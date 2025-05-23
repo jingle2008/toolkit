@@ -1,0 +1,73 @@
+package toolkit
+
+import "github.com/charmbracelet/bubbles/key"
+
+type keyMap struct {
+	Help               key.Binding
+	Quit               key.Binding
+	NextCategory       key.Binding
+	PrevCategory       key.Binding
+	FilterItems        key.Binding
+	JumpTo             key.Binding
+	ViewDetails        key.Binding
+	ApplyContext       key.Binding
+	ViewModelArtifacts key.Binding
+	Category           Category
+	Additionals        map[Category][]key.Binding
+}
+
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Help, k.Quit}
+}
+
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		k.Additionals[k.Category],
+		{k.NextCategory, k.PrevCategory, k.FilterItems, k.JumpTo}, // first column
+		{k.ViewDetails, k.ApplyContext, k.Help, k.Quit},           // second column
+	}
+}
+
+var viewModelArtifacts = key.NewBinding(
+	key.WithKeys("a"),
+	key.WithHelp("a", "view artifacts"),
+)
+
+var keys = keyMap{
+	NextCategory: key.NewBinding(
+		key.WithKeys("shift+right"),
+		key.WithHelp("shift+→", "next category"),
+	),
+	PrevCategory: key.NewBinding(
+		key.WithKeys("shift+left"),
+		key.WithHelp("shift+←", "previous category"),
+	),
+	FilterItems: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "filter items"),
+	),
+	JumpTo: key.NewBinding(
+		key.WithKeys(":"),
+		key.WithHelp(":", "jump to category"),
+	),
+	ViewDetails: key.NewBinding(
+		key.WithKeys("y"),
+		key.WithHelp("y", "view details"),
+	),
+	ApplyContext: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "apply context"),
+	),
+	Help: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "toggle help"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("q", "ctrl+c"),
+		key.WithHelp("q", "quit"),
+	),
+	ViewModelArtifacts: viewModelArtifacts,
+	Additionals: map[Category][]key.Binding{
+		BaseModel: {viewModelArtifacts},
+	},
+}

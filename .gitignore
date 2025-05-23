@@ -1,0 +1,42 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, coverage, and debug output
+*.test
+*.out
+*.log
+*.prof
+*.tmp
+debug.log
+coverage.out
+coverage.html
+
+# Output of the go coverage tool, build artifacts
+*.coverprofile
+*.cov
+*.gcov
+*.gcda
+*.gcno
+*.gcov
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+
+# Dependency directories (vendor/)
+vendor/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Node/npm artifacts (if present)
+node_modules/
+
+# GitHub workflow logs
+.github/workflows/*.log
