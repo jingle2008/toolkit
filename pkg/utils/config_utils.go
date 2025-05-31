@@ -138,7 +138,8 @@ func getTenants(tenantMap map[string]tenantInfo) []models.Tenant {
 }
 
 func updateTenants[T models.TenancyOverride](
-	tenantMap map[string]tenantInfo, overrideMap map[string][]T, index int) {
+	tenantMap map[string]tenantInfo, overrideMap map[string][]T, index int,
+) {
 	for name, overrides := range overrideMap {
 		info, ok := tenantMap[name]
 		if !ok {

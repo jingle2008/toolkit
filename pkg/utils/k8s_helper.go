@@ -49,7 +49,6 @@ func (k *K8sHelper) ChangeContext(context string) error {
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: k.configFile},
 		&clientcmd.ConfigOverrides{CurrentContext: k.context},
 	).ClientConfig()
-
 	if err != nil {
 		return err
 	}
@@ -67,7 +66,6 @@ func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
 	nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), v1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.present=true",
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +100,8 @@ func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
 }
 
 func updateGpuAllocations(clientset *kubernetes.Clientset,
-	gpuAllocationMap map[string]int64, label string) error {
+	gpuAllocationMap map[string]int64, label string,
+) error {
 	// Use a field selector to get only pods with GPU requests
 	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), v1.ListOptions{
 		LabelSelector: label,

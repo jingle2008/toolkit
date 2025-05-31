@@ -350,7 +350,8 @@ func getTableRow(tenant string, item interface{}) table.Row {
 }
 
 func getScopedItems[T models.NamedFilterable](g map[string][]T,
-	scopeCategory Category, context *Context, filter string) []table.Row {
+	scopeCategory Category, context *Context, filter string,
+) []table.Row {
 	var (
 		key  *string
 		name *string

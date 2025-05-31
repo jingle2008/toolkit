@@ -370,7 +370,8 @@ func unmarshalYaml[T any](text *string) *T {
 }
 
 func LoadBaseModels(repoPath string, env models.Environment) (
-	map[string]*models.BaseModel, error) {
+	map[string]*models.BaseModel, error,
+) {
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region")
 	locals, err := loadLocalValueMap(dirPath, env)
 	if err != nil {
@@ -427,7 +428,8 @@ func LoadBaseModels(repoPath string, env models.Environment) (
 }
 
 func getBaseModel(object cty.Value, enabledCaps map[string]struct{},
-	chartValues map[string]*models.ChartValues) *models.BaseModel {
+	chartValues map[string]*models.ChartValues,
+) *models.BaseModel {
 	result := models.BaseModel{}
 	capabilities := make(map[string]*models.Capability)
 
@@ -526,7 +528,8 @@ func LoadGpuPools(repoPath string, env models.Environment) ([]models.GpuPool, er
 }
 
 func loadGpuPools(dirPath, poolConfigName string, isOkeManaged bool,
-	env models.Environment) ([]models.GpuPool, error) {
+	env models.Environment,
+) ([]models.GpuPool, error) {
 	valueMap, err := loadLocalValueMap(dirPath, env)
 	if err != nil {
 		return nil, err

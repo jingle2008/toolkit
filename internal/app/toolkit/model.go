@@ -29,9 +29,11 @@ type header struct {
 	ratio float64
 }
 
-type errMsg struct{ err error }
-type dataMsg struct{ data interface{} }
-type filterMsg struct{ text string }
+type (
+	errMsg    struct{ err error }
+	dataMsg   struct{ data interface{} }
+	filterMsg struct{ text string }
+)
 
 type Model struct {
 	repoPath    string
@@ -85,8 +87,10 @@ var statsStyle = statusNugget.
 
 var statusText = lipgloss.NewStyle().Inherit(statusBarStyle)
 
-var infoKeyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
-var infoValueStyle = lipgloss.NewStyle()
+var (
+	infoKeyStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+	infoValueStyle = lipgloss.NewStyle()
+)
 
 var categoryMap = map[string]Category{
 	"t":    Tenant,
@@ -176,7 +180,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-
 		case "ctrl+c":
 			return m, tea.Quit
 		}
@@ -199,7 +202,6 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-
 		case "esc":
 			m.backToLastState()
 		}
@@ -316,7 +318,6 @@ func updateDetailView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-
 		case "esc":
 			m.exitDetailView()
 		}
@@ -471,7 +472,6 @@ func (m *Model) updateContent(width int) {
 			glamour.WithAutoStyle(),
 			glamour.WithWordWrap(width),
 		)
-
 		if err != nil {
 			wrappedErr := fmt.Errorf("Error encountered creating TermRenderer: %w", err)
 			log.Println(wrappedErr)
