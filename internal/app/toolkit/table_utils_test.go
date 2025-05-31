@@ -19,14 +19,14 @@ func Test_getTenants_returns_rows(t *testing.T) {
 	tenants := []models.Tenant{
 		{
 			Name:                     "TenantA",
-			Ids:                      []string{"idA"},
+			IDs:                      []string{"idA"},
 			LimitOverrides:           1,
 			ConsolePropertyOverrides: 2,
 			PropertyOverrides:        3,
 		},
 		{
 			Name:                     "TenantB",
-			Ids:                      []string{"idB", "idB2"},
+			IDs:                      []string{"idB", "idB2"},
 			LimitOverrides:           4,
 			ConsolePropertyOverrides: 5,
 			PropertyOverrides:        6,
@@ -215,7 +215,7 @@ func Test_getItemKey_and_getItemKeyString(t *testing.T) {
 func Test_findItem_returns_expected(t *testing.T) {
 	dataset := &models.Dataset{
 		Tenants: []models.Tenant{
-			{Name: "TenantA", Ids: []string{"idA"}},
+			{Name: "TenantA", IDs: []string{"idA"}},
 		},
 	}
 	key := "TenantA"

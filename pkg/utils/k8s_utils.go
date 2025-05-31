@@ -53,7 +53,7 @@ func LoadDedicatedAIClusters(configFile string, env models.Environment) (map[str
 
 	result := make(map[string][]models.DedicatedAICluster)
 	for _, dac := range dacs {
-		result[dac.TenantId] = append(result[dac.TenantId], dac)
+		result[dac.TenantID] = append(result[dac.TenantID], dac)
 	}
 
 	for _, v := range result {

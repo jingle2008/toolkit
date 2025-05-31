@@ -7,7 +7,7 @@ type DedicatedAICluster struct {
 	// Common fields
 	Name     string `json:"name"`
 	Status   string `json:"status"`
-	TenantId string `json:"tenantId"`
+	TenantID string `json:"tenantId"`
 
 	// v1 fields
 	Type      string `json:"type,omitempty"`
@@ -25,7 +25,7 @@ func (n DedicatedAICluster) GetName() string {
 
 // GetFilterableFields returns filterable fields for the dedicated AI cluster.
 func (n DedicatedAICluster) GetFilterableFields() []string {
-	return []string{n.Name, n.Type, n.UnitShape, n.Status, n.TenantId}
+	return []string{n.Name, n.Type, n.UnitShape, n.Status, n.TenantID}
 }
 
 // GetKey returns the key of the dedicated AI cluster.

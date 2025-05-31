@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const GPU_PROPERTY = "nvidia.com/gpu"
+const GPUProperty = "nvidia.com/gpu"
 
 // K8sHelper provides helpers for interacting with Kubernetes clusters.
 type K8sHelper struct {
@@ -104,7 +104,7 @@ func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
 
 	gpuNodes := make([]models.GpuNode, 0, len(nodeList.Items))
 	for _, node := range nodeList.Items {
-		allocatable, _ := node.Status.Allocatable.Name(GPU_PROPERTY, resource.DecimalSI).AsInt64()
+		allocatable, _ := node.Status.Allocatable.Name(GPUProperty, resource.DecimalSI).AsInt64()
 		gpuNodes = append(gpuNodes, models.GpuNode{
 			Name:         node.Name,
 			InstanceType: node.Labels["beta.kubernetes.io/instance-type"],
@@ -144,7 +144,7 @@ func updateGpuAllocations(clientset *kubernetes.Clientset,
 func calculatePodGPUs(pod *corev1.Pod) int64 {
 	var total int64
 	for _, container := range pod.Spec.Containers {
-		if val, ok := container.Resources.Requests[GPU_PROPERTY]; ok {
+		if val, ok := container.Resources.Requests[GPUProperty]; ok {
 			total += val.Value()
 		}
 	}
@@ -197,13 +197,13 @@ func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, erro
 			unitShape, _ := spec["unitShape"].(string)
 			size, _ := spec["size"].(int64)
 
-			tenantId := "missing"
+			tenantID := "missing"
 			if hasLabels {
 				value := labels["tenancy-id"]
 				if value == nil {
-					tenantId = "UNKNOWN_TENANCY"
+					tenantID = "UNKNOWN_TENANCY"
 				} else {
-					tenantId = value.(string)
+					tenantID = value.(string)
 				}
 			}
 
@@ -218,7 +218,7 @@ func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, erro
 				UnitShape: unitShape,
 				Size:      int(size),
 				Status:    statusStr,
-				TenantId:  tenantId,
+				TenantID:  tenantID,
 			})
 		}
 	}
@@ -240,7 +240,7 @@ func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, erro
 			profile, _ := spec["profile"].(string)
 			count, _ := spec["count"].(int64)
 
-			tenantId := "missing"
+			tenantID := "missing"
 			labelsMap := make(map[string]string)
 			if hasLabels {
 				for k, v := range labels {
@@ -250,9 +250,9 @@ func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, erro
 				}
 				value := labels["tenancy-id"]
 				if value == nil {
-					tenantId = "UNKNOWN_TENANCY"
+					tenantID = "UNKNOWN_TENANCY"
 				} else {
-					tenantId = value.(string)
+					tenantID = value.(string)
 				}
 			}
 
@@ -267,7 +267,7 @@ func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, erro
 				Profile:  profile,
 				Size:     int(count),
 				Status:   statusStr,
-				TenantId: tenantId,
+				TenantID: tenantID,
 			})
 		}
 	}

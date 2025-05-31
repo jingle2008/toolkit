@@ -61,8 +61,8 @@ func (o PropertyRegionalOverride) GetValue() string {
 	return o.Values[0].Value
 }
 
-// GetTenantId returns the tenant tag of the property tenancy override.
-func (o PropertyTenancyOverride) GetTenantId() string {
+// GetTenantID returns the tenant tag of the property tenancy override.
+func (o PropertyTenancyOverride) GetTenantID() string {
 	return o.Tag
 }
 

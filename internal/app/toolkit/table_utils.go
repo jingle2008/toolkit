@@ -196,7 +196,7 @@ func getTenants(tenants []models.Tenant, filter string) []table.Row {
 	utils.FilterSlice(tenants, nil, filter, func(_ int, val models.Tenant) bool {
 		results = append(results, table.Row{
 			val.Name,
-			val.GetTenantId(),
+			val.GetTenantID(),
 			val.GetOverrides(),
 		})
 		return true

@@ -217,11 +217,11 @@ func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 
 			case key.Matches(msg, m.keys.NextCategory):
-				category := (m.category + 1) % CATEGORIES
+				category := (m.category + 1) % numCategories
 				cmds = append(cmds, m.updateCategory(category))
 
 			case key.Matches(msg, m.keys.PrevCategory):
-				category := (m.category + CATEGORIES - 1) % CATEGORIES
+				category := (m.category + numCategories - 1) % numCategories
 				cmds = append(cmds, m.updateCategory(category))
 
 			case key.Matches(msg, m.keys.FilterItems):
@@ -484,7 +484,7 @@ func (m *Model) updateContent(width int) {
 	}
 
 	item := findItem(m.dataset, m.category, m.choice)
-	content, err := utils.PrettyJson(item)
+	content, err := utils.PrettyJSON(item)
 	if err != nil {
 		content = err.Error()
 	}

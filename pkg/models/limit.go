@@ -50,7 +50,7 @@ func (o LimitTenancyOverride) GetName() string {
 }
 
 // GetTenantId returns the tenant ID of the limit tenancy override.
-func (o LimitTenancyOverride) GetTenantId() string {
+func (o LimitTenancyOverride) GetTenantID() string {
 	return o.TenantID
 }
 

@@ -24,7 +24,7 @@ func LoadFile[T any](filepath string) (*T, error) {
 	return &data, nil
 }
 
-func PrettyJson[T any](object T) (string, error) {
+func PrettyJSON[T any](object T) (string, error) {
 	data, err := json.MarshalIndent(object, "", "    ")
 	if err != nil {
 		return "", err

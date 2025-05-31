@@ -6,8 +6,7 @@ import "fmt"
 // Category represents a logical grouping for toolkit data and UI.
 type Category int
 
-// CATEGORIES is the number of defined categories.
-const CATEGORIES = 16
+const numCategories = 16
 
 // Category constants enumerate all possible toolkit categories.
 const (

@@ -30,7 +30,7 @@ type Definition interface {
 
 // TenancyOverride represents an override with a tenant ID.
 type TenancyOverride interface {
-	GetTenantId() string
+	GetTenantID() string
 }
 
 // DefinitionOverride represents a definition override with regions and value.

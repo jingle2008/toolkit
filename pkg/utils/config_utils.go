@@ -14,16 +14,14 @@ import (
 )
 
 const (
-	/*
-		LIMITS is the key for limits configuration.
-	*/
-	LIMITS             = "limits"
-	PROPERTIES         = "properties"
-	CONSOLE_PROPERTIES = "console_properties"
-	DEFINITION         = "_definition"
-	TENANCY_OVERRIDES  = "_tenancy_overrides"
-	REGIONAL_OVERRIDES = "_regional_overrides"
-	REGIONAL_VALUES    = "regional_values"
+	// keys for config sections
+	limitsKey            = "limits"
+	propertiesKey        = "properties"
+	consolePropertiesKey = "console_properties"
+	definitionSuffix     = "_definition"
+	tenancyOverridesKey  = "_tenancy_overrides"
+	regionalOverridesKey = "_regional_overrides"
+	regionalValuesDir    = "regional_values"
 )
 
 func getConfigPath(root, realm, configName string) string {
@@ -71,7 +69,7 @@ func loadOverrides[T models.NamedItem](dirPath string) ([]T, error) {
 func loadTenancyOverrides[T models.NamedItem](root, realm, name string) (map[string][]T, error) {
 	results := make(map[string][]T)
 
-	realmDir := filepath.Join(root, name, REGIONAL_VALUES, realm)
+	realmDir := filepath.Join(root, name, regionalValuesDir, realm)
 	tenants, err := listSubDirs(realmDir)
 	if err != nil {
 		return nil, err
@@ -90,7 +88,7 @@ func loadTenancyOverrides[T models.NamedItem](root, realm, name string) (map[str
 }
 
 func loadRegionalOverrides[T models.NamedItem](root, realm, name string) ([]T, error) {
-	realmDir := filepath.Join(root, name, REGIONAL_VALUES, realm)
+	realmDir := filepath.Join(root, name, regionalValuesDir, realm)
 	overrides, err := loadOverrides[T](realmDir)
 	if err != nil {
 		return nil, err
@@ -126,7 +124,7 @@ func getTenants(tenantMap map[string]tenantInfo) []models.Tenant {
 			ids = append(ids, k)
 		}
 		tenant := models.Tenant{
-			Ids:                      ids,
+			IDs:                      ids,
 			Name:                     k,
 			LimitOverrides:           v.overrides[0],
 			ConsolePropertyOverrides: v.overrides[1],
@@ -157,9 +155,9 @@ func updateTenants[T models.TenancyOverride](
 		}
 
 		for _, o := range overrides {
-			tenantId := o.GetTenantId()
-			info.idMap[tenantId] = struct{}{}
-			info.overrides[index] += 1
+			tenantID := o.GetTenantID()
+			info.idMap[tenantID] = struct{}{}
+			info.overrides[index]++
 		}
 	}
 }
@@ -201,7 +199,7 @@ func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, erro
 	limitsRoot := filepath.Join(repoPath, "shared_modules/limits")
 
 	realm := env.Realm
-	limitDefinitionPath := getConfigPath(limitsRoot, realm, LIMITS+DEFINITION)
+	limitDefinitionPath := getConfigPath(limitsRoot, realm, limitsKey+definitionSuffix)
 	limitGroup, err := LoadFile[models.LimitDefinitionGroup](limitDefinitionPath)
 	if err != nil {
 		return nil, err
@@ -209,7 +207,7 @@ func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, erro
 
 	sortNamedItems(limitGroup.Values)
 
-	consolePropertyDefinitionPath := getConfigPath(limitsRoot, realm, CONSOLE_PROPERTIES+DEFINITION)
+	consolePropertyDefinitionPath := getConfigPath(limitsRoot, realm, consolePropertiesKey+definitionSuffix)
 	consolePropertyDefinitionGroup, err := LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)
 	if err != nil {
 		return nil, err
@@ -217,7 +215,7 @@ func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, erro
 
 	sortNamedItems(consolePropertyDefinitionGroup.Values)
 
-	propertyDefinitionPath := getConfigPath(limitsRoot, realm, PROPERTIES+DEFINITION)
+	propertyDefinitionPath := getConfigPath(limitsRoot, realm, propertiesKey+definitionSuffix)
 	propertyDefinitionGroup, err := LoadFile[models.PropertyDefinitionGroup](propertyDefinitionPath)
 	if err != nil {
 		return nil, err
@@ -228,7 +226,7 @@ func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, erro
 	tenantMap := make(map[string]tenantInfo)
 
 	limitTenancyOverrideMap, err := loadTenancyOverrides[models.LimitTenancyOverride](
-		limitsRoot, realm, LIMITS+TENANCY_OVERRIDES)
+		limitsRoot, realm, limitsKey+tenancyOverridesKey)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +234,7 @@ func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, erro
 	updateTenants(tenantMap, limitTenancyOverrideMap, 0)
 
 	consolePropertyTenancyOverrideMap, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](
-		limitsRoot, realm, CONSOLE_PROPERTIES+TENANCY_OVERRIDES)
+		limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +242,7 @@ func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, erro
 	updateTenants(tenantMap, consolePropertyTenancyOverrideMap, 1)
 
 	propertyTenancyOverrideMap, err := loadTenancyOverrides[models.PropertyTenancyOverride](
-		limitsRoot, realm, PROPERTIES+TENANCY_OVERRIDES)
+		limitsRoot, realm, propertiesKey+tenancyOverridesKey)
 	if err != nil {
 		return nil, err
 	}
@@ -253,13 +251,13 @@ func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, erro
 	tenants := getTenants(tenantMap)
 
 	consolePropertyRegionalOverrides, err := loadRegionalOverrides[models.ConsolePropertyRegionalOverride](
-		limitsRoot, realm, CONSOLE_PROPERTIES+REGIONAL_OVERRIDES)
+		limitsRoot, realm, consolePropertiesKey+regionalOverridesKey)
 	if err != nil {
 		return nil, err
 	}
 
 	propertyRegionalOverrides, err := loadRegionalOverrides[models.PropertyRegionalOverride](
-		limitsRoot, realm, PROPERTIES+REGIONAL_OVERRIDES)
+		limitsRoot, realm, propertiesKey+regionalOverridesKey)
 	if err != nil {
 		return nil, err
 	}

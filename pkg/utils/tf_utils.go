@@ -36,15 +36,15 @@ type ChartValues struct {
 Constants for local and remote chart locations.
 */
 const (
-	LOCAL        = "local"
-	LOCAL_BLOCK  = "locals"
-	VAR          = "var"
-	DATA         = "data"
-	OUTPUT_BLOCK = "output"
-	OUTPUT_VALUE = "value"
+	localKey    = "local"
+	localBlock  = "locals"
+	varKey      = "var"
+	dataKey     = "data"
+	outputBlock = "output"
+	outputValue = "value"
 )
 
-var LOCAL_FUNC_MAP = map[string]function.Function{
+var localFuncMap = map[string]function.Function{
 	"format":   stdlib.FormatFunc,
 	"lookup":   stdlib.LookupFunc,
 	"merge":    stdlib.MergeFunc,
@@ -79,13 +79,13 @@ func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) err
 
 	// find `locals` block
 	for _, block := range file.Body.(*hclsyntax.Body).Blocks {
-		if block.Type == LOCAL_BLOCK {
+		if block.Type == localBlock {
 			for key, value := range block.Body.Attributes {
 				attributes[key] = value
 			}
-		} else if block.Type == OUTPUT_BLOCK {
+		} else if block.Type == outputBlock {
 			key := block.Labels[0]
-			value := block.Body.Attributes[OUTPUT_VALUE]
+			value := block.Body.Attributes[outputValue]
 			attributes[key] = value
 		}
 	}
@@ -133,11 +133,11 @@ func loadLocalValueMap(dirPath string, env models.Environment) (map[string]cty.V
 
 	context := hcl.EvalContext{
 		Variables: map[string]cty.Value{
-			LOCAL: localObject,
-			VAR:   varObject,
-			DATA:  dataObject,
+			localKey: localObject,
+			varKey:   varObject,
+			dataKey:  dataObject,
 		},
-		Functions: LOCAL_FUNC_MAP,
+		Functions: localFuncMap,
 	}
 
 	keys := make([]string, 0, len(attributes))
@@ -167,7 +167,7 @@ func loadLocalValueMap(dirPath string, env models.Environment) (map[string]cty.V
 
 			if value.IsWhollyKnown() {
 				localObject = mergeObject(localObject, key, value)
-				context.Variables[LOCAL] = localObject
+				context.Variables[localKey] = localObject
 				knownKeys[key] = struct{}{}
 			}
 		}
@@ -203,21 +203,21 @@ func loadLocalValueMap(dirPath string, env models.Environment) (map[string]cty.V
 func loadModelCapabilities(object cty.Value) map[string]map[string]struct{} {
 	modelCapsMap := make(map[string]map[string]struct{})
 
-	for modelId, value := range object.AsValueMap() {
+	for modelID, value := range object.AsValueMap() {
 		capabilities := make(map[string]struct{})
 		for _, capValue := range value.AsValueSlice() {
 			capabilities[capValue.AsString()] = struct{}{}
 		}
 
-		modelCapsMap[modelId] = capabilities
+		modelCapsMap[modelID] = capabilities
 	}
 
 	return modelCapsMap
 }
 
 func updateModelLifecycle(models map[string]*models.BaseModel, stateObject cty.Value) {
-	for modelId, state := range stateObject.AsValueMap() {
-		model, ok := models[modelId]
+	for modelID, state := range stateObject.AsValueMap() {
+		model, ok := models[modelID]
 		if !ok {
 			continue
 		}
