@@ -36,7 +36,11 @@ func main() {
 		fmt.Println("fatal:", err)
 		os.Exit(1)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Printf("WARN: closing debug log: %v\n", err)
+		}
+	}()
 
 	model := toolkit.NewModel(ctx, repoPath, kubeConfig, env, category)
 	p := tea.NewProgram(*model, tea.WithAltScreen())

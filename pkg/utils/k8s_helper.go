@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"log"
 
 	models "github.com/jingle2008/toolkit/pkg/models"
 	corev1 "k8s.io/api/core/v1"
@@ -86,11 +87,20 @@ func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
 	}
 
 	// GPU with no workload
-	updateGpuAllocations(clientset, gpuAllocationMap, "app=dummy")
+	if err := updateGpuAllocations(clientset, gpuAllocationMap, "app=dummy"); err != nil {
+		// WARN: updateGpuAllocations dummy
+		log.Printf("WARN: updateGpuAllocations dummy: %v", err)
+	}
 	// GPU with serving workload
-	updateGpuAllocations(clientset, gpuAllocationMap, "component=predictor")
+	if err := updateGpuAllocations(clientset, gpuAllocationMap, "component=predictor"); err != nil {
+		// WARN: updateGpuAllocations predictor
+		log.Printf("WARN: updateGpuAllocations predictor: %v", err)
+	}
 	// GPU with training workload
-	updateGpuAllocations(clientset, gpuAllocationMap, "ome.oracle.com/trainingjob")
+	if err := updateGpuAllocations(clientset, gpuAllocationMap, "ome.oracle.com/trainingjob"); err != nil {
+		// WARN: updateGpuAllocations trainingjob
+		log.Printf("WARN: updateGpuAllocations trainingjob: %v", err)
+	}
 
 	gpuNodes := make([]models.GpuNode, 0, len(nodeList.Items))
 	for _, node := range nodeList.Items {
