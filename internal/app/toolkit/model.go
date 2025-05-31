@@ -1,3 +1,7 @@
+// Package toolkit implements the core TUI model and logic for the toolkit application.
+// It provides the Model struct and related helpers for managing state, events, and rendering
+// using Bubble Tea and Charmbracelet components.
+
 package toolkit
 
 import (
