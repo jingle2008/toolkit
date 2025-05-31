@@ -133,6 +133,7 @@ const (
 	RegionAPDccTokyo1     Region = "ap-dcc-tokyo-1"
 	RegionUSGovSterling2  Region = "us-gov-sterling-2"
 	RegionUSGovFortworth1 Region = "us-gov-fortworth-1"
+	RegionUSDccPhoenix1   Region = "us-dcc-phoenix-1"
 )
 
 var shortNameRegion = map[string]Region{
@@ -202,6 +203,7 @@ var shortNameRegion = map[string]Region{
 	"tyo": RegionAPDccTokyo1,
 	"dca": RegionUSGovSterling2,
 	"ftw": RegionUSGovFortworth1,
+	"ifp": RegionUSDccPhoenix1,
 }
 
 // Code not part of SDK
