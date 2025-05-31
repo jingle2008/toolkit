@@ -8,5 +8,10 @@ linters:
     - errcheck
     - goimports
     - gocognit
+    - ineffassign
+    - misspell
+    - wastedassign
+  presets:
+    - bugs
 issues:
   exclude-use-default: false

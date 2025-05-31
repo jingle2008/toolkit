@@ -5,6 +5,7 @@
 package toolkit
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math"
@@ -106,7 +107,7 @@ var categoryMap = map[string]Category{
 	"dac":  DedicatedAICluster,
 }
 
-func NewModel(repoPath, kubeConfig string, env models.Environment, category Category) *Model {
+func NewModel(ctx context.Context, repoPath, kubeConfig string, env models.Environment, category Category) *Model {
 	t := table.New(
 		table.WithFocused(true),
 	)
@@ -137,6 +138,9 @@ func NewModel(repoPath, kubeConfig string, env models.Environment, category Cate
 	hm.Styles.FullKey = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("33"))
 	hm.Styles.FullDesc = lipgloss.NewStyle()
+
+	// ctx is not yet used, but is now plumbed for future use
+	_ = ctx
 
 	return &Model{
 		repoPath:    repoPath,

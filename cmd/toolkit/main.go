@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/app/toolkit"
@@ -12,6 +15,9 @@ import (
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	category := toolkit.Tenant
 	env := models.Environment{
 		Type:   "preprod",
@@ -29,7 +35,7 @@ func main() {
 	}
 	defer f.Close()
 
-	model := toolkit.NewModel(repoPath, kubeConfig, env, category)
+	model := toolkit.NewModel(ctx, repoPath, kubeConfig, env, category)
 	p := tea.NewProgram(*model, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)

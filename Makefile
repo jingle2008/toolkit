@@ -1,7 +1,9 @@
 .PHONY: build lint test tidy fmt cover
 
+VERSION ?= $(shell git describe --tags --always --dirty)
+
 build:
-	go build ./cmd/toolkit
+	go install -ldflags "-s -w -X main.Version=$(VERSION)" ./cmd/...
 
 lint:
 	golangci-lint run ./...
