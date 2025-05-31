@@ -533,5 +533,5 @@ func getItemKeyString(category Category, key models.ItemKey) string {
 		return fmt.Sprintf("%s-%s-%s", k.Name, k.Version, k.Type)
 	}
 
-	return "UNKOWN"
+	return "UNKNOWN"
 }

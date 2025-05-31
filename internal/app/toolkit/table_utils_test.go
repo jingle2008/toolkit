@@ -12,7 +12,7 @@ func Test_getHeaders_returns_expected_headers(t *testing.T) {
 	headers := getHeaders(Tenant)
 	assert.NotNil(t, headers)
 	assert.Equal(t, "Name", headers[0].text)
-	assert.Equal(t, 0.25, headers[0].ratio)
+	assert.InEpsilon(t, 0.25, headers[0].ratio, 0.0001)
 }
 
 func Test_getTenants_returns_rows(t *testing.T) {
