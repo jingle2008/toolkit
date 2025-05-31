@@ -17,12 +17,16 @@ import (
 
 const GPU_PROPERTY = "nvidia.com/gpu"
 
+// K8sHelper provides helpers for interacting with Kubernetes clusters.
 type K8sHelper struct {
 	context    string
 	configFile string
 	config     *rest.Config
 }
 
+/*
+NewK8sHelper creates a new K8sHelper using the given kubeconfig file and context.
+*/
 func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
 	helper := &K8sHelper{
 		configFile: configFile,
@@ -38,6 +42,9 @@ func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
 	return helper, nil
 }
 
+/*
+ChangeContext switches the current context of the K8sHelper to the specified context.
+*/
 func (k *K8sHelper) ChangeContext(context string) error {
 	if k.context == context {
 		return nil
@@ -57,6 +64,9 @@ func (k *K8sHelper) ChangeContext(context string) error {
 	return nil
 }
 
+/*
+ListGpuNodes returns a list of GpuNode objects from the current Kubernetes context.
+*/
 func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
 	clientset, err := kubernetes.NewForConfig(k.config)
 	if err != nil {

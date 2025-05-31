@@ -1,7 +1,6 @@
 // Package toolkit implements the core TUI model and logic for the toolkit application.
 // It provides the Model struct and related helpers for managing state, events, and rendering
 // using Bubble Tea and Charmbracelet components.
-
 package toolkit
 
 import (
@@ -35,6 +34,7 @@ type (
 	filterMsg struct{ text string }
 )
 
+// Model represents the main TUI model for the toolkit application.
 type Model struct {
 	repoPath    string
 	environmemt models.Environment
@@ -111,6 +111,7 @@ var categoryMap = map[string]Category{
 	"dac":  DedicatedAICluster,
 }
 
+// NewModel creates and initializes a new Model instance.
 func NewModel(ctx context.Context, repoPath, kubeConfig string, env models.Environment, category Category) *Model {
 	t := table.New(
 		table.WithFocused(true),
@@ -162,6 +163,7 @@ func NewModel(ctx context.Context, repoPath, kubeConfig string, env models.Envir
 	}
 }
 
+// loadData loads the dataset for the current model.
 func (m Model) loadData() tea.Cmd {
 	return func() tea.Msg {
 		dataset, err := utils.LoadDataset(m.repoPath, m.environmemt)
@@ -172,10 +174,12 @@ func (m Model) loadData() tea.Cmd {
 	}
 }
 
+// Init implements the tea.Model interface and initializes the model.
 func (m Model) Init() tea.Cmd {
 	return m.loadData()
 }
 
+// Update handles incoming messages and updates the model state.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -651,6 +655,7 @@ func (m *Model) statusView() string {
 	)
 }
 
+// View renders the current state of the model as a string.
 func (m Model) View() string {
 	if m.err != nil {
 		return centerText(m.err.Error(), m.viewWidth, m.viewHeight)

@@ -2,6 +2,7 @@ package models
 
 import "strings"
 
+// Dataset holds all loaded data for the toolkit.
 type Dataset struct {
 	LimitDefinitionGroup              LimitDefinitionGroup
 	ConsolePropertyDefinitionGroup    ConsolePropertyDefinitionGroup
@@ -21,6 +22,7 @@ type Dataset struct {
 	DedicatedAIClusterMap             map[string][]DedicatedAICluster
 }
 
+// BuildTenantIdSuffixMap builds a map from tenant ID suffix to tenant name.
 func (d *Dataset) BuildTenantIdSuffixMap() map[string]string {
 	suffixMap := make(map[string]string)
 
@@ -35,6 +37,7 @@ func (d *Dataset) BuildTenantIdSuffixMap() map[string]string {
 	return suffixMap
 }
 
+// SetDedicatedAIClusterMap sets the dedicated AI cluster map using tenant suffixes.
 func (d *Dataset) SetDedicatedAIClusterMap(m map[string][]DedicatedAICluster) {
 	dacMap := make(map[string][]DedicatedAICluster)
 	suffixMap := d.BuildTenantIdSuffixMap()

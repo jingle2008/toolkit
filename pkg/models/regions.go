@@ -1,5 +1,8 @@
 package models
 
+/*
+Region represents a cloud region identifier.
+*/
 // copy from oci-go-sdk/v65@v65.68.0/common/regions.go
 type Region string
 
@@ -129,7 +132,9 @@ const (
 	// RegionMEAbudhabi3 region Abudhabi
 	RegionMEAbudhabi3 Region = "me-abudhabi-3"
 	// Tacoma, not part of SDK
-	RegionTacoma          Region = "us-tacoma-1"
+	// RegionTacoma is a region not part of the official SDK.
+	RegionTacoma Region = "us-tacoma-1"
+	// RegionAPDccTokyo1 is a region not part of the official SDK.
 	RegionAPDccTokyo1     Region = "ap-dcc-tokyo-1"
 	RegionUSGovSterling2  Region = "us-gov-sterling-2"
 	RegionUSGovFortworth1 Region = "us-gov-fortworth-1"
@@ -206,6 +211,9 @@ var shortNameRegion = map[string]Region{
 	"ifp": RegionUSDccPhoenix1,
 }
 
+/*
+GetCode returns the short code for the Region, or "UNKNOWN" if not found.
+*/
 // Code not part of SDK
 func (r Region) GetCode() string {
 	for k, v := range shortNameRegion {
@@ -217,6 +225,9 @@ func (r Region) GetCode() string {
 	return "UNKNOWN"
 }
 
+/*
+CodeToRegion returns the Region corresponding to the given code.
+*/
 func CodeToRegion(code string) Region {
 	return shortNameRegion[code]
 }

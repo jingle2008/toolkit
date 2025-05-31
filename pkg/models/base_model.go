@@ -1,3 +1,4 @@
+// Package models provides data structures for toolkit models.
 package models
 
 import (
@@ -7,6 +8,7 @@ import (
 	"strings"
 )
 
+// BaseModel represents a base model entity.
 type BaseModel struct {
 	Capabilities        map[string]*Capability `json:"capabilities"`
 	InternalName        string                 `json:"internal_name"`
@@ -24,6 +26,7 @@ type BaseModel struct {
 	TimeDeprecated      string                 `json:"timeDeprecated"`
 }
 
+// Capability represents a model capability.
 type Capability struct {
 	Capability  string       `json:"capability"`
 	CrName      string       `json:"cr_name"`
@@ -34,58 +37,70 @@ type Capability struct {
 	Replicas    int          `json:"replicas"`
 }
 
+// ChartValues holds chart configuration values for a model.
 type ChartValues struct {
 	Model         *ModelSetting  `json:"model,omitempty"`
 	ModelMetaData *ModelMetaData `json:"modelMetaData,omitempty"`
 }
 
+// ModelSetting holds settings for a model.
 type ModelSetting struct {
 	ModelMaxLoadingSeconds *string `yaml:"modelMaxLoadingSeconds" json:"modelMaxLoadingSeconds,omitempty"`
 }
 
+// ModelMetaData holds metadata for a model.
 type ModelMetaData struct {
 	DacShapeConfigs         *DacShapeConfigs         `json:"dacShapeConfigs,omitempty"`
 	TrainingConfigs         *TrainingConfigs         `json:"trainingConfigs,omitempty"`
 	ServingBaseModelConfigs *ServingBaseModelConfigs `json:"servingBaseModelConfigs,omitempty"`
 }
 
+// DacShapeConfigs holds compatible DAC shapes.
 type DacShapeConfigs struct {
 	CompatibleDACShapes []DACShape `yaml:"compatibleDACShapes" json:"compatibleDACShapes"`
 }
 
+// DACShape represents a DAC shape.
 type DACShape struct {
 	Name      string `yaml:"name" json:"name"`
 	QuotaUnit int    `yaml:"quotaUnit" json:"quotaUnit"`
 	Default   bool   `yaml:"default" json:"default"`
 }
 
+// TrainingConfigs holds compatible training configurations.
 type TrainingConfigs struct {
 	CompatibleTrainingConfigs []TrainingConfig `yaml:"compatibleTrainingConfigs" json:"compatibleTrainingConfigs"`
 }
 
+// TrainingConfig represents a training configuration.
 type TrainingConfig struct {
 	Name                string `yaml:"name" json:"name"`
 	SupportStackServing bool   `yaml:"supportStackServing" json:"supportStackServing"`
 	Default             bool   `yaml:"default" json:"default"`
 }
 
+// ServingBaseModelConfigs holds serving base model configurations.
 type ServingBaseModelConfigs struct {
 	ServingBaseModel ServingBaseModel `yaml:"servingBaseModel" json:"servingBaseModel"`
 }
 
+// ServingBaseModel represents a serving base model.
 type ServingBaseModel struct {
 	CRName       string `yaml:"cr_name" json:"cr_name"`
 	InternalName string `yaml:"internal_name" json:"internal_name"`
 }
 
+// GetName returns the name of the base model.
 func (m BaseModel) GetName() string {
 	return m.Name
 }
 
+// GetKey returns the key of the base model.
 func (m BaseModel) GetKey() string {
 	return fmt.Sprintf("%s-%s-%s", m.Type, m.Name, m.Version)
 }
 
+// GetCapabilities returns the capabilities of the base model.
 func (m BaseModel) GetCapabilities() []string {
 	keys := make([]string, 0, len(m.Capabilities))
 	for key, value := range m.Capabilities {
@@ -100,6 +115,7 @@ func (m BaseModel) GetCapabilities() []string {
 	return keys
 }
 
+// GetDefaultDacShape returns the default DAC shape for the base model.
 func (m BaseModel) GetDefaultDacShape() *DACShape {
 	shapes := make(map[string]*DACShape)
 	for _, value := range m.Capabilities {
@@ -125,6 +141,7 @@ func (m BaseModel) GetDefaultDacShape() *DACShape {
 	return nil
 }
 
+// GetFilterableFields returns filterable fields for the base model.
 func (m BaseModel) GetFilterableFields() []string {
 	var shapeName string
 	shape := m.GetDefaultDacShape()
@@ -137,6 +154,7 @@ func (m BaseModel) GetFilterableFields() []string {
 		m.GetFlags(), shapeName)
 }
 
+// GetFlags returns the flags for the base model.
 func (m BaseModel) GetFlags() string {
 	flags := []string{}
 	if m.IsExperimental {

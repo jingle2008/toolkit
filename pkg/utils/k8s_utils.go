@@ -6,6 +6,9 @@ import (
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
+/*
+LoadGpuNodes loads GPU node information from the given config file and environment.
+*/
 func LoadGpuNodes(configFile string, env models.Environment) (map[string][]models.GpuNode, error) {
 	k8sHelper, err := NewK8sHelper(configFile, env.GetKubeContext())
 	if err != nil {
@@ -34,6 +37,9 @@ func LoadGpuNodes(configFile string, env models.Environment) (map[string][]model
 	return result, nil
 }
 
+/*
+LoadDedicatedAIClusters loads DedicatedAICluster information from the given config file and environment.
+*/
 func LoadDedicatedAIClusters(configFile string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	k8sHelper, err := NewK8sHelper(configFile, env.GetKubeContext())
 	if err != nil {

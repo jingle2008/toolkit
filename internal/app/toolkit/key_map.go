@@ -2,6 +2,7 @@ package toolkit
 
 import "github.com/charmbracelet/bubbles/key"
 
+// keyMap holds key bindings for the toolkit UI.
 type keyMap struct {
 	Help               key.Binding
 	Quit               key.Binding

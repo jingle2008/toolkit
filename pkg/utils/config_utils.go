@@ -1,3 +1,6 @@
+/*
+Package utils provides utility functions for configuration management.
+*/
 package utils
 
 import (
@@ -11,6 +14,9 @@ import (
 )
 
 const (
+	/*
+		LIMITS is the key for limits configuration.
+	*/
 	LIMITS             = "limits"
 	PROPERTIES         = "properties"
 	CONSOLE_PROPERTIES = "console_properties"
@@ -178,6 +184,9 @@ func isValidEnvironment(env models.Environment, allEnvs []models.Environment) bo
 	return false
 }
 
+/*
+LoadDataset loads a Dataset from the given repository path and environment.
+*/
 func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, error) {
 	serviceTenancies, err := LoadServiceTenancies(repoPath)
 	if err != nil {

@@ -20,6 +20,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+/*
+ChartValues represents the values used for chart templating.
+*/
 type ChartValues struct {
 	Model         *models.ModelSetting `yaml:"model"`
 	ModelMetaData *struct {
@@ -29,6 +32,9 @@ type ChartValues struct {
 	} `yaml:"modelMetaData"`
 }
 
+/*
+Constants for local and remote chart locations.
+*/
 const (
 	LOCAL        = "local"
 	LOCAL_BLOCK  = "locals"
@@ -238,6 +244,9 @@ func loadModelReplicas(object cty.Value) map[string]int {
 	return modelReplicaMap
 }
 
+/*
+LoadServiceTenancies loads ServiceTenancy objects from the given repository path.
+*/
 func LoadServiceTenancies(repoPath string) ([]models.ServiceTenancy, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
 	attributes, err := getLocalAttributes(dirPath)
@@ -369,6 +378,9 @@ func unmarshalYaml[T any](text *string) *T {
 	return &result
 }
 
+/*
+LoadBaseModels loads base model definitions from the given repository path and environment.
+*/
 func LoadBaseModels(repoPath string, env models.Environment) (
 	map[string]*models.BaseModel, error,
 ) {
@@ -493,6 +505,9 @@ func getCapability(object cty.Value, chartValues map[string]*models.ChartValues)
 	return &result
 }
 
+/*
+LoadGpuPools loads GpuPool objects from the given repository path and environment.
+*/
 func LoadGpuPools(repoPath string, env models.Environment) ([]models.GpuPool, error) {
 	var gpuPools []models.GpuPool
 
@@ -563,6 +578,9 @@ func loadGpuPools(dirPath, poolConfigName string, isOkeManaged bool,
 	return gpuPools, nil
 }
 
+/*
+LoadModelArtifacts loads ModelArtifact objects from the given repository path and environment.
+*/
 func LoadModelArtifacts(repoPath string, env models.Environment) ([]models.ModelArtifact, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/tensorrt_models_config")
 	valueMap, err := loadLocalValueMap(dirPath, env)

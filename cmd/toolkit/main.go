@@ -1,3 +1,6 @@
+/*
+Command toolkit is the CLI entry-point for the toolkit application.
+*/
 package main
 
 import (

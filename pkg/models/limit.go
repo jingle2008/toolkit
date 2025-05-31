@@ -1,5 +1,6 @@
 package models
 
+// LimitDefinition represents a limit definition for a service.
 type LimitDefinition struct {
 	Name                 string `json:"name"`
 	Description          string `json:"description"`
@@ -15,18 +16,22 @@ type LimitDefinition struct {
 	UsageSource          string `json:"usage_source"`
 }
 
+// GetName returns the name of the limit definition.
 func (c LimitDefinition) GetName() string {
 	return c.Name
 }
 
+// GetDescription returns the description of the limit definition.
 func (c LimitDefinition) GetDescription() string {
 	return c.Description
 }
 
+// GetFilterableFields returns filterable fields for the limit definition.
 func (c LimitDefinition) GetFilterableFields() []string {
 	return []string{c.Name, c.Description}
 }
 
+// LimitTenancyOverride represents a tenancy override for a limit.
 type LimitTenancyOverride struct {
 	Realms   []string `json:"realms"`
 	Name     string   `json:"name"`
@@ -39,14 +44,17 @@ type LimitTenancyOverride struct {
 	} `json:"values"`
 }
 
+// GetName returns the name of the limit tenancy override.
 func (o LimitTenancyOverride) GetName() string {
 	return o.Name
 }
 
+// GetTenantId returns the tenant ID of the limit tenancy override.
 func (o LimitTenancyOverride) GetTenantId() string {
 	return o.TenantID
 }
 
+// GetFilterableFields returns filterable fields for the limit tenancy override.
 func (o LimitTenancyOverride) GetFilterableFields() []string {
 	results := o.Regions[:]
 	return append(results, o.Name)

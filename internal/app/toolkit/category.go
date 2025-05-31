@@ -1,11 +1,15 @@
+// Package toolkit provides core types and logic for the toolkit application.
 package toolkit
 
 import "fmt"
 
+// Category represents a logical grouping for toolkit data and UI.
 type Category int
 
+// CATEGORIES is the number of defined categories.
 const CATEGORIES = 16
 
+// Category constants enumerate all possible toolkit categories.
 const (
 	Tenant Category = iota
 	LimitDefinition
@@ -25,6 +29,7 @@ const (
 	DedicatedAICluster
 )
 
+// String returns the string representation of the Category.
 func (e Category) String() string {
 	switch e {
 	case Tenant:
@@ -64,6 +69,7 @@ func (e Category) String() string {
 	}
 }
 
+// IsScopeOf returns true if the receiver is a scope of the given category.
 func (e Category) IsScopeOf(o Category) bool {
 	if !e.IsScope() {
 		return false
@@ -79,6 +85,7 @@ func (e Category) IsScopeOf(o Category) bool {
 	return false
 }
 
+// IsScope returns true if the category is a scope category.
 func (e Category) IsScope() bool {
 	switch e {
 	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool:
@@ -88,6 +95,7 @@ func (e Category) IsScope() bool {
 	return false
 }
 
+// ScopedCategories returns the categories that are scoped by the receiver.
 func (e Category) ScopedCategories() []Category {
 	switch e {
 	case Tenant:
@@ -117,6 +125,7 @@ func (e Category) ScopedCategories() []Category {
 	}
 }
 
+// Definition returns the definition category for the receiver.
 func (e Category) Definition() Category {
 	switch e {
 	case LimitTenancyOverride:
