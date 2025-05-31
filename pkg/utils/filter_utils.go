@@ -98,12 +98,12 @@ func FilterMap[T models.NamedFilterable, R any](g map[string][]T,
 
 		results = make([]R, 0, len(items))
 
-		FilterSlice(items, name, filter, func(i int, val T) bool {
+		FilterSlice(items, name, filter, func(_ int, val T) bool {
 			results = append(results, transform(*key, val))
 			return true
 		})
 	} else {
-		filterMap(g, name, filter, func(i int, key string, val T) bool {
+		filterMap(g, name, filter, func(_ int, key string, val T) bool {
 			results = append(results, transform(key, val))
 			return true
 		})

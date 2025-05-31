@@ -121,16 +121,16 @@ var headerDefinitions = map[Category][]header{
 }
 
 var categoryHandlers = map[Category]func(*models.Dataset, *Context, string) []table.Row{
-	Tenant: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	Tenant: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getTenants(dataset.Tenants, filter)
 	},
-	LimitDefinition: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	LimitDefinition: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getLimitDefinitions(dataset.LimitDefinitionGroup, filter)
 	},
-	ConsolePropertyDefinition: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	ConsolePropertyDefinition: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.ConsolePropertyDefinitionGroup.Values, filter)
 	},
-	PropertyDefinition: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	PropertyDefinition: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.PropertyDefinitionGroup.Values, filter)
 	},
 	LimitTenancyOverride: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
@@ -142,25 +142,25 @@ var categoryHandlers = map[Category]func(*models.Dataset, *Context, string) []ta
 	PropertyTenancyOverride: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
 		return getScopedItems(dataset.PropertyTenancyOverrideMap, Tenant, context, filter)
 	},
-	ConsolePropertyRegionalOverride: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	ConsolePropertyRegionalOverride: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getRegionalOverrides(dataset.ConsolePropertyRegionalOverrides, filter)
 	},
-	PropertyRegionalOverride: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	PropertyRegionalOverride: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getRegionalOverrides(dataset.PropertyRegionalOverrides, filter)
 	},
-	BaseModel: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	BaseModel: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getBaseModels(dataset.BaseModelMap, filter)
 	},
-	ModelArtifact: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	ModelArtifact: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getModelArtifacts(dataset.ModelArtifacts, filter)
 	},
-	Environment: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	Environment: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getEnvironments(dataset.Environments, filter)
 	},
-	ServiceTenancy: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	ServiceTenancy: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getServiceTenancies(dataset.ServiceTenancies, filter)
 	},
-	GpuPool: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
+	GpuPool: func(dataset *models.Dataset, _ *Context, filter string) []table.Row {
 		return getGpuPools(dataset.GpuPools, filter)
 	},
 	GpuNode: func(dataset *models.Dataset, context *Context, filter string) []table.Row {
@@ -193,7 +193,7 @@ func getTableRows(dataset *models.Dataset, category Category, context *Context, 
 func getTenants(tenants []models.Tenant, filter string) []table.Row {
 	results := make([]table.Row, 0, len(tenants))
 
-	utils.FilterSlice(tenants, nil, filter, func(i int, val models.Tenant) bool {
+	utils.FilterSlice(tenants, nil, filter, func(_ int, val models.Tenant) bool {
 		results = append(results, table.Row{
 			val.Name,
 			val.GetTenantId(),
@@ -208,7 +208,7 @@ func getTenants(tenants []models.Tenant, filter string) []table.Row {
 func getEnvironments(envs []models.Environment, filter string) []table.Row {
 	results := make([]table.Row, 0, len(envs))
 
-	utils.FilterSlice(envs, nil, filter, func(i int, val models.Environment) bool {
+	utils.FilterSlice(envs, nil, filter, func(_ int, val models.Environment) bool {
 		results = append(results, table.Row{
 			val.GetName(),
 			val.Realm,
@@ -224,7 +224,7 @@ func getEnvironments(envs []models.Environment, filter string) []table.Row {
 func getGpuPools(pools []models.GpuPool, filter string) []table.Row {
 	results := make([]table.Row, 0, len(pools))
 
-	utils.FilterSlice(pools, nil, filter, func(i int, val models.GpuPool) bool {
+	utils.FilterSlice(pools, nil, filter, func(_ int, val models.GpuPool) bool {
 		results = append(results, table.Row{
 			val.Name,
 			val.Shape,
@@ -242,7 +242,7 @@ func getGpuPools(pools []models.GpuPool, filter string) []table.Row {
 func getServiceTenancies(tenancies []models.ServiceTenancy, filter string) []table.Row {
 	results := make([]table.Row, 0, len(tenancies))
 
-	utils.FilterSlice(tenancies, nil, filter, func(i int, val models.ServiceTenancy) bool {
+	utils.FilterSlice(tenancies, nil, filter, func(_ int, val models.ServiceTenancy) bool {
 		results = append(results, table.Row{
 			val.Name,
 			val.Realm,
@@ -259,7 +259,7 @@ func getServiceTenancies(tenancies []models.ServiceTenancy, filter string) []tab
 func getLimitDefinitions(g models.LimitDefinitionGroup, filter string) []table.Row {
 	results := make([]table.Row, 0, len(g.Values))
 
-	utils.FilterSlice(g.Values, nil, filter, func(i int, val models.LimitDefinition) bool {
+	utils.FilterSlice(g.Values, nil, filter, func(_ int, val models.LimitDefinition) bool {
 		results = append(results, table.Row{
 			val.Name,
 			val.Description,
@@ -276,7 +276,7 @@ func getLimitDefinitions(g models.LimitDefinitionGroup, filter string) []table.R
 func getPropertyDefinitions[T models.Definition](definitions []T, filter string) []table.Row {
 	results := make([]table.Row, 0, len(definitions))
 
-	utils.FilterSlice(definitions, nil, filter, func(i int, val T) bool {
+	utils.FilterSlice(definitions, nil, filter, func(_ int, val T) bool {
 		results = append(results, table.Row{
 			val.GetName(),
 			val.GetDescription(),
@@ -374,7 +374,7 @@ func getScopedItems[T models.NamedFilterable](g map[string][]T,
 func getRegionalOverrides[T models.DefinitionOverride](overrides []T, filter string) []table.Row {
 	results := make([]table.Row, 0, len(overrides))
 
-	utils.FilterSlice(overrides, nil, filter, func(i int, val T) bool {
+	utils.FilterSlice(overrides, nil, filter, func(_ int, val T) bool {
 		results = append(results, table.Row{
 			val.GetName(),
 			strings.Join(val.GetRegions(), ", "),
@@ -424,7 +424,7 @@ func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 func getModelArtifacts(artifacts []models.ModelArtifact, filter string) []table.Row {
 	results := make([]table.Row, 0, len(artifacts))
 
-	utils.FilterSlice(artifacts, nil, filter, func(i int, val models.ModelArtifact) bool {
+	utils.FilterSlice(artifacts, nil, filter, func(_ int, val models.ModelArtifact) bool {
 		results = append(results, table.Row{
 			val.ModelName,
 			val.GetGpuConfig(),
