@@ -469,7 +469,8 @@ func (m *Model) updateContent(width int) {
 		)
 
 		if err != nil {
-			log.Println("Error encountered creating TermRenderer:", err)
+			wrappedErr := fmt.Errorf("Error encountered creating TermRenderer: %w", err)
+			log.Println(wrappedErr)
 			return
 		}
 	}
@@ -483,7 +484,8 @@ func (m *Model) updateContent(width int) {
 	details := fmt.Sprintf("```json\n%s\n```", content)
 	str, err := m.renderer.Render(details)
 	if err != nil {
-		log.Println("Error encountered rendering content:", err)
+		wrappedErr := fmt.Errorf("Error encountered rendering content: %w", err)
+		log.Println(wrappedErr)
 		return
 	}
 
