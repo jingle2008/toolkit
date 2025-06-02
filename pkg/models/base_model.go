@@ -104,11 +104,11 @@ func (m BaseModel) GetKey() string {
 func (m BaseModel) GetCapabilities() []string {
 	keys := make([]string, 0, len(m.Capabilities))
 	for key, value := range m.Capabilities {
-		cap := key
+		capStr := key
 		if value.Replicas > 0 {
-			cap = fmt.Sprintf("[%d] %s", value.Replicas, key)
+			capStr = fmt.Sprintf("[%d] %s", value.Replicas, key)
 		}
-		keys = append(keys, cap)
+		keys = append(keys, capStr)
 	}
 
 	sort.Strings(keys)

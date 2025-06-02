@@ -86,6 +86,7 @@ func (e Category) IsScopeOf(o Category) bool {
 
 // IsScope returns true if the category is a scope category.
 func (e Category) IsScope() bool {
+	//nolint:exhaustive
 	switch e {
 	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool:
 		return true
@@ -96,6 +97,7 @@ func (e Category) IsScope() bool {
 
 // ScopedCategories returns the categories that are scoped by the receiver.
 func (e Category) ScopedCategories() []Category {
+	//nolint:exhaustive
 	switch e {
 	case Tenant:
 		return []Category{
@@ -126,6 +128,7 @@ func (e Category) ScopedCategories() []Category {
 
 // Definition returns the definition category for the receiver.
 func (e Category) Definition() Category {
+	//nolint:exhaustive
 	switch e {
 	case LimitTenancyOverride:
 		return LimitDefinition

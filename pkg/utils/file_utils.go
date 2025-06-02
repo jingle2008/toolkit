@@ -35,5 +35,5 @@ func SafeReadFile(path string, baseDir string, allowExt map[string]struct{}) ([]
 		return nil, fmt.Errorf("extension %s not permitted", ext)
 	}
 
-	return os.ReadFile(absTarget)
+	return os.ReadFile(absTarget) // #nosec G304 -- absTarget validated above
 }

@@ -289,6 +289,7 @@ func (m *Model) getCurrentItem() interface{} {
 }
 
 func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
+	//nolint:exhaustive
 	switch m.category {
 	case BaseModel:
 		switch {
@@ -300,6 +301,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 }
 
 func (m *Model) processData(msg dataMsg) {
+	//nolint:exhaustive
 	switch data := msg.data.(type) {
 	case *models.Dataset:
 		m.dataset = data
@@ -427,6 +429,7 @@ func (m *Model) ensureCategory() tea.Msg {
 	var data interface{}
 	var err error
 
+	//nolint:exhaustive
 	switch m.category {
 	case BaseModel:
 		if m.dataset.BaseModelMap == nil {
