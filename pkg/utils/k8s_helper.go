@@ -1,3 +1,6 @@
+/*
+Package utils provides helper functions for interacting with Kubernetes clusters and related resources.
+*/
 package utils
 
 import (
@@ -172,106 +175,122 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 	return false
 }
 
+/*
+ListDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
+*/
 func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, error) {
-	dynamicClient, err := dynamic.NewForConfig(k.config)
+	dyn, err := dynamic.NewForConfig(k.config)
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.TODO()
 
-	var dacs []models.DedicatedAICluster
+	v1Clusters, err := k.listDedicatedAIClustersV1(ctx, dyn)
+	if err != nil {
+		return nil, err
+	}
+	v2Clusters, err := k.listDedicatedAIClustersV2(ctx, dyn)
+	if err != nil {
+		return nil, err
+	}
+	return append(v1Clusters, v2Clusters...), nil
+}
 
-	// v1alpha1 (legacy/v1)
-	gvrV1 := schema.GroupVersionResource{
+// listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
+func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamic.Interface) ([]models.DedicatedAICluster, error) {
+	gvr := schema.GroupVersionResource{
 		Group:    "ome.oracle.com",
 		Version:  "v1alpha1",
 		Resource: "dedicatedaiclusters",
 	}
-	listV1, err := dynamicClient.Resource(gvrV1).List(context.TODO(), v1.ListOptions{})
-	if err == nil {
-		for _, item := range listV1.Items {
-			name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
-			spec, _, _ := unstructured.NestedMap(item.Object, "spec")
-			status, _, _ := unstructured.NestedMap(item.Object, "status")
-			labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
-
-			dacType, _ := spec["type"].(string)
-			unitShape, _ := spec["unitShape"].(string)
-			size, _ := spec["size"].(int64)
-
-			tenantID := "missing"
-			if hasLabels {
-				value := labels["tenancy-id"]
-				if value == nil {
-					tenantID = "UNKNOWN_TENANCY"
-				} else {
-					tenantID = value.(string)
-				}
-			}
-
-			statusStr, _ := status["status"].(string)
-			if statusStr == "" {
-				statusStr = "pending"
-			}
-
-			dacs = append(dacs, models.DedicatedAICluster{
-				Name:      name,
-				Type:      dacType,
-				UnitShape: unitShape,
-				Size:      int(size),
-				Status:    statusStr,
-				TenantID:  tenantID,
-			})
-		}
+	list, err := dyn.Resource(gvr).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, err
 	}
+	var dacs []models.DedicatedAICluster
+	for _, item := range list.Items {
+		name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
+		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
+		status, _, _ := unstructured.NestedMap(item.Object, "status")
+		labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
 
-	// v1beta1 (v2)
-	gvrV2 := schema.GroupVersionResource{
+		dacType, _ := spec["type"].(string)
+		unitShape, _ := spec["unitShape"].(string)
+		size, _ := spec["size"].(int64)
+
+		tenantID := "missing"
+		if hasLabels {
+			tenantID = tenantIDFromLabels(labels)
+		}
+
+		statusStr, _ := status["status"].(string)
+		if statusStr == "" {
+			statusStr = "pending"
+		}
+
+		dacs = append(dacs, models.DedicatedAICluster{
+			Name:      name,
+			Type:      dacType,
+			UnitShape: unitShape,
+			Size:      int(size),
+			Status:    statusStr,
+			TenantID:  tenantID,
+		})
+	}
+	return dacs, nil
+}
+
+// listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
+func (k *K8sHelper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamic.Interface) ([]models.DedicatedAICluster, error) {
+	gvr := schema.GroupVersionResource{
 		Group:    "ome.io",
 		Version:  "v1beta1",
 		Resource: "dedicatedaiclusters",
 	}
-	listV2, err := dynamicClient.Resource(gvrV2).List(context.TODO(), v1.ListOptions{})
-	if err == nil {
-		for _, item := range listV2.Items {
-			name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
-			spec, _, _ := unstructured.NestedMap(item.Object, "spec")
-			status, _, _ := unstructured.NestedMap(item.Object, "status")
-			labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
-
-			profile, _ := spec["profile"].(string)
-			count, _ := spec["count"].(int64)
-
-			tenantID := "missing"
-			labelsMap := make(map[string]string)
-			if hasLabels {
-				for k, v := range labels {
-					if strVal, ok := v.(string); ok {
-						labelsMap[k] = strVal
-					}
-				}
-				value := labels["tenancy-id"]
-				if value == nil {
-					tenantID = "UNKNOWN_TENANCY"
-				} else {
-					tenantID = value.(string)
-				}
-			}
-
-			dacLifecycleState, _ := status["dacLifecycleState"].(string)
-			statusStr := dacLifecycleState
-			if statusStr == "" {
-				statusStr = "pending"
-			}
-
-			dacs = append(dacs, models.DedicatedAICluster{
-				Name:     name,
-				Profile:  profile,
-				Size:     int(count),
-				Status:   statusStr,
-				TenantID: tenantID,
-			})
-		}
+	list, err := dyn.Resource(gvr).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, err
 	}
+	var dacs []models.DedicatedAICluster
+	for _, item := range list.Items {
+		name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
+		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
+		status, _, _ := unstructured.NestedMap(item.Object, "status")
+		labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
 
+		profile, _ := spec["profile"].(string)
+		count, _ := spec["count"].(int64)
+
+		tenantID := "missing"
+		if hasLabels {
+			tenantID = tenantIDFromLabels(labels)
+		}
+
+		dacLifecycleState, _ := status["dacLifecycleState"].(string)
+		statusStr := dacLifecycleState
+		if statusStr == "" {
+			statusStr = "pending"
+		}
+
+		dacs = append(dacs, models.DedicatedAICluster{
+			Name:     name,
+			Profile:  profile,
+			Size:     int(count),
+			Status:   statusStr,
+			TenantID: tenantID,
+		})
+	}
 	return dacs, nil
+}
+
+// tenantIDFromLabels extracts the tenancy-id from a labels map
+func tenantIDFromLabels(labels map[string]interface{}) string {
+	value := labels["tenancy-id"]
+	if value == nil {
+		return "UNKNOWN_TENANCY"
+	}
+	if str, ok := value.(string); ok {
+		return str
+	}
+	return "UNKNOWN_TENANCY"
 }
