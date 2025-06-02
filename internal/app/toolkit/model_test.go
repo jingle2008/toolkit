@@ -20,7 +20,7 @@ func Test_NewModel_initializes_fields(t *testing.T) {
 	assert.NotNil(t, m)
 	assert.Equal(t, "/repo", m.repoPath)
 	assert.Equal(t, "/kube", m.kubeConfig)
-	assert.Equal(t, env, m.environmemt)
+	assert.Equal(t, env, m.environment)
 	assert.Equal(t, Tenant, m.category)
 	assert.NotNil(t, m.table)
 	assert.NotNil(t, m.textInput)
@@ -30,7 +30,7 @@ func Test_Model_contextString_and_infoView(t *testing.T) {
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
 	m := NewModel(context.TODO(), "/repo", "/kube", env, LimitTenancyOverride)
 	// Set context.Category to Tenant, m.category to LimitTenancyOverride
-	m.context = &Context{Name: "scopeA", Category: Tenant}
+	m.context = &AppContext{Name: "scopeA", Category: Tenant}
 	m.chosen = false
 	cs := m.contextString()
 	assert.Contains(t, cs, "Limit Tenancy Override")

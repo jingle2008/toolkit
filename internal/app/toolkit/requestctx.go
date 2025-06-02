@@ -1,7 +1,7 @@
 package toolkit
 
-// Context represents a selection context in the toolkit UI.
-type Context struct {
+// AppContext represents a selection context in the toolkit UI.
+type AppContext struct {
 	Name     string
 	Category Category
 }

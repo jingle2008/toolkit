@@ -37,7 +37,7 @@ type (
 // Model represents the main TUI model for the toolkit application.
 type Model struct {
 	repoPath    string
-	environmemt models.Environment
+	environment models.Environment
 	viewHeight  int
 	viewWidth   int
 	dataset     *models.Dataset
@@ -55,8 +55,8 @@ type Model struct {
 	choice      models.ItemKey
 	viewport    viewport.Model
 	renderer    *glamour.TermRenderer
-	reLayout    bool     // layout needs to be updated
-	context     *Context // selected context
+	reLayout    bool        // layout needs to be updated
+	context     *AppContext // selected context
 	keys        keyMap
 	help        help.Model
 	kubeConfig  string
@@ -150,7 +150,7 @@ func NewModel(ctx context.Context, repoPath, kubeConfig string, env models.Envir
 	return &Model{
 		repoPath:    repoPath,
 		kubeConfig:  kubeConfig,
-		environmemt: env,
+		environment: env,
 		table:       t,
 		styles:      s,
 		category:    category,
@@ -166,7 +166,7 @@ func NewModel(ctx context.Context, repoPath, kubeConfig string, env models.Envir
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() tea.Cmd {
 	return func() tea.Msg {
-		dataset, err := utils.LoadDataset(m.repoPath, m.environmemt)
+		dataset, err := utils.LoadDataset(m.repoPath, m.environment)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -388,17 +388,17 @@ func (m *Model) exitDetailView() {
 
 func (m *Model) enterContext() tea.Cmd {
 	target := m.table.SelectedRow()[0]
-	context := Context{
+	appContext := AppContext{
 		Category: m.category,
 		Name:     target,
 	}
 	if m.category.IsScope() {
-		m.context = &context
+		m.context = &appContext
 		return m.updateCategory(m.category.ScopedCategories()[0])
 	} else if m.category == Environment {
 		env := *utils.FindByName(m.dataset.Environments, target)
-		if !m.environmemt.Equals(env) {
-			m.environmemt = env
+		if !m.environment.Equals(env) {
+			m.environment = env
 			// reset env-bounded data
 			m.dataset.BaseModelMap = nil
 			m.dataset.GpuPools = nil
@@ -433,22 +433,22 @@ func (m *Model) ensureCategory() tea.Msg {
 	switch m.category {
 	case BaseModel:
 		if m.dataset.BaseModelMap == nil {
-			data, err = utils.LoadBaseModels(m.repoPath, m.environmemt)
+			data, err = utils.LoadBaseModels(m.repoPath, m.environment)
 		}
 
 	case GpuPool:
 		if m.dataset.GpuPools == nil {
-			data, err = utils.LoadGpuPools(m.repoPath, m.environmemt)
+			data, err = utils.LoadGpuPools(m.repoPath, m.environment)
 		}
 
 	case GpuNode:
 		if m.dataset.GpuNodeMap == nil {
-			data, err = utils.LoadGpuNodes(m.kubeConfig, m.environmemt)
+			data, err = utils.LoadGpuNodes(m.kubeConfig, m.environment)
 		}
 
 	case DedicatedAICluster:
 		if m.dataset.DedicatedAIClusterMap == nil {
-			data, err = utils.LoadDedicatedAIClusters(m.kubeConfig, m.environmemt)
+			data, err = utils.LoadDedicatedAIClusters(m.kubeConfig, m.environment)
 		}
 	}
 
@@ -615,7 +615,7 @@ func centerText(text string, width, height int) string {
 
 func (m *Model) infoView() string {
 	keys := []string{"Realm:", "Type:", "Region:"}
-	values := []string{m.environmemt.Realm, m.environmemt.Type, m.environmemt.Region}
+	values := []string{m.environment.Realm, m.environment.Type, m.environment.Region}
 
 	content := lipgloss.JoinHorizontal(lipgloss.Top,
 		infoKeyStyle.Render(strings.Join(keys, "\n")),
