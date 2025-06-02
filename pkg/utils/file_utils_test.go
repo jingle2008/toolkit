@@ -15,9 +15,9 @@ func TestSafeReadFile(t *testing.T) {
 	jsonFile := filepath.Join(tmpDir, "b.json")
 	mdFile := filepath.Join(tmpDir, "c.md")
 
-	os.WriteFile(txtFile, []byte("foo"), 0644)
-	os.WriteFile(jsonFile, []byte("{\"bar\":1}"), 0644)
-	os.WriteFile(mdFile, []byte("# md"), 0644)
+	os.WriteFile(txtFile, []byte("foo"), 0o644)
+	os.WriteFile(jsonFile, []byte("{\"bar\":1}"), 0o644)
+	os.WriteFile(mdFile, []byte("# md"), 0o644)
 
 	// Allowed extension
 	data, err := SafeReadFile(txtFile, tmpDir, allowExt)
@@ -30,7 +30,7 @@ func TestSafeReadFile(t *testing.T) {
 
 	// File outside baseDir
 	outsideFile := filepath.Join(os.TempDir(), "outside.txt")
-	os.WriteFile(outsideFile, []byte("bad"), 0644)
+	os.WriteFile(outsideFile, []byte("bad"), 0o644)
 	_, err = SafeReadFile(outsideFile, tmpDir, allowExt)
 	assert.Error(t, err)
 

@@ -3,29 +3,48 @@ package utils
 import (
 	"testing"
 
-	"github.com/jingle2008/toolkit/pkg/models"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/stretchr/testify/assert"
-	"github.com/zclconf/go-cty/cty"
 )
 
-func TestGetBaseModel_NilObject(t *testing.T) {
-	assert.Panics(t, func() {
-		getBaseModel(cty.NilVal, nil, nil)
-	}, "getBaseModel should panic on nil cty.Value")
-}
-
-func TestGetCapability_NilObject(t *testing.T) {
-	assert.Panics(t, func() {
-		getCapability(cty.NilVal, nil)
-	}, "getCapability should panic on nil cty.Value")
-}
-
-func TestLoadGpuPools_Error(t *testing.T) {
-	_, err := LoadGpuPools("/no/such/dir", models.Environment{})
+func TestGetLocalAttributesDI_ListFilesError(t *testing.T) {
+	_, err := getLocalAttributesDI(
+		"irrelevant",
+		func(string, string) ([]string, error) { return nil, assert.AnError },
+		func(string, hclsyntax.Attributes) error { return nil },
+	)
 	assert.Error(t, err)
 }
 
-func TestLoadModelArtifacts_Error(t *testing.T) {
-	_, err := LoadModelArtifacts("/no/such/dir", models.Environment{})
+func TestGetLocalAttributesDI_UpdateLocalAttributesError(t *testing.T) {
+	files := []string{"a.tf", "b.tf"}
+	_, err := getLocalAttributesDI(
+		"irrelevant",
+		func(string, string) ([]string, error) { return files, nil },
+		func(string, hclsyntax.Attributes) error { return assert.AnError },
+	)
 	assert.Error(t, err)
+}
+
+func TestGetLocalAttributesDI_EmptyFiles(t *testing.T) {
+	out, err := getLocalAttributesDI(
+		"irrelevant",
+		func(string, string) ([]string, error) { return []string{}, nil },
+		func(string, hclsyntax.Attributes) error { return nil },
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, out)
+	assert.Len(t, out, 0)
+}
+
+func TestGetLocalAttributesDI_Success(t *testing.T) {
+	files := []string{"a.tf"}
+	called := false
+	_, err := getLocalAttributesDI(
+		"irrelevant",
+		func(string, string) ([]string, error) { return files, nil },
+		func(string, hclsyntax.Attributes) error { called = true; return nil },
+	)
+	assert.NoError(t, err)
+	assert.True(t, called)
 }

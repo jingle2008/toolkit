@@ -46,19 +46,22 @@ func listSubDirs(dirPath string) ([]string, error) {
 	return subDirs, nil
 }
 
-func loadOverrides[T models.NamedItem](dirPath string) ([]T, error) {
-	overrideFiles, err := ListFiles(dirPath, ".json")
+func loadOverridesDI[T models.NamedItem](
+	dirPath string,
+	listFilesFunc func(string, string) ([]string, error),
+	loadFileFunc func(string) (*T, error),
+) ([]T, error) {
+	overrideFiles, err := listFilesFunc(dirPath, ".json")
 	if err != nil {
 		return nil, err
 	}
 
 	overrides := make([]T, 0, len(overrideFiles))
 	for _, file := range overrideFiles {
-		override, err := LoadFile[T](file)
+		override, err := loadFileFunc(file)
 		if err != nil {
 			return nil, err
 		}
-
 		overrides = append(overrides, *override)
 	}
 
@@ -66,25 +69,36 @@ func loadOverrides[T models.NamedItem](dirPath string) ([]T, error) {
 	return overrides, nil
 }
 
-func loadTenancyOverrides[T models.NamedItem](root, realm, name string) (map[string][]T, error) {
+func loadOverrides[T models.NamedItem](dirPath string) ([]T, error) {
+	return loadOverridesDI[T](dirPath, ListFiles, LoadFile[T])
+}
+
+func loadTenancyOverridesDI[T models.NamedItem](
+	root, realm, name string,
+	listSubDirsFunc func(string) ([]string, error),
+	loadOverridesFunc func(string) ([]T, error),
+) (map[string][]T, error) {
 	results := make(map[string][]T)
 
 	realmDir := filepath.Join(root, name, regionalValuesDir, realm)
-	tenants, err := listSubDirs(realmDir)
+	tenants, err := listSubDirsFunc(realmDir)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, tenant := range tenants {
-		overrides, err := loadOverrides[T](filepath.Join(realmDir, tenant))
+		overrides, err := loadOverridesFunc(filepath.Join(realmDir, tenant))
 		if err != nil {
 			return nil, err
 		}
-
 		results[tenant] = overrides
 	}
 
 	return results, nil
+}
+
+func loadTenancyOverrides[T models.NamedItem](root, realm, name string) (map[string][]T, error) {
+	return loadTenancyOverridesDI[T](root, realm, name, listSubDirs, loadOverrides[T])
 }
 
 func loadRegionalOverrides[T models.NamedItem](root, realm, name string) ([]T, error) {

@@ -12,7 +12,7 @@ func TestLoadFile_JSON(t *testing.T) {
 		A int `json:"a"`
 	}
 	tmp := t.TempDir() + "/foo.json"
-	os.WriteFile(tmp, []byte(`{"a":42}`), 0644)
+	os.WriteFile(tmp, []byte(`{"a":42}`), 0o644)
 	val, err := LoadFile[Foo](tmp)
 	assert.NoError(t, err)
 	assert.Equal(t, 42, val.A)
@@ -23,7 +23,7 @@ func TestLoadFile_BadExt(t *testing.T) {
 		A int `json:"a"`
 	}
 	tmp := t.TempDir() + "/foo.bad"
-	os.WriteFile(tmp, []byte(`{"a":42}`), 0644)
+	os.WriteFile(tmp, []byte(`{"a":42}`), 0o644)
 	_, err := LoadFile[Foo](tmp)
 	assert.Error(t, err)
 }
@@ -33,7 +33,7 @@ func TestLoadFile_BadJSON(t *testing.T) {
 		A int `json:"a"`
 	}
 	tmp := t.TempDir() + "/foo.json"
-	os.WriteFile(tmp, []byte(`{notjson}`), 0644)
+	os.WriteFile(tmp, []byte(`{notjson}`), 0o644)
 	_, err := LoadFile[Foo](tmp)
 	assert.Error(t, err)
 }

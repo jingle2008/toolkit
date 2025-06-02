@@ -12,8 +12,8 @@ func TestListFiles(t *testing.T) {
 	// create a .txt file and a .go file
 	txtFile := dir + "/foo.txt"
 	goFile := dir + "/bar.go"
-	os.WriteFile(txtFile, []byte("x"), 0644)
-	os.WriteFile(goFile, []byte("y"), 0644)
+	os.WriteFile(txtFile, []byte("x"), 0o644)
+	os.WriteFile(goFile, []byte("y"), 0o644)
 
 	files, err := ListFiles(dir, ".txt")
 	assert.NoError(t, err)

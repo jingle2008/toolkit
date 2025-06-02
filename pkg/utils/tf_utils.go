@@ -53,20 +53,28 @@ var localFuncMap = map[string]function.Function{
 	"flatten":  stdlib.FlattenFunc,
 }
 
-func getLocalAttributes(dirPath string) (hclsyntax.Attributes, error) {
-	tfFiles, err := ListFiles(dirPath, ".tf")
+func getLocalAttributesDI(
+	dirPath string,
+	listFilesFunc func(string, string) ([]string, error),
+	updateLocalAttributesFunc func(string, hclsyntax.Attributes) error,
+) (hclsyntax.Attributes, error) {
+	tfFiles, err := listFilesFunc(dirPath, ".tf")
 	if err != nil {
 		return nil, err
 	}
 
 	attributes := make(hclsyntax.Attributes)
 	for _, file := range tfFiles {
-		if err := updateLocalAttributes(file, attributes); err != nil {
+		if err := updateLocalAttributesFunc(file, attributes); err != nil {
 			return nil, err
 		}
 	}
 
 	return attributes, nil
+}
+
+func getLocalAttributes(dirPath string) (hclsyntax.Attributes, error) {
+	return getLocalAttributesDI(dirPath, ListFiles, updateLocalAttributes)
 }
 
 func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) error {

@@ -6,11 +6,20 @@ import (
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
+type gpuHelper interface {
+	ListGpuNodes() ([]models.GpuNode, error)
+	ListDedicatedAIClusters() ([]models.DedicatedAICluster, error)
+}
+
+var helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
+	return NewK8sHelper(configFile, kubeContext)
+}
+
 /*
 LoadGpuNodes loads GPU node information from the given config file and environment.
 */
 func LoadGpuNodes(configFile string, env models.Environment) (map[string][]models.GpuNode, error) {
-	k8sHelper, err := NewK8sHelper(configFile, env.GetKubeContext())
+	k8sHelper, err := helperFactory(configFile, env.GetKubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +50,7 @@ func LoadGpuNodes(configFile string, env models.Environment) (map[string][]model
 LoadDedicatedAIClusters loads DedicatedAICluster information from the given config file and environment.
 */
 func LoadDedicatedAIClusters(configFile string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	k8sHelper, err := NewK8sHelper(configFile, env.GetKubeContext())
+	k8sHelper, err := helperFactory(configFile, env.GetKubeContext())
 	if err != nil {
 		return nil, err
 	}
