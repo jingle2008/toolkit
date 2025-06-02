@@ -131,14 +131,16 @@ const (
 	RegionEUDccZurich1 Region = "eu-dcc-zurich-1"
 	// RegionMEAbudhabi3 region Abudhabi
 	RegionMEAbudhabi3 Region = "me-abudhabi-3"
-	// Tacoma, not part of SDK
 	// RegionTacoma is a region not part of the official SDK.
 	RegionTacoma Region = "us-tacoma-1"
 	// RegionAPDccTokyo1 is a region not part of the official SDK.
-	RegionAPDccTokyo1     Region = "ap-dcc-tokyo-1"
-	RegionUSGovSterling2  Region = "us-gov-sterling-2"
+	RegionAPDccTokyo1 Region = "ap-dcc-tokyo-1"
+	// RegionUSGovSterling2 is a region not part of the official SDK.
+	RegionUSGovSterling2 Region = "us-gov-sterling-2"
+	// RegionUSGovFortworth1 is a region not part of the official SDK.
 	RegionUSGovFortworth1 Region = "us-gov-fortworth-1"
-	RegionUSDccPhoenix1   Region = "us-dcc-phoenix-1"
+	// RegionUSDccPhoenix1 is a region not part of the official SDK.
+	RegionUSDccPhoenix1 Region = "us-dcc-phoenix-1"
 )
 
 var shortNameRegion = map[string]Region{

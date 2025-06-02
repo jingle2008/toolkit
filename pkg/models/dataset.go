@@ -22,7 +22,7 @@ type Dataset struct {
 	DedicatedAIClusterMap             map[string][]DedicatedAICluster
 }
 
-// // BuildTenantIdSuffixMap builds a map from tenant ID suffix to tenant name.
+// BuildTenantIDSuffixMap builds a map from tenant ID suffix to tenant name.
 func (d *Dataset) BuildTenantIDSuffixMap() map[string]string {
 	suffixMap := make(map[string]string)
 

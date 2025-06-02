@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// GPUProperty is the Kubernetes resource name for GPU.
 const GPUProperty = "nvidia.com/gpu"
 
 // K8sHelper provides helpers for interacting with Kubernetes clusters.

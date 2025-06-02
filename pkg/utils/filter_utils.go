@@ -32,7 +32,7 @@ func IsMatch(item models.Filterable, filter string, ignoreCase bool) bool {
 	return false
 }
 
-// perform action on items in slice that match the filter and name
+// FilterSlice perform action on items in slice that match the filter and name
 // return false in action to stop further processing
 func FilterSlice[T models.NamedFilterable](items []T, name *string, filter string,
 	action func(int, T) bool,
@@ -44,7 +44,7 @@ func FilterSlice[T models.NamedFilterable](items []T, name *string, filter strin
 				return
 			}
 
-			idx += 1
+			idx++
 		}
 	}
 }
@@ -76,7 +76,7 @@ func filterMap[T models.NamedFilterable](m map[string][]T, name *string,
 					return
 				}
 
-				idx += 1
+				idx++
 			}
 		}
 	}

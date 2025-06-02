@@ -59,7 +59,7 @@ func (o ConsolePropertyRegionalOverride) GetValue() string {
 	return o.Values[0].Value
 }
 
-// GetTenantId returns the tenant ID of the console property tenancy override.
+// GetTenantID returns the tenant ID of the console property tenancy override.
 func (o ConsolePropertyTenancyOverride) GetTenantID() string {
 	return o.TenantID
 }

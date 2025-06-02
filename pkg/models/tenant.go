@@ -16,7 +16,7 @@ func (t Tenant) GetName() string {
 	return t.Name
 }
 
-// // GetTenantID returns the tenant ID string.
+// GetTenantID returns the tenant ID string.
 func (t Tenant) GetTenantID() string {
 	if len(t.IDs) > 1 {
 		return fmt.Sprintf("%s (+%d)", t.IDs[0], len(t.IDs)-1)

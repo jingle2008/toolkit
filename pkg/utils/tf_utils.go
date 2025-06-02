@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -323,7 +322,11 @@ func loadChartValuesMap(repoPath string) (map[string]*models.ChartValues, error)
 
 	result := make(map[string]*models.ChartValues)
 	for _, file := range files {
-		yamlData, err := os.ReadFile(file)
+		yamlData, err := SafeReadFile(
+			file,
+			dirPath,
+			map[string]struct{}{".yaml": {}, ".yml": {}},
+		)
 		if err != nil {
 			log.Println("failed to read chart values", err)
 			continue
