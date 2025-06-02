@@ -7,6 +7,7 @@ import (
 )
 
 func TestBaseModel_Getters(t *testing.T) {
+	t.Parallel()
 	bm := BaseModel{
 		Type:     "testType",
 		Name:     "testName",

@@ -11,6 +11,10 @@ linters:
     - ineffassign
     - misspell
     - wastedassign
+    - paralleltest
+    - testpackage
+    - gocritic
+    - gosec
   presets:
     - bugs
 issues:

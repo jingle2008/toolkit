@@ -28,6 +28,7 @@ func TestDefinitionInterfaces(_ *testing.T) {
 }
 
 func TestLimitDefinitionGroup_AndOthers(t *testing.T) {
+	t.Parallel()
 	ldg := LimitDefinitionGroup{}
 	assert.IsType(t, []LimitDefinition{}, ldg.Values)
 

@@ -36,6 +36,10 @@ cover-int:
 	go tool cover -html=coverage-int.out -o coverage-int.html
 	@echo "Open coverage-int.html in your browser to view the integration test report."
 
+cover-check:
+	go test ./... -covermode=atomic -coverprofile=coverage.out
+	go tool cover -func=coverage.out | awk '/total:/ {if ($$3+0 < 80) {print "Coverage below 80%"; exit 1}}'
+
 LINT_VERSION ?= v1.64.8
 
 install-lint:

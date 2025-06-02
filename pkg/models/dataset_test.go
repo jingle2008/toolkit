@@ -7,6 +7,7 @@ import (
 )
 
 func TestDataset_BuildTenantIDSuffixMap(t *testing.T) {
+	t.Parallel()
 	ds := &Dataset{
 		Tenants: []Tenant{
 			{Name: "tenant1", IDs: []string{"id.tenant1"}},

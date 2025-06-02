@@ -63,24 +63,6 @@ func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
 	return helper, nil
 }
 
-/*
-NewK8sHelperWithClients allows injecting mock clients for testability.
-*/
-func NewK8sHelperWithClients(configFile, context string, clientsetFunc func(*rest.Config) (KubernetesClient, error), dynamicFunc func(*rest.Config) (DynamicClient, error)) (*K8sHelper, error) {
-	helper := &K8sHelper{
-		configFile:    configFile,
-		clientsetFunc: clientsetFunc,
-		dynamicFunc:   dynamicFunc,
-	}
-	if configFile != "" && context != "" {
-		err := helper.ChangeContext(context)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return helper, nil
-}
-
 // Default implementations for production.
 func defaultKubernetesClient(cfg *rest.Config) (KubernetesClient, error) {
 	cs, err := kubernetes.NewForConfig(cfg)

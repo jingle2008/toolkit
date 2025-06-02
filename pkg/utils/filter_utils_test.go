@@ -15,6 +15,7 @@ func (t testStruct) GetName() string               { return t.name }
 func (t testStruct) GetFilterableFields() []string { return []string{t.name, t.value} }
 
 func TestFilterSlice_Basic(t *testing.T) {
+	t.Parallel()
 	items := []testStruct{{"foo", "bar"}, {"baz", "qux"}}
 	name := "foo"
 	filter := ""
@@ -28,6 +29,7 @@ func TestFilterSlice_Basic(t *testing.T) {
 }
 
 func TestFilterSlice_Empty(t *testing.T) {
+	t.Parallel()
 	items := []testStruct{}
 	var out []testStruct
 	FilterSlice(items, nil, "", func(_ int, item testStruct) bool {
@@ -38,6 +40,7 @@ func TestFilterSlice_Empty(t *testing.T) {
 }
 
 func TestFilterSlice_CaseInsensitive(t *testing.T) {
+	t.Parallel()
 	items := []testStruct{{"Foo", "Bar"}, {"baz", "qux"}}
 	var out []testStruct
 	FilterSlice(items, nil, "foo", func(_ int, item testStruct) bool {
@@ -49,6 +52,7 @@ func TestFilterSlice_CaseInsensitive(t *testing.T) {
 }
 
 func TestFilterSlice_EmptyFilterReturnsAll(t *testing.T) {
+	t.Parallel()
 	items := []testStruct{{"a", "b"}, {"c", "d"}}
 	var out []testStruct
 	FilterSlice(items, nil, "", func(_ int, item testStruct) bool {
@@ -59,6 +63,7 @@ func TestFilterSlice_EmptyFilterReturnsAll(t *testing.T) {
 }
 
 func TestFindByName(t *testing.T) {
+	t.Parallel()
 	items := []testStruct{{"foo", "bar"}, {"baz", "qux"}}
 	ptr := FindByName(items, "baz")
 	assert.NotNil(t, ptr)
@@ -68,6 +73,7 @@ func TestFindByName(t *testing.T) {
 }
 
 func TestIsMatch(t *testing.T) {
+	t.Parallel()
 	item := testStruct{"foo", "bar"}
 	assert.True(t, IsMatch(item, "foo", false))
 	assert.True(t, IsMatch(item, "bar", false))
@@ -77,6 +83,7 @@ func TestIsMatch(t *testing.T) {
 }
 
 func TestFilterMap_Basic(t *testing.T) {
+	t.Parallel()
 	m := map[string][]testStruct{
 		"a": {{"foo", "bar"}},
 		"b": {{"baz", "qux"}},
@@ -86,7 +93,24 @@ func TestFilterMap_Basic(t *testing.T) {
 }
 
 func TestFilterMap_Empty(t *testing.T) {
+	t.Parallel()
 	m := map[string][]testStruct{}
 	out := FilterMap(m, nil, nil, "", func(_ string, item testStruct) testStruct { return item })
 	assert.Empty(t, out)
+}
+
+func BenchmarkFilterSlice(b *testing.B) {
+	items := make([]testStruct, 1000)
+	for i := 0; i < 1000; i++ {
+		items[i] = testStruct{name: "foo", value: "bar"}
+	}
+	name := "foo"
+	filter := ""
+	for n := 0; n < b.N; n++ {
+		var out []testStruct
+		FilterSlice(items, &name, filter, func(_ int, item testStruct) bool {
+			out = append(out, item)
+			return true
+		})
+	}
 }
