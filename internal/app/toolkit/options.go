@@ -5,7 +5,6 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/glamour"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -83,9 +82,16 @@ func WithViewport(vp *viewport.Model) ModelOption {
 	}
 }
 
-// WithRenderer sets the glamour.TermRenderer.
-func WithRenderer(r *glamour.TermRenderer) ModelOption {
+// WithRenderer sets the Renderer implementation for the Model.
+func WithRenderer(r Renderer) ModelOption {
 	return func(m *Model) {
 		m.renderer = r
+	}
+}
+
+// WithLoader sets the Loader implementation for the Model.
+func WithLoader(loader Loader) ModelOption {
+	return func(m *Model) {
+		m.loader = loader
 	}
 }

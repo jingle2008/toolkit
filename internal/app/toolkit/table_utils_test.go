@@ -248,10 +248,7 @@ func Test_getTableRows_and_scoped_items(t *testing.T) {
 				{
 					Name:    "LimitA",
 					Regions: []string{"us-phoenix-1"},
-					Values: []struct {
-						Min int `json:"min"`
-						Max int `json:"max"`
-					}{{Min: 1, Max: 10}},
+					Values:  []models.LimitRange{{Min: 1, Max: 10}},
 				},
 			},
 		},
@@ -300,10 +297,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 	lto := models.LimitTenancyOverride{
 		Name:    "LimitA",
 		Regions: []string{"us-phoenix-1"},
-		Values: []struct {
-			Min int `json:"min"`
-			Max int `json:"max"`
-		}{{Min: 1, Max: 10}},
+		Values:  []models.LimitRange{{Min: 1, Max: 10}},
 	}
 	row2 := getTableRow("TenantA", lto)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, row2)
