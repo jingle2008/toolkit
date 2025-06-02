@@ -8,12 +8,14 @@ import (
 )
 
 func Test_centerText_returns_centered_text(t *testing.T) {
+	t.Parallel()
 	result := centerText("hello", 10, 3)
 	assert.Contains(t, result, "hello")
 	assert.GreaterOrEqual(t, len(result), 10)
 }
 
 func Test_NewModel_initializes_fields(t *testing.T) {
+	t.Parallel()
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
 	m := NewModel(
 		WithRepoPath("/repo"),
@@ -31,6 +33,7 @@ func Test_NewModel_initializes_fields(t *testing.T) {
 }
 
 func Test_Model_contextString_and_infoView(t *testing.T) {
+	t.Parallel()
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
 	m := NewModel(
 		WithRepoPath("/repo"),
@@ -52,6 +55,7 @@ func Test_Model_contextString_and_infoView(t *testing.T) {
 }
 
 func Test_Model_statusView_renders(t *testing.T) {
+	t.Parallel()
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
 	m := NewModel(
 		WithRepoPath("/repo"),

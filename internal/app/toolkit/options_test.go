@@ -13,6 +13,7 @@ import (
 )
 
 func TestWithRepoPath(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	opt := WithRepoPath("foo/bar")
 	opt(m)
@@ -20,6 +21,7 @@ func TestWithRepoPath(t *testing.T) {
 }
 
 func TestWithKubeConfig(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	opt := WithKubeConfig("kube.yaml")
 	opt(m)
@@ -27,6 +29,7 @@ func TestWithKubeConfig(t *testing.T) {
 }
 
 func TestWithEnvironment(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	env := models.Environment{Region: "us-phoenix-1", Type: "dev", Realm: "realmA"}
 	opt := WithEnvironment(env)
@@ -35,6 +38,7 @@ func TestWithEnvironment(t *testing.T) {
 }
 
 func TestWithCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	opt := WithCategory(GpuPool)
 	opt(m)
@@ -42,6 +46,7 @@ func TestWithCategory(t *testing.T) {
 }
 
 func TestWithAppContext(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	ctx := &AppContext{}
 	opt := WithAppContext(ctx)
@@ -50,6 +55,7 @@ func TestWithAppContext(t *testing.T) {
 }
 
 func TestWithViewSize(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	opt := WithViewSize(80, 24)
 	opt(m)
@@ -58,6 +64,7 @@ func TestWithViewSize(t *testing.T) {
 }
 
 func TestWithHelp(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	h := &help.Model{}
 	opt := WithHelp(h)
@@ -66,6 +73,7 @@ func TestWithHelp(t *testing.T) {
 }
 
 func TestWithTable(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	tbl := &table.Model{}
 	opt := WithTable(tbl)
@@ -74,6 +82,7 @@ func TestWithTable(t *testing.T) {
 }
 
 func TestWithTextInput(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	ti := &textinput.Model{}
 	opt := WithTextInput(ti)
@@ -82,6 +91,7 @@ func TestWithTextInput(t *testing.T) {
 }
 
 func TestWithViewport(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	vp := &viewport.Model{}
 	opt := WithViewport(vp)
@@ -90,6 +100,7 @@ func TestWithViewport(t *testing.T) {
 }
 
 func TestWithRenderer(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	r := &glamour.TermRenderer{}
 	opt := WithRenderer(r)

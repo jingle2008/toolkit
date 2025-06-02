@@ -8,5 +8,6 @@ import (
 )
 
 func TestIntegration_Sample(t *testing.T) {
+	t.Parallel()
 	t.Log("Integration test placeholder")
 }

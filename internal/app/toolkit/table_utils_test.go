@@ -9,6 +9,7 @@ import (
 )
 
 func Test_getHeaders_returns_expected_headers(t *testing.T) {
+	t.Parallel()
 	headers := getHeaders(Tenant)
 	assert.NotNil(t, headers)
 	assert.Equal(t, "Name", headers[0].text)
@@ -16,6 +17,7 @@ func Test_getHeaders_returns_expected_headers(t *testing.T) {
 }
 
 func Test_getTenants_returns_rows(t *testing.T) {
+	t.Parallel()
 	tenants := []models.Tenant{
 		{
 			Name:                     "TenantA",
@@ -39,6 +41,7 @@ func Test_getTenants_returns_rows(t *testing.T) {
 }
 
 func Test_getTableRow_DedicatedAICluster(t *testing.T) {
+	t.Parallel()
 	cluster := models.DedicatedAICluster{
 		Name:      "DAC1",
 		Type:      "GPU",
@@ -51,6 +54,7 @@ func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 }
 
 func Test_getEnvironments_returns_rows(t *testing.T) {
+	t.Parallel()
 	envs := []models.Environment{
 		{
 			Type:   "dev",
@@ -70,6 +74,7 @@ func Test_getEnvironments_returns_rows(t *testing.T) {
 }
 
 func Test_getLimitDefinitions_returns_rows(t *testing.T) {
+	t.Parallel()
 	ldg := models.LimitDefinitionGroup{
 		Values: []models.LimitDefinition{
 			{
@@ -95,6 +100,7 @@ func Test_getLimitDefinitions_returns_rows(t *testing.T) {
 }
 
 func Test_getPropertyDefinitions_returns_rows(t *testing.T) {
+	t.Parallel()
 	defs := []mockDefinition{
 		{name: "PropA", desc: "descA", value: "valA"},
 		{name: "PropB", desc: "descB", value: "valB"},
@@ -106,6 +112,7 @@ func Test_getPropertyDefinitions_returns_rows(t *testing.T) {
 }
 
 func Test_getServiceTenancies_returns_rows(t *testing.T) {
+	t.Parallel()
 	tenancies := []models.ServiceTenancy{
 		{
 			Name:        "svcA",
@@ -129,6 +136,7 @@ func Test_getServiceTenancies_returns_rows(t *testing.T) {
 }
 
 func Test_getGpuPools_returns_rows(t *testing.T) {
+	t.Parallel()
 	pools := []models.GpuPool{
 		{
 			Name:         "poolA",
@@ -152,6 +160,7 @@ func Test_getGpuPools_returns_rows(t *testing.T) {
 }
 
 func Test_getBaseModels_returns_rows(t *testing.T) {
+	t.Parallel()
 	baseModels := map[string]*models.BaseModel{
 		"bm1": {
 			Name:      "BM1",
@@ -190,6 +199,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 }
 
 func Test_getModelArtifacts_returns_rows(t *testing.T) {
+	t.Parallel()
 	artifacts := []models.ModelArtifact{
 		{
 			ModelName:       "M1",
@@ -205,6 +215,7 @@ func Test_getModelArtifacts_returns_rows(t *testing.T) {
 }
 
 func Test_getItemKey_and_getItemKeyString(t *testing.T) {
+	t.Parallel()
 	row := table.Row{"TenantX", "DAC1", "GPU", "A100", "4", "Active"}
 	key := getItemKey(DedicatedAICluster, row)
 	assert.Equal(t, models.ScopedItemKey{Scope: "TenantX", Name: "DAC1"}, key)
@@ -213,6 +224,7 @@ func Test_getItemKey_and_getItemKeyString(t *testing.T) {
 }
 
 func Test_findItem_returns_expected(t *testing.T) {
+	t.Parallel()
 	dataset := &models.Dataset{
 		Tenants: []models.Tenant{
 			{Name: "TenantA", IDs: []string{"idA"}},
@@ -227,6 +239,7 @@ func Test_findItem_returns_expected(t *testing.T) {
 }
 
 func Test_getTableRows_and_scoped_items(t *testing.T) {
+	t.Parallel()
 	// Test getTableRows for LimitTenancyOverride (uses getScopedItems)
 	dataset := &models.Dataset{
 		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
@@ -268,6 +281,7 @@ func (m mockOverride) GetValue() string              { return m.value }
 func (m mockOverride) GetFilterableFields() []string { return []string{m.name, m.value} }
 
 func Test_getTableRow_other_types(t *testing.T) {
+	t.Parallel()
 	// GpuNode
 	node := models.GpuNode{
 		NodePool:     "poolA",
@@ -306,6 +320,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 }
 
 func Test_getTableRows_empty_dataset(t *testing.T) {
+	t.Parallel()
 	// Should not panic or return rows for nil dataset
 	defer func() {
 		if r := recover(); r == nil {

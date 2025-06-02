@@ -7,6 +7,7 @@ import (
 )
 
 func TestCategory_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		cat     Category
 		wantStr string
@@ -30,13 +31,16 @@ func TestCategory_String(t *testing.T) {
 		{Category(99), "99"},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.wantStr, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tt.wantStr, tt.cat.String())
 		})
 	}
 }
 
 func TestCategory_IsScope(t *testing.T) {
+	t.Parallel()
 	scopeCases := []Category{
 		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool,
 	}
@@ -46,14 +50,23 @@ func TestCategory_IsScope(t *testing.T) {
 		Environment, ServiceTenancy, GpuNode, DedicatedAICluster,
 	}
 	for _, c := range scopeCases {
-		assert.True(t, c.IsScope(), "%v should be scope", c)
+		c := c
+		t.Run("scope_"+c.String(), func(t *testing.T) {
+			t.Parallel()
+			assert.True(t, c.IsScope(), "%v should be scope", c)
+		})
 	}
 	for _, c := range nonScopeCases {
-		assert.False(t, c.IsScope(), "%v should not be scope", c)
+		c := c
+		t.Run("non_scope_"+c.String(), func(t *testing.T) {
+			t.Parallel()
+			assert.False(t, c.IsScope(), "%v should not be scope", c)
+		})
 	}
 }
 
 func TestCategory_ScopedCategories(t *testing.T) {
+	t.Parallel()
 	type want struct {
 		scope Category
 		want  []Category
@@ -66,8 +79,12 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		{GpuPool, []Category{GpuNode}},
 	}
 	for _, tc := range cases {
-		got := tc.scope.ScopedCategories()
-		assert.ElementsMatch(t, tc.want, got)
+		tc := tc
+		t.Run(tc.scope.String(), func(t *testing.T) {
+			t.Parallel()
+			got := tc.scope.ScopedCategories()
+			assert.ElementsMatch(t, tc.want, got)
+		})
 	}
 	// panic case
 	defer func() {
@@ -79,6 +96,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 }
 
 func TestCategory_IsScopeOf(t *testing.T) {
+	t.Parallel()
 	assert.True(t, Tenant.IsScopeOf(LimitTenancyOverride))
 	assert.True(t, Tenant.IsScopeOf(ConsolePropertyTenancyOverride))
 	assert.True(t, Tenant.IsScopeOf(PropertyTenancyOverride))
@@ -89,6 +107,7 @@ func TestCategory_IsScopeOf(t *testing.T) {
 }
 
 func TestCategory_Definition(t *testing.T) {
+	t.Parallel()
 	assert.Equal(t, LimitDefinition, LimitTenancyOverride.Definition())
 	assert.Equal(t, ConsolePropertyDefinition, ConsolePropertyTenancyOverride.Definition())
 	assert.Equal(t, ConsolePropertyDefinition, ConsolePropertyRegionalOverride.Definition())
