@@ -40,8 +40,8 @@ func WithCategory(category Category) ModelOption {
 	}
 }
 
-// WithContext sets the context field.
-func WithContext(ctx *AppContext) ModelOption {
+// WithAppContext sets the context field.
+func WithAppContext(ctx *AppContext) ModelOption {
 	return func(m *Model) {
 		m.context = ctx
 	}

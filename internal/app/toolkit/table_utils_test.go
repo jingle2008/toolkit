@@ -292,6 +292,27 @@ func Test_getTableRow_other_types(t *testing.T) {
 	}
 	row2 := getTableRow("TenantA", lto)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, row2)
+
+	// PropertyRegionalOverride edge: empty regions and values
+	pro := models.PropertyRegionalOverride{
+		Name:    "PropX",
+		Regions: []string{},
+		Values: []struct {
+			Value string "json:\"value\""
+		}{{Value: "valX"}},
+	}
+	row3 := getTableRow("TenantA", pro)
+	assert.Nil(t, row3)
+}
+
+func Test_getTableRows_empty_dataset(t *testing.T) {
+	// Should not panic or return rows for nil dataset
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("expected panic for nil dataset")
+		}
+	}()
+	_ = getTableRows(nil, Tenant, nil, "")
 }
 
 // mockDefinition implements models.Definition for testing getPropertyDefinitions
