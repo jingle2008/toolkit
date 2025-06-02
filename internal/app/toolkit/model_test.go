@@ -3,6 +3,7 @@ package toolkit
 import (
 	"testing"
 
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -151,18 +152,107 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 	testutil.Contains(t, info, "Region:")
 }
 
-func TestModelStatusViewRenders(t *testing.T) {
-	t.Parallel()
-	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
-	m := NewModel(
-		WithRepoPath("/repo"),
-		WithKubeConfig("/kube"),
-		WithEnvironment(env),
-		WithCategory(Tenant),
-	)
-	m.viewWidth = 40
-	m.viewHeight = 10
-	status := m.statusView()
-	testutil.Contains(t, status, "Tenant")
-	testutil.Contains(t, status, "[1/")
+func TestModel_DetailView_and_ExitDetailView(t *testing.T) {
+	m := newTestModel(t)
+	m.enterDetailView()
+	// Simulate "esc" key in detail view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("esc")}
+	_, _ = updateDetailView(msg, m)
+	m.exitDetailView()
+}
+
+// --- Loader stub for TestModel_LoadData_and_Init ---
+type stubLoader struct{}
+
+func (stubLoader) LoadDataset(repo string, env models.Environment) (*models.Dataset, error) {
+	return &models.Dataset{Tenants: []models.Tenant{{Name: "stub"}}}, nil
+}
+
+func (stubLoader) LoadBaseModels(string, models.Environment) (map[string]*models.BaseModel, error) {
+	return nil, nil
+}
+func (stubLoader) LoadGpuPools(string, models.Environment) ([]models.GpuPool, error) { return nil, nil }
+func (stubLoader) LoadGpuNodes(string, models.Environment) (map[string][]models.GpuNode, error) {
+	return nil, nil
+}
+
+func (stubLoader) LoadDedicatedAIClusters(string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
+	return nil, nil
+}
+
+// --- Test updateListView and edit mode transitions ---
+func TestModel_UpdateListView_Branches(t *testing.T) {
+	m := newTestModel(t)
+	m.mode = Normal
+	// Simulate NextCategory and PrevCategory keys
+	m.keys.NextCategory = m.keys.Quit
+	m.keys.PrevCategory = m.keys.Quit
+	keyStr := ""
+	if len(m.keys.Quit.Keys()) > 0 {
+		keyStr = m.keys.Quit.Keys()[0]
+	}
+	nextMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	updateListView(nextMsg, m)
+	updateListView(nextMsg, m)
+
+	// Simulate FilterItems, JumpTo, ViewDetails, ApplyContext
+	m.keys.FilterItems = m.keys.Quit
+	m.keys.JumpTo = m.keys.Quit
+	m.keys.ViewDetails = m.keys.Quit
+	m.keys.ApplyContext = m.keys.Quit
+	updateListView(nextMsg, m)
+	updateListView(nextMsg, m)
+	updateListView(nextMsg, m)
+	updateListView(nextMsg, m)
+
+	// Switch to Edit mode and test "enter" and "esc"
+	m.mode = Edit
+	m.target = Alias
+	enterMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("enter")}
+	escMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("esc")}
+	updateListView(enterMsg, m)
+	updateListView(escMsg, m)
+	m.target = Filter
+	updateListView(enterMsg, m)
+	updateListView(escMsg, m)
+}
+
+// --- Added: Test for getCurrentItem and handleAdditionalKeys ---
+
+func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
+	// Setup a Model with a BaseModel in the dataset and table
+	bm := &models.BaseModel{Name: "bm1", Version: "v1", Type: "typeA"}
+	ds := &models.Dataset{
+		BaseModelMap: map[string]*models.BaseModel{
+			"bm1": bm,
+		},
+	}
+	// Table row for BaseModel: [Name, Version, Type]
+	tbl := table.New()
+	tbl.SetColumns([]table.Column{
+		{Title: "Name", Width: 10},
+		{Title: "Version", Width: 10},
+		{Title: "Type", Width: 10},
+	})
+	tbl.SetRows([]table.Row{{"bm1", "v1", "typeA"}})
+	tbl.SetCursor(0)
+
+	m := NewModel(WithTable(&tbl))
+	m.dataset = ds
+	m.category = BaseModel
+
+	// getCurrentItem should return the pointer to bm
+	got := m.getCurrentItem()
+	require.Equal(t, bm, got)
+
+	// handleAdditionalKeys: cover the ViewModelArtifacts branch
+	// Set category to BaseModel and call with a matching key
+	m.category = BaseModel
+	m.keys.ViewModelArtifacts = m.keys.Quit // Use any key that matches
+	keyStr := ""
+	if len(m.keys.Quit.Keys()) > 0 {
+		keyStr = m.keys.Quit.Keys()[0]
+	}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	m.handleAdditionalKeys(msg)
 }

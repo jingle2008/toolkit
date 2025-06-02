@@ -380,8 +380,186 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 	}
 	ds := &models.Dataset{}
 	for _, cat := range categories {
-		_ = getHeaders(cat)
+		headers := getHeaders(cat)
 		_ = getTableRows(ds, cat, nil, "")
+		// Extra assertions for coverage
+		if len(headers) > 0 {
+			require.NotEmpty(t, headers[0].text)
+			require.Greater(t, headers[0].ratio, 0.0)
+		}
+	}
+}
+
+func TestAllCategories_HeadersAndRows(t *testing.T) {
+	// Use the same dataset as TestFindItem_AllCategories
+	ds := &models.Dataset{
+		Tenants:          []models.Tenant{{Name: "tenant1"}},
+		Environments:     []models.Environment{{Type: "type1", Region: "region1", Realm: "realm1"}},
+		GpuPools:         []models.GpuPool{{Name: "pool1"}},
+		GpuNodeMap:       map[string][]models.GpuNode{"pool1": {{NodePool: "pool1", Name: "node1"}}},
+		ServiceTenancies: []models.ServiceTenancy{{Name: "svc1"}},
+		BaseModelMap: map[string]*models.BaseModel{
+			"bm1": {Name: "bm1", Version: "v1", Type: "typeA"},
+		},
+		ModelArtifacts: []models.ModelArtifact{{ModelName: "bm1", Name: "artifact1"}},
+		LimitDefinitionGroup: models.LimitDefinitionGroup{
+			Values: []models.LimitDefinition{{Name: "limdef"}},
+		},
+		ConsolePropertyDefinitionGroup: models.ConsolePropertyDefinitionGroup{
+			Values: []models.ConsolePropertyDefinition{{Name: "cpdef"}},
+		},
+		PropertyDefinitionGroup: models.PropertyDefinitionGroup{
+			Values: []models.PropertyDefinition{{Name: "pdef"}},
+		},
+		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
+			"tenant1": {{Name: "limdef", Regions: []string{"us"}, Values: []models.LimitRange{{Min: 1, Max: 2}}}},
+		},
+		ConsolePropertyTenancyOverrideMap: map[string][]models.ConsolePropertyTenancyOverride{
+			"tenant1": {{
+				TenantID: "tenant1",
+				ConsolePropertyRegionalOverride: models.ConsolePropertyRegionalOverride{
+					Name:    "cpdef",
+					Regions: []string{"us"},
+					Values: []struct {
+						Value string `json:"value"`
+					}{{Value: "val"}},
+				},
+			}},
+		},
+		PropertyTenancyOverrideMap: map[string][]models.PropertyTenancyOverride{
+			"tenant1": {{
+				Tag: "tenant1",
+				PropertyRegionalOverride: models.PropertyRegionalOverride{
+					Name:    "pdef",
+					Regions: []string{"us"},
+					Values: []struct {
+						Value string `json:"value"`
+					}{{Value: "val"}},
+				},
+			}},
+		},
+		ConsolePropertyRegionalOverrides: []models.ConsolePropertyRegionalOverride{
+			{Name: "cpdef", Regions: []string{"us"}, Values: []struct {
+				Value string `json:"value"`
+			}{{Value: "val"}}},
+		},
+		PropertyRegionalOverrides: []models.PropertyRegionalOverride{
+			{Name: "pdef", Regions: []string{"us"}, Values: []struct {
+				Value string `json:"value"`
+			}{{Value: "val"}}},
+		},
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"tenant1": {{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"}},
+		},
+	}
+	for cat := Category(0); cat <= DedicatedAICluster; cat++ {
+		headers := getHeaders(cat)
+		if len(headers) > 0 {
+			sum := 0.0
+			for _, h := range headers {
+				require.NotEmpty(t, h.text)
+				require.Greater(t, h.ratio, 0.0)
+				sum += h.ratio
+			}
+			require.InDelta(t, 1.0, sum, 0.1, "header ratios should sum to ~1")
+		}
+		// getTableRows should not panic
+		_ = getTableRows(ds, cat, nil, "")
+	}
+}
+
+// --- Added: Comprehensive findItem test for all categories ---
+
+func TestFindItem_AllCategories(t *testing.T) {
+	// Build a dataset with one entry for each category
+	ds := &models.Dataset{
+		Tenants:          []models.Tenant{{Name: "tenant1"}},
+		Environments:     []models.Environment{{Type: "type1", Region: "region1", Realm: "realm1"}},
+		GpuPools:         []models.GpuPool{{Name: "pool1"}},
+		GpuNodeMap:       map[string][]models.GpuNode{"pool1": {{NodePool: "pool1", Name: "node1"}}},
+		ServiceTenancies: []models.ServiceTenancy{{Name: "svc1"}},
+		BaseModelMap: map[string]*models.BaseModel{
+			"bm1": {Name: "bm1", Version: "v1", Type: "typeA"},
+		},
+		ModelArtifacts: []models.ModelArtifact{{ModelName: "bm1", Name: "artifact1"}},
+		LimitDefinitionGroup: models.LimitDefinitionGroup{
+			Values: []models.LimitDefinition{{Name: "limdef"}},
+		},
+		ConsolePropertyDefinitionGroup: models.ConsolePropertyDefinitionGroup{
+			Values: []models.ConsolePropertyDefinition{{Name: "cpdef"}},
+		},
+		PropertyDefinitionGroup: models.PropertyDefinitionGroup{
+			Values: []models.PropertyDefinition{{Name: "pdef"}},
+		},
+		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
+			"tenant1": {{Name: "limdef", Regions: []string{"us"}, Values: []models.LimitRange{{Min: 1, Max: 2}}}},
+		},
+		ConsolePropertyTenancyOverrideMap: map[string][]models.ConsolePropertyTenancyOverride{
+			"tenant1": {{
+				TenantID: "tenant1",
+				ConsolePropertyRegionalOverride: models.ConsolePropertyRegionalOverride{
+					Name:    "cpdef",
+					Regions: []string{"us"},
+					Values: []struct {
+						Value string `json:"value"`
+					}{{Value: "val"}},
+				},
+			}},
+		},
+		PropertyTenancyOverrideMap: map[string][]models.PropertyTenancyOverride{
+			"tenant1": {{
+				Tag: "tenant1",
+				PropertyRegionalOverride: models.PropertyRegionalOverride{
+					Name:    "pdef",
+					Regions: []string{"us"},
+					Values: []struct {
+						Value string `json:"value"`
+					}{{Value: "val"}},
+				},
+			}},
+		},
+		ConsolePropertyRegionalOverrides: []models.ConsolePropertyRegionalOverride{
+			{Name: "cpdef", Regions: []string{"us"}, Values: []struct {
+				Value string `json:"value"`
+			}{{Value: "val"}}},
+		},
+		PropertyRegionalOverrides: []models.PropertyRegionalOverride{
+			{Name: "pdef", Regions: []string{"us"}, Values: []struct {
+				Value string `json:"value"`
+			}{{Value: "val"}}},
+		},
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"tenant1": {{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"}},
+		},
+	}
+
+	// Table-driven: category, key, want
+	tests := []struct {
+		category Category
+		key      interface{}
+		want     interface{}
+	}{
+		{Tenant, "tenant1", &ds.Tenants[0]},
+		{LimitDefinition, "limdef", &ds.LimitDefinitionGroup.Values[0]},
+		{ConsolePropertyDefinition, "cpdef", &ds.ConsolePropertyDefinitionGroup.Values[0]},
+		{PropertyDefinition, "pdef", &ds.PropertyDefinitionGroup.Values[0]},
+		{LimitTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "limdef"}, &ds.LimitTenancyOverrideMap["tenant1"][0]},
+		{ConsolePropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "cpdef"}, &ds.ConsolePropertyTenancyOverrideMap["tenant1"][0]},
+		{PropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "pdef"}, &ds.PropertyTenancyOverrideMap["tenant1"][0]},
+		{ConsolePropertyRegionalOverride, "cpdef", &ds.ConsolePropertyRegionalOverrides[0]},
+		{PropertyRegionalOverride, "pdef", &ds.PropertyRegionalOverrides[0]},
+		{BaseModel, models.BaseModelKey{Name: "bm1", Version: "v1", Type: "typeA"}, ds.BaseModelMap["bm1"]},
+		{ModelArtifact, "artifact1", &ds.ModelArtifacts[0]},
+		{Environment, "type1-UNKNOWN", &ds.Environments[0]},
+		{ServiceTenancy, "svc1", &ds.ServiceTenancies[0]},
+		{GpuPool, "pool1", &ds.GpuPools[0]},
+		{GpuNode, models.ScopedItemKey{Scope: "pool1", Name: "node1"}, &ds.GpuNodeMap["pool1"][0]},
+		{DedicatedAICluster, models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}, &ds.DedicatedAIClusterMap["tenant1"][0]},
+	}
+
+	for _, tt := range tests {
+		got := findItem(ds, tt.category, tt.key)
+		require.Equal(t, tt.want, got, "category %v", tt.category)
 	}
 }
 
