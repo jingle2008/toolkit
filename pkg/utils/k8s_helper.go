@@ -27,6 +27,20 @@ type K8sHelper struct {
 	context    string
 	configFile string
 	config     *rest.Config
+
+	clientsetFunc func(*rest.Config) (KubernetesClient, error)
+	dynamicFunc   func(*rest.Config) (DynamicClient, error)
+}
+
+// KubernetesClient abstracts the methods used from *kubernetes.Clientset.
+type KubernetesClient interface {
+	CoreV1NodesList(ctx context.Context, opts v1.ListOptions) ([]corev1.Node, error)
+	CoreV1PodsList(ctx context.Context, namespace string, opts v1.ListOptions) ([]corev1.Pod, error)
+}
+
+// DynamicClient abstracts the methods used from dynamic.Interface.
+type DynamicClient interface {
+	ResourceList(ctx context.Context, gvr schema.GroupVersionResource, opts v1.ListOptions) (*unstructured.UnstructuredList, error)
 }
 
 /*
@@ -34,7 +48,9 @@ NewK8sHelper creates a new K8sHelper using the given kubeconfig file and context
 */
 func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
 	helper := &K8sHelper{
-		configFile: configFile,
+		configFile:    configFile,
+		clientsetFunc: defaultKubernetesClient,
+		dynamicFunc:   defaultDynamicClient,
 	}
 
 	if configFile != "" && context != "" {
@@ -45,6 +61,63 @@ func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
 	}
 
 	return helper, nil
+}
+
+// For testability: allow injecting mock clients.
+func NewK8sHelperWithClients(configFile, context string, clientsetFunc func(*rest.Config) (KubernetesClient, error), dynamicFunc func(*rest.Config) (DynamicClient, error)) (*K8sHelper, error) {
+	helper := &K8sHelper{
+		configFile:    configFile,
+		clientsetFunc: clientsetFunc,
+		dynamicFunc:   dynamicFunc,
+	}
+	if configFile != "" && context != "" {
+		err := helper.ChangeContext(context)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return helper, nil
+}
+
+// Default implementations for production.
+func defaultKubernetesClient(cfg *rest.Config) (KubernetesClient, error) {
+	cs, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &realKubernetesClient{cs}, nil
+}
+
+type realKubernetesClient struct{ cs *kubernetes.Clientset }
+
+func (r *realKubernetesClient) CoreV1NodesList(ctx context.Context, opts v1.ListOptions) ([]corev1.Node, error) {
+	list, err := r.cs.CoreV1().Nodes().List(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
+func (r *realKubernetesClient) CoreV1PodsList(ctx context.Context, namespace string, opts v1.ListOptions) ([]corev1.Pod, error) {
+	list, err := r.cs.CoreV1().Pods(namespace).List(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
+func defaultDynamicClient(cfg *rest.Config) (DynamicClient, error) {
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &realDynamicClient{dyn}, nil
+}
+
+type realDynamicClient struct{ dyn dynamic.Interface }
+
+func (r *realDynamicClient) ResourceList(ctx context.Context, gvr schema.GroupVersionResource, opts v1.ListOptions) (*unstructured.UnstructuredList, error) {
+	return r.dyn.Resource(gvr).List(ctx, opts)
 }
 
 /*
@@ -71,14 +144,15 @@ func (k *K8sHelper) ChangeContext(context string) error {
 
 /*
 ListGpuNodes returns a list of GpuNode objects from the current Kubernetes context.
+By default, it sums allocations for three label selectors. For testability, you can override the selectors.
 */
-func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
-	clientset, err := kubernetes.NewForConfig(k.config)
+func (k *K8sHelper) ListGpuNodesWithSelectors(selectors ...string) ([]models.GpuNode, error) {
+	clientset, err := k.clientsetFunc(k.config)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), v1.ListOptions{
+	nodes, err := clientset.CoreV1NodesList(context.TODO(), v1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.present=true",
 	})
 	if err != nil {
@@ -86,28 +160,18 @@ func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
 	}
 
 	gpuAllocationMap := make(map[string]int64)
-	for _, node := range nodeList.Items {
+	for _, node := range nodes {
 		gpuAllocationMap[node.Name] = 0
 	}
 
-	// GPU with no workload
-	if err := updateGpuAllocations(clientset, gpuAllocationMap, "app=dummy"); err != nil {
-		// WARN: updateGpuAllocations dummy
-		log.Printf("WARN: updateGpuAllocations dummy: %v", err)
-	}
-	// GPU with serving workload
-	if err := updateGpuAllocations(clientset, gpuAllocationMap, "component=predictor"); err != nil {
-		// WARN: updateGpuAllocations predictor
-		log.Printf("WARN: updateGpuAllocations predictor: %v", err)
-	}
-	// GPU with training workload
-	if err := updateGpuAllocations(clientset, gpuAllocationMap, "ome.oracle.com/trainingjob"); err != nil {
-		// WARN: updateGpuAllocations trainingjob
-		log.Printf("WARN: updateGpuAllocations trainingjob: %v", err)
+	for _, sel := range selectors {
+		if err := updateGpuAllocations(clientset, gpuAllocationMap, sel); err != nil {
+			log.Printf("WARN: updateGpuAllocations %s: %v", sel, err)
+		}
 	}
 
-	gpuNodes := make([]models.GpuNode, 0, len(nodeList.Items))
-	for _, node := range nodeList.Items {
+	gpuNodes := make([]models.GpuNode, 0, len(nodes))
+	for _, node := range nodes {
 		allocatable, _ := node.Status.Allocatable.Name(GPUProperty, resource.DecimalSI).AsInt64()
 		gpuNodes = append(gpuNodes, models.GpuNode{
 			Name:         node.Name,
@@ -123,11 +187,15 @@ func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
 	return gpuNodes, nil
 }
 
-func updateGpuAllocations(clientset *kubernetes.Clientset,
+// ListGpuNodes is the production version, using all selectors.
+func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
+	return k.ListGpuNodesWithSelectors("app=dummy", "component=predictor", "ome.oracle.com/trainingjob")
+}
+
+func updateGpuAllocations(clientset KubernetesClient,
 	gpuAllocationMap map[string]int64, label string,
 ) error {
-	// Use a field selector to get only pods with GPU requests
-	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), v1.ListOptions{
+	pods, err := clientset.CoreV1PodsList(context.TODO(), "", v1.ListOptions{
 		LabelSelector: label,
 		FieldSelector: "status.phase=Running",
 	})
@@ -135,8 +203,7 @@ func updateGpuAllocations(clientset *kubernetes.Clientset,
 		return err
 	}
 
-	// Process pods
-	for _, pod := range pods.Items {
+	for _, pod := range pods {
 		if _, ok := gpuAllocationMap[pod.Spec.NodeName]; ok {
 			gpuAllocationMap[pod.Spec.NodeName] += calculatePodGPUs(&pod)
 		}
@@ -179,7 +246,7 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 ListDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
 */
 func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, error) {
-	dyn, err := dynamic.NewForConfig(k.config)
+	dyn, err := k.dynamicFunc(k.config)
 	if err != nil {
 		return nil, err
 	}
@@ -197,13 +264,13 @@ func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, erro
 }
 
 // listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
-func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamic.Interface) ([]models.DedicatedAICluster, error) {
+func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn DynamicClient) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.oracle.com",
 		Version:  "v1alpha1",
 		Resource: "dedicatedaiclusters",
 	}
-	list, err := dyn.Resource(gvr).List(ctx, v1.ListOptions{})
+	list, err := dyn.ResourceList(ctx, gvr, v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -241,13 +308,13 @@ func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamic.I
 }
 
 // listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
-func (k *K8sHelper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamic.Interface) ([]models.DedicatedAICluster, error) {
+func (k *K8sHelper) listDedicatedAIClustersV2(ctx context.Context, dyn DynamicClient) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.io",
 		Version:  "v1beta1",
 		Resource: "dedicatedaiclusters",
 	}
-	list, err := dyn.Resource(gvr).List(ctx, v1.ListOptions{})
+	list, err := dyn.ResourceList(ctx, gvr, v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

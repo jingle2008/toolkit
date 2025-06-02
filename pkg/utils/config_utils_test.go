@@ -55,10 +55,10 @@ func TestListSubDirs(t *testing.T) {
 	// create subdirs
 	sub1 := "sub1"
 	sub2 := "sub2"
-	os.Mkdir(filepath.Join(dir, sub1), 0755)
-	os.Mkdir(filepath.Join(dir, sub2), 0755)
+	os.Mkdir(filepath.Join(dir, sub1), 0o755)
+	os.Mkdir(filepath.Join(dir, sub2), 0o755)
 	// create a file
-	ioutil.WriteFile(filepath.Join(dir, "file.txt"), []byte("x"), 0644)
+	ioutil.WriteFile(filepath.Join(dir, "file.txt"), []byte("x"), 0o644)
 
 	dirs, err := listSubDirs(dir)
 	assert.NoError(t, err)
@@ -83,7 +83,7 @@ func TestLoadOverrides_Error(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 	badFile := filepath.Join(dir, "bad.json")
-	os.WriteFile(badFile, []byte("{not valid json"), 0644)
+	os.WriteFile(badFile, []byte("{not valid json"), 0o644)
 	_, err = loadOverrides[models.Tenant](dir)
 	assert.Error(t, err)
 }
