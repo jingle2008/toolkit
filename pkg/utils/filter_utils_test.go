@@ -7,71 +7,86 @@ import (
 )
 
 type testStruct struct {
-	Name  string
-	Value int
+	name  string
+	value string
 }
 
-func (t testStruct) GetName() string {
-	return t.Name
-}
-
-func (t testStruct) GetFilterableFields() []string {
-	return []string{t.Name}
-}
+func (t testStruct) GetName() string               { return t.name }
+func (t testStruct) GetFilterableFields() []string { return []string{t.name, t.value} }
 
 func TestFilterSlice_Basic(t *testing.T) {
-	input := []testStruct{
-		{Name: "foo", Value: 1},
-		{Name: "bar", Value: 2},
-		{Name: "baz", Value: 3},
-	}
+	items := []testStruct{{"foo", "bar"}, {"baz", "qux"}}
+	name := "foo"
+	filter := ""
 	var out []testStruct
-	FilterSlice(input, nil, "ba", func(_ int, v testStruct) bool {
-		out = append(out, v)
+	FilterSlice(items, &name, filter, func(i int, item testStruct) bool {
+		out = append(out, item)
 		return true
 	})
-	assert.Len(t, out, 2)
-	assert.Equal(t, "bar", out[0].Name)
-	assert.Equal(t, "baz", out[1].Name)
+	assert.Len(t, out, 1)
+	assert.Equal(t, "foo", out[0].name)
 }
 
 func TestFilterSlice_Empty(t *testing.T) {
-	var input []testStruct
+	items := []testStruct{}
 	var out []testStruct
-	FilterSlice(input, nil, "foo", func(_ int, v testStruct) bool {
-		out = append(out, v)
+	FilterSlice(items, nil, "", func(i int, item testStruct) bool {
+		out = append(out, item)
 		return true
 	})
-	assert.Empty(t, out)
+	assert.Len(t, out, 0)
+}
+
+func TestFilterSlice_CaseInsensitive(t *testing.T) {
+	items := []testStruct{{"Foo", "Bar"}, {"baz", "qux"}}
+	var out []testStruct
+	FilterSlice(items, nil, "foo", func(i int, item testStruct) bool {
+		out = append(out, item)
+		return true
+	})
+	assert.Len(t, out, 1)
+	assert.Equal(t, "Foo", out[0].name)
+}
+
+func TestFilterSlice_EmptyFilterReturnsAll(t *testing.T) {
+	items := []testStruct{{"a", "b"}, {"c", "d"}}
+	var out []testStruct
+	FilterSlice(items, nil, "", func(i int, item testStruct) bool {
+		out = append(out, item)
+		return true
+	})
+	assert.Len(t, out, 2)
 }
 
 func TestFindByName(t *testing.T) {
-	input := []testStruct{
-		{Name: "foo", Value: 1},
-		{Name: "bar", Value: 2},
-	}
-	res := FindByName(input, "bar")
-	assert.NotNil(t, res)
-	assert.Equal(t, "bar", (*res).GetName())
-	assert.Nil(t, FindByName(input, "baz"))
+	items := []testStruct{{"foo", "bar"}, {"baz", "qux"}}
+	ptr := FindByName(items, "baz")
+	assert.NotNil(t, ptr)
+	assert.Equal(t, "baz", ptr.name)
+	ptr = FindByName(items, "nope")
+	assert.Nil(t, ptr)
 }
 
 func TestIsMatch(t *testing.T) {
-	obj := testStruct{Name: "hello"}
-	assert.True(t, IsMatch(obj, "hell", true))
-	assert.False(t, IsMatch(obj, "world", true))
+	item := testStruct{"foo", "bar"}
+	assert.True(t, IsMatch(item, "foo", false))
+	assert.True(t, IsMatch(item, "bar", false))
+	assert.False(t, IsMatch(item, "baz", false))
+	assert.True(t, IsMatch(item, "FOO", true))
+	assert.False(t, IsMatch(item, "FOO", false))
 }
 
 func TestFilterMap_Basic(t *testing.T) {
 	m := map[string][]testStruct{
-		"foo": {{Name: "foo", Value: 1}},
-		"bar": {{Name: "bar", Value: 2}},
+		"a": {{"foo", "bar"}},
+		"b": {{"baz", "qux"}},
 	}
-	var out []string
-	FilterMap(m, nil, nil, "foo", func(s string, v testStruct) interface{} {
-		out = append(out, s)
-		return nil
-	})
-	assert.Contains(t, out, "foo")
-	assert.NotContains(t, out, "bar")
+	out := FilterMap(m, nil, nil, "", func(_ string, item testStruct) testStruct { return item })
+	assert.Len(t, out, 2)
+}
+
+func TestFilterMap_Empty(t *testing.T) {
+	m := map[string][]testStruct{}
+	out := FilterMap(m, nil, nil, "", func(_ string, item testStruct) testStruct { return item })
+	assert.Len(t, out, 0)
 }

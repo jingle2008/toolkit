@@ -2,43 +2,52 @@ package utils
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadFile_JSON(t *testing.T) {
-	tmpDir := t.TempDir()
 	type Foo struct {
-		Bar int `json:"bar"`
+		A int `json:"a"`
 	}
-	path := filepath.Join(tmpDir, "foo.json")
-	os.WriteFile(path, []byte(`{"bar":42}`), 0644)
-
-	obj, err := LoadFile[Foo](path)
+	tmp := t.TempDir() + "/foo.json"
+	os.WriteFile(tmp, []byte(`{"a":42}`), 0644)
+	val, err := LoadFile[Foo](tmp)
 	assert.NoError(t, err)
-	assert.Equal(t, 42, obj.Bar)
+	assert.Equal(t, 42, val.A)
 }
 
 func TestLoadFile_BadExt(t *testing.T) {
-	tmpDir := t.TempDir()
 	type Foo struct {
-		Bar int `json:"bar"`
+		A int `json:"a"`
 	}
-	path := filepath.Join(tmpDir, "foo.txt")
-	os.WriteFile(path, []byte(`{"bar":42}`), 0644)
+	tmp := t.TempDir() + "/foo.bad"
+	os.WriteFile(tmp, []byte(`{"a":42}`), 0644)
+	_, err := LoadFile[Foo](tmp)
+	assert.Error(t, err)
+}
 
-	_, err := LoadFile[Foo](path)
+func TestLoadFile_BadJSON(t *testing.T) {
+	type Foo struct {
+		A int `json:"a"`
+	}
+	tmp := t.TempDir() + "/foo.json"
+	os.WriteFile(tmp, []byte(`{notjson}`), 0644)
+	_, err := LoadFile[Foo](tmp)
 	assert.Error(t, err)
 }
 
 func TestPrettyJSON(t *testing.T) {
 	type Foo struct {
-		Bar int `json:"bar"`
+		A int `json:"a"`
 	}
-	obj := Foo{Bar: 7}
-	out, err := PrettyJSON(obj)
+	out, err := PrettyJSON(Foo{A: 7})
 	assert.NoError(t, err)
-	assert.Contains(t, out, "\"bar\": 7")
+	assert.Contains(t, out, `"a": 7`)
+
+	// error path: non-serializable value
+	ch := make(chan int)
+	_, err = PrettyJSON(ch)
+	assert.Error(t, err)
 }
