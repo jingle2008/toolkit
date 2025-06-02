@@ -7,6 +7,7 @@ import (
 )
 
 func TestDedicatedAICluster_Getters(t *testing.T) {
+	t.Parallel()
 	cluster := DedicatedAICluster{
 		Name:      "cluster1",
 		Type:      "A100",

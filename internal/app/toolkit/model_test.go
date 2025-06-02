@@ -3,18 +3,18 @@ package toolkit
 import (
 	"testing"
 
+	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
-func Test_centerText_returns_centered_text(t *testing.T) {
+func TestCenterTextReturnsCenteredText(t *testing.T) {
 	t.Parallel()
 	result := centerText("hello", 10, 3)
-	assert.Contains(t, result, "hello")
-	assert.GreaterOrEqual(t, len(result), 10)
+	testutil.Contains(t, result, "hello")
+	testutil.GreaterOrEqual(t, len(result), 10)
 }
 
-func Test_NewModel_initializes_fields(t *testing.T) {
+func TestNewModelInitializesFields(t *testing.T) {
 	t.Parallel()
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
 	m := NewModel(
@@ -23,16 +23,16 @@ func Test_NewModel_initializes_fields(t *testing.T) {
 		WithEnvironment(env),
 		WithCategory(Tenant),
 	)
-	assert.NotNil(t, m)
-	assert.Equal(t, "/repo", m.repoPath)
-	assert.Equal(t, "/kube", m.kubeConfig)
-	assert.Equal(t, env, m.environment)
-	assert.Equal(t, Tenant, m.category)
-	assert.NotNil(t, m.table)
-	assert.NotNil(t, m.textInput)
+	testutil.NotNil(t, m)
+	testutil.Equal(t, "/repo", m.repoPath)
+	testutil.Equal(t, "/kube", m.kubeConfig)
+	testutil.Equal(t, env, m.environment)
+	testutil.Equal(t, Tenant, m.category)
+	testutil.NotNil(t, m.table)
+	testutil.NotNil(t, m.textInput)
 }
 
-func Test_Model_contextString_and_infoView(t *testing.T) {
+func TestModelContextStringAndInfoView(t *testing.T) {
 	t.Parallel()
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
 	m := NewModel(
@@ -45,16 +45,16 @@ func Test_Model_contextString_and_infoView(t *testing.T) {
 	m.context = &AppContext{Name: "scopeA", Category: Tenant}
 	m.chosen = false
 	cs := m.contextString()
-	assert.Contains(t, cs, "Limit Tenancy Override")
-	assert.Contains(t, cs, "scopeA")
+	testutil.Contains(t, cs, "Limit Tenancy Override")
+	testutil.Contains(t, cs, "scopeA")
 
 	info := m.infoView()
-	assert.Contains(t, info, "Realm:")
-	assert.Contains(t, info, "Type:")
-	assert.Contains(t, info, "Region:")
+	testutil.Contains(t, info, "Realm:")
+	testutil.Contains(t, info, "Type:")
+	testutil.Contains(t, info, "Region:")
 }
 
-func Test_Model_statusView_renders(t *testing.T) {
+func TestModelStatusViewRenders(t *testing.T) {
 	t.Parallel()
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
 	m := NewModel(
@@ -66,6 +66,6 @@ func Test_Model_statusView_renders(t *testing.T) {
 	m.viewWidth = 40
 	m.viewHeight = 10
 	status := m.statusView()
-	assert.Contains(t, status, "Tenant")
-	assert.Contains(t, status, "[1/")
+	testutil.Contains(t, status, "Tenant")
+	testutil.Contains(t, status, "[1/")
 }

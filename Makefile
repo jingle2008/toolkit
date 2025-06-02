@@ -15,10 +15,16 @@ lint:
 	golangci-lint run ./...
 
 test:
-	go test ./... -race -v
+	go test ./... -race -shuffle=on -count=1 -v
+
+bench:
+	go test -bench=. -benchmem ./...
 
 test-int:
 	go test -tags=integration ./test/integration -v
+
+bench-int:
+	go test -tags=integration -bench=. -benchmem ./test/integration
 
 tidy:
 	go mod tidy

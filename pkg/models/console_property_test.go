@@ -7,6 +7,7 @@ import (
 )
 
 func TestConsolePropertyDefinition_Getters(t *testing.T) {
+	t.Parallel()
 	cpd := ConsolePropertyDefinition{
 		Name:        "cpd1",
 		Description: "desc1",
@@ -19,6 +20,7 @@ func TestConsolePropertyDefinition_Getters(t *testing.T) {
 }
 
 func TestConsolePropertyRegionalOverride_Getters(t *testing.T) {
+	t.Parallel()
 	cpro := ConsolePropertyRegionalOverride{
 		Name:    "cpro1",
 		Regions: []string{"us-phoenix-1", "us-ashburn-1"},
@@ -36,6 +38,7 @@ func TestConsolePropertyRegionalOverride_Getters(t *testing.T) {
 }
 
 func TestConsolePropertyTenancyOverride_GetTenantID(t *testing.T) {
+	t.Parallel()
 	cpto := ConsolePropertyTenancyOverride{
 		TenantID: "tenantX",
 	}

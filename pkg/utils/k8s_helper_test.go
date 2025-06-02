@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/testutil"
@@ -10,7 +12,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"
 )
@@ -25,6 +29,20 @@ func TestNewK8sHelperWithClients(t *testing.T) {
 	helper, err := NewK8sHelper("", "")
 	require.NoError(t, err)
 	assert.NotNil(t, helper)
+}
+
+func TestNewK8sHelper_ChangeContextError(t *testing.T) {
+	// Create a temp file that is not a valid kubeconfig
+	tmp := ""
+	f, err := os.CreateTemp("", "badkubeconfig")
+	require.NoError(t, err)
+	tmp = f.Name()
+	_ = f.Close()
+	defer func() { _ = os.Remove(tmp) }()
+
+	helper, err := NewK8sHelper(tmp, "nonexistent-context")
+	require.Error(t, err)
+	assert.Nil(t, helper)
 }
 
 func TestListGpuNodesWithSelectors_Error(t *testing.T) {
@@ -167,4 +185,80 @@ func TestListGpuNodes_FakeClient(t *testing.T) {
 	assert.True(t, nodes[0].IsReady)
 	assert.Equal(t, "n2", nodes[0].InstanceType)
 	assert.Equal(t, "pool2", nodes[0].NodePool)
+}
+
+// ---- merged from k8s_helper_dynamic_test.go ----
+
+type mockDynamicClient struct {
+	lists map[string]*unstructured.UnstructuredList
+}
+
+func (m *mockDynamicClient) ResourceList(_ context.Context, gvr schema.GroupVersionResource, _ v1.ListOptions) (*unstructured.UnstructuredList, error) {
+	key := gvr.Group + "/" + gvr.Version
+	return m.lists[key], nil
+}
+
+func TestListDedicatedAIClusters(t *testing.T) {
+	helper := &K8sHelper{
+		dynamicFunc: func(_ *rest.Config) (DynamicClient, error) {
+			return &mockDynamicClient{
+				lists: map[string]*unstructured.UnstructuredList{
+					"ome.oracle.com/v1alpha1": {
+						Items: []unstructured.Unstructured{
+							{
+								Object: map[string]interface{}{
+									"metadata": map[string]interface{}{
+										"name": "dac1",
+										"labels": map[string]interface{}{
+											"tenancy-id": "tid1",
+										},
+									},
+									"spec": map[string]interface{}{
+										"type":      "t1",
+										"unitShape": "shape1",
+										"size":      int64(2),
+									},
+									"status": map[string]interface{}{
+										"status": "active",
+									},
+								},
+							},
+						},
+					},
+					"ome.io/v1beta1": {
+						Items: []unstructured.Unstructured{
+							{
+								Object: map[string]interface{}{
+									"metadata": map[string]interface{}{
+										"name": "dac2",
+										"labels": map[string]interface{}{
+											"tenancy-id": "tid2",
+										},
+									},
+									"spec": map[string]interface{}{
+										"profile": "p1",
+										"count":   int64(3),
+									},
+									"status": map[string]interface{}{
+										"dacLifecycleState": "ready",
+									},
+								},
+							},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+	helper.config = nil
+	clusters, err := helper.ListDedicatedAIClusters()
+	require.NoError(t, err)
+	assert.NotNil(t, clusters)
+	assert.GreaterOrEqual(t, len(clusters), 2)
+}
+
+func TestTenantIDFromLabels(t *testing.T) {
+	assert.Equal(t, "tid", tenantIDFromLabels(map[string]interface{}{"tenancy-id": "tid"}))
+	assert.Equal(t, "UNKNOWN_TENANCY", tenantIDFromLabels(map[string]interface{}{}))
+	assert.Equal(t, "UNKNOWN_TENANCY", tenantIDFromLabels(map[string]interface{}{"tenancy-id": 123}))
 }
