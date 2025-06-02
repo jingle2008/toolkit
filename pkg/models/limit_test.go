@@ -32,10 +32,7 @@ func TestLimitTenancyOverride_Getters(t *testing.T) {
 		Regions:  []string{"us-phoenix-1", "us-ashburn-1"},
 		Group:    "group1",
 		TenantID: "tenantX",
-		Values: []struct {
-			Min int `json:"min"`
-			Max int `json:"max"`
-		}{{Min: 2, Max: 8}},
+		Values:   []LimitRange{{Min: 2, Max: 8}},
 	}
 	assert.Equal(t, "CPU", lto.GetName())
 	assert.Equal(t, "tenantX", lto.GetTenantID())

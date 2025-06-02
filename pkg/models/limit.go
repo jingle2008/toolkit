@@ -31,17 +31,19 @@ func (c LimitDefinition) GetFilterableFields() []string {
 	return []string{c.Name, c.Description}
 }
 
+type LimitRange struct {
+	Min int `json:"min"`
+	Max int `json:"max"`
+}
+
 // LimitTenancyOverride represents a tenancy override for a limit.
 type LimitTenancyOverride struct {
-	Realms   []string `json:"realms"`
-	Name     string   `json:"name"`
-	Regions  []string `json:"regions"`
-	Group    string   `json:"group"`
-	TenantID string   `json:"tenant_id"`
-	Values   []struct {
-		Min int `json:"min"`
-		Max int `json:"max"`
-	} `json:"values"`
+	Realms   []string     `json:"realms"`
+	Name     string       `json:"name"`
+	Regions  []string     `json:"regions"`
+	Group    string       `json:"group"`
+	TenantID string       `json:"tenant_id"`
+	Values   []LimitRange `json:"values"`
 }
 
 // GetName returns the name of the limit tenancy override.

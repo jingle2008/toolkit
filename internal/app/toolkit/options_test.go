@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/glamour"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -99,10 +98,16 @@ func TestWithViewport(t *testing.T) {
 	assert.Equal(t, vp, m.viewport)
 }
 
+type mockRenderer struct{}
+
+func (mockRenderer) RenderJSON(data interface{}, width int) (string, error) {
+	return "mock", nil
+}
+
 func TestWithRenderer(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	r := &glamour.TermRenderer{}
+	r := mockRenderer{}
 	opt := WithRenderer(r)
 	opt(m)
 	assert.Equal(t, r, m.renderer)

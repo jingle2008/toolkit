@@ -16,16 +16,10 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 )
-
-type header struct {
-	text  string
-	ratio float64
-}
 
 type (
 	errMsg    struct{ err error }
@@ -53,7 +47,8 @@ type Model struct {
 	chosen      bool
 	choice      models.ItemKey
 	viewport    *viewport.Model
-	renderer    *glamour.TermRenderer
+	renderer    Renderer
+	loader      Loader
 	reLayout    bool        // layout needs to be updated
 	context     *AppContext // selected context
 	keys        keyMap
@@ -110,7 +105,6 @@ var categoryMap = map[string]Category{
 	"dac":  DedicatedAICluster,
 }
 
-// NewModel creates and initializes a new Model instance using functional options.
 func NewModel(opts ...ModelOption) *Model {
 	m := &Model{
 		mode:   Normal,
@@ -123,6 +117,12 @@ func NewModel(opts ...ModelOption) *Model {
 		opt(m)
 	}
 
+	if m.loader == nil {
+		m.loader = ProductionLoader{}
+	}
+	if m.renderer == nil {
+		m.renderer = ProductionRenderer{}
+	}
 	// Set up defaults if not set by options
 	if m.table == nil {
 		t := table.New(table.WithFocused(true))
@@ -183,18 +183,21 @@ func (m *Model) Init() tea.Cmd {
 
 // Update handles incoming messages and updates the model state.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	return m.reduce(msg)
+}
+
+// reduce is a pure state reducer for Model, used for testability.
+func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
 		}
-
 	case tea.WindowSizeMsg:
 		m.reLayout = true
 		m.updateLayout(msg.Width, msg.Height)
 	}
-
 	if !m.chosen {
 		return updateListView(msg, m)
 	}
@@ -479,32 +482,17 @@ func (m *Model) updateContent(width int) {
 	}
 
 	var err error
-	if m.renderer == nil {
-		m.renderer, err = glamour.NewTermRenderer(
-			glamour.WithAutoStyle(),
-			glamour.WithWordWrap(width),
-		)
-		if err != nil {
-			wrappedErr := fmt.Errorf("Error encountered creating TermRenderer: %w", err)
-			log.Println(wrappedErr)
-			return
-		}
-	}
-
 	item := findItem(m.dataset, m.category, m.choice)
 	content, err := utils.PrettyJSON(item)
 	if err != nil {
 		content = err.Error()
 	}
-
-	details := fmt.Sprintf("```json\n%s\n```", content)
-	str, err := m.renderer.Render(details)
+	str, err := m.renderer.RenderJSON(content, width)
 	if err != nil {
 		wrappedErr := fmt.Errorf("Error encountered rendering content: %w", err)
 		log.Println(wrappedErr)
 		return
 	}
-
 	m.viewport.SetContent(str)
 }
 
