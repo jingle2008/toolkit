@@ -4,7 +4,6 @@
 package toolkit
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"math"
@@ -42,23 +41,23 @@ type Model struct {
 	viewWidth   int
 	dataset     *models.Dataset
 	err         error
-	table       table.Model
+	table       *table.Model
 	styles      table.Styles
 	category    Category
 	headers     []header
 	target      EditTarget
 	mode        StatusMode
-	textInput   textinput.Model
+	textInput   *textinput.Model
 	curFilter   string
 	newFilter   string
 	chosen      bool
 	choice      models.ItemKey
-	viewport    viewport.Model
+	viewport    *viewport.Model
 	renderer    *glamour.TermRenderer
 	reLayout    bool        // layout needs to be updated
 	context     *AppContext // selected context
 	keys        keyMap
-	help        help.Model
+	help        *help.Model
 	kubeConfig  string
 }
 
@@ -111,56 +110,59 @@ var categoryMap = map[string]Category{
 	"dac":  DedicatedAICluster,
 }
 
-// NewModel creates and initializes a new Model instance.
-func NewModel(ctx context.Context, repoPath, kubeConfig string, env models.Environment, category Category) *Model {
-	t := table.New(
-		table.WithFocused(true),
-	)
-
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(true)
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
-	t.SetStyles(s)
-
-	ti := textinput.New()
-	ti.CharLimit = 256
-	ti.Prompt = "🐶> "
-
-	vp := viewport.New(20, 20)
-	vp.Style = lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("62"))
-
-	hm := help.New()
-	hm.ShowAll = true
-	hm.Styles.FullKey = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("33"))
-	hm.Styles.FullDesc = lipgloss.NewStyle()
-
-	// ctx is not yet used, but is now plumbed for future use
-	_ = ctx
-
-	return &Model{
-		repoPath:    repoPath,
-		kubeConfig:  kubeConfig,
-		environment: env,
-		table:       t,
-		styles:      s,
-		category:    category,
-		textInput:   ti,
-		mode:        Normal,
-		target:      None,
-		viewport:    vp,
-		keys:        keys,
-		help:        hm,
+// NewModel creates and initializes a new Model instance using functional options.
+func NewModel(opts ...ModelOption) *Model {
+	m := &Model{
+		mode:   Normal,
+		target: None,
+		keys:   keys,
 	}
+
+	// Apply all options
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	// Set up defaults if not set by options
+	if m.table == nil {
+		t := table.New(table.WithFocused(true))
+		s := table.DefaultStyles()
+		s.Header = s.Header.
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("240")).
+			BorderBottom(true).
+			Bold(true)
+		s.Selected = s.Selected.
+			Foreground(lipgloss.Color("229")).
+			Background(lipgloss.Color("57")).
+			Bold(false)
+		t.SetStyles(s)
+		m.table = &t
+		m.styles = s
+	}
+	if m.textInput == nil {
+		ti := textinput.New()
+		ti.CharLimit = 256
+		ti.Prompt = "🐶> "
+		m.textInput = &ti
+	}
+	if m.viewport == nil {
+		vp := viewport.New(20, 20)
+		vp.Style = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("62"))
+		m.viewport = &vp
+	}
+	if m.help == nil {
+		hm := help.New()
+		hm.ShowAll = true
+		hm.Styles.FullKey = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("33"))
+		hm.Styles.FullDesc = lipgloss.NewStyle()
+		m.help = &hm
+	}
+
+	return m
 }
 
 // loadData loads the dataset for the current model.
@@ -241,7 +243,8 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 				m.handleAdditionalKeys(msg)
 			}
 		} else {
-			m.textInput, cmd = m.textInput.Update(msg)
+			updatedTextInput, cmd := m.textInput.Update(msg)
+			m.textInput = &updatedTextInput
 			cmds = append(cmds, cmd)
 
 			switch msg.String() {
@@ -278,7 +281,8 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 	}
 
-	m.table, cmd = m.table.Update(msg)
+	updatedTable, cmd := m.table.Update(msg)
+	m.table = &updatedTable
 	cmds = append(cmds, cmd)
 	return m, tea.Batch(cmds...)
 }
@@ -329,7 +333,8 @@ func updateDetailView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	m.viewport, cmd = m.viewport.Update(msg)
+	updatedViewport, cmd := m.viewport.Update(msg)
+	m.viewport = &updatedViewport
 	return m, cmd
 }
 
@@ -357,8 +362,8 @@ func (m *Model) updateLayout(w, h int) {
 	} else {
 		headerHeight := lipgloss.Height(m.styles.Header.Render("test"))
 
-		table.WithWidth(w - borderWidth)(&m.table)
-		table.WithHeight(h - borderHeight - headerHeight - top)(&m.table)
+		table.WithWidth(w - borderWidth)(m.table)
+		table.WithHeight(h - borderHeight - headerHeight - top)(m.table)
 
 		m.updateColumns()
 		m.table.UpdateViewport()
@@ -520,12 +525,12 @@ func (m *Model) updateColumns() {
 		columns[i] = table.Column{Title: header.text, Width: width}
 	}
 
-	table.WithColumns(columns)(&m.table)
+	table.WithColumns(columns)(m.table)
 }
 
 func (m *Model) updateRows() {
 	rows := getTableRows(m.dataset, m.category, m.context, m.curFilter)
-	table.WithRows(rows)(&m.table)
+	table.WithRows(rows)(m.table)
 
 	m.table.GotoTop()
 }

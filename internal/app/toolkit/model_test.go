@@ -1,7 +1,6 @@
 package toolkit
 
 import (
-	"context"
 	"testing"
 
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -16,7 +15,12 @@ func Test_centerText_returns_centered_text(t *testing.T) {
 
 func Test_NewModel_initializes_fields(t *testing.T) {
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
-	m := NewModel(context.TODO(), "/repo", "/kube", env, Tenant)
+	m := NewModel(
+		WithRepoPath("/repo"),
+		WithKubeConfig("/kube"),
+		WithEnvironment(env),
+		WithCategory(Tenant),
+	)
 	assert.NotNil(t, m)
 	assert.Equal(t, "/repo", m.repoPath)
 	assert.Equal(t, "/kube", m.kubeConfig)
@@ -28,7 +32,12 @@ func Test_NewModel_initializes_fields(t *testing.T) {
 
 func Test_Model_contextString_and_infoView(t *testing.T) {
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
-	m := NewModel(context.TODO(), "/repo", "/kube", env, LimitTenancyOverride)
+	m := NewModel(
+		WithRepoPath("/repo"),
+		WithKubeConfig("/kube"),
+		WithEnvironment(env),
+		WithCategory(LimitTenancyOverride),
+	)
 	// Set context.Category to Tenant, m.category to LimitTenancyOverride
 	m.context = &AppContext{Name: "scopeA", Category: Tenant}
 	m.chosen = false
@@ -44,7 +53,12 @@ func Test_Model_contextString_and_infoView(t *testing.T) {
 
 func Test_Model_statusView_renders(t *testing.T) {
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
-	m := NewModel(context.TODO(), "/repo", "/kube", env, Tenant)
+	m := NewModel(
+		WithRepoPath("/repo"),
+		WithKubeConfig("/kube"),
+		WithEnvironment(env),
+		WithCategory(Tenant),
+	)
 	m.viewWidth = 40
 	m.viewHeight = 10
 	status := m.statusView()

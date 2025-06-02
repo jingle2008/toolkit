@@ -1,0 +1,91 @@
+package toolkit
+
+import (
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/glamour"
+	"github.com/jingle2008/toolkit/pkg/models"
+)
+
+// ModelOption defines a functional option for configuring Model.
+type ModelOption func(*Model)
+
+// WithRepoPath sets the repoPath field.
+func WithRepoPath(repoPath string) ModelOption {
+	return func(m *Model) {
+		m.repoPath = repoPath
+	}
+}
+
+// WithKubeConfig sets the kubeConfig field.
+func WithKubeConfig(kubeConfig string) ModelOption {
+	return func(m *Model) {
+		m.kubeConfig = kubeConfig
+	}
+}
+
+// WithEnvironment sets the environment field.
+func WithEnvironment(env models.Environment) ModelOption {
+	return func(m *Model) {
+		m.environment = env
+	}
+}
+
+// WithCategory sets the category field.
+func WithCategory(category Category) ModelOption {
+	return func(m *Model) {
+		m.category = category
+	}
+}
+
+// WithContext sets the context field.
+func WithContext(ctx *AppContext) ModelOption {
+	return func(m *Model) {
+		m.context = ctx
+	}
+}
+
+// WithViewSize sets the viewWidth and viewHeight fields.
+func WithViewSize(width, height int) ModelOption {
+	return func(m *Model) {
+		m.viewWidth = width
+		m.viewHeight = height
+	}
+}
+
+// WithHelp sets the help.Model.
+func WithHelp(helpModel *help.Model) ModelOption {
+	return func(m *Model) {
+		m.help = helpModel
+	}
+}
+
+// WithTable sets the table.Model.
+func WithTable(tbl *table.Model) ModelOption {
+	return func(m *Model) {
+		m.table = tbl
+	}
+}
+
+// WithTextInput sets the textinput.Model.
+func WithTextInput(ti *textinput.Model) ModelOption {
+	return func(m *Model) {
+		m.textInput = ti
+	}
+}
+
+// WithViewport sets the viewport.Model.
+func WithViewport(vp *viewport.Model) ModelOption {
+	return func(m *Model) {
+		m.viewport = vp
+	}
+}
+
+// WithRenderer sets the glamour.TermRenderer.
+func WithRenderer(r *glamour.TermRenderer) ModelOption {
+	return func(m *Model) {
+		m.renderer = r
+	}
+}
