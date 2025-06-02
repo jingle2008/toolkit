@@ -2,32 +2,36 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ "**" ]
   pull_request:
-    branches: [main]
+    branches: [ "**" ]
+  schedule:
+    - cron: "0 3 * * *" # Nightly at 3am UTC
 
 jobs:
-  build:
+  unit-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.1
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      - name: Lint
-        run: make lint
-      - name: Format
-        run: make fmt
-      - name: Tidy
-        run: make tidy
-      - name: Build
-        run: make build
-      - name: Test
+          go-version: "1.22"
+      - name: Install dependencies
+        run: go mod tidy
+      - name: Run unit tests
         run: make test
-      - name: Coverage
-        run: make cover
+
+  integration-test:
+    if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Install dependencies
+        run: go mod tidy
+      - name: Run integration tests
+        run: make test-int

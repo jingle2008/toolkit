@@ -66,6 +66,36 @@ Run all tests with:
 go test ./...
 ```
 
+### Test Organization & CI
+
+- **Unit tests** are located next to their source files and use the `_test.go` suffix.
+- **Integration tests** are in `test/integration/` and use Go build tags (`//go:build integration`).
+- **Fixtures** for tests are stored in `testdata/` directories within each package.
+- **External test packages** (e.g., `package utils_test`) are used where possible to verify public APIs.
+- **Table-driven and sub-tests** are encouraged for clarity and parallelization.
+- **Test helpers** and mocks are placed in dedicated `*_test_helpers.go` files.
+
+#### Running tests
+
+- Unit tests (default):
+  ```sh
+  make test
+  ```
+- Integration tests (with build tag):
+  ```sh
+  make test-int
+  ```
+- Coverage reports:
+  ```sh
+  make cover      # unit test coverage
+  make cover-int  # integration test coverage
+  ```
+
+#### Continuous Integration
+
+- **Unit tests** run on all pushes and pull requests.
+- **Integration tests** run on pushes to `main` and nightly (see `.github/workflows/ci.yml`).
+
 ## Contributing
 
 Contributions are welcome! Please open issues or submit pull requests for new features, bug fixes, or improvements.

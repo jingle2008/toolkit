@@ -30,8 +30,25 @@ func TestMergeObject(t *testing.T) {
 }
 
 func TestExtractGpuNumber(t *testing.T) {
-	assert.Equal(t, 4, extractGpuNumber("4Gpu"))
-	assert.Equal(t, 0, extractGpuNumber("Gpu"))
+	t.Parallel()
+	cases := []struct {
+		name     string
+		input    string
+		expected int
+	}{
+		{"with number", "4Gpu", 4},
+		{"no number", "Gpu", 0},
+		{"empty", "", 0},
+		{"non-numeric", "abcGpu", 0},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := extractGpuNumber(tc.input)
+			assert.Equal(t, tc.expected, got)
+		})
+	}
 }
 
 func TestUnmarshalYaml_Nil(t *testing.T) {
@@ -98,4 +115,48 @@ func TestGetServiceTenancy(t *testing.T) {
 func TestLoadChartValuesMap_Error(t *testing.T) {
 	_, err := loadChartValuesMap("/no/such/dir")
 	assert.Error(t, err)
+}
+
+// ---- Merged from tf_utils_additional_test.go ----
+
+func TestGetLocalAttributesDI_ListFilesError(t *testing.T) {
+	_, err := getLocalAttributesDI(
+		"irrelevant",
+		func(string, string) ([]string, error) { return nil, assert.AnError },
+		func(string, hclsyntax.Attributes) error { return nil },
+	)
+	assert.Error(t, err)
+}
+
+func TestGetLocalAttributesDI_UpdateLocalAttributesError(t *testing.T) {
+	files := []string{"a.tf", "b.tf"}
+	_, err := getLocalAttributesDI(
+		"irrelevant",
+		func(string, string) ([]string, error) { return files, nil },
+		func(string, hclsyntax.Attributes) error { return assert.AnError },
+	)
+	assert.Error(t, err)
+}
+
+func TestGetLocalAttributesDI_EmptyFiles(t *testing.T) {
+	out, err := getLocalAttributesDI(
+		"irrelevant",
+		func(string, string) ([]string, error) { return []string{}, nil },
+		func(string, hclsyntax.Attributes) error { return nil },
+	)
+	assert.NoError(t, err)
+	assert.NotNil(t, out)
+	assert.Len(t, out, 0)
+}
+
+func TestGetLocalAttributesDI_Success(t *testing.T) {
+	files := []string{"a.tf"}
+	called := false
+	_, err := getLocalAttributesDI(
+		"irrelevant",
+		func(string, string) ([]string, error) { return files, nil },
+		func(string, hclsyntax.Attributes) error { called = true; return nil },
+	)
+	assert.NoError(t, err)
+	assert.True(t, called)
 }
