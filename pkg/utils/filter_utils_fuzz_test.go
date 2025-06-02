@@ -20,7 +20,7 @@ func FuzzFilterMap(f *testing.F) {
 	f.Add("foo")
 	f.Add("baz")
 	f.Add("")
-	f.Fuzz(func(t *testing.T, filter string) {
+	f.Fuzz(func(_ *testing.T, filter string) {
 		_ = FilterMap(m, nil, nil, filter, func(_ string, item fuzzStruct) fuzzStruct { return item })
 	})
 }
@@ -30,9 +30,9 @@ func FuzzFilterSlice(f *testing.F) {
 	f.Add("foo")
 	f.Add("baz")
 	f.Add("")
-	f.Fuzz(func(t *testing.T, filter string) {
+	f.Fuzz(func(_ *testing.T, filter string) {
 		var out []fuzzStruct
-		FilterSlice(items, nil, filter, func(i int, item fuzzStruct) bool {
+		FilterSlice(items, nil, filter, func(_ int, item fuzzStruct) bool {
 			out = append(out, item)
 			return true
 		})

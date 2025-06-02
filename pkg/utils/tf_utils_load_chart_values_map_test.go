@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func chartValuesDir(t *testing.T, base string) string {
 	subdir := filepath.Join(base, "model-serving", "application", "generic_region", "model_chart_values")
-	err := os.MkdirAll(subdir, 0o755)
-	assert.NoError(t, err)
+	err := os.MkdirAll(subdir, 0o750) // #nosec G301
+	require.NoError(t, err)
 	return subdir
 }
 
@@ -20,9 +21,9 @@ func TestLoadChartValuesMap_EmptyDir(t *testing.T) {
 	chartValuesDir(t, dir)
 	// No files in subdir
 	out, err := loadChartValuesMap(dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, out)
-	assert.Len(t, out, 0)
+	assert.Empty(t, out)
 }
 
 func TestLoadChartValuesMap_ValidYaml(t *testing.T) {
@@ -33,11 +34,11 @@ model:
   name: "test"
 `
 	path := filepath.Join(subdir, "foo.yaml")
-	err := os.WriteFile(path, []byte(content), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(path, []byte(content), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	out, err := loadChartValuesMap(dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, out, "foo.yaml")
 }
 
@@ -47,24 +48,24 @@ func TestLoadChartValuesMap_SafeReadFileError(t *testing.T) {
 	// Create a file and remove read permissions
 	path := filepath.Join(subdir, "bad.yaml")
 	err := os.WriteFile(path, []byte("foo: bar"), 0o000)
-	assert.NoError(t, err)
-	defer os.Chmod(path, 0o644) // restore permissions for cleanup
+	require.NoError(t, err)
+	defer func() { _ = os.Chmod(path, 0o600) }() // #nosec G306
 
 	out, err := loadChartValuesMap(dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Should skip the unreadable file, so out is empty
-	assert.Len(t, out, 0)
+	assert.Empty(t, out)
 }
 
 func TestLoadChartValuesMap_InvalidYaml(t *testing.T) {
 	dir := t.TempDir()
 	subdir := chartValuesDir(t, dir)
 	path := filepath.Join(subdir, "bad.yaml")
-	err := os.WriteFile(path, []byte("foo: [unclosed"), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(path, []byte("foo: [unclosed"), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	out, err := loadChartValuesMap(dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Should skip the invalid file, so out is empty
-	assert.Len(t, out, 0)
+	assert.Empty(t, out)
 }

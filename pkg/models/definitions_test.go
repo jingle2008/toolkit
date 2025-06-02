@@ -17,7 +17,7 @@ func (testImpl) GetValue() string              { return "v" }
 func (testImpl) Environments() []Environment   { return nil }
 func (testImpl) GetDescription() string        { return "desc" }
 
-func TestDefinitionInterfaces(t *testing.T) {
+func TestDefinitionInterfaces(_ *testing.T) {
 	var _ Filterable = testImpl{}
 	var _ KeyedItem = testImpl{}
 	var _ NamedItem = testImpl{}

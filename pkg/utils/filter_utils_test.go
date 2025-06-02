@@ -19,7 +19,7 @@ func TestFilterSlice_Basic(t *testing.T) {
 	name := "foo"
 	filter := ""
 	var out []testStruct
-	FilterSlice(items, &name, filter, func(i int, item testStruct) bool {
+	FilterSlice(items, &name, filter, func(_ int, item testStruct) bool {
 		out = append(out, item)
 		return true
 	})
@@ -30,17 +30,17 @@ func TestFilterSlice_Basic(t *testing.T) {
 func TestFilterSlice_Empty(t *testing.T) {
 	items := []testStruct{}
 	var out []testStruct
-	FilterSlice(items, nil, "", func(i int, item testStruct) bool {
+	FilterSlice(items, nil, "", func(_ int, item testStruct) bool {
 		out = append(out, item)
 		return true
 	})
-	assert.Len(t, out, 0)
+	assert.Empty(t, out)
 }
 
 func TestFilterSlice_CaseInsensitive(t *testing.T) {
 	items := []testStruct{{"Foo", "Bar"}, {"baz", "qux"}}
 	var out []testStruct
-	FilterSlice(items, nil, "foo", func(i int, item testStruct) bool {
+	FilterSlice(items, nil, "foo", func(_ int, item testStruct) bool {
 		out = append(out, item)
 		return true
 	})
@@ -51,7 +51,7 @@ func TestFilterSlice_CaseInsensitive(t *testing.T) {
 func TestFilterSlice_EmptyFilterReturnsAll(t *testing.T) {
 	items := []testStruct{{"a", "b"}, {"c", "d"}}
 	var out []testStruct
-	FilterSlice(items, nil, "", func(i int, item testStruct) bool {
+	FilterSlice(items, nil, "", func(_ int, item testStruct) bool {
 		out = append(out, item)
 		return true
 	})
@@ -88,5 +88,5 @@ func TestFilterMap_Basic(t *testing.T) {
 func TestFilterMap_Empty(t *testing.T) {
 	m := map[string][]testStruct{}
 	out := FilterMap(m, nil, nil, "", func(_ string, item testStruct) testStruct { return item })
-	assert.Len(t, out, 0)
+	assert.Empty(t, out)
 }

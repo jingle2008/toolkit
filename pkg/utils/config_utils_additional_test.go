@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // mockNamedItem implements models.NamedItem for testing
@@ -19,12 +20,13 @@ func (m mockNamedItem) GetName() string { return m.Name }
 func TestLoadOverrides_Success(t *testing.T) {
 	dir := t.TempDir()
 	item := mockNamedItem{Name: "foo"}
-	data, _ := json.Marshal(item)
-	err := os.WriteFile(filepath.Join(dir, "foo.json"), data, 0o644)
-	assert.NoError(t, err)
+	data, err := json.Marshal(item)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(dir, "foo.json"), data, 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	out, err := loadOverrides[mockNamedItem](dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, out, 1)
 	assert.Equal(t, "foo", out[0].Name)
 }
@@ -54,15 +56,15 @@ func TestLoadOverridesDI_Empty(t *testing.T) {
 		func(string, string) ([]string, error) { return []string{}, nil },
 		func(string) (*mockNamedItem, error) { return nil, nil },
 	)
-	assert.NoError(t, err)
-	assert.Len(t, out, 0)
+	require.NoError(t, err)
+	assert.Empty(t, out)
 }
 
 func TestLoadOverrides_ErrorOnBadFile(t *testing.T) {
 	dir := t.TempDir()
 	// Write a file with invalid JSON
-	err := os.WriteFile(filepath.Join(dir, "bad.json"), []byte("{not json"), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(filepath.Join(dir, "bad.json"), []byte("{not json"), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	_, err = loadOverrides[mockNamedItem](dir)
 	assert.Error(t, err)
@@ -79,15 +81,16 @@ func TestLoadTenancyOverrides_Success(t *testing.T) {
 	name := "testname"
 	tenant := "tenant1"
 	tenantDir := filepath.Join(root, name, "regional_values", realm, tenant)
-	err := os.MkdirAll(tenantDir, 0o755)
-	assert.NoError(t, err)
+	err := os.MkdirAll(tenantDir, 0o750) // #nosec G301
+	require.NoError(t, err)
 	item := mockNamedItem{Name: "bar"}
-	data, _ := json.Marshal(item)
-	err = os.WriteFile(filepath.Join(tenantDir, "bar.json"), data, 0o644)
-	assert.NoError(t, err)
+	data, err := json.Marshal(item)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tenantDir, "bar.json"), data, 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	out, err := loadTenancyOverrides[mockNamedItem](root, realm, name)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, out, tenant)
 	assert.Len(t, out[tenant], 1)
 	assert.Equal(t, "bar", out[tenant][0].Name)

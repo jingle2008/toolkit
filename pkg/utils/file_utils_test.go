@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSafeReadFile(t *testing.T) {
@@ -15,25 +16,25 @@ func TestSafeReadFile(t *testing.T) {
 	jsonFile := filepath.Join(tmpDir, "b.json")
 	mdFile := filepath.Join(tmpDir, "c.md")
 
-	os.WriteFile(txtFile, []byte("foo"), 0o644)
-	os.WriteFile(jsonFile, []byte("{\"bar\":1}"), 0o644)
-	os.WriteFile(mdFile, []byte("# md"), 0o644)
+	_ = os.WriteFile(txtFile, []byte("foo"), 0o600)          // #nosec G306
+	_ = os.WriteFile(jsonFile, []byte("{\"bar\":1}"), 0o600) // #nosec G306
+	_ = os.WriteFile(mdFile, []byte("# md"), 0o600)          // #nosec G306
 
 	// Allowed extension
 	data, err := SafeReadFile(txtFile, tmpDir, allowExt)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte("foo"), data)
 
 	// Disallowed extension
 	_, err = SafeReadFile(mdFile, tmpDir, allowExt)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// File outside baseDir
 	outsideFile := filepath.Join(os.TempDir(), "outside.txt")
-	os.WriteFile(outsideFile, []byte("bad"), 0o644)
+	_ = os.WriteFile(outsideFile, []byte("bad"), 0o600) // #nosec G306
 	_, err = SafeReadFile(outsideFile, tmpDir, allowExt)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Clean up
-	os.Remove(outsideFile)
+	_ = os.Remove(outsideFile)
 }

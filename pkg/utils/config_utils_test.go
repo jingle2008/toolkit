@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetConfigPath(t *testing.T) {
@@ -48,20 +48,20 @@ func TestSortKeyedItems(t *testing.T) {
 }
 
 func TestListSubDirs(t *testing.T) {
-	dir, err := ioutil.TempDir("", "testsubdirs")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir, err := os.MkdirTemp("", "testsubdirs")
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	// create subdirs
 	sub1 := "sub1"
 	sub2 := "sub2"
-	os.Mkdir(filepath.Join(dir, sub1), 0o755)
-	os.Mkdir(filepath.Join(dir, sub2), 0o755)
+	_ = os.Mkdir(filepath.Join(dir, sub1), 0o750) // #nosec G301
+	_ = os.Mkdir(filepath.Join(dir, sub2), 0o750) // #nosec G301
 	// create a file
-	ioutil.WriteFile(filepath.Join(dir, "file.txt"), []byte("x"), 0o644)
+	_ = os.WriteFile(filepath.Join(dir, "file.txt"), []byte("x"), 0o600) // #nosec G306
 
 	dirs, err := listSubDirs(dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// convert to base names for comparison
 	for i := range dirs {
 		dirs[i] = filepath.Base(dirs[i])
@@ -70,32 +70,32 @@ func TestListSubDirs(t *testing.T) {
 
 	// error path: non-existent dir
 	_, err = listSubDirs(filepath.Join(dir, "nope"))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadOverrides_Error(t *testing.T) {
 	// Should error on non-existent dir
 	_, err := loadOverrides[models.Tenant]("/no/such/dir")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Should error on bad JSON file
 	dir, err := os.MkdirTemp("", "badjson")
-	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(dir) }()
 	badFile := filepath.Join(dir, "bad.json")
-	os.WriteFile(badFile, []byte("{not valid json"), 0o644)
+	_ = os.WriteFile(badFile, []byte("{not valid json"), 0o600) // #nosec G306
 	_, err = loadOverrides[models.Tenant](dir)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadTenancyOverrides_Error(t *testing.T) {
 	_, err := loadTenancyOverrides[models.Tenant]("/no/such/dir", "realm", "name")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadRegionalOverrides_Error(t *testing.T) {
 	_, err := loadRegionalOverrides[models.Tenant]("/no/such/dir", "realm", "name")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestGetTenants(t *testing.T) {

@@ -7,19 +7,20 @@ import (
 
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func baseModelsDir(t *testing.T, base string) string {
 	dir := filepath.Join(base, "model-serving", "application", "generic_region")
-	err := os.MkdirAll(dir, 0o755)
-	assert.NoError(t, err)
+	err := os.MkdirAll(dir, 0o750) // #nosec G301
+	require.NoError(t, err)
 	return dir
 }
 
 func chartValuesDirBM(t *testing.T, base string) string {
 	dir := filepath.Join(base, "model-serving", "application", "generic_region", "model_chart_values")
-	err := os.MkdirAll(dir, 0o755)
-	assert.NoError(t, err)
+	err := os.MkdirAll(dir, 0o750) // #nosec G301
+	require.NoError(t, err)
 	return dir
 }
 
@@ -33,8 +34,8 @@ func TestLoadBaseModels_Success(t *testing.T) {
 model:
   name: "test"
 `
-	err := os.WriteFile(filepath.Join(cvDir, "foo.yaml"), []byte(yaml), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(filepath.Join(cvDir, "foo.yaml"), []byte(yaml), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	// Write locals.tf with all required maps
 	tf := `
@@ -75,12 +76,12 @@ locals {
   }
 }
 `
-	err = os.WriteFile(filepath.Join(bmDir, "locals.tf"), []byte(tf), 0o644)
-	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(bmDir, "locals.tf"), []byte(tf), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	modelsMap, err := LoadBaseModels(dir, env)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, modelsMap)
 	assert.Contains(t, modelsMap, "model1")
 	bm := modelsMap["model1"]
@@ -98,8 +99,8 @@ locals {
   foo = {}
 }
 `
-	err := os.WriteFile(filepath.Join(bmDir, "locals.tf"), []byte(tf), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(filepath.Join(bmDir, "locals.tf"), []byte(tf), 0o600) // #nosec G306
+	require.NoError(t, err)
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	_, err = LoadBaseModels(dir, env)
 	assert.Error(t, err)

@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func shepTargetsDir(t *testing.T, base string) string {
 	subdir := filepath.Join(base, "shared_modules", "shep_targets")
-	err := os.MkdirAll(subdir, 0o755)
-	assert.NoError(t, err)
+	err := os.MkdirAll(subdir, 0o750) // #nosec G301
+	require.NoError(t, err)
 	return subdir
 }
 
@@ -29,11 +30,11 @@ locals {
 }
 `
 	path := filepath.Join(subdir, "locals.tf")
-	err := os.WriteFile(path, []byte(tf), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(path, []byte(tf), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	tenancies, err := LoadServiceTenancies(dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, tenancies)
 }
 
@@ -47,13 +48,13 @@ locals {
 }
 `
 	path := filepath.Join(subdir, "locals.tf")
-	err := os.WriteFile(path, []byte(tf), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(path, []byte(tf), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	tenancies, err := LoadServiceTenancies(dir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, tenancies)
-	assert.Len(t, tenancies, 0)
+	assert.Empty(t, tenancies)
 }
 
 func TestLoadServiceTenancies_InvalidHCL(t *testing.T) {
@@ -64,9 +65,9 @@ locals {
   foo = 
 `
 	path := filepath.Join(subdir, "bad.tf")
-	err := os.WriteFile(path, []byte(tf), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(path, []byte(tf), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	_, err = LoadServiceTenancies(dir)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

@@ -7,12 +7,13 @@ import (
 
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func poolsConfigDir(t *testing.T, base, sub string) string {
 	dir := filepath.Join(base, "shared_modules", sub)
-	err := os.MkdirAll(dir, 0o755)
-	assert.NoError(t, err)
+	err := os.MkdirAll(dir, 0o750) // #nosec G301
+	require.NoError(t, err)
 	return dir
 }
 
@@ -33,8 +34,8 @@ locals {
   }
 }
 `
-	err := os.WriteFile(filepath.Join(ipDir, "locals.tf"), []byte(tf), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(filepath.Join(ipDir, "locals.tf"), []byte(tf), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	// cluster_networks_config
 	cnDir := poolsConfigDir(t, dir, "cluster_networks_config")
@@ -49,8 +50,8 @@ locals {
   }
 }
 `
-	err = os.WriteFile(filepath.Join(cnDir, "locals.tf"), []byte(tf2), 0o644)
-	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(cnDir, "locals.tf"), []byte(tf2), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	// oci_oke_nodepools_config
 	okeDir := poolsConfigDir(t, dir, "oci_oke_nodepools_config")
@@ -65,13 +66,13 @@ locals {
   }
 }
 `
-	err = os.WriteFile(filepath.Join(okeDir, "locals.tf"), []byte(tf3), 0o644)
-	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(okeDir, "locals.tf"), []byte(tf3), 0o600) // #nosec G306
+	require.NoError(t, err)
 
 	pools, err := LoadGpuPools(dir, env)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, pools)
-	assert.True(t, len(pools) >= 3)
+	assert.GreaterOrEqual(t, len(pools), 3)
 }
 
 func TestLoadGpuPools_MissingConfig(t *testing.T) {
@@ -79,5 +80,5 @@ func TestLoadGpuPools_MissingConfig(t *testing.T) {
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	// No config files
 	_, err := LoadGpuPools(dir, env)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

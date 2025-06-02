@@ -1,7 +1,6 @@
 package toolkit
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,10 +46,10 @@ func TestCategory_IsScope(t *testing.T) {
 		Environment, ServiceTenancy, GpuNode, DedicatedAICluster,
 	}
 	for _, c := range scopeCases {
-		assert.True(t, c.IsScope(), fmt.Sprintf("%v should be scope", c))
+		assert.True(t, c.IsScope(), "%v should be scope", c)
 	}
 	for _, c := range nonScopeCases {
-		assert.False(t, c.IsScope(), fmt.Sprintf("%v should not be scope", c))
+		assert.False(t, c.IsScope(), "%v should not be scope", c)
 	}
 }
 

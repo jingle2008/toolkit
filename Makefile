@@ -1,3 +1,9 @@
+# Test targets:
+#   make test      - Run all unit tests (excludes integration tests)
+#   make test-int  - Run integration tests only (requires explicit build tag)
+#   make cover     - Unit test coverage report
+#   make cover-int - Integration test coverage report
+
 .PHONY: build lint test tidy fmt cover install-lint
 
 VERSION ?= $(shell git describe --tags --always --dirty)

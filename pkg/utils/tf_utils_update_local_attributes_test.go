@@ -7,12 +7,13 @@ import (
 
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func writeTempFile(t *testing.T, dir, name, content string) string {
 	path := filepath.Join(dir, name)
-	err := os.WriteFile(path, []byte(content), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(path, []byte(content), 0o600) // #nosec G306
+	require.NoError(t, err)
 	return path
 }
 
@@ -27,7 +28,7 @@ locals {
 	path := writeTempFile(t, dir, "locals.tf", tf)
 	attrs := make(hclsyntax.Attributes)
 	err := updateLocalAttributes(path, attrs)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, attrs, "foo")
 	assert.Contains(t, attrs, "num")
 }
@@ -42,7 +43,7 @@ output "baz" {
 	path := writeTempFile(t, dir, "output.tf", tf)
 	attrs := make(hclsyntax.Attributes)
 	err := updateLocalAttributes(path, attrs)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, attrs, "baz")
 }
 
@@ -54,8 +55,8 @@ resource "null_resource" "test" {}
 	path := writeTempFile(t, dir, "none.tf", tf)
 	attrs := make(hclsyntax.Attributes)
 	err := updateLocalAttributes(path, attrs)
-	assert.NoError(t, err)
-	assert.Len(t, attrs, 0)
+	require.NoError(t, err)
+	assert.Empty(t, attrs)
 }
 
 func TestUpdateLocalAttributes_InvalidHCL(t *testing.T) {

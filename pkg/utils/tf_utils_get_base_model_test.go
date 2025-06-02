@@ -88,19 +88,19 @@ func TestGetCapability_AllFields(t *testing.T) {
 	chartValues := map[string]*models.ChartValues{
 		"bar.yaml": {Model: &models.ModelSetting{}},
 	}
-	cap := getCapability(obj, chartValues)
-	assert.Equal(t, "gen", cap.Capability)
-	assert.Equal(t, "cr", cap.CrName)
-	assert.Equal(t, "desc", cap.Description)
-	assert.Equal(t, "rt", cap.Runtime)
-	assert.NotNil(t, cap.ValuesFile)
-	assert.Equal(t, "bar.yaml", filepath.Base(*cap.ValuesFile))
-	assert.NotNil(t, cap.ChartValues)
+	capability := getCapability(obj, chartValues)
+	assert.Equal(t, "gen", capability.Capability)
+	assert.Equal(t, "cr", capability.CrName)
+	assert.Equal(t, "desc", capability.Description)
+	assert.Equal(t, "rt", capability.Runtime)
+	assert.NotNil(t, capability.ValuesFile)
+	assert.Equal(t, "bar.yaml", filepath.Base(*capability.ValuesFile))
+	assert.NotNil(t, capability.ChartValues)
 }
 
 func TestGetCapability_Empty(t *testing.T) {
 	obj := cty.ObjectVal(map[string]cty.Value{})
 	chartValues := map[string]*models.ChartValues{}
-	cap := getCapability(obj, chartValues)
-	assert.NotNil(t, cap)
+	capability := getCapability(obj, chartValues)
+	assert.NotNil(t, capability)
 }

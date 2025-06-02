@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,7 +16,7 @@ type mockDynamicClient struct {
 	lists map[string]*unstructured.UnstructuredList
 }
 
-func (m *mockDynamicClient) ResourceList(ctx context.Context, gvr schema.GroupVersionResource, opts v1.ListOptions) (*unstructured.UnstructuredList, error) {
+func (m *mockDynamicClient) ResourceList(_ context.Context, gvr schema.GroupVersionResource, _ v1.ListOptions) (*unstructured.UnstructuredList, error) {
 	key := gvr.Group + "/" + gvr.Version
 	return m.lists[key], nil
 }
@@ -74,9 +75,9 @@ func TestListDedicatedAIClusters(t *testing.T) {
 	}
 	helper.config = nil
 	clusters, err := helper.ListDedicatedAIClusters()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, clusters)
-	assert.True(t, len(clusters) >= 2)
+	assert.GreaterOrEqual(t, len(clusters), 2)
 }
 
 func TestTenantIDFromLabels(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -19,7 +20,7 @@ func TestUpdateLocalAttributes_Error(t *testing.T) {
 	tmp := filepath.Join(os.TempDir(), "notfound.tf")
 	attrs := make(hclsyntax.Attributes)
 	err := updateLocalAttributes(tmp, attrs)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestMergeObject(t *testing.T) {
@@ -144,9 +145,9 @@ func TestGetLocalAttributesDI_EmptyFiles(t *testing.T) {
 		func(string, string) ([]string, error) { return []string{}, nil },
 		func(string, hclsyntax.Attributes) error { return nil },
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, out)
-	assert.Len(t, out, 0)
+	assert.Empty(t, out)
 }
 
 func TestGetLocalAttributesDI_Success(t *testing.T) {
@@ -157,6 +158,6 @@ func TestGetLocalAttributesDI_Success(t *testing.T) {
 		func(string, string) ([]string, error) { return files, nil },
 		func(string, hclsyntax.Attributes) error { called = true; return nil },
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, called)
 }

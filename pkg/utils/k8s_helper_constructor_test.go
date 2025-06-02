@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 )
 
@@ -12,13 +13,13 @@ func TestNewK8sHelper_ChangeContextError(t *testing.T) {
 	// Create a temp file that is not a valid kubeconfig
 	tmp := ""
 	f, err := os.CreateTemp("", "badkubeconfig")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tmp = f.Name()
-	f.Close()
-	defer os.Remove(tmp)
+	_ = f.Close()
+	defer func() { _ = os.Remove(tmp) }()
 
 	helper, err := NewK8sHelper(tmp, "nonexistent-context")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, helper)
 }
 
@@ -30,6 +31,6 @@ func TestNewK8sHelperWithClients_Error(t *testing.T) {
 		return nil, assert.AnError
 	}
 	helper, err := NewK8sHelperWithClients("bad", "bad", badClient, badDyn)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, helper)
 }

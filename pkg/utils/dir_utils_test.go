@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestListFiles(t *testing.T) {
@@ -12,12 +13,12 @@ func TestListFiles(t *testing.T) {
 	// create a .txt file and a .go file
 	txtFile := dir + "/foo.txt"
 	goFile := dir + "/bar.go"
-	os.WriteFile(txtFile, []byte("x"), 0o644)
-	os.WriteFile(goFile, []byte("y"), 0o644)
+	_ = os.WriteFile(txtFile, []byte("x"), 0o600) // #nosec G306
+	_ = os.WriteFile(goFile, []byte("y"), 0o600)  // #nosec G306
 
 	files, err := ListFiles(dir, ".txt")
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(files))
+	require.NoError(t, err)
+	assert.Len(t, files, 1)
 	assert.Contains(t, files[0], "foo.txt")
 
 	// error path: non-existent dir

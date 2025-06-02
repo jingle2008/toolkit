@@ -63,7 +63,9 @@ func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
 	return helper, nil
 }
 
-// For testability: allow injecting mock clients.
+/*
+NewK8sHelperWithClients allows injecting mock clients for testability.
+*/
 func NewK8sHelperWithClients(configFile, context string, clientsetFunc func(*rest.Config) (KubernetesClient, error), dynamicFunc func(*rest.Config) (DynamicClient, error)) (*K8sHelper, error) {
 	helper := &K8sHelper{
 		configFile:    configFile,
@@ -143,7 +145,7 @@ func (k *K8sHelper) ChangeContext(context string) error {
 }
 
 /*
-ListGpuNodes returns a list of GpuNode objects from the current Kubernetes context.
+ListGpuNodesWithSelectors returns a list of GpuNode objects from the current Kubernetes context.
 By default, it sums allocations for three label selectors. For testability, you can override the selectors.
 */
 func (k *K8sHelper) ListGpuNodesWithSelectors(selectors ...string) ([]models.GpuNode, error) {

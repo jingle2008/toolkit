@@ -6,6 +6,7 @@ import (
 
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockK8sHelper struct {
@@ -25,7 +26,7 @@ func (m *mockK8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, 
 func TestLoadGpuNodes_Success(t *testing.T) {
 	orig := helperFactory
 	defer func() { helperFactory = orig }()
-	helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
+	helperFactory = func(_ string, _ string) (gpuHelper, error) {
 		return &mockK8sHelper{
 			nodes: []models.GpuNode{
 				{Name: "n1", NodePool: "pool1", Allocatable: 4, Allocated: 2},
@@ -35,7 +36,7 @@ func TestLoadGpuNodes_Success(t *testing.T) {
 	}
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	result, err := LoadGpuNodes("dummy", env)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, result, "pool1")
 	assert.Len(t, result["pool1"], 2)
 }
@@ -43,7 +44,7 @@ func TestLoadGpuNodes_Success(t *testing.T) {
 func TestLoadGpuNodes_Error(t *testing.T) {
 	orig := helperFactory
 	defer func() { helperFactory = orig }()
-	helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
+	helperFactory = func(_ string, _ string) (gpuHelper, error) {
 		return &mockK8sHelper{err: errors.New("fail")}, nil
 	}
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
@@ -54,7 +55,7 @@ func TestLoadGpuNodes_Error(t *testing.T) {
 func TestLoadDedicatedAIClusters_Success(t *testing.T) {
 	orig := helperFactory
 	defer func() { helperFactory = orig }()
-	helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
+	helperFactory = func(_ string, _ string) (gpuHelper, error) {
 		return &mockK8sHelper{
 			dacs: []models.DedicatedAICluster{
 				{Name: "dac1", TenantID: "tid1"},
@@ -64,7 +65,7 @@ func TestLoadDedicatedAIClusters_Success(t *testing.T) {
 	}
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	result, err := LoadDedicatedAIClusters("dummy", env)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, result, "tid1")
 	assert.Len(t, result["tid1"], 2)
 }
@@ -72,7 +73,7 @@ func TestLoadDedicatedAIClusters_Success(t *testing.T) {
 func TestLoadDedicatedAIClusters_Error(t *testing.T) {
 	orig := helperFactory
 	defer func() { helperFactory = orig }()
-	helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
+	helperFactory = func(_ string, _ string) (gpuHelper, error) {
 		return &mockK8sHelper{err: errors.New("fail")}, nil
 	}
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}

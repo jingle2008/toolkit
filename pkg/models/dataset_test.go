@@ -18,7 +18,7 @@ func TestDataset_BuildTenantIDSuffixMap(t *testing.T) {
 	assert.Contains(t, suffixMap, "tenant2")
 }
 
-func TestDataset_SetDedicatedAIClusterMap(t *testing.T) {
+func TestDataset_SetDedicatedAIClusterMap(_ *testing.T) {
 	ds := &Dataset{}
 	m := map[string][]DedicatedAICluster{
 		"t1": {{Name: "c1"}, {Name: "c2"}},

@@ -7,12 +7,13 @@ import (
 
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func tensorrtModelsDir(t *testing.T, base string) string {
 	dir := filepath.Join(base, "shared_modules", "tensorrt_models_config")
-	err := os.MkdirAll(dir, 0o755)
-	assert.NoError(t, err)
+	err := os.MkdirAll(dir, 0o750) // #nosec G301
+	require.NoError(t, err)
 	return dir
 }
 
@@ -32,13 +33,13 @@ locals {
   }
 }
 `
-	err := os.WriteFile(filepath.Join(subdir, "locals.tf"), []byte(tf), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(filepath.Join(subdir, "locals.tf"), []byte(tf), 0o600) // #nosec G306
+	require.NoError(t, err)
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	arts, err := LoadModelArtifacts(dir, env)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, arts)
-	assert.True(t, len(arts) >= 1)
+	assert.GreaterOrEqual(t, len(arts), 1)
 }
 
 func TestLoadModelArtifacts_MissingMap(t *testing.T) {
@@ -49,9 +50,9 @@ locals {
   foo = {}
 }
 `
-	err := os.WriteFile(filepath.Join(subdir, "locals.tf"), []byte(tf), 0o644)
-	assert.NoError(t, err)
+	err := os.WriteFile(filepath.Join(subdir, "locals.tf"), []byte(tf), 0o600) // #nosec G306
+	require.NoError(t, err)
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	_, err = LoadModelArtifacts(dir, env)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
