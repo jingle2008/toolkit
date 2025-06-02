@@ -164,7 +164,7 @@ func NewModel(ctx context.Context, repoPath, kubeConfig string, env models.Envir
 }
 
 // loadData loads the dataset for the current model.
-func (m Model) loadData() tea.Cmd {
+func (m *Model) loadData() tea.Cmd {
 	return func() tea.Msg {
 		dataset, err := utils.LoadDataset(m.repoPath, m.environmemt)
 		if err != nil {
@@ -175,12 +175,12 @@ func (m Model) loadData() tea.Cmd {
 }
 
 // Init implements the tea.Model interface and initializes the model.
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return m.loadData()
 }
 
 // Update handles incoming messages and updates the model state.
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -199,7 +199,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return updateDetailView(msg, m)
 }
 
-func updateListView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
+func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
@@ -318,7 +318,7 @@ func (m *Model) processData(msg dataMsg) {
 	m.refreshDisplay()
 }
 
-func updateDetailView(msg tea.Msg, m Model) (tea.Model, tea.Cmd) {
+func updateDetailView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -659,7 +659,7 @@ func (m *Model) statusView() string {
 }
 
 // View renders the current state of the model as a string.
-func (m Model) View() string {
+func (m *Model) View() string {
 	if m.err != nil {
 		return centerText(m.err.Error(), m.viewWidth, m.viewHeight)
 	}
