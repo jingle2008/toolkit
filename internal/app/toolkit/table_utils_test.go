@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_getHeaders_returns_expected_headers(t *testing.T) {
@@ -341,3 +342,95 @@ func (m mockDefinition) GetName() string               { return m.name }
 func (m mockDefinition) GetDescription() string        { return m.desc }
 func (m mockDefinition) GetValue() string              { return m.value }
 func (m mockDefinition) GetFilterableFields() []string { return []string{m.name, m.desc, m.value} }
+
+// --- Extra merged tests below ---
+
+func TestGetItemKeyAndString(t *testing.T) {
+	// Table-driven: category, row, expected string
+	tests := []struct {
+		category Category
+		row      table.Row
+		keyStr   string
+	}{
+		{Tenant, table.Row{"tenant1"}, "tenant1"},
+		{LimitDefinition, table.Row{"limdef"}, "limdef"},
+		{ConsolePropertyDefinition, table.Row{"cpdef"}, "cpdef"},
+		{PropertyDefinition, table.Row{"pdef"}, "pdef"},
+		{LimitTenancyOverride, table.Row{"tenant1", "limdef"}, "tenant1/limdef"},
+		{ConsolePropertyTenancyOverride, table.Row{"tenant1", "cpdef"}, "tenant1/cpdef"},
+		{PropertyTenancyOverride, table.Row{"tenant1", "pdef"}, "tenant1/pdef"},
+		{ConsolePropertyRegionalOverride, table.Row{"cpdef"}, "cpdef"},
+		{PropertyRegionalOverride, table.Row{"pdef"}, "pdef"},
+		{BaseModel, table.Row{"bm", "v1", "type"}, "bm-v1-type"},
+		{ModelArtifact, table.Row{"model", "gpu", "artifact"}, "artifact"},
+		{Environment, table.Row{"env"}, "env"},
+		{ServiceTenancy, table.Row{"svc"}, "svc"},
+		{GpuPool, table.Row{"pool"}, "pool"},
+		{GpuNode, table.Row{"pool", "node"}, "pool/node"},
+		{DedicatedAICluster, table.Row{"tenant1", "dac"}, "tenant1/dac"},
+	}
+	for _, tt := range tests {
+		key := getItemKey(tt.category, tt.row)
+		str := getItemKeyString(tt.category, key)
+		require.Equal(t, tt.keyStr, str, "category %v", tt.category)
+	}
+}
+
+func TestGetHeadersAndTableRows(t *testing.T) {
+	// Cover all categories for getHeaders and getTableRows
+	categories := []Category{
+		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition,
+		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
+		ConsolePropertyRegionalOverride, PropertyRegionalOverride, BaseModel, ModelArtifact,
+		Environment, ServiceTenancy, GpuPool, GpuNode, DedicatedAICluster,
+	}
+	ds := &models.Dataset{}
+	for _, cat := range categories {
+		_ = getHeaders(cat)
+		_ = getTableRows(ds, cat, nil, "")
+	}
+}
+
+func TestGetTableRow(t *testing.T) {
+	// Each supported type should yield a non-nil row
+	// Use the actual type for Values field from the model
+	ltov := models.LimitTenancyOverride{}
+	require.NotNil(t, getTableRow("tenant", models.LimitTenancyOverride{
+		Name:    "lim",
+		Regions: []string{"us"},
+		Values: append(ltov.Values[:0], struct {
+			Min int "json:\"min\""
+			Max int "json:\"max\""
+		}{Min: 1, Max: 2}),
+	}))
+	// Use the actual type for Values field from the model
+	cprov := models.ConsolePropertyRegionalOverride{}
+	require.NotNil(t, getTableRow("tenant", models.ConsolePropertyTenancyOverride{
+		TenantID: "tenant1",
+		ConsolePropertyRegionalOverride: models.ConsolePropertyRegionalOverride{
+			Name:    "cp",
+			Regions: []string{"us"},
+			Values: append(cprov.Values[:0], struct {
+				Value string "json:\"value\""
+			}{Value: "val"}),
+		},
+	}))
+	// Use the actual type for Values field from the model
+	prov := models.PropertyRegionalOverride{}
+	require.NotNil(t, getTableRow("tenant", models.PropertyTenancyOverride{
+		Tag: "tenant1",
+		PropertyRegionalOverride: models.PropertyRegionalOverride{
+			Name:    "p",
+			Regions: []string{"us"},
+			Values: append(prov.Values[:0], struct {
+				Value string "json:\"value\""
+			}{Value: "val"}),
+		},
+	}))
+	require.NotNil(t, getTableRow("pool", models.GpuNode{
+		NodePool: "pool", Name: "node", InstanceType: "type", Allocatable: 10, Allocated: 2, IsHealthy: true, IsReady: true,
+	}))
+	require.NotNil(t, getTableRow("tenant", models.DedicatedAICluster{
+		Name: "dac", Type: "t", UnitShape: "shape", Size: 1, Status: "active",
+	}))
+}

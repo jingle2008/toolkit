@@ -3,9 +3,106 @@ package toolkit
 import (
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/jingle2008/toolkit/pkg/models"
+	"github.com/stretchr/testify/require"
 )
+
+func newTestModel(t *testing.T) *Model {
+	t.Helper()
+	m := NewModel()
+	m.repoPath = "testrepo"
+	m.environment = models.Environment{
+		Realm:  "realm",
+		Type:   "type",
+		Region: "region",
+	}
+	m.dataset = &models.Dataset{
+		Tenants: []models.Tenant{
+			{Name: "tenant1", IDs: []string{"id1"}, LimitOverrides: 1, ConsolePropertyOverrides: 2, PropertyOverrides: 3},
+		},
+		Environments: []models.Environment{
+			{Realm: "realm", Type: "type", Region: "region"},
+		},
+	}
+	m.viewWidth = 80
+	m.viewHeight = 24
+	m.refreshDisplay()
+	return m
+}
+
+func TestUpdateLayoutAndView(t *testing.T) {
+	m := newTestModel(t)
+	m.updateLayout(80, 24)
+	require.Equal(t, 80, m.viewWidth)
+	require.Equal(t, 24, m.viewHeight)
+	_ = m.View()
+	m.enterDetailView()
+	_ = m.View()
+}
+
+func TestContextStringAndStatusView(t *testing.T) {
+	m := newTestModel(t)
+	s := m.contextString()
+	require.Contains(t, s, "all")
+	status := m.statusView()
+	require.NotEmpty(t, status)
+	m.enterDetailView()
+	_ = m.contextString()
+}
+
+func TestFilterAndBackToLastState(t *testing.T) {
+	m := newTestModel(t)
+	m.enterEditMode(Filter)
+	require.Equal(t, Edit, m.mode)
+	m.textInput.SetValue("tenant1")
+	cmd := m.debounceFilter()
+	require.NotNil(t, cmd)
+	// Simulate filterMsg
+	m.filterTable("tenant1")
+	require.Equal(t, "tenant1", m.curFilter)
+	m.backToLastState()
+	require.Equal(t, "", m.curFilter)
+}
+
+func TestEditModeTransitions(t *testing.T) {
+	m := newTestModel(t)
+	m.enterEditMode(Alias)
+	require.Equal(t, Edit, m.mode)
+	m.exitEditMode(true)
+	require.Equal(t, Normal, m.mode)
+}
+
+func TestProcessDataAndErrorMsg(t *testing.T) {
+	m := newTestModel(t)
+	// processData with *models.Dataset
+	m.processData(dataMsg{data: m.dataset})
+	// processData with map[string]*models.BaseModel
+	m.processData(dataMsg{data: map[string]*models.BaseModel{"bm": {}}})
+	// processData with []models.GpuPool
+	m.processData(dataMsg{data: []models.GpuPool{{}}})
+	// processData with map[string][]models.GpuNode
+	m.processData(dataMsg{data: map[string][]models.GpuNode{"pool": {}}})
+	// processData with map[string][]models.DedicatedAICluster
+	m.processData(dataMsg{data: map[string][]models.DedicatedAICluster{"tenant": {}}})
+	// Update with errorMsg
+	m.Update(errMsg{err: nil})
+}
+
+func TestModelUpdateBranches(t *testing.T) {
+	m := newTestModel(t)
+	// Simulate tea.KeyMsg for "ctrl+c"
+	m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	// Simulate tea.WindowSizeMsg
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
+	// Simulate dataMsg
+	m.Update(dataMsg{data: m.dataset})
+	// Simulate filterMsg
+	m.Update(filterMsg{text: "tenant1"})
+	// Simulate errMsg
+	m.Update(errMsg{err: nil})
+}
 
 func TestCenterTextReturnsCenteredText(t *testing.T) {
 	t.Parallel()
