@@ -12,16 +12,16 @@ import (
 )
 
 var categoryHandlers = map[Category]func(*zap.Logger, *models.Dataset, *AppContext, string) []table.Row{
-	Tenant: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	Tenant: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getTenants(dataset.Tenants, filter)
 	},
-	LimitDefinition: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	LimitDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getLimitDefinitions(dataset.LimitDefinitionGroup, filter)
 	},
-	ConsolePropertyDefinition: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	ConsolePropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.ConsolePropertyDefinitionGroup.Values, filter)
 	},
-	PropertyDefinition: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	PropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.PropertyDefinitionGroup.Values, filter)
 	},
 	LimitTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *AppContext, filter string) []table.Row {
@@ -33,25 +33,25 @@ var categoryHandlers = map[Category]func(*zap.Logger, *models.Dataset, *AppConte
 	PropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *AppContext, filter string) []table.Row {
 		return getScopedItems(logger, dataset.PropertyTenancyOverrideMap, Tenant, context, filter)
 	},
-	ConsolePropertyRegionalOverride: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	ConsolePropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.ConsolePropertyRegionalOverrides, filter)
 	},
-	PropertyRegionalOverride: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	PropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.PropertyRegionalOverrides, filter)
 	},
-	BaseModel: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	BaseModel: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getBaseModels(dataset.BaseModelMap, filter)
 	},
-	ModelArtifact: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	ModelArtifact: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getModelArtifacts(dataset.ModelArtifacts, filter)
 	},
-	Environment: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	Environment: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getEnvironments(dataset.Environments, filter)
 	},
-	ServiceTenancy: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	ServiceTenancy: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getServiceTenancies(dataset.ServiceTenancies, filter)
 	},
-	GpuPool: func(logger *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	GpuPool: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
 		return getGpuPools(dataset.GpuPools, filter)
 	},
 	GpuNode: func(logger *zap.Logger, dataset *models.Dataset, context *AppContext, filter string) []table.Row {
@@ -62,6 +62,10 @@ var categoryHandlers = map[Category]func(*zap.Logger, *models.Dataset, *AppConte
 	},
 }
 
+/*
+getHeaders returns the header definitions for a given category.
+If no headers are defined for the category, it returns nil.
+*/
 func getHeaders(category Category) []header {
 	if headers, exists := headerDefinitions[category]; exists {
 		return headers
@@ -69,6 +73,10 @@ func getHeaders(category Category) []header {
 	return nil
 }
 
+/*
+getTableRows returns the table rows for a given category, using the appropriate handler.
+If the context is not valid for the category, it is set to nil.
+*/
 func getTableRows(logger *zap.Logger, dataset *models.Dataset, category Category, context *AppContext, filter string) []table.Row {
 	if context != nil && !context.Category.IsScopeOf(category) {
 		context = nil
@@ -81,6 +89,10 @@ func getTableRows(logger *zap.Logger, dataset *models.Dataset, category Category
 	return nil
 }
 
+/*
+filterRows filters a slice of items using the provided filter and row function.
+It returns a slice of table.Row for items that match the filter.
+*/
 func filterRows[T models.NamedFilterable](items []T, filter string, rowFn func(T) table.Row) []table.Row {
 	results := make([]table.Row, 0, len(items))
 	utils.FilterSlice(items, nil, filter, func(_ int, val T) bool {
@@ -90,6 +102,9 @@ func filterRows[T models.NamedFilterable](items []T, filter string, rowFn func(T
 	return results
 }
 
+/*
+getGpuPools returns table rows for a slice of GpuPool, filtered by the provided filter string.
+*/
 func getGpuPools(pools []models.GpuPool, filter string) []table.Row {
 	return filterRows(pools, filter, func(val models.GpuPool) table.Row {
 		return table.Row{
@@ -103,6 +118,9 @@ func getGpuPools(pools []models.GpuPool, filter string) []table.Row {
 	})
 }
 
+/*
+getLimitDefinitions returns table rows for a LimitDefinitionGroup, filtered by the provided filter string.
+*/
 func getLimitDefinitions(g models.LimitDefinitionGroup, filter string) []table.Row {
 	return filterRows(g.Values, filter, func(val models.LimitDefinition) table.Row {
 		return table.Row{
@@ -115,6 +133,9 @@ func getLimitDefinitions(g models.LimitDefinitionGroup, filter string) []table.R
 	})
 }
 
+/*
+getPropertyDefinitions returns table rows for a slice of Definition, filtered by the provided filter string.
+*/
 func getPropertyDefinitions[T models.Definition](definitions []T, filter string) []table.Row {
 	return filterRows(definitions, filter, func(val T) table.Row {
 		return table.Row{
@@ -125,6 +146,10 @@ func getPropertyDefinitions[T models.Definition](definitions []T, filter string)
 	})
 }
 
+/*
+getTableRow returns a table.Row for a given item, using the appropriate adapter function based on type.
+If the type is unexpected, it logs a warning and returns nil.
+*/
 func getTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row {
 	switch val := item.(type) {
 	case models.LimitTenancyOverride:
@@ -158,21 +183,22 @@ func getTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row 
 	return nil
 }
 
+/*
+getRegionalOverrides returns table rows for a slice of DefinitionOverride, filtered by the provided filter string.
+*/
 func getRegionalOverrides[T models.DefinitionOverride](overrides []T, filter string) []table.Row {
-	results := make([]table.Row, 0, len(overrides))
-
-	utils.FilterSlice(overrides, nil, filter, func(_ int, val T) bool {
-		results = append(results, table.Row{
+	return filterRows(overrides, filter, func(val T) table.Row {
+		return table.Row{
 			val.GetName(),
 			strings.Join(val.GetRegions(), ", "),
 			val.GetValue(),
-		})
-		return true
+		}
 	})
-
-	return results
 }
 
+/*
+getBaseModels returns table rows for a map of BaseModel, filtered by the provided filter string.
+*/
 func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 	baseModels := make([]*models.BaseModel, 0, len(m))
 	for _, model := range m {
@@ -204,6 +230,9 @@ func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 	return results
 }
 
+/*
+getModelArtifacts returns table rows for a slice of ModelArtifact, filtered by the provided filter string.
+*/
 func getModelArtifacts(artifacts []models.ModelArtifact, filter string) []table.Row {
 	return filterRows(artifacts, filter, func(val models.ModelArtifact) table.Row {
 		return table.Row{
@@ -215,6 +244,9 @@ func getModelArtifacts(artifacts []models.ModelArtifact, filter string) []table.
 	})
 }
 
+/*
+getItemKey returns the ItemKey for a given category and table row.
+*/
 func getItemKey(category Category, row table.Row) models.ItemKey {
 	switch category {
 	case Tenant, LimitDefinition, Environment, ServiceTenancy,
@@ -233,6 +265,9 @@ func getItemKey(category Category, row table.Row) models.ItemKey {
 	return nil
 }
 
+/*
+findItem returns the item from the dataset for a given category and key.
+*/
 func findItem(dataset *models.Dataset, category Category, key models.ItemKey) interface{} {
 	var item interface{}
 
@@ -296,6 +331,9 @@ func findItem(dataset *models.Dataset, category Category, key models.ItemKey) in
 	return item
 }
 
+/*
+getItemKeyString returns a string representation of the ItemKey for a given category.
+*/
 func getItemKeyString(category Category, key models.ItemKey) string {
 	switch category {
 	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition,

@@ -131,6 +131,22 @@ go test ./...
 
 - **Unit tests** run on all pushes and pull requests.
 - **Integration tests** run on pushes to `main` and nightly (see `.github/workflows/ci.yml`).
+- **CI target**: Run `make ci` to execute both lint and test in one step (recommended for local and CI use).
+
+## Developer Workflow
+
+- Run `make ci` before pushing to ensure code passes lint and tests.
+- Use `make lint` to check for style and static analysis issues.
+- Use `make test` for a full race-enabled test run.
+- Use `make fmt` and `make tidy` to auto-format and tidy dependencies.
+
+## Architecture Overview
+
+Toolkit follows a modular, testable architecture:
+- **Loader interfaces** (see `internal/app/toolkit/loader.go`): Abstract data loading for datasets, models, GPU pools, etc. Split by concern for testability and clean dependency injection.
+- **Renderer interfaces** (see `internal/app/toolkit/render.go`): Abstract rendering logic for different output formats (e.g., JSON, table).
+- **Model** (see `internal/app/toolkit/model.go`): Central state and update logic, using the Bubble Tea TUI pattern. Composed via functional options for flexibility.
+- **Category enum** (see `internal/app/toolkit/category.go`): Strongly-typed, extensible grouping for all toolkit data and UI.
 
 ## Logging
 

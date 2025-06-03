@@ -20,6 +20,9 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+/*
+Config holds configuration for the toolkit CLI application.
+*/
 type Config struct {
 	RepoPath   string
 	KubeConfig string
@@ -156,6 +159,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, cfg); err != nil {
-		log.Fatalf("%v", err)
+		log.Printf("%v", err)
+		stop()
 	}
 }

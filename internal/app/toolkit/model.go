@@ -4,6 +4,9 @@
 package toolkit
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -20,6 +23,17 @@ type (
 	dataMsg   struct{ data interface{} }
 	filterMsg struct{ text string }
 )
+
+/*
+Loader is a composite interface that embeds all loader interfaces.
+*/
+type Loader interface {
+	DatasetLoader
+	BaseModelLoader
+	GpuPoolLoader
+	GpuNodeLoader
+	DedicatedAIClusterLoader
+}
 
 // Model represents the main TUI model for the toolkit application.
 type Model struct {
@@ -84,7 +98,11 @@ var categoryMap = map[string]Category{
 NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
 func NewModel(opts ...ModelOption) *Model {
-	logger, _ := zap.NewDevelopment()
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "warning: failed to initialize zap logger, using zap.NewNop():", err)
+		logger = zap.NewNop()
+	}
 	m := &Model{
 		mode:   Normal,
 		target: None,

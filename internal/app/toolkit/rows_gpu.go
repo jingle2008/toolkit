@@ -7,7 +7,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Adapter function for models.GpuNode
+/*
+GpuNodeToRow adapts a models.GpuNode to a table.Row for display.
+*/
 func GpuNodeToRow(_ string, n models.GpuNode) table.Row {
 	return table.Row{
 		n.NodePool,

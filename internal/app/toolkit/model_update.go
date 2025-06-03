@@ -2,7 +2,6 @@
 package toolkit
 
 import (
-	"log"
 	"math"
 	"strings"
 	"time"
@@ -13,8 +12,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
+	"go.uber.org/zap"
 )
 
+/*
+Update implements the tea.Model interface and updates the Model state in response to a message.
+*/
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.reduce(msg)
 }
@@ -395,7 +398,9 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 	if m.category == BaseModel {
 		if key.Matches(msg, m.keys.ViewModelArtifacts) {
 			item := m.getCurrentItem()
-			log.Printf("Viewing model artifacts for %s\n", item)
+			if m.logger != nil {
+				m.logger.Info("Viewing model artifacts", zap.Any("item", item))
+			}
 		}
 	}
 }

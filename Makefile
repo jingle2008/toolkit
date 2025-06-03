@@ -50,3 +50,5 @@ LINT_VERSION ?= v1.64.8
 
 install-lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(LINT_VERSION)
+
+ci: lint test

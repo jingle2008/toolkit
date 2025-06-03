@@ -7,7 +7,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Adapter function for models.DedicatedAICluster
+/*
+DedicatedAIClusterToRow adapts a models.DedicatedAICluster to a table.Row for display.
+*/
 func DedicatedAIClusterToRow(scope string, d models.DedicatedAICluster) table.Row {
 	unitShapeOrProfile := d.UnitShape
 	if unitShapeOrProfile == "" {

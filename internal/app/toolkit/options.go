@@ -90,6 +90,7 @@ func WithRenderer(r Renderer) ModelOption {
 }
 
 // WithLoader sets the Loader implementation for the Model.
+// The Loader interface must implement all loader interfaces (DatasetLoader, BaseModelLoader, GpuPoolLoader, GpuNodeLoader, DedicatedAIClusterLoader).
 func WithLoader(loader Loader) ModelOption {
 	return func(m *Model) {
 		m.loader = loader

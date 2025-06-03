@@ -10,7 +10,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// Adapter function for models.LimitTenancyOverride
+/*
+LimitTenancyOverrideToRow adapts a models.LimitTenancyOverride to a table.Row for display.
+*/
 func LimitTenancyOverrideToRow(scope string, l models.LimitTenancyOverride) table.Row {
 	return table.Row{
 		scope,
@@ -21,7 +23,9 @@ func LimitTenancyOverrideToRow(scope string, l models.LimitTenancyOverride) tabl
 	}
 }
 
-// Adapter function for models.ConsolePropertyTenancyOverride
+/*
+ConsolePropertyTenancyOverrideToRow adapts a models.ConsolePropertyTenancyOverride to a table.Row for display.
+*/
 func ConsolePropertyTenancyOverrideToRow(scope string, c models.ConsolePropertyTenancyOverride) table.Row {
 	return table.Row{
 		scope,
@@ -31,7 +35,9 @@ func ConsolePropertyTenancyOverrideToRow(scope string, c models.ConsolePropertyT
 	}
 }
 
-// Adapter function for models.PropertyTenancyOverride
+/*
+PropertyTenancyOverrideToRow adapts a models.PropertyTenancyOverride to a table.Row for display.
+*/
 func PropertyTenancyOverrideToRow(scope string, p models.PropertyTenancyOverride) table.Row {
 	return table.Row{
 		scope,
