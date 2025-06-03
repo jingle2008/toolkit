@@ -8,9 +8,11 @@ import (
 )
 
 /*
-DedicatedAIClusterToRow adapts a models.DedicatedAICluster to a table.Row for display.
+dedicatedAIClusterRow is a wrapper to implement RowMarshaler for models.DedicatedAICluster.
 */
-func DedicatedAIClusterToRow(scope string, d models.DedicatedAICluster) table.Row {
+type dedicatedAIClusterRow models.DedicatedAICluster
+
+func (d dedicatedAIClusterRow) ToRow(scope string) table.Row {
 	unitShapeOrProfile := d.UnitShape
 	if unitShapeOrProfile == "" {
 		unitShapeOrProfile = d.Profile
@@ -23,4 +25,13 @@ func DedicatedAIClusterToRow(scope string, d models.DedicatedAICluster) table.Ro
 		fmt.Sprint(d.Size),
 		d.Status,
 	}
+}
+
+// Helper to convert a slice of models.DedicatedAICluster to []table.Row using MarshalRows.
+func DedicatedAIClustersToRows(scope string, clusters []models.DedicatedAICluster) []table.Row {
+	wrapped := make([]dedicatedAIClusterRow, len(clusters))
+	for i, c := range clusters {
+		wrapped[i] = dedicatedAIClusterRow(c)
+	}
+	return MarshalRows[dedicatedAIClusterRow](scope, wrapped)
 }

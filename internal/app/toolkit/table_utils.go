@@ -170,7 +170,7 @@ func getTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row 
 
 	case models.DedicatedAICluster:
 		// Use adapter function for RowMarshaler pattern
-		return DedicatedAIClusterToRow(tenant, val)
+		return dedicatedAIClusterRow(val).ToRow(tenant)
 
 	default:
 		if logger != nil {
