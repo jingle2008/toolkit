@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -311,6 +312,6 @@ func TestIsValidEnvironment(t *testing.T) {
 
 func TestLoadDataset_Error(t *testing.T) {
 	t.Parallel()
-	_, err := LoadDataset("/no/such/path", models.Environment{})
+	_, err := LoadDataset(context.Background(), "/no/such/path", models.Environment{})
 	assert.Error(t, err)
 }

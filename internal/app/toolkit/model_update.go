@@ -2,6 +2,7 @@
 package toolkit
 
 import (
+	"context"
 	"math"
 	"strings"
 	"time"
@@ -230,22 +231,22 @@ func (m *Model) ensureCategory() tea.Msg {
 	switch m.category {
 	case BaseModel:
 		if m.dataset.BaseModelMap == nil {
-			data, err = utils.LoadBaseModels(m.repoPath, m.environment)
+			data, err = utils.LoadBaseModels(context.Background(), m.repoPath, m.environment)
 		}
 
 	case GpuPool:
 		if m.dataset.GpuPools == nil {
-			data, err = utils.LoadGpuPools(m.repoPath, m.environment)
+			data, err = utils.LoadGpuPools(context.Background(), m.repoPath, m.environment)
 		}
 
 	case GpuNode:
 		if m.dataset.GpuNodeMap == nil {
-			data, err = utils.LoadGpuNodes(m.kubeConfig, m.environment)
+			data, err = utils.LoadGpuNodes(context.Background(), m.kubeConfig, m.environment)
 		}
 
 	case DedicatedAICluster:
 		if m.dataset.DedicatedAIClusterMap == nil {
-			data, err = utils.LoadDedicatedAIClusters(m.kubeConfig, m.environment)
+			data, err = utils.LoadDedicatedAIClusters(context.Background(), m.kubeConfig, m.environment)
 		}
 	}
 

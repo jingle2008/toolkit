@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -244,7 +245,7 @@ locals {
 	require.NoError(t, err)
 
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	modelsMap, err := LoadBaseModels(dir, env)
+	modelsMap, err := LoadBaseModels(context.Background(), dir, env)
 	require.NoError(t, err)
 	assert.NotNil(t, modelsMap)
 	assert.Contains(t, modelsMap, "model1")
@@ -267,7 +268,7 @@ locals {
 	err := os.WriteFile(filepath.Join(bmDir, "locals.tf"), []byte(tf), 0o600) // #nosec G306
 	require.NoError(t, err)
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	_, err = LoadBaseModels(dir, env)
+	_, err = LoadBaseModels(context.Background(), dir, env)
 	assert.Error(t, err)
 }
 
@@ -382,7 +383,7 @@ locals {
 	err = os.WriteFile(filepath.Join(okeDir, "locals.tf"), []byte(tf3), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	pools, err := LoadGpuPools(dir, env)
+	pools, err := LoadGpuPools(context.Background(), dir, env)
 	require.NoError(t, err)
 	assert.NotNil(t, pools)
 	assert.GreaterOrEqual(t, len(pools), 3)
@@ -393,7 +394,7 @@ func TestLoadGpuPools_MissingConfig(t *testing.T) {
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	// No config files
-	_, err := LoadGpuPools(dir, env)
+	_, err := LoadGpuPools(context.Background(), dir, env)
 	require.Error(t, err)
 }
 
@@ -458,7 +459,7 @@ locals {
 	err := os.WriteFile(filepath.Join(subdir, "locals.tf"), []byte(tf), 0o600) // #nosec G306
 	require.NoError(t, err)
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	arts, err := LoadModelArtifacts(dir, env)
+	arts, err := LoadModelArtifacts(context.Background(), dir, env)
 	require.NoError(t, err)
 	assert.NotNil(t, arts)
 	assert.GreaterOrEqual(t, len(arts), 1)
@@ -476,7 +477,7 @@ locals {
 	err := os.WriteFile(filepath.Join(subdir, "locals.tf"), []byte(tf), 0o600) // #nosec G306
 	require.NoError(t, err)
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	_, err = LoadModelArtifacts(dir, env)
+	_, err = LoadModelArtifacts(context.Background(), dir, env)
 	require.Error(t, err)
 }
 
@@ -498,7 +499,7 @@ locals {
 	err := os.WriteFile(path, []byte(tf), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	tenancies, err := LoadServiceTenancies(dir)
+	tenancies, err := LoadServiceTenancies(context.Background(), dir)
 	require.NoError(t, err)
 	assert.NotNil(t, tenancies)
 }
@@ -517,7 +518,7 @@ locals {
 	err := os.WriteFile(path, []byte(tf), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	tenancies, err := LoadServiceTenancies(dir)
+	tenancies, err := LoadServiceTenancies(context.Background(), dir)
 	require.NoError(t, err)
 	assert.NotNil(t, tenancies)
 	assert.Empty(t, tenancies)
@@ -535,7 +536,7 @@ locals {
 	err := os.WriteFile(path, []byte(tf), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	_, err = LoadServiceTenancies(dir)
+	_, err = LoadServiceTenancies(context.Background(), dir)
 	require.Error(t, err)
 }
 

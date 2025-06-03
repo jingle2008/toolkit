@@ -4,6 +4,7 @@
 package toolkit
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -194,7 +195,7 @@ func NewModel(opts ...ModelOption) *Model {
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() tea.Cmd {
 	return func() tea.Msg {
-		dataset, err := utils.LoadDataset(m.repoPath, m.environment)
+		dataset, err := utils.LoadDataset(context.Background(), m.repoPath, m.environment)
 		if err != nil {
 			return errMsg{err}
 		}

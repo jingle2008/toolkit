@@ -4,6 +4,7 @@ Package utils provides utility functions for configuration management.
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -198,9 +199,10 @@ func isValidEnvironment(env models.Environment, allEnvs []models.Environment) bo
 
 /*
 LoadDataset loads a Dataset from the given repository path and environment.
+Now accepts context.Context as the first parameter.
 */
-func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, error) {
-	serviceTenancies, err := LoadServiceTenancies(repoPath)
+func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (*models.Dataset, error) {
+	serviceTenancies, err := LoadServiceTenancies(ctx, repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +278,7 @@ func LoadDataset(repoPath string, env models.Environment) (*models.Dataset, erro
 		return nil, err
 	}
 
-	modelArtifacts, err := LoadModelArtifacts(repoPath, env)
+	modelArtifacts, err := LoadModelArtifacts(ctx, repoPath, env)
 	if err != nil {
 		return nil, err
 	}

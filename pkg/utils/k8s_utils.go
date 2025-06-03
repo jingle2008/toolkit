@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"sort"
 
 	models "github.com/jingle2008/toolkit/pkg/models"
@@ -17,8 +18,9 @@ var helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
 
 /*
 LoadGpuNodes loads GPU node information from the given config file and environment.
+Now accepts context.Context as the first parameter.
 */
-func LoadGpuNodes(configFile string, env models.Environment) (map[string][]models.GpuNode, error) {
+func LoadGpuNodes(ctx context.Context, configFile string, env models.Environment) (map[string][]models.GpuNode, error) {
 	k8sHelper, err := helperFactory(configFile, env.GetKubeContext())
 	if err != nil {
 		return nil, err
@@ -48,8 +50,9 @@ func LoadGpuNodes(configFile string, env models.Environment) (map[string][]model
 
 /*
 LoadDedicatedAIClusters loads DedicatedAICluster information from the given config file and environment.
+Now accepts context.Context as the first parameter.
 */
-func LoadDedicatedAIClusters(configFile string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
+func LoadDedicatedAIClusters(ctx context.Context, configFile string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	k8sHelper, err := helperFactory(configFile, env.GetKubeContext())
 	if err != nil {
 		return nil, err

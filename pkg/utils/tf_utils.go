@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -254,8 +255,9 @@ func loadModelReplicas(object cty.Value) map[string]int {
 
 /*
 LoadServiceTenancies loads ServiceTenancy objects from the given repository path.
+Now accepts context.Context as the first parameter.
 */
-func LoadServiceTenancies(repoPath string) ([]models.ServiceTenancy, error) {
+func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.ServiceTenancy, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
 	attributes, err := getLocalAttributes(dirPath)
 	if err != nil {
@@ -392,8 +394,9 @@ func unmarshalYaml[T any](text *string) *T {
 
 /*
 LoadBaseModels loads base model definitions from the given repository path and environment.
+Now accepts context.Context as the first parameter.
 */
-func LoadBaseModels(repoPath string, env models.Environment) (
+func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment) (
 	map[string]*models.BaseModel, error,
 ) {
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region")
@@ -519,8 +522,9 @@ func getCapability(object cty.Value, chartValues map[string]*models.ChartValues)
 
 /*
 LoadGpuPools loads GpuPool objects from the given repository path and environment.
+Now accepts context.Context as the first parameter.
 */
-func LoadGpuPools(repoPath string, env models.Environment) ([]models.GpuPool, error) {
+func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
 	var gpuPools []models.GpuPool
 
 	// self-managed pools
@@ -592,8 +596,9 @@ func loadGpuPools(dirPath, poolConfigName string, isOkeManaged bool,
 
 /*
 LoadModelArtifacts loads ModelArtifact objects from the given repository path and environment.
+Now accepts context.Context as the first parameter.
 */
-func LoadModelArtifacts(repoPath string, env models.Environment) ([]models.ModelArtifact, error) {
+func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environment) ([]models.ModelArtifact, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/tensorrt_models_config")
 	valueMap, err := loadLocalValueMap(dirPath, env)
 	if err != nil {

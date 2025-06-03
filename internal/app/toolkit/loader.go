@@ -1,6 +1,8 @@
 package toolkit
 
 import (
+	"context"
+
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 )
@@ -10,7 +12,7 @@ DatasetLoader defines an interface for loading datasets.
 */
 type DatasetLoader interface {
 	// LoadDataset loads a dataset from the given repo and environment.
-	LoadDataset(repo string, env models.Environment) (*models.Dataset, error)
+	LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error)
 }
 
 /*
@@ -18,7 +20,7 @@ BaseModelLoader defines an interface for loading base models.
 */
 type BaseModelLoader interface {
 	// LoadBaseModels loads base models from the given repo and environment.
-	LoadBaseModels(repo string, env models.Environment) (map[string]*models.BaseModel, error)
+	LoadBaseModels(ctx context.Context, repo string, env models.Environment) (map[string]*models.BaseModel, error)
 }
 
 /*
@@ -26,7 +28,7 @@ GpuPoolLoader defines an interface for loading GPU pools.
 */
 type GpuPoolLoader interface {
 	// LoadGpuPools loads GPU pools from the given repo and environment.
-	LoadGpuPools(repo string, env models.Environment) ([]models.GpuPool, error)
+	LoadGpuPools(ctx context.Context, repo string, env models.Environment) ([]models.GpuPool, error)
 }
 
 /*
@@ -34,7 +36,7 @@ GpuNodeLoader defines an interface for loading GPU nodes.
 */
 type GpuNodeLoader interface {
 	// LoadGpuNodes loads GPU nodes from the given kube config and environment.
-	LoadGpuNodes(kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error)
+	LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error)
 }
 
 /*
@@ -42,7 +44,7 @@ DedicatedAIClusterLoader defines an interface for loading dedicated AI clusters.
 */
 type DedicatedAIClusterLoader interface {
 	// LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
-	LoadDedicatedAIClusters(kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error)
+	LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error)
 }
 
 /*
@@ -50,27 +52,32 @@ ProductionLoader implements all loader interfaces using the production utils pac
 */
 type ProductionLoader struct{}
 
+/*
+NOTE: The following ProductionLoader methods and their corresponding utils.* functions
+must be updated to accept context.Context as the first parameter.
+*/
+
 // LoadDataset loads a dataset from the given repo and environment.
-func (ProductionLoader) LoadDataset(repo string, env models.Environment) (*models.Dataset, error) {
-	return utils.LoadDataset(repo, env)
+func (ProductionLoader) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
+	return utils.LoadDataset(ctx, repo, env) // TODO: Update utils.LoadDataset to accept context.Context
 }
 
 // LoadBaseModels loads base models from the given repo and environment.
-func (ProductionLoader) LoadBaseModels(repo string, env models.Environment) (map[string]*models.BaseModel, error) {
-	return utils.LoadBaseModels(repo, env)
+func (ProductionLoader) LoadBaseModels(ctx context.Context, repo string, env models.Environment) (map[string]*models.BaseModel, error) {
+	return utils.LoadBaseModels(ctx, repo, env) // TODO: Update utils.LoadBaseModels to accept context.Context
 }
 
 // LoadGpuPools loads GPU pools from the given repo and environment.
-func (ProductionLoader) LoadGpuPools(repo string, env models.Environment) ([]models.GpuPool, error) {
-	return utils.LoadGpuPools(repo, env)
+func (ProductionLoader) LoadGpuPools(ctx context.Context, repo string, env models.Environment) ([]models.GpuPool, error) {
+	return utils.LoadGpuPools(ctx, repo, env) // TODO: Update utils.LoadGpuPools to accept context.Context
 }
 
 // LoadGpuNodes loads GPU nodes from the given kube config and environment.
-func (ProductionLoader) LoadGpuNodes(kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error) {
-	return utils.LoadGpuNodes(kubeCfg, env)
+func (ProductionLoader) LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error) {
+	return utils.LoadGpuNodes(ctx, kubeCfg, env) // TODO: Update utils.LoadGpuNodes to accept context.Context
 }
 
 // LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
-func (ProductionLoader) LoadDedicatedAIClusters(kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	return utils.LoadDedicatedAIClusters(kubeCfg, env)
+func (ProductionLoader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
+	return utils.LoadDedicatedAIClusters(ctx, kubeCfg, env) // TODO: Update utils.LoadDedicatedAIClusters to accept context.Context
 }

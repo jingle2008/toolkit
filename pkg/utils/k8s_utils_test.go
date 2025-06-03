@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -36,7 +37,7 @@ func TestLoadGpuNodes_Success(t *testing.T) {
 		}, nil
 	}
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	result, err := LoadGpuNodes("dummy", env)
+	result, err := LoadGpuNodes(context.Background(), "dummy", env)
 	require.NoError(t, err)
 	assert.Contains(t, result, "pool1")
 	assert.Len(t, result["pool1"], 2)
@@ -50,7 +51,7 @@ func TestLoadGpuNodes_Error(t *testing.T) {
 		return &mockK8sHelper{err: errors.New("fail")}, nil
 	}
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	_, err := LoadGpuNodes("dummy", env)
+	_, err := LoadGpuNodes(context.Background(), "dummy", env)
 	assert.Error(t, err)
 }
 
@@ -67,7 +68,7 @@ func TestLoadDedicatedAIClusters_Success(t *testing.T) {
 		}, nil
 	}
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	result, err := LoadDedicatedAIClusters("dummy", env)
+	result, err := LoadDedicatedAIClusters(context.Background(), "dummy", env)
 	require.NoError(t, err)
 	assert.Contains(t, result, "tid1")
 	assert.Len(t, result["tid1"], 2)
@@ -81,6 +82,6 @@ func TestLoadDedicatedAIClusters_Error(t *testing.T) {
 		return &mockK8sHelper{err: errors.New("fail")}, nil
 	}
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	_, err := LoadDedicatedAIClusters("dummy", env)
+	_, err := LoadDedicatedAIClusters(context.Background(), "dummy", env)
 	assert.Error(t, err)
 }
