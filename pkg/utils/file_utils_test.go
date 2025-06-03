@@ -10,6 +10,7 @@ import (
 )
 
 func TestSafeReadFile(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	allowExt := map[string]struct{}{".txt": {}, ".json": {}}
 	txtFile := filepath.Join(tmpDir, "a.txt")
@@ -40,6 +41,7 @@ func TestSafeReadFile(t *testing.T) {
 }
 
 func TestSafeReadFile_Success(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "foo.json")
 	err := os.WriteFile(path, []byte(`{"ok":true}`), 0o600) // #nosec G306
@@ -52,6 +54,7 @@ func TestSafeReadFile_Success(t *testing.T) {
 }
 
 func TestSafeReadFile_DisallowedExt(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "foo.txt")
 	err := os.WriteFile(path, []byte("bad"), 0o600) // #nosec G306
@@ -64,6 +67,7 @@ func TestSafeReadFile_DisallowedExt(t *testing.T) {
 }
 
 func TestSafeReadFile_DirTraversal(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	allow := map[string]struct{}{".json": {}}
 	evil := filepath.Join(dir, "..", "evil.json")
@@ -73,6 +77,7 @@ func TestSafeReadFile_DirTraversal(t *testing.T) {
 }
 
 func TestSafeReadFile_OutsideBaseDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	otherDir := t.TempDir()
 	path := filepath.Join(otherDir, "foo.json")

@@ -24,6 +24,7 @@ func (m *mockK8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, 
 }
 
 func TestLoadGpuNodes_Success(t *testing.T) {
+	t.Parallel()
 	orig := helperFactory
 	defer func() { helperFactory = orig }()
 	helperFactory = func(_ string, _ string) (gpuHelper, error) {
@@ -42,6 +43,7 @@ func TestLoadGpuNodes_Success(t *testing.T) {
 }
 
 func TestLoadGpuNodes_Error(t *testing.T) {
+	t.Parallel()
 	orig := helperFactory
 	defer func() { helperFactory = orig }()
 	helperFactory = func(_ string, _ string) (gpuHelper, error) {
@@ -53,6 +55,7 @@ func TestLoadGpuNodes_Error(t *testing.T) {
 }
 
 func TestLoadDedicatedAIClusters_Success(t *testing.T) {
+	t.Parallel()
 	orig := helperFactory
 	defer func() { helperFactory = orig }()
 	helperFactory = func(_ string, _ string) (gpuHelper, error) {
@@ -71,6 +74,7 @@ func TestLoadDedicatedAIClusters_Success(t *testing.T) {
 }
 
 func TestLoadDedicatedAIClusters_Error(t *testing.T) {
+	t.Parallel()
 	orig := helperFactory
 	defer func() { helperFactory = orig }()
 	helperFactory = func(_ string, _ string) (gpuHelper, error) {

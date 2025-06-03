@@ -69,11 +69,13 @@ func writeTempFile(t *testing.T, dir, name, content string) string {
 }
 
 func TestGetLocalAttributes_Error(t *testing.T) {
+	t.Parallel()
 	_, err := getLocalAttributes("/no/such/dir")
 	assert.Error(t, err)
 }
 
 func TestUpdateLocalAttributes_Error(t *testing.T) {
+	t.Parallel()
 	tmp := filepath.Join(os.TempDir(), "notfound.tf")
 	attrs := make(hclsyntax.Attributes)
 	err := updateLocalAttributes(tmp, attrs)
@@ -81,6 +83,7 @@ func TestUpdateLocalAttributes_Error(t *testing.T) {
 }
 
 func TestMergeObject(t *testing.T) {
+	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{"a": cty.StringVal("x")})
 	out := mergeObject(obj, "b", cty.StringVal("y"))
 	assert.Equal(t, "x", out.AsValueMap()["a"].AsString())
@@ -110,29 +113,34 @@ func TestExtractGpuNumber(t *testing.T) {
 }
 
 func TestUnmarshalYaml_Nil(t *testing.T) {
+	t.Parallel()
 	type Foo struct{ X int }
 	assert.Nil(t, unmarshalYaml[Foo](nil))
 }
 
 func TestUnmarshalYaml_Bad(t *testing.T) {
+	t.Parallel()
 	type Foo struct{ X int }
 	bad := "not: [valid"
 	assert.Nil(t, unmarshalYaml[Foo](&bad))
 }
 
 func TestCreateAvailabilityDomains(t *testing.T) {
+	t.Parallel()
 	val := createAvailabilityDomains()
 	m := val.AsValueMap()
 	assert.Contains(t, m, "ad_list")
 }
 
 func TestCreateObjectStorageNamespace(t *testing.T) {
+	t.Parallel()
 	val := createObjectStorageNamespace()
 	m := val.AsValueMap()
 	assert.Contains(t, m, "objectstorage_namespace")
 }
 
 func TestLoadModelCapabilities(t *testing.T) {
+	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{
 		"model1": cty.TupleVal([]cty.Value{cty.StringVal("cap1"), cty.StringVal("cap2")}),
 	})
@@ -143,6 +151,7 @@ func TestLoadModelCapabilities(t *testing.T) {
 }
 
 func TestLoadModelReplicas(t *testing.T) {
+	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{
 		"model1": cty.NumberIntVal(3),
 	})
@@ -151,11 +160,13 @@ func TestLoadModelReplicas(t *testing.T) {
 }
 
 func TestConvertChartValues_Nil(t *testing.T) {
+	t.Parallel()
 	val := convertChartValues(ChartValues{})
 	assert.NotNil(t, val)
 }
 
 func TestGetServiceTenancy(t *testing.T) {
+	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{
 		"tenancy_name": cty.StringVal("t1"),
 		"home_region":  cty.StringVal("hr"),
@@ -171,11 +182,13 @@ func TestGetServiceTenancy(t *testing.T) {
 }
 
 func TestLoadChartValuesMap_Error(t *testing.T) {
+	t.Parallel()
 	_, err := loadChartValuesMap("/no/such/dir")
 	assert.Error(t, err)
 }
 
 func TestLoadBaseModels_Success(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	bmDir := baseModelsDir(t, dir)
 	cvDir := chartValuesDirBM(t, dir)
@@ -243,6 +256,7 @@ locals {
 }
 
 func TestLoadBaseModels_MissingLocals(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	bmDir := baseModelsDir(t, dir)
 	tf := `
@@ -258,6 +272,7 @@ locals {
 }
 
 func TestLoadChartValuesMap_EmptyDir(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	chartValuesDir(t, dir)
 	// No files in subdir
@@ -268,6 +283,7 @@ func TestLoadChartValuesMap_EmptyDir(t *testing.T) {
 }
 
 func TestLoadChartValuesMap_ValidYaml(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := chartValuesDir(t, dir)
 	content := `
@@ -284,6 +300,7 @@ model:
 }
 
 func TestLoadChartValuesMap_SafeReadFileError(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := chartValuesDir(t, dir)
 	// Create a file and remove read permissions
@@ -299,6 +316,7 @@ func TestLoadChartValuesMap_SafeReadFileError(t *testing.T) {
 }
 
 func TestLoadChartValuesMap_InvalidYaml(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := chartValuesDir(t, dir)
 	path := filepath.Join(subdir, "bad.yaml")
@@ -312,6 +330,7 @@ func TestLoadChartValuesMap_InvalidYaml(t *testing.T) {
 }
 
 func TestLoadGpuPools_Success(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 
@@ -370,6 +389,7 @@ locals {
 }
 
 func TestLoadGpuPools_MissingConfig(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	// No config files
@@ -378,6 +398,7 @@ func TestLoadGpuPools_MissingConfig(t *testing.T) {
 }
 
 func TestLoadLocalValueMap_Success(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	tf := `
 locals {
@@ -393,6 +414,7 @@ locals {
 }
 
 func TestLoadLocalValueMap_NoTfFiles(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	vals, err := loadLocalValueMap(dir, env)
@@ -404,6 +426,7 @@ func TestLoadLocalValueMap_NoTfFiles(t *testing.T) {
 }
 
 func TestLoadLocalValueMap_InvalidHCL(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	tf := `
 locals {
@@ -416,6 +439,7 @@ locals {
 }
 
 func TestLoadModelArtifacts_Success(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := tensorrtModelsDir(t, dir)
 	tf := `
@@ -441,6 +465,7 @@ locals {
 }
 
 func TestLoadModelArtifacts_MissingMap(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := tensorrtModelsDir(t, dir)
 	tf := `
@@ -456,6 +481,7 @@ locals {
 }
 
 func TestLoadServiceTenancies_Success(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := shepTargetsDir(t, dir)
 	tf := `
@@ -478,6 +504,7 @@ locals {
 }
 
 func TestLoadServiceTenancies_GroupAndRegionKeys(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := shepTargetsDir(t, dir)
 	tf := `
@@ -497,6 +524,7 @@ locals {
 }
 
 func TestLoadServiceTenancies_InvalidHCL(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	subdir := shepTargetsDir(t, dir)
 	tf := `
@@ -512,6 +540,7 @@ locals {
 }
 
 func TestUpdateLocalAttributes_LocalsBlock(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	tf := `
 locals {
@@ -528,6 +557,7 @@ locals {
 }
 
 func TestUpdateLocalAttributes_OutputBlock(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	tf := `
 output "baz" {
@@ -542,6 +572,7 @@ output "baz" {
 }
 
 func TestUpdateLocalAttributes_NoRelevantBlocks(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	tf := `
 resource "null_resource" "test" {}
@@ -554,6 +585,7 @@ resource "null_resource" "test" {}
 }
 
 func TestUpdateLocalAttributes_InvalidHCL(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	tf := `
 locals {
@@ -568,6 +600,7 @@ locals {
 // ---- Merged from tf_utils_additional_test.go ----
 
 func TestGetLocalAttributesDI_ListFilesError(t *testing.T) {
+	t.Parallel()
 	_, err := getLocalAttributesDI(
 		"irrelevant",
 		func(string, string) ([]string, error) { return nil, assert.AnError },
@@ -577,6 +610,7 @@ func TestGetLocalAttributesDI_ListFilesError(t *testing.T) {
 }
 
 func TestGetLocalAttributesDI_UpdateLocalAttributesError(t *testing.T) {
+	t.Parallel()
 	files := []string{"a.tf", "b.tf"}
 	_, err := getLocalAttributesDI(
 		"irrelevant",
@@ -587,6 +621,7 @@ func TestGetLocalAttributesDI_UpdateLocalAttributesError(t *testing.T) {
 }
 
 func TestGetLocalAttributesDI_EmptyFiles(t *testing.T) {
+	t.Parallel()
 	out, err := getLocalAttributesDI(
 		"irrelevant",
 		func(string, string) ([]string, error) { return []string{}, nil },
@@ -598,6 +633,7 @@ func TestGetLocalAttributesDI_EmptyFiles(t *testing.T) {
 }
 
 func TestGetLocalAttributesDI_Success(t *testing.T) {
+	t.Parallel()
 	files := []string{"a.tf"}
 	called := false
 	_, err := getLocalAttributesDI(
@@ -612,6 +648,7 @@ func TestGetLocalAttributesDI_Success(t *testing.T) {
 // ---- Merged from tf_utils_get_base_model_test.go ----
 
 func TestGetBaseModel_AllFields(t *testing.T) {
+	t.Parallel()
 	enabledCaps := map[string]struct{}{
 		"generation":    {},
 		"summarization": {},
@@ -672,6 +709,7 @@ func TestGetBaseModel_AllFields(t *testing.T) {
 }
 
 func TestGetBaseModel_Empty(t *testing.T) {
+	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{})
 	chartValues := map[string]*models.ChartValues{}
 	bm := getBaseModel(obj, map[string]struct{}{}, chartValues)
@@ -680,6 +718,7 @@ func TestGetBaseModel_Empty(t *testing.T) {
 }
 
 func TestGetCapability_AllFields(t *testing.T) {
+	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{
 		"capability":  cty.StringVal("gen"),
 		"cr_name":     cty.StringVal("cr"),
@@ -701,6 +740,7 @@ func TestGetCapability_AllFields(t *testing.T) {
 }
 
 func TestGetCapability_Empty(t *testing.T) {
+	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{})
 	chartValues := map[string]*models.ChartValues{}
 	capability := getCapability(obj, chartValues)

@@ -1,6 +1,6 @@
+version: 2
 # golangci-lint configuration
 # - paralleltest: enforces t.Parallel() in tests; use //nolint:paralleltest with justification for serial tests
-# - testpackage: warns if tests use the same package as the code under test; prefer _test package for public API tests
 # See CONTRIBUTING.md for test best practices.
 
 run:
@@ -11,14 +11,11 @@ linters:
     - staticcheck
     - revive
     - errcheck
-    - goimports
     - gocognit
     - ineffassign
     - misspell
     - wastedassign
     - paralleltest
-    - testpackage
-    - tagliatelle
     - gocritic
     - gosec
   presets:

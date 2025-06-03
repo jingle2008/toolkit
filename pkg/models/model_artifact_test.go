@@ -7,6 +7,7 @@ import (
 )
 
 func TestModelArtifact_Getters(t *testing.T) {
+	t.Parallel()
 	ma := ModelArtifact{
 		ModelName: "m1",
 		GpuShape:  "A100",

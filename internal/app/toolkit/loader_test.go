@@ -7,6 +7,7 @@ import (
 )
 
 func TestProductionLoader_LoadDataset(t *testing.T) {
+	t.Parallel()
 	loader := ProductionLoader{}
 	_, err := loader.LoadDataset("dummy_repo", models.Environment{})
 	if err == nil {
@@ -15,6 +16,7 @@ func TestProductionLoader_LoadDataset(t *testing.T) {
 }
 
 func TestProductionLoader_LoadBaseModels(t *testing.T) {
+	t.Parallel()
 	loader := ProductionLoader{}
 	_, err := loader.LoadBaseModels("dummy_repo", models.Environment{})
 	if err == nil {
@@ -23,6 +25,7 @@ func TestProductionLoader_LoadBaseModels(t *testing.T) {
 }
 
 func TestProductionLoader_LoadGpuPools(t *testing.T) {
+	t.Parallel()
 	loader := ProductionLoader{}
 	_, err := loader.LoadGpuPools("dummy_repo", models.Environment{})
 	if err == nil {
@@ -31,6 +34,7 @@ func TestProductionLoader_LoadGpuPools(t *testing.T) {
 }
 
 func TestProductionLoader_LoadGpuNodes(t *testing.T) {
+	t.Parallel()
 	loader := ProductionLoader{}
 	_, err := loader.LoadGpuNodes("dummy_kubeconfig", models.Environment{})
 	if err == nil {
@@ -39,6 +43,7 @@ func TestProductionLoader_LoadGpuNodes(t *testing.T) {
 }
 
 func TestProductionLoader_LoadDedicatedAIClusters(t *testing.T) {
+	t.Parallel()
 	loader := ProductionLoader{}
 	_, err := loader.LoadDedicatedAIClusters("dummy_kubeconfig", models.Environment{})
 	if err == nil {

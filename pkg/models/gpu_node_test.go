@@ -7,6 +7,7 @@ import (
 )
 
 func TestGpuNode_Getters(t *testing.T) {
+	t.Parallel()
 	node := GpuNode{
 		Name:         "node1",
 		InstanceType: "NVIDIA.A100.8",

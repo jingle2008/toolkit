@@ -7,6 +7,7 @@ import (
 )
 
 func TestPropertyDefinition_Getters(t *testing.T) {
+	t.Parallel()
 	p := PropertyDefinition{
 		Name:         "foo",
 		Description:  "desc",
@@ -21,6 +22,7 @@ func TestPropertyDefinition_Getters(t *testing.T) {
 }
 
 func TestPropertyRegionalOverride_Getters(t *testing.T) {
+	t.Parallel()
 	pro := PropertyRegionalOverride{
 		Realms:  []string{"r1"},
 		Name:    "p1",
@@ -38,6 +40,7 @@ func TestPropertyRegionalOverride_Getters(t *testing.T) {
 }
 
 func TestPropertyTenancyOverride_GetTenantID(t *testing.T) {
+	t.Parallel()
 	pro := PropertyRegionalOverride{
 		Realms:  []string{"r1"},
 		Name:    "p1",

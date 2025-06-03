@@ -31,6 +31,7 @@ func (c LimitDefinition) GetFilterableFields() []string {
 	return []string{c.Name, c.Description}
 }
 
+// LimitRange represents a min/max range for a limit override.
 type LimitRange struct {
 	Min int `json:"min"`
 	Max int `json:"max"`
@@ -58,6 +59,6 @@ func (o LimitTenancyOverride) GetTenantID() string {
 
 // GetFilterableFields returns filterable fields for the limit tenancy override.
 func (o LimitTenancyOverride) GetFilterableFields() []string {
-	results := o.Regions[:]
+	results := o.Regions
 	return append(results, o.Name)
 }

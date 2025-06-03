@@ -30,13 +30,13 @@ func (n GpuNode) GetFilterableFields() []string {
 func (n GpuNode) GetStatus() string {
 	parts := strings.Split(n.InstanceType, ".")
 	count, _ := strconv.Atoi(parts[len(parts)-1])
-	if n.Allocatable != count {
+	switch {
+	case n.Allocatable != count:
 		return "ERROR: Missing GPUs"
-	} else if !n.IsHealthy {
+	case !n.IsHealthy:
 		return "ERROR: Unhealthy"
-	} else if !n.IsReady {
+	case !n.IsReady:
 		return "ERROR: Not ready"
 	}
-
 	return "OK"
 }

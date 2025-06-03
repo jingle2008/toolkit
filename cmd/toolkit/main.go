@@ -5,7 +5,7 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"log"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,9 +14,7 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-func main() {
-	// Removed unused ctx and signal.NotifyContext
-
+func run() error {
 	category := toolkit.Tenant
 	env := models.Environment{
 		Type:   "preprod",
@@ -29,8 +27,7 @@ func main() {
 
 	f, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {
-		fmt.Println("fatal:", err)
-		os.Exit(1)
+		return fmt.Errorf("fatal: %w", err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -46,7 +43,14 @@ func main() {
 	)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("alas, there's been an error: %v", err)
+	}
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		// log.Fatalf will print the error and call os.Exit(1)
+		log.Fatalf("%v", err)
 	}
 }

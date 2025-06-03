@@ -10,6 +10,7 @@ import (
 )
 
 func TestListFiles(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	// create a .txt file and a .go file
 	txtFile := dir + "/foo.txt"
@@ -28,6 +29,7 @@ func TestListFiles(t *testing.T) {
 }
 
 func TestListFiles_MatchExt(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	files := []string{"a.go", "b.txt", "c.go"}
 	for _, name := range files {
@@ -42,12 +44,14 @@ func TestListFiles_MatchExt(t *testing.T) {
 }
 
 func TestListFiles_NoMatch(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	_, err := ListFiles(dir, ".json")
 	require.NoError(t, err)
 }
 
 func TestListFiles_NonExistentDir(t *testing.T) {
+	t.Parallel()
 	_, err := ListFiles("/no/such/dir", ".go")
 	assert.Error(t, err)
 }

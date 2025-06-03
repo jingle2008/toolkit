@@ -7,6 +7,7 @@ import (
 )
 
 func TestRegion_GetCode(t *testing.T) {
+	t.Parallel()
 	var r Region = "us-phoenix-1"
 	assert.Equal(t, "phx", r.GetCode())
 	r = "us-ashburn-1"
@@ -16,6 +17,7 @@ func TestRegion_GetCode(t *testing.T) {
 }
 
 func TestCodeToRegion(t *testing.T) {
+	t.Parallel()
 	assert.Equal(t, Region("us-phoenix-1"), CodeToRegion("phx"))
 	assert.Equal(t, Region("us-ashburn-1"), CodeToRegion("iad"))
 	assert.Equal(t, Region(""), CodeToRegion("unknown"))

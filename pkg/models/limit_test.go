@@ -7,6 +7,7 @@ import (
 )
 
 func TestLimitDefinition_Getters(t *testing.T) {
+	t.Parallel()
 	ld := LimitDefinition{
 		Name:        "CPU",
 		Description: "CPU limit",
@@ -26,6 +27,7 @@ func TestLimitDefinition_Getters(t *testing.T) {
 }
 
 func TestLimitTenancyOverride_Getters(t *testing.T) {
+	t.Parallel()
 	lto := LimitTenancyOverride{
 		Realms:   []string{"realmA"},
 		Name:     "CPU",

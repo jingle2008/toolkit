@@ -7,6 +7,7 @@ import (
 )
 
 func TestServiceTenancy_Getters(t *testing.T) {
+	t.Parallel()
 	st := ServiceTenancy{
 		Name:        "svc1",
 		Regions:     []string{"us-phoenix-1", "us-ashburn-1"},

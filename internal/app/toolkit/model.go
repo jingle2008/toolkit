@@ -105,6 +105,9 @@ var categoryMap = map[string]Category{
 	"dac":  DedicatedAICluster,
 }
 
+/*
+NewModel creates a new Model for the toolkit TUI, applying the given options.
+*/
 func NewModel(opts ...ModelOption) *Model {
 	m := &Model{
 		mode:   Normal,
@@ -190,8 +193,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
+		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
@@ -210,8 +212,7 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc":
+		if msg.String() == "esc" {
 			m.backToLastState()
 		}
 
@@ -297,10 +298,8 @@ func (m *Model) getCurrentItem() interface{} {
 
 func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 	//nolint:exhaustive
-	switch m.category {
-	case BaseModel:
-		switch {
-		case key.Matches(msg, m.keys.ViewModelArtifacts):
+	if m.category == BaseModel {
+		if key.Matches(msg, m.keys.ViewModelArtifacts) {
 			item := m.getCurrentItem()
 			log.Printf("Viewing model artifacts for %s\n", item)
 		}
@@ -328,10 +327,8 @@ func (m *Model) processData(msg dataMsg) {
 func updateDetailView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc":
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if keyMsg.String() == "esc" {
 			m.exitDetailView()
 		}
 	}
@@ -400,10 +397,11 @@ func (m *Model) enterContext() tea.Cmd {
 		Category: m.category,
 		Name:     target,
 	}
-	if m.category.IsScope() {
+	switch {
+	case m.category.IsScope():
 		m.context = &appContext
 		return m.updateCategory(m.category.ScopedCategories()[0])
-	} else if m.category == Environment {
+	case m.category == Environment:
 		env := *utils.FindByName(m.dataset.Environments, target)
 		if !m.environment.Equals(env) {
 			m.environment = env
@@ -416,7 +414,7 @@ func (m *Model) enterContext() tea.Cmd {
 				m.updateCategory(BaseModel),
 			)
 		}
-	} else {
+	default:
 		m.enterDetailView()
 	}
 
@@ -489,7 +487,7 @@ func (m *Model) updateContent(width int) {
 	}
 	str, err := m.renderer.RenderJSON(content, width)
 	if err != nil {
-		wrappedErr := fmt.Errorf("Error encountered rendering content: %w", err)
+		wrappedErr := fmt.Errorf("error encountered rendering content: %w", err)
 		log.Println(wrappedErr)
 		return
 	}

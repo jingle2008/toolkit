@@ -340,6 +340,7 @@ func (m mockDefinition) GetFilterableFields() []string { return []string{m.name,
 // --- Extra merged tests below ---
 
 func TestGetItemKeyAndString(t *testing.T) {
+	t.Parallel()
 	// Table-driven: category, row, expected string
 	tests := []struct {
 		category Category
@@ -371,6 +372,7 @@ func TestGetItemKeyAndString(t *testing.T) {
 }
 
 func TestGetHeadersAndTableRows(t *testing.T) {
+	t.Parallel()
 	// Cover all categories for getHeaders and getTableRows
 	categories := []Category{
 		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition,
@@ -391,6 +393,7 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 }
 
 func TestAllCategories_HeadersAndRows(t *testing.T) {
+	t.Parallel()
 	// Use the same dataset as TestFindItem_AllCategories
 	ds := &models.Dataset{
 		Tenants:          []models.Tenant{{Name: "tenant1"}},
@@ -471,6 +474,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 // --- Added: Comprehensive findItem test for all categories ---
 
 func TestFindItem_AllCategories(t *testing.T) {
+	t.Parallel()
 	// Build a dataset with one entry for each category
 	ds := &models.Dataset{
 		Tenants:          []models.Tenant{{Name: "tenant1"}},
@@ -564,6 +568,7 @@ func TestFindItem_AllCategories(t *testing.T) {
 }
 
 func TestGetTableRow(t *testing.T) {
+	t.Parallel()
 	// Each supported type should yield a non-nil row
 	// Use the actual type for Values field from the model
 	ltov := models.LimitTenancyOverride{}

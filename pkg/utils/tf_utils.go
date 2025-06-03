@@ -86,11 +86,12 @@ func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) err
 
 	// find `locals` block
 	for _, block := range file.Body.(*hclsyntax.Body).Blocks {
-		if block.Type == localBlock {
+		switch block.Type {
+		case localBlock:
 			for key, value := range block.Body.Attributes {
 				attributes[key] = value
 			}
-		} else if block.Type == outputBlock {
+		case outputBlock:
 			key := block.Labels[0]
 			value := block.Body.Attributes[outputValue]
 			attributes[key] = value

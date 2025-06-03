@@ -7,6 +7,7 @@ import (
 )
 
 func TestGpuPool_Getters(t *testing.T) {
+	t.Parallel()
 	pool := GpuPool{
 		Name:         "pool1",
 		Shape:        "NVIDIA.A100.8",

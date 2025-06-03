@@ -12,6 +12,7 @@ import (
 )
 
 func TestLoadFile_JSON(t *testing.T) {
+	t.Parallel()
 	type Foo struct {
 		A int `json:"a"`
 	}
@@ -25,6 +26,7 @@ func TestLoadFile_JSON(t *testing.T) {
 // ---- Merged from json_utils_additional_test.go ----
 
 func TestLoadFile_Success(t *testing.T) {
+	t.Parallel()
 	type sample struct {
 		A int `json:"a"`
 	}
@@ -39,6 +41,7 @@ func TestLoadFile_Success(t *testing.T) {
 }
 
 func TestLoadFile_UnsupportedExt(t *testing.T) {
+	t.Parallel()
 	type sample struct{ A int }
 	dir := t.TempDir()
 	path := dir + "/sample.yaml"
@@ -51,6 +54,7 @@ func TestLoadFile_UnsupportedExt(t *testing.T) {
 }
 
 func TestLoadFile_MissingFile(t *testing.T) {
+	t.Parallel()
 	type sample struct{ A int }
 	dir := t.TempDir()
 	path := dir + "/notfound.json"
@@ -59,6 +63,7 @@ func TestLoadFile_MissingFile(t *testing.T) {
 }
 
 func TestLoadFile_BadExt(t *testing.T) {
+	t.Parallel()
 	type Foo struct {
 		A int `json:"a"`
 	}
@@ -69,6 +74,7 @@ func TestLoadFile_BadExt(t *testing.T) {
 }
 
 func TestLoadFile_BadJSON(t *testing.T) {
+	t.Parallel()
 	type Foo struct {
 		A int `json:"a"`
 	}
@@ -79,6 +85,7 @@ func TestLoadFile_BadJSON(t *testing.T) {
 }
 
 func TestPrettyJSON(t *testing.T) {
+	t.Parallel()
 	type Foo struct {
 		A int `json:"a"`
 	}
@@ -95,6 +102,7 @@ func TestPrettyJSON(t *testing.T) {
 // ---- Merged from json_utils_additional_test.go ----
 
 func TestPrettyJSON_Success(t *testing.T) {
+	t.Parallel()
 	obj := struct {
 		X string `json:"x"`
 		Y int    `json:"y"`
@@ -105,12 +113,14 @@ func TestPrettyJSON_Success(t *testing.T) {
 }
 
 func TestPrettyJSON_MarshalError(t *testing.T) {
+	t.Parallel()
 	ch := make(chan int)
 	_, err := utils.PrettyJSON(ch)
 	require.Error(t, err)
 }
 
 func TestLoadFile_FromTestdata(t *testing.T) {
+	t.Parallel()
 	type sample struct {
 		A int `json:"a"`
 	}

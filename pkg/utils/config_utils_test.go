@@ -20,6 +20,7 @@ type mockNamedItem struct {
 func (m mockNamedItem) GetName() string { return m.Name }
 
 func TestLoadOverrides_Success(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	item := mockNamedItem{Name: "foo"}
 	data, err := json.Marshal(item)
@@ -34,6 +35,7 @@ func TestLoadOverrides_Success(t *testing.T) {
 }
 
 func TestLoadOverridesDI_ListFilesError(t *testing.T) {
+	t.Parallel()
 	_, err := loadOverridesDI[mockNamedItem](
 		"irrelevant",
 		func(string, string) ([]string, error) { return nil, assert.AnError },
@@ -43,6 +45,7 @@ func TestLoadOverridesDI_ListFilesError(t *testing.T) {
 }
 
 func TestLoadOverridesDI_LoadFileError(t *testing.T) {
+	t.Parallel()
 	files := []string{"a.json", "b.json"}
 	_, err := loadOverridesDI[mockNamedItem](
 		"irrelevant",
@@ -53,6 +56,7 @@ func TestLoadOverridesDI_LoadFileError(t *testing.T) {
 }
 
 func TestLoadOverridesDI_Empty(t *testing.T) {
+	t.Parallel()
 	out, err := loadOverridesDI[mockNamedItem](
 		"irrelevant",
 		func(string, string) ([]string, error) { return []string{}, nil },
@@ -63,6 +67,7 @@ func TestLoadOverridesDI_Empty(t *testing.T) {
 }
 
 func TestLoadOverrides_ErrorOnBadFile(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	// Write a file with invalid JSON
 	err := os.WriteFile(filepath.Join(dir, "bad.json"), []byte("{not json"), 0o600) // #nosec G306
@@ -73,11 +78,13 @@ func TestLoadOverrides_ErrorOnBadFile(t *testing.T) {
 }
 
 func TestLoadOverrides_ErrorOnNoDir(t *testing.T) {
+	t.Parallel()
 	_, err := loadOverrides[mockNamedItem]("/no/such/dir")
 	assert.Error(t, err)
 }
 
 func TestLoadTenancyOverrides_Success(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	realm := "testrealm"
 	name := "testname"
@@ -99,6 +106,7 @@ func TestLoadTenancyOverrides_Success(t *testing.T) {
 }
 
 func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
+	t.Parallel()
 	_, err := loadTenancyOverridesDI[mockNamedItem](
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return nil, assert.AnError },
@@ -108,6 +116,7 @@ func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
 }
 
 func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
+	t.Parallel()
 	tenants := []string{"t1", "t2"}
 	_, err := loadTenancyOverridesDI[mockNamedItem](
 		"irrelevant", "realm", "name",
@@ -118,6 +127,7 @@ func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 }
 
 func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
+	t.Parallel()
 	_, err := loadTenancyOverridesDI[mockNamedItem](
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return []string{}, nil },
@@ -127,6 +137,7 @@ func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
 }
 
 func TestGetConfigPath(t *testing.T) {
+	t.Parallel()
 	root := "/repo"
 	realm := "oc1"
 	name := "limits"
@@ -135,6 +146,7 @@ func TestGetConfigPath(t *testing.T) {
 }
 
 func TestSortNamedItems(t *testing.T) {
+	t.Parallel()
 	type named struct{ name string }
 	// implement GetName for named
 	items := []named{{"b"}, {"a"}, {"c"}, {"a"}}
@@ -149,6 +161,7 @@ func TestSortNamedItems(t *testing.T) {
 }
 
 func TestSortKeyedItems(t *testing.T) {
+	t.Parallel()
 	type keyed struct{ key string }
 	// implement GetKey for keyed
 	items := []keyed{{"b"}, {"a"}, {"c"}, {"a"}}
@@ -163,6 +176,7 @@ func TestSortKeyedItems(t *testing.T) {
 }
 
 func TestListSubDirs(t *testing.T) {
+	t.Parallel()
 	dir, err := os.MkdirTemp("", "testsubdirs")
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(dir) }()
@@ -189,6 +203,7 @@ func TestListSubDirs(t *testing.T) {
 }
 
 func TestLoadOverrides_Error(t *testing.T) {
+	t.Parallel()
 	// Should error on non-existent dir
 	_, err := loadOverrides[models.Tenant]("/no/such/dir")
 	require.Error(t, err)
@@ -204,16 +219,19 @@ func TestLoadOverrides_Error(t *testing.T) {
 }
 
 func TestLoadTenancyOverrides_Error(t *testing.T) {
+	t.Parallel()
 	_, err := loadTenancyOverrides[models.Tenant]("/no/such/dir", "realm", "name")
 	require.Error(t, err)
 }
 
 func TestLoadRegionalOverrides_Error(t *testing.T) {
+	t.Parallel()
 	_, err := loadRegionalOverrides[models.Tenant]("/no/such/dir", "realm", "name")
 	require.Error(t, err)
 }
 
 func TestGetTenants(t *testing.T) {
+	t.Parallel()
 	m := map[string]tenantInfo{
 		"Tenant1": {idMap: map[string]struct{}{"id1": {}}, overrides: []int{1, 2, 3}},
 		"Tenant2": {idMap: map[string]struct{}{"id2": {}}, overrides: []int{4, 5, 6}},
@@ -235,6 +253,7 @@ type testOverride struct {
 func (t testOverride) GetTenantID() string { return t.tenantID }
 
 func TestUpdateTenants(t *testing.T) {
+	t.Parallel()
 	// Just test that it doesn't panic on empty input
 	updateTenants[testOverride](map[string]tenantInfo{}, map[string][]testOverride{}, 0)
 
@@ -257,6 +276,7 @@ func TestUpdateTenants(t *testing.T) {
 }
 
 func TestGetEnvironments(t *testing.T) {
+	t.Parallel()
 	tenancies := []models.ServiceTenancy{
 		{
 			Name:        "t1",
@@ -282,6 +302,7 @@ func TestGetEnvironments(t *testing.T) {
 }
 
 func TestIsValidEnvironment(t *testing.T) {
+	t.Parallel()
 	env := models.Environment{}
 	all := []models.Environment{{}, {}}
 	assert.True(t, isValidEnvironment(env, all))
@@ -289,6 +310,7 @@ func TestIsValidEnvironment(t *testing.T) {
 }
 
 func TestLoadDataset_Error(t *testing.T) {
+	t.Parallel()
 	_, err := LoadDataset("/no/such/path", models.Environment{})
 	assert.Error(t, err)
 }

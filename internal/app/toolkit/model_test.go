@@ -34,6 +34,7 @@ func newTestModel(t *testing.T) *Model {
 }
 
 func TestUpdateLayoutAndView(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	m.updateLayout(80, 24)
 	require.Equal(t, 80, m.viewWidth)
@@ -44,6 +45,7 @@ func TestUpdateLayoutAndView(t *testing.T) {
 }
 
 func TestContextStringAndStatusView(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	s := m.contextString()
 	require.Contains(t, s, "all")
@@ -54,6 +56,7 @@ func TestContextStringAndStatusView(t *testing.T) {
 }
 
 func TestFilterAndBackToLastState(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	m.enterEditMode(Filter)
 	require.Equal(t, Edit, m.mode)
@@ -68,6 +71,7 @@ func TestFilterAndBackToLastState(t *testing.T) {
 }
 
 func TestEditModeTransitions(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	m.enterEditMode(Alias)
 	require.Equal(t, Edit, m.mode)
@@ -76,6 +80,7 @@ func TestEditModeTransitions(t *testing.T) {
 }
 
 func TestProcessDataAndErrorMsg(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	// processData with *models.Dataset
 	m.processData(dataMsg{data: m.dataset})
@@ -92,6 +97,7 @@ func TestProcessDataAndErrorMsg(t *testing.T) {
 }
 
 func TestModelUpdateBranches(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	// Simulate tea.KeyMsg for "ctrl+c"
 	m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
@@ -153,6 +159,7 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 }
 
 func TestModel_DetailView_and_ExitDetailView(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	m.enterDetailView()
 	// Simulate "esc" key in detail view
@@ -161,27 +168,9 @@ func TestModel_DetailView_and_ExitDetailView(t *testing.T) {
 	m.exitDetailView()
 }
 
-// --- Loader stub for TestModel_LoadData_and_Init ---
-type stubLoader struct{}
-
-func (stubLoader) LoadDataset(repo string, env models.Environment) (*models.Dataset, error) {
-	return &models.Dataset{Tenants: []models.Tenant{{Name: "stub"}}}, nil
-}
-
-func (stubLoader) LoadBaseModels(string, models.Environment) (map[string]*models.BaseModel, error) {
-	return nil, nil
-}
-func (stubLoader) LoadGpuPools(string, models.Environment) ([]models.GpuPool, error) { return nil, nil }
-func (stubLoader) LoadGpuNodes(string, models.Environment) (map[string][]models.GpuNode, error) {
-	return nil, nil
-}
-
-func (stubLoader) LoadDedicatedAIClusters(string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	return nil, nil
-}
-
 // --- Test updateListView and edit mode transitions ---
 func TestModel_UpdateListView_Branches(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	m.mode = Normal
 	// Simulate NextCategory and PrevCategory keys
@@ -220,6 +209,7 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 // --- Added: Test for getCurrentItem and handleAdditionalKeys ---
 
 func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
+	t.Parallel()
 	// Setup a Model with a BaseModel in the dataset and table
 	bm := &models.BaseModel{Name: "bm1", Version: "v1", Type: "typeA"}
 	ds := &models.Dataset{

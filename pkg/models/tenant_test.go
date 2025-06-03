@@ -7,6 +7,7 @@ import (
 )
 
 func TestTenant_Getters(t *testing.T) {
+	t.Parallel()
 	tenant := Tenant{
 		Name:                     "tenantA",
 		IDs:                      []string{"id1", "id2"},

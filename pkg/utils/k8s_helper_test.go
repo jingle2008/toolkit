@@ -20,18 +20,21 @@ import (
 )
 
 func TestNewK8sHelper_NilConfig(t *testing.T) {
+	t.Parallel()
 	helper, err := NewK8sHelper("", "")
 	require.NoError(t, err)
 	assert.NotNil(t, helper)
 }
 
 func TestNewK8sHelperWithClients(t *testing.T) {
+	t.Parallel()
 	helper, err := NewK8sHelper("", "")
 	require.NoError(t, err)
 	assert.NotNil(t, helper)
 }
 
 func TestNewK8sHelper_ChangeContextError(t *testing.T) {
+	t.Parallel()
 	// Create a temp file that is not a valid kubeconfig
 	tmp := ""
 	f, err := os.CreateTemp("", "badkubeconfig")
@@ -46,6 +49,7 @@ func TestNewK8sHelper_ChangeContextError(t *testing.T) {
 }
 
 func TestListGpuNodesWithSelectors_Error(t *testing.T) {
+	t.Parallel()
 	cs := testutil.NewFakeClient()
 	cs.PrependReactor("*", "*", func(k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("boom")
@@ -61,6 +65,7 @@ func TestListGpuNodesWithSelectors_Error(t *testing.T) {
 }
 
 func TestUpdateGpuAllocations(t *testing.T) {
+	t.Parallel()
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "pod1",
@@ -91,6 +96,7 @@ func TestUpdateGpuAllocations(t *testing.T) {
 }
 
 func TestIsNodeHealthy(t *testing.T) {
+	t.Parallel()
 	conds := []corev1.NodeCondition{
 		{Type: corev1.NodeConditionType("GpuUnhealthy"), Status: corev1.ConditionFalse},
 	}
@@ -100,6 +106,7 @@ func TestIsNodeHealthy(t *testing.T) {
 }
 
 func TestIsNodeReady(t *testing.T) {
+	t.Parallel()
 	conds := []corev1.NodeCondition{
 		{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
 	}
@@ -109,6 +116,7 @@ func TestIsNodeReady(t *testing.T) {
 }
 
 func TestCalculatePodGPUs(t *testing.T) {
+	t.Parallel()
 	pod := corev1.Pod{
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
@@ -199,6 +207,7 @@ func (m *mockDynamicClient) ResourceList(_ context.Context, gvr schema.GroupVers
 }
 
 func TestListDedicatedAIClusters(t *testing.T) {
+	t.Parallel()
 	helper := &K8sHelper{
 		dynamicFunc: func(_ *rest.Config) (DynamicClient, error) {
 			return &mockDynamicClient{
@@ -258,6 +267,7 @@ func TestListDedicatedAIClusters(t *testing.T) {
 }
 
 func TestTenantIDFromLabels(t *testing.T) {
+	t.Parallel()
 	assert.Equal(t, "tid", tenantIDFromLabels(map[string]interface{}{"tenancy-id": "tid"}))
 	assert.Equal(t, "UNKNOWN_TENANCY", tenantIDFromLabels(map[string]interface{}{}))
 	assert.Equal(t, "UNKNOWN_TENANCY", tenantIDFromLabels(map[string]interface{}{"tenancy-id": 123}))

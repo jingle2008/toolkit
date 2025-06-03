@@ -7,6 +7,7 @@ import (
 )
 
 func TestEnvironment_GettersAndEquals(t *testing.T) {
+	t.Parallel()
 	env := Environment{
 		Type:   "dev",
 		Region: "us-phoenix-1",

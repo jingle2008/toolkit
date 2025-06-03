@@ -14,6 +14,7 @@ type Renderer interface {
 // ProductionRenderer uses glamour for markdown rendering.
 type ProductionRenderer struct{}
 
+// RenderJSON renders the given data as JSON in a markdown code block using glamour.
 func (ProductionRenderer) RenderJSON(data interface{}, width int) (string, error) {
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),

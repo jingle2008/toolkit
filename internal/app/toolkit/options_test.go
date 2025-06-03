@@ -1,6 +1,7 @@
 package toolkit
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -100,8 +101,8 @@ func TestWithViewport(t *testing.T) {
 
 type mockRenderer struct{}
 
-func (mockRenderer) RenderJSON(data interface{}, width int) (string, error) {
-	return "mock", nil
+func (mockRenderer) RenderJSON(_ interface{}, width int) (string, error) {
+	return fmt.Sprintf("json: %d", width), nil
 }
 
 func TestWithRenderer(t *testing.T) {
