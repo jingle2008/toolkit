@@ -59,18 +59,56 @@ func parseConfig() Config {
 	}
 }
 
-func categoryFromString(s string) toolkit.Category {
+func categoryFromString(s string) (toolkit.Category, error) {
 	switch strings.ToLower(s) {
 	case "tenant":
-		return toolkit.Tenant
-	// Add more cases as needed
+		return toolkit.Tenant, nil
+	case "limitdefinition":
+		return toolkit.LimitDefinition, nil
+	case "consolepropertydefinition":
+		return toolkit.ConsolePropertyDefinition, nil
+	case "propertydefinition":
+		return toolkit.PropertyDefinition, nil
+	case "limittenancyoverride":
+		return toolkit.LimitTenancyOverride, nil
+	case "consolepropertytenancyoverride":
+		return toolkit.ConsolePropertyTenancyOverride, nil
+	case "propertytenancyoverride":
+		return toolkit.PropertyTenancyOverride, nil
+	case "consolepropertyregionaloverride":
+		return toolkit.ConsolePropertyRegionalOverride, nil
+	case "propertyregionaloverride":
+		return toolkit.PropertyRegionalOverride, nil
+	case "basemodel":
+		return toolkit.BaseModel, nil
+	case "modelartifact":
+		return toolkit.ModelArtifact, nil
+	case "environment":
+		return toolkit.Environment, nil
+	case "servicetenancy":
+		return toolkit.ServiceTenancy, nil
+	case "gpupool":
+		return toolkit.GpuPool, nil
+	case "gpunode":
+		return toolkit.GpuNode, nil
+	case "dedicatedaicluster":
+		return toolkit.DedicatedAICluster, nil
 	default:
-		return toolkit.Tenant
+		return 0, fmt.Errorf("invalid category: %q", s)
 	}
 }
 
 func run(ctx context.Context, cfg Config) error {
-	category := categoryFromString(cfg.Category)
+	category, err := categoryFromString(cfg.Category)
+	if err != nil {
+		valid := []string{
+			"Tenant", "LimitDefinition", "ConsolePropertyDefinition", "PropertyDefinition",
+			"LimitTenancyOverride", "ConsolePropertyTenancyOverride", "PropertyTenancyOverride",
+			"ConsolePropertyRegionalOverride", "PropertyRegionalOverride", "BaseModel", "ModelArtifact",
+			"Environment", "ServiceTenancy", "GpuPool", "GpuNode", "DedicatedAICluster",
+		}
+		return fmt.Errorf("invalid category %q. Valid categories are: %s", cfg.Category, strings.Join(valid, ", "))
+	}
 	env := models.Environment{
 		Type:   cfg.EnvType,
 		Region: cfg.EnvRegion,

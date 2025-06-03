@@ -50,7 +50,7 @@ func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 		Status:    "Active",
 		UnitShape: "A100",
 	}
-	row := getTableRow("TenantX", cluster)
+	row := getTableRow(nil, "TenantX", cluster)
 	assert.Equal(t, table.Row{"TenantX", "DAC1", "GPU", "A100", "4", "Active"}, row)
 }
 
@@ -253,7 +253,7 @@ func Test_getTableRows_and_scoped_items(t *testing.T) {
 			},
 		},
 	}
-	rows := getTableRows(dataset, LimitTenancyOverride, &AppContext{Name: "TenantA", Category: Tenant}, "")
+	rows := getTableRows(nil, dataset, LimitTenancyOverride, &AppContext{Name: "TenantA", Category: Tenant}, "")
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, rows[0])
 
@@ -290,7 +290,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		IsHealthy:    true,
 		IsReady:      true,
 	}
-	row := getTableRow("TenantX", node)
+	row := getTableRow(nil, "TenantX", node)
 	assert.Equal(t, table.Row{"poolA", "node1", "A100.8", "8", "6", "true", "true", "OK"}, row)
 
 	// LimitTenancyOverride
@@ -299,7 +299,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		Regions: []string{"us-phoenix-1"},
 		Values:  []models.LimitRange{{Min: 1, Max: 10}},
 	}
-	row2 := getTableRow("TenantA", lto)
+	row2 := getTableRow(nil, "TenantA", lto)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, row2)
 
 	// PropertyRegionalOverride edge: empty regions and values
@@ -310,7 +310,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 			Value string "json:\"value\""
 		}{{Value: "valX"}},
 	}
-	row3 := getTableRow("TenantA", pro)
+	row3 := getTableRow(nil, "TenantA", pro)
 	assert.Nil(t, row3)
 }
 
@@ -322,7 +322,7 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 			t.Errorf("expected panic for nil dataset")
 		}
 	}()
-	_ = getTableRows(nil, Tenant, nil, "")
+	_ = getTableRows(nil, nil, Tenant, nil, "")
 }
 
 // mockDefinition implements models.Definition for testing getPropertyDefinitions
@@ -383,7 +383,7 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 	ds := &models.Dataset{}
 	for _, cat := range categories {
 		headers := getHeaders(cat)
-		_ = getTableRows(ds, cat, nil, "")
+		_ = getTableRows(nil, ds, cat, nil, "")
 		// Extra assertions for coverage
 		if len(headers) > 0 {
 			require.NotEmpty(t, headers[0].text)
@@ -467,7 +467,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 			require.InDelta(t, 1.0, sum, 0.1, "header ratios should sum to ~1")
 		}
 		// getTableRows should not panic
-		_ = getTableRows(ds, cat, nil, "")
+		_ = getTableRows(nil, ds, cat, nil, "")
 	}
 }
 
@@ -572,7 +572,7 @@ func TestGetTableRow(t *testing.T) {
 	// Each supported type should yield a non-nil row
 	// Use the actual type for Values field from the model
 	ltov := models.LimitTenancyOverride{}
-	require.NotNil(t, getTableRow("tenant", models.LimitTenancyOverride{
+	require.NotNil(t, getTableRow(nil, "tenant", models.LimitTenancyOverride{
 		Name:    "lim",
 		Regions: []string{"us"},
 		Values: append(ltov.Values[:0], struct {
@@ -582,7 +582,7 @@ func TestGetTableRow(t *testing.T) {
 	}))
 	// Use the actual type for Values field from the model
 	cprov := models.ConsolePropertyRegionalOverride{}
-	require.NotNil(t, getTableRow("tenant", models.ConsolePropertyTenancyOverride{
+	require.NotNil(t, getTableRow(nil, "tenant", models.ConsolePropertyTenancyOverride{
 		TenantID: "tenant1",
 		ConsolePropertyRegionalOverride: models.ConsolePropertyRegionalOverride{
 			Name:    "cp",
@@ -594,7 +594,7 @@ func TestGetTableRow(t *testing.T) {
 	}))
 	// Use the actual type for Values field from the model
 	prov := models.PropertyRegionalOverride{}
-	require.NotNil(t, getTableRow("tenant", models.PropertyTenancyOverride{
+	require.NotNil(t, getTableRow(nil, "tenant", models.PropertyTenancyOverride{
 		Tag: "tenant1",
 		PropertyRegionalOverride: models.PropertyRegionalOverride{
 			Name:    "p",
@@ -604,10 +604,10 @@ func TestGetTableRow(t *testing.T) {
 			}{Value: "val"}),
 		},
 	}))
-	require.NotNil(t, getTableRow("pool", models.GpuNode{
+	require.NotNil(t, getTableRow(nil, "pool", models.GpuNode{
 		NodePool: "pool", Name: "node", InstanceType: "type", Allocatable: 10, Allocated: 2, IsHealthy: true, IsReady: true,
 	}))
-	require.NotNil(t, getTableRow("tenant", models.DedicatedAICluster{
+	require.NotNil(t, getTableRow(nil, "tenant", models.DedicatedAICluster{
 		Name: "dac", Type: "t", UnitShape: "shape", Size: 1, Status: "active",
 	}))
 }

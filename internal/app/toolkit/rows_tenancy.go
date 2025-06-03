@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
+	"go.uber.org/zap"
 )
 
 // Adapter function for models.LimitTenancyOverride
@@ -41,7 +42,7 @@ func PropertyTenancyOverrideToRow(scope string, p models.PropertyTenancyOverride
 }
 
 // getScopedItems is used for tenancy and other scoped overrides.
-func getScopedItems[T models.NamedFilterable](g map[string][]T,
+func getScopedItems[T models.NamedFilterable](logger *zap.Logger, g map[string][]T,
 	scopeCategory Category, context *AppContext, filter string,
 ) []table.Row {
 	var (
@@ -59,6 +60,6 @@ func getScopedItems[T models.NamedFilterable](g map[string][]T,
 
 	return utils.FilterMap(g, key, name, filter,
 		func(s string, v T) table.Row {
-			return getTableRow(s, v)
+			return getTableRow(logger, s, v)
 		})
 }
