@@ -54,37 +54,17 @@ type Model struct {
 	keys        keyMap
 	help        *help.Model
 	kubeConfig  string
+
+	// lipgloss styles (moved from package-level for race safety)
+	baseStyle      lipgloss.Style
+	statusNugget   lipgloss.Style
+	statusBarStyle lipgloss.Style
+	contextStyle   lipgloss.Style
+	statsStyle     lipgloss.Style
+	statusText     lipgloss.Style
+	infoKeyStyle   lipgloss.Style
+	infoValueStyle lipgloss.Style
 }
-
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
-
-var statusNugget = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#FFFDF5")).
-	Padding(0, 1)
-
-var statusBarStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.AdaptiveColor{Light: "#343433", Dark: "#C1C6B2"}).
-	Background(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#353533"})
-
-var contextStyle = lipgloss.NewStyle().
-	Inherit(statusBarStyle).
-	Foreground(lipgloss.Color("#FFFDF5")).
-	Background(lipgloss.Color("#FF5F87")).
-	Padding(0, 1).
-	MarginRight(1)
-
-var statsStyle = statusNugget.
-	Background(lipgloss.Color("#A550DF")).
-	Align(lipgloss.Right)
-
-var statusText = lipgloss.NewStyle().Inherit(statusBarStyle)
-
-var (
-	infoKeyStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
-	infoValueStyle = lipgloss.NewStyle()
-)
 
 var categoryMap = map[string]Category{
 	"t":    Tenant,
@@ -114,6 +94,34 @@ func NewModel(opts ...ModelOption) *Model {
 		target: None,
 		keys:   keys,
 	}
+
+	// Initialize all style fields (previously package-level)
+	m.baseStyle = lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240"))
+
+	m.statusNugget = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFDF5")).
+		Padding(0, 1)
+
+	m.statusBarStyle = lipgloss.NewStyle().
+		Foreground(lipgloss.AdaptiveColor{Light: "#343433", Dark: "#C1C6B2"}).
+		Background(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#353533"})
+
+	m.contextStyle = lipgloss.NewStyle().
+		Inherit(m.statusBarStyle).
+		Foreground(lipgloss.Color("#FFFDF5")).
+		Background(lipgloss.Color("#FF5F87")).
+		Padding(0, 1).
+		MarginRight(1)
+
+	m.statsStyle = m.statusNugget.
+		Background(lipgloss.Color("#A550DF")).
+		Align(lipgloss.Right)
+
+	m.statusText = lipgloss.NewStyle().Inherit(m.statusBarStyle)
+	m.infoKeyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
+	m.infoValueStyle = lipgloss.NewStyle()
 
 	// Apply all options
 	for _, opt := range opts {
@@ -346,7 +354,7 @@ func (m *Model) updateLayout(w, h int) {
 	if m.chosen {
 		borderStyle = m.viewport.Style.GetBorderStyle()
 	} else {
-		borderStyle = baseStyle.GetBorderStyle()
+		borderStyle = m.baseStyle.GetBorderStyle()
 	}
 
 	borderWidth := borderStyle.GetLeftSize() + borderStyle.GetRightSize()
@@ -609,9 +617,9 @@ func (m *Model) infoView() string {
 	values := []string{m.environment.Realm, m.environment.Type, m.environment.Region}
 
 	content := lipgloss.JoinHorizontal(lipgloss.Top,
-		infoKeyStyle.Render(strings.Join(keys, "\n")),
+		m.infoKeyStyle.Render(strings.Join(keys, "\n")),
 		" ",
-		infoValueStyle.Render(strings.Join(values, "\n")),
+		m.infoValueStyle.Render(strings.Join(values, "\n")),
 	)
 
 	return content
@@ -634,11 +642,11 @@ func (m *Model) contextString() string {
 func (m *Model) statusView() string {
 	w := lipgloss.Width
 
-	contextCell := contextStyle.Render(m.contextString())
+	contextCell := m.contextStyle.Render(m.contextString())
 
-	statsCell := statsStyle.Render(
+	statsCell := m.statsStyle.Render(
 		fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
-	inputCell := statusText.
+	inputCell := m.statusText.
 		Width(m.viewWidth - w(contextCell) - w(statsCell)).
 		Render(m.textInput.View())
 
@@ -656,13 +664,13 @@ func (m *Model) View() string {
 	}
 
 	helpView := m.help.View(m.keys)
-	infoView := infoValueStyle.
+	infoView := m.infoValueStyle.
 		Width(m.viewWidth - lipgloss.Width(helpView)).Render(m.infoView())
 	header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
 
 	var mainContent string
 	if !m.chosen {
-		mainContent = baseStyle.Render(m.table.View())
+		mainContent = m.baseStyle.Render(m.table.View())
 	} else {
 		mainContent = m.viewport.View()
 	}

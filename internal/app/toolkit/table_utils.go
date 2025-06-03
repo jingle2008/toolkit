@@ -2,13 +2,13 @@ package toolkit
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
+	"go.uber.org/zap"
 )
 
 var categoryHandlers = map[Category]func(*models.Dataset, *AppContext, string) []table.Row{
@@ -81,37 +81,6 @@ func getTableRows(dataset *models.Dataset, category Category, context *AppContex
 	return nil
 }
 
-func getTenants(tenants []models.Tenant, filter string) []table.Row {
-	results := make([]table.Row, 0, len(tenants))
-
-	utils.FilterSlice(tenants, nil, filter, func(_ int, val models.Tenant) bool {
-		results = append(results, table.Row{
-			val.Name,
-			val.GetTenantID(),
-			val.GetOverrides(),
-		})
-		return true
-	})
-
-	return results
-}
-
-func getEnvironments(envs []models.Environment, filter string) []table.Row {
-	results := make([]table.Row, 0, len(envs))
-
-	utils.FilterSlice(envs, nil, filter, func(_ int, val models.Environment) bool {
-		results = append(results, table.Row{
-			val.GetName(),
-			val.Realm,
-			val.Type,
-			val.Region,
-		})
-		return true
-	})
-
-	return results
-}
-
 func getGpuPools(pools []models.GpuPool, filter string) []table.Row {
 	results := make([]table.Row, 0, len(pools))
 
@@ -123,23 +92,6 @@ func getGpuPools(pools []models.GpuPool, filter string) []table.Row {
 			fmt.Sprint(val.GetGPUs()),
 			fmt.Sprint(val.IsOkeManaged),
 			val.CapacityType,
-		})
-		return true
-	})
-
-	return results
-}
-
-func getServiceTenancies(tenancies []models.ServiceTenancy, filter string) []table.Row {
-	results := make([]table.Row, 0, len(tenancies))
-
-	utils.FilterSlice(tenancies, nil, filter, func(_ int, val models.ServiceTenancy) bool {
-		results = append(results, table.Row{
-			val.Name,
-			val.Realm,
-			val.Environment,
-			val.HomeRegion,
-			strings.Join(val.Regions, ", "),
 		})
 		return true
 	})
@@ -182,84 +134,32 @@ func getPropertyDefinitions[T models.Definition](definitions []T, filter string)
 func getTableRow(tenant string, item interface{}) table.Row {
 	switch val := item.(type) {
 	case models.LimitTenancyOverride:
-		return table.Row{
-			tenant,
-			val.Name,
-			strings.Join(val.Regions, ", "),
-			fmt.Sprint(val.Values[0].Min),
-			fmt.Sprint(val.Values[0].Max),
-		}
+		// Use adapter function for RowMarshaler pattern
+		return LimitTenancyOverrideToRow(tenant, val)
 
 	case models.ConsolePropertyTenancyOverride:
-		return table.Row{
-			tenant,
-			val.Name,
-			strings.Join(val.GetRegions(), ", "),
-			val.GetValue(),
-		}
+		// Use adapter function for RowMarshaler pattern
+		return ConsolePropertyTenancyOverrideToRow(tenant, val)
 
 	case models.PropertyTenancyOverride:
-		return table.Row{
-			tenant,
-			val.Name,
-			strings.Join(val.GetRegions(), ", "),
-			val.GetValue(),
-		}
+		// Use adapter function for RowMarshaler pattern
+		return PropertyTenancyOverrideToRow(tenant, val)
 
 	case models.GpuNode:
-		return table.Row{
-			val.NodePool,
-			val.Name,
-			val.InstanceType,
-			fmt.Sprint(val.Allocatable),
-			fmt.Sprint(val.Allocatable - val.Allocated),
-			fmt.Sprint(val.IsHealthy),
-			fmt.Sprint(val.IsReady),
-			val.GetStatus(),
-		}
+		// Use adapter function for RowMarshaler pattern
+		return GpuNodeToRow(tenant, val)
 
 	case models.DedicatedAICluster:
-		// Show UnitShape (v1) or Profile (v2) in the same column
-		unitShapeOrProfile := val.UnitShape
-		if unitShapeOrProfile == "" {
-			unitShapeOrProfile = val.Profile
-		}
-		return table.Row{
-			tenant,
-			val.Name,
-			val.Type,
-			unitShapeOrProfile,
-			fmt.Sprint(val.Size),
-			val.Status,
-		}
+		// Use adapter function for RowMarshaler pattern
+		return DedicatedAIClusterToRow(tenant, val)
 
 	default:
-		log.Printf("value is of type: %T\n", val)
+		Logger().Warn("unexpected type in getTableRow",
+			zap.String("type", fmt.Sprintf("%T", val)),
+		)
 	}
 
 	return nil
-}
-
-func getScopedItems[T models.NamedFilterable](g map[string][]T,
-	scopeCategory Category, context *AppContext, filter string,
-) []table.Row {
-	var (
-		key  *string
-		name *string
-	)
-
-	if context != nil {
-		if context.Category == scopeCategory {
-			key = &context.Name
-		} else {
-			name = &context.Name
-		}
-	}
-
-	return utils.FilterMap(g, key, name, filter,
-		func(s string, v T) table.Row {
-			return getTableRow(s, v)
-		})
 }
 
 func getRegionalOverrides[T models.DefinitionOverride](overrides []T, filter string) []table.Row {

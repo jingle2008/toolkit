@@ -8,6 +8,7 @@ Toolkit is a modular command-line utility written in Go, designed to provide a c
 - **Category-based Utilities**: Organized by categories for clear separation of concerns.
 - **Configurable**: Uses Go modules and a Makefile for streamlined building and management.
 - **Test Coverage**: Includes unit tests for core logic.
+- **Structured Logging**: Uses zap for machine-readable, robust logs.
 
 ## Project Structure
 
@@ -21,10 +22,21 @@ Toolkit is a modular command-line utility written in Go, designed to provide a c
 │       └── toolkit/
 │           ├── category.go
 │           ├── constants.go
-│           ├── context.go
+│           ├── headers.go
 │           ├── key_map.go
+│           ├── loader.go
+│           ├── logging.go
 │           ├── model.go
-│           ├── model_test.go
+│           ├── options.go
+│           ├── render.go
+│           ├── requestctx.go
+│           ├── row_marshaler.go
+│           ├── rows_cluster.go
+│           ├── rows_environment.go
+│           ├── rows_gpu.go
+│           ├── rows_service.go
+│           ├── rows_tenancy.go
+│           ├── rows_tenant.go
 │           ├── table_utils.go
 │           └── table_utils_test.go
 ├── Makefile              # Build and management commands
@@ -39,6 +51,30 @@ Toolkit is a modular command-line utility written in Go, designed to provide a c
 
 - Go 1.18 or later
 
+## Configuration
+
+Toolkit can be configured via CLI flags or environment variables. Flags take precedence over environment variables.
+
+| Flag           | Env Variable           | Description                        | Default                |
+|----------------|-----------------------|------------------------------------|------------------------|
+| --repo         | TOOLKIT_REPO_PATH     | Path to repo                       | (none)                 |
+| --kubeconfig   | KUBECONFIG            | Path to kubeconfig                 | ~/.kube/config         |
+| --envtype      | TOOLKIT_ENV_TYPE      | Environment type                   | preprod                |
+| --envregion    | TOOLKIT_ENV_REGION    | Environment region                 | us-chicago-1           |
+| --envrealm     | TOOLKIT_ENV_REALM     | Environment realm                  | oc1                    |
+| --category     | TOOLKIT_CATEGORY      | Toolkit category                   | Tenant                 |
+
+Example usage:
+```sh
+./bin/toolkit --repo /path/to/repo --envtype prod
+```
+or
+```sh
+export TOOLKIT_REPO_PATH=/path/to/repo
+export TOOLKIT_ENV_TYPE=prod
+./bin/toolkit
+```
+
 ### Build
 
 ```sh
@@ -52,11 +88,11 @@ go build -o bin/toolkit ./cmd/toolkit
 ### Run
 
 ```sh
-./bin/toolkit
+./bin/toolkit --help
 ```
 or, if built with Go:
 ```sh
-go run ./cmd/toolkit
+go run ./cmd/toolkit --help
 ```
 
 ## Testing
@@ -95,6 +131,10 @@ go test ./...
 
 - **Unit tests** run on all pushes and pull requests.
 - **Integration tests** run on pushes to `main` and nightly (see `.github/workflows/ci.yml`).
+
+## Logging
+
+Toolkit uses [zap](https://github.com/uber-go/zap) for structured, machine-readable logging. Logs are written to `debug.log` by default.
 
 ## Contributing
 
