@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,15 +41,15 @@ func TestWithEnvironment(t *testing.T) {
 func TestWithCategory(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	opt := WithCategory(GpuPool)
+	opt := WithCategory(domain.GpuPool)
 	opt(m)
-	assert.Equal(t, GpuPool, m.category)
+	assert.Equal(t, domain.GpuPool, m.category)
 }
 
 func TestWithAppContext(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	ctx := &AppContext{}
+	ctx := &domain.AppContext{}
 	opt := WithAppContext(ctx)
 	opt(m)
 	assert.Equal(t, ctx, m.context)

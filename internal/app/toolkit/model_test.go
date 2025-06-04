@@ -3,8 +3,11 @@ package toolkit
 import (
 	"testing"
 
+	"context"
+
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
 	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/require"
@@ -29,6 +32,7 @@ func newTestModel(t *testing.T) *Model {
 	}
 	m.viewWidth = 80
 	m.viewHeight = 24
+	m.contextCtx = context.Background()
 	m.refreshDisplay()
 	return m
 }
@@ -125,13 +129,13 @@ func TestNewModelInitializesFields(t *testing.T) {
 		WithRepoPath("/repo"),
 		WithKubeConfig("/kube"),
 		WithEnvironment(env),
-		WithCategory(Tenant),
+		WithCategory(domain.Tenant),
 	)
 	testutil.NotNil(t, m)
 	testutil.Equal(t, "/repo", m.repoPath)
 	testutil.Equal(t, "/kube", m.kubeConfig)
 	testutil.Equal(t, env, m.environment)
-	testutil.Equal(t, Tenant, m.category)
+	testutil.Equal(t, domain.Tenant, m.category)
 	testutil.NotNil(t, m.table)
 	testutil.NotNil(t, m.textInput)
 }
@@ -143,10 +147,10 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 		WithRepoPath("/repo"),
 		WithKubeConfig("/kube"),
 		WithEnvironment(env),
-		WithCategory(LimitTenancyOverride),
+		WithCategory(domain.LimitTenancyOverride),
 	)
 	// Set context.Category to Tenant, m.category to LimitTenancyOverride
-	m.context = &AppContext{Name: "scopeA", Category: Tenant}
+	m.context = &domain.AppContext{Name: "scopeA", Category: domain.Tenant}
 	m.chosen = false
 	cs := m.contextString()
 	testutil.Contains(t, cs, "Limit Tenancy Override")
@@ -229,7 +233,7 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 
 	m := NewModel(WithTable(&tbl))
 	m.dataset = ds
-	m.category = BaseModel
+	m.category = domain.BaseModel
 
 	// getCurrentItem should return the pointer to bm
 	got := m.getCurrentItem()
@@ -237,8 +241,9 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 
 	// handleAdditionalKeys: cover the ViewModelArtifacts branch
 	// Set category to BaseModel and call with a matching key
-	m.category = BaseModel
+	m.category = domain.BaseModel
 	m.keys.ViewModelArtifacts = m.keys.Quit // Use any key that matches
+	m.contextCtx = context.Background()
 	keyStr := ""
 	if len(m.keys.Quit.Keys()) > 0 {
 		keyStr = m.keys.Quit.Keys()[0]

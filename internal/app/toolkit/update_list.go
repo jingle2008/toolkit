@@ -6,6 +6,7 @@ package toolkit
 import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
 )
 
 func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
@@ -25,11 +26,11 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 
 			case key.Matches(msg, m.keys.NextCategory):
-				category := (m.category + 1) % numCategories
+				category := (m.category + 1) % domain.NumCategories
 				cmds = append(cmds, m.updateCategory(category))
 
 			case key.Matches(msg, m.keys.PrevCategory):
-				category := (m.category + numCategories - 1) % numCategories
+				category := (m.category + domain.NumCategories - 1) % domain.NumCategories
 				cmds = append(cmds, m.updateCategory(category))
 
 			case key.Matches(msg, m.keys.FilterItems):

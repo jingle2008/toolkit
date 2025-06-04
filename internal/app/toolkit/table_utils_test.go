@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/rows"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,7 +13,7 @@ import (
 
 func Test_getHeaders_returns_expected_headers(t *testing.T) {
 	t.Parallel()
-	headers := getHeaders(Tenant)
+	headers := getHeaders(domain.Tenant)
 	assert.NotNil(t, headers)
 	assert.Equal(t, "Name", headers[0].text)
 	assert.InEpsilon(t, 0.25, headers[0].ratio, 0.0001)
@@ -35,7 +37,7 @@ func Test_getTenants_returns_rows(t *testing.T) {
 			PropertyOverrides:        6,
 		},
 	}
-	rows := getTenants(tenants, "")
+	rows := rows.GetTenants(tenants, "")
 	assert.Len(t, rows, 2)
 	assert.Equal(t, table.Row{"TenantA", "idA", "1/2/3"}, rows[0])
 	assert.Equal(t, table.Row{"TenantB", "idB (+1)", "4/5/6"}, rows[1])
@@ -50,7 +52,7 @@ func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 		Status:    "Active",
 		UnitShape: "A100",
 	}
-	row := getTableRow(nil, "TenantX", cluster)
+	row := rows.GetTableRow(nil, "TenantX", cluster)
 	assert.Equal(t, table.Row{"TenantX", "DAC1", "GPU", "A100", "4", "Active"}, row)
 }
 
@@ -68,7 +70,7 @@ func Test_getEnvironments_returns_rows(t *testing.T) {
 			Realm:  "realmB",
 		},
 	}
-	rows := getEnvironments(envs, "")
+	rows := rows.GetEnvironments(envs, "")
 	assert.Len(t, rows, 2)
 	assert.Equal(t, table.Row{"dev-phx", "realmA", "dev", "us-phoenix-1"}, rows[0])
 	assert.Equal(t, table.Row{"prod-iad", "realmB", "prod", "us-ashburn-1"}, rows[1])
@@ -130,7 +132,7 @@ func Test_getServiceTenancies_returns_rows(t *testing.T) {
 			Regions:     []string{"us-ashburn-1"},
 		},
 	}
-	rows := getServiceTenancies(tenancies, "")
+	rows := rows.GetServiceTenancies(tenancies, "")
 	assert.Len(t, rows, 2)
 	assert.Equal(t, table.Row{"svcA", "realmA", "envA", "us-phoenix-1", "us-phoenix-1, us-ashburn-1"}, rows[0])
 	assert.Equal(t, table.Row{"svcB", "realmB", "envB", "us-ashburn-1", "us-ashburn-1"}, rows[1])
@@ -218,9 +220,9 @@ func Test_getModelArtifacts_returns_rows(t *testing.T) {
 func Test_getItemKey_and_getItemKeyString(t *testing.T) {
 	t.Parallel()
 	row := table.Row{"TenantX", "DAC1", "GPU", "A100", "4", "Active"}
-	key := getItemKey(DedicatedAICluster, row)
+	key := getItemKey(domain.DedicatedAICluster, row)
 	assert.Equal(t, models.ScopedItemKey{Scope: "TenantX", Name: "DAC1"}, key)
-	keyStr := getItemKeyString(DedicatedAICluster, key)
+	keyStr := getItemKeyString(domain.DedicatedAICluster, key)
 	assert.Equal(t, "TenantX/DAC1", keyStr)
 }
 
@@ -232,7 +234,7 @@ func Test_findItem_returns_expected(t *testing.T) {
 		},
 	}
 	key := "TenantA"
-	item := findItem(dataset, Tenant, key)
+	item := findItem(dataset, domain.Tenant, key)
 	tenant, ok := item.(*models.Tenant)
 	assert.True(t, ok)
 	assert.NotNil(t, tenant)
@@ -253,7 +255,7 @@ func Test_getTableRows_and_scoped_items(t *testing.T) {
 			},
 		},
 	}
-	rows := getTableRows(nil, dataset, LimitTenancyOverride, &AppContext{Name: "TenantA", Category: Tenant}, "")
+	rows := getTableRows(nil, dataset, domain.LimitTenancyOverride, &domain.AppContext{Name: "TenantA", Category: domain.Tenant}, "")
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, rows[0])
 
@@ -290,7 +292,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		IsHealthy:    true,
 		IsReady:      true,
 	}
-	row := getTableRow(nil, "TenantX", node)
+	row := rows.GetTableRow(nil, "TenantX", node)
 	assert.Equal(t, table.Row{"poolA", "node1", "A100.8", "8", "6", "true", "true", "OK"}, row)
 
 	// LimitTenancyOverride
@@ -299,7 +301,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		Regions: []string{"us-phoenix-1"},
 		Values:  []models.LimitRange{{Min: 1, Max: 10}},
 	}
-	row2 := getTableRow(nil, "TenantA", lto)
+	row2 := rows.GetTableRow(nil, "TenantA", lto)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, row2)
 
 	// PropertyRegionalOverride edge: empty regions and values
@@ -310,7 +312,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 			Value string "json:\"value\""
 		}{{Value: "valX"}},
 	}
-	row3 := getTableRow(nil, "TenantA", pro)
+	row3 := rows.GetTableRow(nil, "TenantA", pro)
 	assert.Nil(t, row3)
 }
 
@@ -322,7 +324,7 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 			t.Errorf("expected panic for nil dataset")
 		}
 	}()
-	_ = getTableRows(nil, nil, Tenant, nil, "")
+	_ = getTableRows(nil, nil, domain.Tenant, nil, "")
 }
 
 // mockDefinition implements models.Definition for testing getPropertyDefinitions
@@ -343,26 +345,26 @@ func TestGetItemKeyAndString(t *testing.T) {
 	t.Parallel()
 	// Table-driven: category, row, expected string
 	tests := []struct {
-		category Category
+		category domain.Category
 		row      table.Row
 		keyStr   string
 	}{
-		{Tenant, table.Row{"tenant1"}, "tenant1"},
-		{LimitDefinition, table.Row{"limdef"}, "limdef"},
-		{ConsolePropertyDefinition, table.Row{"cpdef"}, "cpdef"},
-		{PropertyDefinition, table.Row{"pdef"}, "pdef"},
-		{LimitTenancyOverride, table.Row{"tenant1", "limdef"}, "tenant1/limdef"},
-		{ConsolePropertyTenancyOverride, table.Row{"tenant1", "cpdef"}, "tenant1/cpdef"},
-		{PropertyTenancyOverride, table.Row{"tenant1", "pdef"}, "tenant1/pdef"},
-		{ConsolePropertyRegionalOverride, table.Row{"cpdef"}, "cpdef"},
-		{PropertyRegionalOverride, table.Row{"pdef"}, "pdef"},
-		{BaseModel, table.Row{"bm", "v1", "type"}, "bm-v1-type"},
-		{ModelArtifact, table.Row{"model", "gpu", "artifact"}, "artifact"},
-		{Environment, table.Row{"env"}, "env"},
-		{ServiceTenancy, table.Row{"svc"}, "svc"},
-		{GpuPool, table.Row{"pool"}, "pool"},
-		{GpuNode, table.Row{"pool", "node"}, "pool/node"},
-		{DedicatedAICluster, table.Row{"tenant1", "dac"}, "tenant1/dac"},
+		{domain.Tenant, table.Row{"tenant1"}, "tenant1"},
+		{domain.LimitDefinition, table.Row{"limdef"}, "limdef"},
+		{domain.ConsolePropertyDefinition, table.Row{"cpdef"}, "cpdef"},
+		{domain.PropertyDefinition, table.Row{"pdef"}, "pdef"},
+		{domain.LimitTenancyOverride, table.Row{"tenant1", "limdef"}, "tenant1/limdef"},
+		{domain.ConsolePropertyTenancyOverride, table.Row{"tenant1", "cpdef"}, "tenant1/cpdef"},
+		{domain.PropertyTenancyOverride, table.Row{"tenant1", "pdef"}, "tenant1/pdef"},
+		{domain.ConsolePropertyRegionalOverride, table.Row{"cpdef"}, "cpdef"},
+		{domain.PropertyRegionalOverride, table.Row{"pdef"}, "pdef"},
+		{domain.BaseModel, table.Row{"bm", "v1", "type"}, "bm-v1-type"},
+		{domain.ModelArtifact, table.Row{"model", "gpu", "artifact"}, "artifact"},
+		{domain.Environment, table.Row{"env"}, "env"},
+		{domain.ServiceTenancy, table.Row{"svc"}, "svc"},
+		{domain.GpuPool, table.Row{"pool"}, "pool"},
+		{domain.GpuNode, table.Row{"pool", "node"}, "pool/node"},
+		{domain.DedicatedAICluster, table.Row{"tenant1", "dac"}, "tenant1/dac"},
 	}
 	for _, tt := range tests {
 		key := getItemKey(tt.category, tt.row)
@@ -374,11 +376,11 @@ func TestGetItemKeyAndString(t *testing.T) {
 func TestGetHeadersAndTableRows(t *testing.T) {
 	t.Parallel()
 	// Cover all categories for getHeaders and getTableRows
-	categories := []Category{
-		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition,
-		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
-		ConsolePropertyRegionalOverride, PropertyRegionalOverride, BaseModel, ModelArtifact,
-		Environment, ServiceTenancy, GpuPool, GpuNode, DedicatedAICluster,
+	categories := []domain.Category{
+		domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
+		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride,
+		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride, domain.BaseModel, domain.ModelArtifact,
+		domain.Environment, domain.ServiceTenancy, domain.GpuPool, domain.GpuNode, domain.DedicatedAICluster,
 	}
 	ds := &models.Dataset{}
 	for _, cat := range categories {
@@ -455,7 +457,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 			"tenant1": {{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"}},
 		},
 	}
-	for cat := Category(0); cat <= DedicatedAICluster; cat++ {
+	for cat := domain.Category(0); cat <= domain.DedicatedAICluster; cat++ {
 		headers := getHeaders(cat)
 		if len(headers) > 0 {
 			sum := 0.0
@@ -539,26 +541,26 @@ func TestFindItem_AllCategories(t *testing.T) {
 
 	// Table-driven: category, key, want
 	tests := []struct {
-		category Category
+		category domain.Category
 		key      interface{}
 		want     interface{}
 	}{
-		{Tenant, "tenant1", &ds.Tenants[0]},
-		{LimitDefinition, "limdef", &ds.LimitDefinitionGroup.Values[0]},
-		{ConsolePropertyDefinition, "cpdef", &ds.ConsolePropertyDefinitionGroup.Values[0]},
-		{PropertyDefinition, "pdef", &ds.PropertyDefinitionGroup.Values[0]},
-		{LimitTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "limdef"}, &ds.LimitTenancyOverrideMap["tenant1"][0]},
-		{ConsolePropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "cpdef"}, &ds.ConsolePropertyTenancyOverrideMap["tenant1"][0]},
-		{PropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "pdef"}, &ds.PropertyTenancyOverrideMap["tenant1"][0]},
-		{ConsolePropertyRegionalOverride, "cpdef", &ds.ConsolePropertyRegionalOverrides[0]},
-		{PropertyRegionalOverride, "pdef", &ds.PropertyRegionalOverrides[0]},
-		{BaseModel, models.BaseModelKey{Name: "bm1", Version: "v1", Type: "typeA"}, ds.BaseModelMap["bm1"]},
-		{ModelArtifact, "artifact1", &ds.ModelArtifacts[0]},
-		{Environment, "type1-UNKNOWN", &ds.Environments[0]},
-		{ServiceTenancy, "svc1", &ds.ServiceTenancies[0]},
-		{GpuPool, "pool1", &ds.GpuPools[0]},
-		{GpuNode, models.ScopedItemKey{Scope: "pool1", Name: "node1"}, &ds.GpuNodeMap["pool1"][0]},
-		{DedicatedAICluster, models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}, &ds.DedicatedAIClusterMap["tenant1"][0]},
+		{domain.Tenant, "tenant1", &ds.Tenants[0]},
+		{domain.LimitDefinition, "limdef", &ds.LimitDefinitionGroup.Values[0]},
+		{domain.ConsolePropertyDefinition, "cpdef", &ds.ConsolePropertyDefinitionGroup.Values[0]},
+		{domain.PropertyDefinition, "pdef", &ds.PropertyDefinitionGroup.Values[0]},
+		{domain.LimitTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "limdef"}, &ds.LimitTenancyOverrideMap["tenant1"][0]},
+		{domain.ConsolePropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "cpdef"}, &ds.ConsolePropertyTenancyOverrideMap["tenant1"][0]},
+		{domain.PropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "pdef"}, &ds.PropertyTenancyOverrideMap["tenant1"][0]},
+		{domain.ConsolePropertyRegionalOverride, "cpdef", &ds.ConsolePropertyRegionalOverrides[0]},
+		{domain.PropertyRegionalOverride, "pdef", &ds.PropertyRegionalOverrides[0]},
+		{domain.BaseModel, models.BaseModelKey{Name: "bm1", Version: "v1", Type: "typeA"}, ds.BaseModelMap["bm1"]},
+		{domain.ModelArtifact, "artifact1", &ds.ModelArtifacts[0]},
+		{domain.Environment, "type1-UNKNOWN", &ds.Environments[0]},
+		{domain.ServiceTenancy, "svc1", &ds.ServiceTenancies[0]},
+		{domain.GpuPool, "pool1", &ds.GpuPools[0]},
+		{domain.GpuNode, models.ScopedItemKey{Scope: "pool1", Name: "node1"}, &ds.GpuNodeMap["pool1"][0]},
+		{domain.DedicatedAICluster, models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}, &ds.DedicatedAIClusterMap["tenant1"][0]},
 	}
 
 	for _, tt := range tests {
@@ -572,7 +574,7 @@ func TestGetTableRow(t *testing.T) {
 	// Each supported type should yield a non-nil row
 	// Use the actual type for Values field from the model
 	ltov := models.LimitTenancyOverride{}
-	require.NotNil(t, getTableRow(nil, "tenant", models.LimitTenancyOverride{
+	require.NotNil(t, rows.GetTableRow(nil, "tenant", models.LimitTenancyOverride{
 		Name:    "lim",
 		Regions: []string{"us"},
 		Values: append(ltov.Values[:0], struct {
@@ -582,7 +584,7 @@ func TestGetTableRow(t *testing.T) {
 	}))
 	// Use the actual type for Values field from the model
 	cprov := models.ConsolePropertyRegionalOverride{}
-	require.NotNil(t, getTableRow(nil, "tenant", models.ConsolePropertyTenancyOverride{
+	require.NotNil(t, rows.GetTableRow(nil, "tenant", models.ConsolePropertyTenancyOverride{
 		TenantID: "tenant1",
 		ConsolePropertyRegionalOverride: models.ConsolePropertyRegionalOverride{
 			Name:    "cp",
@@ -594,7 +596,7 @@ func TestGetTableRow(t *testing.T) {
 	}))
 	// Use the actual type for Values field from the model
 	prov := models.PropertyRegionalOverride{}
-	require.NotNil(t, getTableRow(nil, "tenant", models.PropertyTenancyOverride{
+	require.NotNil(t, rows.GetTableRow(nil, "tenant", models.PropertyTenancyOverride{
 		Tag: "tenant1",
 		PropertyRegionalOverride: models.PropertyRegionalOverride{
 			Name:    "p",
@@ -604,10 +606,10 @@ func TestGetTableRow(t *testing.T) {
 			}{Value: "val"}),
 		},
 	}))
-	require.NotNil(t, getTableRow(nil, "pool", models.GpuNode{
+	require.NotNil(t, rows.GetTableRow(nil, "pool", models.GpuNode{
 		NodePool: "pool", Name: "node", InstanceType: "type", Allocatable: 10, Allocated: 2, IsHealthy: true, IsReady: true,
 	}))
-	require.NotNil(t, getTableRow(nil, "tenant", models.DedicatedAICluster{
+	require.NotNil(t, rows.GetTableRow(nil, "tenant", models.DedicatedAICluster{
 		Name: "dac", Type: "t", UnitShape: "shape", Size: 1, Status: "active",
 	}))
 }

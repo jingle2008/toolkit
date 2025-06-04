@@ -16,6 +16,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/app/toolkit"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"go.uber.org/zap"
 	"k8s.io/client-go/util/homedir"
@@ -63,40 +65,40 @@ func parseConfig() Config {
 	}
 }
 
-func categoryFromString(s string) (toolkit.Category, error) {
+func categoryFromString(s string) (domain.Category, error) {
 	switch strings.ToLower(s) {
 	case "tenant":
-		return toolkit.Tenant, nil
+		return domain.Tenant, nil
 	case "limitdefinition":
-		return toolkit.LimitDefinition, nil
+		return domain.LimitDefinition, nil
 	case "consolepropertydefinition":
-		return toolkit.ConsolePropertyDefinition, nil
+		return domain.ConsolePropertyDefinition, nil
 	case "propertydefinition":
-		return toolkit.PropertyDefinition, nil
+		return domain.PropertyDefinition, nil
 	case "limittenancyoverride":
-		return toolkit.LimitTenancyOverride, nil
+		return domain.LimitTenancyOverride, nil
 	case "consolepropertytenancyoverride":
-		return toolkit.ConsolePropertyTenancyOverride, nil
+		return domain.ConsolePropertyTenancyOverride, nil
 	case "propertytenancyoverride":
-		return toolkit.PropertyTenancyOverride, nil
+		return domain.PropertyTenancyOverride, nil
 	case "consolepropertyregionaloverride":
-		return toolkit.ConsolePropertyRegionalOverride, nil
+		return domain.ConsolePropertyRegionalOverride, nil
 	case "propertyregionaloverride":
-		return toolkit.PropertyRegionalOverride, nil
+		return domain.PropertyRegionalOverride, nil
 	case "basemodel":
-		return toolkit.BaseModel, nil
+		return domain.BaseModel, nil
 	case "modelartifact":
-		return toolkit.ModelArtifact, nil
+		return domain.ModelArtifact, nil
 	case "environment":
-		return toolkit.Environment, nil
+		return domain.Environment, nil
 	case "servicetenancy":
-		return toolkit.ServiceTenancy, nil
+		return domain.ServiceTenancy, nil
 	case "gpupool":
-		return toolkit.GpuPool, nil
+		return domain.GpuPool, nil
 	case "gpunode":
-		return toolkit.GpuNode, nil
+		return domain.GpuNode, nil
 	case "dedicatedaicluster":
-		return toolkit.DedicatedAICluster, nil
+		return domain.DedicatedAICluster, nil
 	default:
 		return 0, fmt.Errorf("invalid category: %q", s)
 	}
@@ -132,7 +134,7 @@ func run(ctx context.Context, cfg Config) error {
 	}()
 
 	logger, _ := zap.NewProduction()
-	ctx = toolkit.CtxWithLogger(ctx, logger)
+	ctx = logging.CtxWithLogger(ctx, logger)
 	model := toolkit.NewModel(
 		toolkit.WithRepoPath(repoPath),
 		toolkit.WithKubeConfig(kubeConfig),

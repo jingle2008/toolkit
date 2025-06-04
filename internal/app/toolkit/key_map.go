@@ -1,6 +1,9 @@
 package toolkit
 
-import "github.com/charmbracelet/bubbles/key"
+import (
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+)
 
 // keyMap holds key bindings for the toolkit UI.
 type keyMap struct {
@@ -13,8 +16,8 @@ type keyMap struct {
 	ViewDetails        key.Binding
 	ApplyContext       key.Binding
 	ViewModelArtifacts key.Binding
-	Category           Category
-	Additionals        map[Category][]key.Binding
+	Category           domain.Category
+	Additionals        map[domain.Category][]key.Binding
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
@@ -68,7 +71,7 @@ var keys = keyMap{
 		key.WithHelp("q", "quit"),
 	),
 	ViewModelArtifacts: viewModelArtifacts,
-	Additionals: map[Category][]key.Binding{
-		BaseModel: {viewModelArtifacts},
+	Additionals: map[domain.Category][]key.Binding{
+		domain.BaseModel: {viewModelArtifacts},
 	},
 }

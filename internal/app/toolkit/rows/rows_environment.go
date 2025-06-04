@@ -1,4 +1,4 @@
-package toolkit
+package rows
 
 import (
 	"github.com/charmbracelet/bubbles/table"
@@ -7,7 +7,7 @@ import (
 )
 
 // Adapter function for models.Environment
-func getEnvironments(envs []models.Environment, filter string) []table.Row {
+func GetEnvironments(envs []models.Environment, filter string) []table.Row {
 	results := make([]table.Row, 0, len(envs))
 
 	utils.FilterSlice(envs, nil, filter, func(_ int, val models.Environment) bool {

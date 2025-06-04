@@ -1,14 +1,12 @@
-// Package toolkit provides core types and logic for the toolkit application.
-package toolkit
+package domain
 
 import "fmt"
 
-// Category represents a logical grouping for toolkit data and UI.
+// Category represents a logical grouping for toolkit data.
 type Category int
 
-const numCategories = 16
+const NumCategories = 16
 
-// Category constants enumerate all possible toolkit categories.
 const (
 	Tenant Category = iota
 	LimitDefinition
@@ -86,18 +84,15 @@ func (e Category) IsScopeOf(o Category) bool {
 
 // IsScope returns true if the category is a scope category.
 func (e Category) IsScope() bool {
-	//nolint:exhaustive
 	switch e {
 	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool:
 		return true
 	}
-
 	return false
 }
 
 // ScopedCategories returns the categories that are scoped by the receiver.
 func (e Category) ScopedCategories() []Category {
-	//nolint:exhaustive
 	switch e {
 	case Tenant:
 		return []Category{
@@ -120,7 +115,6 @@ func (e Category) ScopedCategories() []Category {
 		}
 	case GpuPool:
 		return []Category{GpuNode}
-
 	default:
 		panic(fmt.Sprintf("No scoped categories for category: %s", e))
 	}
@@ -128,7 +122,6 @@ func (e Category) ScopedCategories() []Category {
 
 // Definition returns the definition category for the receiver.
 func (e Category) Definition() Category {
-	//nolint:exhaustive
 	switch e {
 	case LimitTenancyOverride:
 		return LimitDefinition

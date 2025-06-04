@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -34,15 +35,14 @@ func WithEnvironment(env models.Environment) ModelOption {
 	}
 }
 
-// WithCategory sets the category field.
-func WithCategory(category Category) ModelOption {
+func WithCategory(category domain.Category) ModelOption {
 	return func(m *Model) {
 		m.category = category
 	}
 }
 
 // WithAppContext sets the context field.
-func WithAppContext(ctx *AppContext) ModelOption {
+func WithAppContext(ctx *domain.AppContext) ModelOption {
 	return func(m *Model) {
 		m.context = ctx
 	}

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,8 +31,8 @@ func TestKeyMap_FullHelp(t *testing.T) {
 		ApplyContext: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "apply context")),
 		Help:         key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 		Quit:         key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "quit")),
-		Additionals:  map[Category][]key.Binding{BaseModel: {key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "view artifacts"))}},
-		Category:     BaseModel,
+		Additionals:  map[domain.Category][]key.Binding{domain.BaseModel: {key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "view artifacts"))}},
+		Category:     domain.BaseModel,
 	}
 	full := km.FullHelp()
 	assert.NotEmpty(t, full)

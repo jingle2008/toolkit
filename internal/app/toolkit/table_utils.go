@@ -6,59 +6,61 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/rows"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"
 )
 
-var categoryHandlers = map[Category]func(*zap.Logger, *models.Dataset, *AppContext, string) []table.Row{
-	Tenant: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
-		return getTenants(dataset.Tenants, filter)
+var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *domain.AppContext, string) []table.Row{
+	domain.Tenant: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+		return rows.GetTenants(dataset.Tenants, filter)
 	},
-	LimitDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	domain.LimitDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getLimitDefinitions(dataset.LimitDefinitionGroup, filter)
 	},
-	ConsolePropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	domain.ConsolePropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.ConsolePropertyDefinitionGroup.Values, filter)
 	},
-	PropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	domain.PropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.PropertyDefinitionGroup.Values, filter)
 	},
-	LimitTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *AppContext, filter string) []table.Row {
-		return getScopedItems(logger, dataset.LimitTenancyOverrideMap, Tenant, context, filter)
+	domain.LimitTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+		return rows.GetScopedItems(logger, dataset.LimitTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	ConsolePropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *AppContext, filter string) []table.Row {
-		return getScopedItems(logger, dataset.ConsolePropertyTenancyOverrideMap, Tenant, context, filter)
+	domain.ConsolePropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+		return rows.GetScopedItems(logger, dataset.ConsolePropertyTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	PropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *AppContext, filter string) []table.Row {
-		return getScopedItems(logger, dataset.PropertyTenancyOverrideMap, Tenant, context, filter)
+	domain.PropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+		return rows.GetScopedItems(logger, dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	ConsolePropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	domain.ConsolePropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.ConsolePropertyRegionalOverrides, filter)
 	},
-	PropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	domain.PropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.PropertyRegionalOverrides, filter)
 	},
-	BaseModel: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	domain.BaseModel: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getBaseModels(dataset.BaseModelMap, filter)
 	},
-	ModelArtifact: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	domain.ModelArtifact: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getModelArtifacts(dataset.ModelArtifacts, filter)
 	},
-	Environment: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
-		return getEnvironments(dataset.Environments, filter)
+	domain.Environment: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+		return rows.GetEnvironments(dataset.Environments, filter)
 	},
-	ServiceTenancy: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
-		return getServiceTenancies(dataset.ServiceTenancies, filter)
+	domain.ServiceTenancy: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+		return rows.GetServiceTenancies(dataset.ServiceTenancies, filter)
 	},
-	GpuPool: func(_ *zap.Logger, dataset *models.Dataset, _ *AppContext, filter string) []table.Row {
+	domain.GpuPool: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getGpuPools(dataset.GpuPools, filter)
 	},
-	GpuNode: func(logger *zap.Logger, dataset *models.Dataset, context *AppContext, filter string) []table.Row {
-		return getScopedItems(logger, dataset.GpuNodeMap, GpuPool, context, filter)
+	domain.GpuNode: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+		return rows.GetScopedItems(logger, dataset.GpuNodeMap, domain.GpuPool, context, filter)
 	},
-	DedicatedAICluster: func(logger *zap.Logger, dataset *models.Dataset, context *AppContext, filter string) []table.Row {
-		return getScopedItems(logger, dataset.DedicatedAIClusterMap, Tenant, context, filter)
+	domain.DedicatedAICluster: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+		return rows.GetScopedItems(logger, dataset.DedicatedAIClusterMap, domain.Tenant, context, filter)
 	},
 }
 
@@ -66,7 +68,7 @@ var categoryHandlers = map[Category]func(*zap.Logger, *models.Dataset, *AppConte
 getHeaders returns the header definitions for a given category.
 If no headers are defined for the category, it returns nil.
 */
-func getHeaders(category Category) []header {
+func getHeaders(category domain.Category) []header {
 	if headers, exists := headerDefinitions[category]; exists {
 		return headers
 	}
@@ -77,7 +79,7 @@ func getHeaders(category Category) []header {
 getTableRows returns the table rows for a given category, using the appropriate handler.
 If the context is not valid for the category, it is set to nil.
 */
-func getTableRows(logger *zap.Logger, dataset *models.Dataset, category Category, context *AppContext, filter string) []table.Row {
+func getTableRows(logger *zap.Logger, dataset *models.Dataset, category domain.Category, context *domain.AppContext, filter string) []table.Row {
 	if context != nil && !context.Category.IsScopeOf(category) {
 		context = nil
 	}
@@ -150,27 +152,27 @@ func getPropertyDefinitions[T models.Definition](definitions []T, filter string)
 getTableRow returns a table.Row for a given item, using the appropriate adapter function based on type.
 If the type is unexpected, it logs a warning and returns nil.
 */
-func getTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row {
+func GetTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row {
 	switch val := item.(type) {
 	case models.LimitTenancyOverride:
 		// Use adapter function for RowMarshaler pattern
-		return limitTenancyOverrideRow(val).ToRow(tenant)
+		return rows.LimitTenancyOverrideRow(val).ToRow(tenant)
 
 	case models.ConsolePropertyTenancyOverride:
 		// Use adapter function for RowMarshaler pattern
-		return consolePropertyTenancyOverrideRow(val).ToRow(tenant)
+		return rows.ConsolePropertyTenancyOverrideRow(val).ToRow(tenant)
 
 	case models.PropertyTenancyOverride:
 		// Use adapter function for RowMarshaler pattern
-		return propertyTenancyOverrideRow(val).ToRow(tenant)
+		return rows.PropertyTenancyOverrideRow(val).ToRow(tenant)
 
 	case models.GpuNode:
 		// Use adapter function for RowMarshaler pattern
-		return gpuNodeRow(val).ToRow(tenant)
+		return rows.GpuNodeRow(val).ToRow(tenant)
 
 	case models.DedicatedAICluster:
 		// Use adapter function for RowMarshaler pattern
-		return dedicatedAIClusterRow(val).ToRow(tenant)
+		return rows.DedicatedAIClusterRow(val).ToRow(tenant)
 
 	default:
 		if logger != nil {
@@ -247,18 +249,18 @@ func getModelArtifacts(artifacts []models.ModelArtifact, filter string) []table.
 /*
 getItemKey returns the ItemKey for a given category and table row.
 */
-func getItemKey(category Category, row table.Row) models.ItemKey {
+func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	switch category {
-	case Tenant, LimitDefinition, Environment, ServiceTenancy,
-		ConsolePropertyDefinition, PropertyDefinition, GpuPool,
-		ConsolePropertyRegionalOverride, PropertyRegionalOverride:
+	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
+		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
+		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride:
 		return row[0]
-	case LimitTenancyOverride, ConsolePropertyTenancyOverride,
-		PropertyTenancyOverride, GpuNode, DedicatedAICluster:
+	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
+		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
 		return models.ScopedItemKey{Scope: row[0], Name: row[1]}
-	case BaseModel:
+	case domain.BaseModel:
 		return models.BaseModelKey{Name: row[0], Version: row[1], Type: row[2]}
-	case ModelArtifact:
+	case domain.ModelArtifact:
 		return row[2]
 	}
 
@@ -268,38 +270,38 @@ func getItemKey(category Category, row table.Row) models.ItemKey {
 /*
 findItem returns the item from the dataset for a given category and key.
 */
-func findItem(dataset *models.Dataset, category Category, key models.ItemKey) interface{} {
+func findItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) interface{} {
 	var item interface{}
 
 	switch category {
-	case Tenant:
+	case domain.Tenant:
 		item = utils.FindByName(dataset.Tenants, key.(string))
-	case LimitDefinition:
+	case domain.LimitDefinition:
 		item = utils.FindByName(dataset.LimitDefinitionGroup.Values, key.(string))
-	case ConsolePropertyDefinition:
+	case domain.ConsolePropertyDefinition:
 		item = utils.FindByName(dataset.ConsolePropertyDefinitionGroup.Values, key.(string))
-	case PropertyDefinition:
+	case domain.PropertyDefinition:
 		item = utils.FindByName(dataset.PropertyDefinitionGroup.Values, key.(string))
-	case LimitTenancyOverride:
+	case domain.LimitTenancyOverride:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.LimitTenancyOverrideMap[k.Scope]; ok {
 			item = utils.FindByName(items, k.Name)
 		}
-	case ConsolePropertyTenancyOverride:
+	case domain.ConsolePropertyTenancyOverride:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.ConsolePropertyTenancyOverrideMap[k.Scope]; ok {
 			item = utils.FindByName(items, k.Name)
 		}
-	case PropertyTenancyOverride:
+	case domain.PropertyTenancyOverride:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.PropertyTenancyOverrideMap[k.Scope]; ok {
 			item = utils.FindByName(items, k.Name)
 		}
-	case ConsolePropertyRegionalOverride:
+	case domain.ConsolePropertyRegionalOverride:
 		item = utils.FindByName(dataset.ConsolePropertyRegionalOverrides, key.(string))
-	case PropertyRegionalOverride:
+	case domain.PropertyRegionalOverride:
 		item = utils.FindByName(dataset.PropertyRegionalOverrides, key.(string))
-	case BaseModel:
+	case domain.BaseModel:
 		k := key.(models.BaseModelKey)
 		for _, value := range dataset.BaseModelMap {
 			if value.Name == k.Name &&
@@ -308,20 +310,20 @@ func findItem(dataset *models.Dataset, category Category, key models.ItemKey) in
 				item = value
 			}
 		}
-	case ModelArtifact:
+	case domain.ModelArtifact:
 		item = utils.FindByName(dataset.ModelArtifacts, key.(string))
-	case Environment:
+	case domain.Environment:
 		item = utils.FindByName(dataset.Environments, key.(string))
-	case ServiceTenancy:
+	case domain.ServiceTenancy:
 		item = utils.FindByName(dataset.ServiceTenancies, key.(string))
-	case GpuPool:
+	case domain.GpuPool:
 		item = utils.FindByName(dataset.GpuPools, key.(string))
-	case GpuNode:
+	case domain.GpuNode:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.GpuNodeMap[k.Scope]; ok {
 			item = utils.FindByName(items, k.Name)
 		}
-	case DedicatedAICluster:
+	case domain.DedicatedAICluster:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.DedicatedAIClusterMap[k.Scope]; ok {
 			item = utils.FindByName(items, k.Name)
@@ -334,17 +336,17 @@ func findItem(dataset *models.Dataset, category Category, key models.ItemKey) in
 /*
 getItemKeyString returns a string representation of the ItemKey for a given category.
 */
-func getItemKeyString(category Category, key models.ItemKey) string {
+func getItemKeyString(category domain.Category, key models.ItemKey) string {
 	switch category {
-	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition,
-		ConsolePropertyRegionalOverride, PropertyRegionalOverride, Environment,
-		ServiceTenancy, GpuPool, ModelArtifact:
+	case domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
+		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride, domain.Environment,
+		domain.ServiceTenancy, domain.GpuPool, domain.ModelArtifact:
 		return key.(string)
-	case LimitTenancyOverride, ConsolePropertyTenancyOverride,
-		PropertyTenancyOverride, DedicatedAICluster, GpuNode:
+	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
+		domain.PropertyTenancyOverride, domain.DedicatedAICluster, domain.GpuNode:
 		k := key.(models.ScopedItemKey)
 		return fmt.Sprintf("%s/%s", k.Scope, k.Name)
-	case BaseModel:
+	case domain.BaseModel:
 		k := key.(models.BaseModelKey)
 		return fmt.Sprintf("%s-%s-%s", k.Name, k.Version, k.Type)
 	}

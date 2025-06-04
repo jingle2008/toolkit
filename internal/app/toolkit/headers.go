@@ -1,115 +1,117 @@
 package toolkit
 
+import "github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+
 type header struct {
 	text  string
 	ratio float64
 }
 
-var headerDefinitions = map[Category][]header{
-	Tenant: {
-		{text: "Name", ratio: 0.25},
-		{text: "OCID", ratio: 0.65},
-		{text: "LO/CPO/PO", ratio: 0.1},
+var headerDefinitions = map[domain.Category][]header{
+	domain.Tenant: {
+		{"Name", 0.25},
+		{"OCID", 0.65},
+		{"LO/CPO/PO", 0.1},
 	},
-	LimitDefinition: {
-		{text: "Name", ratio: 0.32},
-		{text: "Description", ratio: 0.48},
-		{text: "Scope", ratio: 0.08},
-		{text: "Min", ratio: 0.06},
-		{text: "Max", ratio: 0.06},
+	domain.LimitDefinition: {
+		{"Name", 0.32},
+		{"Description", 0.48},
+		{"Scope", 0.08},
+		{"Min", 0.06},
+		{"Max", 0.06},
 	},
-	ConsolePropertyDefinition: {
-		{text: "Name", ratio: 0.38},
-		{text: "Description", ratio: 0.5},
-		{text: "Value", ratio: 0.12},
+	domain.ConsolePropertyDefinition: {
+		{"Name", 0.38},
+		{"Description", 0.5},
+		{"Value", 0.12},
 	},
-	PropertyDefinition: {
-		{text: "Name", ratio: 0.38},
-		{text: "Description", ratio: 0.5},
-		{text: "Value", ratio: 0.12},
+	domain.PropertyDefinition: {
+		{"Name", 0.38},
+		{"Description", 0.5},
+		{"Value", 0.12},
 	},
-	LimitTenancyOverride: {
-		{text: "Tenant", ratio: 0.24},
-		{text: "Limit", ratio: 0.4},
-		{text: "Regions", ratio: 0.2},
-		{text: "Min", ratio: 0.08},
-		{text: "Max", ratio: 0.08},
+	domain.LimitTenancyOverride: {
+		{"Tenant", 0.24},
+		{"Limit", 0.4},
+		{"Regions", 0.2},
+		{"Min", 0.08},
+		{"Max", 0.08},
 	},
-	ConsolePropertyTenancyOverride: {
-		{text: "Tenant", ratio: 0.25},
-		{text: "Property", ratio: 0.4},
-		{text: "Regions", ratio: 0.25},
-		{text: "Value", ratio: 0.1},
+	domain.ConsolePropertyTenancyOverride: {
+		{"Tenant", 0.25},
+		{"Property", 0.4},
+		{"Regions", 0.25},
+		{"Value", 0.1},
 	},
-	PropertyTenancyOverride: {
-		{text: "Tenant", ratio: 0.25},
-		{text: "Property", ratio: 0.4},
-		{text: "Regions", ratio: 0.25},
-		{text: "Value", ratio: 0.1},
+	domain.PropertyTenancyOverride: {
+		{"Tenant", 0.25},
+		{"Property", 0.4},
+		{"Regions", 0.25},
+		{"Value", 0.1},
 	},
-	ConsolePropertyRegionalOverride: {
-		{text: "Property", ratio: 0.4},
-		{text: "Regions", ratio: 0.3},
-		{text: "Value", ratio: 0.3},
+	domain.ConsolePropertyRegionalOverride: {
+		{"Property", 0.4},
+		{"Regions", 0.4},
+		{"Value", 0.2},
 	},
-	PropertyRegionalOverride: {
-		{text: "Property", ratio: 0.4},
-		{text: "Regions", ratio: 0.3},
-		{text: "Value", ratio: 0.3},
+	domain.PropertyRegionalOverride: {
+		{"Property", 0.4},
+		{"Regions", 0.4},
+		{"Value", 0.2},
 	},
-	BaseModel: {
-		{text: "Name", ratio: 0.26},
-		{text: "Version", ratio: 0.08},
-		{text: "Type", ratio: 0.08},
-		{text: "DAC Shape", ratio: 0.16},
-		{text: "Capabilities", ratio: 0.18},
-		{text: "Category", ratio: 0.08},
-		{text: "Max Tokens", ratio: 0.08},
-		{text: "Flags", ratio: 0.08},
+	domain.BaseModel: {
+		{"Name", 0.26},
+		{"Version", 0.08},
+		{"Type", 0.08},
+		{"DAC Shape", 0.16},
+		{"Capabilities", 0.18},
+		{"Category", 0.08},
+		{"Max Tokens", 0.08},
+		{"Flags", 0.08},
 	},
-	ModelArtifact: {
-		{text: "Model Name", ratio: 0.3},
-		{text: "GPU Config", ratio: 0.1},
-		{text: "Artifact Name", ratio: 0.5},
-		{text: "TRT Version", ratio: 0.1},
+	domain.ModelArtifact: {
+		{"Model", 0.3},
+		{"GPU Config", 0.1},
+		{"Artifact", 0.5},
+		{"TensorRT", 0.1},
 	},
-	Environment: {
-		{text: "Name", ratio: 0.2},
-		{text: "Realm", ratio: 0.15},
-		{text: "Type", ratio: 0.15},
-		{text: "Region", ratio: 0.5},
+	domain.Environment: {
+		{"Name", 0.2},
+		{"Realm", 0.15},
+		{"Type", 0.15},
+		{"Region", 0.5},
 	},
-	ServiceTenancy: {
-		{text: "Name", ratio: 0.15},
-		{text: "Realm", ratio: 0.1},
-		{text: "Environment", ratio: 0.1},
-		{text: "Home Region", ratio: 0.15},
-		{text: "Regions", ratio: 0.5},
+	domain.ServiceTenancy: {
+		{"Name", 0.15},
+		{"Realm", 0.1},
+		{"Environment", 0.1},
+		{"HomeRegion", 0.15},
+		{"Regions", 0.5},
 	},
-	GpuPool: {
-		{text: "Name", ratio: 0.3},
-		{text: "Shape", ratio: 0.3},
-		{text: "Size", ratio: 0.1},
-		{text: "GPUs", ratio: 0.1},
-		{text: "OKE Managed", ratio: 0.1},
-		{text: "Capacity Type", ratio: 0.1},
+	domain.GpuPool: {
+		{"Name", 0.3},
+		{"Shape", 0.3},
+		{"Size", 0.1},
+		{"GPUs", 0.1},
+		{"OKE Managed", 0.1},
+		{"Capacity Type", 0.1},
 	},
-	GpuNode: {
-		{text: "PoolName", ratio: 0.2},
-		{text: "Name", ratio: 0.15},
-		{text: "Instance Type", ratio: 0.15},
-		{text: "Total", ratio: 0.08},
-		{text: "Free", ratio: 0.08},
-		{text: "Healthy", ratio: 0.08},
-		{text: "Ready", ratio: 0.08},
-		{text: "Status", ratio: 0.18},
+	domain.GpuNode: {
+		{"Pool", 0.2},
+		{"Name", 0.15},
+		{"Type", 0.15},
+		{"Total", 0.08},
+		{"Free", 0.08},
+		{"Healthy", 0.08},
+		{"Ready", 0.08},
+		{"Status", 0.18},
 	},
-	DedicatedAICluster: {
-		{text: "Tenant", ratio: 0.2},
-		{text: "Name", ratio: 0.44},
-		{text: "Type", ratio: 0.07},
-		{text: "Unit Shape/Profile", ratio: 0.16},
-		{text: "Size", ratio: 0.05},
-		{text: "Status", ratio: 0.08},
+	domain.DedicatedAICluster: {
+		{"Tenant", 0.2},
+		{"Name", 0.44},
+		{"Type", 0.07},
+		{"Shape/Profile", 0.16},
+		{"Size", 0.05},
+		{"Status", 0.08},
 	},
 }

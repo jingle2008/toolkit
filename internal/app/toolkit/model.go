@@ -12,6 +12,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/loader"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"
@@ -27,11 +30,11 @@ type (
 Loader is a composite interface that embeds all loader interfaces.
 */
 type Loader interface {
-	DatasetLoader
-	BaseModelLoader
-	GpuPoolLoader
-	GpuNodeLoader
-	DedicatedAIClusterLoader
+	loader.DatasetLoader
+	loader.BaseModelLoader
+	loader.GpuPoolLoader
+	loader.GpuNodeLoader
+	loader.DedicatedAIClusterLoader
 }
 
 // Model represents the main TUI model for the toolkit application.
@@ -46,7 +49,7 @@ type Model struct {
 	err         error
 	table       *table.Model
 	styles      table.Styles
-	category    Category
+	category    domain.Category
 	headers     []header
 	target      EditTarget
 	mode        StatusMode
@@ -58,8 +61,8 @@ type Model struct {
 	viewport    *viewport.Model
 	renderer    Renderer
 	loader      Loader
-	reLayout    bool        // layout needs to be updated
-	context     *AppContext // selected context
+	reLayout    bool               // layout needs to be updated
+	context     *domain.AppContext // selected context
 	keys        keyMap
 	help        *help.Model
 	kubeConfig  string
@@ -74,23 +77,23 @@ type Model struct {
 	infoValueStyle lipgloss.Style
 }
 
-var categoryMap = map[string]Category{
-	"t":    Tenant,
-	"ld":   LimitDefinition,
-	"cpd":  ConsolePropertyDefinition,
-	"pd":   PropertyDefinition,
-	"lto":  LimitTenancyOverride,
-	"cpto": ConsolePropertyTenancyOverride,
-	"pto":  PropertyTenancyOverride,
-	"cpro": ConsolePropertyRegionalOverride,
-	"pro":  PropertyRegionalOverride,
-	"bm":   BaseModel,
-	"ma":   ModelArtifact,
-	"e":    Environment,
-	"st":   ServiceTenancy,
-	"gp":   GpuPool,
-	"gn":   GpuNode,
-	"dac":  DedicatedAICluster,
+var categoryMap = map[string]domain.Category{
+	"t":    domain.Tenant,
+	"ld":   domain.LimitDefinition,
+	"cpd":  domain.ConsolePropertyDefinition,
+	"pd":   domain.PropertyDefinition,
+	"lto":  domain.LimitTenancyOverride,
+	"cpto": domain.ConsolePropertyTenancyOverride,
+	"pto":  domain.PropertyTenancyOverride,
+	"cpro": domain.ConsolePropertyRegionalOverride,
+	"pro":  domain.PropertyRegionalOverride,
+	"bm":   domain.BaseModel,
+	"ma":   domain.ModelArtifact,
+	"e":    domain.Environment,
+	"st":   domain.ServiceTenancy,
+	"gp":   domain.GpuPool,
+	"gn":   domain.GpuNode,
+	"dac":  domain.DedicatedAICluster,
 }
 
 /*
@@ -137,7 +140,7 @@ func NewModel(opts ...ModelOption) *Model {
 	}
 
 	if m.loader == nil {
-		m.loader = ProductionLoader{}
+		m.loader = loader.ProductionLoader{}
 	}
 	if m.renderer == nil {
 		m.renderer = ProductionRenderer{}
@@ -188,7 +191,7 @@ func NewModel(opts ...ModelOption) *Model {
 loggerCtx returns the zap.Logger from the model's context.
 */
 func (m *Model) loggerCtx() *zap.Logger {
-	return LoggerFromCtx(m.contextCtx)
+	return logging.LoggerFromCtx(m.contextCtx)
 }
 
 // loadData loads the dataset for the current model.

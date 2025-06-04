@@ -1,4 +1,4 @@
-package toolkit
+package rows
 
 import (
 	"github.com/charmbracelet/bubbles/table"

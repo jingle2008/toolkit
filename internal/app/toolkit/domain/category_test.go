@@ -1,4 +1,4 @@
-package toolkit
+package domain
 
 import (
 	"testing"
@@ -92,7 +92,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 			t.Errorf("expected panic for non-scope category")
 		}
 	}()
-	_ = BaseModel.ScopedCategories()
+	BaseModel.ScopedCategories()
 }
 
 func TestCategory_IsScopeOf(t *testing.T) {

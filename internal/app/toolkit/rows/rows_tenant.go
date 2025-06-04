@@ -1,4 +1,4 @@
-package toolkit
+package rows
 
 import (
 	"github.com/charmbracelet/bubbles/table"
@@ -7,7 +7,7 @@ import (
 )
 
 // Adapter function for models.Tenant
-func getTenants(tenants []models.Tenant, filter string) []table.Row {
+func GetTenants(tenants []models.Tenant, filter string) []table.Row {
 	results := make([]table.Row, 0, len(tenants))
 
 	utils.FilterSlice(tenants, nil, filter, func(_ int, val models.Tenant) bool {

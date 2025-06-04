@@ -1,4 +1,4 @@
-package toolkit
+package rows
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 )
 
 // Adapter function for models.ServiceTenancy
-func getServiceTenancies(tenancies []models.ServiceTenancy, filter string) []table.Row {
+func GetServiceTenancies(tenancies []models.ServiceTenancy, filter string) []table.Row {
 	results := make([]table.Row, 0, len(tenancies))
 
 	utils.FilterSlice(tenancies, nil, filter, func(_ int, val models.ServiceTenancy) bool {

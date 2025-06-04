@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"
@@ -19,7 +20,7 @@ import (
 loadRequest is a command for loading category data using the model's context.
 */
 type loadRequest struct {
-	category Category
+	category domain.Category
 	model    *Model
 }
 
@@ -29,13 +30,13 @@ func (r loadRequest) Run() tea.Msg {
 		err  error
 	)
 	switch r.category {
-	case BaseModel:
+	case domain.BaseModel:
 		data, err = utils.LoadBaseModels(r.model.contextCtx, r.model.repoPath, r.model.environment)
-	case GpuPool:
+	case domain.GpuPool:
 		data, err = utils.LoadGpuPools(r.model.contextCtx, r.model.repoPath, r.model.environment)
-	case GpuNode:
+	case domain.GpuNode:
 		data, err = utils.LoadGpuNodes(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
-	case DedicatedAICluster:
+	case domain.DedicatedAICluster:
 		data, err = utils.LoadDedicatedAIClusters(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
 	}
 	if err != nil {
@@ -142,41 +143,42 @@ func (m *Model) debounceFilter() tea.Cmd {
 	})
 }
 
-func (m *Model) updateCategory(category Category) tea.Cmd {
+func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 	if m.category == category {
 		return nil
 	}
 
 	m.category = category
 	m.keys.Category = category
-	return m.ensureCategory()
-}
 
-func (m *Model) ensureCategory() tea.Cmd {
 	switch m.category {
-	case BaseModel:
+	case domain.BaseModel:
 		if m.dataset.BaseModelMap == nil {
-			return loadRequest{category: BaseModel, model: m}.Run
+			return loadRequest{category: domain.BaseModel, model: m}.Run
 		}
-	case GpuPool:
+	case domain.GpuPool:
 		if m.dataset.GpuPools == nil {
-			return loadRequest{category: GpuPool, model: m}.Run
+			return loadRequest{category: domain.GpuPool, model: m}.Run
 		}
-	case GpuNode:
+	case domain.GpuNode:
 		if m.dataset.GpuNodeMap == nil {
-			return loadRequest{category: GpuNode, model: m}.Run
+			return loadRequest{category: domain.GpuNode, model: m}.Run
 		}
-	case DedicatedAICluster:
+	case domain.DedicatedAICluster:
 		if m.dataset.DedicatedAIClusterMap == nil {
-			return loadRequest{category: DedicatedAICluster, model: m}.Run
+			return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
 		}
 	}
-	return nil
+
+	// trigger refresh of the table
+	return func() tea.Msg {
+		return dataMsg{}
+	}
 }
 
 func (m *Model) enterContext() tea.Cmd {
 	target := m.table.SelectedRow()[0]
-	appContext := AppContext{
+	appContext := domain.AppContext{
 		Category: m.category,
 		Name:     target,
 	}
@@ -184,7 +186,7 @@ func (m *Model) enterContext() tea.Cmd {
 	case m.category.IsScope():
 		m.context = &appContext
 		return m.updateCategory(m.category.ScopedCategories()[0])
-	case m.category == Environment:
+	case m.category == domain.Environment:
 		env := *utils.FindByName(m.dataset.Environments, target)
 		if !m.environment.Equals(env) {
 			m.environment = env
@@ -194,7 +196,7 @@ func (m *Model) enterContext() tea.Cmd {
 			m.dataset.GpuNodeMap = nil
 			m.dataset.DedicatedAIClusterMap = nil
 			return tea.Batch(
-				m.updateCategory(BaseModel),
+				m.updateCategory(domain.BaseModel),
 			)
 		}
 	default:
@@ -313,7 +315,7 @@ func (m *Model) processData(msg dataMsg) {
 
 func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 	//nolint:exhaustive
-	if m.category == BaseModel {
+	if m.category == domain.BaseModel {
 		if key.Matches(msg, m.keys.ViewModelArtifacts) {
 			item := m.getCurrentItem()
 			if bm, ok := item.(*models.BaseModel); ok {
