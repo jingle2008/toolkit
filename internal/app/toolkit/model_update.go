@@ -2,7 +2,6 @@
 package toolkit
 
 import (
-	"context"
 	"math"
 	"strings"
 	"time"
@@ -15,6 +14,35 @@ import (
 	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"
 )
+
+/*
+loadRequest is a command for loading category data using the model's context.
+*/
+type loadRequest struct {
+	category Category
+	model    *Model
+}
+
+func (r loadRequest) Run() tea.Msg {
+	var (
+		data interface{}
+		err  error
+	)
+	switch r.category {
+	case BaseModel:
+		data, err = utils.LoadBaseModels(r.model.contextCtx, r.model.repoPath, r.model.environment)
+	case GpuPool:
+		data, err = utils.LoadGpuPools(r.model.contextCtx, r.model.repoPath, r.model.environment)
+	case GpuNode:
+		data, err = utils.LoadGpuNodes(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
+	case DedicatedAICluster:
+		data, err = utils.LoadDedicatedAIClusters(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
+	}
+	if err != nil {
+		return errMsg{err}
+	}
+	return dataMsg{data}
+}
 
 /*
 Update implements the tea.Model interface and updates the Model state in response to a message.
@@ -121,41 +149,29 @@ func (m *Model) updateCategory(category Category) tea.Cmd {
 
 	m.category = category
 	m.keys.Category = category
-	return m.ensureCategory
+	return m.ensureCategory()
 }
 
-func (m *Model) ensureCategory() tea.Msg {
-	var data interface{}
-	var err error
-
-	//nolint:exhaustive
+func (m *Model) ensureCategory() tea.Cmd {
 	switch m.category {
 	case BaseModel:
 		if m.dataset.BaseModelMap == nil {
-			data, err = utils.LoadBaseModels(context.Background(), m.repoPath, m.environment)
+			return loadRequest{category: BaseModel, model: m}.Run
 		}
-
 	case GpuPool:
 		if m.dataset.GpuPools == nil {
-			data, err = utils.LoadGpuPools(context.Background(), m.repoPath, m.environment)
+			return loadRequest{category: GpuPool, model: m}.Run
 		}
-
 	case GpuNode:
 		if m.dataset.GpuNodeMap == nil {
-			data, err = utils.LoadGpuNodes(context.Background(), m.kubeConfig, m.environment)
+			return loadRequest{category: GpuNode, model: m}.Run
 		}
-
 	case DedicatedAICluster:
 		if m.dataset.DedicatedAIClusterMap == nil {
-			data, err = utils.LoadDedicatedAIClusters(context.Background(), m.kubeConfig, m.environment)
+			return loadRequest{category: DedicatedAICluster, model: m}.Run
 		}
 	}
-
-	if err != nil {
-		return errMsg{err}
-	}
-
-	return dataMsg{data}
+	return nil
 }
 
 func (m *Model) enterContext() tea.Cmd {
@@ -262,7 +278,7 @@ func (m *Model) updateColumns() {
 }
 
 func (m *Model) updateRows() {
-	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter)
+	rows := getTableRows(m.loggerCtx(), m.dataset, m.category, m.context, m.curFilter)
 	table.WithRows(rows)(m.table)
 
 	m.table.GotoTop()
@@ -300,8 +316,14 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 	if m.category == BaseModel {
 		if key.Matches(msg, m.keys.ViewModelArtifacts) {
 			item := m.getCurrentItem()
-			if m.logger != nil {
-				m.logger.Info("Viewing model artifacts", zap.Any("item", item))
+			if bm, ok := item.(*models.BaseModel); ok {
+				m.loggerCtx().Info("view_model_artifacts",
+					zap.String("model", bm.Name),
+					zap.String("version", bm.Version),
+					zap.String("type", bm.Type),
+				)
+			} else {
+				m.loggerCtx().Info("view_model_artifacts", zap.Any("item", item))
 			}
 		}
 	}

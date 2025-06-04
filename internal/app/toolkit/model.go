@@ -5,8 +5,6 @@ package toolkit
 
 import (
 	"context"
-	"fmt"
-	"os"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
@@ -37,7 +35,9 @@ type Loader interface {
 }
 
 // Model represents the main TUI model for the toolkit application.
+
 type Model struct {
+	contextCtx  context.Context
 	repoPath    string
 	environment models.Environment
 	viewHeight  int
@@ -63,8 +63,6 @@ type Model struct {
 	keys        keyMap
 	help        *help.Model
 	kubeConfig  string
-	logger      *zap.Logger
-
 	// lipgloss styles (moved from package-level for race safety)
 	baseStyle      lipgloss.Style
 	statusNugget   lipgloss.Style
@@ -99,16 +97,10 @@ var categoryMap = map[string]Category{
 NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
 func NewModel(opts ...ModelOption) *Model {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "warning: failed to initialize zap logger, using zap.NewNop():", err)
-		logger = zap.NewNop()
-	}
 	m := &Model{
 		mode:   Normal,
 		target: None,
 		keys:   keys,
-		logger: logger,
 	}
 
 	// Initialize all style fields (previously package-level)
@@ -190,6 +182,13 @@ func NewModel(opts ...ModelOption) *Model {
 	}
 
 	return m
+}
+
+/*
+loggerCtx returns the zap.Logger from the model's context.
+*/
+func (m *Model) loggerCtx() *zap.Logger {
+	return LoggerFromCtx(m.contextCtx)
 }
 
 // loadData loads the dataset for the current model.

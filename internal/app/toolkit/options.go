@@ -1,6 +1,8 @@
 package toolkit
 
 import (
+	"context"
+
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -94,5 +96,14 @@ func WithRenderer(r Renderer) ModelOption {
 func WithLoader(loader Loader) ModelOption {
 	return func(m *Model) {
 		m.loader = loader
+	}
+}
+
+/*
+WithContext sets the context.Context for the Model.
+*/
+func WithContext(ctx context.Context) ModelOption {
+	return func(m *Model) {
+		m.contextCtx = ctx
 	}
 }

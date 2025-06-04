@@ -53,8 +53,6 @@ func (p propertyTenancyOverrideRow) ToRow(scope string) table.Row {
 	}
 }
 
-// (bulk *ToRows helpers removed as unused)
-
 // getScopedItems is used for tenancy and other scoped overrides.
 func getScopedItems[T models.NamedFilterable](logger *zap.Logger, g map[string][]T,
 	scopeCategory Category, context *AppContext, filter string,

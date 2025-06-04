@@ -17,6 +17,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/app/toolkit"
 	"github.com/jingle2008/toolkit/pkg/models"
+	"go.uber.org/zap"
 	"k8s.io/client-go/util/homedir"
 )
 
@@ -130,11 +131,14 @@ func run(ctx context.Context, cfg Config) error {
 		}
 	}()
 
+	logger, _ := zap.NewProduction()
+	ctx = toolkit.CtxWithLogger(ctx, logger)
 	model := toolkit.NewModel(
 		toolkit.WithRepoPath(repoPath),
 		toolkit.WithKubeConfig(kubeConfig),
 		toolkit.WithEnvironment(env),
 		toolkit.WithCategory(category),
+		toolkit.WithContext(ctx),
 	)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	// Run the program with context cancellation
