@@ -26,12 +26,3 @@ func (d dedicatedAIClusterRow) ToRow(scope string) table.Row {
 		d.Status,
 	}
 }
-
-// Helper to convert a slice of models.DedicatedAICluster to []table.Row using MarshalRows.
-func DedicatedAIClustersToRows(scope string, clusters []models.DedicatedAICluster) []table.Row {
-	wrapped := make([]dedicatedAIClusterRow, len(clusters))
-	for i, c := range clusters {
-		wrapped[i] = dedicatedAIClusterRow(c)
-	}
-	return MarshalRows[dedicatedAIClusterRow](scope, wrapped)
-}

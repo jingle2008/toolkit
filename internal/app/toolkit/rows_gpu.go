@@ -8,9 +8,11 @@ import (
 )
 
 /*
-GpuNodeToRow adapts a models.GpuNode to a table.Row for display.
+gpuNodeRow is a wrapper to implement RowMarshaler for models.GpuNode.
 */
-func GpuNodeToRow(_ string, n models.GpuNode) table.Row {
+type gpuNodeRow models.GpuNode
+
+func (n gpuNodeRow) ToRow(_ string) table.Row {
 	return table.Row{
 		n.NodePool,
 		n.Name,
@@ -19,6 +21,6 @@ func GpuNodeToRow(_ string, n models.GpuNode) table.Row {
 		fmt.Sprint(n.Allocatable - n.Allocated),
 		fmt.Sprint(n.IsHealthy),
 		fmt.Sprint(n.IsReady),
-		n.GetStatus(),
+		models.GpuNode(n).GetStatus(),
 	}
 }

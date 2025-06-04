@@ -154,19 +154,19 @@ func getTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row 
 	switch val := item.(type) {
 	case models.LimitTenancyOverride:
 		// Use adapter function for RowMarshaler pattern
-		return LimitTenancyOverrideToRow(tenant, val)
+		return limitTenancyOverrideRow(val).ToRow(tenant)
 
 	case models.ConsolePropertyTenancyOverride:
 		// Use adapter function for RowMarshaler pattern
-		return ConsolePropertyTenancyOverrideToRow(tenant, val)
+		return consolePropertyTenancyOverrideRow(val).ToRow(tenant)
 
 	case models.PropertyTenancyOverride:
 		// Use adapter function for RowMarshaler pattern
-		return PropertyTenancyOverrideToRow(tenant, val)
+		return propertyTenancyOverrideRow(val).ToRow(tenant)
 
 	case models.GpuNode:
 		// Use adapter function for RowMarshaler pattern
-		return GpuNodeToRow(tenant, val)
+		return gpuNodeRow(val).ToRow(tenant)
 
 	case models.DedicatedAICluster:
 		// Use adapter function for RowMarshaler pattern

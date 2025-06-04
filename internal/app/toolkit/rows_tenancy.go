@@ -11,9 +11,11 @@ import (
 )
 
 /*
-LimitTenancyOverrideToRow adapts a models.LimitTenancyOverride to a table.Row for display.
+limitTenancyOverrideRow is a wrapper to implement RowMarshaler for models.LimitTenancyOverride.
 */
-func LimitTenancyOverrideToRow(scope string, l models.LimitTenancyOverride) table.Row {
+type limitTenancyOverrideRow models.LimitTenancyOverride
+
+func (l limitTenancyOverrideRow) ToRow(scope string) table.Row {
 	return table.Row{
 		scope,
 		l.Name,
@@ -24,9 +26,11 @@ func LimitTenancyOverrideToRow(scope string, l models.LimitTenancyOverride) tabl
 }
 
 /*
-ConsolePropertyTenancyOverrideToRow adapts a models.ConsolePropertyTenancyOverride to a table.Row for display.
+consolePropertyTenancyOverrideRow is a wrapper to implement RowMarshaler for models.ConsolePropertyTenancyOverride.
 */
-func ConsolePropertyTenancyOverrideToRow(scope string, c models.ConsolePropertyTenancyOverride) table.Row {
+type consolePropertyTenancyOverrideRow models.ConsolePropertyTenancyOverride
+
+func (c consolePropertyTenancyOverrideRow) ToRow(scope string) table.Row {
 	return table.Row{
 		scope,
 		c.Name,
@@ -36,9 +40,11 @@ func ConsolePropertyTenancyOverrideToRow(scope string, c models.ConsolePropertyT
 }
 
 /*
-PropertyTenancyOverrideToRow adapts a models.PropertyTenancyOverride to a table.Row for display.
+propertyTenancyOverrideRow is a wrapper to implement RowMarshaler for models.PropertyTenancyOverride.
 */
-func PropertyTenancyOverrideToRow(scope string, p models.PropertyTenancyOverride) table.Row {
+type propertyTenancyOverrideRow models.PropertyTenancyOverride
+
+func (p propertyTenancyOverrideRow) ToRow(scope string) table.Row {
 	return table.Row{
 		scope,
 		p.Name,
@@ -46,6 +52,8 @@ func PropertyTenancyOverrideToRow(scope string, p models.PropertyTenancyOverride
 		p.GetValue(),
 	}
 }
+
+// (bulk *ToRows helpers removed as unused)
 
 // getScopedItems is used for tenancy and other scoped overrides.
 func getScopedItems[T models.NamedFilterable](logger *zap.Logger, g map[string][]T,
