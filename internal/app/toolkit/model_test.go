@@ -1,6 +1,8 @@
 package toolkit
 
 import (
+	"errors"
+	"reflect"
 	"testing"
 
 	"context"
@@ -12,6 +14,90 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeLoader struct {
+	dataset *models.Dataset
+	err     error
+}
+
+func (f fakeLoader) LoadDataset(ctx context.Context, repoPath string, env models.Environment) (*models.Dataset, error) {
+	return f.dataset, f.err
+}
+func (f fakeLoader) LoadBaseModels(ctx context.Context, repoPath string, env models.Environment) (map[string]*models.BaseModel, error) {
+	return map[string]*models.BaseModel{}, nil
+}
+func (f fakeLoader) LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
+	return nil, nil
+}
+func (f fakeLoader) LoadGpuNodes(ctx context.Context, repoPath string, env models.Environment) (map[string][]models.GpuNode, error) {
+	return map[string][]models.GpuNode{}, nil
+}
+func (f fakeLoader) LoadDedicatedAIClusters(ctx context.Context, repoPath string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
+	return map[string][]models.DedicatedAICluster{}, nil
+}
+
+func TestModel_loadData_Success(t *testing.T) {
+	want := &models.Dataset{}
+	m, err := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
+		WithLoader(fakeLoader{dataset: want}),
+	)
+	if err != nil {
+		t.Fatalf("NewModel failed: %v", err)
+	}
+	cmd := m.loadData()
+	msg := cmd()
+	data, ok := msg.(dataMsg)
+	if !ok {
+		t.Fatalf("expected dataMsg, got %T", msg)
+	}
+	if !reflect.DeepEqual(data.data, want) {
+		t.Errorf("dataMsg.data = %v, want %v", data.data, want)
+	}
+}
+
+func TestModel_loadData_Error(t *testing.T) {
+	fakeErr := errors.New("fail")
+	m, err := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
+		WithLoader(fakeLoader{err: fakeErr}),
+	)
+	if err != nil {
+		t.Fatalf("NewModel failed: %v", err)
+	}
+	cmd := m.loadData()
+	msg := cmd()
+	emsg, ok := msg.(errMsg)
+	if !ok {
+		t.Fatalf("expected errMsg, got %T", msg)
+	}
+	if !errors.Is(emsg.err, fakeErr) {
+		t.Errorf("errMsg.err = %v, want %v", emsg.err, fakeErr)
+	}
+}
+
+func TestModel_Init_CallsLoadData(t *testing.T) {
+	want := &models.Dataset{}
+	m, err := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
+		WithLoader(fakeLoader{dataset: want}),
+	)
+	if err != nil {
+		t.Fatalf("NewModel failed: %v", err)
+	}
+	cmd := m.Init()
+	msg := cmd()
+	data, ok := msg.(dataMsg)
+	if !ok {
+		t.Fatalf("expected dataMsg, got %T", msg)
+	}
+	if !reflect.DeepEqual(data.data, want) {
+		t.Errorf("dataMsg.data = %v, want %v", data.data, want)
+	}
+}
 
 func newTestModel(t *testing.T) *Model {
 	t.Helper()
