@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/rows"
+	"github.com/jingle2008/toolkit/internal/app/domain"
+	"github.com/jingle2008/toolkit/internal/app/rows"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"
@@ -149,7 +149,7 @@ func getPropertyDefinitions[T models.Definition](definitions []T, filter string)
 }
 
 /*
-getTableRow returns a table.Row for a given item, using the appropriate adapter function based on type.
+GetTableRow returns a table.Row for a given item, using the appropriate adapter function based on type.
 If the type is unexpected, it logs a warning and returns nil.
 */
 func GetTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row {

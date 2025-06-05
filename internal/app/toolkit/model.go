@@ -5,6 +5,7 @@ package toolkit
 
 import (
 	"context"
+	"errors"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
@@ -12,11 +13,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/loader"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/logging"
+	"github.com/jingle2008/toolkit/internal/app/domain"
+	"github.com/jingle2008/toolkit/internal/app/loader"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -37,10 +36,13 @@ type Loader interface {
 	loader.DedicatedAIClusterLoader
 }
 
-// Model represents the main TUI model for the toolkit application.
-
+/*
+Model represents the main TUI model for the toolkit application.
+It manages state, events, and rendering for the Bubble Tea UI.
+*/
 type Model struct {
 	contextCtx  context.Context
+	logger      *zap.Logger
 	repoPath    string
 	environment models.Environment
 	viewHeight  int
@@ -99,7 +101,7 @@ var categoryMap = map[string]domain.Category{
 /*
 NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
-func NewModel(opts ...ModelOption) *Model {
+func NewModel(opts ...ModelOption) (*Model, error) {
 	m := &Model{
 		mode:   Normal,
 		target: None,
@@ -137,6 +139,14 @@ func NewModel(opts ...ModelOption) *Model {
 	// Apply all options
 	for _, opt := range opts {
 		opt(m)
+	}
+
+	// Validation
+	if m.repoPath == "" {
+		return nil, errors.New("toolkit: repoPath is required")
+	}
+	if m.environment.Region == "" || m.environment.Type == "" || m.environment.Realm == "" {
+		return nil, errors.New("toolkit: environment (Region, Type, Realm) is required")
 	}
 
 	if m.loader == nil {
@@ -184,20 +194,23 @@ func NewModel(opts ...ModelOption) *Model {
 		m.help = &hm
 	}
 
-	return m
+	return m, nil
 }
 
 /*
-loggerCtx returns the zap.Logger from the model's context.
+loggerCtx returns the zap.Logger from the model's field.
 */
 func (m *Model) loggerCtx() *zap.Logger {
-	return logging.LoggerFromCtx(m.contextCtx)
+	if m.logger != nil {
+		return m.logger
+	}
+	return zap.NewNop()
 }
 
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() tea.Cmd {
 	return func() tea.Msg {
-		dataset, err := utils.LoadDataset(context.Background(), m.repoPath, m.environment)
+		dataset, err := m.loader.LoadDataset(m.contextCtx, m.repoPath, m.environment)
 		if err != nil {
 			return errMsg{err}
 		}

@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+	"github.com/jingle2008/toolkit/internal/app/domain"
 	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/require"
@@ -15,13 +15,16 @@ import (
 
 func newTestModel(t *testing.T) *Model {
 	t.Helper()
-	m := NewModel()
-	m.repoPath = "testrepo"
-	m.environment = models.Environment{
+	env := models.Environment{
 		Realm:  "realm",
 		Type:   "type",
 		Region: "region",
 	}
+	m, err := NewModel(
+		WithRepoPath("testrepo"),
+		WithEnvironment(env),
+	)
+	require.NoError(t, err)
 	m.dataset = &models.Dataset{
 		Tenants: []models.Tenant{
 			{Name: "tenant1", IDs: []string{"id1"}, LimitOverrides: 1, ConsolePropertyOverrides: 2, PropertyOverrides: 3},
@@ -125,12 +128,13 @@ func TestCenterTextReturnsCenteredText(t *testing.T) {
 func TestNewModelInitializesFields(t *testing.T) {
 	t.Parallel()
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
-	m := NewModel(
+	m, err := NewModel(
 		WithRepoPath("/repo"),
 		WithKubeConfig("/kube"),
 		WithEnvironment(env),
 		WithCategory(domain.Tenant),
 	)
+	require.NoError(t, err)
 	testutil.NotNil(t, m)
 	testutil.Equal(t, "/repo", m.repoPath)
 	testutil.Equal(t, "/kube", m.kubeConfig)
@@ -143,12 +147,13 @@ func TestNewModelInitializesFields(t *testing.T) {
 func TestModelContextStringAndInfoView(t *testing.T) {
 	t.Parallel()
 	env := models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "realmA"}
-	m := NewModel(
+	m, err := NewModel(
 		WithRepoPath("/repo"),
 		WithKubeConfig("/kube"),
 		WithEnvironment(env),
 		WithCategory(domain.LimitTenancyOverride),
 	)
+	require.NoError(t, err)
 	// Set context.Category to Tenant, m.category to LimitTenancyOverride
 	m.context = &domain.AppContext{Name: "scopeA", Category: domain.Tenant}
 	m.chosen = false
@@ -231,7 +236,17 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	tbl.SetRows([]table.Row{{"bm1", "v1", "typeA"}})
 	tbl.SetCursor(0)
 
-	m := NewModel(WithTable(&tbl))
+	env := models.Environment{
+		Realm:  "realm",
+		Type:   "type",
+		Region: "region",
+	}
+	m, err := NewModel(
+		WithTable(&tbl),
+		WithRepoPath("testrepo"),
+		WithEnvironment(env),
+	)
+	require.NoError(t, err)
 	m.dataset = ds
 	m.category = domain.BaseModel
 

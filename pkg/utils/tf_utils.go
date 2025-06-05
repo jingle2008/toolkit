@@ -257,7 +257,7 @@ func loadModelReplicas(object cty.Value) map[string]int {
 LoadServiceTenancies loads ServiceTenancy objects from the given repository path.
 Now accepts context.Context as the first parameter.
 */
-func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.ServiceTenancy, error) {
+func LoadServiceTenancies(_ context.Context, repoPath string) ([]models.ServiceTenancy, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
 	attributes, err := getLocalAttributes(dirPath)
 	if err != nil {

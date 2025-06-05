@@ -14,6 +14,9 @@ build:
 lint:
 	golangci-lint run ./...
 
+vet:
+	go vet ./...
+
 test:
 	go test ./... -race -shuffle=on -count=1 -v
 
@@ -51,4 +54,4 @@ LINT_VERSION ?= v1.64.8
 install-lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(LINT_VERSION)
 
-ci: lint test
+ci: lint vet test

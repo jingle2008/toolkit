@@ -18,7 +18,26 @@ linters:
     - paralleltest
     - gocritic
     - gosec
+    - contextcheck
+    - unused
+    - dupl
   presets:
     - bugs
 issues:
   exclude-use-default: false
+
+linters-settings:
+  depguard:
+    list-type: blacklist
+    packages:
+      - github.com/pkg/errors
+    packages-with-error-message:
+      github.com/pkg/errors: "use Go 1.13+ standard errors instead of github.com/pkg/errors"
+  goimports:
+    local-prefixes: github.com/jingle2008/toolkit
+  contextcheck:
+    # Warn if context.Context is not the first arg in exported funcs
+    # (default is true)
+    check-exported: true
+    check-unexported: false
+    allow-context-arg-in-structs: false

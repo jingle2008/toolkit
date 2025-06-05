@@ -6,7 +6,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/utils"
 )
 
-// Adapter function for models.Tenant
+/*
+GetTenants returns table rows for a slice of Tenant, filtered by the provided filter string.
+*/
 func GetTenants(tenants []models.Tenant, filter string) []table.Row {
 	results := make([]table.Row, 0, len(tenants))
 

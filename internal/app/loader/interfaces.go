@@ -1,3 +1,4 @@
+// Package loader defines interfaces for loading datasets and related resources in the toolkit application.
 package loader
 
 import (

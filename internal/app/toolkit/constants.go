@@ -4,8 +4,11 @@ package toolkit
 type EditTarget int
 
 const (
+	// None indicates no edit target is selected.
 	None EditTarget = iota
+	// Filter indicates the filter edit target.
 	Filter
+	// Alias indicates the alias edit target.
 	Alias
 )
 
@@ -13,6 +16,8 @@ const (
 type StatusMode int
 
 const (
+	// Edit indicates the UI is in edit mode.
 	Edit StatusMode = iota
+	// Normal indicates the UI is in normal mode.
 	Normal
 )

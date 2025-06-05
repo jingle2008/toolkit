@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+	"github.com/jingle2008/toolkit/internal/app/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"
@@ -31,13 +31,13 @@ func (r loadRequest) Run() tea.Msg {
 	)
 	switch r.category {
 	case domain.BaseModel:
-		data, err = utils.LoadBaseModels(r.model.contextCtx, r.model.repoPath, r.model.environment)
+		data, err = r.model.loader.LoadBaseModels(r.model.contextCtx, r.model.repoPath, r.model.environment)
 	case domain.GpuPool:
-		data, err = utils.LoadGpuPools(r.model.contextCtx, r.model.repoPath, r.model.environment)
+		data, err = r.model.loader.LoadGpuPools(r.model.contextCtx, r.model.repoPath, r.model.environment)
 	case domain.GpuNode:
-		data, err = utils.LoadGpuNodes(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
+		data, err = r.model.loader.LoadGpuNodes(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
 	case domain.DedicatedAICluster:
-		data, err = utils.LoadDedicatedAIClusters(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
+		data, err = r.model.loader.LoadDedicatedAIClusters(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
 	}
 	if err != nil {
 		return errMsg{err}

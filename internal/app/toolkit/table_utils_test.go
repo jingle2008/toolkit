@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/rows"
+	"github.com/jingle2008/toolkit/internal/app/domain"
+	"github.com/jingle2008/toolkit/internal/app/rows"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -394,10 +394,8 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 	}
 }
 
-func TestAllCategories_HeadersAndRows(t *testing.T) {
-	t.Parallel()
-	// Use the same dataset as TestFindItem_AllCategories
-	ds := &models.Dataset{
+func buildFullTestDataset() *models.Dataset {
+	return &models.Dataset{
 		Tenants:          []models.Tenant{{Name: "tenant1"}},
 		Environments:     []models.Environment{{Type: "type1", Region: "region1", Realm: "realm1"}},
 		GpuPools:         []models.GpuPool{{Name: "pool1"}},
@@ -457,6 +455,11 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 			"tenant1": {{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"}},
 		},
 	}
+}
+
+func TestAllCategories_HeadersAndRows(t *testing.T) {
+	t.Parallel()
+	ds := buildFullTestDataset()
 	for cat := domain.Category(0); cat <= domain.DedicatedAICluster; cat++ {
 		headers := getHeaders(cat)
 		if len(headers) > 0 {
@@ -477,67 +480,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 
 func TestFindItem_AllCategories(t *testing.T) {
 	t.Parallel()
-	// Build a dataset with one entry for each category
-	ds := &models.Dataset{
-		Tenants:          []models.Tenant{{Name: "tenant1"}},
-		Environments:     []models.Environment{{Type: "type1", Region: "region1", Realm: "realm1"}},
-		GpuPools:         []models.GpuPool{{Name: "pool1"}},
-		GpuNodeMap:       map[string][]models.GpuNode{"pool1": {{NodePool: "pool1", Name: "node1"}}},
-		ServiceTenancies: []models.ServiceTenancy{{Name: "svc1"}},
-		BaseModelMap: map[string]*models.BaseModel{
-			"bm1": {Name: "bm1", Version: "v1", Type: "typeA"},
-		},
-		ModelArtifacts: []models.ModelArtifact{{ModelName: "bm1", Name: "artifact1"}},
-		LimitDefinitionGroup: models.LimitDefinitionGroup{
-			Values: []models.LimitDefinition{{Name: "limdef"}},
-		},
-		ConsolePropertyDefinitionGroup: models.ConsolePropertyDefinitionGroup{
-			Values: []models.ConsolePropertyDefinition{{Name: "cpdef"}},
-		},
-		PropertyDefinitionGroup: models.PropertyDefinitionGroup{
-			Values: []models.PropertyDefinition{{Name: "pdef"}},
-		},
-		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
-			"tenant1": {{Name: "limdef", Regions: []string{"us"}, Values: []models.LimitRange{{Min: 1, Max: 2}}}},
-		},
-		ConsolePropertyTenancyOverrideMap: map[string][]models.ConsolePropertyTenancyOverride{
-			"tenant1": {{
-				TenantID: "tenant1",
-				ConsolePropertyRegionalOverride: models.ConsolePropertyRegionalOverride{
-					Name:    "cpdef",
-					Regions: []string{"us"},
-					Values: []struct {
-						Value string `json:"value"`
-					}{{Value: "val"}},
-				},
-			}},
-		},
-		PropertyTenancyOverrideMap: map[string][]models.PropertyTenancyOverride{
-			"tenant1": {{
-				Tag: "tenant1",
-				PropertyRegionalOverride: models.PropertyRegionalOverride{
-					Name:    "pdef",
-					Regions: []string{"us"},
-					Values: []struct {
-						Value string `json:"value"`
-					}{{Value: "val"}},
-				},
-			}},
-		},
-		ConsolePropertyRegionalOverrides: []models.ConsolePropertyRegionalOverride{
-			{Name: "cpdef", Regions: []string{"us"}, Values: []struct {
-				Value string `json:"value"`
-			}{{Value: "val"}}},
-		},
-		PropertyRegionalOverrides: []models.PropertyRegionalOverride{
-			{Name: "pdef", Regions: []string{"us"}, Values: []struct {
-				Value string `json:"value"`
-			}{{Value: "val"}}},
-		},
-		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
-			"tenant1": {{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"}},
-		},
-	}
+	ds := buildFullTestDataset()
 
 	// Table-driven: category, key, want
 	tests := []struct {

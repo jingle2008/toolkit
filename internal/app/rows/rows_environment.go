@@ -6,7 +6,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/utils"
 )
 
-// Adapter function for models.Environment
+/*
+GetEnvironments returns table rows for a slice of Environment, filtered by the provided filter string.
+*/
 func GetEnvironments(envs []models.Environment, filter string) []table.Row {
 	results := make([]table.Row, 0, len(envs))
 

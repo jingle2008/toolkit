@@ -1,3 +1,4 @@
+// Package domain defines core business types and category enums for the toolkit application.
 package domain
 
 import "fmt"
@@ -5,24 +6,41 @@ import "fmt"
 // Category represents a logical grouping for toolkit data.
 type Category int
 
-const NumCategories = 16
-
 const (
+	// NumCategories is the total number of defined categories.
+	NumCategories = 16
+
+	// Tenant is a category for tenant-level data.
 	Tenant Category = iota
+	// LimitDefinition is a category for limit definitions.
 	LimitDefinition
+	// ConsolePropertyDefinition is a category for console property definitions.
 	ConsolePropertyDefinition
+	// PropertyDefinition is a category for property definitions.
 	PropertyDefinition
+	// LimitTenancyOverride is a category for limit tenancy overrides.
 	LimitTenancyOverride
+	// ConsolePropertyTenancyOverride is a category for console property tenancy overrides.
 	ConsolePropertyTenancyOverride
+	// PropertyTenancyOverride is a category for property tenancy overrides.
 	PropertyTenancyOverride
+	// ConsolePropertyRegionalOverride is a category for console property regional overrides.
 	ConsolePropertyRegionalOverride
+	// PropertyRegionalOverride is a category for property regional overrides.
 	PropertyRegionalOverride
+	// BaseModel is a category for base models.
 	BaseModel
+	// ModelArtifact is a category for model artifacts.
 	ModelArtifact
+	// Environment is a category for environments.
 	Environment
+	// ServiceTenancy is a category for service tenancies.
 	ServiceTenancy
+	// GpuPool is a category for GPU pools.
 	GpuPool
+	// GpuNode is a category for GPU nodes.
 	GpuNode
+	// DedicatedAICluster is a category for dedicated AI clusters.
 	DedicatedAICluster
 )
 

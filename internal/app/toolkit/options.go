@@ -7,8 +7,9 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+	"github.com/jingle2008/toolkit/internal/app/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
+	"go.uber.org/zap"
 )
 
 // ModelOption defines a functional option for configuring Model.
@@ -35,6 +36,9 @@ func WithEnvironment(env models.Environment) ModelOption {
 	}
 }
 
+/*
+WithCategory sets the category field for the Model.
+*/
 func WithCategory(category domain.Category) ModelOption {
 	return func(m *Model) {
 		m.category = category
@@ -105,5 +109,12 @@ WithContext sets the context.Context for the Model.
 func WithContext(ctx context.Context) ModelOption {
 	return func(m *Model) {
 		m.contextCtx = ctx
+	}
+}
+
+// WithLogger sets the logger for the Model.
+func WithLogger(logger *zap.Logger) ModelOption {
+	return func(m *Model) {
+		m.logger = logger
 	}
 }

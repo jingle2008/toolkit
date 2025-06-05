@@ -8,7 +8,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/utils"
 )
 
-// Adapter function for models.ServiceTenancy
+/*
+GetServiceTenancies returns table rows for a slice of ServiceTenancy, filtered by the provided filter string.
+*/
 func GetServiceTenancies(tenancies []models.ServiceTenancy, filter string) []table.Row {
 	results := make([]table.Row, 0, len(tenancies))
 

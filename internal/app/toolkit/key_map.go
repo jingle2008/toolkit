@@ -2,7 +2,7 @@ package toolkit
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/jingle2008/toolkit/internal/app/toolkit/domain"
+	"github.com/jingle2008/toolkit/internal/app/domain"
 )
 
 // keyMap holds key bindings for the toolkit UI.
