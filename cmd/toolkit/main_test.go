@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/app/domain"
+	"github.com/jingle2008/toolkit/internal/domain"
 )
 
 func TestCategoryFromString_Valid(t *testing.T) {

@@ -1,6 +1,6 @@
 package toolkit
 
-import "github.com/jingle2008/toolkit/internal/app/domain"
+import "github.com/jingle2008/toolkit/internal/domain"
 
 type header struct {
 	text  string

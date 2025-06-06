@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/jingle2008/toolkit/internal/app/domain"
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/stretchr/testify/assert"
 )
 

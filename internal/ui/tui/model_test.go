@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jingle2008/toolkit/internal/app/domain"
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/require"

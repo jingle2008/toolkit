@@ -15,9 +15,9 @@ import (
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jingle2008/toolkit/internal/app/domain"
-	logctx "github.com/jingle2008/toolkit/internal/app/log"
-	"github.com/jingle2008/toolkit/internal/app/toolkit"
+	"github.com/jingle2008/toolkit/internal/domain"
+	logctx "github.com/jingle2008/toolkit/internal/infra/log"
+	toolkit "github.com/jingle2008/toolkit/internal/ui/tui"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"go.uber.org/zap"
 	"k8s.io/client-go/util/homedir"

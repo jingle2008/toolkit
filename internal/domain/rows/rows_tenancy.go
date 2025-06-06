@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/jingle2008/toolkit/internal/app/domain"
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"

@@ -3,7 +3,7 @@ package rows
 import (
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/app/domain"
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"go.uber.org/zap"
 )
