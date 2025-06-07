@@ -1,4 +1,4 @@
-package environment
+package domain
 
 import (
 	"testing"
@@ -54,7 +54,7 @@ func TestGetEnvironments(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			rows := Filter(envs, tc.filter)
+			rows := FilterEnvironments(envs, tc.filter)
 			if len(rows) != tc.wantCount {
 				t.Errorf("filter %q: expected %d rows, got %d", tc.filter, tc.wantCount, len(rows))
 			}

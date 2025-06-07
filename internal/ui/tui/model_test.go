@@ -36,66 +36,75 @@ func (f fakeLoader) LoadDedicatedAIClusters(ctx context.Context, repoPath string
 	return map[string][]models.DedicatedAICluster{}, nil
 }
 
-func TestModel_loadData_Success(t *testing.T) {
-	want := &models.Dataset{}
-	m, err := NewModel(
-		WithRepoPath("repo"),
-		WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
-		WithLoader(fakeLoader{dataset: want}),
-	)
-	if err != nil {
-		t.Fatalf("NewModel failed: %v", err)
+func TestModel_LoadData_TableDriven(t *testing.T) {
+	t.Parallel()
+	type testCase struct {
+		name      string
+		loader    fakeLoader
+		init      bool
+		wantData  *models.Dataset
+		wantError error
 	}
-	cmd := m.loadData()
-	msg := cmd()
-	data, ok := msg.(DataMsg)
-	if !ok {
-		t.Fatalf("expected DataMsg, got %T", msg)
-	}
-	if !reflect.DeepEqual(data.Data, want) {
-		t.Errorf("DataMsg.Data = %v, want %v", data.Data, want)
-	}
-}
-
-func TestModel_loadData_Error(t *testing.T) {
+	wantDataset := &models.Dataset{}
 	fakeErr := errors.New("fail")
-	m, err := NewModel(
-		WithRepoPath("repo"),
-		WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
-		WithLoader(fakeLoader{err: fakeErr}),
-	)
-	if err != nil {
-		t.Fatalf("NewModel failed: %v", err)
+	tests := []testCase{
+		{
+			name:     "success-loadData",
+			loader:   fakeLoader{dataset: wantDataset},
+			init:     false,
+			wantData: wantDataset,
+		},
+		{
+			name:      "error-loadData",
+			loader:    fakeLoader{err: fakeErr},
+			init:      false,
+			wantError: fakeErr,
+		},
+		{
+			name:     "success-init",
+			loader:   fakeLoader{dataset: wantDataset},
+			init:     true,
+			wantData: wantDataset,
+		},
 	}
-	cmd := m.loadData()
-	msg := cmd()
-	emsg, ok := msg.(ErrMsg)
-	if !ok {
-		t.Fatalf("expected ErrMsg, got %T", msg)
-	}
-	if !errors.Is(emsg.Err, fakeErr) {
-		t.Errorf("ErrMsg.Err = %v, want %v", emsg.Err, fakeErr)
-	}
-}
-
-func TestModel_Init_CallsLoadData(t *testing.T) {
-	want := &models.Dataset{}
-	m, err := NewModel(
-		WithRepoPath("repo"),
-		WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
-		WithLoader(fakeLoader{dataset: want}),
-	)
-	if err != nil {
-		t.Fatalf("NewModel failed: %v", err)
-	}
-	cmd := m.Init()
-	msg := cmd()
-	data, ok := msg.(DataMsg)
-	if !ok {
-		t.Fatalf("expected DataMsg, got %T", msg)
-	}
-	if !reflect.DeepEqual(data.Data, want) {
-		t.Errorf("DataMsg.Data = %v, want %v", data.Data, want)
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			m, err := NewModel(
+				WithRepoPath("repo"),
+				WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
+				WithLoader(tc.loader),
+			)
+			if err != nil {
+				t.Fatalf("NewModel failed: %v", err)
+			}
+			var msg interface{}
+			if tc.init {
+				msg = m.Init()()
+			} else {
+				msg = m.loadData()()
+			}
+			switch {
+			case tc.wantData != nil:
+				data, ok := msg.(DataMsg)
+				if !ok {
+					t.Fatalf("expected DataMsg, got %T", msg)
+				}
+				if !reflect.DeepEqual(data.Data, tc.wantData) {
+					t.Errorf("DataMsg.Data = %v, want %v", data.Data, tc.wantData)
+				}
+			case tc.wantError != nil:
+				emsg, ok := msg.(ErrMsg)
+				if !ok {
+					t.Fatalf("expected ErrMsg, got %T", msg)
+				}
+				if !errors.Is(emsg.Err, tc.wantError) {
+					t.Errorf("ErrMsg.Err = %v, want %v", emsg.Err, tc.wantError)
+				}
+			default:
+				t.Fatalf("invalid test case: no wantData or wantError")
+			}
+		})
 	}
 }
 

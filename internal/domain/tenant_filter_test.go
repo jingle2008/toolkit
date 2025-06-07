@@ -1,4 +1,4 @@
-package tenant
+package domain
 
 import (
 	"testing"
@@ -57,7 +57,7 @@ func TestGetTenants(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			rows := Filter(tenants, tc.filter)
+			rows := FilterTenants(tenants, tc.filter)
 			if len(rows) != tc.wantCount {
 				t.Errorf("filter %q: expected %d rows, got %d", tc.filter, tc.wantCount, len(rows))
 			}

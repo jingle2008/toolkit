@@ -1,4 +1,4 @@
-package rows
+package toolkit
 
 import (
 	"testing"

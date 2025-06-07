@@ -1,4 +1,7 @@
-package rows
+// Package toolkit: row_adapters.go
+// Contains row adapter types, ToRow methods, GetTableRow, and GetScopedItems for UI table rendering.
+
+package toolkit
 
 import (
 	"fmt"
@@ -14,9 +17,7 @@ import (
 // LimitTenancyOverrideRow is a wrapper to implement RowMarshaler for models.LimitTenancyOverride.
 type LimitTenancyOverrideRow models.LimitTenancyOverride
 
-/*
-ToRow returns a table.Row for the LimitTenancyOverrideRow, scoped by the given string.
-*/
+// ToRow returns a table.Row for the LimitTenancyOverrideRow, scoped by the given string.
 func (l LimitTenancyOverrideRow) ToRow(scope string) table.Row {
 	return table.Row{
 		scope,
@@ -30,9 +31,7 @@ func (l LimitTenancyOverrideRow) ToRow(scope string) table.Row {
 // ConsolePropertyTenancyOverrideRow is a wrapper to implement RowMarshaler for models.ConsolePropertyTenancyOverride.
 type ConsolePropertyTenancyOverrideRow models.ConsolePropertyTenancyOverride
 
-/*
-ToRow returns a table.Row for the ConsolePropertyTenancyOverrideRow, scoped by the given string.
-*/
+// ToRow returns a table.Row for the ConsolePropertyTenancyOverrideRow, scoped by the given string.
 func (c ConsolePropertyTenancyOverrideRow) ToRow(scope string) table.Row {
 	return table.Row{
 		scope,
@@ -45,9 +44,7 @@ func (c ConsolePropertyTenancyOverrideRow) ToRow(scope string) table.Row {
 // PropertyTenancyOverrideRow is a wrapper to implement RowMarshaler for models.PropertyTenancyOverride.
 type PropertyTenancyOverrideRow models.PropertyTenancyOverride
 
-/*
-ToRow returns a table.Row for the PropertyTenancyOverrideRow, scoped by the given string.
-*/
+// ToRow returns a table.Row for the PropertyTenancyOverrideRow, scoped by the given string.
 func (p PropertyTenancyOverrideRow) ToRow(scope string) table.Row {
 	return table.Row{
 		scope,
@@ -60,9 +57,7 @@ func (p PropertyTenancyOverrideRow) ToRow(scope string) table.Row {
 // GpuNodeRow is a wrapper to implement RowMarshaler for models.GpuNode.
 type GpuNodeRow models.GpuNode
 
-/*
-ToRow returns a table.Row for the GpuNodeRow.
-*/
+// ToRow returns a table.Row for the GpuNodeRow.
 func (n GpuNodeRow) ToRow(_ string) table.Row {
 	return table.Row{
 		n.NodePool,
@@ -79,9 +74,7 @@ func (n GpuNodeRow) ToRow(_ string) table.Row {
 // DedicatedAIClusterRow is a wrapper to implement RowMarshaler for models.DedicatedAICluster.
 type DedicatedAIClusterRow models.DedicatedAICluster
 
-/*
-ToRow returns a table.Row for the DedicatedAIClusterRow, scoped by the given string.
-*/
+// ToRow returns a table.Row for the DedicatedAIClusterRow, scoped by the given string.
 func (d DedicatedAIClusterRow) ToRow(scope string) table.Row {
 	unitShapeOrProfile := d.UnitShape
 	if unitShapeOrProfile == "" {
@@ -98,7 +91,7 @@ func (d DedicatedAIClusterRow) ToRow(scope string) table.Row {
 }
 
 // GetTableRow returns a table.Row for a given item, using the appropriate adapter function based on type.
-func GetTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row {
+func GetTableRow(logger Logger, tenant string, item interface{}) table.Row {
 	switch val := item.(type) {
 	case models.LimitTenancyOverride:
 		return LimitTenancyOverrideRow(val).ToRow(tenant)
@@ -121,8 +114,9 @@ func GetTableRow(logger *zap.Logger, tenant string, item interface{}) table.Row 
 }
 
 // GetScopedItems is used for tenancy and other scoped overrides.
+// Accepts a Logger interface for decoupling from zap.
 func GetScopedItems[T models.NamedFilterable](
-	logger *zap.Logger,
+	logger Logger,
 	g map[string][]T,
 	scopeCategory domain.Category,
 	ctx *domain.ToolkitContext,

@@ -26,11 +26,19 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 
 			case key.Matches(msg, m.keys.NextCategory):
-				category := domain.Category((int(m.category) + 1) % (int(domain.CategorySentinelLast) + 1))
+				next := int(m.category) + 1
+				if next > int(domain.DedicatedAICluster) {
+					next = int(domain.Tenant)
+				}
+				category := domain.Category(next)
 				cmds = append(cmds, m.updateCategory(category))
 
 			case key.Matches(msg, m.keys.PrevCategory):
-				category := domain.Category((int(m.category) + int(domain.CategorySentinelLast)) % (int(domain.CategorySentinelLast) + 1))
+				prev := int(m.category) - 1
+				if prev < int(domain.Tenant) {
+					prev = int(domain.DedicatedAICluster)
+				}
+				category := domain.Category(prev)
 				cmds = append(cmds, m.updateCategory(category))
 
 			case key.Matches(msg, m.keys.FilterItems):

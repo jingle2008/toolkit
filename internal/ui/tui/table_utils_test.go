@@ -6,10 +6,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
-	"github.com/jingle2008/toolkit/internal/domain/environment"
-	"github.com/jingle2008/toolkit/internal/domain/rows"
-	"github.com/jingle2008/toolkit/internal/domain/service"
-	"github.com/jingle2008/toolkit/internal/domain/tenant"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +37,7 @@ func Test_getTenants_returns_rows(t *testing.T) {
 			PropertyOverrides:        6,
 		},
 	}
-	tenantStructs := tenant.Filter(tenants, "")
+	tenantStructs := domain.FilterTenants(tenants, "")
 	rows := make([]table.Row, 0, len(tenantStructs))
 	for _, val := range tenantStructs {
 		rows = append(rows, table.Row{
@@ -64,7 +60,7 @@ func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 		Status:    "Active",
 		UnitShape: "A100",
 	}
-	row := rows.GetTableRow(nil, "TenantX", cluster)
+	row := GetTableRow(nil, "TenantX", cluster)
 	assert.Equal(t, table.Row{"TenantX", "DAC1", "GPU", "A100", "4", "Active"}, row)
 }
 
@@ -82,7 +78,7 @@ func Test_getEnvironments_returns_rows(t *testing.T) {
 			Realm:  "realmB",
 		},
 	}
-	envStructs := environment.Filter(envs, "")
+	envStructs := domain.FilterEnvironments(envs, "")
 	rows := make([]table.Row, 0, len(envStructs))
 	for _, val := range envStructs {
 		rows = append(rows, table.Row{
@@ -97,42 +93,66 @@ func Test_getEnvironments_returns_rows(t *testing.T) {
 	assert.Equal(t, table.Row{"prod-iad", "realmB", "prod", "us-ashburn-1"}, rows[1])
 }
 
-func Test_getLimitDefinitions_returns_rows(t *testing.T) {
+func Test_rowGenerationFunctions_tableDriven(t *testing.T) {
 	t.Parallel()
-	ldg := models.LimitDefinitionGroup{
-		Values: []models.LimitDefinition{
-			{
-				Name:        "LimitA",
-				Description: "descA",
-				Scope:       "scopeA",
-				DefaultMin:  "1",
-				DefaultMax:  "10",
+	tests := []struct {
+		name     string
+		rowsFunc func() []table.Row
+		want     []table.Row
+	}{
+		{
+			name: "getLimitDefinitions",
+			rowsFunc: func() []table.Row {
+				ldg := models.LimitDefinitionGroup{
+					Values: []models.LimitDefinition{
+						{
+							Name:        "LimitA",
+							Description: "descA",
+							Scope:       "scopeA",
+							DefaultMin:  "1",
+							DefaultMax:  "10",
+						},
+						{
+							Name:        "LimitB",
+							Description: "descB",
+							Scope:       "scopeB",
+							DefaultMin:  "2",
+							DefaultMax:  "20",
+						},
+					},
+				}
+				return getLimitDefinitions(ldg, "")
 			},
-			{
-				Name:        "LimitB",
-				Description: "descB",
-				Scope:       "scopeB",
-				DefaultMin:  "2",
-				DefaultMax:  "20",
+			want: []table.Row{
+				{"LimitA", "descA", "scopeA", "1", "10"},
+				{"LimitB", "descB", "scopeB", "2", "20"},
+			},
+		},
+		{
+			name: "getPropertyDefinitions",
+			rowsFunc: func() []table.Row {
+				defs := []mockDefinition{
+					{name: "PropA", desc: "descA", value: "valA"},
+					{name: "PropB", desc: "descB", value: "valB"},
+				}
+				return getPropertyDefinitions(defs, "")
+			},
+			want: []table.Row{
+				{"PropA", "descA", "valA"},
+				{"PropB", "descB", "valB"},
 			},
 		},
 	}
-	rows := getLimitDefinitions(ldg, "")
-	assert.Len(t, rows, 2)
-	assert.Equal(t, table.Row{"LimitA", "descA", "scopeA", "1", "10"}, rows[0])
-	assert.Equal(t, table.Row{"LimitB", "descB", "scopeB", "2", "20"}, rows[1])
-}
-
-func Test_getPropertyDefinitions_returns_rows(t *testing.T) {
-	t.Parallel()
-	defs := []mockDefinition{
-		{name: "PropA", desc: "descA", value: "valA"},
-		{name: "PropB", desc: "descB", value: "valB"},
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			rows := tc.rowsFunc()
+			assert.Len(t, rows, len(tc.want))
+			for i, wantRow := range tc.want {
+				assert.Equal(t, wantRow, rows[i])
+			}
+		})
 	}
-	rows := getPropertyDefinitions(defs, "")
-	assert.Len(t, rows, 2)
-	assert.Equal(t, table.Row{"PropA", "descA", "valA"}, rows[0])
-	assert.Equal(t, table.Row{"PropB", "descB", "valB"}, rows[1])
 }
 
 func Test_getServiceTenancies_returns_rows(t *testing.T) {
@@ -153,7 +173,7 @@ func Test_getServiceTenancies_returns_rows(t *testing.T) {
 			Regions:     []string{"us-ashburn-1"},
 		},
 	}
-	tenancyStructs := service.Filter(tenancies, "")
+	tenancyStructs := domain.FilterServiceTenancies(tenancies, "")
 	rows := make([]table.Row, 0, len(tenancyStructs))
 	for _, val := range tenancyStructs {
 		rows = append(rows, table.Row{
@@ -323,7 +343,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		IsHealthy:    true,
 		IsReady:      true,
 	}
-	row := rows.GetTableRow(nil, "TenantX", node)
+	row := GetTableRow(nil, "TenantX", node)
 	assert.Equal(t, table.Row{"poolA", "node1", "A100.8", "8", "6", "true", "true", "OK"}, row)
 
 	// LimitTenancyOverride
@@ -332,7 +352,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		Regions: []string{"us-phoenix-1"},
 		Values:  []models.LimitRange{{Min: 1, Max: 10}},
 	}
-	row2 := rows.GetTableRow(nil, "TenantA", lto)
+	row2 := GetTableRow(nil, "TenantA", lto)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, row2)
 
 	// PropertyRegionalOverride edge: empty regions and values
@@ -343,7 +363,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 			Value string "json:\"value\""
 		}{{Value: "valX"}},
 	}
-	row3 := rows.GetTableRow(nil, "TenantA", pro)
+	row3 := GetTableRow(nil, "TenantA", pro)
 	assert.Nil(t, row3)
 }
 
@@ -491,7 +511,8 @@ func buildFullTestDataset() *models.Dataset {
 func TestAllCategories_HeadersAndRows(t *testing.T) {
 	t.Parallel()
 	ds := buildFullTestDataset()
-	for cat := domain.Category(0); cat <= domain.DedicatedAICluster; cat++ {
+	// Iterate from Tenant to DedicatedAICluster (skip CategoryUnknown)
+	for cat := domain.Tenant; cat <= domain.DedicatedAICluster; cat++ {
 		headers := getHeaders(cat)
 		if len(headers) > 0 {
 			sum := 0.0
@@ -548,7 +569,7 @@ func TestGetTableRow(t *testing.T) {
 	// Each supported type should yield a non-nil row
 	// Use the actual type for Values field from the model
 	ltov := models.LimitTenancyOverride{}
-	require.NotNil(t, rows.GetTableRow(nil, "tenant", models.LimitTenancyOverride{
+	require.NotNil(t, GetTableRow(nil, "tenant", models.LimitTenancyOverride{
 		Name:    "lim",
 		Regions: []string{"us"},
 		Values: append(ltov.Values[:0], struct {
@@ -558,7 +579,7 @@ func TestGetTableRow(t *testing.T) {
 	}))
 	// Use the actual type for Values field from the model
 	cprov := models.ConsolePropertyRegionalOverride{}
-	require.NotNil(t, rows.GetTableRow(nil, "tenant", models.ConsolePropertyTenancyOverride{
+	require.NotNil(t, GetTableRow(nil, "tenant", models.ConsolePropertyTenancyOverride{
 		TenantID: "tenant1",
 		ConsolePropertyRegionalOverride: models.ConsolePropertyRegionalOverride{
 			Name:    "cp",
@@ -570,7 +591,7 @@ func TestGetTableRow(t *testing.T) {
 	}))
 	// Use the actual type for Values field from the model
 	prov := models.PropertyRegionalOverride{}
-	require.NotNil(t, rows.GetTableRow(nil, "tenant", models.PropertyTenancyOverride{
+	require.NotNil(t, GetTableRow(nil, "tenant", models.PropertyTenancyOverride{
 		Tag: "tenant1",
 		PropertyRegionalOverride: models.PropertyRegionalOverride{
 			Name:    "p",
@@ -580,10 +601,10 @@ func TestGetTableRow(t *testing.T) {
 			}{Value: "val"}),
 		},
 	}))
-	require.NotNil(t, rows.GetTableRow(nil, "pool", models.GpuNode{
+	require.NotNil(t, GetTableRow(nil, "pool", models.GpuNode{
 		NodePool: "pool", Name: "node", InstanceType: "type", Allocatable: 10, Allocated: 2, IsHealthy: true, IsReady: true,
 	}))
-	require.NotNil(t, rows.GetTableRow(nil, "tenant", models.DedicatedAICluster{
+	require.NotNil(t, GetTableRow(nil, "tenant", models.DedicatedAICluster{
 		Name: "dac", Type: "t", UnitShape: "shape", Size: 1, Status: "active",
 	}))
 }

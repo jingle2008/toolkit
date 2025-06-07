@@ -86,13 +86,8 @@ func TestCategory_ScopedCategories(t *testing.T) {
 			assert.ElementsMatch(t, tc.want, got)
 		})
 	}
-	// panic case
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("expected panic for non-scope category")
-		}
-	}()
-	BaseModel.ScopedCategories()
+	// non-scope category should return nil
+	assert.Nil(t, BaseModel.ScopedCategories())
 }
 
 func TestCategory_IsScopeOf(t *testing.T) {
@@ -115,11 +110,6 @@ func TestCategory_Definition(t *testing.T) {
 	assert.Equal(t, PropertyDefinition, PropertyRegionalOverride.Definition())
 	assert.Equal(t, GpuPool, GpuNode.Definition())
 
-	// panic case
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("expected panic for non-override category")
-		}
-	}()
-	_ = Tenant.Definition()
+	// non-override category should return Category(-1)
+	assert.Equal(t, Category(-1), Tenant.Definition())
 }

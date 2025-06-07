@@ -7,11 +7,11 @@ package domain
 type Category int
 
 const (
-	// CategorySentinelLast is always the last valid category (for iteration).
-	CategorySentinelLast = DedicatedAICluster
+	// CategoryUnknown is the zero value for Category.
+	CategoryUnknown Category = iota
 
 	// Tenant is a category for tenant-level data.
-	Tenant Category = iota
+	Tenant
 	// LimitDefinition is a category for limit definitions.
 	LimitDefinition
 	// ConsolePropertyDefinition is a category for console property definitions.
@@ -43,6 +43,11 @@ const (
 	// DedicatedAICluster is a category for dedicated AI clusters.
 	DedicatedAICluster
 )
+
+/*
+NOTE: Category iteration should use the explicit range [Tenant, DedicatedAICluster].
+Do not rely on a sentinel value.
+*/
 
 // IsScopeOf returns true if the receiver is a scope of the given category.
 func (e Category) IsScopeOf(o Category) bool {
