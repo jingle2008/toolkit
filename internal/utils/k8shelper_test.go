@@ -56,7 +56,8 @@ func TestListGpuNodesWithSelectors_Error(t *testing.T) {
 	})
 	helper := &K8sHelper{
 		clientsetFunc: func(_ *rest.Config) (kubernetesClient, error) {
-			return &testutil.FakeKubernetesClientAdapter{Clientset: cs}, nil
+			var fakeAdapter testutil.TestKubernetesClient = testutil.NewFakeKubernetesClientAdapter(cs)
+			return fakeAdapter, nil
 		},
 	}
 	helper.config = &rest.Config{}
@@ -90,7 +91,8 @@ func TestUpdateGpuAllocations(t *testing.T) {
 	}
 	fakeClient := testutil.NewFakeClient(pod)
 	allocMap := map[string]int64{"node1": 0}
-	err := updateGpuAllocations(context.Background(), &testutil.FakeKubernetesClientAdapter{Clientset: fakeClient}, allocMap, "app=test")
+	var fakeAdapter testutil.TestKubernetesClient = testutil.NewFakeKubernetesClientAdapter(fakeClient)
+	err := updateGpuAllocations(context.Background(), fakeAdapter, allocMap, "app=test")
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), allocMap["node1"])
 }
@@ -177,7 +179,8 @@ func TestListGpuNodes_FakeClient(t *testing.T) {
 	fakeClientset := testutil.NewFakeClient(node, pod)
 	helper := &K8sHelper{
 		clientsetFunc: func(_ *rest.Config) (kubernetesClient, error) {
-			return &testutil.FakeKubernetesClientAdapter{Clientset: fakeClientset}, nil
+			var fakeAdapter testutil.TestKubernetesClient = testutil.NewFakeKubernetesClientAdapter(fakeClientset)
+			return fakeAdapter, nil
 		},
 		dynamicFunc: nil,
 	}

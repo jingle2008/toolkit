@@ -15,13 +15,24 @@ func NewFakeClient(objs ...runtime.Object) *fake.Clientset {
 	return fake.NewSimpleClientset(objs...)
 }
 
-// FakeKubernetesClientAdapter adapts a *fake.Clientset to the KubernetesClient interface.
-type FakeKubernetesClientAdapter struct {
+// TestKubernetesClient is a minimal interface for test fakes.
+type TestKubernetesClient interface {
+	CoreV1NodesList(ctx context.Context, opts v1.ListOptions) ([]corev1.Node, error)
+	CoreV1PodsList(ctx context.Context, namespace string, opts v1.ListOptions) ([]corev1.Pod, error)
+}
+
+// NewFakeKubernetesClientAdapter returns a TestKubernetesClient for testing.
+func NewFakeKubernetesClientAdapter(clientset *fake.Clientset) TestKubernetesClient {
+	return &fakeKubernetesClientAdapter{Clientset: clientset}
+}
+
+// fakeKubernetesClientAdapter adapts a *fake.Clientset to the kubernetesClient interface.
+type fakeKubernetesClientAdapter struct {
 	Clientset *fake.Clientset
 }
 
-// CoreV1NodesList implements KubernetesClient by delegating to the fake clientset.
-func (f *FakeKubernetesClientAdapter) CoreV1NodesList(ctx context.Context, opts v1.ListOptions) ([]corev1.Node, error) {
+// CoreV1NodesList implements kubernetesClient by delegating to the fake clientset.
+func (f *fakeKubernetesClientAdapter) CoreV1NodesList(ctx context.Context, opts v1.ListOptions) ([]corev1.Node, error) {
 	nodeList, err := f.Clientset.CoreV1().Nodes().List(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -29,8 +40,8 @@ func (f *FakeKubernetesClientAdapter) CoreV1NodesList(ctx context.Context, opts 
 	return nodeList.Items, nil
 }
 
-// CoreV1PodsList implements KubernetesClient by delegating to the fake clientset.
-func (f *FakeKubernetesClientAdapter) CoreV1PodsList(ctx context.Context, namespace string, opts v1.ListOptions) ([]corev1.Pod, error) {
+// CoreV1PodsList implements kubernetesClient by delegating to the fake clientset.
+func (f *fakeKubernetesClientAdapter) CoreV1PodsList(ctx context.Context, namespace string, opts v1.ListOptions) ([]corev1.Pod, error) {
 	podList, err := f.Clientset.CoreV1().Pods(namespace).List(ctx, opts)
 	if err != nil {
 		return nil, err

@@ -1,3 +1,7 @@
+/*
+Package utils provides utility functions for secure file operations,
+including path validation and extension whitelisting.
+*/
 package utils
 
 import (
@@ -7,22 +11,34 @@ import (
 	"strings"
 )
 
-// SafeReadFile securely reads a file from disk, enforcing:
-// - Path cleaning (removes ../ etc.)
-// - Absolute path resolution
-// - Ensures the file is within the trusted baseDir
-// - Only allows files with extensions in allowExt (e.g. {".json":{}, ".yaml":{}})
-// Returns file contents or error.
+/*
+SafeReadFile reads a file from disk securely.
+
+It enforces:
+- Path cleaning (removes ../ etc.)
+- Absolute path resolution
+- Ensures the file is within the trusted baseDir
+- Only allows files with extensions in allowExt (e.g. {".json":{}, ".yaml":{}})
+
+Parameters:
+  - path: the file path to read
+  - baseDir: the trusted base directory
+  - allowExt: a set of allowed file extensions
+
+Returns:
+  - file contents as []byte
+  - error if the file cannot be read or does not meet security checks
+*/
 func SafeReadFile(path string, baseDir string, allowExt map[string]struct{}) ([]byte, error) {
 	clean := filepath.Clean(path)
 
 	absTarget, err := filepath.Abs(clean)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	absBase, err := filepath.Abs(filepath.Clean(baseDir))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
 	// Ensure absTarget is within absBase

@@ -17,7 +17,7 @@ func TestNewFakeClientAndAdapterLists(t *testing.T) {
 	p2 := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod-b", Namespace: "ns2"}}
 
 	client := NewFakeClient(n1, p1, p2)
-	adapter := &FakeKubernetesClientAdapter{Clientset: client}
+	adapter := &fakeKubernetesClientAdapter{Clientset: client}
 
 	// Nodes
 	nodes, err := adapter.CoreV1NodesList(ctx, metav1.ListOptions{})
@@ -44,7 +44,7 @@ func TestNewFakeClientAndAdapterLists(t *testing.T) {
 
 func TestAdapterNilClientPanics(t *testing.T) {
 	t.Parallel()
-	adapter := &FakeKubernetesClientAdapter{Clientset: nil}
+	adapter := &fakeKubernetesClientAdapter{Clientset: nil}
 	AssertPanic(t, func() {
 		_, _ = adapter.CoreV1NodesList(context.TODO(), metav1.ListOptions{})
 	})

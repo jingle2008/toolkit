@@ -10,9 +10,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-/* Assert wrappers */
+/*
+Equal asserts that expected and actual are equal.
 
-// Equal asserts that expected and actual are equal.
+Parameters:
+  - t: the testing.T instance
+  - expected: the expected value
+  - actual: the actual value
+  - msgAndArgs: optional message and arguments
+
+Returns:
+  - bool: true if equal, false otherwise
+*/
 func Equal(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) bool {
 	t.Helper()
 	return assert.Equal(t, expected, actual, msgAndArgs...)

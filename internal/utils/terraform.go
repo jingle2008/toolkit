@@ -21,7 +21,11 @@ import (
 )
 
 /*
-ChartValues represents the values used for chart templating.
+ChartValues represents the values used for chart templating in model deployment.
+
+Fields:
+  - Model: model settings for deployment
+  - ModelMetaData: metadata including DAC shape configs, training configs, and serving base model configs
 */
 type ChartValues struct {
 	Model         *models.ModelSetting `yaml:"model"`
@@ -61,13 +65,13 @@ func getLocalAttributesDI(
 ) (hclsyntax.Attributes, error) {
 	tfFiles, err := listFilesFunc(dirPath, ".tf")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 
 	attributes := make(hclsyntax.Attributes)
 	for _, file := range tfFiles {
 		if err := updateLocalAttributesFunc(file, attributes); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to update local attributes: %w", err)
 		}
 	}
 
@@ -82,7 +86,7 @@ func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) err
 	parser := hclparse.NewParser()
 	file, diags := parser.ParseHCLFile(filepath)
 	if diags.HasErrors() {
-		return errors.New(diags.Error())
+		return fmt.Errorf("terraform diagnostics error: %w", errors.New(diags.Error()))
 	}
 
 	// find `locals` block
@@ -111,7 +115,7 @@ func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 func loadLocalValueMap(dirPath string, env models.Environment) (map[string]cty.Value, error) {
 	attributes, err := getLocalAttributes(dirPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode HCL: %w", err)
 	}
 
 	executionTarget := cty.ObjectVal(map[string]cty.Value{
@@ -261,7 +265,7 @@ func LoadServiceTenancies(_ context.Context, repoPath string) ([]models.ServiceT
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
 	attributes, err := getLocalAttributes(dirPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse attributes: %w", err)
 	}
 
 	tenancyMap := make(map[string]*models.ServiceTenancy)
@@ -328,7 +332,7 @@ func loadChartValuesMap(repoPath string) (map[string]*models.ChartValues, error)
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region/model_chart_values")
 	files, err := ListFiles(dirPath, ".yaml")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
 
 	result := make(map[string]*models.ChartValues)
@@ -402,7 +406,7 @@ func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region")
 	locals, err := loadLocalValueMap(dirPath, env)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
 
 	modelCapsValue, ok := locals["enabled_map"]
@@ -531,7 +535,7 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 	dirPath := filepath.Join(repoPath, "shared_modules/instance_pools_config")
 	pools, err := loadGpuPools(dirPath, "env_instance_pools_config", false, env)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
 
 	gpuPools = append(gpuPools, pools...)
@@ -540,7 +544,7 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 	dirPath = filepath.Join(repoPath, "shared_modules/cluster_networks_config")
 	pools, err = loadGpuPools(dirPath, "env_cluster_networks_config", false, env)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
 
 	gpuPools = append(gpuPools, pools...)
@@ -549,7 +553,7 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 	dirPath = filepath.Join(repoPath, "shared_modules/oci_oke_nodepools_config")
 	pools, err = loadGpuPools(dirPath, "env_nodepools_config", true, env)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
 
 	gpuPools = append(gpuPools, pools...)
