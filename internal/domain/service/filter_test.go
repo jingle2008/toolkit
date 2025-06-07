@@ -24,33 +24,68 @@ func TestGetServiceTenancies(t *testing.T) {
 		},
 	}
 
-	// No filter: all tenancies returned
-	rows := Filter(tenancies, "")
-	if len(rows) != 2 {
-		t.Errorf("expected 2 rows, got %d", len(rows))
+	tests := []struct {
+		name        string
+		filter      string
+		wantCount   int
+		wantNames   []string
+		wantEnv     string
+		wantHomeReg string
+	}{
+		{
+			name:      "No filter returns all",
+			filter:    "",
+			wantCount: 2,
+		},
+		{
+			name:      "Filter by name",
+			filter:    "svc2",
+			wantCount: 1,
+			wantNames: []string{"svc2"},
+		},
+		{
+			name:        "Filter by region",
+			filter:      "west",
+			wantCount:   1,
+			wantNames:   []string{"svc1"},
+			wantHomeReg: "us-west",
+		},
+		{
+			name:      "Filter by environment",
+			filter:    "prod",
+			wantCount: 1,
+			wantEnv:   "prod",
+		},
+		{
+			name:      "No match",
+			filter:    "doesnotexist",
+			wantCount: 0,
+		},
 	}
 
-	// Filter by name
-	rows = Filter(tenancies, "svc2")
-	if len(rows) != 1 || rows[0].Name != "svc2" {
-		t.Errorf("expected 1 row for svc2, got %v", rows)
-	}
-
-	// Filter by region
-	rows = Filter(tenancies, "west")
-	if len(rows) != 1 || rows[0].Name != "svc1" {
-		t.Errorf("expected 1 row for us-west, got %v", rows)
-	}
-
-	// Filter by environment
-	rows = Filter(tenancies, "prod")
-	if len(rows) != 1 || rows[0].Environment != "prod" {
-		t.Errorf("expected 1 row for prod, got %v", rows)
-	}
-
-	// Filter with no match
-	rows = Filter(tenancies, "doesnotexist")
-	if len(rows) != 0 {
-		t.Errorf("expected 0 rows for unmatched filter, got %v", rows)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rows := Filter(tenancies, tc.filter)
+			if len(rows) != tc.wantCount {
+				t.Errorf("filter %q: expected %d rows, got %d", tc.filter, tc.wantCount, len(rows))
+			}
+			if tc.wantNames != nil && len(rows) > 0 {
+				for i, want := range tc.wantNames {
+					if rows[i].Name != want {
+						t.Errorf("filter %q: expected name %q, got %q", tc.filter, want, rows[i].Name)
+					}
+				}
+			}
+			if tc.wantEnv != "" && len(rows) > 0 {
+				if rows[0].Environment != tc.wantEnv {
+					t.Errorf("filter %q: expected environment %q, got %q", tc.filter, tc.wantEnv, rows[0].Environment)
+				}
+			}
+			if tc.wantHomeReg != "" && len(rows) > 0 {
+				if rows[0].HomeRegion != tc.wantHomeReg {
+					t.Errorf("filter %q: expected home region %q, got %q", tc.filter, tc.wantHomeReg, rows[0].HomeRegion)
+				}
+			}
+		})
 	}
 }

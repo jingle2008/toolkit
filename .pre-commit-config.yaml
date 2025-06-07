@@ -4,6 +4,13 @@ repos:
     hooks:
       - id: gofumpt
         args: ["-w"]
+  - repo: local
+    hooks:
+      - id: go-vet
+        name: go vet
+        entry: go vet ./...
+        language: system
+        types: [go]
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.55.2
     hooks:

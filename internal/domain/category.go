@@ -1,4 +1,6 @@
 // Package domain defines core business types and category enums for the toolkit application.
+//
+//go:generate stringer -type=Category
 package domain
 
 import "fmt"
@@ -43,46 +45,6 @@ const (
 	// DedicatedAICluster is a category for dedicated AI clusters.
 	DedicatedAICluster
 )
-
-// String returns the string representation of the Category.
-func (e Category) String() string {
-	switch e {
-	case Tenant:
-		return "Tenant"
-	case LimitDefinition:
-		return "Limit Definition"
-	case ConsolePropertyDefinition:
-		return "Console Property Definition"
-	case PropertyDefinition:
-		return "Property Definition"
-	case LimitTenancyOverride:
-		return "Limit Tenancy Override"
-	case ConsolePropertyTenancyOverride:
-		return "Console Property Tenancy Override"
-	case PropertyTenancyOverride:
-		return "Property Tenancy Override"
-	case ConsolePropertyRegionalOverride:
-		return "Console Property Regional Override"
-	case PropertyRegionalOverride:
-		return "Property Regional Override"
-	case BaseModel:
-		return "Base Model"
-	case ModelArtifact:
-		return "Model Artifact"
-	case Environment:
-		return "Environment"
-	case ServiceTenancy:
-		return "Service Tenancy"
-	case GpuPool:
-		return "GPU Pool"
-	case GpuNode:
-		return "GPU Node"
-	case DedicatedAICluster:
-		return "Dedicated AI Cluster"
-	default:
-		return fmt.Sprintf("%d", int(e))
-	}
-}
 
 // IsScopeOf returns true if the receiver is a scope of the given category.
 func (e Category) IsScopeOf(o Category) bool {

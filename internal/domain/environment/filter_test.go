@@ -13,33 +13,68 @@ func TestGetEnvironments(t *testing.T) {
 		{Type: "baremetal", Realm: "public", Region: "eu-central"},
 	}
 
-	// No filter: all environments returned
-	rows := Filter(envs, "")
-	if len(rows) != 3 {
-		t.Errorf("expected 3 rows, got %d", len(rows))
+	tests := []struct {
+		name       string
+		filter     string
+		wantCount  int
+		wantNames  []string
+		wantRegion string
+		wantRealm  string
+	}{
+		{
+			name:      "No filter returns all",
+			filter:    "",
+			wantCount: 3,
+		},
+		{
+			name:      "Filter by type",
+			filter:    "baremetal",
+			wantCount: 1,
+			wantNames: []string{"baremetal-UNKNOWN"},
+		},
+		{
+			name:       "Filter by region",
+			filter:     "west",
+			wantCount:  1,
+			wantNames:  []string{"k8s-UNKNOWN"},
+			wantRegion: "us-west",
+		},
+		{
+			name:      "Filter by realm",
+			filter:    "private",
+			wantCount: 1,
+			wantRealm: "private",
+		},
+		{
+			name:      "No match",
+			filter:    "doesnotexist",
+			wantCount: 0,
+		},
 	}
 
-	// Filter by type
-	rows = Filter(envs, "baremetal")
-	if len(rows) != 1 || rows[0].GetName() != "baremetal-UNKNOWN" {
-		t.Errorf("expected 1 row for baremetal, got %v", rows)
-	}
-
-	// Filter by region
-	rows = Filter(envs, "west")
-	if len(rows) != 1 || rows[0].GetName() != "k8s-UNKNOWN" || rows[0].Region != "us-west" {
-		t.Errorf("expected 1 row for us-west, got %v", rows)
-	}
-
-	// Filter by realm
-	rows = Filter(envs, "private")
-	if len(rows) != 1 || rows[0].Realm != "private" {
-		t.Errorf("expected 1 row for private realm, got %v", rows)
-	}
-
-	// Filter with no match
-	rows = Filter(envs, "doesnotexist")
-	if len(rows) != 0 {
-		t.Errorf("expected 0 rows for unmatched filter, got %v", rows)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rows := Filter(envs, tc.filter)
+			if len(rows) != tc.wantCount {
+				t.Errorf("filter %q: expected %d rows, got %d", tc.filter, tc.wantCount, len(rows))
+			}
+			if tc.wantNames != nil && len(rows) > 0 {
+				for i, want := range tc.wantNames {
+					if rows[i].GetName() != want {
+						t.Errorf("filter %q: expected name %q, got %q", tc.filter, want, rows[i].GetName())
+					}
+				}
+			}
+			if tc.wantRegion != "" && len(rows) > 0 {
+				if rows[0].Region != tc.wantRegion {
+					t.Errorf("filter %q: expected region %q, got %q", tc.filter, tc.wantRegion, rows[0].Region)
+				}
+			}
+			if tc.wantRealm != "" && len(rows) > 0 {
+				if rows[0].Realm != tc.wantRealm {
+					t.Errorf("filter %q: expected realm %q, got %q", tc.filter, tc.wantRealm, rows[0].Realm)
+				}
+			}
+		})
 	}
 }

@@ -247,7 +247,7 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 	m.context = &domain.AppContext{Name: "scopeA", Category: domain.Tenant}
 	m.chosen = false
 	cs := m.contextString()
-	testutil.Contains(t, cs, "Limit Tenancy Override")
+	testutil.Contains(t, cs, "LimitTenancyOverride")
 	testutil.Contains(t, cs, "scopeA")
 
 	info := m.infoView()
