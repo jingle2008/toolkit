@@ -13,6 +13,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/fs"
+	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -204,83 +205,35 @@ LoadDataset loads a Dataset from the given repository path and environment.
 Now accepts context.Context as the first parameter.
 */
 func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (*models.Dataset, error) {
-	serviceTenancies, err := LoadServiceTenancies(ctx, repoPath)
+	serviceTenancies, err := terraform.LoadServiceTenancies(ctx, repoPath)
 	if err != nil {
 		return nil, err
 	}
 
 	environments := getEnvironments(serviceTenancies)
-	if !isValidEnvironment(env, environments) {
-		return nil, errors.New("environment is not valid or in the list")
+	if err := validateEnvironment(env, environments); err != nil {
+		return nil, err
 	}
 
 	limitsRoot := filepath.Join(repoPath, "shared_modules/limits")
-
 	realm := env.Realm
-	limitDefinitionPath := getConfigPath(limitsRoot, realm, limitsKey+definitionSuffix)
-	limitGroup, err := jsonutil.LoadFile[models.LimitDefinitionGroup](limitDefinitionPath)
+
+	limitGroup, consolePropertyDefinitionGroup, propertyDefinitionGroup, err := loadDefinitionGroups(limitsRoot, realm)
 	if err != nil {
 		return nil, err
 	}
 
-	sortNamedItems(limitGroup.Values)
-
-	consolePropertyDefinitionPath := getConfigPath(limitsRoot, realm, consolePropertiesKey+definitionSuffix)
-	consolePropertyDefinitionGroup, err := jsonutil.LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)
+	tenants, limitTenancyOverrideMap, consolePropertyTenancyOverrideMap, propertyTenancyOverrideMap, err := buildTenantMap(limitsRoot, realm)
 	if err != nil {
 		return nil, err
 	}
 
-	sortNamedItems(consolePropertyDefinitionGroup.Values)
-
-	propertyDefinitionPath := getConfigPath(limitsRoot, realm, propertiesKey+definitionSuffix)
-	propertyDefinitionGroup, err := jsonutil.LoadFile[models.PropertyDefinitionGroup](propertyDefinitionPath)
+	consolePropertyRegionalOverrides, propertyRegionalOverrides, err := loadRegionalOverridesGroups(limitsRoot, realm)
 	if err != nil {
 		return nil, err
 	}
 
-	sortNamedItems(propertyDefinitionGroup.Values)
-
-	tenantMap := make(map[string]tenantInfo)
-
-	limitTenancyOverrideMap, err := loadTenancyOverrides[models.LimitTenancyOverride](
-		limitsRoot, realm, limitsKey+tenancyOverridesKey)
-	if err != nil {
-		return nil, err
-	}
-
-	updateTenants(tenantMap, limitTenancyOverrideMap, 0)
-
-	consolePropertyTenancyOverrideMap, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](
-		limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey)
-	if err != nil {
-		return nil, err
-	}
-
-	updateTenants(tenantMap, consolePropertyTenancyOverrideMap, 1)
-
-	propertyTenancyOverrideMap, err := loadTenancyOverrides[models.PropertyTenancyOverride](
-		limitsRoot, realm, propertiesKey+tenancyOverridesKey)
-	if err != nil {
-		return nil, err
-	}
-
-	updateTenants(tenantMap, propertyTenancyOverrideMap, 2)
-	tenants := getTenants(tenantMap)
-
-	consolePropertyRegionalOverrides, err := loadRegionalOverrides[models.ConsolePropertyRegionalOverride](
-		limitsRoot, realm, consolePropertiesKey+regionalOverridesKey)
-	if err != nil {
-		return nil, err
-	}
-
-	propertyRegionalOverrides, err := loadRegionalOverrides[models.PropertyRegionalOverride](
-		limitsRoot, realm, propertiesKey+regionalOverridesKey)
-	if err != nil {
-		return nil, err
-	}
-
-	modelArtifacts, err := LoadModelArtifacts(ctx, repoPath, env)
+	modelArtifacts, err := terraform.LoadModelArtifacts(ctx, repoPath, env)
 	if err != nil {
 		return nil, err
 	}
@@ -299,4 +252,99 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 		ServiceTenancies:                  serviceTenancies,
 		ModelArtifacts:                    modelArtifacts,
 	}, nil
+}
+
+// validateEnvironment checks if the provided environment is valid.
+func validateEnvironment(env models.Environment, allEnvs []models.Environment) error {
+	if !isValidEnvironment(env, allEnvs) {
+		return errors.New("environment is not valid or in the list")
+	}
+	return nil
+}
+
+// loadDefinitionGroups loads and sorts the definition groups.
+func loadDefinitionGroups(limitsRoot, realm string) (
+	*models.LimitDefinitionGroup,
+	*models.ConsolePropertyDefinitionGroup,
+	*models.PropertyDefinitionGroup,
+	error,
+) {
+	limitDefinitionPath := getConfigPath(limitsRoot, realm, limitsKey+definitionSuffix)
+	limitGroup, err := jsonutil.LoadFile[models.LimitDefinitionGroup](limitDefinitionPath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	sortNamedItems(limitGroup.Values)
+
+	consolePropertyDefinitionPath := getConfigPath(limitsRoot, realm, consolePropertiesKey+definitionSuffix)
+	consolePropertyDefinitionGroup, err := jsonutil.LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	sortNamedItems(consolePropertyDefinitionGroup.Values)
+
+	propertyDefinitionPath := getConfigPath(limitsRoot, realm, propertiesKey+definitionSuffix)
+	propertyDefinitionGroup, err := jsonutil.LoadFile[models.PropertyDefinitionGroup](propertyDefinitionPath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	sortNamedItems(propertyDefinitionGroup.Values)
+
+	return limitGroup, consolePropertyDefinitionGroup, propertyDefinitionGroup, nil
+}
+
+// buildTenantMap builds the tenant map and returns tenants and override maps.
+func buildTenantMap(limitsRoot, realm string) (
+	[]models.Tenant,
+	map[string][]models.LimitTenancyOverride,
+	map[string][]models.ConsolePropertyTenancyOverride,
+	map[string][]models.PropertyTenancyOverride,
+	error,
+) {
+	tenantMap := make(map[string]tenantInfo)
+
+	limitTenancyOverrideMap, err := loadTenancyOverrides[models.LimitTenancyOverride](
+		limitsRoot, realm, limitsKey+tenancyOverridesKey)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	updateTenants(tenantMap, limitTenancyOverrideMap, 0)
+
+	consolePropertyTenancyOverrideMap, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](
+		limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	updateTenants(tenantMap, consolePropertyTenancyOverrideMap, 1)
+
+	propertyTenancyOverrideMap, err := loadTenancyOverrides[models.PropertyTenancyOverride](
+		limitsRoot, realm, propertiesKey+tenancyOverridesKey)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	updateTenants(tenantMap, propertyTenancyOverrideMap, 2)
+
+	tenants := getTenants(tenantMap)
+	return tenants, limitTenancyOverrideMap, consolePropertyTenancyOverrideMap, propertyTenancyOverrideMap, nil
+}
+
+// loadRegionalOverridesGroups loads the regional overrides for console property and property.
+func loadRegionalOverridesGroups(limitsRoot, realm string) (
+	[]models.ConsolePropertyRegionalOverride,
+	[]models.PropertyRegionalOverride,
+	error,
+) {
+	consolePropertyRegionalOverrides, err := loadRegionalOverrides[models.ConsolePropertyRegionalOverride](
+		limitsRoot, realm, consolePropertiesKey+regionalOverridesKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	propertyRegionalOverrides, err := loadRegionalOverrides[models.PropertyRegionalOverride](
+		limitsRoot, realm, propertiesKey+regionalOverridesKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return consolePropertyRegionalOverrides, propertyRegionalOverrides, nil
 }

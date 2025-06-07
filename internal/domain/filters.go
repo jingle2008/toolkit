@@ -5,36 +5,26 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// FilterTenants returns a filtered slice of Tenant matching the provided filter string.
-func FilterTenants(tenants []models.Tenant, filter string) []models.Tenant {
-	results := make([]models.Tenant, 0, len(tenants))
-
-	collections.FilterSlice(tenants, nil, filter, func(_ int, val models.Tenant) bool {
+// FilterByFilterable returns a filtered slice of items matching the provided filter string.
+// T must implement models.NamedFilterable.
+func FilterByFilterable[T models.NamedFilterable](items []T, filter string) []T {
+	results := make([]T, 0, len(items))
+	collections.FilterSlice(items, nil, filter, func(_ int, val T) bool {
 		results = append(results, val)
 		return true
 	})
-
 	return results
+}
+
+// FilterTenants returns a filtered slice of Tenant matching the provided filter string.
+func FilterTenants(tenants []models.Tenant, filter string) []models.Tenant {
+	return FilterByFilterable(tenants, filter)
 }
 
 func FilterServiceTenancies(tenancies []models.ServiceTenancy, filter string) []models.ServiceTenancy {
-	results := make([]models.ServiceTenancy, 0, len(tenancies))
-
-	collections.FilterSlice(tenancies, nil, filter, func(_ int, val models.ServiceTenancy) bool {
-		results = append(results, val)
-		return true
-	})
-
-	return results
+	return FilterByFilterable(tenancies, filter)
 }
 
 func FilterEnvironments(envs []models.Environment, filter string) []models.Environment {
-	results := make([]models.Environment, 0, len(envs))
-
-	collections.FilterSlice(envs, nil, filter, func(_ int, val models.Environment) bool {
-		results = append(results, val)
-		return true
-	})
-
-	return results
+	return FilterByFilterable(envs, filter)
 }

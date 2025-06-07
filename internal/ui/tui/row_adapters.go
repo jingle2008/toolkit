@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/jingle2008/toolkit/internal/utils"
 )
 
 // LimitTenancyOverrideRow is a wrapper to implement RowMarshaler for models.LimitTenancyOverride.
@@ -172,7 +172,7 @@ func GetScopedItems[T models.NamedFilterable](
 		}
 	}
 
-	return utils.FilterMap(g, key, name, filter,
+	return collections.FilterMap(g, key, name, filter,
 		func(s string, v T) table.Row {
 			return GetTableRow(logger, s, v)
 		})

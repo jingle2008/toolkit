@@ -1,4 +1,4 @@
-package utils
+package terraform
 
 import (
 	"context"
@@ -19,6 +19,13 @@ import (
 	"github.com/zclconf/go-cty/cty/function"
 	"github.com/zclconf/go-cty/cty/function/stdlib"
 	"gopkg.in/yaml.v2"
+)
+
+var (
+	ErrBaseModelMapNotResolved     = errors.New("base model map not resolved")
+	ErrReplicaMapNotResolved       = errors.New("replica map not resolved")
+	ErrDeprecationMapNotResolved   = errors.New("deprecation map not resolved")
+	ErrModelArtifactMapNotResolved = errors.New("model artifact map not resolved")
 )
 
 /*
@@ -412,19 +419,19 @@ func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment
 
 	modelCapsValue, ok := locals["enabled_map"]
 	if !ok {
-		return nil, errors.New("base model map not resolved")
+		return nil, fmt.Errorf("enabled_map: %w", ErrBaseModelMapNotResolved)
 	}
 	modelCapsMap := loadModelCapabilities(modelCapsValue)
 
 	modelReplicasValue, ok := locals["regional_replica_map"]
 	if !ok {
-		return nil, errors.New("replica map not resolved")
+		return nil, fmt.Errorf("regional_replica_map: %w", ErrReplicaMapNotResolved)
 	}
 	modelReplicasMap := loadModelReplicas(modelReplicasValue)
 
 	modelsValue, ok := locals["base_model_map"]
 	if !ok {
-		return nil, errors.New("base model map not resolved")
+		return nil, fmt.Errorf("base_model_map: %w", ErrBaseModelMapNotResolved)
 	}
 
 	chartValuesMap, err := loadChartValuesMap(repoPath)
@@ -452,7 +459,7 @@ func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment
 
 	deprecationValue, ok := locals["deprecation_map"]
 	if !ok {
-		return nil, errors.New("deprecation map not resolved")
+		return nil, fmt.Errorf("deprecation_map: %w", ErrDeprecationMapNotResolved)
 	}
 	updateModelLifecycle(baseModels, deprecationValue)
 
@@ -612,7 +619,7 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 
 	modelMapValue, ok := valueMap["all_models_map"]
 	if !ok {
-		return nil, errors.New("model artifact map not resolved")
+		return nil, fmt.Errorf("all_models_map: %w", ErrModelArtifactMapNotResolved)
 	}
 
 	modelArtifacts := []models.ModelArtifact{}
@@ -656,4 +663,18 @@ func createObjectStorageNamespace() cty.Value {
 	// data.oci_objectstorage_namespace.objectstorage_namespace.namespace
 	ns := cty.ObjectVal(map[string]cty.Value{"namespace": cty.StringVal("NAMESPACE")})
 	return cty.ObjectVal(map[string]cty.Value{"objectstorage_namespace": ns})
+}
+
+// sortNamedItems sorts a slice of NamedItem by name.
+func sortNamedItems[T interface{ GetName() string }](items []T) {
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].GetName() < items[j].GetName()
+	})
+}
+
+// sortKeyedItems sorts a slice of KeyedItem by key.
+func sortKeyedItems[T interface{ GetKey() string }](items []T) {
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].GetKey() < items[j].GetKey()
+	})
 }
