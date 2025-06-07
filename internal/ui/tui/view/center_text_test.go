@@ -1,38 +1,37 @@
-package tui
+package view
 
 import (
 	"strings"
 	"testing"
 
-	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCenterText_EvenWidth(t *testing.T) {
 	t.Parallel()
 	text := "foo"
-	out := view.CenterText(text, 10, 1)
+	out := CenterText(text, 10, 1)
 	assert.Equal(t, "   foo    ", out)
 }
 
 func TestCenterText_OddWidth(t *testing.T) {
 	t.Parallel()
 	text := "bar"
-	out := view.CenterText(text, 9, 1)
+	out := CenterText(text, 9, 1)
 	assert.Equal(t, "   bar   ", out)
 }
 
 func TestCenterText_WidthLessThanText(t *testing.T) {
 	t.Parallel()
 	text := "longtext"
-	out := view.CenterText(text, 4, 1)
+	out := CenterText(text, 4, 1)
 	assert.Equal(t, "long\ntext", out)
 }
 
 func TestCenterText_Height(t *testing.T) {
 	t.Parallel()
 	text := "baz"
-	out := view.CenterText(text, 7, 3)
+	out := CenterText(text, 7, 3)
 	lines := strings.Split(out, "\n")
 	assert.Len(t, lines, 3)
 	assert.Equal(t, "  baz  ", lines[1])
@@ -40,7 +39,7 @@ func TestCenterText_Height(t *testing.T) {
 
 func TestCenterText_EmptyText(t *testing.T) {
 	t.Parallel()
-	out := view.CenterText("", 5, 2)
+	out := CenterText("", 5, 2)
 	lines := strings.Split(out, "\n")
 	assert.Len(t, lines, 2)
 	assert.Equal(t, "     ", lines[0])

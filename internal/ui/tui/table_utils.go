@@ -14,16 +14,9 @@ import (
 
 var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset, *domain.ToolkitContext, string) []table.Row{
 	domain.Tenant: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
-		tenants := domain.FilterTenants(dataset.Tenants, filter)
-		results := make([]table.Row, 0, len(tenants))
-		for _, val := range tenants {
-			results = append(results, table.Row{
-				val.Name,
-				val.GetTenantID(),
-				val.GetOverrides(),
-			})
-		}
-		return results
+		return filterRows(dataset.Tenants, filter, func(t models.Tenant) table.Row {
+			return TenantRow(t).ToRow("")
+		})
 	},
 	domain.LimitDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getLimitDefinitions(dataset.LimitDefinitionGroup, filter)
@@ -56,31 +49,14 @@ var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset,
 		return getModelArtifacts(dataset.ModelArtifacts, filter)
 	},
 	domain.Environment: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
-		envs := domain.FilterEnvironments(dataset.Environments, filter)
-		results := make([]table.Row, 0, len(envs))
-		for _, val := range envs {
-			results = append(results, table.Row{
-				val.GetName(),
-				val.Realm,
-				val.Type,
-				val.Region,
-			})
-		}
-		return results
+		return filterRows(dataset.Environments, filter, func(e models.Environment) table.Row {
+			return EnvironmentRow(e).ToRow("")
+		})
 	},
 	domain.ServiceTenancy: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
-		tenancies := domain.FilterServiceTenancies(dataset.ServiceTenancies, filter)
-		results := make([]table.Row, 0, len(tenancies))
-		for _, val := range tenancies {
-			results = append(results, table.Row{
-				val.Name,
-				val.Realm,
-				val.Environment,
-				val.HomeRegion,
-				strings.Join(val.Regions, ", "),
-			})
-		}
-		return results
+		return filterRows(dataset.ServiceTenancies, filter, func(s models.ServiceTenancy) table.Row {
+			return ServiceTenancyRow(s).ToRow("")
+		})
 	},
 	domain.GpuPool: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getGpuPools(dataset.GpuPools, filter)

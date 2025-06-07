@@ -90,6 +90,45 @@ func (d DedicatedAIClusterRow) ToRow(scope string) table.Row {
 	}
 }
 
+// TenantRow is a wrapper to implement RowMarshaler for models.Tenant.
+type TenantRow models.Tenant
+
+// ToRow returns a table.Row for the TenantRow.
+func (t TenantRow) ToRow(_ string) table.Row {
+	return table.Row{
+		t.Name,
+		models.Tenant(t).GetTenantID(),
+		models.Tenant(t).GetOverrides(),
+	}
+}
+
+// ServiceTenancyRow is a wrapper to implement RowMarshaler for models.ServiceTenancy.
+type ServiceTenancyRow models.ServiceTenancy
+
+// ToRow returns a table.Row for the ServiceTenancyRow.
+func (s ServiceTenancyRow) ToRow(_ string) table.Row {
+	return table.Row{
+		s.Name,
+		s.Realm,
+		s.Environment,
+		s.HomeRegion,
+		strings.Join(s.Regions, ", "),
+	}
+}
+
+// EnvironmentRow is a wrapper to implement RowMarshaler for models.Environment.
+type EnvironmentRow models.Environment
+
+// ToRow returns a table.Row for the EnvironmentRow.
+func (e EnvironmentRow) ToRow(_ string) table.Row {
+	return table.Row{
+		models.Environment(e).GetName(),
+		e.Realm,
+		e.Type,
+		e.Region,
+	}
+}
+
 // GetTableRow returns a table.Row for a given item, using the appropriate adapter function based on type.
 func GetTableRow(logger logging.Logger, tenant string, item interface{}) table.Row {
 	switch val := item.(type) {
