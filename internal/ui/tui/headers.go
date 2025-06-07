@@ -1,4 +1,4 @@
-package toolkit
+package tui
 
 import "github.com/jingle2008/toolkit/internal/domain"
 

@@ -1,7 +1,7 @@
 // Package toolkit implements the core TUI model and logic for the toolkit application.
 // It provides the Model struct and related helpers for managing state, events, and rendering
 // using Bubble Tea and Charmbracelet components.
-package toolkit
+package tui
 
 import (
 	"context"
@@ -31,24 +31,6 @@ Loader is a composite interface that embeds all loader interfaces.
 Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
 */
-
-// Logger is an interface for logging, to allow for testability and flexibility.
-type Logger interface {
-	Debug(msg string, fields ...zap.Field)
-	Info(msg string, fields ...zap.Field)
-	Warn(msg string, fields ...zap.Field)
-	Error(msg string, fields ...zap.Field)
-}
-
-// ZapLogger is an adapter for zap.Logger to implement Logger.
-type ZapLogger struct {
-	z *zap.Logger
-}
-
-func (l *ZapLogger) Debug(msg string, fields ...zap.Field) { l.z.Debug(msg, fields...) }
-func (l *ZapLogger) Info(msg string, fields ...zap.Field)  { l.z.Info(msg, fields...) }
-func (l *ZapLogger) Warn(msg string, fields ...zap.Field)  { l.z.Warn(msg, fields...) }
-func (l *ZapLogger) Error(msg string, fields ...zap.Field) { l.z.Error(msg, fields...) }
 
 type Model struct {
 	contextCtx  context.Context
@@ -214,7 +196,7 @@ func (m *Model) loggerCtx() Logger {
 	if m.logger != nil {
 		return m.logger
 	}
-	return &ZapLogger{z: zap.NewNop()}
+	return NewZapLogger(zap.NewNop())
 }
 
 // loadData loads the dataset for the current model.

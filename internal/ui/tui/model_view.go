@@ -1,5 +1,5 @@
 // Package toolkit implements the view and rendering logic for the Model.
-package toolkit
+package tui
 
 import (
 	"fmt"

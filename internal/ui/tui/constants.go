@@ -1,4 +1,4 @@
-package toolkit
+package tui
 
 // EditTarget represents the current edit target in the UI.
 type EditTarget int

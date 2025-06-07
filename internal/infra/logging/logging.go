@@ -1,5 +1,5 @@
-// Package log provides context-based logging utilities for the toolkit application.
-package log
+// Package logging provides context-based logging utilities for the toolkit application.
+package logging
 
 import (
 	"context"

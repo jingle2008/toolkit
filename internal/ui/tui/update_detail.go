@@ -1,7 +1,7 @@
 // Package toolkit: update_detail.go
 // Contains updateDetailView and related detail view logic split from model_update.go.
 
-package toolkit
+package tui
 
 import tea "github.com/charmbracelet/bubbletea"
 

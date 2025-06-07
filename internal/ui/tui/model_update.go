@@ -1,5 +1,5 @@
 // Package toolkit implements the update/reduce logic for the Model.
-package toolkit
+package tui
 
 import (
 	"strings"

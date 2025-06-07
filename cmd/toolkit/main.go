@@ -9,64 +9,18 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
-	"github.com/spf13/pflag"
-
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
-	logctx "github.com/jingle2008/toolkit/internal/infra/log"
-	toolkit "github.com/jingle2008/toolkit/internal/ui/tui"
+	logctx "github.com/jingle2008/toolkit/internal/infra/logging"
+	tui "github.com/jingle2008/toolkit/internal/ui/tui"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"go.uber.org/zap"
-	"k8s.io/client-go/util/homedir"
 )
-
-/*
-Config holds configuration for the toolkit CLI application.
-*/
-type Config struct {
-	RepoPath   string
-	KubeConfig string
-	EnvType    string
-	EnvRegion  string
-	EnvRealm   string
-	Category   string
-}
-
-func getEnvOrDefault(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
-
-func parseConfig() Config {
-	home := homedir.HomeDir()
-	defaultKube := filepath.Join(home, ".kube", "config")
-
-	fs := pflag.NewFlagSet("toolkit", pflag.ContinueOnError)
-	repoPath := fs.String("repo", getEnvOrDefault("TOOLKIT_REPO_PATH", "/Users/jinguzha/Work/repos/genai-shepherd-flocks"), "Path to repo")
-	kubeConfig := fs.String("kubeconfig", getEnvOrDefault("KUBECONFIG", defaultKube), "Path to kubeconfig")
-	envType := fs.String("envtype", getEnvOrDefault("TOOLKIT_ENV_TYPE", "preprod"), "Environment type")
-	envRegion := fs.String("envregion", getEnvOrDefault("TOOLKIT_ENV_REGION", "us-chicago-1"), "Environment region")
-	envRealm := fs.String("envrealm", getEnvOrDefault("TOOLKIT_ENV_REALM", "oc1"), "Environment realm")
-	category := fs.String("category", getEnvOrDefault("TOOLKIT_CATEGORY", "Tenant"), "Toolkit category")
-
-	_ = fs.Parse(os.Args[1:])
-
-	return Config{
-		RepoPath:   *repoPath,
-		KubeConfig: *kubeConfig,
-		EnvType:    *envType,
-		EnvRegion:  *envRegion,
-		EnvRealm:   *envRealm,
-		Category:   *category,
-	}
-}
 
 func categoryFromString(s string) (domain.Category, error) {
 	switch strings.ToLower(s) {
@@ -107,7 +61,7 @@ func categoryFromString(s string) (domain.Category, error) {
 	}
 }
 
-func run(ctx context.Context, cfg Config) error {
+func run(ctx context.Context, cfg config.Config) error {
 	category, err := categoryFromString(cfg.Category)
 	if err != nil {
 		valid := []string{
@@ -138,14 +92,14 @@ func run(ctx context.Context, cfg Config) error {
 
 	logger, _ := zap.NewProduction()
 	ctx = logctx.CtxWithLogger(ctx, logger)
-	model, err := toolkit.NewModel(
-		toolkit.WithRepoPath(repoPath),
-		toolkit.WithKubeConfig(kubeConfig),
-		toolkit.WithEnvironment(env),
-		toolkit.WithCategory(category),
-		toolkit.WithContext(ctx),
-		toolkit.WithLogger(logger),
-		toolkit.WithLoader(loader.ProductionLoader{}),
+	model, err := tui.NewModel(
+		tui.WithRepoPath(repoPath),
+		tui.WithKubeConfig(kubeConfig),
+		tui.WithEnvironment(env),
+		tui.WithCategory(category),
+		tui.WithContext(ctx),
+		tui.WithLogger(logger),
+		tui.WithLoader(loader.ProductionLoader{}),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create toolkit model: %w", err)
@@ -169,7 +123,7 @@ func run(ctx context.Context, cfg Config) error {
 }
 
 func main() {
-	cfg := parseConfig()
+	cfg := config.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, cfg); err != nil {

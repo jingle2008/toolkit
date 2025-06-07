@@ -1,5 +1,5 @@
 // Package toolkit defines message types for the TUI model.
-package toolkit
+package tui
 
 // errMsg is a message containing an error.
 type ErrMsg struct{ Err error }

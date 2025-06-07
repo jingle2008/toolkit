@@ -1,7 +1,7 @@
 // Package toolkit: row_adapters.go
 // Contains row adapter types, ToRow methods, GetTableRow, and GetScopedItems for UI table rendering.
 
-package toolkit
+package tui
 
 import (
 	"fmt"

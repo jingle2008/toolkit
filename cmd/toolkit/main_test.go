@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 
@@ -31,41 +32,30 @@ func TestCategoryFromString_Valid(t *testing.T) {
 		{"DedicatedAICluster", domain.DedicatedAICluster},
 	}
 	for _, tt := range tests {
-		got, err := categoryFromString(tt.input)
-		if err != nil {
-			t.Errorf("categoryFromString(%q) returned error: %v", tt.input, err)
-		}
-		if got != tt.expected {
-			t.Errorf("categoryFromString(%q) = %v, want %v", tt.input, got, tt.expected)
-		}
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := categoryFromString(tt.input)
+			if err != nil {
+				t.Errorf("categoryFromString(%q) returned error: %v", tt.input, err)
+			}
+			if got != tt.expected {
+				t.Errorf("categoryFromString(%q) = %v, want %v", tt.input, got, tt.expected)
+			}
+		})
 	}
 }
 
 func TestCategoryFromString_Invalid(t *testing.T) {
-	_, err := categoryFromString("notacategory")
-	if err == nil {
-		t.Errorf("expected error for invalid category, got nil")
+	invalidInputs := []string{"notacategory", "", "123", "fooBar"}
+	for _, input := range invalidInputs {
+		input := input
+		t.Run(input, func(t *testing.T) {
+			_, err := categoryFromString(input)
+			if err == nil {
+				t.Errorf("expected error for invalid category %q, got nil", input)
+			}
+		})
 	}
-}
-
-func TestGetEnvOrDefault(t *testing.T) {
-	const key = "TOOLKIT_TEST_ENV"
-	// Ensure variable is unset
-	_ = unsetEnv(key)
-	got := getEnvOrDefault(key, "default")
-	if got != "default" {
-		t.Errorf("getEnvOrDefault (unset) = %q, want %q", got, "default")
-	}
-	// Set variable
-	t.Setenv(key, "value")
-	got = getEnvOrDefault(key, "default")
-	if got != "value" {
-		t.Errorf("getEnvOrDefault (set) = %q, want %q", got, "value")
-	}
-}
-
-func unsetEnv(key string) error {
-	return nil // t.Setenv will handle unsetting in Go 1.17+
 }
 
 func TestParseConfig_Defaults(t *testing.T) {
@@ -86,9 +76,9 @@ func TestParseConfig_Defaults(t *testing.T) {
 	// Reset flags
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-	cfg := parseConfig()
+	cfg := config.Parse()
 	if cfg.RepoPath == "" || cfg.KubeConfig == "" || cfg.EnvType == "" || cfg.EnvRegion == "" || cfg.EnvRealm == "" || cfg.Category == "" {
-		t.Errorf("parseConfig returned empty fields: %+v", cfg)
+		t.Errorf("config.Parse returned empty fields: %+v", cfg)
 	}
 }
 
@@ -108,7 +98,7 @@ func TestParseConfig_EnvOverride(t *testing.T) {
 	// Reset flags
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
-	cfg := parseConfig()
+	cfg := config.Parse()
 	if cfg.RepoPath != "/tmp/repo" {
 		t.Errorf("RepoPath = %q, want /tmp/repo", cfg.RepoPath)
 	}

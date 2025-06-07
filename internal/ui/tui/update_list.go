@@ -1,7 +1,7 @@
 // Package toolkit: update_list.go
 // Contains updateListView and related list view logic split from model_update.go.
 
-package toolkit
+package tui
 
 import (
 	"github.com/charmbracelet/bubbles/key"
