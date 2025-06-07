@@ -5,8 +5,8 @@ package utils
 
 import (
 	"context"
-	"log"
 
+	"github.com/jingle2008/toolkit/internal/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -28,18 +28,16 @@ type K8sHelper struct {
 	configFile string
 	config     *rest.Config
 
-	clientsetFunc func(*rest.Config) (KubernetesClient, error)
-	dynamicFunc   func(*rest.Config) (DynamicClient, error)
+	clientsetFunc func(*rest.Config) (kubernetesClient, error)
+	dynamicFunc   func(*rest.Config) (dynamicClient, error)
 }
 
-// KubernetesClient abstracts the methods used from *kubernetes.Clientset.
-type KubernetesClient interface {
+type kubernetesClient interface {
 	CoreV1NodesList(ctx context.Context, opts v1.ListOptions) ([]corev1.Node, error)
 	CoreV1PodsList(ctx context.Context, namespace string, opts v1.ListOptions) ([]corev1.Pod, error)
 }
 
-// DynamicClient abstracts the methods used from dynamic.Interface.
-type DynamicClient interface {
+type dynamicClient interface {
 	ResourceList(ctx context.Context, gvr schema.GroupVersionResource, opts v1.ListOptions) (*unstructured.UnstructuredList, error)
 }
 
@@ -64,7 +62,7 @@ func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
 }
 
 // Default implementations for production.
-func defaultKubernetesClient(cfg *rest.Config) (KubernetesClient, error) {
+func defaultKubernetesClient(cfg *rest.Config) (kubernetesClient, error) {
 	cs, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -90,7 +88,7 @@ func (r *realKubernetesClient) CoreV1PodsList(ctx context.Context, namespace str
 	return list.Items, nil
 }
 
-func defaultDynamicClient(cfg *rest.Config) (DynamicClient, error) {
+func defaultDynamicClient(cfg *rest.Config) (dynamicClient, error) {
 	dyn, err := dynamic.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -150,7 +148,7 @@ func (k *K8sHelper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...
 
 	for _, sel := range selectors {
 		if err := updateGpuAllocations(ctx, clientset, gpuAllocationMap, sel); err != nil {
-			log.Printf("WARN: updateGpuAllocations %s: %v", sel, err)
+			logging.LoggerFromCtx(ctx).Errorw("updateGpuAllocations failed", "selector", sel, "err", err)
 		}
 	}
 
@@ -176,7 +174,7 @@ func (k *K8sHelper) ListGpuNodes(ctx context.Context) ([]models.GpuNode, error) 
 	return k.ListGpuNodesWithSelectors(ctx, "app=dummy", "component=predictor", "ome.oracle.com/trainingjob")
 }
 
-func updateGpuAllocations(ctx context.Context, clientset KubernetesClient,
+func updateGpuAllocations(ctx context.Context, clientset kubernetesClient,
 	gpuAllocationMap map[string]int64, label string,
 ) error {
 	pods, err := clientset.CoreV1PodsList(ctx, "", v1.ListOptions{
@@ -247,7 +245,7 @@ func (k *K8sHelper) ListDedicatedAIClusters(ctx context.Context) ([]models.Dedic
 }
 
 // listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
-func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn DynamicClient) ([]models.DedicatedAICluster, error) {
+func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicClient) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.oracle.com",
 		Version:  "v1alpha1",
@@ -291,7 +289,7 @@ func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn DynamicCl
 }
 
 // listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
-func (k *K8sHelper) listDedicatedAIClustersV2(ctx context.Context, dyn DynamicClient) ([]models.DedicatedAICluster, error) {
+func (k *K8sHelper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamicClient) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.io",
 		Version:  "v1beta1",

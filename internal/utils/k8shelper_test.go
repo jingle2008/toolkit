@@ -55,7 +55,7 @@ func TestListGpuNodesWithSelectors_Error(t *testing.T) {
 		return true, nil, errors.New("boom")
 	})
 	helper := &K8sHelper{
-		clientsetFunc: func(_ *rest.Config) (KubernetesClient, error) {
+		clientsetFunc: func(_ *rest.Config) (kubernetesClient, error) {
 			return &testutil.FakeKubernetesClientAdapter{Clientset: cs}, nil
 		},
 	}
@@ -176,7 +176,7 @@ func TestListGpuNodes_FakeClient(t *testing.T) {
 	}
 	fakeClientset := testutil.NewFakeClient(node, pod)
 	helper := &K8sHelper{
-		clientsetFunc: func(_ *rest.Config) (KubernetesClient, error) {
+		clientsetFunc: func(_ *rest.Config) (kubernetesClient, error) {
 			return &testutil.FakeKubernetesClientAdapter{Clientset: fakeClientset}, nil
 		},
 		dynamicFunc: nil,
@@ -209,7 +209,7 @@ func (m *mockDynamicClient) ResourceList(_ context.Context, gvr schema.GroupVers
 func TestListDedicatedAIClusters(t *testing.T) {
 	t.Parallel()
 	helper := &K8sHelper{
-		dynamicFunc: func(_ *rest.Config) (DynamicClient, error) {
+		dynamicFunc: func(_ *rest.Config) (dynamicClient, error) {
 			return &mockDynamicClient{
 				lists: map[string]*unstructured.UnstructuredList{
 					"ome.oracle.com/v1alpha1": {
