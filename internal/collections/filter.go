@@ -32,8 +32,10 @@ func IsMatch(item models.Filterable, filter string, ignoreCase bool) bool {
 	return false
 }
 
-// FilterSlice perform action on items in slice that match the filter and name
-// return false in action to stop further processing
+/*
+FilterSlice performs the given action on items in the slice that match the filter and name.
+Return false in the action to stop further processing.
+*/
 func FilterSlice[T models.NamedFilterable](items []T, name *string, filter string,
 	action func(int, T) bool,
 ) {
@@ -49,6 +51,9 @@ func FilterSlice[T models.NamedFilterable](items []T, name *string, filter strin
 	}
 }
 
+/*
+getSortedKeys returns the sorted keys of the given map.
+*/
 func getSortedKeys[T any](m map[string]T) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -59,8 +64,10 @@ func getSortedKeys[T any](m map[string]T) []string {
 	return keys
 }
 
-// perform action on items in map that match the filter and name
-// return false in action to stop further processing
+/*
+filterMap performs the given action on items in the map that match the filter and name.
+Return false in the action to stop further processing.
+*/
 func filterMap[T models.NamedFilterable](m map[string][]T, name *string,
 	filter string, action func(int, string, T) bool,
 ) {

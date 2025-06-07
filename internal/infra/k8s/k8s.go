@@ -24,7 +24,10 @@ import (
 // GPUProperty is the Kubernetes resource name for GPU.
 const GPUProperty = "nvidia.com/gpu"
 
-// K8sHelper provides helpers for interacting with Kubernetes clusters.
+/*
+K8sHelper provides helpers for interacting with Kubernetes clusters.
+It manages client configuration, context switching, and provides methods for listing GPU nodes and AI clusters.
+*/
 type K8sHelper struct {
 	context    string
 	configFile string
@@ -413,7 +416,9 @@ func LoadDedicatedAIClusters(ctx context.Context, configFile string, env models.
 	return result, nil
 }
 
-// sortKeyedItems sorts a slice of KeyedItem by key.
+/*
+sortKeyedItems sorts a slice of items implementing GetKey() by key.
+*/
 func sortKeyedItems[T interface{ GetKey() string }](items []T) {
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].GetKey() < items[j].GetKey()

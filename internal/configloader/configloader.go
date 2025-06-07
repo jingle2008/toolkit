@@ -1,7 +1,4 @@
-/*
-Package utils provides utility functions for configuration management.
-*/
-package utils
+package configloader
 
 import (
 	"context"
@@ -18,7 +15,6 @@ import (
 )
 
 const (
-	// keys for config sections
 	limitsKey            = "limits"
 	propertiesKey        = "properties"
 	consolePropertiesKey = "console_properties"
@@ -200,10 +196,8 @@ func isValidEnvironment(env models.Environment, allEnvs []models.Environment) bo
 	return false
 }
 
-/*
-LoadDataset loads a Dataset from the given repository path and environment.
-Now accepts context.Context as the first parameter.
-*/
+// LoadDataset loads a Dataset from the given repository path and environment.
+// Now accepts context.Context as the first parameter.
 func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (*models.Dataset, error) {
 	serviceTenancies, err := terraform.LoadServiceTenancies(ctx, repoPath)
 	if err != nil {

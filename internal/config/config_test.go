@@ -8,6 +8,7 @@ import (
 )
 
 func TestConfig_Validate(t *testing.T) {
+	t.Parallel()
 	valid := Config{
 		RepoPath:   "repo",
 		KubeConfig: "kube",

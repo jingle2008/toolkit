@@ -7,6 +7,7 @@ import (
 )
 
 func TestGetEnvironments(t *testing.T) {
+	t.Parallel()
 	envs := []models.Environment{
 		{Type: "k8s", Realm: "public", Region: "us-west"},
 		{Type: "k8s", Realm: "private", Region: "us-east"},
@@ -80,6 +81,7 @@ func TestGetEnvironments(t *testing.T) {
 }
 
 func TestGetServiceTenancies(t *testing.T) {
+	t.Parallel()
 	tenancies := []models.ServiceTenancy{
 		{
 			Name:        "svc1",
@@ -164,6 +166,7 @@ func TestGetServiceTenancies(t *testing.T) {
 }
 
 func TestGetTenants(t *testing.T) {
+	t.Parallel()
 	tenants := []models.Tenant{
 		{
 			Name:                     "tenant1",

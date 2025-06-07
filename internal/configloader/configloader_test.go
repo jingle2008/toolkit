@@ -1,4 +1,4 @@
-package utils
+package configloader
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func TestLoadOverrides_Success(t *testing.T) {
 
 func TestLoadOverridesDI_ListFilesError(t *testing.T) {
 	t.Parallel()
-	_, err := loadOverridesDI[mockNamedItem](
+	_, err := loadOverridesDI(
 		"irrelevant",
 		func(string, string) ([]string, error) { return nil, assert.AnError },
 		func(string) (*mockNamedItem, error) { return nil, nil },
@@ -48,7 +48,7 @@ func TestLoadOverridesDI_ListFilesError(t *testing.T) {
 func TestLoadOverridesDI_LoadFileError(t *testing.T) {
 	t.Parallel()
 	files := []string{"a.json", "b.json"}
-	_, err := loadOverridesDI[mockNamedItem](
+	_, err := loadOverridesDI(
 		"irrelevant",
 		func(string, string) ([]string, error) { return files, nil },
 		func(string) (*mockNamedItem, error) { return nil, assert.AnError },
@@ -58,7 +58,7 @@ func TestLoadOverridesDI_LoadFileError(t *testing.T) {
 
 func TestLoadOverridesDI_Empty(t *testing.T) {
 	t.Parallel()
-	out, err := loadOverridesDI[mockNamedItem](
+	out, err := loadOverridesDI(
 		"irrelevant",
 		func(string, string) ([]string, error) { return []string{}, nil },
 		func(string) (*mockNamedItem, error) { return nil, nil },
@@ -108,7 +108,7 @@ func TestLoadTenancyOverrides_Success(t *testing.T) {
 
 func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
 	t.Parallel()
-	_, err := loadTenancyOverridesDI[mockNamedItem](
+	_, err := loadTenancyOverridesDI(
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return nil, assert.AnError },
 		func(string) ([]mockNamedItem, error) { return nil, nil },
@@ -119,7 +119,7 @@ func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
 func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 	t.Parallel()
 	tenants := []string{"t1", "t2"}
-	_, err := loadTenancyOverridesDI[mockNamedItem](
+	_, err := loadTenancyOverridesDI(
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return tenants, nil },
 		func(string) ([]mockNamedItem, error) { return nil, assert.AnError },
@@ -129,7 +129,7 @@ func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 
 func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
 	t.Parallel()
-	_, err := loadTenancyOverridesDI[mockNamedItem](
+	_, err := loadTenancyOverridesDI(
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return []string{}, nil },
 		func(string) ([]mockNamedItem, error) { return nil, nil },
@@ -256,7 +256,7 @@ func (t testOverride) GetTenantID() string { return t.tenantID }
 func TestUpdateTenants(t *testing.T) {
 	t.Parallel()
 	// Just test that it doesn't panic on empty input
-	updateTenants[testOverride](map[string]tenantInfo{}, map[string][]testOverride{}, 0)
+	updateTenants(map[string]tenantInfo{}, map[string][]testOverride{}, 0)
 
 	// Test with actual data
 	tenantMap := make(map[string]tenantInfo)
@@ -269,7 +269,7 @@ func TestUpdateTenants(t *testing.T) {
 			{tenantID: "idC"},
 		},
 	}
-	updateTenants[testOverride](tenantMap, overrideMap, 1)
+	updateTenants(tenantMap, overrideMap, 1)
 	assert.Contains(t, tenantMap, "TenantA")
 	assert.Contains(t, tenantMap, "TenantB")
 	assert.Equal(t, 2, tenantMap["TenantA"].overrides[1])

@@ -21,10 +21,16 @@ func FilterTenants(tenants []models.Tenant, filter string) []models.Tenant {
 	return FilterByFilterable(tenants, filter)
 }
 
+/*
+FilterServiceTenancies returns a filtered slice of ServiceTenancy matching the provided filter string.
+*/
 func FilterServiceTenancies(tenancies []models.ServiceTenancy, filter string) []models.ServiceTenancy {
 	return FilterByFilterable(tenancies, filter)
 }
 
+/*
+FilterEnvironments returns a filtered slice of Environment matching the provided filter string.
+*/
 func FilterEnvironments(envs []models.Environment, filter string) []models.Environment {
 	return FilterByFilterable(envs, filter)
 }

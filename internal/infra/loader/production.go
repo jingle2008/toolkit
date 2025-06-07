@@ -3,8 +3,9 @@ package loader
 import (
 	"context"
 
+	"github.com/jingle2008/toolkit/internal/configloader"
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/internal/utils"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -18,9 +19,11 @@ NOTE: The following ProductionLoader methods and their corresponding utils.* fun
 must be updated to accept context.Context as the first parameter.
 */
 
-// LoadDataset loads a dataset from the given repo and environment.
+/*
+LoadDataset loads a dataset from the given repo and environment.
+*/
 func (ProductionLoader) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
-	return utils.LoadDataset(ctx, repo, env) // TODO: Update utils.LoadDataset to accept context.Context
+	return configloader.LoadDataset(ctx, repo, env)
 }
 
 // LoadBaseModels loads base models from the given repo and environment.
@@ -33,12 +36,18 @@ func (ProductionLoader) LoadGpuPools(ctx context.Context, repo string, env model
 	return terraform.LoadGpuPools(ctx, repo, env) // TODO: Update utils.LoadGpuPools to accept context.Context
 }
 
-// LoadGpuNodes loads GPU nodes from the given kube config and environment.
+/*
+LoadGpuNodes loads GPU nodes from the given kube config and environment.
+Implements the Loader interface but is not yet migrated.
+*/
 func (ProductionLoader) LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error) {
-	return utils.LoadGpuNodes(ctx, kubeCfg, env) // TODO: Update utils.LoadGpuNodes to accept context.Context
+	return k8s.LoadGpuNodes(ctx, kubeCfg, env)
 }
 
-// LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
+/*
+LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
+Implements the Loader interface but is not yet migrated.
+*/
 func (ProductionLoader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	return utils.LoadDedicatedAIClusters(ctx, kubeCfg, env) // TODO: Update utils.LoadDedicatedAIClusters to accept context.Context
+	return k8s.LoadDedicatedAIClusters(ctx, kubeCfg, env)
 }

@@ -22,7 +22,9 @@ type Config struct {
 	Category   string
 }
 
-// Validate checks that all required fields are set and valid.
+/*
+Validate checks that all required fields in the Config are set and valid.
+*/
 func (c Config) Validate() error {
 	if c.RepoPath == "" {
 		return errors.New("config: RepoPath is required")
@@ -49,7 +51,9 @@ func (c Config) Validate() error {
 	return nil
 }
 
-// env returns the value of the environment variable or the default.
+/*
+env returns the value of the environment variable for key, or def if not set.
+*/
 func env(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -87,8 +91,10 @@ func ParseArgs(args []string) Config {
 	}
 }
 
-// Parse parses CLI flags and environment variables into a Config struct.
-// For backward compatibility.
+/*
+Parse parses CLI flags and environment variables into a Config struct.
+For backward compatibility.
+*/
 func Parse() Config {
 	return ParseArgs(nil)
 }

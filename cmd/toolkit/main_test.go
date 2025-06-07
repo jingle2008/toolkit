@@ -10,6 +10,7 @@ import (
 )
 
 func TestCategoryFromString_Valid(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input    string
 		expected domain.Category
@@ -46,6 +47,7 @@ func TestCategoryFromString_Valid(t *testing.T) {
 }
 
 func TestCategoryFromString_Invalid(t *testing.T) {
+	t.Parallel()
 	invalidInputs := []string{"notacategory", "", "123", "fooBar"}
 	for _, input := range invalidInputs {
 		input := input

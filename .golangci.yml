@@ -29,7 +29,6 @@ linters:
     - bodyclose
     - cyclop
     - errorlint
-    - exportloopref
     - containedctx
   presets:
     - bugs

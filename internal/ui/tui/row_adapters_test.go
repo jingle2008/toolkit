@@ -10,6 +10,7 @@ import (
 )
 
 func TestLimitTenancyOverrideRow_ToRow(t *testing.T) {
+	t.Parallel()
 	row := LimitTenancyOverrideRow(models.LimitTenancyOverride{
 		Name:    "limit",
 		Regions: []string{"us-west", "us-east"},
@@ -21,6 +22,7 @@ func TestLimitTenancyOverrideRow_ToRow(t *testing.T) {
 }
 
 func TestGetTableRow_GpuNodeAndDedicatedAICluster(t *testing.T) {
+	t.Parallel()
 	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	tenant := "scope"
 
@@ -53,6 +55,7 @@ func TestGetTableRow_GpuNodeAndDedicatedAICluster(t *testing.T) {
 }
 
 func TestGetScopedItems(t *testing.T) {
+	t.Parallel()
 	// Use LimitTenancyOverride as the NamedFilterable type
 	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	m := map[string][]models.LimitTenancyOverride{
@@ -70,6 +73,7 @@ func TestGetScopedItems(t *testing.T) {
 }
 
 func TestConsolePropertyTenancyOverrideRow_ToRow(t *testing.T) {
+	t.Parallel()
 	vals := []struct {
 		Value string `json:"value"`
 	}{{Value: "v"}}
@@ -87,6 +91,7 @@ func TestConsolePropertyTenancyOverrideRow_ToRow(t *testing.T) {
 }
 
 func TestPropertyTenancyOverrideRow_ToRow(t *testing.T) {
+	t.Parallel()
 	vals := []struct {
 		Value string `json:"value"`
 	}{{Value: "val"}}
@@ -104,6 +109,7 @@ func TestPropertyTenancyOverrideRow_ToRow(t *testing.T) {
 }
 
 func TestGpuNodeRow_ToRow(t *testing.T) {
+	t.Parallel()
 	row := GpuNodeRow(models.GpuNode{
 		NodePool:     "pool",
 		Name:         "node1",
@@ -120,6 +126,7 @@ func TestGpuNodeRow_ToRow(t *testing.T) {
 }
 
 func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
+	t.Parallel()
 	row := DedicatedAIClusterRow(models.DedicatedAICluster{
 		Name:      "dac1",
 		Type:      "GPU",
@@ -146,6 +153,7 @@ func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
 }
 
 func TestGetTableRow_UnexpectedType(t *testing.T) {
+	t.Parallel()
 	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	row := GetTableRow(logger, "tenant", 12345)
 	if row != nil {
@@ -154,6 +162,7 @@ func TestGetTableRow_UnexpectedType(t *testing.T) {
 }
 
 func TestGetScopedItems_NilCtxAndNonMatchingCategory(t *testing.T) {
+	t.Parallel()
 	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	m := map[string][]models.LimitTenancyOverride{
 		"scope1": {{
@@ -176,6 +185,7 @@ func TestGetScopedItems_NilCtxAndNonMatchingCategory(t *testing.T) {
 }
 
 func TestGetTableRow_Dispatches(t *testing.T) {
+	t.Parallel()
 	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	tenant := "scope"
 
