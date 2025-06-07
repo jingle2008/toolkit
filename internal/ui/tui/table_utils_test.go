@@ -1,6 +1,7 @@
 package toolkit
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -37,7 +38,15 @@ func Test_getTenants_returns_rows(t *testing.T) {
 			PropertyOverrides:        6,
 		},
 	}
-	rows := rows.GetTenants(tenants, "")
+	tenantStructs := rows.Tenants(tenants, "")
+	rows := make([]table.Row, 0, len(tenantStructs))
+	for _, val := range tenantStructs {
+		rows = append(rows, table.Row{
+			val.Name,
+			val.GetTenantID(),
+			val.GetOverrides(),
+		})
+	}
 	assert.Len(t, rows, 2)
 	assert.Equal(t, table.Row{"TenantA", "idA", "1/2/3"}, rows[0])
 	assert.Equal(t, table.Row{"TenantB", "idB (+1)", "4/5/6"}, rows[1])
@@ -70,7 +79,16 @@ func Test_getEnvironments_returns_rows(t *testing.T) {
 			Realm:  "realmB",
 		},
 	}
-	rows := rows.GetEnvironments(envs, "")
+	envStructs := rows.Environments(envs, "")
+	rows := make([]table.Row, 0, len(envStructs))
+	for _, val := range envStructs {
+		rows = append(rows, table.Row{
+			val.GetName(),
+			val.Realm,
+			val.Type,
+			val.Region,
+		})
+	}
 	assert.Len(t, rows, 2)
 	assert.Equal(t, table.Row{"dev-phx", "realmA", "dev", "us-phoenix-1"}, rows[0])
 	assert.Equal(t, table.Row{"prod-iad", "realmB", "prod", "us-ashburn-1"}, rows[1])
@@ -132,7 +150,17 @@ func Test_getServiceTenancies_returns_rows(t *testing.T) {
 			Regions:     []string{"us-ashburn-1"},
 		},
 	}
-	rows := rows.GetServiceTenancies(tenancies, "")
+	tenancyStructs := rows.ServiceTenancies(tenancies, "")
+	rows := make([]table.Row, 0, len(tenancyStructs))
+	for _, val := range tenancyStructs {
+		rows = append(rows, table.Row{
+			val.Name,
+			val.Realm,
+			val.Environment,
+			val.HomeRegion,
+			strings.Join(val.Regions, ", "),
+		})
+	}
 	assert.Len(t, rows, 2)
 	assert.Equal(t, table.Row{"svcA", "realmA", "envA", "us-phoenix-1", "us-phoenix-1, us-ashburn-1"}, rows[0])
 	assert.Equal(t, table.Row{"svcB", "realmB", "envB", "us-ashburn-1", "us-ashburn-1"}, rows[1])

@@ -25,25 +25,25 @@ func TestGetTenants(t *testing.T) {
 	}
 
 	// No filter: all tenants returned
-	rows := GetTenants(tenants, "")
+	rows := Tenants(tenants, "")
 	if len(rows) != 2 {
 		t.Errorf("expected 2 rows, got %d", len(rows))
 	}
 
 	// Filter by name
-	rows = GetTenants(tenants, "tenant2")
-	if len(rows) != 1 || rows[0][0] != "tenant2" {
+	rows = Tenants(tenants, "tenant2")
+	if len(rows) != 1 || rows[0].Name != "tenant2" {
 		t.Errorf("expected 1 row for tenant2, got %v", rows)
 	}
 
 	// Filter by tenant ID
-	rows = GetTenants(tenants, "id1")
-	if len(rows) != 1 || rows[0][1] != "id1" {
+	rows = Tenants(tenants, "id1")
+	if len(rows) != 1 || len(rows[0].IDs) == 0 || rows[0].IDs[0] != "id1" {
 		t.Errorf("expected 1 row for id1, got %v", rows)
 	}
 
 	// Filter with no match
-	rows = GetTenants(tenants, "doesnotexist")
+	rows = Tenants(tenants, "doesnotexist")
 	if len(rows) != 0 {
 		t.Errorf("expected 0 rows for unmatched filter, got %v", rows)
 	}

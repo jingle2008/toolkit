@@ -14,31 +14,31 @@ func TestGetEnvironments(t *testing.T) {
 	}
 
 	// No filter: all environments returned
-	rows := GetEnvironments(envs, "")
+	rows := Environments(envs, "")
 	if len(rows) != 3 {
 		t.Errorf("expected 3 rows, got %d", len(rows))
 	}
 
 	// Filter by type
-	rows = GetEnvironments(envs, "baremetal")
-	if len(rows) != 1 || rows[0][0] != "baremetal-UNKNOWN" {
+	rows = Environments(envs, "baremetal")
+	if len(rows) != 1 || rows[0].GetName() != "baremetal-UNKNOWN" {
 		t.Errorf("expected 1 row for baremetal, got %v", rows)
 	}
 
 	// Filter by region
-	rows = GetEnvironments(envs, "west")
-	if len(rows) != 1 || rows[0][0] != "k8s-UNKNOWN" || rows[0][3] != "us-west" {
+	rows = Environments(envs, "west")
+	if len(rows) != 1 || rows[0].GetName() != "k8s-UNKNOWN" || rows[0].Region != "us-west" {
 		t.Errorf("expected 1 row for us-west, got %v", rows)
 	}
 
 	// Filter by realm
-	rows = GetEnvironments(envs, "private")
-	if len(rows) != 1 || rows[0][1] != "private" {
+	rows = Environments(envs, "private")
+	if len(rows) != 1 || rows[0].Realm != "private" {
 		t.Errorf("expected 1 row for private realm, got %v", rows)
 	}
 
 	// Filter with no match
-	rows = GetEnvironments(envs, "doesnotexist")
+	rows = Environments(envs, "doesnotexist")
 	if len(rows) != 0 {
 		t.Errorf("expected 0 rows for unmatched filter, got %v", rows)
 	}

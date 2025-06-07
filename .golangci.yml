@@ -21,12 +21,23 @@ linters:
     - contextcheck
     - unused
     - dupl
+    - depguard
+    - nilnil
+    - prealloc
+    - unparam
+    - dogsled
+    - bodyclose
+    - gocyclo
   presets:
     - bugs
 issues:
   exclude-use-default: false
 
 linters-settings:
+  gocyclo:
+    min-complexity: 15
+  prealloc:
+    simple: true
   depguard:
     list-type: blacklist
     packages:

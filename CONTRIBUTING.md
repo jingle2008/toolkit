@@ -8,8 +8,16 @@
 - **Coverage Enforcement:**  
   The project enforces a minimum code coverage threshold. Use `make cover-check` to verify that coverage is at least 80%. Pull requests that drop coverage below this threshold should be updated with additional tests.
 
-- **Static Analysis:**  
-  The linter configuration (`.golangci.yml`) enables test-specific linters (`paralleltest`, `testpackage`) and general static analysis (`gocritic`, `gosec`). Run `make lint` before submitting changes.
+- **Static Analysis & Formatting:**  
+  The linter configuration (`.golangci.yml`) enables strict static analysis, including: `govet`, `staticcheck`, `revive`, `errcheck`, `gocognit`, `ineffassign`, `misspell`, `wastedassign`, `paralleltest`, `gocritic`, `gosec`, `contextcheck`, `unused`, `dupl`, `depguard`, `nilnil`, `prealloc`, `unparam`, `dogsled`, `bodyclose`, and `gocyclo`.  
+  Run `make lint` before submitting changes.
+
+  **Formatting:**  
+  Code must be formatted with [gofumpt](https://github.com/mvdan/gofumpt) (a stricter gofmt). This is not run by golangci-lint and must be run separately, e.g.:
+  ```
+  gofumpt -w .
+  ```
+  Consider adding gofumpt as a pre-commit hook or running it in CI to ensure consistent formatting.
 
 - **Benchmarks:**  
   Add micro-benchmarks for performance-sensitive code using `func BenchmarkXxx(b *testing.B)`. Run `go test -bench ./...` to execute benchmarks. Use `benchstat` to compare results and catch regressions.
@@ -28,6 +36,7 @@
 - [ ] All new and changed code is covered by tests.
 - [ ] Tests use `t.Parallel()` where possible.
 - [ ] Lint and static analysis pass (`make lint`).
+- [ ] Code is formatted with `gofumpt -w .`.
 - [ ] Code coverage is at least 80% (`make cover-check`).
 - [ ] Benchmarks are added for performance-critical code.
 - [ ] Golden files and fuzz corpora are updated as needed.

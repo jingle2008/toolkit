@@ -15,7 +15,16 @@ import (
 
 var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *domain.AppContext, string) []table.Row{
 	domain.Tenant: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
-		return rows.GetTenants(dataset.Tenants, filter)
+		tenants := rows.Tenants(dataset.Tenants, filter)
+		results := make([]table.Row, 0, len(tenants))
+		for _, val := range tenants {
+			results = append(results, table.Row{
+				val.Name,
+				val.GetTenantID(),
+				val.GetOverrides(),
+			})
+		}
+		return results
 	},
 	domain.LimitDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getLimitDefinitions(dataset.LimitDefinitionGroup, filter)
@@ -48,10 +57,31 @@ var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *d
 		return getModelArtifacts(dataset.ModelArtifacts, filter)
 	},
 	domain.Environment: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
-		return rows.GetEnvironments(dataset.Environments, filter)
+		envs := rows.Environments(dataset.Environments, filter)
+		results := make([]table.Row, 0, len(envs))
+		for _, val := range envs {
+			results = append(results, table.Row{
+				val.GetName(),
+				val.Realm,
+				val.Type,
+				val.Region,
+			})
+		}
+		return results
 	},
 	domain.ServiceTenancy: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
-		return rows.GetServiceTenancies(dataset.ServiceTenancies, filter)
+		tenancies := rows.ServiceTenancies(dataset.ServiceTenancies, filter)
+		results := make([]table.Row, 0, len(tenancies))
+		for _, val := range tenancies {
+			results = append(results, table.Row{
+				val.Name,
+				val.Realm,
+				val.Environment,
+				val.HomeRegion,
+				strings.Join(val.Regions, ", "),
+			})
+		}
+		return results
 	},
 	domain.GpuPool: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
 		return getGpuPools(dataset.GpuPools, filter)

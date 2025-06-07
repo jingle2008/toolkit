@@ -25,31 +25,31 @@ func TestGetServiceTenancies(t *testing.T) {
 	}
 
 	// No filter: all tenancies returned
-	rows := GetServiceTenancies(tenancies, "")
+	rows := ServiceTenancies(tenancies, "")
 	if len(rows) != 2 {
 		t.Errorf("expected 2 rows, got %d", len(rows))
 	}
 
 	// Filter by name
-	rows = GetServiceTenancies(tenancies, "svc2")
-	if len(rows) != 1 || rows[0][0] != "svc2" {
+	rows = ServiceTenancies(tenancies, "svc2")
+	if len(rows) != 1 || rows[0].Name != "svc2" {
 		t.Errorf("expected 1 row for svc2, got %v", rows)
 	}
 
 	// Filter by region
-	rows = GetServiceTenancies(tenancies, "west")
-	if len(rows) != 1 || rows[0][0] != "svc1" {
+	rows = ServiceTenancies(tenancies, "west")
+	if len(rows) != 1 || rows[0].Name != "svc1" {
 		t.Errorf("expected 1 row for us-west, got %v", rows)
 	}
 
 	// Filter by environment
-	rows = GetServiceTenancies(tenancies, "prod")
-	if len(rows) != 1 || rows[0][2] != "prod" {
+	rows = ServiceTenancies(tenancies, "prod")
+	if len(rows) != 1 || rows[0].Environment != "prod" {
 		t.Errorf("expected 1 row for prod, got %v", rows)
 	}
 
 	// Filter with no match
-	rows = GetServiceTenancies(tenancies, "doesnotexist")
+	rows = ServiceTenancies(tenancies, "doesnotexist")
 	if len(rows) != 0 {
 		t.Errorf("expected 0 rows for unmatched filter, got %v", rows)
 	}
