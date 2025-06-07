@@ -2,7 +2,7 @@ package domain
 
 import (
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/jingle2008/toolkit/pkg/utils"
+	"github.com/jingle2008/toolkit/internal/utils"
 )
 
 // FilterTenants returns a filtered slice of Tenant matching the provided filter string.

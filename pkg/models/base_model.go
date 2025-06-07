@@ -3,7 +3,6 @@ package models
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 )
@@ -131,7 +130,7 @@ func (m BaseModel) GetDefaultDacShape() *DACShape {
 	}
 
 	if len(shapes) > 1 {
-		log.Fatalf("More than 1 shapes found for model: %s", m.GetKey())
+		panic(fmt.Sprintf("More than 1 default DAC shapes found for model: %s", m.GetKey()))
 	}
 
 	for _, value := range shapes {

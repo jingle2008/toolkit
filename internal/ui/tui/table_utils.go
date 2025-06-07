@@ -9,7 +9,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/jingle2008/toolkit/pkg/utils"
+	"github.com/jingle2008/toolkit/internal/utils"
 )
 
 var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset, *domain.ToolkitContext, string) []table.Row{

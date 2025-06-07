@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/jingle2008/toolkit/pkg/utils"
+	"github.com/jingle2008/toolkit/internal/utils"
 )
 
 /*

@@ -11,7 +11,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/jingle2008/toolkit/pkg/utils"
+	"github.com/jingle2008/toolkit/internal/utils"
 )
 
 // LimitTenancyOverrideRow is a wrapper to implement RowMarshaler for models.LimitTenancyOverride.

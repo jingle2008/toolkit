@@ -130,13 +130,13 @@ func (k *K8sHelper) ChangeContext(context string) error {
 ListGpuNodesWithSelectors returns a list of GpuNode objects from the current Kubernetes context.
 By default, it sums allocations for three label selectors. For testability, you can override the selectors.
 */
-func (k *K8sHelper) ListGpuNodesWithSelectors(selectors ...string) ([]models.GpuNode, error) {
+func (k *K8sHelper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...string) ([]models.GpuNode, error) {
 	clientset, err := k.clientsetFunc(k.config)
 	if err != nil {
 		return nil, err
 	}
 
-	nodes, err := clientset.CoreV1NodesList(context.TODO(), v1.ListOptions{
+	nodes, err := clientset.CoreV1NodesList(ctx, v1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.present=true",
 	})
 	if err != nil {
@@ -149,7 +149,7 @@ func (k *K8sHelper) ListGpuNodesWithSelectors(selectors ...string) ([]models.Gpu
 	}
 
 	for _, sel := range selectors {
-		if err := updateGpuAllocations(clientset, gpuAllocationMap, sel); err != nil {
+		if err := updateGpuAllocations(ctx, clientset, gpuAllocationMap, sel); err != nil {
 			log.Printf("WARN: updateGpuAllocations %s: %v", sel, err)
 		}
 	}
@@ -172,14 +172,14 @@ func (k *K8sHelper) ListGpuNodesWithSelectors(selectors ...string) ([]models.Gpu
 }
 
 // ListGpuNodes is the production version, using all selectors.
-func (k *K8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
-	return k.ListGpuNodesWithSelectors("app=dummy", "component=predictor", "ome.oracle.com/trainingjob")
+func (k *K8sHelper) ListGpuNodes(ctx context.Context) ([]models.GpuNode, error) {
+	return k.ListGpuNodesWithSelectors(ctx, "app=dummy", "component=predictor", "ome.oracle.com/trainingjob")
 }
 
-func updateGpuAllocations(clientset KubernetesClient,
+func updateGpuAllocations(ctx context.Context, clientset KubernetesClient,
 	gpuAllocationMap map[string]int64, label string,
 ) error {
-	pods, err := clientset.CoreV1PodsList(context.TODO(), "", v1.ListOptions{
+	pods, err := clientset.CoreV1PodsList(ctx, "", v1.ListOptions{
 		LabelSelector: label,
 		FieldSelector: "status.phase=Running",
 	})
@@ -229,12 +229,11 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 /*
 ListDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
 */
-func (k *K8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, error) {
+func (k *K8sHelper) ListDedicatedAIClusters(ctx context.Context) ([]models.DedicatedAICluster, error) {
 	dyn, err := k.dynamicFunc(k.config)
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.TODO()
 
 	v1Clusters, err := k.listDedicatedAIClustersV1(ctx, dyn)
 	if err != nil {

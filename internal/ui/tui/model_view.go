@@ -3,12 +3,11 @@ package tui
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
-	"github.com/jingle2008/toolkit/pkg/utils"
+	"github.com/jingle2008/toolkit/internal/utils"
 )
 
 func (m *Model) infoView() string {
@@ -70,7 +69,7 @@ func (m *Model) updateContent(width int) {
 	str, err := m.renderer.RenderJSON(content, width)
 	if err != nil {
 		wrappedErr := fmt.Errorf("error encountered rendering content: %w", err)
-		log.Println(wrappedErr)
+		m.err = wrappedErr
 		return
 	}
 	m.viewport.SetContent(str)

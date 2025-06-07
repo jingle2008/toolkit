@@ -16,11 +16,11 @@ type mockK8sHelper struct {
 	err   error
 }
 
-func (m *mockK8sHelper) ListGpuNodes() ([]models.GpuNode, error) {
+func (m *mockK8sHelper) ListGpuNodes(_ context.Context) ([]models.GpuNode, error) {
 	return m.nodes, m.err
 }
 
-func (m *mockK8sHelper) ListDedicatedAIClusters() ([]models.DedicatedAICluster, error) {
+func (m *mockK8sHelper) ListDedicatedAIClusters(_ context.Context) ([]models.DedicatedAICluster, error) {
 	return m.dacs, m.err
 }
 

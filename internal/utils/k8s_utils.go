@@ -8,8 +8,8 @@ import (
 )
 
 type gpuHelper interface {
-	ListGpuNodes() ([]models.GpuNode, error)
-	ListDedicatedAIClusters() ([]models.DedicatedAICluster, error)
+	ListGpuNodes(ctx context.Context) ([]models.GpuNode, error)
+	ListDedicatedAIClusters(ctx context.Context) ([]models.DedicatedAICluster, error)
 }
 
 var helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
@@ -20,13 +20,13 @@ var helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
 LoadGpuNodes loads GPU node information from the given config file and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadGpuNodes(_ context.Context, configFile string, env models.Environment) (map[string][]models.GpuNode, error) {
+func LoadGpuNodes(ctx context.Context, configFile string, env models.Environment) (map[string][]models.GpuNode, error) {
 	k8sHelper, err := helperFactory(configFile, env.GetKubeContext())
 	if err != nil {
 		return nil, err
 	}
 
-	nodes, err := k8sHelper.ListGpuNodes()
+	nodes, err := k8sHelper.ListGpuNodes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -52,13 +52,13 @@ func LoadGpuNodes(_ context.Context, configFile string, env models.Environment) 
 LoadDedicatedAIClusters loads DedicatedAICluster information from the given config file and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadDedicatedAIClusters(_ context.Context, configFile string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
+func LoadDedicatedAIClusters(ctx context.Context, configFile string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	k8sHelper, err := helperFactory(configFile, env.GetKubeContext())
 	if err != nil {
 		return nil, err
 	}
 
-	dacs, err := k8sHelper.ListDedicatedAIClusters()
+	dacs, err := k8sHelper.ListDedicatedAIClusters(ctx)
 	if err != nil {
 		return nil, err
 	}

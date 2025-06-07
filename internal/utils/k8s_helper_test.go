@@ -60,7 +60,7 @@ func TestListGpuNodesWithSelectors_Error(t *testing.T) {
 		},
 	}
 	helper.config = &rest.Config{}
-	_, err := helper.ListGpuNodesWithSelectors("app=fail")
+	_, err := helper.ListGpuNodesWithSelectors(context.Background(), "app=fail")
 	assert.Error(t, err)
 }
 
@@ -90,7 +90,7 @@ func TestUpdateGpuAllocations(t *testing.T) {
 	}
 	fakeClient := testutil.NewFakeClient(pod)
 	allocMap := map[string]int64{"node1": 0}
-	err := updateGpuAllocations(&testutil.FakeKubernetesClientAdapter{Clientset: fakeClient}, allocMap, "app=test")
+	err := updateGpuAllocations(context.Background(), &testutil.FakeKubernetesClientAdapter{Clientset: fakeClient}, allocMap, "app=test")
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), allocMap["node1"])
 }
@@ -183,7 +183,7 @@ func TestListGpuNodes_FakeClient(t *testing.T) {
 	}
 	helper.config = &rest.Config{}
 
-	nodes, err := helper.ListGpuNodesWithSelectors("app=dummy")
+	nodes, err := helper.ListGpuNodesWithSelectors(context.Background(), "app=dummy")
 	require.NoError(t, err)
 	assert.Len(t, nodes, 1)
 	assert.Equal(t, "node2", nodes[0].Name)
@@ -260,7 +260,7 @@ func TestListDedicatedAIClusters(t *testing.T) {
 		},
 	}
 	helper.config = nil
-	clusters, err := helper.ListDedicatedAIClusters()
+	clusters, err := helper.ListDedicatedAIClusters(context.Background())
 	require.NoError(t, err)
 	assert.NotNil(t, clusters)
 	assert.GreaterOrEqual(t, len(clusters), 2)
