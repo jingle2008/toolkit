@@ -7,17 +7,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/utils"
 )
-
-func centerText(text string, width, height int) string {
-	style := lipgloss.NewStyle().
-		Width(width).
-		Height(height).
-		Align(lipgloss.Center, lipgloss.Center)
-
-	return style.Render(text)
-}
 
 func (m *Model) infoView() string {
 	keys := []string{"Realm:", "Type:", "Region:"}
@@ -87,7 +79,7 @@ func (m *Model) updateContent(width int) {
 // View renders the current state of the model as a string.
 func (m *Model) View() string {
 	if m.err != nil {
-		return centerText(m.err.Error(), m.viewWidth, m.viewHeight)
+		return view.CenterText(m.err.Error(), m.viewWidth, m.viewHeight)
 	}
 
 	helpView := m.help.View(m.keys)

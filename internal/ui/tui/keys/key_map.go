@@ -1,4 +1,4 @@
-package tui
+package keys
 
 import (
 	"github.com/charmbracelet/bubbles/key"
@@ -6,7 +6,7 @@ import (
 )
 
 // keyMap holds key bindings for the toolkit UI.
-type keyMap struct {
+type KeyMap struct {
 	Help               key.Binding
 	Quit               key.Binding
 	NextCategory       key.Binding
@@ -20,11 +20,11 @@ type keyMap struct {
 	Additionals        map[domain.Category][]key.Binding
 }
 
-func (k keyMap) ShortHelp() []key.Binding {
+func (k KeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Help, k.Quit}
 }
 
-func (k keyMap) FullHelp() [][]key.Binding {
+func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		k.Additionals[k.Category],
 		{k.NextCategory, k.PrevCategory, k.FilterItems, k.JumpTo}, // first column
@@ -37,7 +37,7 @@ var viewModelArtifacts = key.NewBinding(
 	key.WithHelp("a", "view artifacts"),
 )
 
-var keys = keyMap{
+var Keys = KeyMap{
 	NextCategory: key.NewBinding(
 		key.WithKeys("shift+right"),
 		key.WithHelp("shift+→", "next category"),

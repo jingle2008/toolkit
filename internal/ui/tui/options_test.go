@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/jingle2008/toolkit/internal/domain"
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -102,6 +103,8 @@ func TestWithViewport(t *testing.T) {
 
 type mockRenderer struct{}
 
+var _ view.Renderer = (*mockRenderer)(nil)
+
 func (mockRenderer) RenderJSON(_ interface{}, width int) (string, error) {
 	return fmt.Sprintf("json: %d", width), nil
 }
@@ -109,7 +112,7 @@ func (mockRenderer) RenderJSON(_ interface{}, width int) (string, error) {
 func TestWithRenderer(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	r := mockRenderer{}
+	var r view.Renderer = mockRenderer{}
 	opt := WithRenderer(r)
 	opt(m)
 	assert.Equal(t, r, m.renderer)

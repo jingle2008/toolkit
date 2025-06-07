@@ -9,9 +9,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
-	"go.uber.org/zap"
 )
 
 // LimitTenancyOverrideRow is a wrapper to implement RowMarshaler for models.LimitTenancyOverride.
@@ -91,7 +91,7 @@ func (d DedicatedAIClusterRow) ToRow(scope string) table.Row {
 }
 
 // GetTableRow returns a table.Row for a given item, using the appropriate adapter function based on type.
-func GetTableRow(logger Logger, tenant string, item interface{}) table.Row {
+func GetTableRow(logger logging.Logger, tenant string, item interface{}) table.Row {
 	switch val := item.(type) {
 	case models.LimitTenancyOverride:
 		return LimitTenancyOverrideRow(val).ToRow(tenant)
@@ -105,9 +105,7 @@ func GetTableRow(logger Logger, tenant string, item interface{}) table.Row {
 		return DedicatedAIClusterRow(val).ToRow(tenant)
 	default:
 		if logger != nil {
-			logger.Warn("unexpected type in GetTableRow",
-				zap.String("type", fmt.Sprintf("%T", val)),
-			)
+			logger.Errorw("unexpected type in GetTableRow", "type", fmt.Sprintf("%T", val))
 		}
 	}
 	return nil
@@ -116,7 +114,7 @@ func GetTableRow(logger Logger, tenant string, item interface{}) table.Row {
 // GetScopedItems is used for tenancy and other scoped overrides.
 // Accepts a Logger interface for decoupling from zap.
 func GetScopedItems[T models.NamedFilterable](
-	logger Logger,
+	logger logging.Logger,
 	g map[string][]T,
 	scopeCategory domain.Category,
 	ctx *domain.ToolkitContext,

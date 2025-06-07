@@ -18,8 +18,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"go.uber.org/zap"
 )
 
 /*
@@ -34,7 +36,7 @@ It manages state, events, and rendering for the Bubble Tea UI.
 
 type Model struct {
 	contextCtx  context.Context
-	logger      Logger
+	logger      logging.Logger
 	repoPath    string
 	environment models.Environment
 	viewHeight  int
@@ -53,11 +55,11 @@ type Model struct {
 	chosen      bool
 	choice      models.ItemKey
 	viewport    *viewport.Model
-	renderer    Renderer
+	renderer    view.Renderer
 	loader      loader.Loader
 	reLayout    bool                   // layout needs to be updated
 	context     *domain.ToolkitContext // selected context
-	keys        keyMap
+	keys        keys.KeyMap
 	help        *help.Model
 	kubeConfig  string
 	// lipgloss styles (moved from package-level for race safety)
@@ -71,24 +73,9 @@ type Model struct {
 	infoValueStyle lipgloss.Style
 }
 
-var categoryMap = map[string]domain.Category{
-	"t":    domain.Tenant,
-	"ld":   domain.LimitDefinition,
-	"cpd":  domain.ConsolePropertyDefinition,
-	"pd":   domain.PropertyDefinition,
-	"lto":  domain.LimitTenancyOverride,
-	"cpto": domain.ConsolePropertyTenancyOverride,
-	"pto":  domain.PropertyTenancyOverride,
-	"cpro": domain.ConsolePropertyRegionalOverride,
-	"pro":  domain.PropertyRegionalOverride,
-	"bm":   domain.BaseModel,
-	"ma":   domain.ModelArtifact,
-	"e":    domain.Environment,
-	"st":   domain.ServiceTenancy,
-	"gp":   domain.GpuPool,
-	"gn":   domain.GpuNode,
-	"dac":  domain.DedicatedAICluster,
-}
+/*
+categoryMap is deprecated. Use domain.ParseCategory for string-to-category conversion.
+*/
 
 /*
 NewModel creates a new Model for the toolkit TUI, applying the given options.
@@ -97,7 +84,7 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 	m := &Model{
 		mode:   Normal,
 		target: None,
-		keys:   keys,
+		keys:   keys.Keys,
 	}
 
 	// Initialize all style fields (previously package-level)
@@ -145,7 +132,7 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		return nil, errors.New("toolkit: loader is required (use WithLoader option)")
 	}
 	if m.renderer == nil {
-		m.renderer = ProductionRenderer{}
+		m.renderer = view.ProductionRenderer{}
 	}
 	// Set up defaults if not set by options
 	if m.table == nil {
@@ -192,11 +179,12 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 /*
 loggerCtx returns the Logger from the model's field.
 */
-func (m *Model) loggerCtx() Logger {
+// loggerCtx returns the Logger from the model's field.
+func (m *Model) loggerCtx() logging.Logger {
 	if m.logger != nil {
 		return m.logger
 	}
-	return NewZapLogger(zap.NewNop())
+	return logging.NewZapLogger(nil)
 }
 
 // loadData loads the dataset for the current model.
@@ -295,13 +283,13 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 		if key.Matches(msg, m.keys.ViewModelArtifacts) {
 			item := m.getCurrentItem()
 			if bm, ok := item.(*models.BaseModel); ok {
-				m.loggerCtx().Info("view_model_artifacts",
-					zap.String("model", bm.Name),
-					zap.String("version", bm.Version),
-					zap.String("type", bm.Type),
+				m.loggerCtx().Infow("view_model_artifacts",
+					"model", bm.Name,
+					"version", bm.Version,
+					"type", bm.Type,
 				)
 			} else {
-				m.loggerCtx().Info("view_model_artifacts", zap.Any("item", item))
+				m.loggerCtx().Infow("view_model_artifacts", "item", item)
 			}
 		}
 	}
@@ -361,9 +349,9 @@ func (m *Model) exitDetailView() {
 }
 
 func (m *Model) changeCategory() tea.Cmd {
-	text := strings.ToLower(m.textInput.Value())
-	category, ok := categoryMap[text]
-	if !ok {
+	text := m.textInput.Value()
+	category, err := domain.ParseCategory(text)
+	if err != nil {
 		return nil
 	}
 	return m.updateCategory(category)

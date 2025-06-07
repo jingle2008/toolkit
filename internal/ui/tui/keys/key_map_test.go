@@ -1,4 +1,4 @@
-package tui
+package keys
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 
 func TestKeyMap_ShortHelp(t *testing.T) {
 	t.Parallel()
-	km := keyMap{
+	km := KeyMap{
 		Help: key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
 		Quit: key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "quit")),
 	}
@@ -22,7 +22,7 @@ func TestKeyMap_ShortHelp(t *testing.T) {
 
 func TestKeyMap_FullHelp(t *testing.T) {
 	t.Parallel()
-	km := keyMap{
+	km := KeyMap{
 		NextCategory: key.NewBinding(key.WithKeys("shift+right"), key.WithHelp("shift+→", "next category")),
 		PrevCategory: key.NewBinding(key.WithKeys("shift+left"), key.WithHelp("shift+←", "previous category")),
 		FilterItems:  key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filter items")),

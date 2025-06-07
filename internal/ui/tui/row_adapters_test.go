@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"go.uber.org/zap"
 )
@@ -20,7 +21,7 @@ func TestLimitTenancyOverrideRow_ToRow(t *testing.T) {
 }
 
 func TestGetTableRow_GpuNodeAndDedicatedAICluster(t *testing.T) {
-	logger := zap.NewNop()
+	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	tenant := "scope"
 
 	node := models.GpuNode{
@@ -53,7 +54,7 @@ func TestGetTableRow_GpuNodeAndDedicatedAICluster(t *testing.T) {
 
 func TestGetScopedItems(t *testing.T) {
 	// Use LimitTenancyOverride as the NamedFilterable type
-	logger := zap.NewNop()
+	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	m := map[string][]models.LimitTenancyOverride{
 		"scope1": {{
 			Name:    "limitA",
@@ -145,7 +146,7 @@ func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
 }
 
 func TestGetTableRow_UnexpectedType(t *testing.T) {
-	logger := zap.NewNop()
+	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	row := GetTableRow(logger, "tenant", 12345)
 	if row != nil {
 		t.Errorf("expected nil for unexpected type, got %v", row)
@@ -153,7 +154,7 @@ func TestGetTableRow_UnexpectedType(t *testing.T) {
 }
 
 func TestGetScopedItems_NilCtxAndNonMatchingCategory(t *testing.T) {
-	logger := zap.NewNop()
+	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	m := map[string][]models.LimitTenancyOverride{
 		"scope1": {{
 			Name:    "limitA",
@@ -175,7 +176,7 @@ func TestGetScopedItems_NilCtxAndNonMatchingCategory(t *testing.T) {
 }
 
 func TestGetTableRow_Dispatches(t *testing.T) {
-	logger := zap.NewNop()
+	logger := logging.NewZapLogger(zap.NewNop().Sugar())
 	tenant := "scope"
 
 	limit := models.LimitTenancyOverride{Name: "l", Regions: []string{"r"}, Values: []models.LimitRange{{Min: 1, Max: 2}}}

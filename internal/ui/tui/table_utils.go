@@ -7,14 +7,13 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
-
-	// rows import removed; now using toolkit package for row adapters and helpers
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 )
 
-var categoryHandlers = map[domain.Category]func(Logger, *models.Dataset, *domain.ToolkitContext, string) []table.Row{
-	domain.Tenant: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset, *domain.ToolkitContext, string) []table.Row{
+	domain.Tenant: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		tenants := domain.FilterTenants(dataset.Tenants, filter)
 		results := make([]table.Row, 0, len(tenants))
 		for _, val := range tenants {
@@ -26,37 +25,37 @@ var categoryHandlers = map[domain.Category]func(Logger, *models.Dataset, *domain
 		}
 		return results
 	},
-	domain.LimitDefinition: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.LimitDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getLimitDefinitions(dataset.LimitDefinitionGroup, filter)
 	},
-	domain.ConsolePropertyDefinition: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.ConsolePropertyDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.ConsolePropertyDefinitionGroup.Values, filter)
 	},
-	domain.PropertyDefinition: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.PropertyDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.PropertyDefinitionGroup.Values, filter)
 	},
-	domain.LimitTenancyOverride: func(logger Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
+	domain.LimitTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return GetScopedItems(logger, dataset.LimitTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	domain.ConsolePropertyTenancyOverride: func(logger Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
+	domain.ConsolePropertyTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return GetScopedItems(logger, dataset.ConsolePropertyTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	domain.PropertyTenancyOverride: func(logger Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
+	domain.PropertyTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return GetScopedItems(logger, dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	domain.ConsolePropertyRegionalOverride: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.ConsolePropertyRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.ConsolePropertyRegionalOverrides, filter)
 	},
-	domain.PropertyRegionalOverride: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.PropertyRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.PropertyRegionalOverrides, filter)
 	},
-	domain.BaseModel: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.BaseModel: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getBaseModels(dataset.BaseModelMap, filter)
 	},
-	domain.ModelArtifact: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.ModelArtifact: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getModelArtifacts(dataset.ModelArtifacts, filter)
 	},
-	domain.Environment: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.Environment: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		envs := domain.FilterEnvironments(dataset.Environments, filter)
 		results := make([]table.Row, 0, len(envs))
 		for _, val := range envs {
@@ -69,7 +68,7 @@ var categoryHandlers = map[domain.Category]func(Logger, *models.Dataset, *domain
 		}
 		return results
 	},
-	domain.ServiceTenancy: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.ServiceTenancy: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		tenancies := domain.FilterServiceTenancies(dataset.ServiceTenancies, filter)
 		results := make([]table.Row, 0, len(tenancies))
 		for _, val := range tenancies {
@@ -83,13 +82,13 @@ var categoryHandlers = map[domain.Category]func(Logger, *models.Dataset, *domain
 		}
 		return results
 	},
-	domain.GpuPool: func(_ Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+	domain.GpuPool: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getGpuPools(dataset.GpuPools, filter)
 	},
-	domain.GpuNode: func(logger Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
+	domain.GpuNode: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return GetScopedItems(logger, dataset.GpuNodeMap, domain.GpuPool, context, filter)
 	},
-	domain.DedicatedAICluster: func(logger Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
+	domain.DedicatedAICluster: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return GetScopedItems(logger, dataset.DedicatedAIClusterMap, domain.Tenant, context, filter)
 	},
 }
@@ -109,7 +108,7 @@ func getHeaders(category domain.Category) []header {
 getTableRows returns the table rows for a given category, using the appropriate handler.
 If the context is not valid for the category, it is set to nil.
 */
-func getTableRows(logger Logger, dataset *models.Dataset, category domain.Category, context *domain.ToolkitContext, filter string) []table.Row {
+func getTableRows(logger logging.Logger, dataset *models.Dataset, category domain.Category, context *domain.ToolkitContext, filter string) []table.Row {
 	if context != nil && !context.Category.IsScopeOf(category) {
 		context = nil
 	}

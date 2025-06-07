@@ -9,8 +9,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"go.uber.org/zap"
 )
 
 // ModelOption defines a functional option for configuring Model.
@@ -90,7 +91,7 @@ func WithViewport(vp *viewport.Model) ModelOption {
 }
 
 // WithRenderer sets the Renderer implementation for the Model.
-func WithRenderer(r Renderer) ModelOption {
+func WithRenderer(r view.Renderer) ModelOption {
 	return func(m *Model) {
 		m.renderer = r
 	}
@@ -114,7 +115,7 @@ func WithContext(ctx context.Context) ModelOption {
 }
 
 // WithLogger sets the logger for the Model.
-func WithLogger(logger *zap.Logger) ModelOption {
+func WithLogger(logger logging.Logger) ModelOption {
 	return func(m *Model) {
 		m.logger = logger
 	}

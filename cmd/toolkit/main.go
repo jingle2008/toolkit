@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -16,49 +15,13 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
-	logctx "github.com/jingle2008/toolkit/internal/infra/logging"
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	tui "github.com/jingle2008/toolkit/internal/ui/tui"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"go.uber.org/zap"
 )
 
 func categoryFromString(s string) (domain.Category, error) {
-	switch strings.ToLower(s) {
-	case "tenant":
-		return domain.Tenant, nil
-	case "limitdefinition":
-		return domain.LimitDefinition, nil
-	case "consolepropertydefinition":
-		return domain.ConsolePropertyDefinition, nil
-	case "propertydefinition":
-		return domain.PropertyDefinition, nil
-	case "limittenancyoverride":
-		return domain.LimitTenancyOverride, nil
-	case "consolepropertytenancyoverride":
-		return domain.ConsolePropertyTenancyOverride, nil
-	case "propertytenancyoverride":
-		return domain.PropertyTenancyOverride, nil
-	case "consolepropertyregionaloverride":
-		return domain.ConsolePropertyRegionalOverride, nil
-	case "propertyregionaloverride":
-		return domain.PropertyRegionalOverride, nil
-	case "basemodel":
-		return domain.BaseModel, nil
-	case "modelartifact":
-		return domain.ModelArtifact, nil
-	case "environment":
-		return domain.Environment, nil
-	case "servicetenancy":
-		return domain.ServiceTenancy, nil
-	case "gpupool":
-		return domain.GpuPool, nil
-	case "gpunode":
-		return domain.GpuNode, nil
-	case "dedicatedaicluster":
-		return domain.DedicatedAICluster, nil
-	default:
-		return 0, fmt.Errorf("invalid category: %q", s)
-	}
+	return domain.ParseCategory(s)
 }
 
 func run(ctx context.Context, cfg config.Config) error {
@@ -90,8 +53,14 @@ func run(ctx context.Context, cfg config.Config) error {
 		}
 	}()
 
-	logger, _ := zap.NewProduction()
-	ctx = logctx.CtxWithLogger(ctx, logger)
+	logger, _ := logging.NewLogger(false)
+	ctx = logging.WithLogger(ctx, logger)
+	logger.Infow("starting toolkit",
+		"repo", repoPath,
+		"env", env,
+		"category", category,
+	)
+
 	model, err := tui.NewModel(
 		tui.WithRepoPath(repoPath),
 		tui.WithKubeConfig(kubeConfig),
@@ -102,6 +71,7 @@ func run(ctx context.Context, cfg config.Config) error {
 		tui.WithLoader(loader.ProductionLoader{}),
 	)
 	if err != nil {
+		logger.Errorw("failed to create toolkit model", "error", err)
 		return fmt.Errorf("failed to create toolkit model: %w", err)
 	}
 	p := tea.NewProgram(model, tea.WithAltScreen())
@@ -113,9 +83,11 @@ func run(ctx context.Context, cfg config.Config) error {
 	}()
 	select {
 	case <-ctx.Done():
+		logger.Errorw("context cancelled", "error", ctx.Err())
 		return ctx.Err()
 	case err := <-done:
 		if err != nil {
+			logger.Errorw("program error", "error", err)
 			return fmt.Errorf("alas, there's been an error: %v", err)
 		}
 	}
@@ -124,9 +96,15 @@ func run(ctx context.Context, cfg config.Config) error {
 
 func main() {
 	cfg := config.Parse()
+	if err := cfg.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
+		os.Exit(2)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, cfg); err != nil {
-		log.Fatal(err)
+		logger := logging.LoggerFromCtx(ctx)
+		logger.Errorw("fatal error", "error", err)
+		os.Exit(1)
 	}
 }

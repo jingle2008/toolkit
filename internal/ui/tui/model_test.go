@@ -10,9 +10,12 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/internal/testutil"
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 type fakeLoader struct {
@@ -133,6 +136,8 @@ func newTestModel(t *testing.T) *Model {
 	m.viewHeight = 24
 	m.contextCtx = context.Background()
 	m.refreshDisplay()
+	// Set a non-nil logger to avoid nil pointer dereference in tests
+	m.logger = logging.NewZapLogger(zap.NewNop().Sugar())
 	return m
 }
 
@@ -216,7 +221,7 @@ func TestModelUpdateBranches(t *testing.T) {
 
 func TestCenterTextReturnsCenteredText(t *testing.T) {
 	t.Parallel()
-	result := centerText("hello", 10, 3)
+	result := view.CenterText("hello", 10, 3)
 	testutil.Contains(t, result, "hello")
 	testutil.GreaterOrEqual(t, len(result), 10)
 }
@@ -348,6 +353,8 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	require.NoError(t, err)
 	m.dataset = ds
 	m.category = domain.BaseModel
+	// Set a non-nil logger to avoid nil pointer dereference in tests
+	m.logger = logging.NewZapLogger(zap.NewNop().Sugar())
 
 	// getCurrentItem should return the pointer to bm
 	got := m.getCurrentItem()
