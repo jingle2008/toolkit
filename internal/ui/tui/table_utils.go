@@ -7,7 +7,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/domain/environment"
 	"github.com/jingle2008/toolkit/internal/domain/rows"
+	"github.com/jingle2008/toolkit/internal/domain/service"
+	"github.com/jingle2008/toolkit/internal/domain/tenant"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/jingle2008/toolkit/pkg/utils"
 	"go.uber.org/zap"
@@ -15,7 +18,7 @@ import (
 
 var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *domain.AppContext, string) []table.Row{
 	domain.Tenant: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
-		tenants := rows.Tenants(dataset.Tenants, filter)
+		tenants := tenant.Filter(dataset.Tenants, filter)
 		results := make([]table.Row, 0, len(tenants))
 		for _, val := range tenants {
 			results = append(results, table.Row{
@@ -57,7 +60,7 @@ var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *d
 		return getModelArtifacts(dataset.ModelArtifacts, filter)
 	},
 	domain.Environment: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
-		envs := rows.Environments(dataset.Environments, filter)
+		envs := environment.Filter(dataset.Environments, filter)
 		results := make([]table.Row, 0, len(envs))
 		for _, val := range envs {
 			results = append(results, table.Row{
@@ -70,7 +73,7 @@ var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *d
 		return results
 	},
 	domain.ServiceTenancy: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
-		tenancies := rows.ServiceTenancies(dataset.ServiceTenancies, filter)
+		tenancies := service.Filter(dataset.ServiceTenancies, filter)
 		results := make([]table.Row, 0, len(tenancies))
 		for _, val := range tenancies {
 			results = append(results, table.Row{

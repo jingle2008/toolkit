@@ -30,6 +30,9 @@ linters:
     - gocyclo
   presets:
     - bugs
+  severity:
+    errcheck: warning
+    gocritic: warning
 issues:
   exclude-use-default: false
 

@@ -6,7 +6,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/domain/environment"
 	"github.com/jingle2008/toolkit/internal/domain/rows"
+	"github.com/jingle2008/toolkit/internal/domain/service"
+	"github.com/jingle2008/toolkit/internal/domain/tenant"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +41,7 @@ func Test_getTenants_returns_rows(t *testing.T) {
 			PropertyOverrides:        6,
 		},
 	}
-	tenantStructs := rows.Tenants(tenants, "")
+	tenantStructs := tenant.Filter(tenants, "")
 	rows := make([]table.Row, 0, len(tenantStructs))
 	for _, val := range tenantStructs {
 		rows = append(rows, table.Row{
@@ -79,7 +82,7 @@ func Test_getEnvironments_returns_rows(t *testing.T) {
 			Realm:  "realmB",
 		},
 	}
-	envStructs := rows.Environments(envs, "")
+	envStructs := environment.Filter(envs, "")
 	rows := make([]table.Row, 0, len(envStructs))
 	for _, val := range envStructs {
 		rows = append(rows, table.Row{
@@ -150,7 +153,7 @@ func Test_getServiceTenancies_returns_rows(t *testing.T) {
 			Regions:     []string{"us-ashburn-1"},
 		},
 	}
-	tenancyStructs := rows.ServiceTenancies(tenancies, "")
+	tenancyStructs := service.Filter(tenancies, "")
 	rows := make([]table.Row, 0, len(tenancyStructs))
 	for _, val := range tenancyStructs {
 		rows = append(rows, table.Row{

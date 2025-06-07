@@ -1,4 +1,4 @@
-package rows
+package tenant
 
 import (
 	"testing"
@@ -25,25 +25,25 @@ func TestGetTenants(t *testing.T) {
 	}
 
 	// No filter: all tenants returned
-	rows := Tenants(tenants, "")
+	rows := Filter(tenants, "")
 	if len(rows) != 2 {
 		t.Errorf("expected 2 rows, got %d", len(rows))
 	}
 
 	// Filter by name
-	rows = Tenants(tenants, "tenant2")
+	rows = Filter(tenants, "tenant2")
 	if len(rows) != 1 || rows[0].Name != "tenant2" {
 		t.Errorf("expected 1 row for tenant2, got %v", rows)
 	}
 
 	// Filter by tenant ID
-	rows = Tenants(tenants, "id1")
+	rows = Filter(tenants, "id1")
 	if len(rows) != 1 || len(rows[0].IDs) == 0 || rows[0].IDs[0] != "id1" {
 		t.Errorf("expected 1 row for id1, got %v", rows)
 	}
 
 	// Filter with no match
-	rows = Tenants(tenants, "doesnotexist")
+	rows = Filter(tenants, "doesnotexist")
 	if len(rows) != 0 {
 		t.Errorf("expected 0 rows for unmatched filter, got %v", rows)
 	}
