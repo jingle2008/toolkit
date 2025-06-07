@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
+	"github.com/jingle2008/toolkit/internal/fs"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -71,7 +73,7 @@ func loadOverridesDI[T models.NamedItem](
 }
 
 func loadOverrides[T models.NamedItem](dirPath string) ([]T, error) {
-	return loadOverridesDI[T](dirPath, ListFiles, LoadFile[T])
+	return loadOverridesDI(dirPath, fs.ListFiles, jsonutil.LoadFile[T])
 }
 
 func loadTenancyOverridesDI[T models.NamedItem](
@@ -216,7 +218,7 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 
 	realm := env.Realm
 	limitDefinitionPath := getConfigPath(limitsRoot, realm, limitsKey+definitionSuffix)
-	limitGroup, err := LoadFile[models.LimitDefinitionGroup](limitDefinitionPath)
+	limitGroup, err := jsonutil.LoadFile[models.LimitDefinitionGroup](limitDefinitionPath)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +226,7 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 	sortNamedItems(limitGroup.Values)
 
 	consolePropertyDefinitionPath := getConfigPath(limitsRoot, realm, consolePropertiesKey+definitionSuffix)
-	consolePropertyDefinitionGroup, err := LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)
+	consolePropertyDefinitionGroup, err := jsonutil.LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +234,7 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 	sortNamedItems(consolePropertyDefinitionGroup.Values)
 
 	propertyDefinitionPath := getConfigPath(limitsRoot, realm, propertiesKey+definitionSuffix)
-	propertyDefinitionGroup, err := LoadFile[models.PropertyDefinitionGroup](propertyDefinitionPath)
+	propertyDefinitionGroup, err := jsonutil.LoadFile[models.PropertyDefinitionGroup](propertyDefinitionPath)
 	if err != nil {
 		return nil, err
 	}

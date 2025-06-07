@@ -1,8 +1,8 @@
 /*
-Package utils provides utility functions for directory operations,
+Package fs provides utility functions for directory operations,
 such as listing files with a specific extension.
 */
-package utils
+package fs
 
 import (
 	"fmt"

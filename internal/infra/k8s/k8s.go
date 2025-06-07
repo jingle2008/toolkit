@@ -1,7 +1,7 @@
 /*
-Package utils provides helper functions for interacting with Kubernetes clusters and related resources.
+Package k8s provides helper functions for interacting with Kubernetes clusters and related resources.
 */
-package utils
+package k8s
 
 import (
 	"context"

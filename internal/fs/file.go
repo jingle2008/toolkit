@@ -1,8 +1,8 @@
 /*
-Package utils provides utility functions for secure file operations,
+Package fs provides utility functions for secure file operations,
 including path validation and extension whitelisting.
 */
-package utils
+package fs
 
 import (
 	"fmt"

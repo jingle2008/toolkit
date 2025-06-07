@@ -8,7 +8,6 @@ This package provides shared utility functions for file, directory, JSON, Terraf
 - **dir.go**: Directory listing utilities.
 - **json.go**: JSON file loading and pretty-printing.
 - **terraform.go**: Helpers for parsing and working with Terraform HCL files and model deployment metadata.
-- **k8shelper.go**: Helpers for interacting with Kubernetes clusters, including node and resource queries.
 
 ## Example Usage
 
@@ -45,7 +44,9 @@ str, err := utils.PrettyJSON(cfg)
 ### Kubernetes Helper
 
 ```go
-helper, err := utils.NewK8sHelper("kubeconfig.yaml", "my-context")
+import "github.com/jingle2008/toolkit/internal/infra/k8s"
+
+helper, err := k8s.NewK8sHelper("kubeconfig.yaml", "my-context")
 nodes, err := helper.ListGpuNodes(ctx)
 ```
 

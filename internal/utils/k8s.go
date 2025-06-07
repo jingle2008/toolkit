@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -13,7 +14,7 @@ type gpuHelper interface {
 }
 
 var helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
-	return NewK8sHelper(configFile, kubeContext)
+	return k8s.NewK8sHelper(configFile, kubeContext)
 }
 
 /*

@@ -1,4 +1,4 @@
-package utils_test
+package jsonutil
 
 import (
 	"os"
@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +17,7 @@ func TestLoadFile_JSON(t *testing.T) {
 	}
 	tmp := t.TempDir() + "/foo.json"
 	_ = os.WriteFile(tmp, []byte(`{"a":42}`), 0o600) // #nosec G306
-	val, err := utils.LoadFile[Foo](tmp)
+	val, err := LoadFile[Foo](tmp)
 	require.NoError(t, err)
 	assert.Equal(t, 42, val.A)
 }
@@ -35,7 +34,7 @@ func TestLoadFile_Success(t *testing.T) {
 	err := os.WriteFile(path, []byte(`{"a":42}`), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	result, err := utils.LoadFile[sample](path)
+	result, err := LoadFile[sample](path)
 	require.NoError(t, err)
 	assert.Equal(t, 42, result.A)
 }
@@ -48,7 +47,7 @@ func TestLoadFile_UnsupportedExt(t *testing.T) {
 	err := os.WriteFile(path, []byte("a: 1"), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	_, err = utils.LoadFile[sample](path)
+	_, err = LoadFile[sample](path)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "extension")
 }
@@ -58,7 +57,7 @@ func TestLoadFile_MissingFile(t *testing.T) {
 	type sample struct{ A int }
 	dir := t.TempDir()
 	path := dir + "/notfound.json"
-	_, err := utils.LoadFile[sample](path)
+	_, err := LoadFile[sample](path)
 	require.Error(t, err)
 }
 
@@ -69,7 +68,7 @@ func TestLoadFile_BadExt(t *testing.T) {
 	}
 	tmp := t.TempDir() + "/foo.bad"
 	_ = os.WriteFile(tmp, []byte(`{"a":42}`), 0o600) // #nosec G306
-	_, err := utils.LoadFile[Foo](tmp)
+	_, err := LoadFile[Foo](tmp)
 	require.Error(t, err)
 }
 
@@ -80,7 +79,7 @@ func TestLoadFile_BadJSON(t *testing.T) {
 	}
 	tmp := t.TempDir() + "/foo.json"
 	_ = os.WriteFile(tmp, []byte(`{notjson}`), 0o600) // #nosec G306
-	_, err := utils.LoadFile[Foo](tmp)
+	_, err := LoadFile[Foo](tmp)
 	require.Error(t, err)
 }
 
@@ -89,13 +88,13 @@ func TestPrettyJSON(t *testing.T) {
 	type Foo struct {
 		A int `json:"a"`
 	}
-	out, err := utils.PrettyJSON(Foo{A: 7})
+	out, err := PrettyJSON(Foo{A: 7})
 	require.NoError(t, err)
 	assert.Contains(t, out, `"a": 7`)
 
 	// error path: non-serializable value
 	ch := make(chan int)
-	_, err = utils.PrettyJSON(ch)
+	_, err = PrettyJSON(ch)
 	require.Error(t, err)
 }
 
@@ -107,7 +106,7 @@ func TestPrettyJSON_Success(t *testing.T) {
 		X string `json:"x"`
 		Y int    `json:"y"`
 	}{"foo", 7}
-	out, err := utils.PrettyJSON(obj)
+	out, err := PrettyJSON(obj)
 	require.NoError(t, err)
 	assert.Contains(t, out, "{\n    \"x\": \"foo\",\n    \"y\": 7\n}")
 }
@@ -115,7 +114,7 @@ func TestPrettyJSON_Success(t *testing.T) {
 func TestPrettyJSON_MarshalError(t *testing.T) {
 	t.Parallel()
 	ch := make(chan int)
-	_, err := utils.PrettyJSON(ch)
+	_, err := PrettyJSON(ch)
 	require.Error(t, err)
 }
 
@@ -126,7 +125,7 @@ func TestLoadFile_FromTestdata(t *testing.T) {
 	}
 	_, filename, _, _ := runtime.Caller(0)
 	testdataPath := filepath.Join(filepath.Dir(filename), "testdata", "sample.json")
-	val, err := utils.LoadFile[sample](testdataPath)
+	val, err := LoadFile[sample](testdataPath)
 	require.NoError(t, err)
 	assert.Equal(t, 123, val.A)
 }

@@ -11,17 +11,20 @@ This package contains shared test helpers, fake clients, and fixtures for use ac
 For Kubernetes-related tests, use the provided fake client helpers:
 
 - `NewFakeClient(objs ...runtime.Object) *fake.Clientset`: creates a fake Kubernetes client pre-loaded with objects.
-- `NewFakeKubernetesClientAdapter(clientset *fake.Clientset) TestKubernetesClient`: returns a test adapter implementing the minimal interface for K8sHelper tests.
+- `NewFakeKubernetesClientAdapter(clientset *fake.Clientset) TestKubernetesClient`: returns a test adapter implementing the minimal interface for use with `internal/infra/k8s.K8sHelper` tests.
 
 Example usage:
 
 ```go
-import "yourmodule/internal/testutil"
+import (
+    "yourmodule/internal/testutil"
+    "yourmodule/internal/infra/k8s"
+)
 
 pod := &corev1.Pod{ /* ... */ }
 client := testutil.NewFakeClient(pod)
 adapter := testutil.NewFakeKubernetesClientAdapter(client)
-// Use adapter in your K8sHelper tests as a TestKubernetesClient
+// Use adapter in your k8s.K8sHelper tests as a kubernetesClient
 ```
 
 ## Usage

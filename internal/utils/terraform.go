@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/jingle2008/toolkit/internal/fs"
 	models "github.com/jingle2008/toolkit/pkg/models"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
@@ -79,7 +80,7 @@ func getLocalAttributesDI(
 }
 
 func getLocalAttributes(dirPath string) (hclsyntax.Attributes, error) {
-	return getLocalAttributesDI(dirPath, ListFiles, updateLocalAttributes)
+	return getLocalAttributesDI(dirPath, fs.ListFiles, updateLocalAttributes)
 }
 
 func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) error {
@@ -330,14 +331,14 @@ func getServiceTenancy(object cty.Value, realm string) *models.ServiceTenancy {
 
 func loadChartValuesMap(repoPath string) (map[string]*models.ChartValues, error) {
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region/model_chart_values")
-	files, err := ListFiles(dirPath, ".yaml")
+	files, err := fs.ListFiles(dirPath, ".yaml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
 
 	result := make(map[string]*models.ChartValues)
 	for _, file := range files {
-		yamlData, err := SafeReadFile(
+		yamlData, err := fs.SafeReadFile(
 			file,
 			dirPath,
 			map[string]struct{}{".yaml": {}, ".yml": {}},

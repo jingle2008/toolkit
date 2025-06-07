@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/jingle2008/toolkit/internal/utils"
 )
 
 var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset, *domain.ToolkitContext, string) []table.Row{
@@ -102,7 +102,7 @@ It returns a slice of table.Row for items that match the filter.
 */
 func filterRows[T models.NamedFilterable](items []T, filter string, rowFn func(T) table.Row) []table.Row {
 	results := make([]table.Row, 0, len(items))
-	utils.FilterSlice(items, nil, filter, func(_ int, val T) bool {
+	collections.FilterSlice(items, nil, filter, func(_ int, val T) bool {
 		results = append(results, rowFn(val))
 		return true
 	})
@@ -172,7 +172,7 @@ getBaseModels returns table rows for a map of BaseModel, filtered by the provide
 func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 	baseModels := make([]*models.BaseModel, 0, len(m))
 	for _, model := range m {
-		if utils.IsMatch(model, filter, true) {
+		if collections.IsMatch(model, filter, true) {
 			baseModels = append(baseModels, model)
 		}
 	}
@@ -243,32 +243,32 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 
 	switch category {
 	case domain.Tenant:
-		item = utils.FindByName(dataset.Tenants, key.(string))
+		item = collections.FindByName(dataset.Tenants, key.(string))
 	case domain.LimitDefinition:
-		item = utils.FindByName(dataset.LimitDefinitionGroup.Values, key.(string))
+		item = collections.FindByName(dataset.LimitDefinitionGroup.Values, key.(string))
 	case domain.ConsolePropertyDefinition:
-		item = utils.FindByName(dataset.ConsolePropertyDefinitionGroup.Values, key.(string))
+		item = collections.FindByName(dataset.ConsolePropertyDefinitionGroup.Values, key.(string))
 	case domain.PropertyDefinition:
-		item = utils.FindByName(dataset.PropertyDefinitionGroup.Values, key.(string))
+		item = collections.FindByName(dataset.PropertyDefinitionGroup.Values, key.(string))
 	case domain.LimitTenancyOverride:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.LimitTenancyOverrideMap[k.Scope]; ok {
-			item = utils.FindByName(items, k.Name)
+			item = collections.FindByName(items, k.Name)
 		}
 	case domain.ConsolePropertyTenancyOverride:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.ConsolePropertyTenancyOverrideMap[k.Scope]; ok {
-			item = utils.FindByName(items, k.Name)
+			item = collections.FindByName(items, k.Name)
 		}
 	case domain.PropertyTenancyOverride:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.PropertyTenancyOverrideMap[k.Scope]; ok {
-			item = utils.FindByName(items, k.Name)
+			item = collections.FindByName(items, k.Name)
 		}
 	case domain.ConsolePropertyRegionalOverride:
-		item = utils.FindByName(dataset.ConsolePropertyRegionalOverrides, key.(string))
+		item = collections.FindByName(dataset.ConsolePropertyRegionalOverrides, key.(string))
 	case domain.PropertyRegionalOverride:
-		item = utils.FindByName(dataset.PropertyRegionalOverrides, key.(string))
+		item = collections.FindByName(dataset.PropertyRegionalOverrides, key.(string))
 	case domain.BaseModel:
 		k := key.(models.BaseModelKey)
 		for _, value := range dataset.BaseModelMap {
@@ -279,22 +279,22 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 			}
 		}
 	case domain.ModelArtifact:
-		item = utils.FindByName(dataset.ModelArtifacts, key.(string))
+		item = collections.FindByName(dataset.ModelArtifacts, key.(string))
 	case domain.Environment:
-		item = utils.FindByName(dataset.Environments, key.(string))
+		item = collections.FindByName(dataset.Environments, key.(string))
 	case domain.ServiceTenancy:
-		item = utils.FindByName(dataset.ServiceTenancies, key.(string))
+		item = collections.FindByName(dataset.ServiceTenancies, key.(string))
 	case domain.GpuPool:
-		item = utils.FindByName(dataset.GpuPools, key.(string))
+		item = collections.FindByName(dataset.GpuPools, key.(string))
 	case domain.GpuNode:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.GpuNodeMap[k.Scope]; ok {
-			item = utils.FindByName(items, k.Name)
+			item = collections.FindByName(items, k.Name)
 		}
 	case domain.DedicatedAICluster:
 		k := key.(models.ScopedItemKey)
 		if items, ok := dataset.DedicatedAIClusterMap[k.Scope]; ok {
-			item = utils.FindByName(items, k.Name)
+			item = collections.FindByName(items, k.Name)
 		}
 	}
 

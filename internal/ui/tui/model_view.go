@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
-	"github.com/jingle2008/toolkit/internal/utils"
 )
 
 func (m *Model) infoView() string {
@@ -62,7 +62,7 @@ func (m *Model) updateContent(width int) {
 
 	var err error
 	item := findItem(m.dataset, m.category, m.choice)
-	content, err := utils.PrettyJSON(item)
+	content, err := jsonutil.PrettyJSON(item)
 	if err != nil {
 		content = err.Error()
 	}

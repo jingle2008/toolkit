@@ -1,13 +1,15 @@
 /*
-Package utils provides utility functions for working with JSON files,
+Package jsonutil provides utility functions for working with JSON files,
 including secure file loading and pretty-printing of JSON data.
 */
-package utils
+package jsonutil
 
 import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+
+	"github.com/jingle2008/toolkit/internal/fs"
 )
 
 /*
@@ -23,7 +25,7 @@ Returns:
 func LoadFile[T any](path string) (*T, error) {
 	allowedExt := map[string]struct{}{".json": {}}
 	baseDir := filepath.Dir(path)
-	jsonData, err := SafeReadFile(path, baseDir, allowedExt)
+	jsonData, err := fs.SafeReadFile(path, baseDir, allowedExt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
