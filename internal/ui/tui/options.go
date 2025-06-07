@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/jingle2008/toolkit/internal/domain"
+	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"go.uber.org/zap"
 )
@@ -97,9 +98,9 @@ func WithRenderer(r Renderer) ModelOption {
 
 // WithLoader sets the Loader implementation for the Model.
 // The Loader interface must implement all loader interfaces (DatasetLoader, BaseModelLoader, GpuPoolLoader, GpuNodeLoader, DedicatedAIClusterLoader).
-func WithLoader(loader Loader) ModelOption {
+func WithLoader(l loader.Loader) ModelOption {
 	return func(m *Model) {
-		m.loader = loader
+		m.loader = l
 	}
 }
 

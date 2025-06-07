@@ -16,6 +16,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
+	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	logctx "github.com/jingle2008/toolkit/internal/infra/log"
 	toolkit "github.com/jingle2008/toolkit/internal/ui/tui"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -142,6 +143,7 @@ func run(ctx context.Context, cfg Config) error {
 		toolkit.WithCategory(category),
 		toolkit.WithContext(ctx),
 		toolkit.WithLogger(logger),
+		toolkit.WithLoader(loader.ProductionLoader{}),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create toolkit model: %w", err)

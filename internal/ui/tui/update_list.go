@@ -71,21 +71,21 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 
 			default:
 				if m.target == Filter {
-					cmds = append(cmds, m.debounceFilter())
+					cmds = append(cmds, DebounceFilter(m))
 				}
 			}
 		}
 
-	case dataMsg:
+	case DataMsg:
 		m.processData(msg)
 
-	case filterMsg:
-		if msg.text == m.newFilter {
-			m.filterTable(msg.text)
+	case FilterMsg:
+		if msg.Text == m.newFilter {
+			FilterTable(m, msg.Text)
 		}
 
-	case errMsg:
-		m.err = msg.err
+	case ErrMsg:
+		m.err = msg.Err
 	}
 
 	updatedTable, cmd := m.table.Update(msg)

@@ -48,12 +48,12 @@ func TestModel_loadData_Success(t *testing.T) {
 	}
 	cmd := m.loadData()
 	msg := cmd()
-	data, ok := msg.(dataMsg)
+	data, ok := msg.(DataMsg)
 	if !ok {
-		t.Fatalf("expected dataMsg, got %T", msg)
+		t.Fatalf("expected DataMsg, got %T", msg)
 	}
-	if !reflect.DeepEqual(data.data, want) {
-		t.Errorf("dataMsg.data = %v, want %v", data.data, want)
+	if !reflect.DeepEqual(data.Data, want) {
+		t.Errorf("DataMsg.Data = %v, want %v", data.Data, want)
 	}
 }
 
@@ -69,12 +69,12 @@ func TestModel_loadData_Error(t *testing.T) {
 	}
 	cmd := m.loadData()
 	msg := cmd()
-	emsg, ok := msg.(errMsg)
+	emsg, ok := msg.(ErrMsg)
 	if !ok {
-		t.Fatalf("expected errMsg, got %T", msg)
+		t.Fatalf("expected ErrMsg, got %T", msg)
 	}
-	if !errors.Is(emsg.err, fakeErr) {
-		t.Errorf("errMsg.err = %v, want %v", emsg.err, fakeErr)
+	if !errors.Is(emsg.Err, fakeErr) {
+		t.Errorf("ErrMsg.Err = %v, want %v", emsg.Err, fakeErr)
 	}
 }
 
@@ -90,12 +90,12 @@ func TestModel_Init_CallsLoadData(t *testing.T) {
 	}
 	cmd := m.Init()
 	msg := cmd()
-	data, ok := msg.(dataMsg)
+	data, ok := msg.(DataMsg)
 	if !ok {
-		t.Fatalf("expected dataMsg, got %T", msg)
+		t.Fatalf("expected DataMsg, got %T", msg)
 	}
-	if !reflect.DeepEqual(data.data, want) {
-		t.Errorf("dataMsg.data = %v, want %v", data.data, want)
+	if !reflect.DeepEqual(data.Data, want) {
+		t.Errorf("DataMsg.Data = %v, want %v", data.Data, want)
 	}
 }
 
@@ -109,6 +109,7 @@ func newTestModel(t *testing.T) *Model {
 	m, err := NewModel(
 		WithRepoPath("testrepo"),
 		WithEnvironment(env),
+		WithLoader(fakeLoader{}),
 	)
 	require.NoError(t, err)
 	m.dataset = &models.Dataset{
@@ -154,10 +155,10 @@ func TestFilterAndBackToLastState(t *testing.T) {
 	m.enterEditMode(Filter)
 	require.Equal(t, Edit, m.mode)
 	m.textInput.SetValue("tenant1")
-	cmd := m.debounceFilter()
+	cmd := DebounceFilter(m)
 	require.NotNil(t, cmd)
 	// Simulate filterMsg
-	m.filterTable("tenant1")
+	FilterTable(m, "tenant1")
 	require.Equal(t, "tenant1", m.curFilter)
 	m.backToLastState()
 	require.Equal(t, "", m.curFilter)
@@ -176,17 +177,17 @@ func TestProcessDataAndErrorMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	// processData with *models.Dataset
-	m.processData(dataMsg{data: m.dataset})
+	m.processData(DataMsg{Data: m.dataset})
 	// processData with map[string]*models.BaseModel
-	m.processData(dataMsg{data: map[string]*models.BaseModel{"bm": {}}})
+	m.processData(DataMsg{Data: map[string]*models.BaseModel{"bm": {}}})
 	// processData with []models.GpuPool
-	m.processData(dataMsg{data: []models.GpuPool{{}}})
+	m.processData(DataMsg{Data: []models.GpuPool{{}}})
 	// processData with map[string][]models.GpuNode
-	m.processData(dataMsg{data: map[string][]models.GpuNode{"pool": {}}})
+	m.processData(DataMsg{Data: map[string][]models.GpuNode{"pool": {}}})
 	// processData with map[string][]models.DedicatedAICluster
-	m.processData(dataMsg{data: map[string][]models.DedicatedAICluster{"tenant": {}}})
+	m.processData(DataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
 	// Update with errorMsg
-	m.Update(errMsg{err: nil})
+	m.Update(ErrMsg{Err: nil})
 }
 
 func TestModelUpdateBranches(t *testing.T) {
@@ -197,11 +198,11 @@ func TestModelUpdateBranches(t *testing.T) {
 	// Simulate tea.WindowSizeMsg
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	// Simulate dataMsg
-	m.Update(dataMsg{data: m.dataset})
+	m.Update(DataMsg{Data: m.dataset})
 	// Simulate filterMsg
-	m.Update(filterMsg{text: "tenant1"})
+	m.Update(FilterMsg{Text: "tenant1"})
 	// Simulate errMsg
-	m.Update(errMsg{err: nil})
+	m.Update(ErrMsg{Err: nil})
 }
 
 func TestCenterTextReturnsCenteredText(t *testing.T) {
@@ -219,6 +220,7 @@ func TestNewModelInitializesFields(t *testing.T) {
 		WithKubeConfig("/kube"),
 		WithEnvironment(env),
 		WithCategory(domain.Tenant),
+		WithLoader(fakeLoader{}),
 	)
 	require.NoError(t, err)
 	testutil.NotNil(t, m)
@@ -238,6 +240,7 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 		WithKubeConfig("/kube"),
 		WithEnvironment(env),
 		WithCategory(domain.LimitTenancyOverride),
+		WithLoader(fakeLoader{}),
 	)
 	require.NoError(t, err)
 	// Set context.Category to Tenant, m.category to LimitTenancyOverride
@@ -331,6 +334,7 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 		WithTable(&tbl),
 		WithRepoPath("testrepo"),
 		WithEnvironment(env),
+		WithLoader(fakeLoader{}),
 	)
 	require.NoError(t, err)
 	m.dataset = ds

@@ -46,3 +46,14 @@ type DedicatedAIClusterLoader interface {
 	// LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
 	LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error)
 }
+
+/*
+Loader is a composite interface that embeds all loader interfaces.
+*/
+type Loader interface {
+	DatasetLoader
+	BaseModelLoader
+	GpuPoolLoader
+	GpuNodeLoader
+	DedicatedAIClusterLoader
+}
