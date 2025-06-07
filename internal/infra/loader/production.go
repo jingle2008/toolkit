@@ -28,12 +28,12 @@ func (ProductionLoader) LoadDataset(ctx context.Context, repo string, env models
 
 // LoadBaseModels loads base models from the given repo and environment.
 func (ProductionLoader) LoadBaseModels(ctx context.Context, repo string, env models.Environment) (map[string]*models.BaseModel, error) {
-	return terraform.LoadBaseModels(ctx, repo, env) // TODO: Update utils.LoadBaseModels to accept context.Context
+	return terraform.LoadBaseModels(ctx, repo, env)
 }
 
 // LoadGpuPools loads GPU pools from the given repo and environment.
 func (ProductionLoader) LoadGpuPools(ctx context.Context, repo string, env models.Environment) ([]models.GpuPool, error) {
-	return terraform.LoadGpuPools(ctx, repo, env) // TODO: Update utils.LoadGpuPools to accept context.Context
+	return terraform.LoadGpuPools(ctx, repo, env)
 }
 
 /*

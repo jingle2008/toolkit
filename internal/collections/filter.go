@@ -131,3 +131,14 @@ func FindByName[T models.NamedItem](items []T, name string) *T {
 
 	return nil
 }
+
+// Filter returns a new slice containing only the elements for which keep returns true.
+func Filter[T any](items []T, keep func(T) bool) []T {
+	var out []T
+	for _, item := range items {
+		if keep(item) {
+			out = append(out, item)
+		}
+	}
+	return out
+}

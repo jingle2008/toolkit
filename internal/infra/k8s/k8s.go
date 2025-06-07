@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 	corev1 "k8s.io/api/core/v1"
@@ -153,7 +154,7 @@ func (k *K8sHelper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...
 
 	for _, sel := range selectors {
 		if err := updateGpuAllocations(ctx, clientset, gpuAllocationMap, sel); err != nil {
-			logging.LoggerFromCtx(ctx).Errorw("updateGpuAllocations failed", "selector", sel, "err", err)
+			logging.FromContext(ctx).Errorw("updateGpuAllocations failed", "selector", sel, "err", err)
 		}
 	}
 
@@ -410,17 +411,8 @@ func LoadDedicatedAIClusters(ctx context.Context, configFile string, env models.
 	}
 
 	for _, v := range result {
-		sortKeyedItems(v)
+		collections.SortKeyedItems(v)
 	}
 
 	return result, nil
-}
-
-/*
-sortKeyedItems sorts a slice of items implementing GetKey() by key.
-*/
-func sortKeyedItems[T interface{ GetKey() string }](items []T) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetKey() < items[j].GetKey()
-	})
 }

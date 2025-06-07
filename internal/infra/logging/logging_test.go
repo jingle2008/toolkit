@@ -22,16 +22,16 @@ func (f *fakeLogger) WithFields(kv ...any) Logger {
 func TestWithLoggerAndLoggerFromCtx(t *testing.T) {
 	ctx := context.Background()
 	l := &fakeLogger{}
-	ctx2 := WithLogger(ctx, l)
-	got := LoggerFromCtx(ctx2)
+	ctx2 := WithContext(ctx, l)
+	got := FromContext(ctx2)
 	if got != l {
-		t.Errorf("LoggerFromCtx did not return the logger set by WithLogger")
+		t.Errorf("FromContext did not return the logger set by WithContext")
 	}
 }
 
 func TestLoggerFromCtxReturnsNopIfNoneSet(t *testing.T) {
 	ctx := context.Background()
-	got := LoggerFromCtx(ctx)
+	got := FromContext(ctx)
 	got.Debugw("should not panic")
 	got.Infow("should not panic")
 	got.Errorw("should not panic")
@@ -65,19 +65,6 @@ func TestZapLoggerImplementsLogger(t *testing.T) {
 	}
 }
 
-func TestLoggerKeyType(t *testing.T) {
-	var k1, k2 loggerKey
-	if k1 != k2 {
-		t.Errorf("loggerKey should be comparable")
-	}
-}
-
-func TestLoggerFromCtx_TypeSafety(t *testing.T) {
-	ctx := context.WithValue(context.Background(), loggerKey{}, "not a logger")
-	got := LoggerFromCtx(ctx)
-	got.Debugw("should not panic")
-}
-
 func TestNewLogger_Success(t *testing.T) {
 	l, err := NewLogger(true)
 	if err != nil {
@@ -88,26 +75,22 @@ func TestNewLogger_Success(t *testing.T) {
 	}
 }
 
-func TestWithLogger_Nil(t *testing.T) {
+func TestWithContext_Nil(t *testing.T) {
 	ctx := context.Background()
-	ctx2 := WithLogger(ctx, nil)
-	got := LoggerFromCtx(ctx2)
+	ctx2 := WithContext(ctx, nil)
+	got := FromContext(ctx2)
 	if got == nil {
-		t.Errorf("LoggerFromCtx should return a logger, got nil")
+		t.Errorf("FromContext should return a logger, got nil")
 	}
 }
 
-func TestLoggerFromCtx_NilContext(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("expected panic on nil context, got none")
-		}
-	}()
-	_ = LoggerFromCtx(nil)
+func TestFromContext_NilContext(t *testing.T) {
+	got := FromContext(nil)
+	got.Debugw("should not panic")
 }
 
-func TestLoggerFromCtx_UnknownType(t *testing.T) {
-	ctx := context.WithValue(context.Background(), loggerKey{}, errors.New("not a logger"))
-	got := LoggerFromCtx(ctx)
+func TestFromContext_UnknownType(t *testing.T) {
+	ctx := context.WithValue(context.Background(), struct{}{}, errors.New("not a logger"))
+	got := FromContext(ctx)
 	got.Debugw("should not panic")
 }

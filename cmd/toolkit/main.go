@@ -54,7 +54,7 @@ func run(ctx context.Context, cfg config.Config) error {
 	}()
 
 	logger, _ := logging.NewLogger(false)
-	ctx = logging.WithLogger(ctx, logger)
+	ctx = logging.WithContext(ctx, logger)
 	logger.Infow("starting toolkit",
 		"repo", repoPath,
 		"env", env,
@@ -103,7 +103,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, cfg); err != nil {
-		logger := logging.LoggerFromCtx(ctx)
+		logger := logging.FromContext(ctx)
 		logger.Errorw("fatal error", "error", err)
 		os.Exit(1)
 	}
