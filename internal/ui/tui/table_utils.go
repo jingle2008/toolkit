@@ -16,8 +16,8 @@ import (
 	"go.uber.org/zap"
 )
 
-var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *domain.AppContext, string) []table.Row{
-	domain.Tenant: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *domain.ToolkitContext, string) []table.Row{
+	domain.Tenant: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		tenants := tenant.Filter(dataset.Tenants, filter)
 		results := make([]table.Row, 0, len(tenants))
 		for _, val := range tenants {
@@ -29,37 +29,37 @@ var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *d
 		}
 		return results
 	},
-	domain.LimitDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.LimitDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getLimitDefinitions(dataset.LimitDefinitionGroup, filter)
 	},
-	domain.ConsolePropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.ConsolePropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.ConsolePropertyDefinitionGroup.Values, filter)
 	},
-	domain.PropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.PropertyDefinition: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getPropertyDefinitions(dataset.PropertyDefinitionGroup.Values, filter)
 	},
-	domain.LimitTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+	domain.LimitTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return rows.GetScopedItems(logger, dataset.LimitTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	domain.ConsolePropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+	domain.ConsolePropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return rows.GetScopedItems(logger, dataset.ConsolePropertyTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	domain.PropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+	domain.PropertyTenancyOverride: func(logger *zap.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return rows.GetScopedItems(logger, dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter)
 	},
-	domain.ConsolePropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.ConsolePropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.ConsolePropertyRegionalOverrides, filter)
 	},
-	domain.PropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.PropertyRegionalOverride: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.PropertyRegionalOverrides, filter)
 	},
-	domain.BaseModel: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.BaseModel: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getBaseModels(dataset.BaseModelMap, filter)
 	},
-	domain.ModelArtifact: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.ModelArtifact: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getModelArtifacts(dataset.ModelArtifacts, filter)
 	},
-	domain.Environment: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.Environment: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		envs := environment.Filter(dataset.Environments, filter)
 		results := make([]table.Row, 0, len(envs))
 		for _, val := range envs {
@@ -72,7 +72,7 @@ var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *d
 		}
 		return results
 	},
-	domain.ServiceTenancy: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.ServiceTenancy: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		tenancies := service.Filter(dataset.ServiceTenancies, filter)
 		results := make([]table.Row, 0, len(tenancies))
 		for _, val := range tenancies {
@@ -86,13 +86,13 @@ var categoryHandlers = map[domain.Category]func(*zap.Logger, *models.Dataset, *d
 		}
 		return results
 	},
-	domain.GpuPool: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.AppContext, filter string) []table.Row {
+	domain.GpuPool: func(_ *zap.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getGpuPools(dataset.GpuPools, filter)
 	},
-	domain.GpuNode: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+	domain.GpuNode: func(logger *zap.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return rows.GetScopedItems(logger, dataset.GpuNodeMap, domain.GpuPool, context, filter)
 	},
-	domain.DedicatedAICluster: func(logger *zap.Logger, dataset *models.Dataset, context *domain.AppContext, filter string) []table.Row {
+	domain.DedicatedAICluster: func(logger *zap.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return rows.GetScopedItems(logger, dataset.DedicatedAIClusterMap, domain.Tenant, context, filter)
 	},
 }
@@ -112,7 +112,7 @@ func getHeaders(category domain.Category) []header {
 getTableRows returns the table rows for a given category, using the appropriate handler.
 If the context is not valid for the category, it is set to nil.
 */
-func getTableRows(logger *zap.Logger, dataset *models.Dataset, category domain.Category, context *domain.AppContext, filter string) []table.Row {
+func getTableRows(logger *zap.Logger, dataset *models.Dataset, category domain.Category, context *domain.ToolkitContext, filter string) []table.Row {
 	if context != nil && !context.Category.IsScopeOf(category) {
 		context = nil
 	}

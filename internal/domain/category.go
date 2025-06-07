@@ -3,14 +3,12 @@
 //go:generate stringer -type=Category
 package domain
 
-import "fmt"
-
 // Category represents a logical grouping for toolkit data.
 type Category int
 
 const (
-	// NumCategories is the total number of defined categories.
-	NumCategories = 16
+	// CategorySentinelLast is always the last valid category (for iteration).
+	CategorySentinelLast = DedicatedAICluster
 
 	// Tenant is a category for tenant-level data.
 	Tenant Category = iota
@@ -96,7 +94,8 @@ func (e Category) ScopedCategories() []Category {
 	case GpuPool:
 		return []Category{GpuNode}
 	default:
-		panic(fmt.Sprintf("No scoped categories for category: %s", e))
+		// Instead of panic, return nil to indicate no scoped categories.
+		return nil
 	}
 }
 
@@ -112,6 +111,7 @@ func (e Category) Definition() Category {
 	case GpuNode:
 		return GpuPool
 	default:
-		panic(fmt.Sprintf("No definition for category: %s", e))
+		// Instead of panic, return Category(-1) to indicate no definition.
+		return Category(-1)
 	}
 }

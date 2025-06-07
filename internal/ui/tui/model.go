@@ -54,8 +54,8 @@ type Model struct {
 	viewport    *viewport.Model
 	renderer    Renderer
 	loader      loader.Loader
-	reLayout    bool               // layout needs to be updated
-	context     *domain.AppContext // selected context
+	reLayout    bool                   // layout needs to be updated
+	context     *domain.ToolkitContext // selected context
 	keys        keyMap
 	help        *help.Model
 	kubeConfig  string
@@ -371,7 +371,7 @@ func (m *Model) changeCategory() tea.Cmd {
 // enterContext moves the model into a new context based on the selected row.
 func (m *Model) enterContext() tea.Cmd {
 	target := m.table.SelectedRow()[0]
-	appContext := domain.AppContext{
+	appContext := domain.ToolkitContext{
 		Category: m.category,
 		Name:     target,
 	}

@@ -61,7 +61,7 @@ func TestGetScopedItems(t *testing.T) {
 			Values:  []models.LimitRange{{Min: 1, Max: 2}},
 		}},
 	}
-	ctx := &domain.AppContext{Name: "scope1", Category: domain.Tenant}
+	ctx := &domain.ToolkitContext{Name: "scope1", Category: domain.Tenant}
 	rows := GetScopedItems(logger, m, domain.Tenant, ctx, "")
 	if len(rows) != 1 || rows[0][0] != "scope1" || rows[0][1] != "limitA" {
 		t.Errorf("unexpected GetScopedItems result: %v", rows)
@@ -167,7 +167,7 @@ func TestGetScopedItems_NilCtxAndNonMatchingCategory(t *testing.T) {
 		t.Errorf("unexpected GetScopedItems result for nil ctx: %v", rows)
 	}
 	// ctx.Category != scopeCategory
-	ctx := &domain.AppContext{Name: "scope1", Category: domain.LimitDefinition}
+	ctx := &domain.ToolkitContext{Name: "scope1", Category: domain.LimitDefinition}
 	rows2 := GetScopedItems(logger, m, domain.Tenant, ctx, "")
 	if len(rows2) != 0 {
 		t.Errorf("expected 0 rows for non-matching category, got: %v", rows2)

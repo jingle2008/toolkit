@@ -125,7 +125,7 @@ func GetScopedItems[T models.NamedFilterable](
 	logger *zap.Logger,
 	g map[string][]T,
 	scopeCategory domain.Category,
-	ctx *domain.AppContext,
+	ctx *domain.ToolkitContext,
 	filter string,
 ) []table.Row {
 	var (

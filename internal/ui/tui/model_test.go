@@ -244,7 +244,7 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 	)
 	require.NoError(t, err)
 	// Set context.Category to Tenant, m.category to LimitTenancyOverride
-	m.context = &domain.AppContext{Name: "scopeA", Category: domain.Tenant}
+	m.context = &domain.ToolkitContext{Name: "scopeA", Category: domain.Tenant}
 	m.chosen = false
 	cs := m.contextString()
 	testutil.Contains(t, cs, "LimitTenancyOverride")

@@ -27,7 +27,10 @@ linters:
     - unparam
     - dogsled
     - bodyclose
-    - gocyclo
+    - cyclop
+    - errorlint
+    - exportloopref
+    - containedctx
   presets:
     - bugs
   severity:

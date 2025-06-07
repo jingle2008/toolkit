@@ -49,7 +49,7 @@ func TestWithCategory(t *testing.T) {
 func TestWithAppContext(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	ctx := &domain.AppContext{}
+	ctx := &domain.ToolkitContext{}
 	opt := WithAppContext(ctx)
 	opt(m)
 	assert.Equal(t, ctx, m.context)

@@ -47,7 +47,7 @@ func WithCategory(category domain.Category) ModelOption {
 }
 
 // WithAppContext sets the context field.
-func WithAppContext(ctx *domain.AppContext) ModelOption {
+func WithAppContext(ctx *domain.ToolkitContext) ModelOption {
 	return func(m *Model) {
 		m.context = ctx
 	}

@@ -286,7 +286,7 @@ func Test_getTableRows_and_scoped_items(t *testing.T) {
 			},
 		},
 	}
-	rows := getTableRows(nil, dataset, domain.LimitTenancyOverride, &domain.AppContext{Name: "TenantA", Category: domain.Tenant}, "")
+	rows := getTableRows(nil, dataset, domain.LimitTenancyOverride, &domain.ToolkitContext{Name: "TenantA", Category: domain.Tenant}, "")
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, rows[0])
 
