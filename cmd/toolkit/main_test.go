@@ -1,8 +1,6 @@
 package main
 
 import (
-	"flag"
-	"os"
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/config"
@@ -64,12 +62,8 @@ func TestCategoryFromString_Invalid(t *testing.T) {
 
 func TestParseConfig_Defaults(t *testing.T) {
 	t.Parallel()
-	// Save and restore os.Args and flag.CommandLine
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-	os.Args = []string{"cmd"}
+	args := []string{"toolkit"}
 
-	// Unset all relevant env vars
 	envVars := []string{
 		"TOOLKIT_REPO_PATH", "KUBECONFIG", "TOOLKIT_ENV_TYPE",
 		"TOOLKIT_ENV_REGION", "TOOLKIT_ENV_REALM", "TOOLKIT_CATEGORY",
@@ -78,22 +72,15 @@ func TestParseConfig_Defaults(t *testing.T) {
 		t.Setenv(v, "")
 	}
 
-	// Reset flags
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-
-	cfg := config.Parse()
+	cfg := config.Parse(args)
 	if cfg.RepoPath == "" || cfg.KubeConfig == "" || cfg.EnvType == "" || cfg.EnvRegion == "" || cfg.EnvRealm == "" || cfg.Category == "" {
 		t.Errorf("config.Parse returned empty fields: %+v", cfg)
 	}
 }
 
 func TestParseConfig_EnvOverride(t *testing.T) {
-	t.Parallel()
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-	os.Args = []string{"cmd"}
+	args := []string{"toolkit"}
 
-	// Set env vars
 	t.Setenv("TOOLKIT_REPO_PATH", "/tmp/repo")
 	t.Setenv("KUBECONFIG", "/tmp/kubeconfig")
 	t.Setenv("TOOLKIT_ENV_TYPE", "prod")
@@ -101,10 +88,7 @@ func TestParseConfig_EnvOverride(t *testing.T) {
 	t.Setenv("TOOLKIT_ENV_REALM", "oc2")
 	t.Setenv("TOOLKIT_CATEGORY", "GpuNode")
 
-	// Reset flags
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
-
-	cfg := config.Parse()
+	cfg := config.Parse(args)
 	if cfg.RepoPath != "/tmp/repo" {
 		t.Errorf("RepoPath = %q, want /tmp/repo", cfg.RepoPath)
 	}

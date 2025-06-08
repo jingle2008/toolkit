@@ -41,11 +41,10 @@ func poolsConfigDir(t *testing.T, base, sub string) string {
 	return dir
 }
 
-func writeTfFile(t *testing.T, dir, name, content string) string {
+func writeTfFile(t *testing.T, dir, name, content string) {
 	path := filepath.Join(dir, name)
 	err := os.WriteFile(path, []byte(content), 0o600) // #nosec G306
 	require.NoError(t, err)
-	return path
 }
 
 func tensorrtModelsDir(t *testing.T, base string) string {

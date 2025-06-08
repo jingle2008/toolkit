@@ -23,23 +23,23 @@ type fakeLoader struct {
 	err     error
 }
 
-func (f fakeLoader) LoadDataset(ctx context.Context, repoPath string, env models.Environment) (*models.Dataset, error) {
+func (f fakeLoader) LoadDataset(_ context.Context, _ string, _ models.Environment) (*models.Dataset, error) {
 	return f.dataset, f.err
 }
-func (f fakeLoader) LoadBaseModels(ctx context.Context, repoPath string, env models.Environment) (map[string]*models.BaseModel, error) {
+func (f fakeLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environment) (map[string]*models.BaseModel, error) {
 	return map[string]*models.BaseModel{}, nil
 }
-func (f fakeLoader) LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
+func (f fakeLoader) LoadGpuPools(_ context.Context, _ string, _ models.Environment) ([]models.GpuPool, error) {
 	return nil, nil
 }
-func (f fakeLoader) LoadGpuNodes(ctx context.Context, repoPath string, env models.Environment) (map[string][]models.GpuNode, error) {
+func (f fakeLoader) LoadGpuNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GpuNode, error) {
 	return map[string][]models.GpuNode{}, nil
 }
-func (f fakeLoader) LoadDedicatedAIClusters(ctx context.Context, repoPath string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
+func (f fakeLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	return map[string][]models.DedicatedAICluster{}, nil
 }
 
-func TestModel_LoadData_TableDriven(t *testing.T) {
+func TestModel_LoadData_TableDriven(t *testing.T) { //nolint:cyclop
 	t.Parallel()
 	type testCase struct {
 		name      string

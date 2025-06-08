@@ -1,8 +1,6 @@
 package config
 
 import (
-	"flag"
-	"os"
 	"reflect"
 	"testing"
 )
@@ -47,21 +45,6 @@ func contains(s, substr string) bool {
 }
 
 func TestParseArgs_Priority(t *testing.T) {
-	// Save and restore os.Args and flag.CommandLine
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-	os.Args = []string{"cmd"}
-
-	// Set env vars
-	t.Setenv("TOOLKIT_REPO_PATH", "envrepo")
-	t.Setenv("KUBECONFIG", "envkube")
-	t.Setenv("TOOLKIT_ENV_TYPE", "envtype")
-	t.Setenv("TOOLKIT_ENV_REGION", "envregion")
-	t.Setenv("TOOLKIT_ENV_REALM", "envrealm")
-	t.Setenv("TOOLKIT_CATEGORY", "Tenant")
-
-	// Reset flags
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	args := []string{
 		"-repo", "flagrepo",
 		"-kubeconfig", "flagkube",
@@ -70,7 +53,15 @@ func TestParseArgs_Priority(t *testing.T) {
 		"-envrealm", "flagrealm",
 		"-category", "Tenant",
 	}
-	cfg := ParseArgs(args)
+
+	t.Setenv("TOOLKIT_REPO_PATH", "envrepo")
+	t.Setenv("KUBECONFIG", "envkube")
+	t.Setenv("TOOLKIT_ENV_TYPE", "envtype")
+	t.Setenv("TOOLKIT_ENV_REGION", "envregion")
+	t.Setenv("TOOLKIT_ENV_REALM", "envrealm")
+	t.Setenv("TOOLKIT_CATEGORY", "Tenant")
+
+	cfg := Parse(args)
 	if cfg.RepoPath != "flagrepo" {
 		t.Errorf("flag should override env for RepoPath, got %q", cfg.RepoPath)
 	}

@@ -26,9 +26,12 @@ import (
 
 var (
 	// ErrBaseModelMapNotResolved is returned when the base model map cannot be resolved.
-	ErrBaseModelMapNotResolved     = errors.New("base model map not resolved")
-	ErrReplicaMapNotResolved       = errors.New("replica map not resolved")
-	ErrDeprecationMapNotResolved   = errors.New("deprecation map not resolved")
+	ErrBaseModelMapNotResolved = errors.New("base model map not resolved")
+	// ErrReplicaMapNotResolved is returned when the replica map cannot be resolved.
+	ErrReplicaMapNotResolved = errors.New("replica map not resolved")
+	// ErrDeprecationMapNotResolved is returned when the deprecation map cannot be resolved.
+	ErrDeprecationMapNotResolved = errors.New("deprecation map not resolved")
+	// ErrModelArtifactMapNotResolved is returned when the model artifact map cannot be resolved.
 	ErrModelArtifactMapNotResolved = errors.New("model artifact map not resolved")
 )
 
@@ -124,10 +127,7 @@ func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 	return cty.ObjectVal(valueMap)
 }
 
-/*
-//nolint:cyclop,gocognit // Complexity is due to necessary HCL parsing and dependency resolution logic.
-*/
-func loadLocalValueMap(dirPath string, env models.Environment) (map[string]cty.Value, error) {
+func loadLocalValueMap(dirPath string, env models.Environment) (map[string]cty.Value, error) { //nolint:cyclop
 	attributes, err := getLocalAttributes(dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode HCL: %w", err)
@@ -415,7 +415,7 @@ func unmarshalYaml[T any](text *string) *T {
 LoadBaseModels loads base model definitions from the given repository path and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment) (
+func LoadBaseModels(_ context.Context, repoPath string, env models.Environment) ( //nolint:cyclop
 	map[string]*models.BaseModel, error,
 ) {
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region")
@@ -473,9 +473,7 @@ func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment
 	return baseModels, nil
 }
 
-/*
-//nolint:cyclop,gocognit // Complexity is due to necessary field mapping and capability extraction logic.
-*/
+//nolint:cyclop
 func getBaseModel(object cty.Value, enabledCaps map[string]struct{},
 	chartValues map[string]*models.ChartValues,
 ) *models.BaseModel {
@@ -546,7 +544,7 @@ func getCapability(object cty.Value, chartValues map[string]*models.ChartValues)
 LoadGpuPools loads GpuPool objects from the given repository path and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
+func LoadGpuPools(_ context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
 	var gpuPools []models.GpuPool
 
 	// self-managed pools
@@ -620,7 +618,7 @@ func loadGpuPools(dirPath, poolConfigName string, isOkeManaged bool,
 LoadModelArtifacts loads ModelArtifact objects from the given repository path and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environment) ([]models.ModelArtifact, error) {
+func LoadModelArtifacts(_ context.Context, repoPath string, env models.Environment) ([]models.ModelArtifact, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/tensorrt_models_config")
 	valueMap, err := loadLocalValueMap(dirPath, env)
 	if err != nil {

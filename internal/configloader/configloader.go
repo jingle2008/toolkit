@@ -101,7 +101,7 @@ func loadTenancyOverridesDI[T models.NamedItem](
 }
 
 func loadTenancyOverrides[T models.NamedItem](root, realm, name string) (map[string][]T, error) {
-	return loadTenancyOverridesDI[T](root, realm, name, listSubDirs, loadOverrides[T])
+	return loadTenancyOverridesDI(root, realm, name, listSubDirs, loadOverrides[T])
 }
 
 func loadRegionalOverrides[T models.NamedItem](root, realm, name string) ([]T, error) {

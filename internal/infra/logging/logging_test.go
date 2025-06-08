@@ -11,9 +11,9 @@ type fakeLogger struct {
 	fields                []any
 }
 
-func (f *fakeLogger) Debugw(msg string, kv ...any) { f.debugs++ }
-func (f *fakeLogger) Infow(msg string, kv ...any)  { f.infos++ }
-func (f *fakeLogger) Errorw(msg string, kv ...any) { f.errors++ }
+func (f *fakeLogger) Debugw(_ string, _ ...any) { f.debugs++ }
+func (f *fakeLogger) Infow(_ string, _ ...any)  { f.infos++ }
+func (f *fakeLogger) Errorw(_ string, _ ...any) { f.errors++ }
 func (f *fakeLogger) WithFields(kv ...any) Logger {
 	f.fields = append(f.fields, kv...)
 	return f
@@ -92,11 +92,13 @@ func TestWithContext_Nil(t *testing.T) {
 }
 
 func TestFromContext_NilContext(t *testing.T) {
+	t.Parallel()
 	got := FromContext(context.TODO())
 	got.Debugw("should not panic")
 }
 
 func TestFromContext_UnknownType(t *testing.T) {
+	t.Parallel()
 	type unknownKeyType struct{}
 	ctx := context.WithValue(context.Background(), unknownKeyType{}, errors.New("not a logger"))
 	got := FromContext(ctx)

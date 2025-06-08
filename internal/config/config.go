@@ -122,9 +122,9 @@ func mergeConfig(dst, src Config) Config {
 	return dst
 }
 
-// ParseArgs parses CLI flags, environment variables, and optionally a config file into a Config struct.
-// Accepts args for testability; if args is nil, uses os.Args[1:].
-func ParseArgs(args []string) Config {
+// Parse parses CLI flags, environment variables, and optionally a config file into a Config struct.
+// Accepts args for testability.
+func Parse(args []string) Config {
 	home := homedir.HomeDir()
 	defaultKube := filepath.Join(home, ".kube", "config")
 
@@ -137,10 +137,6 @@ func ParseArgs(args []string) Config {
 	envRealm := fs.String("envrealm", env("TOOLKIT_ENV_REALM", "oc1"), "Environment realm")
 	category := fs.String("category", env("TOOLKIT_CATEGORY", "Tenant"), "Toolkit category")
 
-	// If args is nil, use os.Args[1:]
-	if args == nil {
-		args = os.Args[1:]
-	}
 	_ = fs.Parse(args)
 
 	// Start with config from file if provided
@@ -166,12 +162,4 @@ func ParseArgs(args []string) Config {
 	cfg = mergeConfig(cfg, flagCfg)
 
 	return cfg
-}
-
-/*
-Parse parses CLI flags, environment variables, and optionally a config file into a Config struct.
-For backward compatibility.
-*/
-func Parse() Config {
-	return ParseArgs(nil)
 }

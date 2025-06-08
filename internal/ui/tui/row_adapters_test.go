@@ -125,7 +125,7 @@ func TestGpuNodeRow_ToRow(t *testing.T) {
 	}
 }
 
-func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
+func TestDedicatedAIClusterRow_ToRow(t *testing.T) { //nolint:cyclop
 	t.Parallel()
 	row := DedicatedAIClusterRow(models.DedicatedAICluster{
 		Name:      "dac1",

@@ -31,33 +31,32 @@ Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
 */
 type Model struct {
-	logger      logging.Logger
-	repoPath    string
-	environment models.Environment
-	viewHeight  int
-	viewWidth   int
-	dataset     *models.Dataset
-	err         error
-	table       *table.Model
-	styles      table.Styles
-	category    domain.Category
-	headers     []header
-	target      EditTarget
-	mode        StatusMode
-	textInput   *textinput.Model
-	curFilter   string
-	newFilter   string
-	chosen      bool
-	choice      models.ItemKey
-	viewport    *viewport.Model
-	renderer    view.Renderer
-	loader      loader.Loader
-	reLayout    bool                   // layout needs to be updated
-	context     *domain.ToolkitContext // selected context
-	keys        keys.KeyMap
-	help        *help.Model
-	kubeConfig  string
-	// lipgloss styles (moved from package-level for race safety)
+	logger         logging.Logger
+	repoPath       string
+	environment    models.Environment
+	viewHeight     int
+	viewWidth      int
+	dataset        *models.Dataset
+	err            error
+	table          *table.Model
+	styles         table.Styles
+	category       domain.Category
+	headers        []header
+	target         EditTarget
+	mode           StatusMode
+	textInput      *textinput.Model
+	curFilter      string
+	newFilter      string
+	chosen         bool
+	choice         models.ItemKey
+	viewport       *viewport.Model
+	renderer       view.Renderer
+	loader         loader.Loader
+	reLayout       bool                   // layout needs to be updated
+	context        *domain.ToolkitContext // selected context
+	keys           keys.KeyMap
+	help           *help.Model
+	kubeConfig     string
 	baseStyle      lipgloss.Style
 	statusNugget   lipgloss.Style
 	statusBarStyle lipgloss.Style
@@ -69,13 +68,9 @@ type Model struct {
 }
 
 /*
-categoryMap is deprecated. Use domain.ParseCategory for string-to-category conversion.
-*/
-
-/*
 NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
-func NewModel(opts ...ModelOption) (*Model, error) {
+func NewModel(opts ...ModelOption) (*Model, error) { //nolint:cyclop
 	m := &Model{
 		mode:   Normal,
 		target: None,

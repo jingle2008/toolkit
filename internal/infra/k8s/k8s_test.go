@@ -22,19 +22,19 @@ import (
 
 func TestNewK8sHelper_NilConfig(t *testing.T) {
 	t.Parallel()
-	helper, err := NewK8sHelper("", "")
+	helper, err := NewHelper("", "")
 	require.NoError(t, err)
 	assert.NotNil(t, helper)
 }
 
-func TestNewK8sHelperWithClients(t *testing.T) {
+func TestNewHelperWithClients(t *testing.T) {
 	t.Parallel()
-	helper, err := NewK8sHelper("", "")
+	helper, err := NewHelper("", "")
 	require.NoError(t, err)
 	assert.NotNil(t, helper)
 }
 
-func TestNewK8sHelper_ChangeContextError(t *testing.T) {
+func TestNewHelper_ChangeContextError(t *testing.T) {
 	t.Parallel()
 	// Create a temp file that is not a valid kubeconfig
 	tmp := ""
@@ -44,7 +44,7 @@ func TestNewK8sHelper_ChangeContextError(t *testing.T) {
 	_ = f.Close()
 	defer func() { _ = os.Remove(tmp) }()
 
-	helper, err := NewK8sHelper(tmp, "nonexistent-context")
+	helper, err := NewHelper(tmp, "nonexistent-context")
 	require.Error(t, err)
 	assert.Nil(t, helper)
 }
@@ -55,9 +55,9 @@ func TestListGpuNodesWithSelectors_Error(t *testing.T) {
 	cs.PrependReactor("*", "*", func(k8stesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("boom")
 	})
-	helper := &K8sHelper{
+	helper := &Helper{
 		clientsetFunc: func(_ *rest.Config) (kubernetesClient, error) {
-			var fakeAdapter testutil.TestKubernetesClient = testutil.NewFakeKubernetesClientAdapter(cs)
+			fakeAdapter := testutil.NewFakeKubernetesClientAdapter(cs)
 			return fakeAdapter, nil
 		},
 	}
@@ -92,7 +92,7 @@ func TestUpdateGpuAllocations(t *testing.T) {
 	}
 	fakeClient := testutil.NewFakeClient(pod)
 	allocMap := map[string]int64{"node1": 0}
-	var fakeAdapter testutil.TestKubernetesClient = testutil.NewFakeKubernetesClientAdapter(fakeClient)
+	fakeAdapter := testutil.NewFakeKubernetesClientAdapter(fakeClient)
 	err := updateGpuAllocations(context.Background(), fakeAdapter, allocMap, "app=test")
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), allocMap["node1"])
@@ -178,9 +178,9 @@ func TestListGpuNodes_FakeClient(t *testing.T) {
 		},
 	}
 	fakeClientset := testutil.NewFakeClient(node, pod)
-	helper := &K8sHelper{
+	helper := &Helper{
 		clientsetFunc: func(_ *rest.Config) (kubernetesClient, error) {
-			var fakeAdapter testutil.TestKubernetesClient = testutil.NewFakeKubernetesClientAdapter(fakeClientset)
+			fakeAdapter := testutil.NewFakeKubernetesClientAdapter(fakeClientset)
 			return fakeAdapter, nil
 		},
 		dynamicFunc: nil,
@@ -212,7 +212,7 @@ func (m *mockDynamicClient) ResourceList(_ context.Context, gvr schema.GroupVers
 
 func TestListDedicatedAIClusters(t *testing.T) {
 	t.Parallel()
-	helper := &K8sHelper{
+	helper := &Helper{
 		dynamicFunc: func(_ *rest.Config) (dynamicClient, error) {
 			return &mockDynamicClient{
 				lists: map[string]*unstructured.UnstructuredList{

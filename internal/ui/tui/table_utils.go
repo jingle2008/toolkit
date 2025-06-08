@@ -236,10 +236,9 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 }
 
 /*
-//nolint:cyclop,gocognit // Complexity is due to necessary category dispatch logic for dataset lookups.
 findItem returns the item from the dataset for a given category and key.
 */
-func findItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) interface{} {
+func findItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) interface{} { //nolint:cyclop
 	var item interface{}
 
 	switch category {

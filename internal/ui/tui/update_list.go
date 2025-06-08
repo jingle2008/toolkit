@@ -9,7 +9,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 
-func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
+func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) { //nolint:gocognit,cyclop
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 

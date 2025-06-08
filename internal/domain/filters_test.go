@@ -6,7 +6,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-func TestGetEnvironments(t *testing.T) {
+func TestGetEnvironments(t *testing.T) { //nolint:cyclop,gocognit
 	t.Parallel()
 	envs := []models.Environment{
 		{Type: "k8s", Realm: "public", Region: "us-west"},
@@ -81,7 +81,7 @@ func TestGetEnvironments(t *testing.T) {
 	}
 }
 
-func TestGetServiceTenancies(t *testing.T) {
+func TestGetServiceTenancies(t *testing.T) { //nolint:cyclop,gocognit
 	t.Parallel()
 	tenancies := []models.ServiceTenancy{
 		{
@@ -167,7 +167,7 @@ func TestGetServiceTenancies(t *testing.T) {
 	}
 }
 
-func TestGetTenants(t *testing.T) {
+func TestGetTenants(t *testing.T) { //nolint:cyclop,gocognit
 	t.Parallel()
 	tenants := []models.Tenant{
 		{

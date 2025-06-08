@@ -93,7 +93,7 @@ func run(ctx context.Context, logger logging.Logger, cfg config.Config) error {
 }
 
 func main() {
-	cfg := config.Parse()
+	cfg := config.Parse(os.Args[1:])
 	if err := cfg.Validate(); err != nil {
 		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(2)

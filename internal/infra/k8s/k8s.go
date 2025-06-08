@@ -26,10 +26,10 @@ import (
 const GPUProperty = "nvidia.com/gpu"
 
 /*
-K8sHelper provides helpers for interacting with Kubernetes clusters.
+Helper provides helpers for interacting with Kubernetes clusters.
 It manages client configuration, context switching, and provides methods for listing GPU nodes and AI clusters.
 */
-type K8sHelper struct {
+type Helper struct {
 	context    string
 	configFile string
 	config     *rest.Config
@@ -48,10 +48,10 @@ type dynamicClient interface {
 }
 
 /*
-NewK8sHelper creates a new K8sHelper using the given kubeconfig file and context.
+NewHelper creates a new Helper using the given kubeconfig file and context.
 */
-func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
-	helper := &K8sHelper{
+func NewHelper(configFile string, context string) (*Helper, error) {
+	helper := &Helper{
 		configFile:    configFile,
 		clientsetFunc: defaultKubernetesClient,
 		dynamicFunc:   defaultDynamicClient,
@@ -60,7 +60,7 @@ func NewK8sHelper(configFile string, context string) (*K8sHelper, error) {
 	if configFile != "" && context != "" {
 		err := helper.ChangeContext(context)
 		if err != nil {
-			return nil, fmt.Errorf("failed to change context in NewK8sHelper: %w", err)
+			return nil, fmt.Errorf("failed to change context in NewHelper: %w", err)
 		}
 	}
 
@@ -111,7 +111,7 @@ func (r *realDynamicClient) ResourceList(ctx context.Context, gvr schema.GroupVe
 /*
 ChangeContext switches the current context of the K8sHelper to the specified context.
 */
-func (k *K8sHelper) ChangeContext(context string) error {
+func (k *Helper) ChangeContext(context string) error {
 	if k.context == context {
 		return nil
 	}
@@ -134,7 +134,7 @@ func (k *K8sHelper) ChangeContext(context string) error {
 ListGpuNodesWithSelectors returns a list of GpuNode objects from the current Kubernetes context.
 By default, it sums allocations for three label selectors. For testability, you can override the selectors.
 */
-func (k *K8sHelper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...string) ([]models.GpuNode, error) {
+func (k *Helper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...string) ([]models.GpuNode, error) {
 	clientset, err := k.clientsetFunc(k.config)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func (k *K8sHelper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...
 }
 
 // ListGpuNodes is the production version, using all selectors.
-func (k *K8sHelper) ListGpuNodes(ctx context.Context) ([]models.GpuNode, error) {
+func (k *Helper) ListGpuNodes(ctx context.Context) ([]models.GpuNode, error) {
 	return k.ListGpuNodesWithSelectors(ctx, "app=dummy", "component=predictor", "ome.oracle.com/trainingjob")
 }
 
@@ -233,7 +233,7 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 /*
 ListDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
 */
-func (k *K8sHelper) ListDedicatedAIClusters(ctx context.Context) ([]models.DedicatedAICluster, error) {
+func (k *Helper) ListDedicatedAIClusters(ctx context.Context) ([]models.DedicatedAICluster, error) {
 	dyn, err := k.dynamicFunc(k.config)
 	if err != nil {
 		return nil, err
@@ -251,7 +251,7 @@ func (k *K8sHelper) ListDedicatedAIClusters(ctx context.Context) ([]models.Dedic
 }
 
 // listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
-func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicClient) ([]models.DedicatedAICluster, error) {
+func (k *Helper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicClient) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.oracle.com",
 		Version:  "v1alpha1",
@@ -295,7 +295,7 @@ func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicCl
 }
 
 // listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
-func (k *K8sHelper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamicClient) ([]models.DedicatedAICluster, error) {
+func (k *Helper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamicClient) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.io",
 		Version:  "v1beta1",
@@ -355,7 +355,7 @@ type gpuHelper interface {
 }
 
 var helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
-	return NewK8sHelper(configFile, kubeContext)
+	return NewHelper(configFile, kubeContext)
 }
 
 /*
