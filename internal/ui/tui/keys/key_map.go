@@ -8,7 +8,9 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 
-// keyMap holds key bindings for the toolkit UI.
+/*
+KeyMap holds key bindings for the toolkit UI.
+*/
 type KeyMap struct {
 	Help               key.Binding
 	Quit               key.Binding
@@ -23,10 +25,16 @@ type KeyMap struct {
 	Additionals        map[domain.Category][]key.Binding
 }
 
+/*
+ShortHelp returns a short list of key bindings for help display.
+*/
 func (k KeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Help, k.Quit}
 }
 
+/*
+FullHelp returns a full list of key bindings for help display.
+*/
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		k.Additionals[k.Category],
@@ -40,6 +48,9 @@ var viewModelArtifacts = key.NewBinding(
 	key.WithHelp("a", "view artifacts"),
 )
 
+/*
+Keys is the default key map for the toolkit UI.
+*/
 var Keys = KeyMap{
 	NextCategory: key.NewBinding(
 		key.WithKeys("shift+right"),
