@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"math"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -18,6 +17,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
@@ -359,26 +359,17 @@ func (m *Model) enterContext() tea.Cmd {
 		m.context = &appContext
 		return m.updateCategory(m.category.ScopedCategories()[0])
 	case m.category == domain.Environment:
-		// Defensive: check for FindByName existence
-		if m.dataset != nil && len(m.dataset.Environments) > 0 {
-			for _, env := range m.dataset.Environments {
-				// Use a string representation for matching, e.g., "type/region/realm"
-				envKey := strings.ToLower(env.Type + "/" + env.Region + "/" + env.Realm)
-				if envKey == strings.ToLower(target) {
-					if !m.environment.Equals(env) {
-						m.environment = env
-						// reset env-bounded data
-						m.dataset.BaseModelMap = nil
-						m.dataset.GpuPools = nil
-						m.dataset.GpuNodeMap = nil
-						m.dataset.DedicatedAIClusterMap = nil
-						return tea.Batch(
-							m.updateCategory(domain.BaseModel),
-						)
-					}
-					break
-				}
-			}
+		env := *collections.FindByName(m.dataset.Environments, target)
+		if !m.environment.Equals(env) {
+			m.environment = env
+			// reset env-bounded data
+			m.dataset.BaseModelMap = nil
+			m.dataset.GpuPools = nil
+			m.dataset.GpuNodeMap = nil
+			m.dataset.DedicatedAIClusterMap = nil
+			return tea.Batch(
+				m.updateCategory(domain.BaseModel),
+			)
 		}
 	default:
 		m.enterDetailView()
