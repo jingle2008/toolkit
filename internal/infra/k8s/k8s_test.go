@@ -81,7 +81,7 @@ func TestUpdateGpuAllocations(t *testing.T) {
 			Containers: []corev1.Container{
 				{Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
-						GPUProperty: *resource.NewQuantity(2, resource.DecimalSI),
+						corev1.ResourceName(GPUProperty): *resource.NewQuantity(2, resource.DecimalSI),
 					},
 				}},
 			},
@@ -100,22 +100,84 @@ func TestUpdateGpuAllocations(t *testing.T) {
 
 func TestIsNodeHealthy(t *testing.T) {
 	t.Parallel()
-	conds := []corev1.NodeCondition{
-		{Type: corev1.NodeConditionType("GpuUnhealthy"), Status: corev1.ConditionFalse},
+	tests := []struct {
+		name  string
+		conds []corev1.NodeCondition
+		want  bool
+	}{
+		{
+			name: "healthy GPU",
+			conds: []corev1.NodeCondition{
+				{Type: NodeCondGpuUnhealthy, Status: corev1.ConditionFalse},
+			},
+			want: true,
+		},
+		{
+			name: "unhealthy GPU",
+			conds: []corev1.NodeCondition{
+				{Type: NodeCondGpuUnhealthy, Status: corev1.ConditionTrue},
+			},
+			want: false,
+		},
+		{
+			name: "no GPU condition",
+			conds: []corev1.NodeCondition{
+				{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+			},
+			want: false,
+		},
+		{
+			name:  "empty conditions",
+			conds: nil,
+			want:  false,
+		},
 	}
-	assert.True(t, isNodeHealthy(conds))
-	conds[0].Status = corev1.ConditionTrue
-	assert.False(t, isNodeHealthy(conds))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isNodeHealthy(tt.conds))
+		})
+	}
 }
 
 func TestIsNodeReady(t *testing.T) {
 	t.Parallel()
-	conds := []corev1.NodeCondition{
-		{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+	tests := []struct {
+		name  string
+		conds []corev1.NodeCondition
+		want  bool
+	}{
+		{
+			name: "ready node",
+			conds: []corev1.NodeCondition{
+				{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+			},
+			want: true,
+		},
+		{
+			name: "not ready node",
+			conds: []corev1.NodeCondition{
+				{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
+			},
+			want: false,
+		},
+		{
+			name: "no ready condition",
+			conds: []corev1.NodeCondition{
+				{Type: NodeCondGpuUnhealthy, Status: corev1.ConditionFalse},
+			},
+			want: false,
+		},
+		{
+			name:  "empty conditions",
+			conds: nil,
+			want:  false,
+		},
 	}
-	assert.True(t, isNodeReady(conds))
-	conds[0].Status = corev1.ConditionFalse
-	assert.False(t, isNodeReady(conds))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isNodeReady(tt.conds))
+		})
+	}
 }
 
 func TestCalculatePodGPUs(t *testing.T) {
@@ -125,7 +187,7 @@ func TestCalculatePodGPUs(t *testing.T) {
 			Containers: []corev1.Container{
 				{Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
-						GPUProperty: *resource.NewQuantity(3, resource.DecimalSI),
+						corev1.ResourceName(GPUProperty): *resource.NewQuantity(3, resource.DecimalSI),
 					},
 				}},
 			},
@@ -147,7 +209,7 @@ func TestListGpuNodes_FakeClient(t *testing.T) {
 		},
 		Status: corev1.NodeStatus{
 			Allocatable: corev1.ResourceList{
-				GPUProperty: *resource.NewQuantity(8, resource.DecimalSI),
+				corev1.ResourceName(GPUProperty): *resource.NewQuantity(8, resource.DecimalSI),
 			},
 			Conditions: []corev1.NodeCondition{
 				{Type: corev1.NodeConditionType("GpuUnhealthy"), Status: corev1.ConditionFalse},
@@ -168,7 +230,7 @@ func TestListGpuNodes_FakeClient(t *testing.T) {
 			Containers: []corev1.Container{
 				{Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
-						GPUProperty: *resource.NewQuantity(6, resource.DecimalSI),
+						corev1.ResourceName(GPUProperty): *resource.NewQuantity(6, resource.DecimalSI),
 					},
 				}},
 			},
@@ -272,9 +334,37 @@ func TestListDedicatedAIClusters(t *testing.T) {
 
 func TestTenantIDFromLabels(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, "tid", tenantIDFromLabels(map[string]interface{}{"tenancy-id": "tid"}))
-	assert.Equal(t, "UNKNOWN_TENANCY", tenantIDFromLabels(map[string]interface{}{}))
-	assert.Equal(t, "UNKNOWN_TENANCY", tenantIDFromLabels(map[string]interface{}{"tenancy-id": 123}))
+	tests := []struct {
+		name   string
+		labels map[string]interface{}
+		want   string
+	}{
+		{
+			name:   "string tenancy-id",
+			labels: map[string]interface{}{"tenancy-id": "tid"},
+			want:   "tid",
+		},
+		{
+			name:   "missing tenancy-id",
+			labels: map[string]interface{}{},
+			want:   "UNKNOWN_TENANCY",
+		},
+		{
+			name:   "non-string tenancy-id",
+			labels: map[string]interface{}{"tenancy-id": 123},
+			want:   "UNKNOWN_TENANCY",
+		},
+		{
+			name:   "nil labels",
+			labels: nil,
+			want:   "UNKNOWN_TENANCY",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, TenantIDFromLabels(tt.labels))
+		})
+	}
 }
 
 // ---- merged from internal/utils/k8s_test.go ----

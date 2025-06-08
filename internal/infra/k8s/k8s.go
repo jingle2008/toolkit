@@ -11,8 +11,8 @@ import (
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -23,7 +23,10 @@ import (
 )
 
 // GPUProperty is the Kubernetes resource name for GPU.
-const GPUProperty = "nvidia.com/gpu"
+const GPUProperty corev1.ResourceName = "nvidia.com/gpu"
+
+// NodeCondGpuUnhealthy is the condition type for unhealthy GPU nodes.
+const NodeCondGpuUnhealthy corev1.NodeConditionType = "GpuUnhealthy"
 
 /*
 Helper provides helpers for interacting with Kubernetes clusters.
@@ -34,6 +37,8 @@ type Helper struct {
 	configFile string
 	config     *rest.Config
 
+	clientset     kubernetesClient
+	dynamic       dynamicClient
 	clientsetFunc func(*rest.Config) (kubernetesClient, error)
 	dynamicFunc   func(*rest.Config) (dynamicClient, error)
 }
@@ -131,14 +136,30 @@ func (k *Helper) ChangeContext(context string) error {
 }
 
 /*
+DefaultGPUSelectors is the default set of label selectors used to sum GPU allocations.
+*/
+var DefaultGPUSelectors = []string{
+	"app=dummy",
+	"component=predictor",
+	"ome.oracle.com/trainingjob",
+}
+
+/*
 ListGpuNodesWithSelectors returns a list of GpuNode objects from the current Kubernetes context.
-By default, it sums allocations for three label selectors. For testability, you can override the selectors.
+If no selectors are provided, DefaultGPUSelectors is used.
 */
 func (k *Helper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...string) ([]models.GpuNode, error) {
-	clientset, err := k.clientsetFunc(k.config)
-	if err != nil {
-		return nil, err
+	if len(selectors) == 0 {
+		selectors = DefaultGPUSelectors
 	}
+	var err error
+	if k.clientset == nil {
+		k.clientset, err = k.clientsetFunc(k.config)
+		if err != nil {
+			return nil, err
+		}
+	}
+	clientset := k.clientset
 
 	nodes, err := clientset.CoreV1NodesList(ctx, v1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.present=true",
@@ -152,15 +173,23 @@ func (k *Helper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...str
 		gpuAllocationMap[node.Name] = 0
 	}
 
+	eg, egCtx := errgroup.WithContext(ctx)
 	for _, sel := range selectors {
-		if err := updateGpuAllocations(ctx, clientset, gpuAllocationMap, sel); err != nil {
-			logging.FromContext(ctx).Errorw("updateGpuAllocations failed", "selector", sel, "err", err)
-		}
+		selCopy := sel
+		eg.Go(func() error {
+			err := updateGpuAllocations(egCtx, clientset, gpuAllocationMap, selCopy)
+			if err != nil {
+				logging.FromContext(egCtx).Errorw("updateGpuAllocations failed", "selector", selCopy, "err", err)
+			}
+			return nil // always return nil so all selectors run, errors are logged
+		})
 	}
+	_ = eg.Wait()
 
 	gpuNodes := make([]models.GpuNode, 0, len(nodes))
 	for _, node := range nodes {
-		allocatable, _ := node.Status.Allocatable.Name(GPUProperty, resource.DecimalSI).AsInt64()
+		allocQty := node.Status.Allocatable[GPUProperty]
+		allocatable, _ := allocQty.AsInt64()
 		gpuNodes = append(gpuNodes, models.GpuNode{
 			Name:         node.Name,
 			InstanceType: node.Labels["beta.kubernetes.io/instance-type"],
@@ -177,7 +206,7 @@ func (k *Helper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...str
 
 // ListGpuNodes is the production version, using all selectors.
 func (k *Helper) ListGpuNodes(ctx context.Context) ([]models.GpuNode, error) {
-	return k.ListGpuNodesWithSelectors(ctx, "app=dummy", "component=predictor", "ome.oracle.com/trainingjob")
+	return k.ListGpuNodesWithSelectors(ctx)
 }
 
 func updateGpuAllocations(ctx context.Context, clientset kubernetesClient,
@@ -188,7 +217,7 @@ func updateGpuAllocations(ctx context.Context, clientset kubernetesClient,
 		FieldSelector: "status.phase=Running",
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list pods in updateGpuAllocations: %w", err)
+		return fmt.Errorf("failed to list pods for selector %q in updateGpuAllocations: %w", label, err)
 	}
 
 	for _, pod := range pods {
@@ -212,7 +241,7 @@ func calculatePodGPUs(pod *corev1.Pod) int64 {
 
 func isNodeHealthy(conditions []corev1.NodeCondition) bool {
 	for _, condition := range conditions {
-		if condition.Type == corev1.NodeConditionType("GpuUnhealthy") {
+		if condition.Type == NodeCondGpuUnhealthy {
 			return condition.Status == corev1.ConditionFalse
 		}
 	}
@@ -234,10 +263,14 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 ListDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
 */
 func (k *Helper) ListDedicatedAIClusters(ctx context.Context) ([]models.DedicatedAICluster, error) {
-	dyn, err := k.dynamicFunc(k.config)
-	if err != nil {
-		return nil, err
+	var err error
+	if k.dynamic == nil {
+		k.dynamic, err = k.dynamicFunc(k.config)
+		if err != nil {
+			return nil, err
+		}
 	}
+	dyn := k.dynamic
 
 	v1Clusters, err := k.listDedicatedAIClustersV1(ctx, dyn)
 	if err != nil {
@@ -250,6 +283,24 @@ func (k *Helper) ListDedicatedAIClusters(ctx context.Context) ([]models.Dedicate
 	return append(v1Clusters, v2Clusters...), nil
 }
 
+// listDedicatedAIClustersGeneric fetches DedicatedAIClusters using a GVR and extractor.
+func listDedicatedAIClustersGeneric(
+	ctx context.Context,
+	dyn dynamicClient,
+	gvr schema.GroupVersionResource,
+	extract func(item unstructured.Unstructured) models.DedicatedAICluster,
+) ([]models.DedicatedAICluster, error) {
+	list, err := dyn.ResourceList(ctx, gvr, v1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	dacs := make([]models.DedicatedAICluster, 0, len(list.Items))
+	for _, item := range list.Items {
+		dacs = append(dacs, extract(item))
+	}
+	return dacs, nil
+}
+
 // listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
 func (k *Helper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicClient) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
@@ -257,12 +308,7 @@ func (k *Helper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicClien
 		Version:  "v1alpha1",
 		Resource: "dedicatedaiclusters",
 	}
-	list, err := dyn.ResourceList(ctx, gvr, v1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	dacs := make([]models.DedicatedAICluster, 0, len(list.Items))
-	for _, item := range list.Items {
+	return listDedicatedAIClustersGeneric(ctx, dyn, gvr, func(item unstructured.Unstructured) models.DedicatedAICluster {
 		name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
 		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
 		status, _, _ := unstructured.NestedMap(item.Object, "status")
@@ -274,7 +320,7 @@ func (k *Helper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicClien
 
 		tenantID := "missing"
 		if hasLabels {
-			tenantID = tenantIDFromLabels(labels)
+			tenantID = TenantIDFromLabels(labels)
 		}
 
 		statusStr, _ := status["status"].(string)
@@ -282,16 +328,15 @@ func (k *Helper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicClien
 			statusStr = "pending"
 		}
 
-		dacs = append(dacs, models.DedicatedAICluster{
+		return models.DedicatedAICluster{
 			Name:      name,
 			Type:      dacType,
 			UnitShape: unitShape,
 			Size:      int(size),
 			Status:    statusStr,
 			TenantID:  tenantID,
-		})
-	}
-	return dacs, nil
+		}
+	})
 }
 
 // listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
@@ -301,12 +346,7 @@ func (k *Helper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamicClien
 		Version:  "v1beta1",
 		Resource: "dedicatedaiclusters",
 	}
-	list, err := dyn.ResourceList(ctx, gvr, v1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	dacs := make([]models.DedicatedAICluster, 0, len(list.Items))
-	for _, item := range list.Items {
+	return listDedicatedAIClustersGeneric(ctx, dyn, gvr, func(item unstructured.Unstructured) models.DedicatedAICluster {
 		name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
 		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
 		status, _, _ := unstructured.NestedMap(item.Object, "status")
@@ -317,7 +357,7 @@ func (k *Helper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamicClien
 
 		tenantID := "missing"
 		if hasLabels {
-			tenantID = tenantIDFromLabels(labels)
+			tenantID = TenantIDFromLabels(labels)
 		}
 
 		dacLifecycleState, _ := status["dacLifecycleState"].(string)
@@ -326,26 +366,14 @@ func (k *Helper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamicClien
 			statusStr = "pending"
 		}
 
-		dacs = append(dacs, models.DedicatedAICluster{
+		return models.DedicatedAICluster{
 			Name:     name,
 			Profile:  profile,
 			Size:     int(count),
 			Status:   statusStr,
 			TenantID: tenantID,
-		})
-	}
-	return dacs, nil
-}
-
-func tenantIDFromLabels(labels map[string]interface{}) string {
-	value := labels["tenancy-id"]
-	if value == nil {
-		return "UNKNOWN_TENANCY"
-	}
-	if str, ok := value.(string); ok {
-		return str
-	}
-	return "UNKNOWN_TENANCY"
+		}
+	})
 }
 
 // gpuHelper interface and helperFactory for compatibility with previous utils API.
