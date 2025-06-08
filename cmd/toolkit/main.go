@@ -53,7 +53,10 @@ func run(ctx context.Context, cfg config.Config) error {
 		}
 	}()
 
-	logger, _ := logging.NewLogger(false)
+	logger, err := logging.NewLogger(false)
+	if err != nil {
+		return fmt.Errorf("failed to initialize logger: %w", err)
+	}
 	ctx = logging.WithContext(ctx, logger)
 	logger.Infow("starting toolkit",
 		"repo", repoPath,

@@ -1,12 +1,15 @@
 package config
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"errors"
-	"fmt"
+	"gopkg.in/yaml.v3"
 
 	domain "github.com/jingle2008/toolkit/internal/domain"
 	"k8s.io/client-go/util/homedir"
@@ -14,12 +17,13 @@ import (
 
 // Config holds configuration for the toolkit CLI application.
 type Config struct {
-	RepoPath   string
-	KubeConfig string
-	EnvType    string
-	EnvRegion  string
-	EnvRealm   string
-	Category   string
+	ConfigFile string `json:"config_file" yaml:"config_file"`
+	RepoPath   string `json:"repo_path" yaml:"repo_path"`
+	KubeConfig string `json:"kubeconfig" yaml:"kubeconfig"`
+	EnvType    string `json:"env_type" yaml:"env_type"`
+	EnvRegion  string `json:"env_region" yaml:"env_region"`
+	EnvRealm   string `json:"env_realm" yaml:"env_realm"`
+	Category   string `json:"category" yaml:"category"`
 }
 
 /*
@@ -61,13 +65,66 @@ func env(key, def string) string {
 	return def
 }
 
-// Parse parses CLI flags and environment variables into a Config struct.
+// loadConfigFile loads config from a YAML or JSON file.
+func loadConfigFile(path string) (Config, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return Config{}, err
+	}
+	defer f.Close()
+	var cfg Config
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".yaml", ".yml":
+		dec := yaml.NewDecoder(f)
+		if err := dec.Decode(&cfg); err != nil {
+			return Config{}, err
+		}
+	case ".json":
+		dec := json.NewDecoder(f)
+		if err := dec.Decode(&cfg); err != nil {
+			return Config{}, err
+		}
+	default:
+		return Config{}, fmt.Errorf("unsupported config file extension: %s", ext)
+	}
+	return cfg, nil
+}
+
+// mergeConfig overlays non-empty fields from src onto dst.
+func mergeConfig(dst, src Config) Config {
+	if src.ConfigFile != "" {
+		dst.ConfigFile = src.ConfigFile
+	}
+	if src.RepoPath != "" {
+		dst.RepoPath = src.RepoPath
+	}
+	if src.KubeConfig != "" {
+		dst.KubeConfig = src.KubeConfig
+	}
+	if src.EnvType != "" {
+		dst.EnvType = src.EnvType
+	}
+	if src.EnvRegion != "" {
+		dst.EnvRegion = src.EnvRegion
+	}
+	if src.EnvRealm != "" {
+		dst.EnvRealm = src.EnvRealm
+	}
+	if src.Category != "" {
+		dst.Category = src.Category
+	}
+	return dst
+}
+
+// ParseArgs parses CLI flags, environment variables, and optionally a config file into a Config struct.
 // Accepts args for testability; if args is nil, uses os.Args[1:].
 func ParseArgs(args []string) Config {
 	home := homedir.HomeDir()
 	defaultKube := filepath.Join(home, ".kube", "config")
 
 	fs := flag.NewFlagSet("toolkit", flag.ContinueOnError)
+	configFile := fs.String("config", env("TOOLKIT_CONFIG", ""), "Path to config file (YAML or JSON)")
 	repoPath := fs.String("repo", env("TOOLKIT_REPO_PATH", "/Users/jinguzha/Work/repos/genai-shepherd-flocks"), "Path to repo")
 	kubeConfig := fs.String("kubeconfig", env("KUBECONFIG", defaultKube), "Path to kubeconfig")
 	envType := fs.String("envtype", env("TOOLKIT_ENV_TYPE", "preprod"), "Environment type")
@@ -81,7 +138,19 @@ func ParseArgs(args []string) Config {
 	}
 	_ = fs.Parse(args)
 
-	return Config{
+	// Start with config from file if provided
+	var cfg Config
+	if *configFile != "" {
+		fileCfg, err := loadConfigFile(*configFile)
+		if err == nil {
+			cfg = fileCfg
+		}
+		cfg.ConfigFile = *configFile
+	}
+
+	// Overlay with flags/envs (flags take precedence)
+	flagCfg := Config{
+		ConfigFile: *configFile,
 		RepoPath:   *repoPath,
 		KubeConfig: *kubeConfig,
 		EnvType:    *envType,
@@ -89,10 +158,13 @@ func ParseArgs(args []string) Config {
 		EnvRealm:   *envRealm,
 		Category:   *category,
 	}
+	cfg = mergeConfig(cfg, flagCfg)
+
+	return cfg
 }
 
 /*
-Parse parses CLI flags and environment variables into a Config struct.
+Parse parses CLI flags, environment variables, and optionally a config file into a Config struct.
 For backward compatibility.
 */
 func Parse() Config {

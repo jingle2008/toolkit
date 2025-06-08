@@ -18,6 +18,7 @@ func (f *fakeLogger) WithFields(kv ...any) Logger {
 	f.fields = append(f.fields, kv...)
 	return f
 }
+func (f *fakeLogger) DebugEnabled() bool { return true }
 
 func TestWithLoggerAndLoggerFromCtx(t *testing.T) {
 	ctx := context.Background()

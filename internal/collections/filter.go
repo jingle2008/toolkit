@@ -132,7 +132,9 @@ func FindByName[T models.NamedItem](items []T, name string) *T {
 	return nil
 }
 
-// Filter returns a new slice containing only the elements for which keep returns true.
+/*
+Filter returns a new slice containing only the elements for which keep returns true.
+*/
 func Filter[T any](items []T, keep func(T) bool) []T {
 	var out []T
 	for _, item := range items {
@@ -141,4 +143,24 @@ func Filter[T any](items []T, keep func(T) bool) []T {
 		}
 	}
 	return out
+}
+
+/*
+Map returns a new slice by applying f to each element of items.
+*/
+func Map[T any, R any](items []T, f func(T) R) []R {
+	out := make([]R, len(items))
+	for i, item := range items {
+		out[i] = f(item)
+	}
+	return out
+}
+
+/*
+SortBy sorts the slice in place using the provided less function.
+*/
+func SortBy[T any](items []T, less func(a, b T) bool) {
+	sort.Slice(items, func(i, j int) bool {
+		return less(items[i], items[j])
+	})
 }

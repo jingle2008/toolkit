@@ -1,9 +1,52 @@
-// Package logging provides context-based logging utilities for the toolkit application.
+// Package logging provides context-based logging utilities and a generic logging interface for the toolkit application.
 package logging
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 )
+
+// Logger is an abstract logging interface for use throughout the codebase.
+type Logger interface {
+	Debugw(msg string, kv ...any)
+	Infow(msg string, kv ...any)
+	Errorw(msg string, kv ...any)
+	WithFields(kv ...any) Logger
+	DebugEnabled() bool
+}
+
+// zapLogger is an adapter that wraps a zap.SugaredLogger to implement Logger.
+type zapLogger struct {
+	s     *zap.SugaredLogger
+	debug bool
+}
+
+func (l *zapLogger) Debugw(msg string, kv ...any) {
+	l.s.Debugw(msg, kv...)
+}
+
+func (l *zapLogger) Infow(msg string, kv ...any) {
+	l.s.Infow(msg, kv...)
+}
+
+func (l *zapLogger) Errorw(msg string, kv ...any) {
+	l.s.Errorw(msg, kv...)
+}
+
+func (l *zapLogger) WithFields(kv ...any) Logger {
+	return &zapLogger{s: l.s.With(kv...), debug: l.debug}
+}
+
+func (l *zapLogger) DebugEnabled() bool {
+	return l.debug
+}
+
+// NewZapLogger returns a Logger backed by a zap.SugaredLogger.
+// The debug flag controls DebugEnabled().
+func NewZapLogger(s *zap.SugaredLogger, debug bool) Logger {
+	return &zapLogger{s: s, debug: debug}
+}
 
 // NewLogger creates a new Logger. If debug is true, uses zap.NewDevelopment, else zap.NewProduction.
 func NewLogger(debug bool) (Logger, error) {
@@ -17,5 +60,49 @@ func NewLogger(debug bool) (Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewZapLogger(zl.Sugar()), nil
+	return NewZapLogger(zl.Sugar(), debug), nil
 }
+
+// MustNewLogger creates a new Logger or panics if creation fails.
+func MustNewLogger(debug bool) Logger {
+	l, err := NewLogger(debug)
+	if err != nil {
+		panic(err)
+	}
+	return l
+}
+
+// NewNoOpLogger returns a Logger that does nothing (for tests).
+func NewNoOpLogger() Logger {
+	return noopLogger{}
+}
+
+// ---- Context propagation ----
+
+type ctxKeyLogger struct{}
+
+// WithContext returns a new context with the provided Logger attached.
+func WithContext(ctx context.Context, logger Logger) context.Context {
+	return context.WithValue(ctx, ctxKeyLogger{}, logger)
+}
+
+// FromContext retrieves the Logger from the context, or returns a no-op logger if not found.
+func FromContext(ctx context.Context) Logger {
+	if ctx == nil {
+		return noopLogger{}
+	}
+	if logger, ok := ctx.Value(ctxKeyLogger{}).(Logger); ok && logger != nil {
+		return logger
+	}
+	return noopLogger{}
+}
+
+// ---- No-op logger ----
+
+type noopLogger struct{}
+
+func (noopLogger) Debugw(string, ...any)    {}
+func (noopLogger) Infow(string, ...any)     {}
+func (noopLogger) Errorw(string, ...any)    {}
+func (noopLogger) WithFields(...any) Logger { return noopLogger{} }
+func (noopLogger) DebugEnabled() bool       { return false }

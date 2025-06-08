@@ -184,7 +184,7 @@ func (m *Model) loggerCtx() logging.Logger {
 	if m.logger != nil {
 		return m.logger
 	}
-	return logging.NewZapLogger(nil)
+	return logging.NewNoOpLogger()
 }
 
 // loadData loads the dataset for the current model.

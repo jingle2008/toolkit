@@ -1,9 +1,8 @@
 package jsonutil
 
 import (
+	_ "embed"
 	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -118,14 +117,17 @@ func TestPrettyJSON_MarshalError(t *testing.T) {
 	require.Error(t, err)
 }
 
+//go:embed testdata/sample.json
+var sampleJSON []byte
+
 func TestLoadFile_FromTestdata(t *testing.T) {
 	t.Parallel()
 	type sample struct {
 		A int `json:"a"`
 	}
-	_, filename, _, _ := runtime.Caller(0)
-	testdataPath := filepath.Join(filepath.Dir(filename), "testdata", "sample.json")
-	val, err := LoadFile[sample](testdataPath)
+	tmp := t.TempDir() + "/sample.json"
+	require.NoError(t, os.WriteFile(tmp, sampleJSON, 0o600))
+	val, err := LoadFile[sample](tmp)
 	require.NoError(t, err)
 	assert.Equal(t, 123, val.A)
 }

@@ -137,7 +137,7 @@ func newTestModel(t *testing.T) *Model {
 	m.contextCtx = context.Background()
 	m.refreshDisplay()
 	// Set a non-nil logger to avoid nil pointer dereference in tests
-	m.logger = logging.NewZapLogger(zap.NewNop().Sugar())
+	m.logger = logging.NewZapLogger(zap.NewNop().Sugar(), false)
 	return m
 }
 
@@ -354,7 +354,7 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	m.dataset = ds
 	m.category = domain.BaseModel
 	// Set a non-nil logger to avoid nil pointer dereference in tests
-	m.logger = logging.NewZapLogger(zap.NewNop().Sugar())
+	m.logger = logging.NewZapLogger(zap.NewNop().Sugar(), false)
 
 	// getCurrentItem should return the pointer to bm
 	got := m.getCurrentItem()
