@@ -15,6 +15,7 @@ func (ti testItem) GetKey() string {
 }
 
 func TestSortKeyedItems_EmptySlice(t *testing.T) {
+	t.Parallel()
 	var items []testItem
 	SortKeyedItems(items)
 	if len(items) != 0 {
@@ -23,6 +24,7 @@ func TestSortKeyedItems_EmptySlice(t *testing.T) {
 }
 
 func TestSortKeyedItems_SingleElement(t *testing.T) {
+	t.Parallel()
 	items := []testItem{{Key: "a", Value: 1}}
 	SortKeyedItems(items)
 	want := []testItem{{Key: "a", Value: 1}}
@@ -32,6 +34,7 @@ func TestSortKeyedItems_SingleElement(t *testing.T) {
 }
 
 func TestSortKeyedItems_AlreadySorted(t *testing.T) {
+	t.Parallel()
 	items := []testItem{
 		{Key: "a", Value: 1},
 		{Key: "b", Value: 2},
@@ -45,6 +48,7 @@ func TestSortKeyedItems_AlreadySorted(t *testing.T) {
 }
 
 func TestSortKeyedItems_ReverseOrder(t *testing.T) {
+	t.Parallel()
 	items := []testItem{
 		{Key: "c", Value: 3},
 		{Key: "b", Value: 2},
@@ -62,6 +66,7 @@ func TestSortKeyedItems_ReverseOrder(t *testing.T) {
 }
 
 func TestSortKeyedItems_DuplicateKeys(t *testing.T) {
+	t.Parallel()
 	items := []testItem{
 		{Key: "b", Value: 1},
 		{Key: "a", Value: 2},

@@ -14,6 +14,7 @@ func stripANSI(input string) string {
 }
 
 func TestProductionRenderer_RenderJSON_Success(t *testing.T) {
+	t.Parallel()
 	r := ProductionRenderer{}
 	data := map[string]interface{}{
 		"foo": "bar",

@@ -21,6 +21,7 @@ func (f *fakeLogger) WithFields(kv ...any) Logger {
 func (f *fakeLogger) DebugEnabled() bool { return true }
 
 func TestWithLoggerAndLoggerFromCtx(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	l := &fakeLogger{}
 	ctx2 := WithContext(ctx, l)
@@ -31,6 +32,7 @@ func TestWithLoggerAndLoggerFromCtx(t *testing.T) {
 }
 
 func TestLoggerFromCtxReturnsNopIfNoneSet(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	got := FromContext(ctx)
 	got.Debugw("should not panic")
@@ -43,6 +45,7 @@ func TestLoggerFromCtxReturnsNopIfNoneSet(t *testing.T) {
 }
 
 func TestNewLogger_Error(t *testing.T) {
+	t.Parallel()
 	// Simulate zap.NewProductionConfig() error by passing impossible config
 	// (In real code, would use monkeypatch or test build tag, but here just check no panic)
 	l, err := NewLogger(false)
@@ -52,6 +55,7 @@ func TestNewLogger_Error(t *testing.T) {
 }
 
 func TestZapLoggerImplementsLogger(t *testing.T) {
+	t.Parallel()
 	// Just ensure zapLogger implements all methods and doesn't panic
 	z, err := NewLogger(false)
 	if err != nil {
@@ -67,6 +71,7 @@ func TestZapLoggerImplementsLogger(t *testing.T) {
 }
 
 func TestNewLogger_Success(t *testing.T) {
+	t.Parallel()
 	l, err := NewLogger(true)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
@@ -77,6 +82,7 @@ func TestNewLogger_Success(t *testing.T) {
 }
 
 func TestWithContext_Nil(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	ctx2 := WithContext(ctx, nil)
 	got := FromContext(ctx2)
@@ -97,6 +103,7 @@ func TestFromContext_UnknownType(t *testing.T) {
 }
 
 func TestNewNoOpLogger(t *testing.T) {
+	t.Parallel()
 	l := NewNoOpLogger()
 	if l == nil {
 		t.Errorf("expected non-nil logger")
@@ -114,6 +121,7 @@ func TestNewNoOpLogger(t *testing.T) {
 }
 
 func TestMustNewLogger(t *testing.T) {
+	t.Parallel()
 	l := MustNewLogger(true)
 	if l == nil {
 		t.Errorf("expected non-nil logger")
