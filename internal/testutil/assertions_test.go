@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -47,4 +48,19 @@ func TestRequireNoError(t *testing.T) {
 func TestAssertPanic(t *testing.T) {
 	t.Parallel()
 	AssertPanic(t, func() { panic("should panic") })
+}
+
+func TestElementsMatch(t *testing.T) {
+	t.Parallel()
+	ElementsMatch(t, []int{1, 2, 3}, []int{3, 2, 1})
+}
+
+func TestRequireElementsMatch(t *testing.T) {
+	t.Parallel()
+	RequireElementsMatch(t, []string{"a", "b"}, []string{"b", "a"})
+}
+
+func TestRequireError(t *testing.T) {
+	t.Parallel()
+	RequireError(t, errors.New("fail"))
 }

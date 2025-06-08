@@ -95,3 +95,27 @@ func TestFromContext_UnknownType(t *testing.T) {
 	got := FromContext(ctx)
 	got.Debugw("should not panic")
 }
+
+func TestNewNoOpLogger(t *testing.T) {
+	l := NewNoOpLogger()
+	if l == nil {
+		t.Errorf("expected non-nil logger")
+	}
+	if l.DebugEnabled() {
+		t.Errorf("expected DebugEnabled to be false")
+	}
+	l.Debugw("should not panic")
+	l.Infow("should not panic")
+	l.Errorw("should not panic")
+	l2 := l.WithFields("foo", "bar")
+	if l2 == nil {
+		t.Errorf("WithFields should return a logger, got nil")
+	}
+}
+
+func TestMustNewLogger(t *testing.T) {
+	l := MustNewLogger(true)
+	if l == nil {
+		t.Errorf("expected non-nil logger")
+	}
+}
