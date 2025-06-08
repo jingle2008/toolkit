@@ -1,4 +1,6 @@
-// Package toolkit implements the view and rendering logic for the Model.
+/*
+Package tui implements the view and rendering logic for the Model.
+*/
 package tui
 
 import (

@@ -39,7 +39,7 @@ func TestLoadOverridesDI_ListFilesError(t *testing.T) {
 	_, err := loadOverridesDI(
 		"irrelevant",
 		func(string, string) ([]string, error) { return nil, os.ErrNotExist },
-		func(string) (*mockNamedItem, error) { return nil, nil },
+		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireError(t, err)
 }
@@ -60,7 +60,7 @@ func TestLoadOverridesDI_Empty(t *testing.T) {
 	out, err := loadOverridesDI(
 		"irrelevant",
 		func(string, string) ([]string, error) { return []string{}, nil },
-		func(string) (*mockNamedItem, error) { return nil, nil },
+		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireNoError(t, err)
 	testutil.Equal(t, 0, len(out))
@@ -110,7 +110,7 @@ func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
 	_, err := loadTenancyOverridesDI(
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return nil, os.ErrNotExist },
-		func(string) ([]mockNamedItem, error) { return nil, nil },
+		func(string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireError(t, err)
 }
@@ -131,7 +131,7 @@ func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
 	_, err := loadTenancyOverridesDI(
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return []string{}, nil },
-		func(string) ([]mockNamedItem, error) { return nil, nil },
+		func(string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireNoError(t, err)
 }

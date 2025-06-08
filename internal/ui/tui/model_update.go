@@ -4,8 +4,7 @@ Package tui implements the update/reduce logic for the Model.
 package tui
 
 import (
-	"strings"
-	"time"
+	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -26,13 +25,13 @@ func (r loadRequest) Run() tea.Msg {
 	)
 	switch r.category {
 	case domain.BaseModel:
-		data, err = r.model.loader.LoadBaseModels(r.model.contextCtx, r.model.repoPath, r.model.environment)
+		data, err = r.model.loader.LoadBaseModels(context.Background(), r.model.repoPath, r.model.environment)
 	case domain.GpuPool:
-		data, err = r.model.loader.LoadGpuPools(r.model.contextCtx, r.model.repoPath, r.model.environment)
+		data, err = r.model.loader.LoadGpuPools(context.Background(), r.model.repoPath, r.model.environment)
 	case domain.GpuNode:
-		data, err = r.model.loader.LoadGpuNodes(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
+		data, err = r.model.loader.LoadGpuNodes(context.Background(), r.model.kubeConfig, r.model.environment)
 	case domain.DedicatedAICluster:
-		data, err = r.model.loader.LoadDedicatedAIClusters(r.model.contextCtx, r.model.kubeConfig, r.model.environment)
+		data, err = r.model.loader.LoadDedicatedAIClusters(context.Background(), r.model.kubeConfig, r.model.environment)
 	}
 	if err != nil {
 		return ErrMsg{Err: err}
@@ -123,12 +122,4 @@ func (m *Model) exitEditMode(resetInput bool) {
 	}
 	m.textInput.Blur()
 	m.table.Focus()
-}
-
-func (m *Model) debounceFilter() tea.Cmd {
-	m.newFilter = strings.ToLower(m.textInput.Value())
-
-	return tea.Tick(100*time.Millisecond, func(_ time.Time) tea.Msg {
-		return FilterMsg{Text: m.newFilter}
-	})
 }

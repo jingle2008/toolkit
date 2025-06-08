@@ -1,3 +1,6 @@
+/*
+Package terraform provides functions for loading and managing infrastructure data from Terraform state and configuration.
+*/
 package terraform
 
 import (
@@ -22,6 +25,7 @@ import (
 )
 
 var (
+	// ErrBaseModelMapNotResolved is returned when the base model map cannot be resolved.
 	ErrBaseModelMapNotResolved     = errors.New("base model map not resolved")
 	ErrReplicaMapNotResolved       = errors.New("replica map not resolved")
 	ErrDeprecationMapNotResolved   = errors.New("deprecation map not resolved")
@@ -120,6 +124,9 @@ func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 	return cty.ObjectVal(valueMap)
 }
 
+/*
+//nolint:cyclop,gocognit // Complexity is due to necessary HCL parsing and dependency resolution logic.
+*/
 func loadLocalValueMap(dirPath string, env models.Environment) (map[string]cty.Value, error) {
 	attributes, err := getLocalAttributes(dirPath)
 	if err != nil {
@@ -466,6 +473,9 @@ func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment
 	return baseModels, nil
 }
 
+/*
+//nolint:cyclop,gocognit // Complexity is due to necessary field mapping and capability extraction logic.
+*/
 func getBaseModel(object cty.Value, enabledCaps map[string]struct{},
 	chartValues map[string]*models.ChartValues,
 ) *models.BaseModel {

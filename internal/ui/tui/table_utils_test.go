@@ -146,6 +146,7 @@ func Test_rowGenerationFunctions_tableDriven(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			rows := tc.rowsFunc()
 			assert.Len(t, rows, len(tc.want))
 			for i, wantRow := range tc.want {

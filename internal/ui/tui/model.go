@@ -27,17 +27,10 @@ import (
 )
 
 /*
-Loader is a composite interface that embeds all loader interfaces.
-*/
-// Loader interface is now imported from internal/infra/loader.
-
-/*
 Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
 */
-
 type Model struct {
-	contextCtx  context.Context
 	logger      logging.Logger
 	repoPath    string
 	environment models.Environment
@@ -190,9 +183,9 @@ func (m *Model) loggerCtx() logging.Logger {
 }
 
 // loadData loads the dataset for the current model.
-func (m *Model) loadData() tea.Cmd {
+func (m *Model) loadData(ctx context.Context) tea.Cmd {
 	return func() tea.Msg {
-		dataset, err := m.loader.LoadDataset(m.contextCtx, m.repoPath, m.environment)
+		dataset, err := m.loader.LoadDataset(ctx, m.repoPath, m.environment)
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
@@ -202,7 +195,7 @@ func (m *Model) loadData() tea.Cmd {
 
 // Init implements the tea.Model interface and initializes the model.
 func (m *Model) Init() tea.Cmd {
-	return m.loadData()
+	return m.loadData(context.Background())
 }
 
 // --- Methods moved from model_update.go ---

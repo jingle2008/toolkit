@@ -35,6 +35,7 @@ func TestCategoryFromString_Valid(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
 			got, err := categoryFromString(tt.input)
 			if err != nil {
 				t.Errorf("categoryFromString(%q) returned error: %v", tt.input, err)
@@ -52,6 +53,7 @@ func TestCategoryFromString_Invalid(t *testing.T) {
 	for _, input := range invalidInputs {
 		input := input
 		t.Run(input, func(t *testing.T) {
+			t.Parallel()
 			_, err := categoryFromString(input)
 			if err == nil {
 				t.Errorf("expected error for invalid category %q, got nil", input)
@@ -61,6 +63,7 @@ func TestCategoryFromString_Invalid(t *testing.T) {
 }
 
 func TestParseConfig_Defaults(t *testing.T) {
+	t.Parallel()
 	// Save and restore os.Args and flag.CommandLine
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
@@ -85,6 +88,7 @@ func TestParseConfig_Defaults(t *testing.T) {
 }
 
 func TestParseConfig_EnvOverride(t *testing.T) {
+	t.Parallel()
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 	os.Args = []string{"cmd"}

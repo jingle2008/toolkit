@@ -55,6 +55,7 @@ func TestGetEnvironments(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			rows := FilterEnvironments(envs, tc.filter)
 			if len(rows) != tc.wantCount {
 				t.Errorf("filter %q: expected %d rows, got %d", tc.filter, tc.wantCount, len(rows))
@@ -140,6 +141,7 @@ func TestGetServiceTenancies(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			rows := FilterServiceTenancies(tenancies, tc.filter)
 			if len(rows) != tc.wantCount {
 				t.Errorf("filter %q: expected %d rows, got %d", tc.filter, tc.wantCount, len(rows))
@@ -217,6 +219,7 @@ func TestGetTenants(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			rows := FilterTenants(tenants, tc.filter)
 			if len(rows) != tc.wantCount {
 				t.Errorf("filter %q: expected %d rows, got %d", tc.filter, tc.wantCount, len(rows))

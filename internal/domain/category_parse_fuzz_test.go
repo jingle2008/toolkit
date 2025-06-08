@@ -10,7 +10,7 @@ func FuzzParseCategory(f *testing.F) {
 	for _, s := range seeds {
 		f.Add(s)
 	}
-	f.Fuzz(func(t *testing.T, input string) {
+	f.Fuzz(func(_ *testing.T, input string) {
 		_, _ = ParseCategory(input)
 	})
 }

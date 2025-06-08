@@ -1,3 +1,6 @@
+/*
+Package configloader provides utilities for loading configuration overrides and tenancy data for the toolkit.
+*/
 package configloader
 
 import (

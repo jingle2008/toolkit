@@ -12,7 +12,7 @@ func FuzzPrettyJSON(f *testing.F) {
 	f.Add(`true`)
 	f.Add(`null`)
 	f.Add(`[1,2,3]`)
-	f.Fuzz(func(t *testing.T, input string) {
+	f.Fuzz(func(_ *testing.T, input string) {
 		var v any
 		_ = json.Unmarshal([]byte(input), &v)
 		_, _ = PrettyJSON(v)

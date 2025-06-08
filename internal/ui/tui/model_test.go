@@ -73,6 +73,7 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			m, err := NewModel(
 				WithRepoPath("repo"),
 				WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
@@ -85,7 +86,7 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 			if tc.init {
 				msg = m.Init()()
 			} else {
-				msg = m.loadData()()
+				msg = m.loadData(context.Background())()
 			}
 			switch {
 			case tc.wantData != nil:
@@ -134,7 +135,6 @@ func newTestModel(t *testing.T) *Model {
 	}
 	m.viewWidth = 80
 	m.viewHeight = 24
-	m.contextCtx = context.Background()
 	m.refreshDisplay()
 	// Set a non-nil logger to avoid nil pointer dereference in tests
 	m.logger = logging.NewZapLogger(zap.NewNop().Sugar(), false)
@@ -364,7 +364,6 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	// Set category to BaseModel and call with a matching key
 	m.category = domain.BaseModel
 	m.keys.ViewModelArtifacts = m.keys.Quit // Use any key that matches
-	m.contextCtx = context.Background()
 	keyStr := ""
 	if len(m.keys.Quit.Keys()) > 0 {
 		keyStr = m.keys.Quit.Keys()[0]

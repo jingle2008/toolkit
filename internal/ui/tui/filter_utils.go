@@ -1,4 +1,6 @@
-// Package toolkit provides filter and debounce utilities for the TUI model.
+/*
+Package tui provides filter and debounce utilities for the TUI model.
+*/
 package tui
 
 import (

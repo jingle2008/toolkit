@@ -65,7 +65,6 @@ func run(ctx context.Context, logger logging.Logger, cfg config.Config) error {
 		tui.WithKubeConfig(kubeConfig),
 		tui.WithEnvironment(env),
 		tui.WithCategory(category),
-		tui.WithContext(ctx),
 		tui.WithLogger(logger),
 		tui.WithLoader(loader.ProductionLoader{}),
 	)
@@ -87,7 +86,7 @@ func run(ctx context.Context, logger logging.Logger, cfg config.Config) error {
 	case err := <-done:
 		if err != nil {
 			logger.Errorw("program error", "error", err)
-			return fmt.Errorf("alas, there's been an error: %v", err)
+			return fmt.Errorf("alas, there's been an error: %w", err)
 		}
 	}
 	return nil
@@ -105,10 +104,10 @@ func main() {
 		os.Exit(2)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 	ctx = logging.WithContext(ctx, logger)
 	if err := run(ctx, logger, cfg); err != nil {
 		logger.Errorw("fatal error", "error", err)
+		stop()
 		os.Exit(1)
 	}
 }

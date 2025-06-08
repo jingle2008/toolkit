@@ -261,7 +261,7 @@ func (k *K8sHelper) listDedicatedAIClustersV1(ctx context.Context, dyn dynamicCl
 	if err != nil {
 		return nil, err
 	}
-	var dacs []models.DedicatedAICluster
+	dacs := make([]models.DedicatedAICluster, 0, len(list.Items))
 	for _, item := range list.Items {
 		name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
 		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
@@ -305,7 +305,7 @@ func (k *K8sHelper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamicCl
 	if err != nil {
 		return nil, err
 	}
-	var dacs []models.DedicatedAICluster
+	dacs := make([]models.DedicatedAICluster, 0, len(list.Items))
 	for _, item := range list.Items {
 		name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
 		spec, _, _ := unstructured.NestedMap(item.Object, "spec")

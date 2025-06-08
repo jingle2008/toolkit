@@ -1,3 +1,6 @@
+/*
+Package config provides configuration loading and validation for the toolkit CLI application.
+*/
 package config
 
 import (
@@ -67,11 +70,13 @@ func env(key, def string) string {
 
 // loadConfigFile loads config from a YAML or JSON file.
 func loadConfigFile(path string) (Config, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304
 	if err != nil {
 		return Config{}, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	var cfg Config
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {

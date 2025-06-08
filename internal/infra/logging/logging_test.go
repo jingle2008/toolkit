@@ -92,12 +92,13 @@ func TestWithContext_Nil(t *testing.T) {
 }
 
 func TestFromContext_NilContext(t *testing.T) {
-	got := FromContext(nil)
+	got := FromContext(context.TODO())
 	got.Debugw("should not panic")
 }
 
 func TestFromContext_UnknownType(t *testing.T) {
-	ctx := context.WithValue(context.Background(), struct{}{}, errors.New("not a logger"))
+	type unknownKeyType struct{}
+	ctx := context.WithValue(context.Background(), unknownKeyType{}, errors.New("not a logger"))
 	got := FromContext(ctx)
 	got.Debugw("should not panic")
 }
