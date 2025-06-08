@@ -15,6 +15,10 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) { //nolint:gocog
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.loading {
+			break
+		}
+
 		if msg.String() == "esc" {
 			m.backToLastState()
 		}

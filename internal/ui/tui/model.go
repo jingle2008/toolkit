@@ -65,6 +65,7 @@ type Model struct {
 	statusText     lipgloss.Style
 	infoKeyStyle   lipgloss.Style
 	infoValueStyle lipgloss.Style
+	loading        bool // true if data is being loaded
 }
 
 /*
@@ -72,9 +73,10 @@ NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
 func NewModel(opts ...ModelOption) (*Model, error) { //nolint:cyclop
 	m := &Model{
-		mode:   Normal,
-		target: None,
-		keys:   keys.Keys,
+		mode:    Normal,
+		target:  None,
+		keys:    keys.Keys,
+		loading: true, // start in loading state
 	}
 
 	// Initialize all style fields (previously package-level)
@@ -177,8 +179,16 @@ func (m *Model) loggerCtx() logging.Logger {
 	return logging.NewNoOpLogger()
 }
 
+/*
+SetLoading sets the loading flag to true.
+*/
+func (m *Model) SetLoading() {
+	m.loading = true
+}
+
 // loadData loads the dataset for the current model.
 func (m *Model) loadData(ctx context.Context) tea.Cmd {
+	m.SetLoading()
 	return func() tea.Msg {
 		dataset, err := m.loader.LoadDataset(ctx, m.repoPath, m.environment)
 		if err != nil {
@@ -265,6 +275,7 @@ func (m *Model) processData(msg DataMsg) {
 	case map[string][]models.DedicatedAICluster:
 		m.dataset.SetDedicatedAIClusterMap(data)
 	}
+	m.loading = false
 	m.refreshDisplay()
 }
 
@@ -299,18 +310,22 @@ func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 	switch m.category {
 	case domain.BaseModel:
 		if m.dataset.BaseModelMap == nil {
+			m.loading = true
 			return loadRequest{category: domain.BaseModel, model: m}.Run
 		}
 	case domain.GpuPool:
 		if m.dataset.GpuPools == nil {
+			m.loading = true
 			return loadRequest{category: domain.GpuPool, model: m}.Run
 		}
 	case domain.GpuNode:
 		if m.dataset.GpuNodeMap == nil {
+			m.loading = true
 			return loadRequest{category: domain.GpuNode, model: m}.Run
 		}
 	case domain.DedicatedAICluster:
 		if m.dataset.DedicatedAIClusterMap == nil {
+			m.loading = true
 			return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
 		}
 	}

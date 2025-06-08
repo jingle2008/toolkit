@@ -79,6 +79,9 @@ func (m *Model) updateContent(width int) {
 
 // View renders the current state of the model as a string.
 func (m *Model) View() string {
+	if m.loading {
+		return view.CenterText("Loading …", m.viewWidth, m.viewHeight)
+	}
 	if m.err != nil {
 		return view.CenterText(m.err.Error(), m.viewWidth, m.viewHeight)
 	}
