@@ -1,4 +1,6 @@
-// Package toolkit implements the update/reduce logic for the Model.
+/*
+Package tui implements the update/reduce logic for the Model.
+*/
 package tui
 
 import (

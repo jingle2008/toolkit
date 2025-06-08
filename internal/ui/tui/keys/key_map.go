@@ -1,3 +1,6 @@
+/*
+Package keys defines key bindings and key maps for the TUI.
+*/
 package keys
 
 import (

@@ -1,4 +1,6 @@
-// Package toolkit defines message types for the TUI model.
+/*
+Package tui defines message types for the TUI model.
+*/
 package tui
 
 // errMsg is a message containing an error.

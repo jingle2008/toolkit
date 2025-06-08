@@ -1,3 +1,6 @@
+/*
+Package view provides utilities for rendering and centering text in the TUI.
+*/
 package view
 
 import (
