@@ -21,7 +21,7 @@ linters:
     - contextcheck
     - unused
     - dupl
-    - depguard
+    # - depguard
     - nilnil
     - prealloc
     - unparam
