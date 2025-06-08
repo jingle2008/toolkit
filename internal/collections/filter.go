@@ -164,3 +164,18 @@ func SortBy[T any](items []T, less func(a, b T) bool) {
 		return less(items[i], items[j])
 	})
 }
+
+/*
+Unique returns a new slice with duplicate elements removed, preserving order.
+*/
+func Unique[T comparable](items []T) []T {
+	seen := make(map[T]struct{})
+	var out []T
+	for _, item := range items {
+		if _, ok := seen[item]; !ok {
+			seen[item] = struct{}{}
+			out = append(out, item)
+		}
+	}
+	return out
+}

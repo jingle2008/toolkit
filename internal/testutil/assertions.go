@@ -39,6 +39,14 @@ func Contains(t *testing.T, s, contains interface{}, msgAndArgs ...interface{}) 
 	return assert.Contains(t, s, contains, msgAndArgs...)
 }
 
+/*
+ElementsMatch asserts that two slices contain the same elements, regardless of order.
+*/
+func ElementsMatch(t *testing.T, listA, listB interface{}, msgAndArgs ...interface{}) bool {
+	t.Helper()
+	return assert.ElementsMatch(t, listA, listB, msgAndArgs...)
+}
+
 // GreaterOrEqual asserts that e1 is greater than or equal to e2.
 func GreaterOrEqual(t *testing.T, e1, e2 interface{}, msgAndArgs ...interface{}) bool {
 	t.Helper()
@@ -59,10 +67,26 @@ func RequireNotNil(t *testing.T, object interface{}, msgAndArgs ...interface{}) 
 	require.NotNil(t, object, msgAndArgs...)
 }
 
+/*
+RequireElementsMatch requires that two slices contain the same elements, regardless of order.
+*/
+func RequireElementsMatch(t *testing.T, listA, listB interface{}, msgAndArgs ...interface{}) {
+	t.Helper()
+	require.ElementsMatch(t, listA, listB, msgAndArgs...)
+}
+
 // RequireContains requires that s contains contains.
 func RequireContains(t *testing.T, s, contains interface{}, msgAndArgs ...interface{}) {
 	t.Helper()
 	require.Contains(t, s, contains, msgAndArgs...)
+}
+
+/*
+RequireError requires that err is not nil.
+*/
+func RequireError(t *testing.T, err error, msgAndArgs ...interface{}) {
+	t.Helper()
+	require.Error(t, err, msgAndArgs...)
 }
 
 // RequireNoError requires that err is nil.

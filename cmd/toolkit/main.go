@@ -24,7 +24,7 @@ func categoryFromString(s string) (domain.Category, error) {
 	return domain.ParseCategory(s)
 }
 
-func run(ctx context.Context, cfg config.Config) error {
+func run(ctx context.Context, logger logging.Logger, cfg config.Config) error {
 	category, err := categoryFromString(cfg.Category)
 	if err != nil {
 		valid := []string{
@@ -53,10 +53,6 @@ func run(ctx context.Context, cfg config.Config) error {
 		}
 	}()
 
-	logger, err := logging.NewLogger(false)
-	if err != nil {
-		return fmt.Errorf("failed to initialize logger: %w", err)
-	}
 	ctx = logging.WithContext(ctx, logger)
 	logger.Infow("starting toolkit",
 		"repo", repoPath,
@@ -103,10 +99,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(2)
 	}
+	logger, err := logging.NewLogger(false)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize logger: %v\n", err)
+		os.Exit(2)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := run(ctx, cfg); err != nil {
-		logger := logging.FromContext(ctx)
+	ctx = logging.WithContext(ctx, logger)
+	if err := run(ctx, logger, cfg); err != nil {
 		logger.Errorw("fatal error", "error", err)
 		os.Exit(1)
 	}
