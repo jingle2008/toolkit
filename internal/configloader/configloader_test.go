@@ -322,3 +322,134 @@ func TestLoadDataset_ContextCanceled(t *testing.T) {
 	_, err := LoadDataset(ctx, "/no/such/path", models.Environment{})
 	testutil.RequireError(t, err)
 }
+
+func TestLoadDataset_Success(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	realm := "oc1"
+	// Create minimal limit definition group
+	limitDefDir := filepath.Join(tmp, "shared_modules/limits")
+	_ = os.MkdirAll(limitDefDir, 0o750)
+	// Create required subdirs for definitions
+	limitDefSubdir := filepath.Join(limitDefDir, "limits_definitions")
+	consoleDefSubdir := filepath.Join(limitDefDir, "console_properties_definitions")
+	propDefSubdir := filepath.Join(limitDefDir, "properties_definitions")
+	_ = os.MkdirAll(limitDefSubdir, 0o750)
+	_ = os.MkdirAll(consoleDefSubdir, 0o750)
+	_ = os.MkdirAll(propDefSubdir, 0o750)
+	// Create required shep_targets directory
+	_ = os.MkdirAll(filepath.Join(tmp, "shared_modules/shep_targets"), 0o750)
+	// Create required tensorrt_models_config directory and minimal .tf file
+	tensorrtDir := filepath.Join(tmp, "shared_modules/tensorrt_models_config")
+	_ = os.MkdirAll(tensorrtDir, 0o750)
+	tensorrtTfContent := `
+locals {
+  all_models_map = {}
+}
+`
+	_ = os.WriteFile(filepath.Join(tensorrtDir, "models.tf"), []byte(tensorrtTfContent), 0o600)
+	limitDef := models.LimitDefinitionGroup{Values: []models.LimitDefinition{{Name: "foo"}}}
+	limitDefPath := filepath.Join(limitDefSubdir, realm+"_limits_definition.json")
+	data, _ := json.Marshal(limitDef)
+	_ = os.WriteFile(limitDefPath, data, 0o600)
+
+	// Console property definition group
+	consoleDef := models.ConsolePropertyDefinitionGroup{Values: []models.ConsolePropertyDefinition{{Name: "bar"}}}
+	consoleDefPath := filepath.Join(consoleDefSubdir, realm+"_console_properties_definition.json")
+	data, _ = json.Marshal(consoleDef)
+	_ = os.WriteFile(consoleDefPath, data, 0o600)
+
+	// Property definition group
+	propDef := models.PropertyDefinitionGroup{Values: []models.PropertyDefinition{{Name: "baz"}}}
+	propDefPath := filepath.Join(propDefSubdir, realm+"_properties_definition.json")
+	data, _ = json.Marshal(propDef)
+	_ = os.WriteFile(propDefPath, data, 0o600)
+
+	// Tenancy overrides
+	limitTenancyDir := filepath.Join(limitDefDir, "limits_tenancy_overrides", "regional_values", realm, "tenant1")
+	consoleTenancyDir := filepath.Join(limitDefDir, "console_properties_tenancy_overrides", "regional_values", realm, "tenant1")
+	propTenancyDir := filepath.Join(limitDefDir, "properties_tenancy_overrides", "regional_values", realm, "tenant1")
+	_ = os.MkdirAll(limitTenancyDir, 0o750)
+	_ = os.MkdirAll(consoleTenancyDir, 0o750)
+	_ = os.MkdirAll(propTenancyDir, 0o750)
+	limitOverride := models.LimitTenancyOverride{TenantID: "tenant1"}
+	limitOverridePath := filepath.Join(limitTenancyDir, "limits_tenancy_overrides.json")
+	data, _ = json.Marshal(limitOverride)
+	_ = os.WriteFile(limitOverridePath, data, 0o600)
+	consoleOverride := models.ConsolePropertyTenancyOverride{TenantID: "tenant1"}
+	consoleOverridePath := filepath.Join(consoleTenancyDir, "console_properties_tenancy_overrides.json")
+	data, _ = json.Marshal(consoleOverride)
+	_ = os.WriteFile(consoleOverridePath, data, 0o600)
+	propOverride := models.PropertyTenancyOverride{Tag: "tenant1"}
+	propOverridePath := filepath.Join(propTenancyDir, "properties_tenancy_overrides.json")
+	data, _ = json.Marshal(propOverride)
+	_ = os.WriteFile(propOverridePath, data, 0o600)
+
+	// Regional overrides
+	consoleRegOverrideDir := filepath.Join(limitDefDir, "console_properties_regional_overrides", "regional_values", realm)
+	propRegOverrideDir := filepath.Join(limitDefDir, "properties_regional_overrides", "regional_values", realm)
+	_ = os.MkdirAll(consoleRegOverrideDir, 0o750)
+	_ = os.MkdirAll(propRegOverrideDir, 0o750)
+	consoleRegOverride := models.ConsolePropertyRegionalOverride{Name: "cpr"}
+	consoleRegOverridePath := filepath.Join(consoleRegOverrideDir, "console_properties_regional_overrides.json")
+	data, _ = json.Marshal(consoleRegOverride)
+	_ = os.WriteFile(consoleRegOverridePath, data, 0o600)
+	propRegOverride := models.PropertyRegionalOverride{Name: "pr"}
+	propRegOverridePath := filepath.Join(propRegOverrideDir, "properties_regional_overrides.json")
+	data, _ = json.Marshal(propRegOverride)
+	_ = os.WriteFile(propRegOverridePath, data, 0o600)
+
+	// Environment
+	env := models.Environment{Type: "dev", Region: "us-phx-1", Realm: realm}
+
+	// Create minimal .tf file for ServiceTenancy in shep_targets
+	shepTargetsDir := filepath.Join(tmp, "shared_modules/shep_targets")
+	_ = os.MkdirAll(shepTargetsDir, 0o750)
+	tfContent := `
+locals {
+  oc1_t1 = {
+    tenancy_name = "t1"
+    home_region = "us-phx-1"
+    regions = ["us-phx-1"]
+    environment = "dev"
+  }
+}
+`
+	tfPath := filepath.Join(shepTargetsDir, "tenancy.tf")
+	_ = os.WriteFile(tfPath, []byte(tfContent), 0o600)
+
+	ds, err := LoadDataset(context.Background(), tmp, env)
+	testutil.RequireNoError(t, err)
+	testutil.Equal(t, "foo", ds.LimitDefinitionGroup.Values[0].Name)
+	testutil.Equal(t, "bar", ds.ConsolePropertyDefinitionGroup.Values[0].Name)
+	testutil.Equal(t, "baz", ds.PropertyDefinitionGroup.Values[0].Name)
+	testutil.Equal(t, "tenant1", ds.Tenants[0].Name)
+	testutil.Equal(t, "cpr", ds.ConsolePropertyRegionalOverrides[0].Name)
+	testutil.Equal(t, "pr", ds.PropertyRegionalOverrides[0].Name)
+}
+
+func TestValidateEnvironment_Success(t *testing.T) {
+	t.Parallel()
+	env := models.Environment{Region: "us-phx-1"}
+	all := []models.Environment{{Region: "us-phx-1"}, {Region: "us-ashburn-1"}}
+	err := validateEnvironment(env, all)
+	testutil.RequireNoError(t, err)
+}
+
+func TestLoadDefinitionGroups_Error(t *testing.T) {
+	t.Parallel()
+	_, _, _, err := loadDefinitionGroups("/no/such/path", "realm") //nolint:dogsled // we only need err
+	testutil.RequireError(t, err)
+}
+
+func TestBuildTenantMap_Error(t *testing.T) {
+	t.Parallel()
+	_, _, _, _, err := buildTenantMap("/no/such/path", "realm") //nolint:dogsled // we only need err
+	testutil.RequireError(t, err)
+}
+
+func TestLoadRegionalOverridesGroups_Error(t *testing.T) {
+	t.Parallel()
+	_, _, err := loadRegionalOverridesGroups("/no/such/path", "realm")
+	testutil.RequireError(t, err)
+}

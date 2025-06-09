@@ -8,12 +8,14 @@ import (
 	"context"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/internal/testutil"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -364,4 +366,81 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	}
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
 	m.handleAdditionalKeys(msg)
+}
+
+func TestModel_Init(t *testing.T) {
+	t.Parallel()
+	m, err := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithLoader(fakeLoader{}),
+	)
+	assert.NoError(t, err)
+	cmd := m.Init()
+	assert.NotNil(t, cmd)
+}
+
+func TestModel_updateColumns(t *testing.T) {
+	t.Parallel()
+	m, _ := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithLoader(fakeLoader{}),
+	)
+	m.table.SetWidth(80)
+	m.category = domain.BaseModel
+	m.updateColumns()
+	assert.NotEmpty(t, m.headers)
+}
+
+func TestModel_updateCategory(t *testing.T) {
+	t.Parallel()
+	m, _ := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithLoader(fakeLoader{}),
+	)
+	m.dataset = &models.Dataset{}
+	cmd := m.updateCategory(domain.BaseModel)
+	assert.NotNil(t, cmd)
+}
+
+func TestModel_changeCategory(t *testing.T) {
+	t.Parallel()
+	m, _ := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithLoader(fakeLoader{}),
+	)
+	m.dataset = &models.Dataset{
+		BaseModelMap:          map[string]*models.BaseModel{},
+		GpuPools:              []models.GpuPool{},
+		GpuNodeMap:            map[string][]models.GpuNode{},
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{},
+	}
+	ti := textinput.New()
+	ti.SetValue("BaseModel")
+	m.textInput = &ti
+	cmd := m.changeCategory()
+	assert.NotNil(t, cmd)
+}
+
+func TestModel_enterContext(t *testing.T) {
+	t.Parallel()
+	m, _ := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithLoader(fakeLoader{}),
+	)
+	m.table.SetColumns([]table.Column{{Title: "Region", Width: 10}})
+	m.table.SetRows([]table.Row{{"dev-UNKNOWN"}})
+	m.category = domain.Environment
+	m.dataset = &models.Dataset{
+		Environments: []models.Environment{
+			{Type: "dev", Region: "us-phx-1", Realm: "oc1"},
+		},
+	}
+	cmd := m.enterContext()
+	// It is valid for cmd to be nil if no update is needed; just ensure no panic
+	_ = cmd
 }

@@ -138,6 +138,50 @@ func TestFilterMap_AllFilteredOut(t *testing.T) {
 	assert.Empty(t, out)
 }
 
+func TestFilterMap_WithKey(t *testing.T) {
+	t.Parallel()
+	m := map[string][]testStruct{
+		"a": {{"foo", "bar"}, {"baz", "qux"}},
+		"b": {{"quux", "corge"}},
+	}
+	key := "a"
+	out := FilterMap(m, &key, nil, "", func(k string, item testStruct) string {
+		return k + ":" + item.name
+	})
+	assert.Equal(t, []string{"a:foo", "a:baz"}, out)
+}
+
+func TestFilterMap_WithKeyNotFound(t *testing.T) {
+	t.Parallel()
+	m := map[string][]testStruct{
+		"a": {{"foo", "bar"}},
+	}
+	key := "b"
+	out := FilterMap(m, &key, nil, "", func(k string, item testStruct) string { return k + ":" + item.name })
+	assert.Empty(t, out)
+}
+
+func TestFilterMap_WithKeyAndName(t *testing.T) {
+	t.Parallel()
+	m := map[string][]testStruct{
+		"a": {{"foo", "bar"}, {"baz", "qux"}},
+	}
+	key := "a"
+	name := "baz"
+	out := FilterMap(m, &key, &name, "", func(_ string, item testStruct) string { return item.name })
+	assert.Equal(t, []string{"baz"}, out)
+}
+
+func TestFilterMap_WithKeyAndFilter(t *testing.T) {
+	t.Parallel()
+	m := map[string][]testStruct{
+		"a": {{"foo", "bar"}, {"baz", "qux"}},
+	}
+	key := "a"
+	out := FilterMap(m, &key, nil, "qux", func(_ string, item testStruct) string { return item.name })
+	assert.Equal(t, []string{"baz"}, out)
+}
+
 func TestFindByName_EmptySlice(t *testing.T) {
 	t.Parallel()
 	var items []testStruct
@@ -166,4 +210,50 @@ func BenchmarkFilterSlice(b *testing.B) {
 			return true
 		})
 	}
+}
+
+// --- Coverage for generic utilities ---
+
+func TestFilter_Generic(t *testing.T) {
+	t.Parallel()
+	ints := []int{1, 2, 3, 4, 5}
+	evens := Filter(ints, func(i int) bool { return i%2 == 0 })
+	assert.Equal(t, []int{2, 4}, evens)
+
+	strs := []string{"a", "bb", "ccc"}
+	long := Filter(strs, func(s string) bool { return len(s) > 1 })
+	assert.Equal(t, []string{"bb", "ccc"}, long)
+}
+
+func TestMap_Generic(t *testing.T) {
+	t.Parallel()
+	ints := []int{1, 2, 3}
+	strs := Map(ints, func(i int) string { return string(rune('a' + i - 1)) })
+	assert.Equal(t, []string{"a", "b", "c"}, strs)
+
+	squares := Map(ints, func(i int) int { return i * i })
+	assert.Equal(t, []int{1, 4, 9}, squares)
+}
+
+func TestSortBy_Generic(t *testing.T) {
+	t.Parallel()
+	ints := []int{5, 2, 4, 1, 3}
+	SortBy(ints, func(a, b int) bool { return a < b })
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, ints)
+
+	type pair struct{ a, b int }
+	pairs := []pair{{2, 3}, {1, 5}, {2, 1}}
+	SortBy(pairs, func(x, y pair) bool { return x.a < y.a || (x.a == y.a && x.b < y.b) })
+	assert.Equal(t, []pair{{1, 5}, {2, 1}, {2, 3}}, pairs)
+}
+
+func TestUnique_Generic(t *testing.T) {
+	t.Parallel()
+	ints := []int{1, 2, 2, 3, 1, 4}
+	uniq := Unique(ints)
+	assert.Equal(t, []int{1, 2, 3, 4}, uniq)
+
+	strs := []string{"a", "b", "a", "c", "b"}
+	uniqStrs := Unique(strs)
+	assert.Equal(t, []string{"a", "b", "c"}, uniqStrs)
 }
