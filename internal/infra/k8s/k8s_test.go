@@ -66,6 +66,37 @@ func TestListGpuNodesWithSelectors_Error(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestListGpuNodesWithSelectors_EmptySelector(t *testing.T) {
+	t.Parallel()
+	cs := testutil.NewFakeClient()
+	helper := &Helper{
+		clientsetFunc: func(_ *rest.Config) (kubernetesClient, error) {
+			fakeAdapter := testutil.NewFakeKubernetesClientAdapter(cs)
+			return fakeAdapter, nil
+		},
+	}
+	helper.config = &rest.Config{}
+	_, err := helper.ListGpuNodesWithSelectors(context.Background(), "")
+	assert.NoError(t, err)
+}
+
+func TestListGpuNodesWithSelectors_PermissionDenied(t *testing.T) {
+	t.Parallel()
+	cs := testutil.NewFakeClient()
+	cs.PrependReactor("*", "*", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("forbidden")
+	})
+	helper := &Helper{
+		clientsetFunc: func(_ *rest.Config) (kubernetesClient, error) {
+			fakeAdapter := testutil.NewFakeKubernetesClientAdapter(cs)
+			return fakeAdapter, nil
+		},
+	}
+	helper.config = &rest.Config{}
+	_, err := helper.ListGpuNodesWithSelectors(context.Background(), "app=forbidden")
+	assert.Error(t, err)
+}
+
 func TestUpdateGpuAllocations(t *testing.T) {
 	t.Parallel()
 	pod := &corev1.Pod{

@@ -99,6 +99,59 @@ func TestFilterMap_Empty(t *testing.T) {
 	assert.Empty(t, out)
 }
 
+// Additional edge-case tests for coverage
+func TestFilterSlice_AllFilteredOut(t *testing.T) {
+	t.Parallel()
+	items := []testStruct{{"foo", "bar"}, {"baz", "qux"}}
+	var out []testStruct
+	FilterSlice(items, nil, "notfound", func(_ int, item testStruct) bool {
+		out = append(out, item)
+		return true
+	})
+	assert.Empty(t, out)
+}
+
+func TestFilterSlice_NilPredicate(t *testing.T) {
+	t.Parallel()
+	items := []testStruct{{"foo", "bar"}}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("expected panic with nil predicate")
+		}
+	}()
+	FilterSlice(items, nil, "", nil)
+}
+
+func TestFilterMap_NilMap(t *testing.T) {
+	t.Parallel()
+	var m map[string][]testStruct
+	out := FilterMap(m, nil, nil, "", func(_ string, item testStruct) testStruct { return item })
+	assert.Empty(t, out)
+}
+
+func TestFilterMap_AllFilteredOut(t *testing.T) {
+	t.Parallel()
+	m := map[string][]testStruct{
+		"a": {{"foo", "bar"}},
+	}
+	out := FilterMap(m, nil, nil, "notfound", func(_ string, item testStruct) testStruct { return item })
+	assert.Empty(t, out)
+}
+
+func TestFindByName_EmptySlice(t *testing.T) {
+	t.Parallel()
+	var items []testStruct
+	ptr := FindByName(items, "foo")
+	assert.Nil(t, ptr)
+}
+
+func TestIsMatch_EmptyFields(t *testing.T) {
+	t.Parallel()
+	item := testStruct{"", ""}
+	assert.False(t, IsMatch(item, "foo", false))
+	assert.True(t, IsMatch(item, "", false)) // empty filter should match
+}
+
 func BenchmarkFilterSlice(b *testing.B) {
 	items := make([]testStruct, 1000)
 	for i := 0; i < 1000; i++ {

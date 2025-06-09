@@ -314,3 +314,11 @@ func TestLoadDataset_Error(t *testing.T) {
 	_, err := LoadDataset(context.Background(), "/no/such/path", models.Environment{})
 	testutil.RequireError(t, err)
 }
+
+func TestLoadDataset_ContextCanceled(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := LoadDataset(ctx, "/no/such/path", models.Environment{})
+	testutil.RequireError(t, err)
+}

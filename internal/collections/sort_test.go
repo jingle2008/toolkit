@@ -82,3 +82,30 @@ func TestSortKeyedItems_DuplicateKeys(t *testing.T) {
 		t.Errorf("expected %v, got %v", want, items)
 	}
 }
+
+func TestSortKeyedItems_Stability(t *testing.T) {
+	t.Parallel()
+	items := []testItem{
+		{Key: "a", Value: 1},
+		{Key: "a", Value: 2},
+		{Key: "b", Value: 3},
+	}
+	want := []testItem{
+		{Key: "a", Value: 1},
+		{Key: "a", Value: 2},
+		{Key: "b", Value: 3},
+	}
+	SortKeyedItems(items)
+	if !reflect.DeepEqual(items, want) {
+		t.Errorf("expected stable sort, got %v", items)
+	}
+}
+
+func TestSortKeyedItems_NilSlice(t *testing.T) {
+	t.Parallel()
+	var items []testItem
+	SortKeyedItems(items)
+	if len(items) != 0 {
+		t.Errorf("expected empty slice, got %v", items)
+	}
+}
