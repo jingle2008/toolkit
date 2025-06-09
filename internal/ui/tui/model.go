@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -66,6 +67,9 @@ type Model struct {
 	infoKeyStyle   lipgloss.Style
 	infoValueStyle lipgloss.Style
 	loading        bool // true if data is being loaded
+
+	// Spinner for loading screen
+	loadingSpinner spinner.Model
 }
 
 /*
@@ -77,6 +81,10 @@ func NewModel(opts ...ModelOption) (*Model, error) { //nolint:cyclop
 		target:  None,
 		keys:    keys.Keys,
 		loading: true, // start in loading state
+		loadingSpinner: spinner.New(
+			spinner.WithSpinner(spinner.Points),
+			spinner.WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("205"))),
+		),
 	}
 
 	// Initialize all style fields (previously package-level)
@@ -179,16 +187,9 @@ func (m *Model) loggerCtx() logging.Logger {
 	return logging.NewNoOpLogger()
 }
 
-/*
-SetLoading sets the loading flag to true.
-*/
-func (m *Model) SetLoading() {
-	m.loading = true
-}
-
 // loadData loads the dataset for the current model.
 func (m *Model) loadData(ctx context.Context) tea.Cmd {
-	m.SetLoading()
+	m.loading = true
 	return func() tea.Msg {
 		dataset, err := m.loader.LoadDataset(ctx, m.repoPath, m.environment)
 		if err != nil {
@@ -200,7 +201,10 @@ func (m *Model) loadData(ctx context.Context) tea.Cmd {
 
 // Init implements the tea.Model interface and initializes the model.
 func (m *Model) Init() tea.Cmd {
-	return m.loadData(context.Background())
+	return tea.Sequence(
+		m.loadingSpinner.Tick,
+		m.loadData(context.Background()),
+	)
 }
 
 // --- Methods moved from model_update.go ---

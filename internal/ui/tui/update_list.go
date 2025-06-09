@@ -5,6 +5,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
 )
@@ -98,6 +99,11 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) { //nolint:gocog
 
 	case ErrMsg:
 		m.err = msg.Err
+
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.loadingSpinner, cmd = m.loadingSpinner.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	updatedTable, cmd := m.table.Update(msg)
