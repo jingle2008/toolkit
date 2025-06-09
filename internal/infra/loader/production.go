@@ -41,7 +41,11 @@ LoadGpuNodes loads GPU nodes from the given kube config and environment.
 Implements the Loader interface but is not yet migrated.
 */
 func (ProductionLoader) LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error) {
-	return k8s.LoadGpuNodes(ctx, kubeCfg, env)
+	helper, err := k8s.NewHelper(kubeCfg, env.GetKubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.LoadGpuNodes(ctx, helper)
 }
 
 /*
@@ -49,5 +53,9 @@ LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config a
 Implements the Loader interface but is not yet migrated.
 */
 func (ProductionLoader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	return k8s.LoadDedicatedAIClusters(ctx, kubeCfg, env)
+	helper, err := k8s.NewHelper(kubeCfg, env.GetKubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.LoadDedicatedAIClusters(ctx, helper)
 }

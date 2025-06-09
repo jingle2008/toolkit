@@ -376,27 +376,18 @@ func (k *Helper) listDedicatedAIClustersV2(ctx context.Context, dyn dynamicClien
 	})
 }
 
-// gpuHelper interface and helperFactory for compatibility with previous utils API.
-type gpuHelper interface {
+/*
+GpuNodeLister is an interface for listing GPU nodes.
+*/
+type GpuNodeLister interface {
 	ListGpuNodes(ctx context.Context) ([]models.GpuNode, error)
-	ListDedicatedAIClusters(ctx context.Context) ([]models.DedicatedAICluster, error)
-}
-
-var helperFactory = func(configFile, kubeContext string) (gpuHelper, error) {
-	return NewHelper(configFile, kubeContext)
 }
 
 /*
-LoadGpuNodes loads GPU node information from the given config file and environment.
-Now accepts context.Context as the first parameter.
+LoadGpuNodes loads GPU node information using the provided GpuNodeLister.
 */
-func LoadGpuNodes(ctx context.Context, configFile string, env models.Environment) (map[string][]models.GpuNode, error) {
-	k8sHelper, err := helperFactory(configFile, env.GetKubeContext())
-	if err != nil {
-		return nil, err
-	}
-
-	nodes, err := k8sHelper.ListGpuNodes(ctx)
+func LoadGpuNodes(ctx context.Context, lister GpuNodeLister) (map[string][]models.GpuNode, error) {
+	nodes, err := lister.ListGpuNodes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -419,16 +410,17 @@ func LoadGpuNodes(ctx context.Context, configFile string, env models.Environment
 }
 
 /*
-LoadDedicatedAIClusters loads DedicatedAICluster information from the given config file and environment.
-Now accepts context.Context as the first parameter.
+DedicatedAIClusterLister is an interface for listing DedicatedAIClusters.
 */
-func LoadDedicatedAIClusters(ctx context.Context, configFile string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	k8sHelper, err := helperFactory(configFile, env.GetKubeContext())
-	if err != nil {
-		return nil, err
-	}
+type DedicatedAIClusterLister interface {
+	ListDedicatedAIClusters(ctx context.Context) ([]models.DedicatedAICluster, error)
+}
 
-	dacs, err := k8sHelper.ListDedicatedAIClusters(ctx)
+/*
+LoadDedicatedAIClusters loads DedicatedAICluster information using the provided DedicatedAIClusterLister.
+*/
+func LoadDedicatedAIClusters(ctx context.Context, lister DedicatedAIClusterLister) (map[string][]models.DedicatedAICluster, error) {
+	dacs, err := lister.ListDedicatedAIClusters(ctx)
 	if err != nil {
 		return nil, err
 	}

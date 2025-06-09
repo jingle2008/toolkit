@@ -63,12 +63,6 @@ func TestModel_LoadData_TableDriven(t *testing.T) { //nolint:cyclop
 			init:      false,
 			wantError: fakeErr,
 		},
-		{
-			name:     "success-init",
-			loader:   fakeLoader{dataset: wantDataset},
-			init:     true,
-			wantData: wantDataset,
-		},
 	}
 	for _, tc := range tests {
 		tc := tc

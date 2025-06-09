@@ -60,7 +60,7 @@ func TestCategoryFromString_Invalid(t *testing.T) {
 	}
 }
 
-func TestParseConfig_Defaults(t *testing.T) {
+func TestParseConfig_Defaults(t *testing.T) { //nolint:paralleltest
 	args := []string{"toolkit"}
 
 	envVars := []string{
