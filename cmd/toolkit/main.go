@@ -5,10 +5,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
+	"path/filepath"
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,23 +19,18 @@ import (
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	tui "github.com/jingle2008/toolkit/internal/ui/tui"
 	"github.com/jingle2008/toolkit/pkg/models"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"k8s.io/client-go/util/homedir"
 )
 
-func categoryFromString(s string) (domain.Category, error) {
-	return domain.ParseCategory(s)
-}
+var (
+	version = "dev" // set via -ldflags "-X main.version=$(git describe --tags)"
+	cfgFile string
+)
 
-func run(ctx context.Context, logger logging.Logger, cfg config.Config) error {
-	category, err := categoryFromString(cfg.Category)
-	if err != nil {
-		valid := []string{
-			"Tenant", "LimitDefinition", "ConsolePropertyDefinition", "PropertyDefinition",
-			"LimitTenancyOverride", "ConsolePropertyTenancyOverride", "PropertyTenancyOverride",
-			"ConsolePropertyRegionalOverride", "PropertyRegionalOverride", "BaseModel", "ModelArtifact",
-			"Environment", "ServiceTenancy", "GpuPool", "GpuNode", "DedicatedAICluster",
-		}
-		return fmt.Errorf("invalid category %q. Valid categories are: %s", cfg.Category, strings.Join(valid, ", "))
-	}
+func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config) error {
+	category, _ := domain.ParseCategory(cfg.Category)
 	env := models.Environment{
 		Type:   cfg.EnvType,
 		Region: cfg.EnvRegion,
@@ -93,21 +89,71 @@ func run(ctx context.Context, logger logging.Logger, cfg config.Config) error {
 }
 
 func main() {
-	cfg := config.Parse(os.Args[1:])
-	if err := cfg.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
-		os.Exit(2)
+	var rootCmd = &cobra.Command{
+		Use:   "toolkit",
+		Short: "Toolkit CLI",
+		Long:  "Toolkit CLI for managing and visualizing infrastructure and configuration.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			// Bind all flags to viper
+			_ = viper.BindPFlags(cmd.Flags())
+			_ = viper.BindPFlags(cmd.PersistentFlags())
+
+			// Set env prefix and automatic env
+			viper.SetEnvPrefix("toolkit")
+			viper.AutomaticEnv()
+
+			// Read config file if provided
+			if cfgFile != "" {
+				viper.SetConfigFile(cfgFile)
+				if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("failed to read config file: %w", err)
+				}
+			}
+
+			// Unmarshal config
+			var cfg config.Config
+			if err := viper.Unmarshal(&cfg); err != nil {
+				return fmt.Errorf("failed to unmarshal config: %w", err)
+			}
+			if err := cfg.Validate(); err != nil {
+				return fmt.Errorf("failed to validate config: %w", err)
+			}
+			logger, err := logging.NewLogger(false)
+			if err != nil {
+				return fmt.Errorf("failed to initialize logger: %w", err)
+			}
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			if err := runToolkit(ctx, logger, cfg); err != nil {
+				logger.Errorw("fatal error", "error", err)
+				os.Exit(1)
+			}
+			return nil
+		},
 	}
-	logger, err := logging.NewLogger(false)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to initialize logger: %v\n", err)
-		os.Exit(2)
+
+	home := homedir.HomeDir()
+	defaultKube := filepath.Join(home, ".kube", "config")
+	defaultConfig := filepath.Join(home, ".config", "toolkit", "config.yaml")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", defaultConfig, "Path to config file (YAML or JSON)")
+	rootCmd.PersistentFlags().String("repo_path", "", "Path to the repository")
+	rootCmd.PersistentFlags().String("env_type", "", "Environment type (e.g. dev, prod)")
+	rootCmd.PersistentFlags().String("env_region", "", "Environment region")
+	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
+	rootCmd.PersistentFlags().String("category", "", "Category to display")
+	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
+
+	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
+
+	rootCmd.PreRun = func(cmd *cobra.Command, _ []string) {
+		showVersion, _ := cmd.Flags().GetBool("version")
+		if showVersion {
+			fmt.Println(version)
+			os.Exit(0)
+		}
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	ctx = logging.WithContext(ctx, logger)
-	if err := run(ctx, logger, cfg); err != nil {
-		logger.Errorw("fatal error", "error", err)
-		stop()
+
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }

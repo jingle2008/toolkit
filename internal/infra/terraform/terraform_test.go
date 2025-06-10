@@ -70,7 +70,7 @@ func writeTempFile(t *testing.T, dir, name, content string) string {
 
 func TestGetLocalAttributes_Error(t *testing.T) {
 	t.Parallel()
-	_, err := getLocalAttributes("/no/such/dir")
+	_, err := getLocalAttributes(context.Background(), "/no/such/dir")
 	assert.Error(t, err)
 }
 
@@ -183,7 +183,7 @@ func TestGetServiceTenancy(t *testing.T) {
 
 func TestLoadChartValuesMap_Error(t *testing.T) {
 	t.Parallel()
-	_, err := loadChartValuesMap("/no/such/dir")
+	_, err := loadChartValuesMap(context.Background(), "/no/such/dir")
 	assert.Error(t, err)
 }
 
@@ -276,7 +276,7 @@ func TestLoadChartValuesMap_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	chartValuesDir(t, dir)
 	// No files in subdir
-	out, err := loadChartValuesMap(dir)
+	out, err := loadChartValuesMap(context.Background(), dir)
 	require.NoError(t, err)
 	assert.NotNil(t, out)
 	assert.Empty(t, out)
@@ -294,7 +294,7 @@ model:
 	err := os.WriteFile(path, []byte(content), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	out, err := loadChartValuesMap(dir)
+	out, err := loadChartValuesMap(context.Background(), dir)
 	require.NoError(t, err)
 	assert.Contains(t, out, "foo.yaml")
 }
@@ -309,7 +309,7 @@ func TestLoadChartValuesMap_SafeReadFileError(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = os.Chmod(path, 0o600) }() // #nosec G306
 
-	out, err := loadChartValuesMap(dir)
+	out, err := loadChartValuesMap(context.Background(), dir)
 	require.NoError(t, err)
 	// Should skip the unreadable file, so out is empty
 	assert.Empty(t, out)
@@ -323,7 +323,7 @@ func TestLoadChartValuesMap_InvalidYaml(t *testing.T) {
 	err := os.WriteFile(path, []byte("foo: [unclosed"), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	out, err := loadChartValuesMap(dir)
+	out, err := loadChartValuesMap(context.Background(), dir)
 	require.NoError(t, err)
 	// Should skip the invalid file, so out is empty
 	assert.Empty(t, out)
@@ -408,7 +408,7 @@ locals {
 `
 	writeTfFile(t, dir, "locals.tf", tf)
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	vals, err := loadLocalValueMap(dir, env)
+	vals, err := loadLocalValueMap(context.Background(), dir, env)
 	require.NoError(t, err)
 	assert.NotNil(t, vals)
 }
@@ -417,7 +417,7 @@ func TestLoadLocalValueMap_NoTfFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	vals, err := loadLocalValueMap(dir, env)
+	vals, err := loadLocalValueMap(context.Background(), dir, env)
 	require.NoError(t, err)
 	assert.NotNil(t, vals)
 	assert.Len(t, vals, 1)
@@ -434,7 +434,7 @@ locals {
 `
 	writeTfFile(t, dir, "bad.tf", tf)
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
-	_, err := loadLocalValueMap(dir, env)
+	_, err := loadLocalValueMap(context.Background(), dir, env)
 	require.Error(t, err)
 }
 
@@ -602,8 +602,9 @@ locals {
 func TestGetLocalAttributesDI_ListFilesError(t *testing.T) {
 	t.Parallel()
 	_, err := getLocalAttributesDI(
+		context.Background(),
 		"irrelevant",
-		func(string, string) ([]string, error) { return nil, assert.AnError },
+		func(_ context.Context, _, _ string) ([]string, error) { return nil, assert.AnError },
 		func(string, hclsyntax.Attributes) error { return nil },
 	)
 	assert.Error(t, err)
@@ -613,8 +614,9 @@ func TestGetLocalAttributesDI_UpdateLocalAttributesError(t *testing.T) {
 	t.Parallel()
 	files := []string{"a.tf", "b.tf"}
 	_, err := getLocalAttributesDI(
+		context.Background(),
 		"irrelevant",
-		func(string, string) ([]string, error) { return files, nil },
+		func(_ context.Context, _, _ string) ([]string, error) { return files, nil },
 		func(string, hclsyntax.Attributes) error { return assert.AnError },
 	)
 	assert.Error(t, err)
@@ -623,8 +625,9 @@ func TestGetLocalAttributesDI_UpdateLocalAttributesError(t *testing.T) {
 func TestGetLocalAttributesDI_EmptyFiles(t *testing.T) {
 	t.Parallel()
 	out, err := getLocalAttributesDI(
+		context.Background(),
 		"irrelevant",
-		func(string, string) ([]string, error) { return []string{}, nil },
+		func(_ context.Context, _, _ string) ([]string, error) { return []string{}, nil },
 		func(string, hclsyntax.Attributes) error { return nil },
 	)
 	require.NoError(t, err)
@@ -637,8 +640,9 @@ func TestGetLocalAttributesDI_Success(t *testing.T) {
 	files := []string{"a.tf"}
 	called := false
 	_, err := getLocalAttributesDI(
+		context.Background(),
 		"irrelevant",
-		func(string, string) ([]string, error) { return files, nil },
+		func(_ context.Context, _, _ string) ([]string, error) { return files, nil },
 		func(string, hclsyntax.Attributes) error { called = true; return nil },
 	)
 	require.NoError(t, err)

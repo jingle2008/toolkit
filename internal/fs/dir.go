@@ -5,6 +5,7 @@ such as listing files with a specific extension.
 package fs
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,7 +22,10 @@ Returns:
   - []string: absolute file paths matching the extension
   - error: if the directory cannot be read
 */
-func ListFiles(dirPath, ext string) ([]string, error) {
+func ListFiles(ctx context.Context, dirPath, ext string) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	var out []string
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {

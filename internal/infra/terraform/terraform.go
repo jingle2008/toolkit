@@ -74,11 +74,12 @@ var localFuncMap = map[string]function.Function{
 }
 
 func getLocalAttributesDI(
+	ctx context.Context,
 	dirPath string,
-	listFilesFunc func(string, string) ([]string, error),
+	listFilesFunc func(context.Context, string, string) ([]string, error),
 	updateLocalAttributesFunc func(string, hclsyntax.Attributes) error,
 ) (hclsyntax.Attributes, error) {
-	tfFiles, err := listFilesFunc(dirPath, ".tf")
+	tfFiles, err := listFilesFunc(ctx, dirPath, ".tf")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
@@ -93,8 +94,8 @@ func getLocalAttributesDI(
 	return attributes, nil
 }
 
-func getLocalAttributes(dirPath string) (hclsyntax.Attributes, error) {
-	return getLocalAttributesDI(dirPath, fs.ListFiles, updateLocalAttributes)
+func getLocalAttributes(ctx context.Context, dirPath string) (hclsyntax.Attributes, error) {
+	return getLocalAttributesDI(ctx, dirPath, fs.ListFiles, updateLocalAttributes)
 }
 
 func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) error {
@@ -127,8 +128,8 @@ func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 	return cty.ObjectVal(valueMap)
 }
 
-func loadLocalValueMap(dirPath string, env models.Environment) (map[string]cty.Value, error) { //nolint:cyclop
-	attributes, err := getLocalAttributes(dirPath)
+func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environment) (map[string]cty.Value, error) { //nolint:cyclop
+	attributes, err := getLocalAttributes(ctx, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode HCL: %w", err)
 	}
@@ -276,9 +277,9 @@ func loadModelReplicas(object cty.Value) map[string]int {
 LoadServiceTenancies loads ServiceTenancy objects from the given repository path.
 Now accepts context.Context as the first parameter.
 */
-func LoadServiceTenancies(_ context.Context, repoPath string) ([]models.ServiceTenancy, error) {
+func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.ServiceTenancy, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
-	attributes, err := getLocalAttributes(dirPath)
+	attributes, err := getLocalAttributes(ctx, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse attributes: %w", err)
 	}
@@ -343,9 +344,9 @@ func getServiceTenancy(object cty.Value, realm string) *models.ServiceTenancy {
 	return &result
 }
 
-func loadChartValuesMap(repoPath string) (map[string]*models.ChartValues, error) {
+func loadChartValuesMap(ctx context.Context, repoPath string) (map[string]*models.ChartValues, error) {
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region/model_chart_values")
-	files, err := fs.ListFiles(dirPath, ".yaml")
+	files, err := fs.ListFiles(ctx, dirPath, ".yaml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
@@ -415,11 +416,11 @@ func unmarshalYaml[T any](text *string) *T {
 LoadBaseModels loads base model definitions from the given repository path and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadBaseModels(_ context.Context, repoPath string, env models.Environment) ( //nolint:cyclop
+func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment) ( //nolint:cyclop
 	map[string]*models.BaseModel, error,
 ) {
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region")
-	locals, err := loadLocalValueMap(dirPath, env)
+	locals, err := loadLocalValueMap(ctx, dirPath, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
@@ -441,7 +442,7 @@ func LoadBaseModels(_ context.Context, repoPath string, env models.Environment) 
 		return nil, fmt.Errorf("base_model_map: %w", ErrBaseModelMapNotResolved)
 	}
 
-	chartValuesMap, err := loadChartValuesMap(repoPath)
+	chartValuesMap, err := loadChartValuesMap(ctx, repoPath)
 	if err != nil {
 		return nil, errors.New("failed to load chart values")
 	}
@@ -544,12 +545,12 @@ func getCapability(object cty.Value, chartValues map[string]*models.ChartValues)
 LoadGpuPools loads GpuPool objects from the given repository path and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadGpuPools(_ context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
+func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
 	var gpuPools []models.GpuPool
 
 	// self-managed pools
 	dirPath := filepath.Join(repoPath, "shared_modules/instance_pools_config")
-	pools, err := loadGpuPools(dirPath, "env_instance_pools_config", false, env)
+	pools, err := loadGpuPools(ctx, dirPath, "env_instance_pools_config", false, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
@@ -558,7 +559,7 @@ func LoadGpuPools(_ context.Context, repoPath string, env models.Environment) ([
 
 	// self-managed pools (cluster network)
 	dirPath = filepath.Join(repoPath, "shared_modules/cluster_networks_config")
-	pools, err = loadGpuPools(dirPath, "env_cluster_networks_config", false, env)
+	pools, err = loadGpuPools(ctx, dirPath, "env_cluster_networks_config", false, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
@@ -567,7 +568,7 @@ func LoadGpuPools(_ context.Context, repoPath string, env models.Environment) ([
 
 	// oke-managed pools
 	dirPath = filepath.Join(repoPath, "shared_modules/oci_oke_nodepools_config")
-	pools, err = loadGpuPools(dirPath, "env_nodepools_config", true, env)
+	pools, err = loadGpuPools(ctx, dirPath, "env_nodepools_config", true, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
 	}
@@ -578,10 +579,10 @@ func LoadGpuPools(_ context.Context, repoPath string, env models.Environment) ([
 	return gpuPools, nil
 }
 
-func loadGpuPools(dirPath, poolConfigName string, isOkeManaged bool,
+func loadGpuPools(ctx context.Context, dirPath, poolConfigName string, isOkeManaged bool,
 	env models.Environment,
 ) ([]models.GpuPool, error) {
-	valueMap, err := loadLocalValueMap(dirPath, env)
+	valueMap, err := loadLocalValueMap(ctx, dirPath, env)
 	if err != nil {
 		return nil, err
 	}
@@ -618,9 +619,9 @@ func loadGpuPools(dirPath, poolConfigName string, isOkeManaged bool,
 LoadModelArtifacts loads ModelArtifact objects from the given repository path and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadModelArtifacts(_ context.Context, repoPath string, env models.Environment) ([]models.ModelArtifact, error) {
+func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environment) ([]models.ModelArtifact, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/tensorrt_models_config")
-	valueMap, err := loadLocalValueMap(dirPath, env)
+	valueMap, err := loadLocalValueMap(ctx, dirPath, env)
 	if err != nil {
 		return nil, err
 	}

@@ -238,6 +238,7 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 /*
 findItem returns the item from the dataset for a given category and key.
 */
+//nolint:cyclop
 func findItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) interface{} {
 	switch category {
 	case domain.Tenant:

@@ -50,11 +50,12 @@ func listSubDirs(dirPath string) ([]string, error) {
 }
 
 func loadOverridesDI[T models.NamedItem](
+	ctx context.Context,
 	dirPath string,
-	listFilesFunc func(string, string) ([]string, error),
+	listFilesFunc func(context.Context, string, string) ([]string, error),
 	loadFileFunc func(string) (*T, error),
 ) ([]T, error) {
-	overrideFiles, err := listFilesFunc(dirPath, ".json")
+	overrideFiles, err := listFilesFunc(ctx, dirPath, ".json")
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +73,15 @@ func loadOverridesDI[T models.NamedItem](
 	return overrides, nil
 }
 
-func loadOverrides[T models.NamedItem](dirPath string) ([]T, error) {
-	return loadOverridesDI(dirPath, fs.ListFiles, jsonutil.LoadFile[T])
+func loadOverrides[T models.NamedItem](ctx context.Context, dirPath string) ([]T, error) {
+	return loadOverridesDI(ctx, dirPath, fs.ListFiles, jsonutil.LoadFile[T])
 }
 
 func loadTenancyOverridesDI[T models.NamedItem](
+	ctx context.Context,
 	root, realm, name string,
 	listSubDirsFunc func(string) ([]string, error),
-	loadOverridesFunc func(string) ([]T, error),
+	loadOverridesFunc func(context.Context, string) ([]T, error),
 ) (map[string][]T, error) {
 	results := make(map[string][]T)
 
@@ -90,7 +92,7 @@ func loadTenancyOverridesDI[T models.NamedItem](
 	}
 
 	for _, tenant := range tenants {
-		overrides, err := loadOverridesFunc(filepath.Join(realmDir, tenant))
+		overrides, err := loadOverridesFunc(ctx, filepath.Join(realmDir, tenant))
 		if err != nil {
 			return nil, err
 		}
@@ -100,13 +102,13 @@ func loadTenancyOverridesDI[T models.NamedItem](
 	return results, nil
 }
 
-func loadTenancyOverrides[T models.NamedItem](root, realm, name string) (map[string][]T, error) {
-	return loadTenancyOverridesDI(root, realm, name, listSubDirs, loadOverrides[T])
+func loadTenancyOverrides[T models.NamedItem](ctx context.Context, root, realm, name string) (map[string][]T, error) {
+	return loadTenancyOverridesDI(ctx, root, realm, name, listSubDirs, loadOverrides[T])
 }
 
-func loadRegionalOverrides[T models.NamedItem](root, realm, name string) ([]T, error) {
+func loadRegionalOverrides[T models.NamedItem](ctx context.Context, root, realm, name string) ([]T, error) {
 	realmDir := filepath.Join(root, name, regionalValuesDir, realm)
-	overrides, err := loadOverrides[T](realmDir)
+	overrides, err := loadOverrides[T](ctx, realmDir)
 	if err != nil {
 		return nil, err
 	}
@@ -220,12 +222,12 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 		return nil, err
 	}
 
-	tenants, limitTenancyOverrideMap, consolePropertyTenancyOverrideMap, propertyTenancyOverrideMap, err := buildTenantMap(limitsRoot, realm)
+	tenants, limitTenancyOverrideMap, consolePropertyTenancyOverrideMap, propertyTenancyOverrideMap, err := buildTenantMap(ctx, limitsRoot, realm)
 	if err != nil {
 		return nil, err
 	}
 
-	consolePropertyRegionalOverrides, propertyRegionalOverrides, err := loadRegionalOverridesGroups(limitsRoot, realm)
+	consolePropertyRegionalOverrides, propertyRegionalOverrides, err := loadRegionalOverridesGroups(ctx, limitsRoot, realm)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +293,7 @@ func loadDefinitionGroups(limitsRoot, realm string) (
 }
 
 // buildTenantMap builds the tenant map and returns tenants and override maps.
-func buildTenantMap(limitsRoot, realm string) (
+func buildTenantMap(ctx context.Context, limitsRoot, realm string) (
 	[]models.Tenant,
 	map[string][]models.LimitTenancyOverride,
 	map[string][]models.ConsolePropertyTenancyOverride,
@@ -301,21 +303,21 @@ func buildTenantMap(limitsRoot, realm string) (
 	tenantMap := make(map[string]tenantInfo)
 
 	limitTenancyOverrideMap, err := loadTenancyOverrides[models.LimitTenancyOverride](
-		limitsRoot, realm, limitsKey+tenancyOverridesKey)
+		ctx, limitsRoot, realm, limitsKey+tenancyOverridesKey)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 	updateTenants(tenantMap, limitTenancyOverrideMap, 0)
 
 	consolePropertyTenancyOverrideMap, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](
-		limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey)
+		ctx, limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 	updateTenants(tenantMap, consolePropertyTenancyOverrideMap, 1)
 
 	propertyTenancyOverrideMap, err := loadTenancyOverrides[models.PropertyTenancyOverride](
-		limitsRoot, realm, propertiesKey+tenancyOverridesKey)
+		ctx, limitsRoot, realm, propertiesKey+tenancyOverridesKey)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -326,19 +328,19 @@ func buildTenantMap(limitsRoot, realm string) (
 }
 
 // loadRegionalOverridesGroups loads the regional overrides for console property and property.
-func loadRegionalOverridesGroups(limitsRoot, realm string) (
+func loadRegionalOverridesGroups(ctx context.Context, limitsRoot, realm string) (
 	[]models.ConsolePropertyRegionalOverride,
 	[]models.PropertyRegionalOverride,
 	error,
 ) {
 	consolePropertyRegionalOverrides, err := loadRegionalOverrides[models.ConsolePropertyRegionalOverride](
-		limitsRoot, realm, consolePropertiesKey+regionalOverridesKey)
+		ctx, limitsRoot, realm, consolePropertiesKey+regionalOverridesKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	propertyRegionalOverrides, err := loadRegionalOverrides[models.PropertyRegionalOverride](
-		limitsRoot, realm, propertiesKey+regionalOverridesKey)
+		ctx, limitsRoot, realm, propertiesKey+regionalOverridesKey)
 	if err != nil {
 		return nil, nil, err
 	}

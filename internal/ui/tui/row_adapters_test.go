@@ -125,6 +125,7 @@ func TestGpuNodeRow_ToRow(t *testing.T) {
 	}
 }
 
+//nolint:cyclop
 func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
 	t.Parallel()
 	t.Run("UnitShape branch", func(t *testing.T) {

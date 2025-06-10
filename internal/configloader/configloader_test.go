@@ -28,7 +28,7 @@ func TestLoadOverrides_Success(t *testing.T) {
 	err = os.WriteFile(filepath.Join(dir, "foo.json"), data, 0o600) // #nosec G306
 	testutil.RequireNoError(t, err)
 
-	out, err := loadOverrides[mockNamedItem](dir)
+	out, err := loadOverrides[mockNamedItem](context.Background(), dir)
 	testutil.RequireNoError(t, err)
 	testutil.Equal(t, 1, len(out))
 	testutil.Equal(t, "foo", out[0].Name)
@@ -37,8 +37,9 @@ func TestLoadOverrides_Success(t *testing.T) {
 func TestLoadOverridesDI_ListFilesError(t *testing.T) {
 	t.Parallel()
 	_, err := loadOverridesDI(
+		context.Background(),
 		"irrelevant",
-		func(string, string) ([]string, error) { return nil, os.ErrNotExist },
+		func(_ context.Context, _, _ string) ([]string, error) { return nil, os.ErrNotExist },
 		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireError(t, err)
@@ -48,8 +49,9 @@ func TestLoadOverridesDI_LoadFileError(t *testing.T) {
 	t.Parallel()
 	files := []string{"a.json", "b.json"}
 	_, err := loadOverridesDI(
+		context.Background(),
 		"irrelevant",
-		func(string, string) ([]string, error) { return files, nil },
+		func(_ context.Context, _, _ string) ([]string, error) { return files, nil },
 		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireError(t, err)
@@ -58,8 +60,9 @@ func TestLoadOverridesDI_LoadFileError(t *testing.T) {
 func TestLoadOverridesDI_Empty(t *testing.T) {
 	t.Parallel()
 	out, err := loadOverridesDI(
+		context.Background(),
 		"irrelevant",
-		func(string, string) ([]string, error) { return []string{}, nil },
+		func(_ context.Context, _, _ string) ([]string, error) { return []string{}, nil },
 		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireNoError(t, err)
@@ -73,13 +76,13 @@ func TestLoadOverrides_ErrorOnBadFile(t *testing.T) {
 	err := os.WriteFile(filepath.Join(dir, "bad.json"), []byte("{not json"), 0o600) // #nosec G306
 	testutil.RequireNoError(t, err)
 
-	_, err = loadOverrides[mockNamedItem](dir)
+	_, err = loadOverrides[mockNamedItem](context.Background(), dir)
 	testutil.RequireError(t, err)
 }
 
 func TestLoadOverrides_ErrorOnNoDir(t *testing.T) {
 	t.Parallel()
-	_, err := loadOverrides[mockNamedItem]("/no/such/dir")
+	_, err := loadOverrides[mockNamedItem](context.Background(), "/no/such/dir")
 	testutil.RequireError(t, err)
 }
 
@@ -98,7 +101,7 @@ func TestLoadTenancyOverrides_Success(t *testing.T) {
 	err = os.WriteFile(filepath.Join(tenantDir, "bar.json"), data, 0o600) // #nosec G306
 	testutil.RequireNoError(t, err)
 
-	out, err := loadTenancyOverrides[mockNamedItem](root, realm, name)
+	out, err := loadTenancyOverrides[mockNamedItem](context.Background(), root, realm, name)
 	testutil.RequireNoError(t, err)
 	testutil.Contains(t, out, tenant)
 	testutil.Equal(t, 1, len(out[tenant]))
@@ -108,9 +111,10 @@ func TestLoadTenancyOverrides_Success(t *testing.T) {
 func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
 	t.Parallel()
 	_, err := loadTenancyOverridesDI(
+		context.Background(),
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return nil, os.ErrNotExist },
-		func(string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
+		func(_ context.Context, _ string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireError(t, err)
 }
@@ -119,9 +123,10 @@ func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 	t.Parallel()
 	tenants := []string{"t1", "t2"}
 	_, err := loadTenancyOverridesDI(
+		context.Background(),
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return tenants, nil },
-		func(string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
+		func(_ context.Context, _ string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireError(t, err)
 }
@@ -129,9 +134,10 @@ func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
 	t.Parallel()
 	_, err := loadTenancyOverridesDI(
+		context.Background(),
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return []string{}, nil },
-		func(string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
+		func(_ context.Context, _ string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	testutil.RequireNoError(t, err)
 }
@@ -205,7 +211,7 @@ func TestListSubDirs(t *testing.T) {
 func TestLoadOverrides_Error(t *testing.T) {
 	t.Parallel()
 	// Should error on non-existent dir
-	_, err := loadOverrides[models.Tenant]("/no/such/dir")
+	_, err := loadOverrides[models.Tenant](context.Background(), "/no/such/dir")
 	testutil.RequireError(t, err)
 
 	// Should error on bad JSON file
@@ -214,19 +220,19 @@ func TestLoadOverrides_Error(t *testing.T) {
 	defer func() { _ = os.RemoveAll(dir) }()
 	badFile := filepath.Join(dir, "bad.json")
 	_ = os.WriteFile(badFile, []byte("{not valid json"), 0o600) // #nosec G306
-	_, err = loadOverrides[models.Tenant](dir)
+	_, err = loadOverrides[models.Tenant](context.Background(), dir)
 	testutil.RequireError(t, err)
 }
 
 func TestLoadTenancyOverrides_Error(t *testing.T) {
 	t.Parallel()
-	_, err := loadTenancyOverrides[models.Tenant]("/no/such/dir", "realm", "name")
+	_, err := loadTenancyOverrides[models.Tenant](context.Background(), "/no/such/dir", "realm", "name")
 	testutil.RequireError(t, err)
 }
 
 func TestLoadRegionalOverrides_Error(t *testing.T) {
 	t.Parallel()
-	_, err := loadRegionalOverrides[models.Tenant]("/no/such/dir", "realm", "name")
+	_, err := loadRegionalOverrides[models.Tenant](context.Background(), "/no/such/dir", "realm", "name")
 	testutil.RequireError(t, err)
 }
 
@@ -444,12 +450,12 @@ func TestLoadDefinitionGroups_Error(t *testing.T) {
 
 func TestBuildTenantMap_Error(t *testing.T) {
 	t.Parallel()
-	_, _, _, _, err := buildTenantMap("/no/such/path", "realm") //nolint:dogsled // we only need err
+	_, _, _, _, err := buildTenantMap(context.Background(), "/no/such/path", "realm") //nolint:dogsled // we only need err
 	testutil.RequireError(t, err)
 }
 
 func TestLoadRegionalOverridesGroups_Error(t *testing.T) {
 	t.Parallel()
-	_, _, err := loadRegionalOverridesGroups("/no/such/path", "realm")
+	_, _, err := loadRegionalOverridesGroups(context.Background(), "/no/such/path", "realm")
 	testutil.RequireError(t, err)
 }
