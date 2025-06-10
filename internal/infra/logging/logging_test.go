@@ -93,7 +93,7 @@ func TestWithContext_Nil(t *testing.T) {
 
 func TestFromContext_NilContext(t *testing.T) {
 	t.Parallel()
-	got := FromContext(context.TODO())
+	got := FromContext(context.Background())
 	got.Debugw("should not panic")
 }
 

@@ -10,7 +10,7 @@ import (
 
 func TestNewFakeClientAndAdapterLists(t *testing.T) {
 	t.Parallel()
-	ctx := context.TODO()
+	ctx := context.Background()
 	// Seed objects
 	n1 := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-a"}}
 	p1 := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod-a", Namespace: "ns1"}}
@@ -46,6 +46,6 @@ func TestAdapterNilClientPanics(t *testing.T) {
 	t.Parallel()
 	adapter := &fakeKubernetesClientAdapter{Clientset: nil}
 	AssertPanic(t, func() {
-		_, _ = adapter.CoreV1NodesList(context.TODO(), metav1.ListOptions{})
+		_, _ = adapter.CoreV1NodesList(context.Background(), metav1.ListOptions{})
 	})
 }
