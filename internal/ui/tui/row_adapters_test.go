@@ -128,6 +128,7 @@ func TestGpuNodeRow_ToRow(t *testing.T) {
 func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
 	t.Parallel()
 	t.Run("UnitShape branch", func(t *testing.T) {
+		t.Parallel()
 		row := DedicatedAIClusterRow(models.DedicatedAICluster{
 			Name:      "dac1",
 			Type:      "GPU",
@@ -141,6 +142,7 @@ func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
 		}
 	})
 	t.Run("Profile branch", func(t *testing.T) {
+		t.Parallel()
 		row2 := DedicatedAIClusterRow(models.DedicatedAICluster{
 			Name:      "dac2",
 			Type:      "GPU",

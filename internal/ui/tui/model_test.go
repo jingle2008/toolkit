@@ -17,7 +17,6 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 )
 
 type fakeLoader struct {
@@ -74,6 +73,7 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 				WithRepoPath("repo"),
 				WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
 				WithLoader(tc.loader),
+				WithLogger(logging.NewNoOpLogger()),
 			)
 			if err != nil {
 				t.Fatalf("NewModel failed: %v", err)
@@ -124,6 +124,7 @@ func newTestModel(t *testing.T) *Model {
 		WithRepoPath("testrepo"),
 		WithEnvironment(env),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	require.NoError(t, err)
 	m.dataset = &models.Dataset{
@@ -137,8 +138,6 @@ func newTestModel(t *testing.T) *Model {
 	m.viewWidth = 80
 	m.viewHeight = 24
 	m.refreshDisplay()
-	// Set a non-nil logger to avoid nil pointer dereference in tests
-	m.logger = logging.NewZapLogger(zap.NewNop().Sugar(), false)
 	return m
 }
 
@@ -236,6 +235,7 @@ func TestNewModelInitializesFields(t *testing.T) {
 		WithEnvironment(env),
 		WithCategory(domain.Tenant),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	require.NoError(t, err)
 	testutil.NotNil(t, m)
@@ -256,6 +256,7 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 		WithEnvironment(env),
 		WithCategory(domain.LimitTenancyOverride),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	require.NoError(t, err)
 	// Set context.Category to Tenant, m.category to LimitTenancyOverride
@@ -350,12 +351,11 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 		WithRepoPath("testrepo"),
 		WithEnvironment(env),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	require.NoError(t, err)
 	m.dataset = ds
 	m.category = domain.BaseModel
-	// Set a non-nil logger to avoid nil pointer dereference in tests
-	m.logger = logging.NewZapLogger(zap.NewNop().Sugar(), false)
 
 	// getCurrentItem should return the pointer to bm
 	got := m.getCurrentItem()
@@ -379,6 +379,7 @@ func TestModel_Init(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	assert.NoError(t, err)
 	cmd := m.Init()
@@ -391,6 +392,7 @@ func TestModel_updateColumns(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	m.table.SetWidth(80)
 	m.category = domain.BaseModel
@@ -404,6 +406,7 @@ func TestModel_updateCategory(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	m.dataset = &models.Dataset{}
 	cmd := m.updateCategory(domain.BaseModel)
@@ -416,6 +419,7 @@ func TestModel_changeCategory(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	m.dataset = &models.Dataset{
 		BaseModelMap:          map[string]*models.BaseModel{},
@@ -436,6 +440,7 @@ func TestModel_enterContext(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
 	)
 	m.table.SetColumns([]table.Column{{Title: "Region", Width: 10}})
 	m.table.SetRows([]table.Row{{"dev-UNKNOWN"}})

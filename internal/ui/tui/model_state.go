@@ -139,6 +139,9 @@ func validateModel(m *Model) error {
 	if m.loader == nil {
 		return errors.New("toolkit: loader is required (use WithLoader option)")
 	}
+	if m.logger == nil {
+		return errors.New("toolkit: logger is required (use WithLogger option)")
+	}
 	return nil
 }
 

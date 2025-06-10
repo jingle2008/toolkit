@@ -9,19 +9,7 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
-	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 )
-
-/*
-loggerCtx returns the Logger from the model's field.
-*/
-// loggerCtx returns the Logger from the model's field.
-func (m *Model) loggerCtx() logging.Logger {
-	if m.logger != nil {
-		return m.logger
-	}
-	return logging.NewNoOpLogger()
-}
 
 // loadData loads the dataset for the current model.
 func (m *Model) loadData(ctx context.Context) tea.Cmd {

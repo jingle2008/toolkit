@@ -1,7 +1,5 @@
-/*
-Package tui: Reducer and event logic for the Model.
-This file contains methods for state transitions, event handling, and UI updates.
-*/
+// Package tui contains reducer and event logic for the Model.
+// This file contains methods for state transitions, event handling, and UI updates.
 package tui
 
 import (
@@ -18,7 +16,7 @@ import (
 
 // updateRows updates the table rows based on the current model state.
 func (m *Model) updateRows() {
-	rows := getTableRows(m.loggerCtx(), m.dataset, m.category, m.context, m.curFilter)
+	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter)
 	table.WithRows(rows)(m.table)
 	m.table.GotoTop()
 }
@@ -101,13 +99,13 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 		if key.Matches(msg, m.keys.ViewModelArtifacts) {
 			item := m.getCurrentItem()
 			if bm, ok := item.(*models.BaseModel); ok {
-				m.loggerCtx().Infow("view_model_artifacts",
+				m.logger.Infow("view_model_artifacts",
 					"model", bm.Name,
 					"version", bm.Version,
 					"type", bm.Type,
 				)
 			} else {
-				m.loggerCtx().Infow("view_model_artifacts", "item", item)
+				m.logger.Infow("view_model_artifacts", "item", item)
 			}
 		}
 	}
