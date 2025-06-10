@@ -125,31 +125,34 @@ func TestGpuNodeRow_ToRow(t *testing.T) {
 	}
 }
 
-func TestDedicatedAIClusterRow_ToRow(t *testing.T) { //nolint:cyclop
+func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
 	t.Parallel()
-	row := DedicatedAIClusterRow(models.DedicatedAICluster{
-		Name:      "dac1",
-		Type:      "GPU",
-		UnitShape: "shapeA",
-		Profile:   "",
-		Size:      4,
-		Status:    "Active",
-	}).ToRow("scope")
-	if row[0] != "scope" || row[1] != "dac1" || row[2] != "GPU" || row[3] != "shapeA" || row[4] != "4" || row[5] != "Active" {
-		t.Errorf("unexpected row: %v", row)
-	}
-	// Test branch where UnitShape == "" and Profile is used
-	row2 := DedicatedAIClusterRow(models.DedicatedAICluster{
-		Name:      "dac2",
-		Type:      "GPU",
-		UnitShape: "",
-		Profile:   "profileA",
-		Size:      2,
-		Status:    "Inactive",
-	}).ToRow("scope2")
-	if row2[0] != "scope2" || row2[1] != "dac2" || row2[2] != "GPU" || row2[3] != "profileA" || row2[4] != "2" || row2[5] != "Inactive" {
-		t.Errorf("unexpected row2: %v", row2)
-	}
+	t.Run("UnitShape branch", func(t *testing.T) {
+		row := DedicatedAIClusterRow(models.DedicatedAICluster{
+			Name:      "dac1",
+			Type:      "GPU",
+			UnitShape: "shapeA",
+			Profile:   "",
+			Size:      4,
+			Status:    "Active",
+		}).ToRow("scope")
+		if row[0] != "scope" || row[1] != "dac1" || row[2] != "GPU" || row[3] != "shapeA" || row[4] != "4" || row[5] != "Active" {
+			t.Errorf("unexpected row: %v", row)
+		}
+	})
+	t.Run("Profile branch", func(t *testing.T) {
+		row2 := DedicatedAIClusterRow(models.DedicatedAICluster{
+			Name:      "dac2",
+			Type:      "GPU",
+			UnitShape: "",
+			Profile:   "profileA",
+			Size:      2,
+			Status:    "Inactive",
+		}).ToRow("scope2")
+		if row2[0] != "scope2" || row2[1] != "dac2" || row2[2] != "GPU" || row2[3] != "profileA" || row2[4] != "2" || row2[5] != "Inactive" {
+			t.Errorf("unexpected row2: %v", row2)
+		}
+	})
 }
 
 func TestGetTableRow_UnexpectedType(t *testing.T) {

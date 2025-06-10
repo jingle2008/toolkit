@@ -41,7 +41,7 @@ func (f fakeLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ model
 	return map[string][]models.DedicatedAICluster{}, nil
 }
 
-func TestModel_LoadData_TableDriven(t *testing.T) { //nolint:cyclop
+func TestModel_LoadData_TableDriven(t *testing.T) {
 	t.Parallel()
 	type testCase struct {
 		name      string
@@ -84,27 +84,32 @@ func TestModel_LoadData_TableDriven(t *testing.T) { //nolint:cyclop
 			} else {
 				msg = m.loadData(context.Background())()
 			}
-			switch {
-			case tc.wantData != nil:
-				data, ok := msg.(DataMsg)
-				if !ok {
-					t.Fatalf("expected DataMsg, got %T", msg)
-				}
-				if !reflect.DeepEqual(data.Data, tc.wantData) {
-					t.Errorf("DataMsg.Data = %v, want %v", data.Data, tc.wantData)
-				}
-			case tc.wantError != nil:
-				emsg, ok := msg.(ErrMsg)
-				if !ok {
-					t.Fatalf("expected ErrMsg, got %T", msg)
-				}
-				if !errors.Is(emsg.Err, tc.wantError) {
-					t.Errorf("ErrMsg.Err = %v, want %v", emsg.Err, tc.wantError)
-				}
-			default:
-				t.Fatalf("invalid test case: no wantData or wantError")
-			}
+			checkLoadDataResult(t, msg, tc.wantData, tc.wantError)
 		})
+	}
+}
+
+func checkLoadDataResult(t *testing.T, msg interface{}, wantData *models.Dataset, wantError error) {
+	t.Helper()
+	switch {
+	case wantData != nil:
+		data, ok := msg.(DataMsg)
+		if !ok {
+			t.Fatalf("expected DataMsg, got %T", msg)
+		}
+		if !reflect.DeepEqual(data.Data, wantData) {
+			t.Errorf("DataMsg.Data = %v, want %v", data.Data, wantData)
+		}
+	case wantError != nil:
+		emsg, ok := msg.(ErrMsg)
+		if !ok {
+			t.Fatalf("expected ErrMsg, got %T", msg)
+		}
+		if !errors.Is(emsg.Err, wantError) {
+			t.Errorf("ErrMsg.Err = %v, want %v", emsg.Err, wantError)
+		}
+	default:
+		t.Fatalf("invalid test case: no wantData or wantError")
 	}
 }
 
