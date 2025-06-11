@@ -1,11 +1,10 @@
 package tui
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
-
-	"context"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -27,15 +26,19 @@ type fakeLoader struct {
 func (f fakeLoader) LoadDataset(_ context.Context, _ string, _ models.Environment) (*models.Dataset, error) {
 	return f.dataset, f.err
 }
+
 func (f fakeLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environment) (map[string]*models.BaseModel, error) {
 	return map[string]*models.BaseModel{}, nil
 }
+
 func (f fakeLoader) LoadGpuPools(_ context.Context, _ string, _ models.Environment) ([]models.GpuPool, error) {
 	return nil, nil
 }
+
 func (f fakeLoader) LoadGpuNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GpuNode, error) {
 	return map[string][]models.GpuNode{}, nil
 }
+
 func (f fakeLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	return map[string][]models.DedicatedAICluster{}, nil
 }

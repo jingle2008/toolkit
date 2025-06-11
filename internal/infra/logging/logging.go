@@ -3,8 +3,10 @@ package logging
 
 import (
 	"context"
+	"os"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // Logger is an abstract logging interface for use throughout the codebase.
@@ -66,6 +68,39 @@ func NewLogger(debug bool) (Logger, error) {
 // MustNewLogger creates a new Logger or panics if creation fails.
 func MustNewLogger(debug bool) Logger {
 	l, err := NewLogger(debug)
+	if err != nil {
+		panic(err)
+	}
+	return l
+}
+
+// NewFileLogger returns a Logger that writes only to the given file (overwriting it on each run).
+// If debug is true, uses development encoder config, else production config.
+func NewFileLogger(debug bool, filename string) (Logger, error) {
+	flag := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+	f, err := os.OpenFile(filename, flag, 0o644)
+	if err != nil {
+		return nil, err
+	}
+	var encCfg zapcore.EncoderConfig
+	if debug {
+		encCfg = zap.NewDevelopmentEncoderConfig()
+	} else {
+		encCfg = zap.NewProductionEncoderConfig()
+	}
+	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encCfg),
+		zapcore.AddSync(f),
+		zap.DebugLevel,
+	)
+	zl := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+	return NewZapLogger(zl.Sugar(), debug), nil
+}
+
+// MustNewFileLogger returns a file Logger or panics if creation fails.
+func MustNewFileLogger(debug bool, filename string) Logger {
+	l, err := NewFileLogger(debug, filename)
 	if err != nil {
 		panic(err)
 	}

@@ -57,7 +57,8 @@ func NewRootCmd(version string) *cobra.Command {
 			if err := cfg.Validate(); err != nil {
 				return fmt.Errorf("failed to validate config: %w", err)
 			}
-			logger, err := logging.NewLogger(false)
+			// Always log to toolkit.log in current directory, overwrite each run
+			logger, err := logging.NewFileLogger(false, "toolkit.log")
 			if err != nil {
 				return fmt.Errorf("failed to initialize logger: %w", err)
 			}
@@ -79,7 +80,7 @@ func NewRootCmd(version string) *cobra.Command {
 	rootCmd.PersistentFlags().String("env_type", "", "Environment type (e.g. dev, prod)")
 	rootCmd.PersistentFlags().String("env_region", "", "Environment region")
 	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
-	rootCmd.PersistentFlags().String("category", "", "Category to display")
+	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
 
 	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
@@ -143,7 +144,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config) e
 		logger.Errorw("failed to create toolkit model", "error", err)
 		return fmt.Errorf("failed to create toolkit model: %w", err)
 	}
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(ctx))
 	// Run the program with context cancellation
 	done := make(chan error, 1)
 	go func() {

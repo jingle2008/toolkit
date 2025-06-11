@@ -9,6 +9,7 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jingle2008/toolkit/internal/domain"
 )
 
 // loadData loads the dataset for the current model.
@@ -23,10 +24,23 @@ func (m *Model) loadData(ctx context.Context) tea.Cmd {
 	}
 }
 
+var lazyLoadedCategories = map[domain.Category]struct{}{
+	domain.BaseModel:          {},
+	domain.GpuPool:            {},
+	domain.GpuNode:            {},
+	domain.DedicatedAICluster: {},
+}
+
 // Init implements the tea.Model interface and initializes the model.
 func (m *Model) Init() tea.Cmd {
-	return tea.Sequence(
+	cmds := []tea.Cmd{
 		m.loadingSpinner.Tick,
 		m.loadData(context.Background()),
-	)
+	}
+
+	if _, ok := lazyLoadedCategories[m.category]; ok {
+		cmds = append(cmds, m.updateCategory(m.category))
+	}
+
+	return tea.Sequence(cmds...)
 }

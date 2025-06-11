@@ -281,15 +281,19 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 func findTenant(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.Tenants, key.(string))
 }
+
 func findLimitDefinition(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.LimitDefinitionGroup.Values, key.(string))
 }
+
 func findConsolePropertyDefinition(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.ConsolePropertyDefinitionGroup.Values, key.(string))
 }
+
 func findPropertyDefinition(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.PropertyDefinitionGroup.Values, key.(string))
 }
+
 func findLimitTenancyOverride(dataset *models.Dataset, key models.ItemKey) interface{} {
 	k := key.(models.ScopedItemKey)
 	if items, ok := dataset.LimitTenancyOverrideMap[k.Scope]; ok {
@@ -297,6 +301,7 @@ func findLimitTenancyOverride(dataset *models.Dataset, key models.ItemKey) inter
 	}
 	return nil
 }
+
 func findConsolePropertyTenancyOverride(dataset *models.Dataset, key models.ItemKey) interface{} {
 	k := key.(models.ScopedItemKey)
 	if items, ok := dataset.ConsolePropertyTenancyOverrideMap[k.Scope]; ok {
@@ -304,6 +309,7 @@ func findConsolePropertyTenancyOverride(dataset *models.Dataset, key models.Item
 	}
 	return nil
 }
+
 func findPropertyTenancyOverride(dataset *models.Dataset, key models.ItemKey) interface{} {
 	k := key.(models.ScopedItemKey)
 	if items, ok := dataset.PropertyTenancyOverrideMap[k.Scope]; ok {
@@ -311,12 +317,15 @@ func findPropertyTenancyOverride(dataset *models.Dataset, key models.ItemKey) in
 	}
 	return nil
 }
+
 func findConsolePropertyRegionalOverride(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.ConsolePropertyRegionalOverrides, key.(string))
 }
+
 func findPropertyRegionalOverride(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.PropertyRegionalOverrides, key.(string))
 }
+
 func findBaseModel(dataset *models.Dataset, key models.ItemKey) interface{} {
 	k := key.(models.BaseModelKey)
 	for _, value := range dataset.BaseModelMap {
@@ -328,18 +337,23 @@ func findBaseModel(dataset *models.Dataset, key models.ItemKey) interface{} {
 	}
 	return nil
 }
+
 func findModelArtifact(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.ModelArtifacts, key.(string))
 }
+
 func findEnvironment(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.Environments, key.(string))
 }
+
 func findServiceTenancy(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.ServiceTenancies, key.(string))
 }
+
 func findGpuPool(dataset *models.Dataset, key models.ItemKey) interface{} {
 	return collections.FindByName(dataset.GpuPools, key.(string))
 }
+
 func findGpuNode(dataset *models.Dataset, key models.ItemKey) interface{} {
 	k := key.(models.ScopedItemKey)
 	if items, ok := dataset.GpuNodeMap[k.Scope]; ok {
@@ -347,6 +361,7 @@ func findGpuNode(dataset *models.Dataset, key models.ItemKey) interface{} {
 	}
 	return nil
 }
+
 func findDedicatedAICluster(dataset *models.Dataset, key models.ItemKey) interface{} {
 	k := key.(models.ScopedItemKey)
 	if items, ok := dataset.DedicatedAIClusterMap[k.Scope]; ok {

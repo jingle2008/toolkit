@@ -119,29 +119,26 @@ func (m *Model) getCurrentItem() interface{} {
 
 // updateCategory changes the current category and loads data if needed.
 func (m *Model) updateCategory(category domain.Category) tea.Cmd {
-	if m.category == category {
-		return nil
-	}
 	m.category = category
 	m.keys.Category = category
 	switch m.category {
 	case domain.BaseModel:
-		if m.dataset.BaseModelMap == nil {
+		if m.dataset == nil || m.dataset.BaseModelMap == nil {
 			m.loading = true
 			return loadRequest{category: domain.BaseModel, model: m}.Run
 		}
 	case domain.GpuPool:
-		if m.dataset.GpuPools == nil {
+		if m.dataset == nil || m.dataset.GpuPools == nil {
 			m.loading = true
 			return loadRequest{category: domain.GpuPool, model: m}.Run
 		}
 	case domain.GpuNode:
-		if m.dataset.GpuNodeMap == nil {
+		if m.dataset == nil || m.dataset.GpuNodeMap == nil {
 			m.loading = true
 			return loadRequest{category: domain.GpuNode, model: m}.Run
 		}
 	case domain.DedicatedAICluster:
-		if m.dataset.DedicatedAIClusterMap == nil {
+		if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil {
 			m.loading = true
 			return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
 		}
@@ -177,6 +174,10 @@ func (m *Model) changeCategory() tea.Cmd {
 	text := m.textInput.Value()
 	category, err := domain.ParseCategory(text)
 	if err != nil {
+		return nil
+	}
+
+	if m.category == category {
 		return nil
 	}
 	return m.updateCategory(category)
