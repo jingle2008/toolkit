@@ -40,7 +40,9 @@ issues:
 
 linters-settings:
   gocyclo:
-    min-complexity: 15
+    min-complexity: 13
+  cyclop:
+    min-complexity: 13
   prealloc:
     simple: true
   depguard:

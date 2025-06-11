@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/jingle2008/toolkit/internal/fs"
+	fs "github.com/jingle2008/toolkit/internal/fileutil"
 )
 
 /*

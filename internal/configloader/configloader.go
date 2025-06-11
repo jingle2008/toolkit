@@ -12,7 +12,7 @@ import (
 	"sort"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
-	"github.com/jingle2008/toolkit/internal/fs"
+	fs "github.com/jingle2008/toolkit/internal/fileutil"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
