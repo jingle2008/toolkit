@@ -14,6 +14,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
+// reusable refresh command emitting an empty DataMsg
+var refreshCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
+
 // updateRows updates the table rows based on the current model state.
 func (m *Model) updateRows() {
 	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter)
@@ -131,9 +134,7 @@ func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 	case domain.DedicatedAICluster:
 		return m.handleDedicatedAIClusterCategory()
 	default:
-		return func() tea.Msg {
-			return DataMsg{}
-		}
+		return refreshCmd
 	}
 }
 
@@ -142,7 +143,7 @@ func (m *Model) handleBaseModelCategory() tea.Cmd {
 		m.loading = true
 		return loadRequest{category: domain.BaseModel, model: m}.Run
 	}
-	return func() tea.Msg { return DataMsg{} }
+	return refreshCmd
 }
 
 func (m *Model) handleGpuPoolCategory() tea.Cmd {
@@ -150,7 +151,7 @@ func (m *Model) handleGpuPoolCategory() tea.Cmd {
 		m.loading = true
 		return loadRequest{category: domain.GpuPool, model: m}.Run
 	}
-	return func() tea.Msg { return DataMsg{} }
+	return refreshCmd
 }
 
 func (m *Model) handleGpuNodeCategory() tea.Cmd {
@@ -158,7 +159,7 @@ func (m *Model) handleGpuNodeCategory() tea.Cmd {
 		m.loading = true
 		return loadRequest{category: domain.GpuNode, model: m}.Run
 	}
-	return func() tea.Msg { return DataMsg{} }
+	return refreshCmd
 }
 
 func (m *Model) handleDedicatedAIClusterCategory() tea.Cmd {
@@ -166,7 +167,7 @@ func (m *Model) handleDedicatedAIClusterCategory() tea.Cmd {
 		m.loading = true
 		return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
 	}
-	return func() tea.Msg { return DataMsg{} }
+	return refreshCmd
 }
 
 // enterDetailView switches the model into detail view mode.

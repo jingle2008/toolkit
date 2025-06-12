@@ -115,16 +115,6 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config) e
 	repoPath := cfg.RepoPath
 	kubeConfig := cfg.KubeConfig
 
-	f, err := tea.LogToFile("debug.log", "debug")
-	if err != nil {
-		return fmt.Errorf("fatal: %w", err)
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			fmt.Printf("WARN: closing debug log: %v\n", err)
-		}
-	}()
-
 	ctx = logging.WithContext(ctx, logger)
 	logger.Infow("starting toolkit",
 		"repo", repoPath,

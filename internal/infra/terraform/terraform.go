@@ -7,11 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+
+	// structural logging
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
@@ -129,6 +132,7 @@ func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 }
 
 func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environment) (map[string]cty.Value, error) { //nolint:cyclop
+	logger := logging.FromContext(ctx)
 	attributes, err := getLocalAttributes(ctx, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode HCL: %w", err)
@@ -215,15 +219,17 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 
 		value, diags := attr.Expr.Value(&context)
 		if diags.HasErrors() {
-			log.Println("can't resolve local:", key, ", errors:")
-			for _, err := range diags.Errs() {
-				log.Println("\t", err.Error())
-			}
-
+			logger.Errorw("cannot resolve local",
+				"local", key,
+				"errors", diags.Errs(),
+			)
 			continue
 		}
 
-		log.Println("can't resolve local:", key, ", value:", value)
+		logger.Infow("cannot resolve local value",
+			"local", key,
+			"value", value.GoString(),
+		)
 	}
 
 	return localObject.AsValueMap(), nil
@@ -345,6 +351,7 @@ func getServiceTenancy(object cty.Value, realm string) *models.ServiceTenancy {
 }
 
 func loadChartValuesMap(ctx context.Context, repoPath string) (map[string]*models.ChartValues, error) {
+	logger := logging.FromContext(ctx)
 	dirPath := filepath.Join(repoPath, "model-serving/application/generic_region/model_chart_values")
 	files, err := fs.ListFiles(ctx, dirPath, ".yaml")
 	if err != nil {
@@ -359,14 +366,14 @@ func loadChartValuesMap(ctx context.Context, repoPath string) (map[string]*model
 			map[string]struct{}{".yaml": {}, ".yml": {}},
 		)
 		if err != nil {
-			log.Println("failed to read chart values", err)
+			logger.Errorw("failed to read chart values", "error", err)
 			continue
 		}
 
 		var config ChartValues
 		err = yaml.Unmarshal(yamlData, &config)
 		if err != nil {
-			log.Println("failed to parse chart values", err)
+			logger.Errorw("failed to parse chart values", "error", err)
 			continue
 		}
 		result[filepath.Base(file)] = convertChartValues(config)
