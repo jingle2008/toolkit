@@ -138,6 +138,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config) e
 		tui.WithEnvironment(env),
 		tui.WithCategory(category),
 		tui.WithLogger(logger),
+		tui.WithContext(ctx),
 		tui.WithLoader(loader.ProductionLoader{}),
 	)
 	if err != nil {

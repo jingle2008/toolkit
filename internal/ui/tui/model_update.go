@@ -4,7 +4,7 @@ Package tui implements the update/reduce logic for the Model.
 package tui
 
 import (
-	"context"
+	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -25,16 +25,16 @@ func (r loadRequest) Run() tea.Msg {
 	)
 	switch r.category {
 	case domain.BaseModel:
-		data, err = r.model.loader.LoadBaseModels(context.Background(), r.model.repoPath, r.model.environment)
+		data, err = r.model.loader.LoadBaseModels(r.model.ctx, r.model.repoPath, r.model.environment)
 	case domain.GpuPool:
-		data, err = r.model.loader.LoadGpuPools(context.Background(), r.model.repoPath, r.model.environment)
+		data, err = r.model.loader.LoadGpuPools(r.model.ctx, r.model.repoPath, r.model.environment)
 	case domain.GpuNode:
-		data, err = r.model.loader.LoadGpuNodes(context.Background(), r.model.kubeConfig, r.model.environment)
+		data, err = r.model.loader.LoadGpuNodes(r.model.ctx, r.model.kubeConfig, r.model.environment)
 	case domain.DedicatedAICluster:
-		data, err = r.model.loader.LoadDedicatedAIClusters(context.Background(), r.model.kubeConfig, r.model.environment)
+		data, err = r.model.loader.LoadDedicatedAIClusters(r.model.ctx, r.model.kubeConfig, r.model.environment)
 	}
 	if err != nil {
-		return ErrMsg{Err: err}
+		return ErrMsg{Err: fmt.Errorf("failed to load %s: %w", r.category, err)}
 	}
 	return DataMsg{Data: data}
 }

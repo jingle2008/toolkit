@@ -85,7 +85,7 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 			if tc.init {
 				msg = m.Init()()
 			} else {
-				msg = m.loadData(context.Background())()
+				msg = m.loadData()()
 			}
 			checkLoadDataResult(t, msg, tc.wantData, tc.wantError)
 		})

@@ -5,6 +5,7 @@ This file defines the main state container and its initialization logic.
 package tui
 
 import (
+	"context"
 	"errors"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -27,6 +28,7 @@ It manages state, events, and rendering for the Bubble Tea UI.
 */
 type Model struct {
 	logger         logging.Logger
+	ctx            context.Context //nolint:containedctx
 	repoPath       string
 	environment    models.Environment
 	viewHeight     int

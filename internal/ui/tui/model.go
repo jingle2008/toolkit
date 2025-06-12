@@ -6,17 +6,15 @@ using Bubble Tea and Charmbracelet components.
 package tui
 
 import (
-	"context"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 
 // loadData loads the dataset for the current model.
-func (m *Model) loadData(ctx context.Context) tea.Cmd {
+func (m *Model) loadData() tea.Cmd {
 	m.loading = true
 	return func() tea.Msg {
-		dataset, err := m.loader.LoadDataset(ctx, m.repoPath, m.environment)
+		dataset, err := m.loader.LoadDataset(m.ctx, m.repoPath, m.environment)
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
@@ -35,7 +33,7 @@ var lazyLoadedCategories = map[domain.Category]struct{}{
 func (m *Model) Init() tea.Cmd {
 	cmds := []tea.Cmd{
 		m.loadingSpinner.Tick,
-		m.loadData(context.Background()),
+		m.loadData(),
 	}
 
 	if _, ok := lazyLoadedCategories[m.category]; ok {

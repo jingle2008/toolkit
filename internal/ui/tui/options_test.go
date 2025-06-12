@@ -4,10 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/jingle2008/toolkit/internal/domain"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -47,33 +44,6 @@ func TestWithCategory(t *testing.T) {
 	assert.Equal(t, domain.GpuPool, m.category)
 }
 
-func TestWithAppContext(t *testing.T) {
-	t.Parallel()
-	m := &Model{}
-	ctx := &domain.ToolkitContext{}
-	opt := WithAppContext(ctx)
-	opt(m)
-	assert.Equal(t, ctx, m.context)
-}
-
-func TestWithViewSize(t *testing.T) {
-	t.Parallel()
-	m := &Model{}
-	opt := WithViewSize(80, 24)
-	opt(m)
-	assert.Equal(t, 80, m.viewWidth)
-	assert.Equal(t, 24, m.viewHeight)
-}
-
-func TestWithHelp(t *testing.T) {
-	t.Parallel()
-	m := &Model{}
-	h := &help.Model{}
-	opt := WithHelp(h)
-	opt(m)
-	assert.Equal(t, h, m.help)
-}
-
 func TestWithTable(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
@@ -83,37 +53,10 @@ func TestWithTable(t *testing.T) {
 	assert.Equal(t, tbl, m.table)
 }
 
-func TestWithTextInput(t *testing.T) {
-	t.Parallel()
-	m := &Model{}
-	ti := &textinput.Model{}
-	opt := WithTextInput(ti)
-	opt(m)
-	assert.Equal(t, ti, m.textInput)
-}
-
-func TestWithViewport(t *testing.T) {
-	t.Parallel()
-	m := &Model{}
-	vp := &viewport.Model{}
-	opt := WithViewport(vp)
-	opt(m)
-	assert.Equal(t, vp, m.viewport)
-}
-
 type mockRenderer struct{}
 
 var _ view.Renderer = (*mockRenderer)(nil)
 
 func (mockRenderer) RenderJSON(_ interface{}, width int) (string, error) {
 	return fmt.Sprintf("json: %d", width), nil
-}
-
-func TestWithRenderer(t *testing.T) {
-	t.Parallel()
-	m := &Model{}
-	var r view.Renderer = mockRenderer{}
-	opt := WithRenderer(r)
-	opt(m)
-	assert.Equal(t, r, m.renderer)
 }

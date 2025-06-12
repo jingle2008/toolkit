@@ -1,19 +1,26 @@
 package tui
 
 import (
-	"github.com/charmbracelet/bubbles/help"
+	"context"
+
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
-	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // ModelOption defines a functional option for configuring Model.
 type ModelOption func(*Model)
+
+/*
+WithContext sets the context.Context for the Model.
+*/
+func WithContext(ctx context.Context) ModelOption {
+	return func(m *Model) {
+		m.ctx = ctx
+	}
+}
 
 // WithRepoPath sets the repoPath field.
 func WithRepoPath(repoPath string) ModelOption {
@@ -45,53 +52,10 @@ func WithCategory(category domain.Category) ModelOption {
 	}
 }
 
-// WithAppContext sets the context field.
-func WithAppContext(ctx *domain.ToolkitContext) ModelOption {
-	return func(m *Model) {
-		m.context = ctx
-	}
-}
-
-// WithViewSize sets the viewWidth and viewHeight fields.
-func WithViewSize(width, height int) ModelOption {
-	return func(m *Model) {
-		m.viewWidth = width
-		m.viewHeight = height
-	}
-}
-
-// WithHelp sets the help.Model.
-func WithHelp(helpModel *help.Model) ModelOption {
-	return func(m *Model) {
-		m.help = helpModel
-	}
-}
-
 // WithTable sets the table.Model.
 func WithTable(tbl *table.Model) ModelOption {
 	return func(m *Model) {
 		m.table = tbl
-	}
-}
-
-// WithTextInput sets the textinput.Model.
-func WithTextInput(ti *textinput.Model) ModelOption {
-	return func(m *Model) {
-		m.textInput = ti
-	}
-}
-
-// WithViewport sets the viewport.Model.
-func WithViewport(vp *viewport.Model) ModelOption {
-	return func(m *Model) {
-		m.viewport = vp
-	}
-}
-
-// WithRenderer sets the Renderer implementation for the Model.
-func WithRenderer(r view.Renderer) ModelOption {
-	return func(m *Model) {
-		m.renderer = r
 	}
 }
 

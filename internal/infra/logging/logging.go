@@ -78,7 +78,7 @@ func MustNewLogger(debug bool) Logger {
 // If debug is true, uses development encoder config, else production config.
 func NewFileLogger(debug bool, filename string) (Logger, error) {
 	flag := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
-	f, err := os.OpenFile(filename, flag, 0o644)
+	f, err := os.OpenFile(filename, flag, 0o600) // #nosec G304
 	if err != nil {
 		return nil, err
 	}

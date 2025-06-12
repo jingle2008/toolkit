@@ -123,29 +123,50 @@ func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 	m.keys.Category = category
 	switch m.category {
 	case domain.BaseModel:
-		if m.dataset == nil || m.dataset.BaseModelMap == nil {
-			m.loading = true
-			return loadRequest{category: domain.BaseModel, model: m}.Run
-		}
+		return m.handleBaseModelCategory()
 	case domain.GpuPool:
-		if m.dataset == nil || m.dataset.GpuPools == nil {
-			m.loading = true
-			return loadRequest{category: domain.GpuPool, model: m}.Run
-		}
+		return m.handleGpuPoolCategory()
 	case domain.GpuNode:
-		if m.dataset == nil || m.dataset.GpuNodeMap == nil {
-			m.loading = true
-			return loadRequest{category: domain.GpuNode, model: m}.Run
-		}
+		return m.handleGpuNodeCategory()
 	case domain.DedicatedAICluster:
-		if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil {
-			m.loading = true
-			return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
+		return m.handleDedicatedAIClusterCategory()
+	default:
+		return func() tea.Msg {
+			return DataMsg{}
 		}
 	}
-	return func() tea.Msg {
-		return DataMsg{}
+}
+
+func (m *Model) handleBaseModelCategory() tea.Cmd {
+	if m.dataset == nil || m.dataset.BaseModelMap == nil {
+		m.loading = true
+		return loadRequest{category: domain.BaseModel, model: m}.Run
 	}
+	return func() tea.Msg { return DataMsg{} }
+}
+
+func (m *Model) handleGpuPoolCategory() tea.Cmd {
+	if m.dataset == nil || m.dataset.GpuPools == nil {
+		m.loading = true
+		return loadRequest{category: domain.GpuPool, model: m}.Run
+	}
+	return func() tea.Msg { return DataMsg{} }
+}
+
+func (m *Model) handleGpuNodeCategory() tea.Cmd {
+	if m.dataset == nil || m.dataset.GpuNodeMap == nil {
+		m.loading = true
+		return loadRequest{category: domain.GpuNode, model: m}.Run
+	}
+	return func() tea.Msg { return DataMsg{} }
+}
+
+func (m *Model) handleDedicatedAIClusterCategory() tea.Cmd {
+	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil {
+		m.loading = true
+		return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
+	}
+	return func() tea.Msg { return DataMsg{} }
 }
 
 // enterDetailView switches the model into detail view mode.
