@@ -1,3 +1,6 @@
+/*
+Package errors provides error helpers and custom error types for toolkit.
+*/
 package errors
 
 import (

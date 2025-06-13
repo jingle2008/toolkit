@@ -45,12 +45,12 @@ func SafeReadFile(path string, baseDir string, allowExt map[string]struct{}) ([]
 
 	// Ensure absTarget is within absBase
 	if !strings.HasPrefix(absTarget, absBase+string(os.PathSeparator)) && absTarget != absBase {
-		return nil, errors.Wrap(nil, fmt.Sprintf("access outside trusted dir %s", absBase))
+		return nil, fmt.Errorf("access outside trusted dir %s", absBase)
 	}
 
 	ext := strings.ToLower(filepath.Ext(absTarget))
 	if _, ok := allowExt[ext]; !ok {
-		return nil, errors.Wrap(nil, fmt.Sprintf("extension %s not permitted", ext))
+		return nil, fmt.Errorf("extension %s not permitted", ext)
 	}
 
 	return os.ReadFile(absTarget) // #nosec G304 -- absTarget validated above
