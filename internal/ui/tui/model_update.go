@@ -69,25 +69,8 @@ func (m *Model) enterEditMode(target EditTarget) {
 	m.target = target
 	m.textInput.Focus()
 
-	// Provide category suggestions using domain.ParseCategory aliases.
-	keys := []string{
-		"t", "tenant",
-		"ld", "limitdefinition",
-		"cpd", "consolepropertydefinition",
-		"pd", "propertydefinition",
-		"lto", "limittenancyoverride",
-		"cpto", "consolepropertytenancyoverride",
-		"pto", "propertytenancyoverride",
-		"cpro", "consolepropertyregionaloverride",
-		"pro", "propertyregionaloverride",
-		"bm", "basemodel",
-		"ma", "modelartifact",
-		"e", "environment",
-		"st", "servicetenancy",
-		"gp", "gpupool",
-		"gn", "gpunode",
-		"dac", "dedicatedaicluster",
-	}
+	// Provide category suggestions using domain.Aliases().
+	keys := domain.Aliases()
 	if target == Alias {
 		m.textInput.Reset()
 	} else if len(m.textInput.Value()) > 0 {

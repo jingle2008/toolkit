@@ -150,6 +150,16 @@ var catLookup = map[string]Category{
 	"dac":                             DedicatedAICluster,
 }
 
+// Aliases returns all canonical alias strings for autocomplete, etc.
+func Aliases() []string {
+	keys := make([]string, 0, len(catLookup))
+	for k := range catLookup {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
 // ErrUnknownCategory is returned when a string cannot be parsed into a known Category.
 var ErrUnknownCategory = errors.New("unknown category")
 
