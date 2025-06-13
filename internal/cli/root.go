@@ -32,16 +32,21 @@ func NewRootCmd(version string) *cobra.Command {
 		Use:   "toolkit",
 		Short: "Toolkit CLI",
 		Long:  "Toolkit CLI for managing and visualizing infrastructure and configuration.",
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			showVersion, _ := cmd.Flags().GetBool("version")
+			if showVersion {
+				fmt.Println(version)
+				os.Exit(0)
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			// Bind all flags to viper
 			_ = viper.BindPFlags(cmd.Flags())
 			_ = viper.BindPFlags(cmd.PersistentFlags())
 
-			// Set env prefix and automatic env
 			viper.SetEnvPrefix("toolkit")
 			viper.AutomaticEnv()
 
-			// Read config file if provided
 			if cfgFile != "" {
 				viper.SetConfigFile(cfgFile)
 				if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -49,7 +54,6 @@ func NewRootCmd(version string) *cobra.Command {
 				}
 			}
 
-			// Unmarshal config
 			var cfg config.Config
 			if err := viper.Unmarshal(&cfg); err != nil {
 				return fmt.Errorf("failed to unmarshal config: %w", err)
@@ -57,11 +61,14 @@ func NewRootCmd(version string) *cobra.Command {
 			if err := cfg.Validate(); err != nil {
 				return fmt.Errorf("failed to validate config: %w", err)
 			}
-			// Always log to toolkit.log in current directory, overwrite each run
-			logger, err := logging.NewFileLogger(false, "toolkit.log")
+
+			logger, err := logging.NewFileLogger(cfg.Debug, cfg.LogFile)
 			if err != nil {
 				return fmt.Errorf("failed to initialize logger: %w", err)
 			}
+			defer func() {
+				_ = logger.Sync()
+			}()
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
 			if err := runToolkit(ctx, logger, cfg); err != nil {
@@ -82,16 +89,10 @@ func NewRootCmd(version string) *cobra.Command {
 	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
 	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
+	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file (default: toolkit.log)")
+	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
 
 	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
-
-	rootCmd.PreRun = func(cmd *cobra.Command, _ []string) {
-		showVersion, _ := cmd.Flags().GetBool("version")
-		if showVersion {
-			fmt.Println(version)
-			os.Exit(0)
-		}
-	}
 
 	return rootCmd
 }

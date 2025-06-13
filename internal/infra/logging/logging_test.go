@@ -19,6 +19,7 @@ func (f *fakeLogger) WithFields(kv ...any) Logger {
 	return f
 }
 func (f *fakeLogger) DebugEnabled() bool { return true }
+func (f *fakeLogger) Sync() error        { return nil }
 
 func TestWithLoggerAndLoggerFromCtx(t *testing.T) {
 	t.Parallel()

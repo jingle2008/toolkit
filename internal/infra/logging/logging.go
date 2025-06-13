@@ -16,6 +16,7 @@ type Logger interface {
 	Errorw(msg string, kv ...any)
 	WithFields(kv ...any) Logger
 	DebugEnabled() bool
+	Sync() error
 }
 
 // zapLogger is an adapter that wraps a zap.SugaredLogger to implement Logger.
@@ -42,6 +43,10 @@ func (l *zapLogger) WithFields(kv ...any) Logger {
 
 func (l *zapLogger) DebugEnabled() bool {
 	return l.debug
+}
+
+func (l *zapLogger) Sync() error {
+	return l.s.Sync()
 }
 
 // NewZapLogger returns a Logger backed by a zap.SugaredLogger.
@@ -141,3 +146,4 @@ func (noopLogger) Infow(string, ...any)     {}
 func (noopLogger) Errorw(string, ...any)    {}
 func (noopLogger) WithFields(...any) Logger { return noopLogger{} }
 func (noopLogger) DebugEnabled() bool       { return false }
+func (noopLogger) Sync() error              { return nil }

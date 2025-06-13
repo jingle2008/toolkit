@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/jingle2008/toolkit/internal/errors"
 )
 
 /*
@@ -34,21 +36,21 @@ func SafeReadFile(path string, baseDir string, allowExt map[string]struct{}) ([]
 
 	absTarget, err := filepath.Abs(clean)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
+		return nil, errors.Wrap(err, "failed to open file")
 	}
 	absBase, err := filepath.Abs(filepath.Clean(baseDir))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		return nil, errors.Wrap(err, "failed to read file")
 	}
 
 	// Ensure absTarget is within absBase
 	if !strings.HasPrefix(absTarget, absBase+string(os.PathSeparator)) && absTarget != absBase {
-		return nil, fmt.Errorf("access outside trusted dir %s", absBase)
+		return nil, errors.Wrap(nil, fmt.Sprintf("access outside trusted dir %s", absBase))
 	}
 
 	ext := strings.ToLower(filepath.Ext(absTarget))
 	if _, ok := allowExt[ext]; !ok {
-		return nil, fmt.Errorf("extension %s not permitted", ext)
+		return nil, errors.Wrap(nil, fmt.Sprintf("extension %s not permitted", ext))
 	}
 
 	return os.ReadFile(absTarget) // #nosec G304 -- absTarget validated above
