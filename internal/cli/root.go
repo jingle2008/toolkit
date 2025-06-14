@@ -88,8 +88,9 @@ func NewRootCmd(version string) *cobra.Command {
 	rootCmd.PersistentFlags().String("env_region", "", "Environment region")
 	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
 	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
+	rootCmd.PersistentFlags().StringP("filter", "f", "", "Initial filter for current category")
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
-	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file (default: toolkit.log)")
+	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
 
 	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
@@ -131,6 +132,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config) e
 		tui.WithLogger(logger),
 		tui.WithContext(ctx),
 		tui.WithLoader(loader.ProductionLoader{}),
+		tui.WithFilter(cfg.Filter),
 	)
 	if err != nil {
 		logger.Errorw("failed to create toolkit model", "error", err)

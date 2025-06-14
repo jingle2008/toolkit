@@ -11,3 +11,6 @@ type DataMsg struct{ Data interface{} }
 
 // FilterMsg is a message containing filter text.
 type FilterMsg struct{ Text string }
+
+// SetFilterMsg is a message to set the filter text in the model.
+type SetFilterMsg struct{ Text string }

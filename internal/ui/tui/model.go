@@ -22,6 +22,16 @@ func (m *Model) loadData() tea.Cmd {
 	}
 }
 
+func setFilter(filter string) tea.Cmd {
+	if filter == "" {
+		return nil
+	}
+
+	return func() tea.Msg {
+		return SetFilterMsg{Text: filter}
+	}
+}
+
 var lazyLoadedCategories = map[domain.Category]struct{}{
 	domain.BaseModel:          {},
 	domain.GpuPool:            {},
@@ -40,5 +50,6 @@ func (m *Model) Init() tea.Cmd {
 		cmds = append(cmds, m.updateCategory(m.category))
 	}
 
+	cmds = append(cmds, setFilter(m.newFilter))
 	return tea.Sequence(cmds...)
 }

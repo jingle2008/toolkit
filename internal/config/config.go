@@ -20,6 +20,7 @@ type Config struct {
 	Category   string `mapstructure:"category"`
 	LogFile    string `mapstructure:"log_file"`
 	Debug      bool   `mapstructure:"debug"`
+	Filter     string `mapstructure:"filter"`
 }
 
 /*

@@ -20,6 +20,8 @@ func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
 		m.handleDataMsg(msg)
 	case FilterMsg:
 		m.handleFilterMsg(msg)
+	case SetFilterMsg:
+		cmds = append(cmds, m.handleSetFilterMsg(msg))
 	case ErrMsg:
 		m.handleErrMsg(msg)
 	case spinner.TickMsg:
@@ -57,6 +59,14 @@ func (m *Model) handleDataMsg(msg DataMsg) {
 func (m *Model) handleFilterMsg(msg FilterMsg) {
 	if msg.Text == m.newFilter {
 		FilterTable(m, msg.Text)
+	}
+}
+
+func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
+	m.newFilter = msg.Text
+	m.textInput.SetValue(msg.Text)
+	return func() tea.Msg {
+		return FilterMsg(msg)
 	}
 }
 
