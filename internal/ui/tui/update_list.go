@@ -10,7 +10,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 
-func updateListView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
+func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {

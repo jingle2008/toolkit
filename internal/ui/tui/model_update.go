@@ -58,9 +58,9 @@ func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateLayout(msg.Width, msg.Height)
 	}
 	if !m.chosen {
-		return updateListView(msg, m)
+		return m.updateListView(msg)
 	}
-	return updateDetailView(msg, m)
+	return m.updateDetailView(msg)
 }
 
 func (m *Model) enterEditMode(target EditTarget) {

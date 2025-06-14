@@ -281,7 +281,7 @@ func TestModel_DetailView_and_ExitDetailView(t *testing.T) {
 	m.enterDetailView()
 	// Simulate "esc" key in detail view
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("esc")}
-	_, _ = updateDetailView(msg, m)
+	_, _ = m.updateDetailView(msg)
 	m.exitDetailView()
 }
 
@@ -298,29 +298,29 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 		keyStr = m.keys.Quit.Keys()[0]
 	}
 	nextMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
-	updateListView(nextMsg, m)
-	updateListView(nextMsg, m)
+	m.updateListView(nextMsg)
+	m.updateListView(nextMsg)
 
 	// Simulate FilterItems, JumpTo, ViewDetails, ApplyContext
 	m.keys.FilterItems = m.keys.Quit
 	m.keys.JumpTo = m.keys.Quit
 	m.keys.ViewDetails = m.keys.Quit
 	m.keys.ApplyContext = m.keys.Quit
-	updateListView(nextMsg, m)
-	updateListView(nextMsg, m)
-	updateListView(nextMsg, m)
-	updateListView(nextMsg, m)
+	m.updateListView(nextMsg)
+	m.updateListView(nextMsg)
+	m.updateListView(nextMsg)
+	m.updateListView(nextMsg)
 
 	// Switch to Edit mode and test "enter" and "esc"
 	m.mode = Edit
 	m.target = Alias
 	enterMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("enter")}
 	escMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("esc")}
-	updateListView(enterMsg, m)
-	updateListView(escMsg, m)
+	m.updateListView(enterMsg)
+	m.updateListView(escMsg)
 	m.target = Filter
-	updateListView(enterMsg, m)
-	updateListView(escMsg, m)
+	m.updateListView(enterMsg)
+	m.updateListView(escMsg)
 }
 
 // --- Added: Test for getCurrentItem and handleAdditionalKeys ---

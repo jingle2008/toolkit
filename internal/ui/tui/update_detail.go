@@ -5,7 +5,7 @@ package tui
 
 import tea "github.com/charmbracelet/bubbletea"
 
-func updateDetailView(msg tea.Msg, m *Model) (tea.Model, tea.Cmd) {
+func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
