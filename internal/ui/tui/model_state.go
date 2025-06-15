@@ -27,6 +27,7 @@ Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
 */
 type Model struct {
+	pendingTasks   int
 	logger         logging.Logger
 	ctx            context.Context //nolint:containedctx
 	repoPath       string
@@ -62,10 +63,9 @@ type Model struct {
 	statusText     lipgloss.Style
 	infoKeyStyle   lipgloss.Style
 	infoValueStyle lipgloss.Style
-	loading        bool // true if data is being loaded
 
 	// Spinner for loading screen
-	loadingSpinner spinner.Model
+	loadingSpinner *spinner.Model
 }
 
 /*
@@ -73,14 +73,9 @@ NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
 func NewModel(opts ...ModelOption) (*Model, error) {
 	m := &Model{
-		mode:    Normal,
-		target:  None,
-		keys:    keys.Keys,
-		loading: true, // start in loading state
-		loadingSpinner: spinner.New(
-			spinner.WithSpinner(spinner.Points),
-			spinner.WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("205"))),
-		),
+		mode:   Normal,
+		target: None,
+		keys:   keys.Keys,
 	}
 
 	initStyles(m)
@@ -188,5 +183,14 @@ func setDefaults(m *Model) {
 			Foreground(lipgloss.Color("33"))
 		hm.Styles.FullDesc = lipgloss.NewStyle()
 		m.help = &hm
+	}
+
+	if m.loadingSpinner == nil {
+		loadingSpinner := spinner.New(
+			spinner.WithSpinner(spinner.Points),
+			spinner.WithStyle(lipgloss.NewStyle().
+				Foreground(lipgloss.Color("205"))),
+		)
+		m.loadingSpinner = &loadingSpinner
 	}
 }

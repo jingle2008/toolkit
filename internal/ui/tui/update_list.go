@@ -25,7 +25,7 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ErrMsg:
 		m.handleErrMsg(msg)
 	case spinner.TickMsg:
-		cmds = append(cmds, m.handleSpinnerTickMsg(msg)...)
+		cmds = append(cmds, m.handleSpinnerTickMsg(msg))
 	default:
 		// Future-proof: ignore unknown message types
 	}
@@ -38,7 +38,7 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
-	if m.loading {
+	if m.pendingTasks > 0 {
 		return cmds
 	}
 	if msg.String() == "esc" {
@@ -71,15 +71,14 @@ func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
 }
 
 func (m *Model) handleErrMsg(msg ErrMsg) {
+	m.pendingTasks--
 	m.err = msg.Err
 }
 
-func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) []tea.Cmd {
-	var cmds []tea.Cmd
-	var cmd tea.Cmd
-	m.loadingSpinner, cmd = m.loadingSpinner.Update(msg)
-	cmds = append(cmds, cmd)
-	return cmds
+func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
+	loadingSpinner, cmd := m.loadingSpinner.Update(msg)
+	m.loadingSpinner = &loadingSpinner
+	return cmd
 }
 
 // handleNormalKeys processes key events in Normal mode.

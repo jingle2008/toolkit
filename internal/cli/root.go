@@ -73,7 +73,7 @@ func NewRootCmd(version string) *cobra.Command {
 			defer stop()
 			if err := runToolkit(ctx, logger, cfg); err != nil {
 				logger.Errorw("fatal error", "error", err)
-				os.Exit(1)
+				return err
 			}
 			return nil
 		},
@@ -102,6 +102,7 @@ func NewRootCmd(version string) *cobra.Command {
 func Execute(version string) {
 	cmd := NewRootCmd(version)
 	if err := cmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
 }
@@ -139,21 +140,10 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config) e
 		return fmt.Errorf("failed to create toolkit model: %w", err)
 	}
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(ctx))
-	// Run the program with context cancellation
-	done := make(chan error, 1)
-	go func() {
-		_, err := p.Run()
-		done <- err
-	}()
-	select {
-	case <-ctx.Done():
-		logger.Errorw("context cancelled", "error", ctx.Err())
-		return ctx.Err()
-	case err := <-done:
-		if err != nil {
-			logger.Errorw("program error", "error", err)
-			return fmt.Errorf("alas, there's been an error: %w", err)
-		}
+	_, err = p.Run()
+	if err != nil && !errors.Is(err, context.Canceled) {
+		logger.Errorw("program error", "error", err)
+		return fmt.Errorf("program error: %w", err)
 	}
 	return nil
 }

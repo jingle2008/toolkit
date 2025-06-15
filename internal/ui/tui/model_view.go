@@ -79,7 +79,7 @@ func (m *Model) updateContent(width int) {
 
 // View renders the current state of the model as a string.
 func (m *Model) View() string {
-	if m.loading {
+	if m.pendingTasks > 0 {
 		// Compose spinner and message
 		spin := m.loadingSpinner.View()
 		msg := fmt.Sprintf("%s Loading data: %s …", spin, m.category.String())

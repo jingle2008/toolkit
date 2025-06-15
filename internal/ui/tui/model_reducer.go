@@ -14,8 +14,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// reusable refresh command emitting an empty DataMsg
-var refreshCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
+var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
 
 // updateRows updates the table rows based on the current model state.
 func (m *Model) updateRows() {
@@ -92,7 +91,10 @@ func (m *Model) processData(msg DataMsg) {
 	case map[string][]models.DedicatedAICluster:
 		m.dataset.SetDedicatedAIClusterMap(data)
 	}
-	m.loading = false
+
+	if msg.Data != nil {
+		m.pendingTasks--
+	}
 	m.refreshDisplay()
 }
 
@@ -134,40 +136,40 @@ func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 	case domain.DedicatedAICluster:
 		return m.handleDedicatedAIClusterCategory()
 	default:
-		return refreshCmd
+		return refreshDataCmd
 	}
 }
 
 func (m *Model) handleBaseModelCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.BaseModelMap == nil {
-		m.loading = true
+		m.pendingTasks++
 		return loadRequest{category: domain.BaseModel, model: m}.Run
 	}
-	return refreshCmd
+	return refreshDataCmd
 }
 
 func (m *Model) handleGpuPoolCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuPools == nil {
-		m.loading = true
+		m.pendingTasks++
 		return loadRequest{category: domain.GpuPool, model: m}.Run
 	}
-	return refreshCmd
+	return refreshDataCmd
 }
 
 func (m *Model) handleGpuNodeCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuNodeMap == nil {
-		m.loading = true
+		m.pendingTasks++
 		return loadRequest{category: domain.GpuNode, model: m}.Run
 	}
-	return refreshCmd
+	return refreshDataCmd
 }
 
 func (m *Model) handleDedicatedAIClusterCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil {
-		m.loading = true
+		m.pendingTasks++
 		return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
 	}
-	return refreshCmd
+	return refreshDataCmd
 }
 
 // enterDetailView switches the model into detail view mode.

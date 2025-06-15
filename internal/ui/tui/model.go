@@ -12,7 +12,7 @@ import (
 
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() tea.Cmd {
-	m.loading = true
+	m.pendingTasks++
 	return func() tea.Msg {
 		dataset, err := m.loader.LoadDataset(m.ctx, m.repoPath, m.environment)
 		if err != nil {
@@ -32,6 +32,7 @@ func setFilter(filter string) tea.Cmd {
 	}
 }
 
+// lazyLoadedCategories is a set of categories that are loaded on demand and never mutated.
 var lazyLoadedCategories = map[domain.Category]struct{}{
 	domain.BaseModel:          {},
 	domain.GpuPool:            {},
