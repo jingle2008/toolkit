@@ -49,6 +49,12 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Regions", 0.25},
 		{"Value", 0.1},
 	},
+	domain.LimitRegionalOverride: {
+		{"Limit", 0.4},
+		{"Regions", 0.3},
+		{"Min", 0.15},
+		{"Max", 0.15},
+	},
 	domain.ConsolePropertyRegionalOverride: {
 		{"Property", 0.4},
 		{"Regions", 0.4},

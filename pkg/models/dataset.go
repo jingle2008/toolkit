@@ -11,6 +11,7 @@ type Dataset struct {
 	LimitTenancyOverrideMap           map[string][]LimitTenancyOverride
 	PropertyTenancyOverrideMap        map[string][]PropertyTenancyOverride
 	ConsolePropertyRegionalOverrides  []ConsolePropertyRegionalOverride
+	LimitRegionalOverrides            []LimitRegionalOverride
 	PropertyRegionalOverrides         []PropertyRegionalOverride
 	Tenants                           []Tenant
 	BaseModelMap                      map[string]*BaseModel

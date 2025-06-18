@@ -227,7 +227,7 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 		return nil, err
 	}
 
-	consolePropertyRegionalOverrides, propertyRegionalOverrides, err := loadRegionalOverridesGroups(ctx, limitsRoot, realm)
+	limitRegionalOverrides, consolePropertyRegionalOverrides, propertyRegionalOverrides, err := loadRegionalOverridesGroups(ctx, limitsRoot, realm)
 	if err != nil {
 		return nil, err
 	}
@@ -245,6 +245,7 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 		ConsolePropertyTenancyOverrideMap: consolePropertyTenancyOverrideMap,
 		PropertyTenancyOverrideMap:        propertyTenancyOverrideMap,
 		ConsolePropertyRegionalOverrides:  consolePropertyRegionalOverrides,
+		LimitRegionalOverrides:            limitRegionalOverrides,
 		PropertyRegionalOverrides:         propertyRegionalOverrides,
 		Tenants:                           tenants,
 		Environments:                      environments,
@@ -327,23 +328,30 @@ func buildTenantMap(ctx context.Context, limitsRoot, realm string) (
 	return tenants, limitTenancyOverrideMap, consolePropertyTenancyOverrideMap, propertyTenancyOverrideMap, nil
 }
 
-// loadRegionalOverridesGroups loads the regional overrides for console property and property.
+// loadRegionalOverridesGroups loads the regional overrides for limit, console property, and property.
 func loadRegionalOverridesGroups(ctx context.Context, limitsRoot, realm string) (
+	[]models.LimitRegionalOverride,
 	[]models.ConsolePropertyRegionalOverride,
 	[]models.PropertyRegionalOverride,
 	error,
 ) {
+	limitRegionalOverrides, err := loadRegionalOverrides[models.LimitRegionalOverride](
+		ctx, limitsRoot, realm, limitsKey+regionalOverridesKey)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	consolePropertyRegionalOverrides, err := loadRegionalOverrides[models.ConsolePropertyRegionalOverride](
 		ctx, limitsRoot, realm, consolePropertiesKey+regionalOverridesKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	propertyRegionalOverrides, err := loadRegionalOverrides[models.PropertyRegionalOverride](
 		ctx, limitsRoot, realm, propertiesKey+regionalOverridesKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return consolePropertyRegionalOverrides, propertyRegionalOverrides, nil
+	return limitRegionalOverrides, consolePropertyRegionalOverrides, propertyRegionalOverrides, nil
 }

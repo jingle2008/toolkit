@@ -93,6 +93,26 @@ func Test_getEnvironments_returns_rows(t *testing.T) {
 	assert.Equal(t, table.Row{"prod-iad", "realmB", "prod", "us-ashburn-1"}, rows[1])
 }
 
+func Test_getLimitRegionalOverrides(t *testing.T) {
+	t.Parallel()
+	overrides := []models.LimitRegionalOverride{
+		{
+			Name:    "LimitA",
+			Regions: []string{"us-phoenix-1", "eu-frankfurt-1"},
+			Values:  []models.LimitRange{{Min: 10, Max: 100}},
+		},
+		{
+			Name:    "LimitB",
+			Regions: []string{"us-ashburn-1"},
+			Values:  []models.LimitRange{{Min: 5, Max: 50}},
+		},
+	}
+	rows := getLimitRegionalOverrides(overrides, "")
+	require.Len(t, rows, 2)
+	require.Equal(t, table.Row{"LimitA", "us-phoenix-1, eu-frankfurt-1", "10", "100"}, rows[0])
+	require.Equal(t, table.Row{"LimitB", "us-ashburn-1", "5", "50"}, rows[1])
+}
+
 func Test_rowGenerationFunctions_tableDriven(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -30,6 +30,8 @@ const (
 	ConsolePropertyTenancyOverride
 	// PropertyTenancyOverride is a category for property tenancy overrides.
 	PropertyTenancyOverride
+	// LimitRegionalOverride is a category for limit regional overrides.
+	LimitRegionalOverride
 	// ConsolePropertyRegionalOverride is a category for console property regional overrides.
 	ConsolePropertyRegionalOverride
 	// PropertyRegionalOverride is a category for property regional overrides.
@@ -91,7 +93,7 @@ func (e Category) ScopedCategories() []Category {
 			DedicatedAICluster,
 		}
 	case LimitDefinition:
-		return []Category{LimitTenancyOverride}
+		return []Category{LimitTenancyOverride, LimitRegionalOverride}
 	case ConsolePropertyDefinition:
 		return []Category{
 			ConsolePropertyTenancyOverride,
@@ -130,6 +132,8 @@ var catLookup = map[string]Category{
 	"cpto":                            ConsolePropertyTenancyOverride,
 	"propertytenancyoverride":         PropertyTenancyOverride,
 	"pto":                             PropertyTenancyOverride,
+	"limitregionaloverride":           LimitRegionalOverride,
+	"lro":                             LimitRegionalOverride,
 	"consolepropertyregionaloverride": ConsolePropertyRegionalOverride,
 	"cpro":                            ConsolePropertyRegionalOverride,
 	"propertyregionaloverride":        PropertyRegionalOverride,
@@ -169,6 +173,8 @@ Definition returns the definition category for the receiver.
 func (e Category) Definition() Category {
 	switch e {
 	case LimitTenancyOverride:
+		return LimitDefinition
+	case LimitRegionalOverride:
 		return LimitDefinition
 	case ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride:
 		return ConsolePropertyDefinition

@@ -98,8 +98,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	case key.Matches(msg, m.keys.ViewDetails):
 		m.enterDetailView()
 	case key.Matches(msg, m.keys.ApplyContext):
-		cmd := m.enterContext()
-		cmds = append(cmds, cmd)
+		cmds = append(cmds, m.enterContext())
 	default:
 		m.handleAdditionalKeys(msg)
 	}

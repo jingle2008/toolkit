@@ -73,7 +73,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 	}
 	cases := []want{
 		{Tenant, []Category{LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster}},
-		{LimitDefinition, []Category{LimitTenancyOverride}},
+		{LimitDefinition, []Category{LimitTenancyOverride, LimitRegionalOverride}},
 		{ConsolePropertyDefinition, []Category{ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride}},
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},
 		{GpuPool, []Category{GpuNode}},

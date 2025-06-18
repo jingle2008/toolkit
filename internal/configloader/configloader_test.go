@@ -394,8 +394,10 @@ locals {
 	// Regional overrides
 	consoleRegOverrideDir := filepath.Join(limitDefDir, "console_properties_regional_overrides", "regional_values", realm)
 	propRegOverrideDir := filepath.Join(limitDefDir, "properties_regional_overrides", "regional_values", realm)
+	limitRegOverrideDir := filepath.Join(limitDefDir, "limits_regional_overrides", "regional_values", realm)
 	_ = os.MkdirAll(consoleRegOverrideDir, 0o750)
 	_ = os.MkdirAll(propRegOverrideDir, 0o750)
+	_ = os.MkdirAll(limitRegOverrideDir, 0o750)
 	consoleRegOverride := models.ConsolePropertyRegionalOverride{Name: "cpr"}
 	consoleRegOverridePath := filepath.Join(consoleRegOverrideDir, "console_properties_regional_overrides.json")
 	data, _ = json.Marshal(consoleRegOverride)
@@ -404,6 +406,8 @@ locals {
 	propRegOverridePath := filepath.Join(propRegOverrideDir, "properties_regional_overrides.json")
 	data, _ = json.Marshal(propRegOverride)
 	_ = os.WriteFile(propRegOverridePath, data, 0o600)
+	// Add a dummy file for limits_regional_overrides to avoid directory read error
+	_ = os.WriteFile(filepath.Join(limitRegOverrideDir, "dummy.json"), []byte("{}"), 0o600)
 
 	// Environment
 	env := models.Environment{Type: "dev", Region: "us-phx-1", Realm: realm}
@@ -456,6 +460,6 @@ func TestBuildTenantMap_Error(t *testing.T) {
 
 func TestLoadRegionalOverridesGroups_Error(t *testing.T) {
 	t.Parallel()
-	_, _, err := loadRegionalOverridesGroups(context.Background(), "/no/such/path", "realm")
+	_, _, _, err := loadRegionalOverridesGroups(context.Background(), "/no/such/path", "realm")
 	testutil.RequireError(t, err)
 }

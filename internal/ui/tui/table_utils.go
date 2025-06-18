@@ -36,6 +36,9 @@ var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset,
 	domain.PropertyTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
 		return GetScopedItems(logger, dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter)
 	},
+	domain.LimitRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+		return getLimitRegionalOverrides(dataset.LimitRegionalOverrides, filter)
+	},
 	domain.ConsolePropertyRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getRegionalOverrides(dataset.ConsolePropertyRegionalOverrides, filter)
 	},
@@ -154,6 +157,25 @@ func getPropertyDefinitions[T models.Definition](definitions []T, filter string)
 }
 
 /*
+getLimitRegionalOverrides returns table rows for a slice of LimitRegionalOverride, filtered by the provided filter string.
+*/
+func getLimitRegionalOverrides(overrides []models.LimitRegionalOverride, filter string) []table.Row {
+	return filterRows(overrides, filter, func(val models.LimitRegionalOverride) table.Row {
+		min, max := "", ""
+		if len(val.Values) > 0 {
+			min = fmt.Sprint(val.Values[0].Min)
+			max = fmt.Sprint(val.Values[0].Max)
+		}
+		return table.Row{
+			val.Name,
+			strings.Join(val.Regions, ", "),
+			min,
+			max,
+		}
+	})
+}
+
+/*
 getRegionalOverrides returns table rows for a slice of DefinitionOverride, filtered by the provided filter string.
 */
 func getRegionalOverrides[T models.DefinitionOverride](overrides []T, filter string) []table.Row {
@@ -221,7 +243,7 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	switch category {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
-		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride:
+		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride:
 		return row[0]
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
@@ -255,6 +277,8 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 		return findConsolePropertyTenancyOverride(dataset, key)
 	case domain.PropertyTenancyOverride:
 		return findPropertyTenancyOverride(dataset, key)
+	case domain.LimitRegionalOverride:
+		return findLimitRegionalOverride(dataset, key)
 	case domain.ConsolePropertyRegionalOverride:
 		return findConsolePropertyRegionalOverride(dataset, key)
 	case domain.PropertyRegionalOverride:
@@ -316,6 +340,10 @@ func findPropertyTenancyOverride(dataset *models.Dataset, key models.ItemKey) in
 		return collections.FindByName(items, k.Name)
 	}
 	return nil
+}
+
+func findLimitRegionalOverride(dataset *models.Dataset, key models.ItemKey) interface{} {
+	return collections.FindByName(dataset.LimitRegionalOverrides, key.(string))
 }
 
 func findConsolePropertyRegionalOverride(dataset *models.Dataset, key models.ItemKey) interface{} {

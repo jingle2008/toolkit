@@ -66,6 +66,5 @@ func (o ConsolePropertyTenancyOverride) GetTenantID() string {
 
 // GetFilterableFields returns filterable fields for the console property regional override.
 func (o ConsolePropertyRegionalOverride) GetFilterableFields() []string {
-	results := o.Regions
-	return append(results, o.Name)
+	return append(o.Regions, o.Name)
 }
