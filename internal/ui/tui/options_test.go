@@ -58,7 +58,7 @@ type mockRenderer struct{}
 
 var _ view.Renderer = (*mockRenderer)(nil)
 
-func (mockRenderer) RenderJSON(_ interface{}, width int) (string, error) {
+func (mockRenderer) RenderJSON(_ any, width int) (string, error) {
 	return fmt.Sprintf("json: %d", width), nil
 }
 

@@ -1,7 +1,7 @@
 package models
 
 // ItemKey represents a generic item key.
-type ItemKey interface{}
+type ItemKey any
 
 // ScopedItemKey represents an item key with a scope.
 type ScopedItemKey struct {

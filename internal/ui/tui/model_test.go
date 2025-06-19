@@ -113,7 +113,7 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 			if err != nil {
 				t.Fatalf("NewModel failed: %v", err)
 			}
-			var msg interface{}
+			var msg any
 			if tc.init {
 				msg = m.Init()()
 			} else {
@@ -124,7 +124,7 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 	}
 }
 
-func checkLoadDataResult(t *testing.T, msg interface{}, wantData *models.Dataset, wantError error) {
+func checkLoadDataResult(t *testing.T, msg any, wantData *models.Dataset, wantError error) {
 	t.Helper()
 	switch {
 	case wantData != nil:

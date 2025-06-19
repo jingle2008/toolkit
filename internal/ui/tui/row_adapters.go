@@ -184,7 +184,7 @@ GetTableRow returns a table.Row for a given item.
 If the item implements RowMarshaler, it is used directly.
 Otherwise, falls back to legacy type switch for backward compatibility.
 */
-func GetTableRow(logger logging.Logger, tenant string, item interface{}) table.Row {
+func GetTableRow(logger logging.Logger, tenant string, item any) table.Row {
 	if marshaler, ok := item.(RowMarshaler); ok {
 		return marshaler.ToRow(tenant)
 	}

@@ -58,7 +58,7 @@ func (m *Model) updateLayout(w, h int) {
 	helpHeight := lipgloss.Height(m.help.View(m.keys))
 	top := statusHeight + helpHeight
 	if m.viewMode == common.DetailsView {
-		m.viewport.Width = w - borderWidth
+		m.viewport.Width = w // - borderWidth, seems a bug in bubbletea
 		m.viewport.Height = h - borderHeight - top
 		m.updateContent(w - borderWidth)
 	} else {
@@ -128,7 +128,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 }
 
 // getCurrentItem returns the currently selected item in the table.
-func (m *Model) getCurrentItem() interface{} {
+func (m *Model) getCurrentItem() any {
 	key := getItemKey(m.category, m.table.SelectedRow())
 	return findItem(m.dataset, m.category, key)
 }

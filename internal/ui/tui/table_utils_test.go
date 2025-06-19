@@ -558,8 +558,8 @@ func TestFindItem_AllCategories(t *testing.T) {
 	// Table-driven: category, key, want
 	tests := []struct {
 		category domain.Category
-		key      interface{}
-		want     interface{}
+		key      any
+		want     any
 	}{
 		{domain.Tenant, "tenant1", &ds.Tenants[0]},
 		{domain.LimitDefinition, "limdef", &ds.LimitDefinitionGroup.Values[0]},

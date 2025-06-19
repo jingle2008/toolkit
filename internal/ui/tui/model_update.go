@@ -23,7 +23,7 @@ type loadRequest struct {
 
 func (r loadRequest) Run() tea.Msg {
 	var (
-		data interface{}
+		data any
 		err  error
 	)
 	switch r.category {

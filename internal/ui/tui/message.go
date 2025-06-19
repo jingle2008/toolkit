@@ -7,7 +7,7 @@ package tui
 type ErrMsg struct{ Err error }
 
 // DataMsg is a message containing generic data.
-type DataMsg struct{ Data interface{} }
+type DataMsg struct{ Data any }
 
 // FilterMsg is a message containing filter text.
 type FilterMsg struct{ Text string }

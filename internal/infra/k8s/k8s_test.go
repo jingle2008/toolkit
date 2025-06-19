@@ -316,19 +316,19 @@ func TestListDedicatedAIClusters(t *testing.T) {
 					"ome.oracle.com/v1alpha1": {
 						Items: []unstructured.Unstructured{
 							{
-								Object: map[string]interface{}{
-									"metadata": map[string]interface{}{
+								Object: map[string]any{
+									"metadata": map[string]any{
 										"name": "dac1",
-										"labels": map[string]interface{}{
+										"labels": map[string]any{
 											"tenancy-id": "tid1",
 										},
 									},
-									"spec": map[string]interface{}{
+									"spec": map[string]any{
 										"type":      "t1",
 										"unitShape": "shape1",
 										"size":      int64(2),
 									},
-									"status": map[string]interface{}{
+									"status": map[string]any{
 										"status": "active",
 									},
 								},
@@ -338,18 +338,18 @@ func TestListDedicatedAIClusters(t *testing.T) {
 					"ome.io/v1beta1": {
 						Items: []unstructured.Unstructured{
 							{
-								Object: map[string]interface{}{
-									"metadata": map[string]interface{}{
+								Object: map[string]any{
+									"metadata": map[string]any{
 										"name": "dac2",
-										"labels": map[string]interface{}{
+										"labels": map[string]any{
 											"tenancy-id": "tid2",
 										},
 									},
-									"spec": map[string]interface{}{
+									"spec": map[string]any{
 										"profile": "p1",
 										"count":   int64(3),
 									},
-									"status": map[string]interface{}{
+									"status": map[string]any{
 										"dacLifecycleState": "ready",
 									},
 								},
@@ -371,22 +371,22 @@ func TestTenantIDFromLabels(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name   string
-		labels map[string]interface{}
+		labels map[string]any
 		want   string
 	}{
 		{
 			name:   "string tenancy-id",
-			labels: map[string]interface{}{"tenancy-id": "tid"},
+			labels: map[string]any{"tenancy-id": "tid"},
 			want:   "tid",
 		},
 		{
 			name:   "missing tenancy-id",
-			labels: map[string]interface{}{},
+			labels: map[string]any{},
 			want:   "UNKNOWN_TENANCY",
 		},
 		{
 			name:   "non-string tenancy-id",
-			labels: map[string]interface{}{"tenancy-id": 123},
+			labels: map[string]any{"tenancy-id": 123},
 			want:   "UNKNOWN_TENANCY",
 		},
 		{
