@@ -230,12 +230,6 @@ func TestLoadTenancyOverrides_Error(t *testing.T) {
 	testutil.RequireError(t, err)
 }
 
-func TestLoadRegionalOverrides_Error(t *testing.T) {
-	t.Parallel()
-	_, err := loadRegionalOverrides[models.Tenant](context.Background(), "/no/such/dir", "realm", "name")
-	testutil.RequireError(t, err)
-}
-
 func TestGetTenants(t *testing.T) {
 	t.Parallel()
 	m := map[string]tenantInfo{
@@ -448,18 +442,25 @@ func TestValidateEnvironment_Success(t *testing.T) {
 
 func TestLoadDefinitionGroups_Error(t *testing.T) {
 	t.Parallel()
-	_, _, _, err := loadDefinitionGroups("/no/such/path", "realm") //nolint:dogsled // we only need err
+	_, _, _, err := loadDefinitionGroups("/no/such/path") //nolint:dogsled // we only need err
 	testutil.RequireError(t, err)
 }
 
-func TestBuildTenantMap_Error(t *testing.T) {
+func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
 	t.Parallel()
-	_, _, _, _, err := buildTenantMap(context.Background(), "/no/such/path", "realm") //nolint:dogsled // we only need err
+	_, err := LoadTenancyOverrideGroup(context.Background(), "/no/such/path", "realm") //nolint:dogsled // we only need err
 	testutil.RequireError(t, err)
 }
 
-func TestLoadRegionalOverridesGroups_Error(t *testing.T) {
+func TestLoadRegionalOverrides_MissingDir(t *testing.T) {
 	t.Parallel()
-	_, _, _, err := loadRegionalOverridesGroups(context.Background(), "/no/such/path", "realm")
-	testutil.RequireError(t, err)
+	out, err := LoadLimitRegionalOverrides(context.Background(), "/no/such/path", "realm")
+	testutil.RequireNoError(t, err)
+	testutil.Equal(t, 0, len(out))
+	out2, err := LoadConsolePropertyRegionalOverrides(context.Background(), "/no/such/path", "realm")
+	testutil.RequireNoError(t, err)
+	testutil.Equal(t, 0, len(out2))
+	out3, err := LoadPropertyRegionalOverrides(context.Background(), "/no/such/path", "realm")
+	testutil.RequireNoError(t, err)
+	testutil.Equal(t, 0, len(out3))
 }

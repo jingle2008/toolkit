@@ -59,3 +59,21 @@ func (ProductionLoader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg str
 	}
 	return k8s.LoadDedicatedAIClusters(ctx, helper)
 }
+
+// LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.
+func (ProductionLoader) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
+	return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm)
+}
+
+// RegionalOverrideLoader implementations
+func (ProductionLoader) LoadLimitRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.LimitRegionalOverride, error) {
+	return configloader.LoadLimitRegionalOverrides(ctx, repo, env.Realm)
+}
+
+func (ProductionLoader) LoadConsolePropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.ConsolePropertyRegionalOverride, error) {
+	return configloader.LoadConsolePropertyRegionalOverrides(ctx, repo, env.Realm)
+}
+
+func (ProductionLoader) LoadPropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.PropertyRegionalOverride, error) {
+	return configloader.LoadPropertyRegionalOverrides(ctx, repo, env.Realm)
+}

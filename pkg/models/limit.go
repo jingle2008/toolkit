@@ -1,7 +1,5 @@
 package models
 
-import "fmt"
-
 // LimitDefinition represents a limit definition for a service.
 type LimitDefinition struct {
 	Name                 string `json:"name"`
@@ -79,20 +77,7 @@ func (o LimitRegionalOverride) GetName() string {
 	return o.Name
 }
 
-// GetRegions returns the regions of the limit regional override.
-func (o LimitRegionalOverride) GetRegions() []string {
-	return o.Regions
-}
-
 // GetFilterableFields returns filterable fields for the limit regional override.
 func (o LimitRegionalOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name)
-}
-
-// GetValue returns a string representation of the min/max range for the limit regional override.
-func (o LimitRegionalOverride) GetValue() string {
-	if len(o.Values) == 0 {
-		return ""
-	}
-	return fmt.Sprintf("%d-%d", o.Values[0].Min, o.Values[0].Max)
 }

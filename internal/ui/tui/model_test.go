@@ -43,6 +43,36 @@ func (f fakeLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ model
 	return map[string][]models.DedicatedAICluster{}, nil
 }
 
+// TenancyOverrideLoader stubs
+func (f fakeLoader) LoadLimitTenancyOverrides(_ context.Context, _ string, _ models.Environment) (map[string][]models.LimitTenancyOverride, error) {
+	return map[string][]models.LimitTenancyOverride{}, nil
+}
+
+func (f fakeLoader) LoadConsolePropertyTenancyOverrides(_ context.Context, _ string, _ models.Environment) (map[string][]models.ConsolePropertyTenancyOverride, error) {
+	return map[string][]models.ConsolePropertyTenancyOverride{}, nil
+}
+
+func (f fakeLoader) LoadPropertyTenancyOverrides(_ context.Context, _ string, _ models.Environment) (map[string][]models.PropertyTenancyOverride, error) {
+	return map[string][]models.PropertyTenancyOverride{}, nil
+}
+
+func (f fakeLoader) LoadTenancyOverrideGroup(_ context.Context, _ string, _ models.Environment) (models.TenancyOverrideGroup, error) {
+	return models.TenancyOverrideGroup{}, nil
+}
+
+// RegionalOverrideLoader stubs
+func (f fakeLoader) LoadLimitRegionalOverrides(_ context.Context, _ string, _ models.Environment) ([]models.LimitRegionalOverride, error) {
+	return []models.LimitRegionalOverride{}, nil
+}
+
+func (f fakeLoader) LoadConsolePropertyRegionalOverrides(_ context.Context, _ string, _ models.Environment) ([]models.ConsolePropertyRegionalOverride, error) {
+	return []models.ConsolePropertyRegionalOverride{}, nil
+}
+
+func (f fakeLoader) LoadPropertyRegionalOverrides(_ context.Context, _ string, _ models.Environment) ([]models.PropertyRegionalOverride, error) {
+	return []models.PropertyRegionalOverride{}, nil
+}
+
 func TestModel_LoadData_TableDriven(t *testing.T) {
 	t.Parallel()
 	type testCase struct {

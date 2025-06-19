@@ -48,6 +48,22 @@ type DedicatedAIClusterLoader interface {
 }
 
 /*
+TenancyOverrideLoader defines methods for loading tenancy override maps.
+*/
+type TenancyOverrideLoader interface {
+	LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error)
+}
+
+/*
+RegionalOverrideLoader defines methods for loading regional override slices.
+*/
+type RegionalOverrideLoader interface {
+	LoadLimitRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.LimitRegionalOverride, error)
+	LoadConsolePropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.ConsolePropertyRegionalOverride, error)
+	LoadPropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.PropertyRegionalOverride, error)
+}
+
+/*
 Loader is a composite interface that embeds all loader interfaces.
 */
 type Loader interface {
@@ -56,4 +72,6 @@ type Loader interface {
 	GpuPoolLoader
 	GpuNodeLoader
 	DedicatedAIClusterLoader
+	TenancyOverrideLoader
+	RegionalOverrideLoader
 }

@@ -32,6 +32,14 @@ func (r loadRequest) Run() tea.Msg {
 		data, err = r.model.loader.LoadGpuNodes(r.model.ctx, r.model.kubeConfig, r.model.environment)
 	case domain.DedicatedAICluster:
 		data, err = r.model.loader.LoadDedicatedAIClusters(r.model.ctx, r.model.kubeConfig, r.model.environment)
+	case domain.Tenant, domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride:
+		data, err = r.model.loader.LoadTenancyOverrideGroup(r.model.ctx, r.model.repoPath, r.model.environment)
+	case domain.LimitRegionalOverride:
+		data, err = r.model.loader.LoadLimitRegionalOverrides(r.model.ctx, r.model.repoPath, r.model.environment)
+	case domain.ConsolePropertyRegionalOverride:
+		data, err = r.model.loader.LoadConsolePropertyRegionalOverrides(r.model.ctx, r.model.repoPath, r.model.environment)
+	case domain.PropertyRegionalOverride:
+		data, err = r.model.loader.LoadPropertyRegionalOverrides(r.model.ctx, r.model.repoPath, r.model.environment)
 	}
 	if err != nil {
 		return ErrMsg{Err: fmt.Errorf("failed to load %s: %w", r.category, err)}

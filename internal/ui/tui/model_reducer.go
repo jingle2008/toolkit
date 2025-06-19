@@ -90,6 +90,11 @@ func (m *Model) processData(msg DataMsg) {
 		m.dataset.GpuNodeMap = data
 	case map[string][]models.DedicatedAICluster:
 		m.dataset.SetDedicatedAIClusterMap(data)
+	case models.TenancyOverrideGroup:
+		m.dataset.Tenants = data.Tenants
+		m.dataset.LimitTenancyOverrideMap = data.LimitTenancyOverrideMap
+		m.dataset.ConsolePropertyTenancyOverrideMap = data.ConsolePropertyTenancyOverrideMap
+		m.dataset.PropertyTenancyOverrideMap = data.PropertyTenancyOverrideMap
 	}
 
 	if msg.Data != nil {
@@ -135,9 +140,54 @@ func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 		return m.handleGpuNodeCategory()
 	case domain.DedicatedAICluster:
 		return m.handleDedicatedAIClusterCategory()
+	case domain.Tenant, domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride:
+		return m.handleTenancyOverridesGroup()
+	case domain.LimitRegionalOverride:
+		return m.handleLimitRegionalOverrideCategory()
+	case domain.ConsolePropertyRegionalOverride:
+		return m.handleConsolePropertyRegionalOverrideCategory()
+	case domain.PropertyRegionalOverride:
+		return m.handlePropertyRegionalOverrideCategory()
 	default:
 		return refreshDataCmd
 	}
+}
+
+// Lazy loaders for realm-specific categories
+func (m *Model) handleTenancyOverridesGroup() tea.Cmd {
+	if m.dataset == nil ||
+		m.dataset.Tenants == nil ||
+		m.dataset.LimitTenancyOverrideMap == nil ||
+		m.dataset.ConsolePropertyTenancyOverrideMap == nil ||
+		m.dataset.PropertyTenancyOverrideMap == nil {
+		m.pendingTasks++
+		return loadRequest{category: domain.Tenant, model: m}.Run
+	}
+	return refreshDataCmd
+}
+
+func (m *Model) handleLimitRegionalOverrideCategory() tea.Cmd {
+	if m.dataset == nil || m.dataset.LimitRegionalOverrides == nil {
+		m.pendingTasks++
+		return loadRequest{category: domain.LimitRegionalOverride, model: m}.Run
+	}
+	return refreshDataCmd
+}
+
+func (m *Model) handleConsolePropertyRegionalOverrideCategory() tea.Cmd {
+	if m.dataset == nil || m.dataset.ConsolePropertyRegionalOverrides == nil {
+		m.pendingTasks++
+		return loadRequest{category: domain.ConsolePropertyRegionalOverride, model: m}.Run
+	}
+	return refreshDataCmd
+}
+
+func (m *Model) handlePropertyRegionalOverrideCategory() tea.Cmd {
+	if m.dataset == nil || m.dataset.PropertyRegionalOverrides == nil {
+		m.pendingTasks++
+		return loadRequest{category: domain.PropertyRegionalOverride, model: m}.Run
+	}
+	return refreshDataCmd
 }
 
 func (m *Model) handleBaseModelCategory() tea.Cmd {
@@ -222,7 +272,14 @@ func (m *Model) enterContext() tea.Cmd {
 		env := *collections.FindByName(m.dataset.Environments, target)
 		if !m.environment.Equals(env) {
 			m.environment = env
-			// reset env-bounded data
+			// reset realm-bounded data
+			m.dataset.LimitTenancyOverrideMap = nil
+			m.dataset.ConsolePropertyTenancyOverrideMap = nil
+			m.dataset.PropertyTenancyOverrideMap = nil
+			m.dataset.Tenants = nil
+			m.dataset.LimitRegionalOverrides = nil
+			m.dataset.ConsolePropertyRegionalOverrides = nil
+			m.dataset.PropertyRegionalOverrides = nil
 			m.dataset.BaseModelMap = nil
 			m.dataset.GpuPools = nil
 			m.dataset.GpuNodeMap = nil
