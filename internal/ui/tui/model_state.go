@@ -17,6 +17,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -40,12 +41,12 @@ type Model struct {
 	styles         table.Styles
 	category       domain.Category
 	headers        []header
-	target         EditTarget
-	mode           StatusMode
+	editTarget     common.EditTarget
+	inputMode      common.InputMode
 	textInput      *textinput.Model
 	curFilter      string
 	newFilter      string
-	chosen         bool
+	viewMode       common.ViewMode
 	choice         models.ItemKey
 	viewport       *viewport.Model
 	renderer       view.Renderer
@@ -55,6 +56,7 @@ type Model struct {
 	keys           keys.KeyMap
 	help           *help.Model
 	kubeConfig     string
+	version        string
 	baseStyle      lipgloss.Style
 	statusNugget   lipgloss.Style
 	statusBarStyle lipgloss.Style
@@ -73,10 +75,13 @@ NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
 func NewModel(opts ...ModelOption) (*Model, error) {
 	m := &Model{
-		mode:   Normal,
-		target: None,
-		keys:   keys.Keys,
+		inputMode:  common.NormalInput,
+		editTarget: common.NoneTarget,
+		category:   domain.Tenant, // or a sensible default
+		viewMode:   common.ListView,
 	}
+	// Initialize keys based on initial category and mode
+	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 
 	initStyles(m)
 	applyOptions(m, opts)

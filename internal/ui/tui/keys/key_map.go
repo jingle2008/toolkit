@@ -1,91 +1,46 @@
-/*
-Package keys defines key bindings and key maps for the TUI.
-*/
 package keys
 
 import (
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/jingle2008/toolkit/internal/domain"
 )
 
-/*
-KeyMap holds key bindings for the toolkit UI.
-*/
+// KeyMap holds key bindings for the TUI, composed of global, mode, and context (category+mode) keys.
 type KeyMap struct {
-	Help               key.Binding
-	Quit               key.Binding
-	NextCategory       key.Binding
-	PrevCategory       key.Binding
-	FilterItems        key.Binding
-	JumpTo             key.Binding
-	ViewDetails        key.Binding
-	ApplyContext       key.Binding
-	ViewModelArtifacts key.Binding
-	Category           domain.Category
-	Additionals        map[domain.Category][]key.Binding
+	Global  []key.Binding // always active
+	Mode    []key.Binding // active for current UI mode
+	Context []key.Binding // category-specific and mode-specific (optional)
 }
 
-/*
-ShortHelp returns a short list of key bindings for help display.
-*/
+// ShortHelp returns a short list of key bindings for help display.
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Help, k.Quit}
+	return []key.Binding{k.Help(), k.Quit()}
 }
 
-/*
-FullHelp returns a full list of key bindings for help display.
-*/
+// FullHelp returns a full list of key bindings for help display.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		k.Additionals[k.Category],
-		{k.NextCategory, k.PrevCategory, k.FilterItems, k.JumpTo}, // first column
-		{k.ViewDetails, k.ApplyContext, k.Help, k.Quit},           // second column
+		k.Context,
+		k.Mode,
+		k.Global,
 	}
 }
 
-var viewModelArtifacts = key.NewBinding(
-	key.WithKeys("a"),
-	key.WithHelp("a", "view artifacts"),
-)
+// Help returns the help key binding from the global keys.
+func (k KeyMap) Help() key.Binding {
+	return findBindingByHelp(k.Global, "help")
+}
 
-/*
-Keys is the default key map for the toolkit UI.
-*/
-var Keys = KeyMap{
-	NextCategory: key.NewBinding(
-		key.WithKeys("shift+right"),
-		key.WithHelp("shift+→", "next category"),
-	),
-	PrevCategory: key.NewBinding(
-		key.WithKeys("shift+left"),
-		key.WithHelp("shift+←", "previous category"),
-	),
-	FilterItems: key.NewBinding(
-		key.WithKeys("/"),
-		key.WithHelp("/", "filter items"),
-	),
-	JumpTo: key.NewBinding(
-		key.WithKeys(":"),
-		key.WithHelp(":", "jump to category"),
-	),
-	ViewDetails: key.NewBinding(
-		key.WithKeys("y"),
-		key.WithHelp("y", "view details"),
-	),
-	ApplyContext: key.NewBinding(
-		key.WithKeys("enter"),
-		key.WithHelp("enter", "apply context"),
-	),
-	Help: key.NewBinding(
-		key.WithKeys("?"),
-		key.WithHelp("?", "toggle help"),
-	),
-	Quit: key.NewBinding(
-		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q", "quit"),
-	),
-	ViewModelArtifacts: viewModelArtifacts,
-	Additionals: map[domain.Category][]key.Binding{
-		domain.BaseModel: {viewModelArtifacts},
-	},
+// Quit returns the quit key binding from the global keys.
+func (k KeyMap) Quit() key.Binding {
+	return findBindingByHelp(k.Global, "quit")
+}
+
+// findBindingByHelp finds a key.Binding in the slice by its help text.
+func findBindingByHelp(bindings []key.Binding, help string) key.Binding {
+	for _, b := range bindings {
+		if b.Help().Key == help || b.Help().Desc == help {
+			return b
+		}
+	}
+	return key.Binding{}
 }

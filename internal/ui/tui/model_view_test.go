@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +27,7 @@ func TestModel_updateContent_and_View(t *testing.T) {
 			{Type: "dev", Region: "us-phx-1", Realm: "oc1"},
 		},
 	}
-	m.chosen = true
+	m.viewMode = common.DetailsView
 	m.choice = "dev-UNKNOWN"
 	m.updateContent(80)
 	viewStr := m.View()

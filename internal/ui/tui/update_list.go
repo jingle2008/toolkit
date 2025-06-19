@@ -8,6 +8,8 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
 func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -41,10 +43,10 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	if m.pendingTasks > 0 {
 		return cmds
 	}
-	if msg.String() == "esc" {
+	if key.Matches(msg, keys.Back) {
 		m.backToLastState()
 	}
-	if m.mode == Normal {
+	if m.inputMode == common.NormalInput {
 		cmds = append(cmds, m.handleNormalKeys(msg)...)
 	} else {
 		cmds = append(cmds, m.handleEditKeys(msg)...)
@@ -85,19 +87,19 @@ func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
 	switch {
-	case key.Matches(msg, m.keys.Quit):
+	case key.Matches(msg, keys.Quit):
 		return []tea.Cmd{tea.Quit}
-	case key.Matches(msg, m.keys.NextCategory):
+	case key.Matches(msg, keys.NextCategory):
 		cmds = append(cmds, m.handleNextCategory())
-	case key.Matches(msg, m.keys.PrevCategory):
+	case key.Matches(msg, keys.PrevCategory):
 		cmds = append(cmds, m.handlePrevCategory())
-	case key.Matches(msg, m.keys.FilterItems):
-		m.enterEditMode(Filter)
-	case key.Matches(msg, m.keys.JumpTo):
-		m.enterEditMode(Alias)
-	case key.Matches(msg, m.keys.ViewDetails):
+	case key.Matches(msg, keys.FilterItems):
+		m.enterEditMode(common.FilterTarget)
+	case key.Matches(msg, keys.JumpTo):
+		m.enterEditMode(common.AliasTarget)
+	case key.Matches(msg, keys.ViewDetails):
 		m.enterDetailView()
-	case key.Matches(msg, m.keys.ApplyContext):
+	case key.Matches(msg, keys.Apply):
 		cmds = append(cmds, m.enterContext())
 	default:
 		m.handleAdditionalKeys(msg)
@@ -130,19 +132,19 @@ func (m *Model) handleEditKeys(msg tea.KeyMsg) []tea.Cmd {
 	m.textInput = &updatedTextInput
 	cmds = append(cmds, cmd)
 
-	switch msg.String() {
-	case "enter":
-		if m.target == Alias {
+	switch {
+	case key.Matches(msg, keys.Apply):
+		if m.editTarget == common.AliasTarget {
 			cmd := m.changeCategory()
 			if cmd != nil {
 				cmds = append(cmds, cmd)
 			}
 		}
-		m.exitEditMode(m.target == Alias)
-	case "esc":
+		m.exitEditMode(m.editTarget == common.AliasTarget)
+	case key.Matches(msg, keys.Back):
 		m.exitEditMode(true)
 	default:
-		if m.target == Filter {
+		if m.editTarget == common.FilterTarget {
 			cmds = append(cmds, DebounceFilter(m))
 		}
 	}

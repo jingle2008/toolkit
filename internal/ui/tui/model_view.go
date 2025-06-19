@@ -9,12 +9,19 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
 func (m *Model) infoView() string {
-	keys := []string{"Realm:", "Type:", "Region:"}
-	values := []string{m.environment.Realm, m.environment.Type, m.environment.Region}
+	keys := []string{"Realm:", "Type:", "Region:", "Context:", "Version:"}
+	values := []string{
+		m.environment.Realm,
+		m.environment.Type,
+		m.environment.Region,
+		m.environment.GetKubeContext(),
+		m.version,
+	}
 
 	content := lipgloss.JoinHorizontal(lipgloss.Top,
 		m.infoKeyStyle.Render(strings.Join(keys, "\n")),
@@ -31,7 +38,7 @@ func (m *Model) contextString() string {
 		scope = m.context.Name
 	}
 
-	if m.chosen {
+	if m.viewMode == common.DetailsView {
 		keyString := getItemKeyString(m.category, m.choice)
 		scope = fmt.Sprintf("%s/%s", scope, keyString)
 	}
@@ -58,7 +65,7 @@ func (m *Model) statusView() string {
 }
 
 func (m *Model) updateContent(width int) {
-	if !m.chosen {
+	if m.viewMode != common.DetailsView {
 		return
 	}
 
@@ -95,7 +102,7 @@ func (m *Model) View() string {
 	header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
 
 	var mainContent string
-	if !m.chosen {
+	if m.viewMode == common.ListView {
 		mainContent = m.baseStyle.Render(m.table.View())
 	} else {
 		mainContent = m.viewport.View()

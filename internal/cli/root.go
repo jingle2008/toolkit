@@ -71,7 +71,7 @@ func NewRootCmd(version string) *cobra.Command {
 			}()
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			if err := runToolkit(ctx, logger, cfg); err != nil {
+			if err := runToolkit(ctx, logger, cfg, version); err != nil {
 				logger.Errorw("fatal error", "error", err)
 				return err
 			}
@@ -108,7 +108,7 @@ func Execute(version string) {
 }
 
 // runToolkit is moved from main.go for clarity.
-func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config) error {
+func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, version string) error {
 	category, _ := domain.ParseCategory(cfg.Category)
 	env := models.Environment{
 		Type:   cfg.EnvType,
@@ -134,6 +134,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config) e
 		tui.WithContext(ctx),
 		tui.WithLoader(loader.ProductionLoader{}),
 		tui.WithFilter(cfg.Filter),
+		tui.WithVersion(version),
 	)
 	if err != nil {
 		logger.Errorw("failed to create toolkit model", "error", err)

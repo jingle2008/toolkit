@@ -80,3 +80,8 @@ func WithFilter(filter string) ModelOption {
 		m.newFilter = filter
 	}
 }
+
+// WithVersion sets the version of the Model.
+func WithVersion(v string) ModelOption {
+	return func(m *Model) { m.version = v }
+}

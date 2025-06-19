@@ -11,6 +11,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -45,7 +47,7 @@ func (m *Model) updateLayout(w, h int) {
 	m.viewWidth, m.viewHeight = w, h
 	m.help.Width = w
 	var borderStyle lipgloss.Border
-	if m.chosen {
+	if m.viewMode == common.DetailsView {
 		borderStyle = m.viewport.Style.GetBorderStyle()
 	} else {
 		borderStyle = m.baseStyle.GetBorderStyle()
@@ -55,7 +57,7 @@ func (m *Model) updateLayout(w, h int) {
 	statusHeight := lipgloss.Height(m.statusView())
 	helpHeight := lipgloss.Height(m.help.View(m.keys))
 	top := statusHeight + helpHeight
-	if m.chosen {
+	if m.viewMode == common.DetailsView {
 		m.viewport.Width = w - borderWidth
 		m.viewport.Height = h - borderHeight - top
 		m.updateContent(w - borderWidth)
@@ -105,8 +107,12 @@ func (m *Model) processData(msg DataMsg) {
 
 // handleAdditionalKeys processes extra key events for the current category.
 func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
+	if !key.Matches(msg, m.keys.Context...) {
+		return
+	}
+
 	if m.category == domain.BaseModel {
-		if key.Matches(msg, m.keys.ViewModelArtifacts) {
+		if key.Matches(msg, keys.ViewModelArtifacts) {
 			item := m.getCurrentItem()
 			if bm, ok := item.(*models.BaseModel); ok {
 				m.logger.Infow("view_model_artifacts",
@@ -130,7 +136,7 @@ func (m *Model) getCurrentItem() interface{} {
 // updateCategory changes the current category and loads data if needed.
 func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 	m.category = category
-	m.keys.Category = category
+	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	switch m.category {
 	case domain.BaseModel:
 		return m.handleBaseModelCategory()
@@ -224,7 +230,8 @@ func (m *Model) handleDedicatedAIClusterCategory() tea.Cmd {
 
 // enterDetailView switches the model into detail view mode.
 func (m *Model) enterDetailView() {
-	m.chosen = true
+	m.viewMode = common.DetailsView
+	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	m.choice = getItemKey(m.category, m.table.SelectedRow())
 	if m.reLayout {
 		m.reLayout = false
@@ -236,7 +243,8 @@ func (m *Model) enterDetailView() {
 
 // exitDetailView exits detail view mode.
 func (m *Model) exitDetailView() {
-	m.chosen = false
+	m.viewMode = common.ListView
+	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	if m.reLayout {
 		m.reLayout = false
 		m.updateLayout(m.viewWidth, m.viewHeight)

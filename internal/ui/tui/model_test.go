@@ -12,6 +12,8 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/internal/testutil"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
@@ -199,8 +201,8 @@ func TestContextStringAndStatusView(t *testing.T) {
 func TestFilterAndBackToLastState(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.enterEditMode(Filter)
-	require.Equal(t, Edit, m.mode)
+	m.enterEditMode(common.FilterTarget)
+	require.Equal(t, common.EditInput, m.inputMode)
 	m.textInput.SetValue("tenant1")
 	cmd := DebounceFilter(m)
 	require.NotNil(t, cmd)
@@ -214,10 +216,10 @@ func TestFilterAndBackToLastState(t *testing.T) {
 func TestEditModeTransitions(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.enterEditMode(Alias)
-	require.Equal(t, Edit, m.mode)
+	m.enterEditMode(common.AliasTarget)
+	require.Equal(t, common.EditInput, m.inputMode)
 	m.exitEditMode(true)
-	require.Equal(t, Normal, m.mode)
+	require.Equal(t, common.NormalInput, m.inputMode)
 }
 
 func TestProcessDataAndErrorMsg(t *testing.T) {
@@ -294,7 +296,7 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 	require.NoError(t, err)
 	// Set context.Category to Tenant, m.category to LimitTenancyOverride
 	m.context = &domain.ToolkitContext{Name: "scopeA", Category: domain.Tenant}
-	m.chosen = false
+	m.viewMode = common.ListView
 	cs := m.contextString()
 	testutil.Contains(t, cs, "LimitTenancyOverride")
 	testutil.Contains(t, cs, "scopeA")
@@ -319,36 +321,66 @@ func TestModel_DetailView_and_ExitDetailView(t *testing.T) {
 func TestModel_UpdateListView_Branches(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.mode = Normal
-	// Simulate NextCategory and PrevCategory keys
-	m.keys.NextCategory = m.keys.Quit
-	m.keys.PrevCategory = m.keys.Quit
-	keyStr := ""
-	if len(m.keys.Quit.Keys()) > 0 {
-		keyStr = m.keys.Quit.Keys()[0]
-	}
-	nextMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
-	m.updateListView(nextMsg)
-	m.updateListView(nextMsg)
+	m.inputMode = common.NormalInput
 
-	// Simulate FilterItems, JumpTo, ViewDetails, ApplyContext
-	m.keys.FilterItems = m.keys.Quit
-	m.keys.JumpTo = m.keys.Quit
-	m.keys.ViewDetails = m.keys.Quit
-	m.keys.ApplyContext = m.keys.Quit
-	m.updateListView(nextMsg)
-	m.updateListView(nextMsg)
-	m.updateListView(nextMsg)
-	m.updateListView(nextMsg)
+	// Simulate Quit key
+	keyStr := ""
+	if len(keys.Quit.Keys()) > 0 {
+		keyStr = keys.Quit.Keys()[0]
+	}
+	quitMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	m.updateListView(quitMsg)
+
+	// Simulate NextCategory key
+	if len(keys.NextCategory.Keys()) > 0 {
+		keyStr = keys.NextCategory.Keys()[0]
+	}
+	nextCatMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	m.updateListView(nextCatMsg)
+
+	// Simulate PrevCategory key
+	if len(keys.PrevCategory.Keys()) > 0 {
+		keyStr = keys.PrevCategory.Keys()[0]
+	}
+	prevCatMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	m.updateListView(prevCatMsg)
+
+	// Simulate FilterItems key
+	if len(keys.FilterItems.Keys()) > 0 {
+		keyStr = keys.FilterItems.Keys()[0]
+	}
+	filterMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	m.updateListView(filterMsg)
+
+	// Simulate JumpTo key
+	if len(keys.JumpTo.Keys()) > 0 {
+		keyStr = keys.JumpTo.Keys()[0]
+	}
+	jumpToMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	m.updateListView(jumpToMsg)
+
+	// Simulate ViewDetails key
+	if len(keys.ViewDetails.Keys()) > 0 {
+		keyStr = keys.ViewDetails.Keys()[0]
+	}
+	viewDetailsMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	m.updateListView(viewDetailsMsg)
+
+	// Simulate ApplyContext key
+	if len(keys.Apply.Keys()) > 0 {
+		keyStr = keys.Apply.Keys()[0]
+	}
+	applyContextMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	m.updateListView(applyContextMsg)
 
 	// Switch to Edit mode and test "enter" and "esc"
-	m.mode = Edit
-	m.target = Alias
+	m.inputMode = common.EditInput
+	m.editTarget = common.AliasTarget
 	enterMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("enter")}
 	escMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("esc")}
 	m.updateListView(enterMsg)
 	m.updateListView(escMsg)
-	m.target = Filter
+	m.editTarget = common.FilterTarget
 	m.updateListView(enterMsg)
 	m.updateListView(escMsg)
 }
@@ -397,10 +429,10 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	// handleAdditionalKeys: cover the ViewModelArtifacts branch
 	// Set category to BaseModel and call with a matching key
 	m.category = domain.BaseModel
-	m.keys.ViewModelArtifacts = m.keys.Quit // Use any key that matches
+	// Use the ViewModelArtifacts key for the test
 	keyStr := ""
-	if len(m.keys.Quit.Keys()) > 0 {
-		keyStr = m.keys.Quit.Keys()[0]
+	if len(keys.ViewModelArtifacts.Keys()) > 0 {
+		keyStr = keys.ViewModelArtifacts.Keys()[0]
 	}
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
 	m.handleAdditionalKeys(msg)

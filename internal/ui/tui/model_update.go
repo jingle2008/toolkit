@@ -6,8 +6,11 @@ package tui
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
 /*
@@ -58,28 +61,28 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
+		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
 		m.reLayout = true
 		m.updateLayout(msg.Width, msg.Height)
 	}
-	if !m.chosen {
+	if m.viewMode == common.ListView {
 		return m.updateListView(msg)
 	}
 	return m.updateDetailView(msg)
 }
 
-func (m *Model) enterEditMode(target EditTarget) {
+func (m *Model) enterEditMode(target common.EditTarget) {
 	m.table.Blur()
-	m.mode = Edit
-	m.target = target
+	m.inputMode = common.EditInput
+	m.editTarget = target
 	m.textInput.Focus()
 
 	// Provide category suggestions using domain.Aliases().
 	keys := domain.Aliases()
-	if target == Alias {
+	if target == common.AliasTarget {
 		m.textInput.Reset()
 	} else if len(m.textInput.Value()) > 0 {
 		keys = append(keys, m.textInput.Value())
@@ -101,13 +104,13 @@ func (m *Model) backToLastState() {
 }
 
 func (m *Model) exitEditMode(resetInput bool) {
-	if m.target == Alias || resetInput {
+	if m.editTarget == common.AliasTarget || resetInput {
 		m.textInput.SetSuggestions([]string{})
 		m.textInput.ShowSuggestions = false
 	}
 
-	m.mode = Normal
-	m.target = None
+	m.inputMode = common.NormalInput
+	m.editTarget = common.NoneTarget
 	if resetInput {
 		m.textInput.Reset()
 	}

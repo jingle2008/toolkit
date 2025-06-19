@@ -405,7 +405,7 @@ func getItemKeyString(category domain.Category, key models.ItemKey) string {
 	switch category {
 	case domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride, domain.Environment,
-		domain.ServiceTenancy, domain.GpuPool, domain.ModelArtifact:
+		domain.ServiceTenancy, domain.GpuPool, domain.ModelArtifact, domain.LimitRegionalOverride:
 		return key.(string)
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.DedicatedAICluster, domain.GpuNode:
