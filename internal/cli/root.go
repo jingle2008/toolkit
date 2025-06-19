@@ -132,7 +132,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithCategory(category),
 		tui.WithLogger(logger),
 		tui.WithContext(ctx),
-		tui.WithLoader(loader.ProductionLoader{}),
+		tui.WithLoader(loader.NewProductionLoader()),
 		tui.WithFilter(cfg.Filter),
 		tui.WithVersion(version),
 	)

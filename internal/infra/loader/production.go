@@ -12,7 +12,15 @@ import (
 /*
 ProductionLoader implements all loader interfaces using the production utils package.
 */
-type ProductionLoader struct{}
+type ProductionLoader struct {
+	// Add dependencies here for future extensibility, e.g.:
+	// K8sFactory func(kubeCfg, context string) (k8s.Helper, error)
+}
+
+// NewProductionLoader returns a Loader implementation for production use.
+func NewProductionLoader() Loader {
+	return &ProductionLoader{}
+}
 
 /*
 NOTE: The following ProductionLoader methods and their corresponding utils.* functions
