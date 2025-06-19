@@ -61,6 +61,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Toggle help view on "?" or "h"
+		if key.Matches(msg, keys.Help) && m.viewMode != common.HelpView {
+			m.lastViewMode = m.viewMode
+			m.viewMode = common.HelpView
+			return m, nil
+		}
+
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
 		}
@@ -68,10 +75,16 @@ func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.reLayout = true
 		m.updateLayout(msg.Width, msg.Height)
 	}
-	if m.viewMode == common.ListView {
+
+	switch m.viewMode {
+	case common.HelpView:
+		return m.updateHelpView(msg)
+	case common.ListView:
 		return m.updateListView(msg)
+	case common.DetailsView:
+		return m.updateDetailView(msg)
 	}
-	return m.updateDetailView(msg)
+	return m, nil
 }
 
 func (m *Model) enterEditMode(target common.EditTarget) {

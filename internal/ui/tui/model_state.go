@@ -47,6 +47,7 @@ type Model struct {
 	curFilter      string
 	newFilter      string
 	viewMode       common.ViewMode
+	lastViewMode   common.ViewMode // for toggling help view
 	choice         models.ItemKey
 	viewport       *viewport.Model
 	renderer       view.Renderer
@@ -66,6 +67,12 @@ type Model struct {
 	infoKeyStyle   lipgloss.Style
 	infoValueStyle lipgloss.Style
 
+	// Help view styles
+	helpBorder lipgloss.Style
+	helpHeader lipgloss.Style
+	helpKey    lipgloss.Style
+	helpDesc   lipgloss.Style
+
 	// Spinner for loading screen
 	loadingSpinner *spinner.Model
 }
@@ -75,10 +82,11 @@ NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
 func NewModel(opts ...ModelOption) (*Model, error) {
 	m := &Model{
-		inputMode:  common.NormalInput,
-		editTarget: common.NoneTarget,
-		category:   domain.Tenant, // or a sensible default
-		viewMode:   common.ListView,
+		inputMode:    common.NormalInput,
+		editTarget:   common.NoneTarget,
+		category:     domain.Tenant, // or a sensible default
+		viewMode:     common.ListView,
+		lastViewMode: common.ListView,
 	}
 	// Initialize keys based on initial category and mode
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
@@ -121,6 +129,15 @@ func initStyles(m *Model) {
 	m.statusText = lipgloss.NewStyle().Inherit(m.statusBarStyle)
 	m.infoKeyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
 	m.infoValueStyle = lipgloss.NewStyle()
+
+	// Help view styles
+	m.helpBorder = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("62")).
+		Padding(1, 2)
+	m.helpHeader = lipgloss.NewStyle().Inherit(m.infoKeyStyle).Underline(true)
+	m.helpKey = lipgloss.NewStyle().Foreground(lipgloss.Color("33"))
+	m.helpDesc = lipgloss.NewStyle()
 }
 
 // applyOptions applies all ModelOption functions to the model.

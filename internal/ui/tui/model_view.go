@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
@@ -96,6 +98,11 @@ func (m *Model) View() string {
 		return view.CenterText(m.err.Error(), m.viewWidth, m.viewHeight)
 	}
 
+	// Show full help view if in HelpView mode
+	if m.viewMode == common.HelpView {
+		return view.CenterText(m.fullHelpView(), m.viewWidth, m.viewHeight)
+	}
+
 	helpView := m.help.View(m.keys)
 	infoView := m.infoValueStyle.
 		Width(m.viewWidth - lipgloss.Width(helpView)).Render(m.infoView())
@@ -111,4 +118,38 @@ func (m *Model) View() string {
 	status := m.statusView()
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, status, mainContent)
+}
+
+/*
+fullHelpView renders all key bindings in sections for the help screen,
+with improved formatting and styling.
+*/
+func (m *Model) fullHelpView() string {
+	km := keys.FullKeyMap()
+	const keyCol = 12
+	var b strings.Builder
+
+	renderRow := func(k, d string) {
+		fmt.Fprintf(&b, "  %s%s\n",
+			m.helpKey.Render(fmt.Sprintf("%-*s", keyCol, k)),
+			m.helpDesc.Render(d))
+	}
+	renderSection := func(title string, bind []key.Binding) {
+		if len(bind) == 0 {
+			return
+		}
+		fmt.Fprintln(&b, m.helpHeader.Render(title))
+		for _, bb := range bind {
+			h := bb.Help()
+			if h.Key == "" && h.Desc == "" {
+				continue
+			}
+			renderRow(h.Key, h.Desc)
+		}
+		b.WriteString("\n")
+	}
+	renderSection("Context-specific", km.Context)
+	renderSection("Mode-specific", km.Mode)
+	renderSection("Global", km.Global)
+	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())
 }
