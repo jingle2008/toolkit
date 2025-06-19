@@ -161,16 +161,16 @@ getLimitRegionalOverrides returns table rows for a slice of LimitRegionalOverrid
 */
 func getLimitRegionalOverrides(overrides []models.LimitRegionalOverride, filter string) []table.Row {
 	return filterRows(overrides, filter, func(val models.LimitRegionalOverride) table.Row {
-		min, max := "", ""
+		minStr, maxStr := "", ""
 		if len(val.Values) > 0 {
-			min = fmt.Sprint(val.Values[0].Min)
-			max = fmt.Sprint(val.Values[0].Max)
+			minStr = fmt.Sprint(val.Values[0].Min)
+			maxStr = fmt.Sprint(val.Values[0].Max)
 		}
 		return table.Row{
 			val.Name,
 			strings.Join(val.Regions, ", "),
-			min,
-			max,
+			minStr,
+			maxStr,
 		}
 	})
 }

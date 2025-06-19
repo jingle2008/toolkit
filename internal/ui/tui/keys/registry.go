@@ -28,10 +28,16 @@ var globalKeys = []key.Binding{
 	Quit,
 }
 
-// Exported helpers for full help aggregation
-func GlobalKeys() []key.Binding      { return append([]key.Binding(nil), globalKeys...) }
-func ListModeKeys() []key.Binding    { return append([]key.Binding(nil), listModeKeys...) }
+// GlobalKeys returns a copy of the global key bindings (always active).
+func GlobalKeys() []key.Binding { return append([]key.Binding(nil), globalKeys...) }
+
+// ListModeKeys returns a copy of the key bindings for list mode.
+func ListModeKeys() []key.Binding { return append([]key.Binding(nil), listModeKeys...) }
+
+// DetailsModeKeys returns a copy of the key bindings for details mode.
 func DetailsModeKeys() []key.Binding { return append([]key.Binding(nil), detailsModeKeys...) }
+
+// CatContext returns the mapping of category and view mode to context-specific key bindings.
 func CatContext() map[domain.Category]map[common.ViewMode][]key.Binding {
 	return catContext
 }

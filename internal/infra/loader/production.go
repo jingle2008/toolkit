@@ -65,15 +65,19 @@ func (ProductionLoader) LoadTenancyOverrideGroup(ctx context.Context, repo strin
 	return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm)
 }
 
-// RegionalOverrideLoader implementations
+/*
+LoadLimitRegionalOverrides ...
+*/
 func (ProductionLoader) LoadLimitRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.LimitRegionalOverride, error) {
 	return configloader.LoadLimitRegionalOverrides(ctx, repo, env.Realm)
 }
 
+// LoadConsolePropertyRegionalOverrides loads console property regional overrides for the given repo and environment.
 func (ProductionLoader) LoadConsolePropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.ConsolePropertyRegionalOverride, error) {
 	return configloader.LoadConsolePropertyRegionalOverrides(ctx, repo, env.Realm)
 }
 
+// LoadPropertyRegionalOverrides loads property regional overrides for the given repo and environment.
 func (ProductionLoader) LoadPropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.PropertyRegionalOverride, error) {
 	return configloader.LoadPropertyRegionalOverrides(ctx, repo, env.Realm)
 }

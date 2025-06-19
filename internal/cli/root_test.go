@@ -7,6 +7,7 @@ import (
 )
 
 func TestRootCmd_HelpOutput(t *testing.T) {
+	t.Parallel()
 	cmd := NewRootCmd("vtest")
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
@@ -26,6 +27,7 @@ func TestRootCmd_HelpOutput(t *testing.T) {
 }
 
 func TestRootCmd_UnknownFlag(t *testing.T) {
+	t.Parallel()
 	cmd := NewRootCmd("vtest")
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)

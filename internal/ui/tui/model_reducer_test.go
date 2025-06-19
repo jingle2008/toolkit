@@ -10,6 +10,7 @@ import (
 )
 
 func TestHandleTenancyOverridesGroup(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	cmd := m.handleTenancyOverridesGroup()
 	assert.NotNil(t, cmd)
@@ -31,6 +32,7 @@ func TestHandleTenancyOverridesGroup(t *testing.T) {
 }
 
 func TestHandleLimitRegionalOverrideCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	cmd := m.handleLimitRegionalOverrideCategory()
 	assert.NotNil(t, cmd)
@@ -44,6 +46,7 @@ func TestHandleLimitRegionalOverrideCategory(t *testing.T) {
 }
 
 func TestHandleConsolePropertyRegionalOverrideCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	cmd := m.handleConsolePropertyRegionalOverrideCategory()
 	assert.NotNil(t, cmd)
@@ -57,6 +60,7 @@ func TestHandleConsolePropertyRegionalOverrideCategory(t *testing.T) {
 }
 
 func TestHandlePropertyRegionalOverrideCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	cmd := m.handlePropertyRegionalOverrideCategory()
 	assert.NotNil(t, cmd)
@@ -70,6 +74,7 @@ func TestHandlePropertyRegionalOverrideCategory(t *testing.T) {
 }
 
 func TestHandleGpuPoolCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	cmd := m.handleGpuPoolCategory()
 	assert.NotNil(t, cmd)
@@ -83,6 +88,7 @@ func TestHandleGpuPoolCategory(t *testing.T) {
 }
 
 func TestHandleGpuNodeCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	cmd := m.handleGpuNodeCategory()
 	assert.NotNil(t, cmd)
@@ -96,6 +102,7 @@ func TestHandleGpuNodeCategory(t *testing.T) {
 }
 
 func TestHandleDedicatedAIClusterCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	cmd := m.handleDedicatedAIClusterCategory()
 	assert.NotNil(t, cmd)
@@ -109,6 +116,7 @@ func TestHandleDedicatedAIClusterCategory(t *testing.T) {
 }
 
 func TestEnterContext(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		table:    &table.Model{},
 		category: domain.Tenant,

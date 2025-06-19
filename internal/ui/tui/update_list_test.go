@@ -10,6 +10,7 @@ import (
 )
 
 func TestHandleSetFilterMsg(t *testing.T) {
+	t.Parallel()
 	ti := textinput.New()
 	m := &Model{
 		textInput: &ti,
@@ -22,6 +23,7 @@ func TestHandleSetFilterMsg(t *testing.T) {
 }
 
 func TestHandleSpinnerTickMsg(t *testing.T) {
+	t.Parallel()
 	s := spinner.New()
 	m := &Model{
 		loadingSpinner: &s,
@@ -32,6 +34,7 @@ func TestHandleSpinnerTickMsg(t *testing.T) {
 }
 
 func TestHandleNextCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		category: domain.Tenant,
 	}
@@ -40,6 +43,7 @@ func TestHandleNextCategory(t *testing.T) {
 }
 
 func TestHandlePrevCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		category: domain.Tenant,
 	}

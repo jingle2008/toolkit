@@ -27,7 +27,8 @@ const (
 	regionalValuesDir    = "regional_values"
 )
 
-func getConfigPath(root, realm, configName string) string {
+func getConfigPath(root, configName string) string {
+	const realm = "oc1"
 	configFile := fmt.Sprintf("%s_%s.json", realm, configName)
 	return filepath.Join(root, configName+"s", configFile)
 }
@@ -283,23 +284,22 @@ func loadDefinitionGroups(repoPath string) (
 	*models.PropertyDefinitionGroup,
 	error,
 ) {
-	const definitionRealm = "oc1"
 	limitsRoot := getLimitsRoot(repoPath)
-	limitDefinitionPath := getConfigPath(limitsRoot, definitionRealm, limitsKey+definitionSuffix)
+	limitDefinitionPath := getConfigPath(limitsRoot, limitsKey+definitionSuffix)
 	limitGroup, err := jsonutil.LoadFile[models.LimitDefinitionGroup](limitDefinitionPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	sortNamedItems(limitGroup.Values)
 
-	consolePropertyDefinitionPath := getConfigPath(limitsRoot, definitionRealm, consolePropertiesKey+definitionSuffix)
+	consolePropertyDefinitionPath := getConfigPath(limitsRoot, consolePropertiesKey+definitionSuffix)
 	consolePropertyDefinitionGroup, err := jsonutil.LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	sortNamedItems(consolePropertyDefinitionGroup.Values)
 
-	propertyDefinitionPath := getConfigPath(limitsRoot, definitionRealm, propertiesKey+definitionSuffix)
+	propertyDefinitionPath := getConfigPath(limitsRoot, propertiesKey+definitionSuffix)
 	propertyDefinitionGroup, err := jsonutil.LoadFile[models.PropertyDefinitionGroup](propertyDefinitionPath)
 	if err != nil {
 		return nil, nil, nil, err
@@ -346,14 +346,17 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string) (mode
 	}, nil
 }
 
+// LoadLimitRegionalOverrides loads limit regional overrides for the given repo path and realm.
 func LoadLimitRegionalOverrides(ctx context.Context, repoPath, realm string) ([]models.LimitRegionalOverride, error) {
 	return loadRegionalOverrides[models.LimitRegionalOverride](ctx, getLimitsRoot(repoPath), realm, limitsKey+regionalOverridesKey)
 }
 
+// LoadConsolePropertyRegionalOverrides loads console property regional overrides for the given repo path and realm.
 func LoadConsolePropertyRegionalOverrides(ctx context.Context, repoPath, realm string) ([]models.ConsolePropertyRegionalOverride, error) {
 	return loadRegionalOverrides[models.ConsolePropertyRegionalOverride](ctx, getLimitsRoot(repoPath), realm, consolePropertiesKey+regionalOverridesKey)
 }
 
+// LoadPropertyRegionalOverrides loads property regional overrides for the given repo path and realm.
 func LoadPropertyRegionalOverrides(ctx context.Context, repoPath, realm string) ([]models.PropertyRegionalOverride, error) {
 	return loadRegionalOverrides[models.PropertyRegionalOverride](ctx, getLimitsRoot(repoPath), realm, propertiesKey+regionalOverridesKey)
 }

@@ -7,6 +7,7 @@ import (
 )
 
 func TestWrap(t *testing.T) {
+	t.Parallel()
 	base := errors.New("base")
 	tests := []struct {
 		name    string
@@ -19,6 +20,8 @@ func TestWrap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			t.Parallel()
 			wrapped := Wrap(tt.err, tt.msg)
 			if tt.wantNil && wrapped != nil {
 				t.Errorf("expected nil, got %v", wrapped)
@@ -36,7 +39,8 @@ func TestWrap(t *testing.T) {
 	}
 }
 
-func TestJoin(t *testing.T) {
+func TestJoin(t *testing.T) { //nolint: cyclop
+	t.Parallel()
 	err1 := errors.New("err1")
 	err2 := errors.New("err2")
 	tests := []struct {
@@ -50,15 +54,18 @@ func TestJoin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
+			t.Parallel()
 			got := Join(tt.in...)
-			if tt.want == nil && got != nil && len(tt.in) == 2 && tt.in[0] != nil && tt.in[1] != nil {
+			switch {
+			case tt.want == nil && got != nil && len(tt.in) == 2 && tt.in[0] != nil && tt.in[1] != nil:
 				// For two errors, errors.Join returns a joined error, not nil
 				if !errors.Is(got, err1) || !errors.Is(got, err2) {
 					t.Errorf("joined error does not contain both errors")
 				}
-			} else if tt.want == nil && got != nil && len(tt.in) == 2 && tt.in[0] == nil && tt.in[1] == nil {
+			case tt.want == nil && got != nil && len(tt.in) == 2 && tt.in[0] == nil && tt.in[1] == nil:
 				t.Errorf("expected nil, got %v", got)
-			} else if tt.want != nil && !errors.Is(got, tt.want) {
+			case tt.want != nil && !errors.Is(got, tt.want):
 				t.Errorf("expected error %v, got %v", tt.want, got)
 			}
 		})

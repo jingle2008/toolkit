@@ -145,10 +145,9 @@ func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
 func TestGetConfigPath(t *testing.T) {
 	t.Parallel()
 	root := "/repo"
-	realm := "oc1"
 	name := "limits"
 	expected := "/repo/limitss/oc1_limits.json"
-	testutil.Equal(t, expected, getConfigPath(root, realm, name))
+	testutil.Equal(t, expected, getConfigPath(root, name))
 }
 
 func TestSortNamedItems(t *testing.T) {

@@ -1,3 +1,4 @@
+// Package keys provides key binding definitions and utilities for the TUI.
 package keys
 
 import (
