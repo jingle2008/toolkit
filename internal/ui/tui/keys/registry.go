@@ -18,24 +18,29 @@ var (
 	)
 	Back = key.NewBinding(
 		key.WithKeys("esc"),
-		key.WithHelp("esc", "back to last state"),
+		key.WithHelp("esc", "go back"),
+	)
+	CopyName = key.NewBinding(
+		key.WithKeys("n"),
+		key.WithHelp("n", "copy name"),
 	)
 )
 
 var globalKeys = []key.Binding{
+	CopyName,
 	Back,
 	Help,
 	Quit,
 }
 
 // GlobalKeys returns a copy of the global key bindings (always active).
-func GlobalKeys() []key.Binding { return append([]key.Binding(nil), globalKeys...) }
+func GlobalKeys() []key.Binding { return globalKeys }
 
 // ListModeKeys returns a copy of the key bindings for list mode.
-func ListModeKeys() []key.Binding { return append([]key.Binding(nil), listModeKeys...) }
+func ListModeKeys() []key.Binding { return listModeKeys }
 
 // DetailsModeKeys returns a copy of the key bindings for details mode.
-func DetailsModeKeys() []key.Binding { return append([]key.Binding(nil), detailsModeKeys...) }
+func DetailsModeKeys() []key.Binding { return detailsModeKeys }
 
 // CatContext returns the mapping of category and view mode to context-specific key bindings.
 func CatContext() map[domain.Category]map[common.ViewMode][]key.Binding {
@@ -92,13 +97,9 @@ var (
 		key.WithKeys("y"),
 		key.WithHelp("y", "view details"),
 	)
-	Apply = key.NewBinding(
+	Confirm = key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "apply context"),
-	)
-	ViewModelArtifacts = key.NewBinding(
-		key.WithKeys("a"),
-		key.WithHelp("a", "view artifacts"),
 	)
 )
 
@@ -112,25 +113,55 @@ var listModeKeys = []key.Binding{
 
 var detailsModeKeys = []key.Binding{}
 
+var (
+	// ViewModelArtifacts is a key binding for viewing artifacts in the base model list view.
+	ViewModelArtifacts = key.NewBinding(
+		key.WithKeys("a"),
+		key.WithHelp("a", "view artifacts"),
+	)
+	// CopyValue is a key binding for copying the value of an item in the details view.
+	CopyValue = key.NewBinding(
+		key.WithKeys("v"),
+		key.WithHelp("v", "copy value"),
+	)
+	// CopyTenant is a key binding for copying the tenant ID in the tenant context.
+	CopyTenant = key.NewBinding(
+		key.WithKeys("t"),
+		key.WithHelp("t", "copy tenant"),
+	)
+)
+
 // Category+mode-specific key bindings
 var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.BaseModel: {
 		common.ListView: {ViewModelArtifacts},
 	},
 	domain.Tenant: {
-		common.ListView: {Apply},
+		common.ListView: {Confirm, CopyTenant},
 	},
 	domain.LimitDefinition: {
-		common.ListView: {Apply},
+		common.ListView: {Confirm},
 	},
 	domain.ConsolePropertyDefinition: {
-		common.ListView: {Apply},
+		common.ListView: {Confirm},
 	},
 	domain.PropertyDefinition: {
-		common.ListView: {Apply},
+		common.ListView: {Confirm},
 	},
 	domain.GpuPool: {
-		common.ListView: {Apply},
+		common.ListView: {Confirm},
+	},
+	domain.DedicatedAICluster: {
+		common.ListView: {CopyTenant, CopyValue},
+	},
+	domain.LimitTenancyOverride: {
+		common.ListView: {CopyTenant},
+	},
+	domain.ConsolePropertyTenancyOverride: {
+		common.ListView: {CopyTenant},
+	},
+	domain.PropertyTenancyOverride: {
+		common.ListView: {CopyTenant, CopyValue},
 	},
 }
 

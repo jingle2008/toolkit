@@ -367,8 +367,8 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 	m.updateListView(viewDetailsMsg)
 
 	// Simulate ApplyContext key
-	if len(keys.Apply.Keys()) > 0 {
-		keyStr = keys.Apply.Keys()[0]
+	if len(keys.Confirm.Keys()) > 0 {
+		keyStr = keys.Confirm.Keys()[0]
 	}
 	applyContextMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
 	m.updateListView(applyContextMsg)

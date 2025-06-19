@@ -61,13 +61,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Toggle help view on "?" or "h"
-		if key.Matches(msg, keys.Help) && m.viewMode != common.HelpView {
-			m.lastViewMode = m.viewMode
-			m.viewMode = common.HelpView
-			return m, nil
-		}
-
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
 		}

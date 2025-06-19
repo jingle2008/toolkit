@@ -88,8 +88,6 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		viewMode:     common.ListView,
 		lastViewMode: common.ListView,
 	}
-	// Initialize keys based on initial category and mode
-	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 
 	initStyles(m)
 	applyOptions(m, opts)
@@ -97,6 +95,9 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		return nil, err
 	}
 	setDefaults(m)
+
+	// Initialize keys based on initial category and mode
+	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 
 	return m, nil
 }

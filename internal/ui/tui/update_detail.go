@@ -13,8 +13,13 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		if key.Matches(keyMsg, keys.Back) {
+		switch {
+		case key.Matches(keyMsg, keys.Back):
 			m.exitDetailView()
+		case key.Matches(keyMsg, keys.CopyName):
+			m.copyItemName(findItem(m.dataset, m.category, m.choice))
+		case key.Matches(keyMsg, keys.Help):
+			m.enterHelpView()
 		}
 	}
 

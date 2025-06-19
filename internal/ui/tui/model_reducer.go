@@ -3,8 +3,10 @@
 package tui
 
 import (
+	"fmt"
 	"math"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -111,18 +113,65 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 		return
 	}
 
-	if m.category == domain.BaseModel {
-		if key.Matches(msg, keys.ViewModelArtifacts) {
-			item := m.getCurrentItem()
+	item := m.getCurrentItem()
+	switch {
+	case key.Matches(msg, keys.ViewModelArtifacts):
+		if m.category == domain.BaseModel {
 			if bm, ok := item.(*models.BaseModel); ok {
 				m.logger.Infow("view_model_artifacts",
 					"model", bm.Name,
 					"version", bm.Version,
 					"type", bm.Type,
 				)
-			} else {
-				m.logger.Infow("view_model_artifacts", "item", item)
 			}
+		}
+	case key.Matches(msg, keys.CopyTenant):
+		m.copyTenantID(item)
+	case key.Matches(msg, keys.CopyValue):
+		m.copyItemValue(item)
+	}
+}
+
+func (m *Model) copyItemName(item any) {
+	if dac, ok := item.(*models.DedicatedAICluster); ok {
+		id := fmt.Sprintf("ocid1.generativeaidedicatedaicluster.%s.%s.%s",
+			m.environment.Realm, m.environment.Region, dac.Name)
+		if err := clipboard.WriteAll(id); err != nil {
+			m.logger.Errorw("failed to copy id to clipboard", "error", err)
+		}
+	} else if to, ok := item.(models.NamedItem); ok {
+		if err := clipboard.WriteAll(to.GetName()); err != nil {
+			m.logger.Errorw("failed to copy name to clipboard", "error", err)
+		}
+	}
+}
+
+// copyTenantId copies the tenant ID from the current row to the clipboard if available.
+func (m *Model) copyTenantID(item any) {
+	if dac, ok := item.(*models.DedicatedAICluster); ok {
+		tenantID := fmt.Sprintf("ocid1.tenancy.%s..%s", m.environment.Realm, dac.TenantID)
+		if err := clipboard.WriteAll(tenantID); err != nil {
+			m.logger.Errorw("failed to copy tenantID to clipboard", "error", err)
+		}
+	} else if to, ok := item.(models.TenancyOverride); ok {
+		if err := clipboard.WriteAll(to.GetTenantID()); err != nil {
+			m.logger.Errorw("failed to copy tenantID to clipboard", "error", err)
+		}
+	}
+}
+
+func (m *Model) copyItemValue(item any) {
+	if dac, ok := item.(*models.DedicatedAICluster); ok {
+		value := dac.UnitShape
+		if value == "" {
+			value = dac.Profile
+		}
+		if err := clipboard.WriteAll(value); err != nil {
+			m.logger.Errorw("failed to copy value to clipboard", "error", err)
+		}
+	} else if to, ok := item.(*models.PropertyTenancyOverride); ok {
+		if err := clipboard.WriteAll(to.GetValue()); err != nil {
+			m.logger.Errorw("failed to copy value to clipboard", "error", err)
 		}
 	}
 }

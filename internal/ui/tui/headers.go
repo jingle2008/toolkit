@@ -32,36 +32,36 @@ var headerDefinitions = map[domain.Category][]header{
 	},
 	domain.LimitTenancyOverride: {
 		{"Tenant", 0.24},
-		{"Limit", 0.4},
+		{"Name", 0.4},
 		{"Regions", 0.2},
 		{"Min", 0.08},
 		{"Max", 0.08},
 	},
 	domain.ConsolePropertyTenancyOverride: {
 		{"Tenant", 0.25},
-		{"Property", 0.4},
+		{"Name", 0.4},
 		{"Regions", 0.25},
 		{"Value", 0.1},
 	},
 	domain.PropertyTenancyOverride: {
 		{"Tenant", 0.25},
-		{"Property", 0.4},
+		{"Name", 0.4},
 		{"Regions", 0.25},
 		{"Value", 0.1},
 	},
 	domain.LimitRegionalOverride: {
-		{"Limit", 0.4},
+		{"Name", 0.4},
 		{"Regions", 0.3},
 		{"Min", 0.15},
 		{"Max", 0.15},
 	},
 	domain.ConsolePropertyRegionalOverride: {
-		{"Property", 0.4},
+		{"Name", 0.4},
 		{"Regions", 0.4},
 		{"Value", 0.2},
 	},
 	domain.PropertyRegionalOverride: {
-		{"Property", 0.4},
+		{"Name", 0.4},
 		{"Regions", 0.4},
 		{"Value", 0.2},
 	},
@@ -78,7 +78,7 @@ var headerDefinitions = map[domain.Category][]header{
 	domain.ModelArtifact: {
 		{"Model", 0.3},
 		{"GPU Config", 0.1},
-		{"Artifact", 0.5},
+		{"Name", 0.5},
 		{"TensorRT", 0.1},
 	},
 	domain.Environment: {

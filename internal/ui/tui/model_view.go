@@ -148,8 +148,22 @@ func (m *Model) fullHelpView() string {
 		}
 		b.WriteString("\n")
 	}
-	renderSection("Context-specific", km.Context)
-	renderSection("Mode-specific", km.Mode)
-	renderSection("Global", km.Global)
+	renderSection("Category-specific Actions", km.Context)
+	renderSection("Mode-specific Actions", km.Mode)
+	renderSection("Global Actions", km.Global)
+	renderSection("Table Actions", m.getTableBinding())
 	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())
+}
+
+func (m *Model) getTableBinding() []key.Binding {
+	return []key.Binding{
+		m.table.KeyMap.LineUp,
+		m.table.KeyMap.LineDown,
+		m.table.KeyMap.HalfPageUp,
+		m.table.KeyMap.HalfPageDown,
+		m.table.KeyMap.PageUp,
+		m.table.KeyMap.PageDown,
+		m.table.KeyMap.GotoTop,
+		m.table.KeyMap.GotoBottom,
+	}
 }

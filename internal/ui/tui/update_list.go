@@ -86,6 +86,7 @@ func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 // handleNormalKeys processes key events in Normal mode.
 func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
+
 	switch {
 	case key.Matches(msg, keys.Quit):
 		return []tea.Cmd{tea.Quit}
@@ -99,12 +100,21 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		m.enterEditMode(common.AliasTarget)
 	case key.Matches(msg, keys.ViewDetails):
 		m.enterDetailView()
-	case key.Matches(msg, keys.Apply):
+	case key.Matches(msg, keys.Confirm):
 		cmds = append(cmds, m.enterContext())
+	case key.Matches(msg, keys.CopyTenant):
+		item := m.getCurrentItem()
+		m.copyTenantID(item)
 	default:
 		m.handleAdditionalKeys(msg)
 	}
+
 	return cmds
+}
+
+func (m *Model) enterHelpView() {
+	m.lastViewMode = m.viewMode
+	m.viewMode = common.HelpView
 }
 
 func (m *Model) handleNextCategory() tea.Cmd {
@@ -133,7 +143,7 @@ func (m *Model) handleEditKeys(msg tea.KeyMsg) []tea.Cmd {
 	cmds = append(cmds, cmd)
 
 	switch {
-	case key.Matches(msg, keys.Apply):
+	case key.Matches(msg, keys.Confirm):
 		if m.editTarget == common.AliasTarget {
 			cmd := m.changeCategory()
 			if cmd != nil {
