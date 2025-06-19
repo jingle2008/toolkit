@@ -141,6 +141,8 @@ const (
 	RegionUSGovFortworth1 Region = "us-gov-fortworth-1"
 	// RegionUSDccPhoenix1 is a region not part of the official SDK.
 	RegionUSDccPhoenix1 Region = "us-dcc-phoenix-1"
+	// RegionUSDccPhoenix2 is a region not part of the official SDK.
+	RegionUSDccPhoenix2 Region = "us-dcc-phoenix-2"
 )
 
 var shortNameRegion = map[string]Region{
@@ -211,6 +213,7 @@ var shortNameRegion = map[string]Region{
 	"dca": RegionUSGovSterling2,
 	"ftw": RegionUSGovFortworth1,
 	"ifp": RegionUSDccPhoenix1,
+	"gcn": RegionUSDccPhoenix2,
 }
 
 /*

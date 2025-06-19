@@ -51,3 +51,31 @@ func TestProductionLoader_LoadDedicatedAIClusters(t *testing.T) {
 		t.Log("LoadDedicatedAIClusters: expected error or empty result with dummy input")
 	}
 }
+
+func TestProductionLoader_RegionalOverrides(t *testing.T) {
+	t.Parallel()
+	loader := ProductionLoader{}
+	ctx := context.Background()
+	repo := "dummy_repo"
+	env := models.Environment{}
+
+	_, err := loader.LoadTenancyOverrideGroup(ctx, repo, env)
+	if err == nil {
+		t.Log("LoadTenancyOverrideGroup: expected error or empty result with dummy input")
+	}
+
+	_, err = loader.LoadLimitRegionalOverrides(ctx, repo, env)
+	if err == nil {
+		t.Log("LoadLimitRegionalOverrides: expected error or empty result with dummy input")
+	}
+
+	_, err = loader.LoadConsolePropertyRegionalOverrides(ctx, repo, env)
+	if err == nil {
+		t.Log("LoadConsolePropertyRegionalOverrides: expected error or empty result with dummy input")
+	}
+
+	_, err = loader.LoadPropertyRegionalOverrides(ctx, repo, env)
+	if err == nil {
+		t.Log("LoadPropertyRegionalOverrides: expected error or empty result with dummy input")
+	}
+}

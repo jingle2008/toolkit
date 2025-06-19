@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -59,4 +60,21 @@ var _ view.Renderer = (*mockRenderer)(nil)
 
 func (mockRenderer) RenderJSON(_ interface{}, width int) (string, error) {
 	return fmt.Sprintf("json: %d", width), nil
+}
+
+func TestWithContext(t *testing.T) {
+	t.Parallel()
+	m := &Model{}
+	ctx := context.Background()
+	opt := WithContext(ctx)
+	opt(m)
+	assert.Equal(t, ctx, m.ctx)
+}
+
+func TestWithFilter(t *testing.T) {
+	t.Parallel()
+	m := &Model{}
+	opt := WithFilter("foo")
+	opt(m)
+	assert.Equal(t, "foo", m.newFilter)
 }

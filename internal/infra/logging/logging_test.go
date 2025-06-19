@@ -3,6 +3,7 @@ package logging
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 )
 
@@ -129,5 +130,41 @@ func TestMustNewLogger(t *testing.T) {
 	l := MustNewLogger(true)
 	if l == nil {
 		t.Errorf("expected non-nil logger")
+	}
+}
+
+func TestNewFileLoggerAndMustNewFileLogger(t *testing.T) {
+	t.Parallel()
+	tmpfile := "test_log.json"
+	defer func() { _ = os.Remove(tmpfile) }()
+
+	l, err := NewFileLogger(true, tmpfile)
+	if err != nil {
+		t.Fatalf("NewFileLogger failed: %v", err)
+	}
+	if l == nil {
+		t.Fatalf("NewFileLogger returned nil logger")
+	}
+	l.Infow("test message", "foo", "bar")
+	if err := l.Sync(); err != nil {
+		t.Errorf("Sync failed: %v", err)
+	}
+	info, err := os.Stat(tmpfile)
+	if err != nil {
+		t.Fatalf("log file not created: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Errorf("log file is empty")
+	}
+
+	// MustNewFileLogger should not panic with valid file
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("MustNewFileLogger panicked unexpectedly: %v", r)
+		}
+	}()
+	l2 := MustNewFileLogger(true, tmpfile)
+	if l2 == nil {
+		t.Errorf("MustNewFileLogger returned nil logger")
 	}
 }

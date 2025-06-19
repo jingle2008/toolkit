@@ -113,3 +113,19 @@ func TestCategory_Definition(t *testing.T) {
 	// non-override category should return Category(-1)
 	assert.Equal(t, Category(-1), Tenant.Definition())
 }
+
+func TestAliases(t *testing.T) {
+	t.Parallel()
+	aliases := Aliases()
+	assert.NotEmpty(t, aliases, "Aliases() should not return an empty slice")
+
+	// Check that all keys in catLookup are present in the result
+	expected := make(map[string]struct{})
+	for k := range catLookup {
+		expected[k] = struct{}{}
+	}
+	for _, alias := range aliases {
+		delete(expected, alias)
+	}
+	assert.Empty(t, expected, "All catLookup keys should be present in Aliases() result")
+}
