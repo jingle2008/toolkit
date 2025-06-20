@@ -12,9 +12,11 @@ import (
 func TestLimitTenancyOverrideRow_ToRow(t *testing.T) {
 	t.Parallel()
 	row := LimitTenancyOverrideRow(models.LimitTenancyOverride{
-		Name:    "limit",
-		Regions: []string{"us-west", "us-east"},
-		Values:  []models.LimitRange{{Min: 1, Max: 10}},
+		LimitRegionalOverride: models.LimitRegionalOverride{
+			Name:    "limit",
+			Regions: []string{"us-west", "us-east"},
+			Values:  []models.LimitRange{{Min: 1, Max: 10}},
+		},
 	}).ToRow("scope")
 	if row[0] != "scope" || row[1] != "limit" || row[2] != "us-west, us-east" || row[3] != "1" || row[4] != "10" {
 		t.Errorf("unexpected row: %v", row)
@@ -60,9 +62,11 @@ func TestGetScopedItems(t *testing.T) {
 	logger := logging.NewNoOpLogger()
 	m := map[string][]models.LimitTenancyOverride{
 		"scope1": {{
-			Name:    "limitA",
-			Regions: []string{"us-west"},
-			Values:  []models.LimitRange{{Min: 1, Max: 2}},
+			LimitRegionalOverride: models.LimitRegionalOverride{
+				Name:    "limitA",
+				Regions: []string{"us-west"},
+				Values:  []models.LimitRange{{Min: 1, Max: 2}},
+			},
 		}},
 	}
 	ctx := &domain.ToolkitContext{Name: "scope1", Category: domain.Tenant}
@@ -172,9 +176,11 @@ func TestGetScopedItems_NilCtxAndNonMatchingCategory(t *testing.T) {
 	logger := logging.NewZapLogger(zap.NewNop().Sugar(), false)
 	m := map[string][]models.LimitTenancyOverride{
 		"scope1": {{
-			Name:    "limitA",
-			Regions: []string{"us-west"},
-			Values:  []models.LimitRange{{Min: 1, Max: 2}},
+			LimitRegionalOverride: models.LimitRegionalOverride{
+				Name:    "limitA",
+				Regions: []string{"us-west"},
+				Values:  []models.LimitRange{{Min: 1, Max: 2}},
+			},
 		}},
 	}
 	// ctx == nil
@@ -195,7 +201,13 @@ func TestGetTableRow_Dispatches(t *testing.T) {
 	logger := logging.NewZapLogger(zap.NewNop().Sugar(), false)
 	tenant := "scope"
 
-	limit := models.LimitTenancyOverride{Name: "l", Regions: []string{"r"}, Values: []models.LimitRange{{Min: 1, Max: 2}}}
+	limit := models.LimitTenancyOverride{
+		LimitRegionalOverride: models.LimitRegionalOverride{
+			Name:    "l",
+			Regions: []string{"r"},
+			Values:  []models.LimitRange{{Min: 1, Max: 2}},
+		},
+	}
 	row := GetTableRow(logger, tenant, limit)
 	if row[0] != tenant || row[1] != "l" {
 		t.Errorf("LimitTenancyOverride dispatch failed: %v", row)

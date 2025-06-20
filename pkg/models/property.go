@@ -40,12 +40,6 @@ type PropertyRegionalOverride struct {
 	} `json:"values"`
 }
 
-// PropertyTenancyOverride represents a tenancy override for a property.
-type PropertyTenancyOverride struct {
-	Tag string `json:"tag"`
-	PropertyRegionalOverride
-}
-
 // GetName returns the name of the property regional override.
 func (o PropertyRegionalOverride) GetName() string {
 	return o.Name
@@ -61,12 +55,23 @@ func (o PropertyRegionalOverride) GetValue() string {
 	return o.Values[0].Value
 }
 
+// GetFilterableFields returns filterable fields for the property regional override.
+func (o PropertyRegionalOverride) GetFilterableFields() []string {
+	return append(o.Regions, o.Name)
+}
+
+// PropertyTenancyOverride represents a tenancy override for a property.
+type PropertyTenancyOverride struct {
+	Tag string `json:"tag"`
+	PropertyRegionalOverride
+}
+
 // GetTenantID returns the tenant tag of the property tenancy override.
 func (o PropertyTenancyOverride) GetTenantID() string {
 	return o.Tag
 }
 
-// GetFilterableFields returns filterable fields for the property regional override.
-func (o PropertyRegionalOverride) GetFilterableFields() []string {
-	return append(o.Regions, o.Name)
+// GetFilterableFields returns filterable fields for the property tenancy override.
+func (o PropertyTenancyOverride) GetFilterableFields() []string {
+	return append(o.Regions, o.Name, o.Tag)
 }

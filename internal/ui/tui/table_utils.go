@@ -228,12 +228,13 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	switch category {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
-		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride:
+		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
+		domain.PropertyRegionalOverride, domain.BaseModel:
 		return row[0]
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
 		return models.ScopedItemKey{Scope: row[0], Name: row[1]}
-	case domain.BaseModel, domain.ModelArtifact:
+	case domain.ModelArtifact:
 		return row[2]
 	}
 

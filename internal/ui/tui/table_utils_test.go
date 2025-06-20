@@ -311,9 +311,11 @@ func Test_getTableRows_and_scoped_items(t *testing.T) {
 		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
 			"TenantA": {
 				{
-					Name:    "LimitA",
-					Regions: []string{"us-phoenix-1"},
-					Values:  []models.LimitRange{{Min: 1, Max: 10}},
+					LimitRegionalOverride: models.LimitRegionalOverride{
+						Name:    "LimitA",
+						Regions: []string{"us-phoenix-1"},
+						Values:  []models.LimitRange{{Min: 1, Max: 10}},
+					},
 				},
 			},
 		},
@@ -360,9 +362,11 @@ func Test_getTableRow_other_types(t *testing.T) {
 
 	// LimitTenancyOverride
 	lto := models.LimitTenancyOverride{
-		Name:    "LimitA",
-		Regions: []string{"us-phoenix-1"},
-		Values:  []models.LimitRange{{Min: 1, Max: 10}},
+		LimitRegionalOverride: models.LimitRegionalOverride{
+			Name:    "LimitA",
+			Regions: []string{"us-phoenix-1"},
+			Values:  []models.LimitRange{{Min: 1, Max: 10}},
+		},
 	}
 	row2 := GetTableRow(nil, "TenantA", lto)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, row2)
@@ -421,7 +425,7 @@ func TestGetItemKeyAndString(t *testing.T) {
 		{domain.PropertyTenancyOverride, table.Row{"tenant1", "pdef"}, "tenant1/pdef"},
 		{domain.ConsolePropertyRegionalOverride, table.Row{"cpdef"}, "cpdef"},
 		{domain.PropertyRegionalOverride, table.Row{"pdef"}, "pdef"},
-		{domain.BaseModel, table.Row{"bm1", "BM1", "v1", "", "C,C*2", "1024", "EXP/INT/LTS/RTD"}, "v1"},
+		{domain.BaseModel, table.Row{"bm1", "BM1", "v1", "", "C,C*2", "1024", "EXP/INT/LTS/RTD"}, "bm1"},
 		{domain.ModelArtifact, table.Row{"model", "gpu", "artifact"}, "artifact"},
 		{domain.Environment, table.Row{"env"}, "env"},
 		{domain.ServiceTenancy, table.Row{"svc"}, "svc"},
@@ -480,7 +484,13 @@ func buildFullTestDataset() *models.Dataset {
 			Values: []models.PropertyDefinition{{Name: "pdef"}},
 		},
 		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
-			"tenant1": {{Name: "limdef", Regions: []string{"us"}, Values: []models.LimitRange{{Min: 1, Max: 2}}}},
+			"tenant1": {{
+				LimitRegionalOverride: models.LimitRegionalOverride{
+					Name:    "limdef",
+					Regions: []string{"us"},
+					Values:  []models.LimitRange{{Min: 1, Max: 2}},
+				},
+			}},
 		},
 		ConsolePropertyTenancyOverrideMap: map[string][]models.ConsolePropertyTenancyOverride{
 			"tenant1": {{
@@ -584,12 +594,14 @@ func TestGetTableRow(t *testing.T) {
 	// Use the actual type for Values field from the model
 	ltov := models.LimitTenancyOverride{}
 	require.NotNil(t, GetTableRow(nil, "tenant", models.LimitTenancyOverride{
-		Name:    "lim",
-		Regions: []string{"us"},
-		Values: append(ltov.Values[:0], struct {
-			Min int "json:\"min\""
-			Max int "json:\"max\""
-		}{Min: 1, Max: 2}),
+		LimitRegionalOverride: models.LimitRegionalOverride{
+			Name:    "lim",
+			Regions: []string{"us"},
+			Values: append(ltov.Values[:0], struct {
+				Min int "json:\"min\""
+				Max int "json:\"max\""
+			}{Min: 1, Max: 2}),
+		},
 	}))
 	// Use the actual type for Values field from the model
 	cprov := models.ConsolePropertyRegionalOverride{}

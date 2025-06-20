@@ -133,6 +133,8 @@ func (m *Model) copyItemName(item any) {
 		if err := clipboard.WriteAll(to.GetName()); err != nil {
 			m.logger.Errorw("failed to copy name to clipboard", "error", err)
 		}
+	} else {
+		m.logger.Errorw("unsupported item type for copying name", "item", item)
 	}
 }
 
@@ -147,6 +149,8 @@ func (m *Model) copyTenantID(item any) {
 		if err := clipboard.WriteAll(to.GetTenantID()); err != nil {
 			m.logger.Errorw("failed to copy tenantID to clipboard", "error", err)
 		}
+	} else {
+		m.logger.Errorw("unsupported item type for copying tenant ID", "item", item)
 	}
 }
 
@@ -163,6 +167,8 @@ func (m *Model) copyItemValue(item any) {
 		if err := clipboard.WriteAll(to.GetValue()); err != nil {
 			m.logger.Errorw("failed to copy value to clipboard", "error", err)
 		}
+	} else {
+		m.logger.Errorw("unsupported item type for copying value", "item", item)
 	}
 }
 

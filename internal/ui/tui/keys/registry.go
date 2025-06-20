@@ -122,7 +122,7 @@ var (
 	// CopyTenant is a key binding for copying the tenant ID in the tenant context.
 	CopyTenant = key.NewBinding(
 		key.WithKeys("t"),
-		key.WithHelp("t", "copy tenant"),
+		key.WithHelp("t", "copy tenant ocid"),
 	)
 )
 

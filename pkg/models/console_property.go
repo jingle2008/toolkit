@@ -38,12 +38,6 @@ type ConsolePropertyRegionalOverride struct {
 	} `json:"values"`
 }
 
-// ConsolePropertyTenancyOverride represents a tenancy override for a console property.
-type ConsolePropertyTenancyOverride struct {
-	TenantID string `json:"tenant_id"`
-	ConsolePropertyRegionalOverride
-}
-
 // GetName returns the name of the console property regional override.
 func (o ConsolePropertyRegionalOverride) GetName() string {
 	return o.Name
@@ -59,12 +53,23 @@ func (o ConsolePropertyRegionalOverride) GetValue() string {
 	return o.Values[0].Value
 }
 
+// GetFilterableFields returns filterable fields for the console property regional override.
+func (o ConsolePropertyRegionalOverride) GetFilterableFields() []string {
+	return append(o.Regions, o.Name)
+}
+
+// ConsolePropertyTenancyOverride represents a tenancy override for a console property.
+type ConsolePropertyTenancyOverride struct {
+	TenantID string `json:"tenant_id"`
+	ConsolePropertyRegionalOverride
+}
+
 // GetTenantID returns the tenant ID of the console property tenancy override.
 func (o ConsolePropertyTenancyOverride) GetTenantID() string {
 	return o.TenantID
 }
 
-// GetFilterableFields returns filterable fields for the console property regional override.
-func (o ConsolePropertyRegionalOverride) GetFilterableFields() []string {
-	return append(o.Regions, o.Name)
+// GetFilterableFields returns filterable fields for the console property tenancy override.
+func (o ConsolePropertyTenancyOverride) GetFilterableFields() []string {
+	return append(o.Regions, o.Name, o.TenantID)
 }

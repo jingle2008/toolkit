@@ -66,8 +66,8 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Value", 0.2},
 	},
 	domain.BaseModel: {
-		{"Name", 0.28},
-		{"Display Name", 0.26},
+		{"Internal Name", 0.28},
+		{"Name", 0.26},
 		{"Version", 0.08},
 		{"DAC Shape", 0.16},
 		{"Caps", 0.06},

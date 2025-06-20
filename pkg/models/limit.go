@@ -37,32 +37,6 @@ type LimitRange struct {
 	Max int `json:"max"`
 }
 
-// LimitTenancyOverride represents a tenancy override for a limit.
-type LimitTenancyOverride struct {
-	Realms   []string     `json:"realms"`
-	Name     string       `json:"name"`
-	Regions  []string     `json:"regions"`
-	Group    string       `json:"group"`
-	TenantID string       `json:"tenant_id"`
-	Values   []LimitRange `json:"values"`
-}
-
-// GetName returns the name of the limit tenancy override.
-func (o LimitTenancyOverride) GetName() string {
-	return o.Name
-}
-
-// GetTenantID returns the tenant ID of the limit tenancy override.
-func (o LimitTenancyOverride) GetTenantID() string {
-	return o.TenantID
-}
-
-// GetFilterableFields returns filterable fields for the limit tenancy override.
-func (o LimitTenancyOverride) GetFilterableFields() []string {
-	results := o.Regions
-	return append(results, o.Name)
-}
-
 // LimitRegionalOverride represents a regional override for a limit.
 type LimitRegionalOverride struct {
 	Realms  []string     `json:"realms"`
@@ -72,7 +46,7 @@ type LimitRegionalOverride struct {
 	Values  []LimitRange `json:"values"`
 }
 
-// GetName returns the name of the limit regional override.
+// GetName returns the name of the limit tenancy override.
 func (o LimitRegionalOverride) GetName() string {
 	return o.Name
 }
@@ -80,4 +54,20 @@ func (o LimitRegionalOverride) GetName() string {
 // GetFilterableFields returns filterable fields for the limit regional override.
 func (o LimitRegionalOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name)
+}
+
+// LimitTenancyOverride represents a tenancy override for a limit.
+type LimitTenancyOverride struct {
+	LimitRegionalOverride
+	TenantID string `json:"tenant_id"`
+}
+
+// GetTenantID returns the tenant ID of the limit tenancy override.
+func (o LimitTenancyOverride) GetTenantID() string {
+	return o.TenantID
+}
+
+// GetFilterableFields returns filterable fields for the limit tenancy override.
+func (o LimitTenancyOverride) GetFilterableFields() []string {
+	return append(o.Regions, o.Name, o.TenantID)
 }
