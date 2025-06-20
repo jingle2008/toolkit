@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mattn/go-runewidth"
+
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
@@ -48,10 +50,19 @@ func (m *Model) contextString() string {
 	return fmt.Sprintf("%s (%s)", m.category.String(), scope)
 }
 
+func truncateString(s string, max int) string {
+	if runewidth.StringWidth(s) <= max {
+		return s
+	}
+	return runewidth.Truncate(s, max-1, "…")
+}
+
 func (m *Model) statusView() string {
 	w := lipgloss.Width
 
-	contextCell := m.contextStyle.Render(m.contextString())
+	maxCtx := m.viewWidth / 3
+	ctx := truncateString(m.contextString(), maxCtx)
+	contextCell := m.contextStyle.Render(ctx)
 
 	statsCell := m.statsStyle.Render(
 		fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
