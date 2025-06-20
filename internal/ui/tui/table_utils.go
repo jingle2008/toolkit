@@ -48,8 +48,8 @@ var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset,
 	domain.BaseModel: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return getBaseModels(dataset.BaseModelMap, filter)
 	},
-	domain.ModelArtifact: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
-		return getModelArtifacts(dataset.ModelArtifacts, filter)
+	domain.ModelArtifact: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string) []table.Row {
+		return GetScopedItems(logger, dataset.ModelArtifactMap, domain.BaseModel, context, filter)
 	},
 	domain.Environment: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return filterRows(dataset.Environments, filter, func(e models.Environment) table.Row {
@@ -209,31 +209,16 @@ func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 			shapeDisplay = fmt.Sprintf("%dx %s", shape.QuotaUnit, shape.Name)
 		}
 		results = append(results, table.Row{
+			val.InternalName,
 			val.Name,
 			val.Version,
-			val.Type,
 			shapeDisplay,
-			strings.Join(val.GetCapabilities(), ", "),
-			val.Category,
+			strings.Join(val.GetCapabilities(), ","),
 			fmt.Sprint(val.MaxTokens),
 			val.GetFlags(),
 		})
 	}
 	return results
-}
-
-/*
-getModelArtifacts returns table rows for a slice of ModelArtifact, filtered by the provided filter string.
-*/
-func getModelArtifacts(artifacts []models.ModelArtifact, filter string) []table.Row {
-	return filterRows(artifacts, filter, func(val models.ModelArtifact) table.Row {
-		return table.Row{
-			val.ModelName,
-			val.GetGpuConfig(),
-			val.Name,
-			val.TensorRTVersion,
-		}
-	})
 }
 
 /*
@@ -248,9 +233,7 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
 		return models.ScopedItemKey{Scope: row[0], Name: row[1]}
-	case domain.BaseModel:
-		return models.BaseModelKey{Name: row[0], Version: row[1], Type: row[2]}
-	case domain.ModelArtifact:
+	case domain.BaseModel, domain.ModelArtifact:
 		return row[2]
 	}
 
@@ -355,11 +338,9 @@ func findPropertyRegionalOverride(dataset *models.Dataset, key models.ItemKey) a
 }
 
 func findBaseModel(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(models.BaseModelKey)
+	k := key.(string)
 	for _, value := range dataset.BaseModelMap {
-		if value.Name == k.Name &&
-			value.Version == k.Version &&
-			value.Type == k.Type {
+		if value.InternalName == k {
 			return value
 		}
 	}
@@ -367,7 +348,13 @@ func findBaseModel(dataset *models.Dataset, key models.ItemKey) any {
 }
 
 func findModelArtifact(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.ModelArtifacts, key.(string))
+	k := key.(string)
+	for _, value := range dataset.ModelArtifactMap {
+		if item := collections.FindByName(value, k); item != nil {
+			return item
+		}
+	}
+	return nil
 }
 
 func findEnvironment(dataset *models.Dataset, key models.ItemKey) any {
@@ -405,15 +392,13 @@ func getItemKeyString(category domain.Category, key models.ItemKey) string {
 	switch category {
 	case domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride, domain.Environment,
-		domain.ServiceTenancy, domain.GpuPool, domain.ModelArtifact, domain.LimitRegionalOverride:
+		domain.ServiceTenancy, domain.GpuPool, domain.ModelArtifact, domain.LimitRegionalOverride,
+		domain.BaseModel:
 		return key.(string)
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.DedicatedAICluster, domain.GpuNode:
 		k := key.(models.ScopedItemKey)
 		return fmt.Sprintf("%s/%s", k.Scope, k.Name)
-	case domain.BaseModel:
-		k := key.(models.BaseModelKey)
-		return fmt.Sprintf("%s-%s-%s", k.Name, k.Version, k.Type)
 	}
 
 	return "UNKNOWN"

@@ -6,6 +6,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -64,19 +65,13 @@ func (e Category) IsScopeOf(o Category) bool {
 	}
 
 	categories := e.ScopedCategories()
-	for _, c := range categories {
-		if c == o {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(categories, o)
 }
 
 // IsScope returns true if the category is a scope category.
 func (e Category) IsScope() bool {
 	switch e {
-	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool:
+	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool, BaseModel:
 		return true
 	}
 	return false
@@ -106,6 +101,8 @@ func (e Category) ScopedCategories() []Category {
 		}
 	case GpuPool:
 		return []Category{GpuNode}
+	case BaseModel:
+		return []Category{ModelArtifact}
 	default:
 		// Instead of panic, return nil to indicate no scoped categories.
 		return nil

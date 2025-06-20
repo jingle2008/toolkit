@@ -9,31 +9,34 @@ import (
 
 // BaseModel represents a base model entity.
 type BaseModel struct {
-	Capabilities        map[string]*Capability `json:"capabilities"`
-	InternalName        string                 `json:"internal_name"`
-	Name                string                 `json:"displayName"`
-	Type                string                 `json:"type"`
-	Category            string                 `json:"category"`
-	Version             string                 `json:"version"`
-	Vendor              string                 `json:"vendor"`
-	MaxTokens           int                    `json:"maxTokens"`
-	VaultKey            string                 `json:"vaultKey"`
-	IsExperimental      bool                   `json:"isExperimental"`
-	IsInternal          bool                   `json:"isInternal"`
-	IsLongTermSupported bool                   `json:"isLongTermSupported"`
-	LifeCyclePhase      string                 `json:"baseModelLifeCyclePhase"`
-	TimeDeprecated      string                 `json:"timeDeprecated"`
+	Capabilities           map[string]*Capability `json:"capabilities"`
+	InternalName           string                 `json:"internal_name"`
+	Name                   string                 `json:"displayName"`
+	Type                   string                 `json:"type"`
+	Category               string                 `json:"category"`
+	Version                string                 `json:"version"`
+	Vendor                 string                 `json:"vendor"`
+	MaxTokens              int                    `json:"maxTokens"`
+	VaultKey               string                 `json:"vaultKey"`
+	IsExperimental         bool                   `json:"isExperimental"`
+	IsInternal             bool                   `json:"isInternal"`
+	IsLongTermSupported    bool                   `json:"isLongTermSupported"`
+	LifeCyclePhase         string                 `json:"baseModelLifeCyclePhase"`
+	TimeDeprecated         string                 `json:"timeDeprecated"`
+	ImageTextToText        *bool                  `json:"imageTextToText,omitempty"`
+	ContainerImageOverride *string                `json:"containerImageOverride,omitempty"`
 }
 
 // Capability represents a model capability.
 type Capability struct {
-	Capability  string       `json:"capability"`
-	CrName      string       `json:"cr_name"`
-	Description string       `json:"description"`
-	Runtime     string       `json:"runtime"`
-	ValuesFile  *string      `json:"values_file,omitempty"`
-	ChartValues *ChartValues `json:"chart_values,omitempty"`
-	Replicas    int          `json:"replicas"`
+	Capability        string       `json:"capability"`
+	CrName            string       `json:"cr_name"`
+	Description       string       `json:"description"`
+	Runtime           string       `json:"runtime"`
+	ValuesFile        *string      `json:"values_file,omitempty"`
+	ChartValues       *ChartValues `json:"chart_values,omitempty"`
+	Replicas          int          `json:"replicas"`
+	MaxLoadingSeconds *string      `json:"max_loading_seconds,omitempty"`
 }
 
 // ChartValues holds chart configuration values for a model.
@@ -103,9 +106,9 @@ func (m BaseModel) GetKey() string {
 func (m BaseModel) GetCapabilities() []string {
 	keys := make([]string, 0, len(m.Capabilities))
 	for key, value := range m.Capabilities {
-		capStr := key
+		capStr := strings.ToUpper(key[:1])
 		if value.Replicas > 0 {
-			capStr = fmt.Sprintf("[%d] %s", value.Replicas, key)
+			capStr = fmt.Sprintf("%s*%d", capStr, value.Replicas)
 		}
 		keys = append(keys, capStr)
 	}

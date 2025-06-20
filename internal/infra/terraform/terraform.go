@@ -462,7 +462,7 @@ func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment
 			continue
 		}
 
-		model := getBaseModel(value, capabilities, chartValuesMap)
+		model := getBaseModel(ctx, value, capabilities, chartValuesMap)
 		for _, capability := range model.Capabilities {
 			if replicas, ok := modelReplicasMap[capability.CrName]; ok {
 				capability.Replicas = replicas
@@ -482,12 +482,13 @@ func LoadBaseModels(ctx context.Context, repoPath string, env models.Environment
 }
 
 //nolint:cyclop
-func getBaseModel(object cty.Value, enabledCaps map[string]struct{},
+func getBaseModel(ctx context.Context, object cty.Value, enabledCaps map[string]struct{},
 	chartValues map[string]*models.ChartValues,
 ) *models.BaseModel {
 	result := models.BaseModel{}
 	capabilities := make(map[string]*models.Capability)
 
+	logger := logging.FromContext(ctx)
 	for name, value := range object.AsValueMap() {
 		switch name {
 		case "internal_name":
@@ -515,8 +516,16 @@ func getBaseModel(object cty.Value, enabledCaps map[string]struct{},
 			result.IsLongTermSupported = value.True()
 		case "generation", "summarization", "chat", "embedding", "rerank":
 			if _, ok := enabledCaps[name]; ok {
-				capabilities[name] = getCapability(value, chartValues)
+				capabilities[name] = getCapability(ctx, value, chartValues)
 			}
+		case "imageTextToText":
+			v := value.True()
+			result.ImageTextToText = &v
+		case "containerImageOverride":
+			v := value.AsString()
+			result.ContainerImageOverride = &v
+		default:
+			logger.Errorw("unknown base model attribute", "name", name)
 		}
 	}
 
@@ -524,9 +533,10 @@ func getBaseModel(object cty.Value, enabledCaps map[string]struct{},
 	return &result
 }
 
-func getCapability(object cty.Value, chartValues map[string]*models.ChartValues) *models.Capability {
+func getCapability(ctx context.Context, object cty.Value, chartValues map[string]*models.ChartValues) *models.Capability {
 	result := models.Capability{}
 
+	logger := logging.FromContext(ctx)
 	for name, value := range object.AsValueMap() {
 		switch name {
 		case "capability":
@@ -542,6 +552,11 @@ func getCapability(object cty.Value, chartValues map[string]*models.ChartValues)
 			result.ValuesFile = &file
 			chartName := filepath.Base(file)
 			result.ChartValues = chartValues[chartName]
+		case "max_loading_seconds":
+			v := value.AsString()
+			result.MaxLoadingSeconds = &v
+		default:
+			logger.Errorw("unknown capability attribute", "name", name)
 		}
 	}
 
@@ -626,7 +641,7 @@ func loadGpuPools(ctx context.Context, dirPath, poolConfigName string, isOkeMana
 LoadModelArtifacts loads ModelArtifact objects from the given repository path and environment.
 Now accepts context.Context as the first parameter.
 */
-func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environment) ([]models.ModelArtifact, error) {
+func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environment) (map[string][]models.ModelArtifact, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/tensorrt_models_config")
 	valueMap, err := loadLocalValueMap(ctx, dirPath, env)
 	if err != nil {
@@ -638,8 +653,9 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 		return nil, fmt.Errorf("all_models_map: %w", ErrModelArtifactMapNotResolved)
 	}
 
-	modelArtifacts := []models.ModelArtifact{}
+	modelArtifactMap := map[string][]models.ModelArtifact{}
 	for modelName, value := range modelMapValue.AsValueMap() {
+		modelArtifacts := make([]models.ModelArtifact, 0, 4)
 		for trtVersion, v1 := range value.AsValueMap() {
 			for gpuShape, v2 := range v1.AsValueMap() {
 				for gpuCount, v3 := range v2.AsValueMap() {
@@ -655,10 +671,12 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 				}
 			}
 		}
+
+		sortKeyedItems(modelArtifacts)
+		modelArtifactMap[modelName] = modelArtifacts
 	}
 
-	sortKeyedItems(modelArtifacts)
-	return modelArtifacts, nil
+	return modelArtifactMap, nil
 }
 
 func extractGpuNumber(s string) int {

@@ -688,7 +688,7 @@ func TestGetBaseModel_AllFields(t *testing.T) {
 	chartValues := map[string]*models.ChartValues{
 		"foo.yaml": {Model: &models.ModelSetting{}},
 	}
-	bm := getBaseModel(obj, enabledCaps, chartValues)
+	bm := getBaseModel(context.Background(), obj, enabledCaps, chartValues)
 	assert.Equal(t, "iname", bm.InternalName)
 	assert.Equal(t, "dname", bm.Name)
 	assert.Equal(t, "type", bm.Type)
@@ -716,7 +716,7 @@ func TestGetBaseModel_Empty(t *testing.T) {
 	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{})
 	chartValues := map[string]*models.ChartValues{}
-	bm := getBaseModel(obj, map[string]struct{}{}, chartValues)
+	bm := getBaseModel(context.Background(), obj, map[string]struct{}{}, chartValues)
 	assert.NotNil(t, bm)
 	assert.Empty(t, bm.Capabilities)
 }
@@ -733,7 +733,7 @@ func TestGetCapability_AllFields(t *testing.T) {
 	chartValues := map[string]*models.ChartValues{
 		"bar.yaml": {Model: &models.ModelSetting{}},
 	}
-	capability := getCapability(obj, chartValues)
+	capability := getCapability(context.Background(), obj, chartValues)
 	assert.Equal(t, "gen", capability.Capability)
 	assert.Equal(t, "cr", capability.CrName)
 	assert.Equal(t, "desc", capability.Description)
@@ -747,6 +747,6 @@ func TestGetCapability_Empty(t *testing.T) {
 	t.Parallel()
 	obj := cty.ObjectVal(map[string]cty.Value{})
 	chartValues := map[string]*models.ChartValues{}
-	capability := getCapability(obj, chartValues)
+	capability := getCapability(context.Background(), obj, chartValues)
 	assert.NotNil(t, capability)
 }

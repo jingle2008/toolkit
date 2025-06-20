@@ -14,11 +14,6 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// RowMarshaler is an interface for types that can marshal themselves into a BubbleTea table.Row.
-type RowMarshaler interface {
-	ToRow(scope string) table.Row
-}
-
 // Renderer is a UI-agnostic interface for rendering a row as a slice of strings.
 type Renderer interface {
 	Render(scope string) []string
@@ -179,26 +174,42 @@ func (e EnvironmentRow) ToRow(scope string) table.Row {
 	return table.Row(e.Render(scope))
 }
 
+type ModelArtifactRow models.ModelArtifact
+
+// Render implements the Renderer interface for ModelArtifactRow.
+func (val ModelArtifactRow) Render(_ string) []string {
+	return []string{
+		val.ModelName,
+		models.ModelArtifact(val).GetGpuConfig(),
+		val.Name,
+		val.TensorRTVersion,
+	}
+}
+
+// ToRow returns a table.Row for the ModelArtifactRow.
+func (val ModelArtifactRow) ToRow(scope string) table.Row {
+	return table.Row(val.Render(scope))
+}
+
 /*
 GetTableRow returns a table.Row for a given item.
 If the item implements RowMarshaler, it is used directly.
 Otherwise, falls back to legacy type switch for backward compatibility.
 */
-func GetTableRow(logger logging.Logger, tenant string, item any) table.Row {
-	if marshaler, ok := item.(RowMarshaler); ok {
-		return marshaler.ToRow(tenant)
-	}
+func GetTableRow(logger logging.Logger, scope string, item any) table.Row {
 	switch val := item.(type) {
 	case models.LimitTenancyOverride:
-		return LimitTenancyOverrideRow(val).ToRow(tenant)
+		return LimitTenancyOverrideRow(val).ToRow(scope)
 	case models.ConsolePropertyTenancyOverride:
-		return ConsolePropertyTenancyOverrideRow(val).ToRow(tenant)
+		return ConsolePropertyTenancyOverrideRow(val).ToRow(scope)
 	case models.PropertyTenancyOverride:
-		return PropertyTenancyOverrideRow(val).ToRow(tenant)
+		return PropertyTenancyOverrideRow(val).ToRow(scope)
 	case models.GpuNode:
-		return GpuNodeRow(val).ToRow(tenant)
+		return GpuNodeRow(val).ToRow(scope)
 	case models.DedicatedAICluster:
-		return DedicatedAIClusterRow(val).ToRow(tenant)
+		return DedicatedAIClusterRow(val).ToRow(scope)
+	case models.ModelArtifact:
+		return ModelArtifactRow(val).ToRow(scope)
 	default:
 		if logger != nil {
 			logger.Errorw("unexpected type in GetTableRow", "type", fmt.Sprintf("%T", val))

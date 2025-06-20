@@ -114,11 +114,6 @@ var listModeKeys = []key.Binding{
 var detailsModeKeys = []key.Binding{}
 
 var (
-	// ViewModelArtifacts is a key binding for viewing artifacts in the base model list view.
-	ViewModelArtifacts = key.NewBinding(
-		key.WithKeys("a"),
-		key.WithHelp("a", "view artifacts"),
-	)
 	// CopyValue is a key binding for copying the value of an item in the details view.
 	CopyValue = key.NewBinding(
 		key.WithKeys("v"),
@@ -134,7 +129,7 @@ var (
 // Category+mode-specific key bindings
 var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.BaseModel: {
-		common.ListView: {ViewModelArtifacts},
+		common.ListView: {Confirm},
 	},
 	domain.Tenant: {
 		common.ListView: {Confirm, CopyTenant},

@@ -242,7 +242,7 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 		return nil, err
 	}
 
-	modelArtifacts, err := terraform.LoadModelArtifacts(ctx, repoPath, env)
+	modelArtifactMap, err := terraform.LoadModelArtifacts(ctx, repoPath, env)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +260,7 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 		Tenants:                           tenancyOverrideGroup.Tenants,
 		Environments:                      environments,
 		ServiceTenancies:                  serviceTenancies,
-		ModelArtifacts:                    modelArtifacts,
+		ModelArtifactMap:                  modelArtifactMap,
 	}, nil
 }
 

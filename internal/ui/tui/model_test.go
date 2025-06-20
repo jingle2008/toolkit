@@ -390,20 +390,21 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	t.Parallel()
 	// Setup a Model with a BaseModel in the dataset and table
-	bm := &models.BaseModel{Name: "bm1", Version: "v1", Type: "typeA"}
+	bm := &models.BaseModel{InternalName: "v1", Name: "bm1", Version: "v1", Type: "typeA"}
 	ds := &models.Dataset{
 		BaseModelMap: map[string]*models.BaseModel{
 			"bm1": bm,
 		},
 	}
-	// Table row for BaseModel: [Name, Version, Type]
+	// Table row for BaseModel: [InternalName, Name, Version, Type]
 	tbl := table.New()
 	tbl.SetColumns([]table.Column{
+		{Title: "InternalName", Width: 10},
 		{Title: "Name", Width: 10},
 		{Title: "Version", Width: 10},
 		{Title: "Type", Width: 10},
 	})
-	tbl.SetRows([]table.Row{{"bm1", "v1", "typeA"}})
+	tbl.SetRows([]table.Row{{"v1", "bm1", "v1", "typeA"}})
 	tbl.SetCursor(0)
 
 	env := models.Environment{
@@ -425,17 +426,6 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	// getCurrentItem should return the pointer to bm
 	got := m.getCurrentItem()
 	require.Equal(t, bm, got)
-
-	// handleAdditionalKeys: cover the ViewModelArtifacts branch
-	// Set category to BaseModel and call with a matching key
-	m.category = domain.BaseModel
-	// Use the ViewModelArtifacts key for the test
-	keyStr := ""
-	if len(keys.ViewModelArtifacts.Keys()) > 0 {
-		keyStr = keys.ViewModelArtifacts.Keys()[0]
-	}
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
-	m.handleAdditionalKeys(msg)
 }
 
 func TestModel_Init(t *testing.T) {

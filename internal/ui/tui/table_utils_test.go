@@ -238,27 +238,15 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 	t.Parallel()
 	baseModels := map[string]*models.BaseModel{
 		"bm1": {
-			Name:      "BM1",
-			Version:   "v1",
-			Type:      "typeA",
-			Category:  "catA",
-			MaxTokens: 1024,
+			InternalName: "bm1",
+			Name:         "BM1",
+			Version:      "v1",
+			Type:         "typeA",
+			Category:     "catA",
+			MaxTokens:    1024,
 			Capabilities: map[string]*models.Capability{
-				"cap1": {
-					Replicas: 2,
-					ChartValues: &models.ChartValues{
-						ModelMetaData: &models.ModelMetaData{
-							DacShapeConfigs: &models.DacShapeConfigs{
-								CompatibleDACShapes: []models.DACShape{
-									{Name: "A100", QuotaUnit: 2, Default: true},
-								},
-							},
-						},
-					},
-				},
-				"cap2": {
-					Replicas: 0,
-				},
+				"cap1": {Capability: "cap1", Replicas: 0},
+				"cap2": {Capability: "cap2", Replicas: 2},
 			},
 			IsExperimental:      true,
 			IsInternal:          true,
@@ -269,22 +257,25 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 	rows := getBaseModels(baseModels, "")
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{
-		"BM1", "v1", "typeA", "2x A100", "[2] cap1, cap2", "catA", "1024", "EXP/INT/LTS/RTD",
+		"bm1", "BM1", "v1", "", "C,C*2", "1024", "EXP/INT/LTS/RTD",
 	}, rows[0])
 }
 
 func Test_getModelArtifacts_returns_rows(t *testing.T) {
 	t.Parallel()
-	artifacts := []models.ModelArtifact{
-		{
-			ModelName:       "M1",
-			Name:            "artifactA",
-			TensorRTVersion: "8.0",
-			GpuCount:        2,
-			GpuShape:        "A100",
+	rows := getTableRows(nil, &models.Dataset{
+		ModelArtifactMap: map[string][]models.ModelArtifact{
+			"M1": {
+				{
+					ModelName:       "M1",
+					Name:            "artifactA",
+					TensorRTVersion: "8.0",
+					GpuCount:        2,
+					GpuShape:        "A100",
+				},
+			},
 		},
-	}
-	rows := getModelArtifacts(artifacts, "")
+	}, domain.ModelArtifact, nil, "")
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"M1", "2x A100", "artifactA", "8.0"}, rows[0])
 }
@@ -430,7 +421,7 @@ func TestGetItemKeyAndString(t *testing.T) {
 		{domain.PropertyTenancyOverride, table.Row{"tenant1", "pdef"}, "tenant1/pdef"},
 		{domain.ConsolePropertyRegionalOverride, table.Row{"cpdef"}, "cpdef"},
 		{domain.PropertyRegionalOverride, table.Row{"pdef"}, "pdef"},
-		{domain.BaseModel, table.Row{"bm", "v1", "type"}, "bm-v1-type"},
+		{domain.BaseModel, table.Row{"bm1", "BM1", "v1", "", "C,C*2", "1024", "EXP/INT/LTS/RTD"}, "v1"},
 		{domain.ModelArtifact, table.Row{"model", "gpu", "artifact"}, "artifact"},
 		{domain.Environment, table.Row{"env"}, "env"},
 		{domain.ServiceTenancy, table.Row{"svc"}, "svc"},
@@ -474,9 +465,11 @@ func buildFullTestDataset() *models.Dataset {
 		GpuNodeMap:       map[string][]models.GpuNode{"pool1": {{NodePool: "pool1", Name: "node1"}}},
 		ServiceTenancies: []models.ServiceTenancy{{Name: "svc1"}},
 		BaseModelMap: map[string]*models.BaseModel{
-			"bm1": {Name: "bm1", Version: "v1", Type: "typeA"},
+			"bm1": {InternalName: "v1", Name: "bm1", Version: "v1", Type: "typeA"},
 		},
-		ModelArtifacts: []models.ModelArtifact{{ModelName: "bm1", Name: "artifact1"}},
+		ModelArtifactMap: map[string][]models.ModelArtifact{
+			"artifact1": {{ModelName: "bm1", Name: "artifact1"}},
+		},
 		LimitDefinitionGroup: models.LimitDefinitionGroup{
 			Values: []models.LimitDefinition{{Name: "limdef"}},
 		},
@@ -570,8 +563,8 @@ func TestFindItem_AllCategories(t *testing.T) {
 		{domain.PropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "pdef"}, &ds.PropertyTenancyOverrideMap["tenant1"][0]},
 		{domain.ConsolePropertyRegionalOverride, "cpdef", &ds.ConsolePropertyRegionalOverrides[0]},
 		{domain.PropertyRegionalOverride, "pdef", &ds.PropertyRegionalOverrides[0]},
-		{domain.BaseModel, models.BaseModelKey{Name: "bm1", Version: "v1", Type: "typeA"}, ds.BaseModelMap["bm1"]},
-		{domain.ModelArtifact, "artifact1", &ds.ModelArtifacts[0]},
+		{domain.BaseModel, "v1", ds.BaseModelMap["bm1"]},
+		{domain.ModelArtifact, "artifact1", &ds.ModelArtifactMap["artifact1"][0]},
 		{domain.Environment, "type1-UNKNOWN", &ds.Environments[0]},
 		{domain.ServiceTenancy, "svc1", &ds.ServiceTenancies[0]},
 		{domain.GpuPool, "pool1", &ds.GpuPools[0]},

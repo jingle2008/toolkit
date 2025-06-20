@@ -115,16 +115,6 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 
 	item := m.getCurrentItem()
 	switch {
-	case key.Matches(msg, keys.ViewModelArtifacts):
-		if m.category == domain.BaseModel {
-			if bm, ok := item.(*models.BaseModel); ok {
-				m.logger.Infow("view_model_artifacts",
-					"model", bm.Name,
-					"version", bm.Version,
-					"type", bm.Type,
-				)
-			}
-		}
 	case key.Matches(msg, keys.CopyTenant):
 		m.copyTenantID(item)
 	case key.Matches(msg, keys.CopyValue):

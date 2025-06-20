@@ -25,7 +25,7 @@ func TestBaseModel_Getters(t *testing.T) {
 	}
 	assert.Equal(t, "testName", bm.GetName())
 	assert.Equal(t, "testType-testName-v1", bm.GetKey())
-	assert.ElementsMatch(t, []string{"cap1", "[2] cap2"}, bm.GetCapabilities())
+	assert.ElementsMatch(t, []string{"C", "C*2"}, bm.GetCapabilities())
 	// GetDefaultDacShape returns nil unless Capabilities have ChartValues with DacShapeConfigs, so just check type
 	assert.Nil(t, bm.GetDefaultDacShape())
 	fields := bm.GetFilterableFields()

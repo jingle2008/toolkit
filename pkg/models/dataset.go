@@ -15,7 +15,7 @@ type Dataset struct {
 	PropertyRegionalOverrides         []PropertyRegionalOverride
 	Tenants                           []Tenant
 	BaseModelMap                      map[string]*BaseModel
-	ModelArtifacts                    []ModelArtifact
+	ModelArtifactMap                  map[string][]ModelArtifact
 	Environments                      []Environment
 	ServiceTenancies                  []ServiceTenancy
 	GpuPools                          []GpuPool

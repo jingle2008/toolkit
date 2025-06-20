@@ -8,10 +8,3 @@ type ScopedItemKey struct {
 	Name  string
 	Scope string
 }
-
-// BaseModelKey represents a key for a base model.
-type BaseModelKey struct {
-	Name    string
-	Version string
-	Type    string
-}

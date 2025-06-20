@@ -42,11 +42,11 @@ func TestCategory_String(t *testing.T) {
 func TestCategory_IsScope(t *testing.T) {
 	t.Parallel()
 	scopeCases := []Category{
-		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool,
+		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool, BaseModel,
 	}
 	nonScopeCases := []Category{
 		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
-		ConsolePropertyRegionalOverride, PropertyRegionalOverride, BaseModel, ModelArtifact,
+		ConsolePropertyRegionalOverride, PropertyRegionalOverride, ModelArtifact,
 		Environment, ServiceTenancy, GpuNode, DedicatedAICluster,
 	}
 	for _, c := range scopeCases {
@@ -77,6 +77,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		{ConsolePropertyDefinition, []Category{ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride}},
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},
 		{GpuPool, []Category{GpuNode}},
+		{BaseModel, []Category{ModelArtifact}},
 	}
 	for _, tc := range cases {
 		tc := tc
@@ -87,7 +88,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		})
 	}
 	// non-scope category should return nil
-	assert.Nil(t, BaseModel.ScopedCategories())
+	assert.Nil(t, ModelArtifact.ScopedCategories())
 }
 
 func TestCategory_IsScopeOf(t *testing.T) {
@@ -98,7 +99,7 @@ func TestCategory_IsScopeOf(t *testing.T) {
 	assert.True(t, Tenant.IsScopeOf(DedicatedAICluster))
 	assert.False(t, Tenant.IsScopeOf(GpuNode))
 	assert.False(t, LimitTenancyOverride.IsScopeOf(Tenant))
-	assert.False(t, BaseModel.IsScopeOf(ModelArtifact))
+	assert.True(t, BaseModel.IsScopeOf(ModelArtifact))
 }
 
 func TestCategory_Definition(t *testing.T) {
