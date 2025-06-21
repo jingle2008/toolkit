@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 
+	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
@@ -70,7 +70,7 @@ func loadOverridesDI[T models.NamedItem](
 		overrides = append(overrides, *override)
 	}
 
-	sortNamedItems(overrides)
+	collections.SortNamedItems(overrides)
 	return overrides, nil
 }
 
@@ -119,18 +119,6 @@ func loadRegionalOverrides[T models.NamedItem](ctx context.Context, root, realm,
 	return overrides, nil
 }
 
-func sortNamedItems[T models.NamedItem](items []T) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetName() < items[j].GetName()
-	})
-}
-
-func sortKeyedItems[T models.KeyedItem](items []T) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetKey() < items[j].GetKey()
-	})
-}
-
 type tenantInfo struct {
 	idMap     map[string]struct{}
 	overrides []int
@@ -159,7 +147,7 @@ func getTenants(tenantMap map[string]tenantInfo) []models.Tenant {
 		po += v.overrides[2]
 	}
 
-	sortNamedItems(tenants)
+	collections.SortNamedItems(tenants)
 	return tenants
 }
 
@@ -190,7 +178,7 @@ func getEnvironments(tenancies []models.ServiceTenancy) []models.Environment {
 		environments = append(environments, t.Environments()...)
 	}
 
-	sortKeyedItems(environments)
+	collections.SortKeyedItems(environments)
 	return environments
 }
 
@@ -290,21 +278,21 @@ func loadDefinitionGroups(repoPath string) (
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	sortNamedItems(limitGroup.Values)
+	collections.SortNamedItems(limitGroup.Values)
 
 	consolePropertyDefinitionPath := getConfigPath(limitsRoot, consolePropertiesKey+definitionSuffix)
 	consolePropertyDefinitionGroup, err := jsonutil.LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	sortNamedItems(consolePropertyDefinitionGroup.Values)
+	collections.SortNamedItems(consolePropertyDefinitionGroup.Values)
 
 	propertyDefinitionPath := getConfigPath(limitsRoot, propertiesKey+definitionSuffix)
 	propertyDefinitionGroup, err := jsonutil.LoadFile[models.PropertyDefinitionGroup](propertyDefinitionPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	sortNamedItems(propertyDefinitionGroup.Values)
+	collections.SortNamedItems(propertyDefinitionGroup.Values)
 
 	return limitGroup, consolePropertyDefinitionGroup, propertyDefinitionGroup, nil
 }

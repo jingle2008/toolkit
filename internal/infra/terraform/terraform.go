@@ -7,19 +7,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	// structural logging
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
-	logging "github.com/jingle2008/toolkit/internal/infra/logging"
-
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/jingle2008/toolkit/internal/collections"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
+	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
@@ -321,7 +319,7 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 		tenancies = append(tenancies, *tenancy)
 	}
 
-	sortKeyedItems(tenancies)
+	collections.SortKeyedItems(tenancies)
 	return tenancies, nil
 }
 
@@ -597,7 +595,7 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 
 	gpuPools = append(gpuPools, pools...)
 
-	sortNamedItems(gpuPools)
+	collections.SortNamedItems(gpuPools)
 	return gpuPools, nil
 }
 
@@ -672,7 +670,7 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 			}
 		}
 
-		sortKeyedItems(modelArtifacts)
+		collections.SortKeyedItems(modelArtifacts)
 		modelArtifactMap[modelName] = modelArtifacts
 	}
 
@@ -697,18 +695,4 @@ func createObjectStorageNamespace() cty.Value {
 	// data.oci_objectstorage_namespace.objectstorage_namespace.namespace
 	ns := cty.ObjectVal(map[string]cty.Value{"namespace": cty.StringVal("NAMESPACE")})
 	return cty.ObjectVal(map[string]cty.Value{"objectstorage_namespace": ns})
-}
-
-// sortNamedItems sorts a slice of NamedItem by name.
-func sortNamedItems[T interface{ GetName() string }](items []T) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetName() < items[j].GetName()
-	})
-}
-
-// sortKeyedItems sorts a slice of KeyedItem by key.
-func sortKeyedItems[T interface{ GetKey() string }](items []T) {
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].GetKey() < items[j].GetKey()
-	})
 }

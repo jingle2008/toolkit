@@ -3,6 +3,8 @@ package collections
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type testItem struct {
@@ -108,4 +110,40 @@ func TestSortKeyedItems_NilSlice(t *testing.T) {
 	if len(items) != 0 {
 		t.Errorf("expected empty slice, got %v", items)
 	}
+}
+
+type named struct {
+	name string
+}
+
+func (n named) GetName() string { return n.name }
+
+type keyed struct {
+	key string
+}
+
+func (k keyed) GetKey() string { return k.key }
+
+func TestSortNamedItems(t *testing.T) {
+	items := []named{
+		{name: "zeta"},
+		{name: "alpha"},
+		{name: "gamma"},
+	}
+	SortNamedItems(items)
+	require.Equal(t, "alpha", items[0].GetName())
+	require.Equal(t, "gamma", items[1].GetName())
+	require.Equal(t, "zeta", items[2].GetName())
+}
+
+func TestSortKeyedItems(t *testing.T) {
+	items := []keyed{
+		{key: "b"},
+		{key: "a"},
+		{key: "c"},
+	}
+	SortKeyedItems(items)
+	require.Equal(t, "a", items[0].GetKey())
+	require.Equal(t, "b", items[1].GetKey())
+	require.Equal(t, "c", items[2].GetKey())
 }
