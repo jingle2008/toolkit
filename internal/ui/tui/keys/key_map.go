@@ -2,6 +2,8 @@
 package keys
 
 import (
+	"slices"
+
 	"github.com/charmbracelet/bubbles/key"
 )
 
@@ -17,13 +19,15 @@ func (k KeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Help(), k.Quit()}
 }
 
-// FullHelp returns a full list of key bindings for help display.
+// FullHelp returns a full list of key bindings for help display, chunked per category.
 func (k KeyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		k.Context,
-		k.Mode,
-		k.Global,
+	rows := [][]key.Binding{}
+	for _, cat := range [][]key.Binding{k.Context, k.Mode, k.Global} {
+		for chunk := range slices.Chunk(cat, 5) {
+			rows = append(rows, chunk)
+		}
 	}
+	return rows
 }
 
 // Help returns the help key binding from the global keys.

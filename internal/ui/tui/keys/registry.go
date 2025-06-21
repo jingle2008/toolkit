@@ -20,6 +20,10 @@ var (
 		key.WithKeys("esc"),
 		key.WithHelp("esc", "go back"),
 	)
+	ViewDetails = key.NewBinding(
+		key.WithKeys("y"),
+		key.WithHelp("y", "toggle details"),
+	)
 	CopyName = key.NewBinding(
 		key.WithKeys("n"),
 		key.WithHelp("n", "copy name"),
@@ -27,9 +31,10 @@ var (
 )
 
 var globalKeys = []key.Binding{
+	Help,
+	ViewDetails,
 	CopyName,
 	Back,
-	Help,
 	Quit,
 }
 
@@ -97,10 +102,6 @@ var (
 		key.WithKeys("p"),
 		key.WithHelp("p", "paste as filter"),
 	)
-	ViewDetails = key.NewBinding(
-		key.WithKeys("y"),
-		key.WithHelp("y", "view details"),
-	)
 	Confirm = key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "enter context"),
@@ -113,7 +114,6 @@ var listModeKeys = []key.Binding{
 	JumpTo,
 	FilterList,
 	PasteFilter,
-	ViewDetails,
 }
 
 var detailsModeKeys = []key.Binding{}

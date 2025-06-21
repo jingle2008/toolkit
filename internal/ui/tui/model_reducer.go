@@ -28,7 +28,6 @@ func (m *Model) updateRows() {
 	idx := m.findContextIndex(rows)
 	if idx >= 0 {
 		m.table.SetCursor(idx)
-		m.table.MoveDown(0) // scroll to the context row
 	} else {
 		m.table.GotoTop()
 	}
