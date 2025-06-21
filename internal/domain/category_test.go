@@ -31,7 +31,6 @@ func TestCategory_String(t *testing.T) {
 		{Category(99), "Category(99)"},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.wantStr, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.wantStr, tt.cat.String())
@@ -50,14 +49,12 @@ func TestCategory_IsScope(t *testing.T) {
 		Environment, ServiceTenancy, GpuNode, DedicatedAICluster,
 	}
 	for _, c := range scopeCases {
-		c := c
 		t.Run("scope_"+c.String(), func(t *testing.T) {
 			t.Parallel()
 			assert.True(t, c.IsScope(), "%v should be scope", c)
 		})
 	}
 	for _, c := range nonScopeCases {
-		c := c
 		t.Run("non_scope_"+c.String(), func(t *testing.T) {
 			t.Parallel()
 			assert.False(t, c.IsScope(), "%v should not be scope", c)
@@ -80,7 +77,6 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		{BaseModel, []Category{ModelArtifact}},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.scope.String(), func(t *testing.T) {
 			t.Parallel()
 			got := tc.scope.ScopedCategories()

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/jingle2008/toolkit/pkg/models"
+	"golang.org/x/exp/slices"
 )
 
 func TestGetEnvironments(t *testing.T) { //nolint:cyclop,gocognit
@@ -230,14 +231,7 @@ func TestGetTenants(t *testing.T) { //nolint:cyclop,gocognit
 				}
 			}
 			if tc.wantID != "" && len(rows) > 0 {
-				found := false
-				for _, id := range rows[0].IDs {
-					if id == tc.wantID {
-						found = true
-						break
-					}
-				}
-				if !found {
+				if !slices.Contains(rows[0].IDs, tc.wantID) {
 					t.Errorf("filter %q: expected ID %q in %+v", tc.filter, tc.wantID, rows[0].IDs)
 				}
 			}

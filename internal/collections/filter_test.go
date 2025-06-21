@@ -1,6 +1,7 @@
 package collections
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -197,19 +198,21 @@ func TestIsMatch_EmptyFields(t *testing.T) {
 }
 
 func BenchmarkFilterSlice(b *testing.B) {
-	items := make([]testStruct, 1000)
-	for i := 0; i < 1000; i++ {
-		items[i] = testStruct{name: "foo", value: "bar"}
+	data := make([]testStruct, 1000)
+	for i := range data {
+		data[i] = testStruct{
+			name:  fmt.Sprintf("item-%d", i),
+			value: fmt.Sprintf("%d", i),
+		}
 	}
-	name := "foo"
-	filter := ""
-	for n := 0; n < b.N; n++ {
-		var out []testStruct
-		FilterSlice(items, &name, filter, func(_ int, item testStruct) bool {
-			out = append(out, item)
-			return true
-		})
-	}
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			FilterSlice(data, nil, "item-5", func(_ int, val testStruct) bool {
+				return val.name == "item-5"
+			})
+		}
+	})
 }
 
 // --- Coverage for generic utilities ---

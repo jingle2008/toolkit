@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -110,9 +111,7 @@ func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) err
 	for _, block := range file.Body.(*hclsyntax.Body).Blocks {
 		switch block.Type {
 		case localBlock:
-			for key, value := range block.Body.Attributes {
-				attributes[key] = value
-			}
+			maps.Copy(attributes, block.Body.Attributes)
 		case outputBlock:
 			key := block.Labels[0]
 			value := block.Body.Attributes[outputValue]
