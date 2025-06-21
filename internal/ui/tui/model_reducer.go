@@ -382,20 +382,9 @@ func (m *Model) enterContext() tea.Cmd {
 		env := *collections.FindByName(m.dataset.Environments, target)
 		if !m.environment.Equals(env) {
 			m.environment = env
-			// reset realm-bounded data
-			m.dataset.LimitTenancyOverrideMap = nil
-			m.dataset.ConsolePropertyTenancyOverrideMap = nil
-			m.dataset.PropertyTenancyOverrideMap = nil
-			m.dataset.Tenants = nil
-			m.dataset.LimitRegionalOverrides = nil
-			m.dataset.ConsolePropertyRegionalOverrides = nil
-			m.dataset.PropertyRegionalOverrides = nil
-			m.dataset.BaseModelMap = nil
-			m.dataset.GpuPools = nil
-			m.dataset.GpuNodeMap = nil
-			m.dataset.DedicatedAIClusterMap = nil
+			m.dataset.ResetScopedData()
 			return tea.Batch(
-				m.updateCategory(domain.BaseModel),
+				m.updateCategory(domain.Tenant),
 			)
 		}
 	default:

@@ -54,3 +54,18 @@ func (d *Dataset) SetDedicatedAIClusterMap(m map[string][]DedicatedAICluster) {
 
 	d.DedicatedAIClusterMap = dacMap
 }
+
+// ResetScopedData resets all realm-scoped fields to nil.
+func (d *Dataset) ResetScopedData() {
+	d.LimitTenancyOverrideMap = nil
+	d.ConsolePropertyTenancyOverrideMap = nil
+	d.PropertyTenancyOverrideMap = nil
+	d.Tenants = nil
+	d.LimitRegionalOverrides = nil
+	d.ConsolePropertyRegionalOverrides = nil
+	d.PropertyRegionalOverrides = nil
+	d.BaseModelMap = nil
+	d.GpuPools = nil
+	d.GpuNodeMap = nil
+	d.DedicatedAIClusterMap = nil
+}
