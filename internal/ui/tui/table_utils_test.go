@@ -256,7 +256,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 	rows := getBaseModels(baseModels, "")
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{
-		"bm1", "BM1", "v1", "", "C,C*2", "1024", "EXP/INT/LTS/RTD",
+		"bm1", "BM1", "v1", "", "C/C*2", "1024", "EXP/INT/LTS/RTD",
 	}, rows[0])
 }
 

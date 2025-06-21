@@ -130,3 +130,60 @@ func TestEnterContext(t *testing.T) {
 	cmd := m.enterContext()
 	assert.NotNil(t, cmd) // Should not panic or error
 }
+
+// mockEnv returns a mock environment with the given name.
+func TestFindContextIndex_Environment(t *testing.T) {
+	m := &Model{}
+	m.category = domain.Environment
+	m.environment = models.Environment{Type: "dev", Region: "test"}
+	rows := []table.Row{
+		{"prod-UNKNOWN", "realm1", "type1", "region1"},
+		{"dev-UNKNOWN", "realm2", "type2", "region2"},
+		{"test-UNKNOWN", "realm3", "type3", "region3"},
+	}
+	idx := m.findContextIndex(rows)
+	assert.Equal(t, 1, idx)
+}
+
+func TestFindContextIndex_ContextCategory(t *testing.T) {
+	m := &Model{}
+	m.category = domain.Tenant
+	m.context = &domain.ToolkitContext{
+		Category: domain.Tenant,
+		Name:     "tenant2",
+	}
+	rows := []table.Row{
+		{"tenant1", "id1", "overrides1"},
+		{"tenant2", "id2", "overrides2"},
+		{"tenant3", "id3", "overrides3"},
+	}
+	idx := m.findContextIndex(rows)
+	assert.Equal(t, 1, idx)
+}
+
+func TestFindContextIndex_NoMatch(t *testing.T) {
+	m := &Model{}
+	m.category = domain.Environment
+	m.environment = models.Environment{Type: "notfound"}
+	rows := []table.Row{
+		{"prod", "realm1", "type1", "region1"},
+		{"dev", "realm2", "type2", "region2"},
+	}
+	idx := m.findContextIndex(rows)
+	assert.Equal(t, -1, idx)
+}
+
+func TestFindContextIndex_ContextCategory_NoMatch(t *testing.T) {
+	m := &Model{}
+	m.category = domain.Tenant
+	m.context = &domain.ToolkitContext{
+		Category: domain.Tenant,
+		Name:     "notfound",
+	}
+	rows := []table.Row{
+		{"tenant1", "id1", "overrides1"},
+		{"tenant2", "id2", "overrides2"},
+	}
+	idx := m.findContextIndex(rows)
+	assert.Equal(t, -1, idx)
+}

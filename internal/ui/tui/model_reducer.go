@@ -24,7 +24,14 @@ var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
 func (m *Model) updateRows() {
 	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter)
 	table.WithRows(rows)(m.table)
-	m.table.GotoTop()
+
+	idx := m.findContextIndex(rows)
+	if idx >= 0 {
+		m.table.SetCursor(idx)
+		m.table.MoveDown(0) // scroll to the context row
+	} else {
+		m.table.GotoTop()
+	}
 }
 
 // updateColumns updates the table columns based on the current category.
@@ -42,6 +49,30 @@ func (m *Model) updateColumns() {
 		columns[i] = table.Column{Title: header.text, Width: width}
 	}
 	table.WithColumns(columns)(m.table)
+}
+
+// findContextIndex returns the index of the row to move the cursor to, based on environment or context.
+func (m *Model) findContextIndex(rows []table.Row) int {
+	if len(rows) == 0 {
+		return -1
+	}
+
+	var name string
+	if m.category == domain.Environment {
+		name = m.environment.GetName()
+	} else if m.context != nil && m.category == m.context.Category {
+		name = m.context.Name
+	} else {
+		return -1
+	}
+
+	for i, r := range rows {
+		if r[0] == name {
+			return i
+		}
+	}
+
+	return -1
 }
 
 // updateLayout recalculates the layout for the view and table.

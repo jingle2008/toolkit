@@ -213,7 +213,7 @@ func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 			val.Name,
 			val.Version,
 			shapeDisplay,
-			strings.Join(val.GetCapabilities(), ","),
+			strings.Join(val.GetCapabilities(), "/"),
 			fmt.Sprint(val.MaxTokens),
 			val.GetFlags(),
 		})
