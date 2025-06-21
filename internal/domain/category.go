@@ -70,7 +70,7 @@ func (e Category) IsScopeOf(o Category) bool {
 
 // IsScope returns true if the category is a scope category.
 func (e Category) IsScope() bool {
-	switch e {
+	switch e { //nolint:exhaustive
 	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool, BaseModel:
 		return true
 	}
@@ -79,7 +79,7 @@ func (e Category) IsScope() bool {
 
 // ScopedCategories returns the categories that are scoped by the receiver.
 func (e Category) ScopedCategories() []Category {
-	switch e {
+	switch e { //nolint:exhaustive
 	case Tenant:
 		return []Category{
 			LimitTenancyOverride,
@@ -104,7 +104,6 @@ func (e Category) ScopedCategories() []Category {
 	case BaseModel:
 		return []Category{ModelArtifact}
 	default:
-		// Instead of panic, return nil to indicate no scoped categories.
 		return nil
 	}
 }
@@ -168,10 +167,8 @@ var ErrUnknownCategory = errors.New("unknown category")
 Definition returns the definition category for the receiver.
 */
 func (e Category) Definition() Category {
-	switch e {
-	case LimitTenancyOverride:
-		return LimitDefinition
-	case LimitRegionalOverride:
+	switch e { //nolint:exhaustive
+	case LimitTenancyOverride, LimitRegionalOverride:
 		return LimitDefinition
 	case ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride:
 		return ConsolePropertyDefinition
@@ -180,7 +177,6 @@ func (e Category) Definition() Category {
 	case GpuNode:
 		return GpuPool
 	default:
-		// Instead of panic, return Category(-1) to indicate no definition.
 		return Category(-1)
 	}
 }

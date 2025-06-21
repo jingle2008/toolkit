@@ -435,7 +435,7 @@ func TestModel_Init(t *testing.T) {
 		WithLoader(fakeLoader{}),
 		WithLogger(logging.NewNoOpLogger()),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cmd := m.Init()
 	assert.NotNil(t, cmd)
 }

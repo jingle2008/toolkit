@@ -58,11 +58,12 @@ func (m *Model) findContextIndex(rows []table.Row) int {
 	}
 
 	var name string
-	if m.category == domain.Environment {
+	switch {
+	case m.category == domain.Environment:
 		name = m.environment.GetName()
-	} else if m.context != nil && m.category == m.context.Category {
+	case m.context != nil && m.category == m.context.Category:
 		name = m.context.Name
-	} else {
+	default:
 		return -1
 	}
 
@@ -228,7 +229,7 @@ func (m *Model) getSelectedItem() any {
 func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 	m.category = category
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
-	switch m.category {
+	switch m.category { //nolint:exhaustive
 	case domain.BaseModel:
 		return m.handleBaseModelCategory()
 	case domain.GpuPool:

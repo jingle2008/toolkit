@@ -349,19 +349,22 @@ locals {
 	_ = os.WriteFile(filepath.Join(tensorrtDir, "models.tf"), []byte(tensorrtTfContent), 0o600)
 	limitDef := models.LimitDefinitionGroup{Values: []models.LimitDefinition{{Name: "foo"}}}
 	limitDefPath := filepath.Join(limitDefSubdir, realm+"_limits_definition.json")
-	data, _ := json.Marshal(limitDef)
+	data, err := json.Marshal(limitDef)
+	testutil.RequireNoError(t, err)
 	_ = os.WriteFile(limitDefPath, data, 0o600)
 
 	// Console property definition group
 	consoleDef := models.ConsolePropertyDefinitionGroup{Values: []models.ConsolePropertyDefinition{{Name: "bar"}}}
 	consoleDefPath := filepath.Join(consoleDefSubdir, realm+"_console_properties_definition.json")
-	data, _ = json.Marshal(consoleDef)
+	data, err = json.Marshal(consoleDef)
+	testutil.RequireNoError(t, err)
 	_ = os.WriteFile(consoleDefPath, data, 0o600)
 
 	// Property definition group
 	propDef := models.PropertyDefinitionGroup{Values: []models.PropertyDefinition{{Name: "baz"}}}
 	propDefPath := filepath.Join(propDefSubdir, realm+"_properties_definition.json")
-	data, _ = json.Marshal(propDef)
+	data, err = json.Marshal(propDef)
+	testutil.RequireNoError(t, err)
 	_ = os.WriteFile(propDefPath, data, 0o600)
 
 	// Tenancy overrides
@@ -373,15 +376,18 @@ locals {
 	_ = os.MkdirAll(propTenancyDir, 0o750)
 	limitOverride := models.LimitTenancyOverride{TenantID: "tenant1"}
 	limitOverridePath := filepath.Join(limitTenancyDir, "limits_tenancy_overrides.json")
-	data, _ = json.Marshal(limitOverride)
+	data, err = json.Marshal(limitOverride)
+	testutil.RequireNoError(t, err)
 	_ = os.WriteFile(limitOverridePath, data, 0o600)
 	consoleOverride := models.ConsolePropertyTenancyOverride{TenantID: "tenant1"}
 	consoleOverridePath := filepath.Join(consoleTenancyDir, "console_properties_tenancy_overrides.json")
-	data, _ = json.Marshal(consoleOverride)
+	data, err = json.Marshal(consoleOverride)
+	testutil.RequireNoError(t, err)
 	_ = os.WriteFile(consoleOverridePath, data, 0o600)
 	propOverride := models.PropertyTenancyOverride{Tag: "tenant1"}
 	propOverridePath := filepath.Join(propTenancyDir, "properties_tenancy_overrides.json")
-	data, _ = json.Marshal(propOverride)
+	data, err = json.Marshal(propOverride)
+	testutil.RequireNoError(t, err)
 	_ = os.WriteFile(propOverridePath, data, 0o600)
 
 	// Regional overrides
@@ -393,11 +399,13 @@ locals {
 	_ = os.MkdirAll(limitRegOverrideDir, 0o750)
 	consoleRegOverride := models.ConsolePropertyRegionalOverride{Name: "cpr"}
 	consoleRegOverridePath := filepath.Join(consoleRegOverrideDir, "console_properties_regional_overrides.json")
-	data, _ = json.Marshal(consoleRegOverride)
+	data, err = json.Marshal(consoleRegOverride)
+	testutil.RequireNoError(t, err)
 	_ = os.WriteFile(consoleRegOverridePath, data, 0o600)
 	propRegOverride := models.PropertyRegionalOverride{Name: "pr"}
 	propRegOverridePath := filepath.Join(propRegOverrideDir, "properties_regional_overrides.json")
-	data, _ = json.Marshal(propRegOverride)
+	data, err = json.Marshal(propRegOverride)
+	testutil.RequireNoError(t, err)
 	_ = os.WriteFile(propRegOverridePath, data, 0o600)
 	// Add a dummy file for limits_regional_overrides to avoid directory read error
 	_ = os.WriteFile(filepath.Join(limitRegOverrideDir, "dummy.json"), []byte("{}"), 0o600)

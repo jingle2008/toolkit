@@ -170,7 +170,7 @@ func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
 	km := KeyMap{
 		Global: globalKeys,
 	}
-	switch mode {
+	switch mode { //nolint:exhaustive
 	case common.ListView:
 		km.Mode = listModeKeys
 	case common.DetailsView:

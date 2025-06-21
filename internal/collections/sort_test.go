@@ -125,6 +125,7 @@ type keyed struct {
 func (k keyed) GetKey() string { return k.key }
 
 func TestSortNamedItems(t *testing.T) {
+	t.Parallel()
 	items := []named{
 		{name: "zeta"},
 		{name: "alpha"},
@@ -137,6 +138,7 @@ func TestSortNamedItems(t *testing.T) {
 }
 
 func TestSortKeyedItems(t *testing.T) {
+	t.Parallel()
 	items := []keyed{
 		{key: "b"},
 		{key: "a"},

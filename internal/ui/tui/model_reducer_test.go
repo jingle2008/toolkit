@@ -133,6 +133,7 @@ func TestEnterContext(t *testing.T) {
 
 // mockEnv returns a mock environment with the given name.
 func TestFindContextIndex_Environment(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	m.category = domain.Environment
 	m.environment = models.Environment{Type: "dev", Region: "test"}
@@ -146,6 +147,7 @@ func TestFindContextIndex_Environment(t *testing.T) {
 }
 
 func TestFindContextIndex_ContextCategory(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	m.category = domain.Tenant
 	m.context = &domain.ToolkitContext{
@@ -162,6 +164,7 @@ func TestFindContextIndex_ContextCategory(t *testing.T) {
 }
 
 func TestFindContextIndex_NoMatch(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	m.category = domain.Environment
 	m.environment = models.Environment{Type: "notfound"}
@@ -174,6 +177,7 @@ func TestFindContextIndex_NoMatch(t *testing.T) {
 }
 
 func TestFindContextIndex_ContextCategory_NoMatch(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	m.category = domain.Tenant
 	m.context = &domain.ToolkitContext{

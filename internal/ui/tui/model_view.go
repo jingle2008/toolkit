@@ -50,11 +50,11 @@ func (m *Model) contextString() string {
 	return fmt.Sprintf("%s (%s)", m.category.String(), scope)
 }
 
-func truncateString(s string, max int) string {
-	if runewidth.StringWidth(s) <= max {
+func truncateString(s string, limit int) string {
+	if runewidth.StringWidth(s) <= limit {
 		return s
 	}
-	return runewidth.Truncate(s, max-1, "…")
+	return runewidth.Truncate(s, limit-1, "…")
 }
 
 func (m *Model) statusView() string {

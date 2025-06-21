@@ -635,13 +635,15 @@ func TestGetTableRow(t *testing.T) {
 }
 
 func TestGetItemKey_EmptyRow(t *testing.T) {
+	t.Parallel()
 	var empty table.Row
 	key := getItemKey(domain.Tenant, empty)
 	require.Nil(t, key)
 }
 
 func TestGetItemKey_NilRow(t *testing.T) {
-	var nilRow table.Row = nil
+	t.Parallel()
+	var nilRow table.Row
 	key := getItemKey(domain.Tenant, nilRow)
 	require.Nil(t, key)
 }

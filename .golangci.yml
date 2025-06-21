@@ -1,4 +1,4 @@
-version: 2
+# version: 2
 # golangci-lint configuration
 # - paralleltest: enforces t.Parallel() in tests; use //nolint:paralleltest with justification for serial tests
 # See CONTRIBUTING.md for test best practices.
@@ -42,7 +42,7 @@ linters-settings:
   gocyclo:
     min-complexity: 13
   cyclop:
-    min-complexity: 13
+    max-complexity: 13
   prealloc:
     simple: true
   depguard:

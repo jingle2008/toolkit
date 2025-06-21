@@ -174,6 +174,7 @@ func (e EnvironmentRow) ToRow(scope string) table.Row {
 	return table.Row(e.Render(scope))
 }
 
+// ModelArtifactRow adapts models.ModelArtifact for table rendering.
 type ModelArtifactRow models.ModelArtifact
 
 // Render implements the Renderer interface for ModelArtifactRow.

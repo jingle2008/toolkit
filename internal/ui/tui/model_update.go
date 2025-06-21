@@ -26,7 +26,7 @@ func (r loadRequest) Run() tea.Msg {
 		data any
 		err  error
 	)
-	switch r.category {
+	switch r.category { //nolint:exhaustive
 	case domain.BaseModel:
 		data, err = r.model.loader.LoadBaseModels(r.model.ctx, r.model.repoPath, r.model.environment)
 	case domain.GpuPool:
@@ -69,7 +69,7 @@ func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateLayout(msg.Width, msg.Height)
 	}
 
-	switch m.viewMode {
+	switch m.viewMode { //nolint:exhaustive
 	case common.HelpView:
 		return m.updateHelpView(msg)
 	case common.ListView:

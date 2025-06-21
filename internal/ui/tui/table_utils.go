@@ -228,7 +228,7 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	if len(row) == 0 {
 		return nil
 	}
-	switch category {
+	switch category { //nolint:exhaustive
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
 		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
@@ -252,7 +252,7 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 	if key == nil {
 		return nil
 	}
-	switch category {
+	switch category { //nolint:exhaustive
 	case domain.Tenant:
 		return findTenant(dataset, key)
 	case domain.LimitDefinition:
@@ -396,7 +396,7 @@ func findDedicatedAICluster(dataset *models.Dataset, key models.ItemKey) any {
 getItemKeyString returns a string representation of the ItemKey for a given category.
 */
 func getItemKeyString(category domain.Category, key models.ItemKey) string {
-	switch category {
+	switch category { //nolint:exhaustive
 	case domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride, domain.Environment,
 		domain.ServiceTenancy, domain.GpuPool, domain.ModelArtifact, domain.LimitRegionalOverride,

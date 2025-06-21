@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // stripANSI removes ANSI escape codes from a string.
@@ -21,7 +22,7 @@ func TestProductionRenderer_RenderJSON_Success(t *testing.T) {
 		"num": 42,
 	}
 	out, err := r.RenderJSON(data, 40)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	out = stripANSI(out)
 	assert.Contains(t, out, "foo")
 	assert.Contains(t, out, "bar")
