@@ -4,8 +4,10 @@
 package tui
 
 import (
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
@@ -20,10 +22,23 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.copyItemName(findItem(m.dataset, m.category, m.choice))
 		case key.Matches(keyMsg, keys.Help):
 			m.enterHelpView()
+		case key.Matches(keyMsg, keys.CopyObject):
+			m.copyItemAsJSON(findItem(m.dataset, m.category, m.choice))
 		}
 	}
 
 	updatedViewport, cmd := m.viewport.Update(msg)
 	m.viewport = &updatedViewport
 	return m, cmd
+}
+
+func (m *Model) copyItemAsJSON(item any) {
+	content, err := jsonutil.PrettyJSON(item)
+	if err != nil {
+		m.logger.Errorw("failed to convert item to JSON", "error", err)
+		return
+	}
+	if err := clipboard.WriteAll(content); err != nil {
+		m.logger.Errorw("failed to copy JSON to clipboard", "error", err)
+	}
 }

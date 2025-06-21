@@ -145,11 +145,8 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 	}
 
 	item := m.getSelectedItem()
-	switch {
-	case key.Matches(msg, keys.CopyTenant):
+	if key.Matches(msg, keys.CopyTenant) {
 		m.copyTenantID(item)
-	case key.Matches(msg, keys.CopyValue):
-		m.copyItemValue(item)
 	}
 }
 
@@ -192,29 +189,6 @@ func (m *Model) copyTenantID(item any) {
 		}
 	} else {
 		m.logger.Errorw("unsupported item type for copying tenant ID", "item", item)
-	}
-}
-
-func (m *Model) copyItemValue(item any) {
-	if item == nil {
-		m.logger.Errorw("no item selected for copying value", "category", m.category)
-		return
-	}
-
-	if dac, ok := item.(*models.DedicatedAICluster); ok {
-		value := dac.UnitShape
-		if value == "" {
-			value = dac.Profile
-		}
-		if err := clipboard.WriteAll(value); err != nil {
-			m.logger.Errorw("failed to copy value to clipboard", "error", err)
-		}
-	} else if to, ok := item.(*models.PropertyTenancyOverride); ok {
-		if err := clipboard.WriteAll(to.GetValue()); err != nil {
-			m.logger.Errorw("failed to copy value to clipboard", "error", err)
-		}
-	} else {
-		m.logger.Errorw("unsupported item type for copying value", "item", item)
 	}
 }
 

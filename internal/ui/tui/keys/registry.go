@@ -116,13 +116,15 @@ var listModeKeys = []key.Binding{
 	PasteFilter,
 }
 
-var detailsModeKeys = []key.Binding{}
+var detailsModeKeys = []key.Binding{
+	CopyObject,
+}
 
 var (
-	// CopyValue is a key binding for copying the value of an item in the details view.
-	CopyValue = key.NewBinding(
-		key.WithKeys("v"),
-		key.WithHelp("v", "copy value"),
+	// CopyObject is a key binding for copying the value of an item in the details view.
+	CopyObject = key.NewBinding(
+		key.WithKeys("o"),
+		key.WithHelp("o", "copy object as JSON"),
 	)
 	// CopyTenant is a key binding for copying the tenant ID in the tenant context.
 	CopyTenant = key.NewBinding(
@@ -152,7 +154,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Confirm},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {CopyTenant, CopyValue},
+		common.ListView: {CopyTenant},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {CopyTenant},
@@ -161,7 +163,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {CopyTenant},
 	},
 	domain.PropertyTenancyOverride: {
-		common.ListView: {CopyTenant, CopyValue},
+		common.ListView: {CopyTenant},
 	},
 }
 
