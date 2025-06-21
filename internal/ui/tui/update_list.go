@@ -4,6 +4,9 @@
 package tui
 
 import (
+	"strings"
+
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -94,8 +97,10 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		cmds = append(cmds, m.handleNextCategory())
 	case key.Matches(msg, keys.PrevCategory):
 		cmds = append(cmds, m.handlePrevCategory())
-	case key.Matches(msg, keys.FilterItems):
+	case key.Matches(msg, keys.FilterList):
 		m.enterEditMode(common.FilterTarget)
+	case key.Matches(msg, keys.PasteFilter):
+		cmds = append(cmds, m.pasteFilter())
 	case key.Matches(msg, keys.JumpTo):
 		m.enterEditMode(common.AliasTarget)
 	case key.Matches(msg, keys.ViewDetails):
@@ -109,6 +114,15 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	}
 
 	return cmds
+}
+
+func (*Model) pasteFilter() tea.Cmd {
+	if clip, err := clipboard.ReadAll(); err == nil {
+		if clip = strings.TrimSpace(clip); clip != "" {
+			return setFilter(clip)
+		}
+	}
+	return nil
 }
 
 func (m *Model) enterHelpView() {

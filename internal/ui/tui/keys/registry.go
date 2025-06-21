@@ -85,13 +85,17 @@ var (
 		key.WithKeys("shift+left"),
 		key.WithHelp("shift+←", "previous category"),
 	)
-	FilterItems = key.NewBinding(
+	FilterList = key.NewBinding(
 		key.WithKeys("/"),
-		key.WithHelp("/", "filter items"),
+		key.WithHelp("/", "filter list"),
 	)
 	JumpTo = key.NewBinding(
 		key.WithKeys(":"),
 		key.WithHelp(":", "jump to category"),
+	)
+	PasteFilter = key.NewBinding(
+		key.WithKeys("p"),
+		key.WithHelp("p", "paste as filter"),
 	)
 	ViewDetails = key.NewBinding(
 		key.WithKeys("y"),
@@ -99,15 +103,16 @@ var (
 	)
 	Confirm = key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "apply context"),
+		key.WithHelp("enter", "enter context"),
 	)
 )
 
 var listModeKeys = []key.Binding{
 	NextCategory,
 	PrevCategory,
-	FilterItems,
 	JumpTo,
+	FilterList,
+	PasteFilter,
 	ViewDetails,
 }
 

@@ -346,8 +346,8 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 	m.updateListView(prevCatMsg)
 
 	// Simulate FilterItems key
-	if len(keys.FilterItems.Keys()) > 0 {
-		keyStr = keys.FilterItems.Keys()[0]
+	if len(keys.FilterList.Keys()) > 0 {
+		keyStr = keys.FilterList.Keys()[0]
 	}
 	filterMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
 	m.updateListView(filterMsg)
