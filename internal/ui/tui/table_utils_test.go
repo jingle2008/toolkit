@@ -634,3 +634,15 @@ func TestGetTableRow(t *testing.T) {
 		Name: "dac", Type: "t", UnitShape: "shape", Size: 1, Status: "active",
 	}))
 }
+
+func TestGetItemKey_EmptyRow(t *testing.T) {
+	var empty table.Row
+	key := getItemKey(domain.Tenant, empty)
+	require.Nil(t, key)
+}
+
+func TestGetItemKey_NilRow(t *testing.T) {
+	var nilRow table.Row = nil
+	key := getItemKey(domain.Tenant, nilRow)
+	require.Nil(t, key)
+}

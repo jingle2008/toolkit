@@ -225,6 +225,9 @@ func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 getItemKey returns the ItemKey for a given category and table row.
 */
 func getItemKey(category domain.Category, row table.Row) models.ItemKey {
+	if len(row) == 0 {
+		return nil
+	}
 	switch category {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
@@ -246,6 +249,9 @@ findItem returns the item from the dataset for a given category and key.
 */
 //nolint:cyclop
 func findItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) any {
+	if key == nil {
+		return nil
+	}
 	switch category {
 	case domain.Tenant:
 		return findTenant(dataset, key)

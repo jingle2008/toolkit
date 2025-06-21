@@ -108,7 +108,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	case key.Matches(msg, keys.Confirm):
 		cmds = append(cmds, m.enterContext())
 	case key.Matches(msg, keys.CopyName):
-		m.copyItemName(m.getCurrentItem())
+		m.copyItemName(m.getSelectedItem())
 	default:
 		m.handleAdditionalKeys(msg)
 	}

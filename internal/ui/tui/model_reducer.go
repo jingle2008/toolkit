@@ -113,7 +113,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 		return
 	}
 
-	item := m.getCurrentItem()
+	item := m.getSelectedItem()
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
 		m.copyTenantID(item)
@@ -123,6 +123,11 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 }
 
 func (m *Model) copyItemName(item any) {
+	if item == nil {
+		m.logger.Errorw("no item selected for copying name", "category", m.category)
+		return
+	}
+
 	if dac, ok := item.(*models.DedicatedAICluster); ok {
 		id := fmt.Sprintf("ocid1.generativeaidedicatedaicluster.%s.%s.%s",
 			m.environment.Realm, m.environment.Region, dac.Name)
@@ -140,6 +145,11 @@ func (m *Model) copyItemName(item any) {
 
 // copyTenantId copies the tenant ID from the current row to the clipboard if available.
 func (m *Model) copyTenantID(item any) {
+	if item == nil {
+		m.logger.Errorw("no item selected for copying tenant ID", "category", m.category)
+		return
+	}
+
 	if dac, ok := item.(*models.DedicatedAICluster); ok {
 		tenantID := fmt.Sprintf("ocid1.tenancy.%s..%s", m.environment.Realm, dac.TenantID)
 		if err := clipboard.WriteAll(tenantID); err != nil {
@@ -155,6 +165,11 @@ func (m *Model) copyTenantID(item any) {
 }
 
 func (m *Model) copyItemValue(item any) {
+	if item == nil {
+		m.logger.Errorw("no item selected for copying value", "category", m.category)
+		return
+	}
+
 	if dac, ok := item.(*models.DedicatedAICluster); ok {
 		value := dac.UnitShape
 		if value == "" {
@@ -172,8 +187,8 @@ func (m *Model) copyItemValue(item any) {
 	}
 }
 
-// getCurrentItem returns the currently selected item in the table.
-func (m *Model) getCurrentItem() any {
+// getSelectedItem returns the currently selected item in the table.
+func (m *Model) getSelectedItem() any {
 	key := getItemKey(m.category, m.table.SelectedRow())
 	return findItem(m.dataset, m.category, key)
 }
@@ -275,9 +290,14 @@ func (m *Model) handleDedicatedAIClusterCategory() tea.Cmd {
 
 // enterDetailView switches the model into detail view mode.
 func (m *Model) enterDetailView() {
+	row := m.table.SelectedRow()
+	if len(row) == 0 {
+		return
+	}
+
 	m.viewMode = common.DetailsView
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
-	m.choice = getItemKey(m.category, m.table.SelectedRow())
+	m.choice = getItemKey(m.category, row)
 	if m.reLayout {
 		m.reLayout = false
 		m.updateLayout(m.viewWidth, m.viewHeight)
@@ -312,7 +332,12 @@ func (m *Model) changeCategory() tea.Cmd {
 
 // enterContext moves the model into a new context based on the selected row.
 func (m *Model) enterContext() tea.Cmd {
-	target := m.table.SelectedRow()[0]
+	row := m.table.SelectedRow()
+	if len(row) == 0 {
+		return nil
+	}
+
+	target := row[0]
 	appContext := domain.ToolkitContext{
 		Category: m.category,
 		Name:     target,
