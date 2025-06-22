@@ -52,6 +52,7 @@ func makeTestModel() *Model {
 }
 
 func TestInfoView(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	out := m.infoView()
 	assert.Contains(t, out, "Realm:")
@@ -59,6 +60,7 @@ func TestInfoView(t *testing.T) {
 }
 
 func TestContextString(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.category = domain.Tenant
 	m.context = &domain.ToolkitContext{Category: domain.Tenant, Name: "foo"}
@@ -70,12 +72,14 @@ func TestContextString(t *testing.T) {
 }
 
 func TestTruncateString(t *testing.T) {
+	t.Parallel()
 	s := "hello world"
 	assert.Equal(t, s, truncateString(s, 20))
 	assert.Contains(t, truncateString("longstring", 5), "…")
 }
 
 func TestStatusView(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.contextStyle = lipgloss.NewStyle()
 	m.statsStyle = lipgloss.NewStyle()
@@ -86,6 +90,7 @@ func TestStatusView(t *testing.T) {
 }
 
 func TestUpdateContent_DetailsView(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.DetailsView
 	m.choice = "foo"
@@ -103,6 +108,7 @@ func (testRenderer) RenderJSON(content any, width int) (string, error) {
 }
 
 func TestUpdateContent_Error(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.DetailsView
 	m.choice = "foo"
@@ -120,6 +126,7 @@ func (errRenderer) RenderJSON(content any, width int) (string, error) {
 }
 
 func TestView_PendingTasks(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.pendingTasks = 1
 	out := m.View()
@@ -127,6 +134,7 @@ func TestView_PendingTasks(t *testing.T) {
 }
 
 func TestView_Error(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.err = errors.New("fail")
 	out := m.View()
@@ -134,6 +142,7 @@ func TestView_Error(t *testing.T) {
 }
 
 func TestView_HelpView(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.HelpView
 	out := m.View()
@@ -141,6 +150,7 @@ func TestView_HelpView(t *testing.T) {
 }
 
 func TestView_ListView(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.ListView
 	out := m.View()
@@ -148,6 +158,7 @@ func TestView_ListView(t *testing.T) {
 }
 
 func TestView_DetailsView(t *testing.T) {
+	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.DetailsView
 	m.choice = "foo"

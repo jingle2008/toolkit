@@ -11,6 +11,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeLogger struct{}
@@ -23,13 +24,14 @@ func (fakeLogger) DebugEnabled() bool               { return false }
 func (fakeLogger) Sync() error                      { return nil }
 
 func TestNewModel_Valid(t *testing.T) {
+	t.Parallel()
 	m, err := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
 		WithLoader(fakeLoader{}),
 		WithLogger(fakeLogger{}),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, m)
 	assert.Equal(t, "repo", m.repoPath)
 	assert.Equal(t, "r", m.environment.Region)
@@ -43,46 +45,51 @@ func TestNewModel_Valid(t *testing.T) {
 }
 
 func TestNewModel_MissingRepoPath(t *testing.T) {
+	t.Parallel()
 	_, err := NewModel(
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
 		WithLoader(fakeLoader{}),
 		WithLogger(fakeLogger{}),
 	)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repoPath")
 }
 
 func TestNewModel_MissingEnvironment(t *testing.T) {
+	t.Parallel()
 	_, err := NewModel(
 		WithRepoPath("repo"),
 		WithLoader(fakeLoader{}),
 		WithLogger(fakeLogger{}),
 	)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "environment")
 }
 
 func TestNewModel_MissingLoader(t *testing.T) {
+	t.Parallel()
 	_, err := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
 		WithLogger(fakeLogger{}),
 	)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "loader")
 }
 
 func TestNewModel_MissingLogger(t *testing.T) {
+	t.Parallel()
 	_, err := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
 		WithLoader(fakeLoader{}),
 	)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "logger")
 }
 
 func TestSetDefaults_TableStyles(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	setDefaults(m)
 	assert.NotNil(t, m.table)
@@ -94,6 +101,7 @@ func TestSetDefaults_TableStyles(t *testing.T) {
 }
 
 func TestInitStyles(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	initStyles(m)
 	assert.NotNil(t, m.baseStyle)
@@ -111,6 +119,7 @@ func TestInitStyles(t *testing.T) {
 }
 
 func TestApplyOptions(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	opt1 := func(m *Model) { m.repoPath = "foo" }
 	opt2 := func(m *Model) { m.environment = models.Environment{Region: "r", Type: "t", Realm: "rl"} }
@@ -120,6 +129,7 @@ func TestApplyOptions(t *testing.T) {
 }
 
 func TestValidateModel_AllValid(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		repoPath:    "repo",
 		environment: models.Environment{Region: "r", Type: "t", Realm: "rl"},
@@ -130,27 +140,29 @@ func TestValidateModel_AllValid(t *testing.T) {
 }
 
 func TestValidateModel_MissingFields(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	err := validateModel(m)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repoPath")
 	m.repoPath = "repo"
 	err = validateModel(m)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "environment")
 	m.environment = models.Environment{Region: "r", Type: "t", Realm: "rl"}
 	err = validateModel(m)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "loader")
 	m.loader = fakeLoader{}
 	err = validateModel(m)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "logger")
 	m.logger = fakeLogger{}
 	assert.NoError(t, validateModel(m))
 }
 
 func TestSetDefaults_ExistingFields(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		table:          &table.Model{},
 		textInput:      &textinput.Model{},
@@ -167,13 +179,14 @@ func TestSetDefaults_ExistingFields(t *testing.T) {
 }
 
 func TestNewModel_OptionsApplied(t *testing.T) {
+	t.Parallel()
 	m, err := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
 		WithLoader(fakeLoader{}),
 		WithLogger(fakeLogger{}),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "repo", m.repoPath)
 	assert.Equal(t, "r", m.environment.Region)
 	assert.Equal(t, "t", m.environment.Type)

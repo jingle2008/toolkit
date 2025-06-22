@@ -7,6 +7,7 @@ import (
 )
 
 func TestShortHelpAndFullHelp(t *testing.T) {
+	t.Parallel()
 	km := KeyMap{
 		Global: []key.Binding{
 			key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "quit")),
@@ -30,6 +31,7 @@ func TestShortHelpAndFullHelp(t *testing.T) {
 }
 
 func TestHelpAndQuit(t *testing.T) {
+	t.Parallel()
 	km := KeyMap{
 		Global: []key.Binding{
 			key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "quit")),

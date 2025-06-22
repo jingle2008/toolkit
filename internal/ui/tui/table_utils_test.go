@@ -649,28 +649,33 @@ func TestGetItemKey_NilRow(t *testing.T) {
 }
 
 func TestGetHeaders_KnownCategory(t *testing.T) {
+	t.Parallel()
 	headers := getHeaders(domain.Tenant)
 	assert.NotNil(t, headers)
-	assert.Greater(t, len(headers), 0)
+	assert.NotEmpty(t, headers)
 }
 
 func TestGetHeaders_UnknownCategory(t *testing.T) {
+	t.Parallel()
 	headers := getHeaders(domain.Category(9999))
 	assert.Nil(t, headers)
 }
 
 func TestGetItemKeyString_Simple(t *testing.T) {
+	t.Parallel()
 	key := getItemKeyString(domain.Tenant, "foo")
 	assert.Equal(t, "foo", key)
 }
 
 func TestGetItemKeyString_Scoped(t *testing.T) {
+	t.Parallel()
 	k := models.ScopedItemKey{Scope: "scope", Name: "name"}
 	key := getItemKeyString(domain.LimitTenancyOverride, k)
 	assert.Equal(t, "scope/name", key)
 }
 
 func TestFilterRows(t *testing.T) {
+	t.Parallel()
 	items := []models.Environment{
 		{Type: "foo", Region: "us-phx-1"},
 		{Type: "bar", Region: "us-ashburn-1"},
@@ -683,11 +688,13 @@ func TestFilterRows(t *testing.T) {
 }
 
 func TestGetTableRows_UnknownCategory(t *testing.T) {
+	t.Parallel()
 	rows := getTableRows(nil, &models.Dataset{}, domain.Category(9999), nil, "")
 	assert.Nil(t, rows)
 }
 
 func TestGetItemKey_AndFindItem(t *testing.T) {
+	t.Parallel()
 	row := table.Row{"foo"}
 	key := getItemKey(domain.Tenant, row)
 	assert.Equal(t, "foo", key)
@@ -697,6 +704,7 @@ func TestGetItemKey_AndFindItem(t *testing.T) {
 }
 
 func TestGetBaseModels_SortsAndFilters(t *testing.T) {
+	t.Parallel()
 	m := map[string]*models.BaseModel{
 		"a": {InternalName: "a", Name: "A"},
 		"b": {InternalName: "b", Name: "B"},

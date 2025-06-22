@@ -8,6 +8,7 @@ import (
 )
 
 func TestHeaderDefinitions_AllCategoriesPresent(t *testing.T) {
+	t.Parallel()
 	// Ensure every domain.Category has a header definition
 	for _, cat := range []domain.Category{
 		domain.Tenant,
@@ -34,6 +35,7 @@ func TestHeaderDefinitions_AllCategoriesPresent(t *testing.T) {
 }
 
 func TestHeaderDefinitions_RatiosSumToOne(t *testing.T) {
+	t.Parallel()
 	for cat, headers := range headerDefinitions {
 		var sum float64
 		for _, h := range headers {

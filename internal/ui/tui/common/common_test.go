@@ -5,6 +5,7 @@ import (
 )
 
 func TestEditTargetString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		val  EditTarget
 		want string
@@ -22,6 +23,7 @@ func TestEditTargetString(t *testing.T) {
 }
 
 func TestInputModeString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		val  InputMode
 		want string
@@ -39,6 +41,7 @@ func TestInputModeString(t *testing.T) {
 }
 
 func TestViewModeString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		val  ViewMode
 		want string

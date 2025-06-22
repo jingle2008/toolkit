@@ -9,6 +9,7 @@ import (
 )
 
 func TestGlobalKeys(t *testing.T) {
+	t.Parallel()
 	keys := GlobalKeys()
 	if len(keys) == 0 {
 		t.Error("GlobalKeys() returned empty slice")
@@ -16,6 +17,7 @@ func TestGlobalKeys(t *testing.T) {
 }
 
 func TestListModeKeys(t *testing.T) {
+	t.Parallel()
 	keys := ListModeKeys()
 	if len(keys) == 0 {
 		t.Error("ListModeKeys() returned empty slice")
@@ -23,6 +25,7 @@ func TestListModeKeys(t *testing.T) {
 }
 
 func TestDetailsModeKeys(t *testing.T) {
+	t.Parallel()
 	keys := DetailsModeKeys()
 	if len(keys) == 0 {
 		t.Error("DetailsModeKeys() returned empty slice")
@@ -30,6 +33,7 @@ func TestDetailsModeKeys(t *testing.T) {
 }
 
 func TestCatContext(t *testing.T) {
+	t.Parallel()
 	ctx := CatContext()
 	if len(ctx) == 0 {
 		t.Error("CatContext() returned empty map")
@@ -37,6 +41,7 @@ func TestCatContext(t *testing.T) {
 }
 
 func TestFullKeyMap(t *testing.T) {
+	t.Parallel()
 	km := FullKeyMap()
 	if len(km.Global) == 0 || len(km.Mode) == 0 {
 		t.Error("FullKeyMap() missing keys")
@@ -44,6 +49,7 @@ func TestFullKeyMap(t *testing.T) {
 }
 
 func TestResolveKeys(t *testing.T) {
+	t.Parallel()
 	km := ResolveKeys(domain.Tenant, common.ListView)
 	if len(km.Global) == 0 {
 		t.Error("ResolveKeys() missing global keys")
@@ -57,6 +63,7 @@ func TestResolveKeys(t *testing.T) {
 }
 
 func TestKeyBindingHelp(t *testing.T) {
+	t.Parallel()
 	b := key.NewBinding(key.WithKeys("x"), key.WithHelp("x", "desc"))
 	if b.Help().Key != "x" || b.Help().Desc != "desc" {
 		t.Error("key.Binding Help() did not return expected values")

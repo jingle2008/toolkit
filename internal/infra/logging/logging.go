@@ -3,6 +3,7 @@ package logging
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	"go.uber.org/zap"
@@ -63,7 +64,7 @@ func (l *zapLogger) DebugEnabled() bool {
 
 func (l *zapLogger) Sync() error {
 	// zap.Sync can return os.ErrInvalid on Windows; ignore it
-	if err := l.s.Sync(); err != nil && err != os.ErrInvalid {
+	if err := l.s.Sync(); err != nil && !errors.Is(err, os.ErrInvalid) {
 		return err
 	}
 	return nil

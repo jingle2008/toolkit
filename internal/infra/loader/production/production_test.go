@@ -9,10 +9,12 @@ import (
 )
 
 func TestNewLoaderImplementsInterface(t *testing.T) {
+	t.Parallel()
 	var _ loader.Loader = NewLoader()
 }
 
 func TestLoadDataset_Error(t *testing.T) {
+	t.Parallel()
 	ldr := NewLoader()
 	// Use a repo path that does not exist to trigger error
 	_, err := ldr.LoadDataset(context.Background(), "/nonexistent/path", models.Environment{})
@@ -22,6 +24,7 @@ func TestLoadDataset_Error(t *testing.T) {
 }
 
 func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
+	t.Parallel()
 	ldr := NewLoader()
 	_, err := ldr.LoadTenancyOverrideGroup(context.Background(), "/nonexistent/path", models.Environment{Realm: "bad"})
 	if err == nil {
@@ -30,6 +33,7 @@ func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
 }
 
 func TestLoadLimitRegionalOverrides_EmptyOnBadPath(t *testing.T) {
+	t.Parallel()
 	ldr := NewLoader()
 	got, err := ldr.LoadLimitRegionalOverrides(context.Background(), "/nonexistent/path", models.Environment{Realm: "bad"})
 	if err != nil {
@@ -41,6 +45,7 @@ func TestLoadLimitRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 }
 
 func TestLoadConsolePropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
+	t.Parallel()
 	ldr := NewLoader()
 	got, err := ldr.LoadConsolePropertyRegionalOverrides(context.Background(), "/nonexistent/path", models.Environment{Realm: "bad"})
 	if err != nil {
@@ -52,6 +57,7 @@ func TestLoadConsolePropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 }
 
 func TestLoadPropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
+	t.Parallel()
 	ldr := NewLoader()
 	got, err := ldr.LoadPropertyRegionalOverrides(context.Background(), "/nonexistent/path", models.Environment{Realm: "bad"})
 	if err != nil {
@@ -65,6 +71,7 @@ func TestLoadPropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 // Optionally, add more tests for LoadGpuPools, LoadGpuNodes, etc., using mocks or testutil if available.
 
 func TestLoadBaseModels_Error(t *testing.T) {
+	t.Parallel()
 	ldr := NewLoader()
 	_, err := ldr.LoadBaseModels(context.Background(), "/nonexistent/path", models.Environment{})
 	if err == nil {
@@ -73,6 +80,7 @@ func TestLoadBaseModels_Error(t *testing.T) {
 }
 
 func TestLoadGpuPools_Error(t *testing.T) {
+	t.Parallel()
 	ldr := NewLoader()
 	_, err := ldr.LoadGpuPools(context.Background(), "/nonexistent/path", models.Environment{})
 	if err == nil {

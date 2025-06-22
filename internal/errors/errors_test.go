@@ -7,12 +7,14 @@ import (
 )
 
 func TestWrapNil(t *testing.T) {
+	t.Parallel()
 	if got := Wrap("action", nil); got != nil {
 		t.Errorf("Wrap(nil) = %v, want nil", got)
 	}
 }
 
 func TestWrapNonNil(t *testing.T) {
+	t.Parallel()
 	base := fmt.Errorf("base error")
 	wrapped := Wrap("action", base)
 	if wrapped == nil {
@@ -24,6 +26,7 @@ func TestWrapNonNil(t *testing.T) {
 }
 
 func TestJoin(t *testing.T) {
+	t.Parallel()
 	e1 := fmt.Errorf("err1")
 	e2 := fmt.Errorf("err2")
 	joined := Join(e1, e2)
@@ -33,6 +36,7 @@ func TestJoin(t *testing.T) {
 }
 
 func TestUnwrap(t *testing.T) {
+	t.Parallel()
 	base := fmt.Errorf("base")
 	wrapped := Wrap("action", base)
 	got := Unwrap(wrapped)
@@ -42,6 +46,7 @@ func TestUnwrap(t *testing.T) {
 }
 
 func TestErrUnknownSentinel(t *testing.T) {
+	t.Parallel()
 	err := Wrap("foo", ErrUnknown)
 	if !stdErrors.Is(err, ErrUnknown) {
 		t.Errorf("errors.Is(err, ErrUnknown) = false, want true")

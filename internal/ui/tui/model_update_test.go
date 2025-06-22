@@ -28,6 +28,7 @@ func TestLoadRequest_Run(t *testing.T) {
 }
 
 func TestModelUpdate_QuitKey(t *testing.T) {
+	t.Parallel()
 	m, _ := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
@@ -40,6 +41,7 @@ func TestModelUpdate_QuitKey(t *testing.T) {
 }
 
 func TestModelUpdate_WindowSizeMsg(t *testing.T) {
+	t.Parallel()
 	m, _ := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
@@ -53,6 +55,7 @@ func TestModelUpdate_WindowSizeMsg(t *testing.T) {
 }
 
 func TestModelReduce_ViewModes(t *testing.T) {
+	t.Parallel()
 	m, _ := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
@@ -74,6 +77,7 @@ func TestModelReduce_ViewModes(t *testing.T) {
 }
 
 func TestEnterEditModeAndExitEditMode(t *testing.T) {
+	t.Parallel()
 	m, _ := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
