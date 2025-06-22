@@ -437,6 +437,26 @@ locals {
 	require.Error(t, err)
 }
 
+func TestLoadLocalValueMap_CyclicLocals(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	tf := `
+locals {
+  a = b
+  b = a
+}
+`
+	writeTfFile(t, dir, "cyclic.tf", tf)
+	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
+	vals, err := loadLocalValueMap(context.Background(), dir, env)
+	require.NoError(t, err)
+	// Both a and b should not be resolved, so not present in vals
+	_, aOk := vals["a"]
+	_, bOk := vals["b"]
+	assert.False(t, aOk)
+	assert.False(t, bOk)
+}
+
 func TestLoadModelArtifacts_Success(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

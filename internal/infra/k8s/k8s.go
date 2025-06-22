@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/jingle2008/toolkit/internal/collections"
+	interrors "github.com/jingle2008/toolkit/internal/errors"
 	"github.com/jingle2008/toolkit/internal/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 	"golang.org/x/sync/errgroup"
@@ -65,7 +66,7 @@ func NewHelper(configFile string, context string) (*Helper, error) {
 	if configFile != "" && context != "" {
 		err := helper.ChangeContext(context)
 		if err != nil {
-			return nil, fmt.Errorf("failed to change context in NewHelper: %w", err)
+			return nil, interrors.Wrap("failed to change context in NewHelper", err)
 		}
 	}
 
@@ -76,7 +77,7 @@ func NewHelper(configFile string, context string) (*Helper, error) {
 func defaultKubernetesClient(cfg *rest.Config) (kubernetesClient, error) {
 	cs, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+		return nil, interrors.Wrap("failed to create Kubernetes client", err)
 	}
 	return &realKubernetesClient{cs}, nil
 }
@@ -86,7 +87,7 @@ type realKubernetesClient struct{ cs *kubernetes.Clientset }
 func (r *realKubernetesClient) CoreV1NodesList(ctx context.Context, opts v1.ListOptions) ([]corev1.Node, error) {
 	list, err := r.cs.CoreV1().Nodes().List(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list nodes: %w", err)
+		return nil, interrors.Wrap("failed to list nodes", err)
 	}
 	return list.Items, nil
 }
@@ -94,7 +95,7 @@ func (r *realKubernetesClient) CoreV1NodesList(ctx context.Context, opts v1.List
 func (r *realKubernetesClient) CoreV1PodsList(ctx context.Context, namespace string, opts v1.ListOptions) ([]corev1.Pod, error) {
 	list, err := r.cs.CoreV1().Pods(namespace).List(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list pods: %w", err)
+		return nil, interrors.Wrap("failed to list pods", err)
 	}
 	return list.Items, nil
 }
@@ -102,7 +103,7 @@ func (r *realKubernetesClient) CoreV1PodsList(ctx context.Context, namespace str
 func defaultDynamicClient(cfg *rest.Config) (dynamicClient, error) {
 	dyn, err := dynamic.NewForConfig(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
+		return nil, interrors.Wrap("failed to create dynamic client", err)
 	}
 	return &realDynamicClient{dyn}, nil
 }
@@ -128,7 +129,7 @@ func (k *Helper) ChangeContext(context string) error {
 		&clientcmd.ConfigOverrides{CurrentContext: k.context},
 	).ClientConfig()
 	if err != nil {
-		return fmt.Errorf("failed to change context: %w", err)
+		return interrors.Wrap("failed to change context", err)
 	}
 
 	k.config = config
@@ -217,7 +218,7 @@ func updateGpuAllocations(ctx context.Context, clientset kubernetesClient,
 		FieldSelector: "status.phase=Running",
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list pods for selector %q in updateGpuAllocations: %w", label, err)
+		return interrors.Wrap(fmt.Sprintf("failed to list pods for selector %q in updateGpuAllocations", label), err)
 	}
 
 	for _, pod := range pods {

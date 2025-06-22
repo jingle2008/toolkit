@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	interrors "github.com/jingle2008/toolkit/internal/errors"
 )
 
 /*
@@ -34,11 +36,11 @@ func SafeReadFile(path string, baseDir string, allowExt map[string]struct{}) ([]
 
 	absTarget, err := filepath.Abs(clean)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
+		return nil, interrors.Wrap("failed to open file", err)
 	}
 	absBase, err := filepath.Abs(filepath.Clean(baseDir))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+		return nil, interrors.Wrap("failed to read file", err)
 	}
 
 	// Ensure absTarget is within absBase

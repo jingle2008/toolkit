@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	interrors "github.com/jingle2008/toolkit/internal/errors"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -90,8 +91,7 @@ func (m *Model) updateContent(width int) {
 	}
 	str, err := m.renderer.RenderJSON(content, width)
 	if err != nil {
-		wrappedErr := fmt.Errorf("error encountered rendering content: %w", err)
-		m.err = wrappedErr
+		m.err = interrors.Wrap("error encountered rendering content", err)
 		return
 	}
 	m.viewport.SetContent(str)

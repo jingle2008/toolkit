@@ -6,9 +6,9 @@ package jsonutil
 
 import (
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 
+	interrors "github.com/jingle2008/toolkit/internal/errors"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
 )
 
@@ -27,13 +27,13 @@ func LoadFile[T any](path string) (*T, error) {
 	baseDir := filepath.Dir(path)
 	jsonData, err := fs.SafeReadFile(path, baseDir, allowedExt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
+		return nil, interrors.Wrap("failed to open file", err)
 	}
 
 	var data T
 	err = json.Unmarshal(jsonData, &data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode JSON: %w", err)
+		return nil, interrors.Wrap("failed to decode JSON", err)
 	}
 
 	return &data, nil

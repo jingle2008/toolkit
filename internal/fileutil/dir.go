@@ -6,9 +6,10 @@ package fs
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
+
+	interrors "github.com/jingle2008/toolkit/internal/errors"
 )
 
 /*
@@ -27,9 +28,10 @@ func ListFiles(ctx context.Context, dirPath, ext string) ([]string, error) {
 		return nil, err
 	}
 	var out []string
+
 	entries, err := os.ReadDir(dirPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read directory: %w", err)
+		return nil, interrors.Wrap("failed to read directory", err)
 	}
 	for _, e := range entries {
 		if !e.IsDir() && filepath.Ext(e.Name()) == ext {
