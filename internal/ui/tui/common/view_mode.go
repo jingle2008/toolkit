@@ -15,3 +15,21 @@ const (
 	// ErrorView is the view mode for displaying error state.
 	ErrorView
 )
+
+// String returns the string representation of the ViewMode.
+func (v ViewMode) String() string {
+	switch v {
+	case ListView:
+		return "list"
+	case DetailsView:
+		return "details"
+	case LoadingView:
+		return "loading"
+	case HelpView:
+		return "help"
+	case ErrorView:
+		return "error"
+	default:
+		return "unknown"
+	}
+}

@@ -1,7 +1,10 @@
 // Package common provides shared types and utilities for the TUI components.
 package common
 
-// EditTarget represents the current edit target in the UI.
+/*
+EditTarget represents the current edit target in the UI.
+Implements Stringer for testability and debugging.
+*/
 type EditTarget int
 
 const (
@@ -12,3 +15,17 @@ const (
 	// AliasTarget is the edit target for aliases.
 	AliasTarget // Alias edit target
 )
+
+// String returns the string representation of the EditTarget.
+func (e EditTarget) String() string {
+	switch e {
+	case NoneTarget:
+		return "none"
+	case FilterTarget:
+		return "filter"
+	case AliasTarget:
+		return "alias"
+	default:
+		return "unknown"
+	}
+}

@@ -647,3 +647,61 @@ func TestGetItemKey_NilRow(t *testing.T) {
 	key := getItemKey(domain.Tenant, nilRow)
 	require.Nil(t, key)
 }
+
+func TestGetHeaders_KnownCategory(t *testing.T) {
+	headers := getHeaders(domain.Tenant)
+	assert.NotNil(t, headers)
+	assert.Greater(t, len(headers), 0)
+}
+
+func TestGetHeaders_UnknownCategory(t *testing.T) {
+	headers := getHeaders(domain.Category(9999))
+	assert.Nil(t, headers)
+}
+
+func TestGetItemKeyString_Simple(t *testing.T) {
+	key := getItemKeyString(domain.Tenant, "foo")
+	assert.Equal(t, "foo", key)
+}
+
+func TestGetItemKeyString_Scoped(t *testing.T) {
+	k := models.ScopedItemKey{Scope: "scope", Name: "name"}
+	key := getItemKeyString(domain.LimitTenancyOverride, k)
+	assert.Equal(t, "scope/name", key)
+}
+
+func TestFilterRows(t *testing.T) {
+	items := []models.Environment{
+		{Type: "foo", Region: "us-phx-1"},
+		{Type: "bar", Region: "us-ashburn-1"},
+	}
+	rows := filterRows(items, "foo", func(e models.Environment) table.Row {
+		return table.Row{e.Type, e.Region}
+	})
+	assert.Len(t, rows, 1)
+	assert.Equal(t, "foo", rows[0][0])
+}
+
+func TestGetTableRows_UnknownCategory(t *testing.T) {
+	rows := getTableRows(nil, &models.Dataset{}, domain.Category(9999), nil, "")
+	assert.Nil(t, rows)
+}
+
+func TestGetItemKey_AndFindItem(t *testing.T) {
+	row := table.Row{"foo"}
+	key := getItemKey(domain.Tenant, row)
+	assert.Equal(t, "foo", key)
+	ds := &models.Dataset{Tenants: []models.Tenant{{Name: "foo"}}}
+	item := findItem(ds, domain.Tenant, key)
+	assert.NotNil(t, item)
+}
+
+func TestGetBaseModels_SortsAndFilters(t *testing.T) {
+	m := map[string]*models.BaseModel{
+		"a": {InternalName: "a", Name: "A"},
+		"b": {InternalName: "b", Name: "B"},
+	}
+	rows := getBaseModels(m, "a")
+	assert.Len(t, rows, 1)
+	assert.Contains(t, rows[0][0], "a")
+}
