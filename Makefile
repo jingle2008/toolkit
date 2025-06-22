@@ -35,6 +35,10 @@ tidy:
 fmt:
 	gofumpt -w .
 
+# Format imports using goimports (enforces import grouping)
+goimports:
+	goimports -w .
+
 cover:
 	go test ./... -coverprofile=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
@@ -54,4 +58,4 @@ LINT_VERSION ?= v1.64.8
 install-lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(LINT_VERSION)
 
-ci: lint vet test
+ci: goimports lint vet test

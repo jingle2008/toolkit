@@ -260,3 +260,37 @@ func TestUnique_Generic(t *testing.T) {
 	uniqStrs := Unique(strs)
 	assert.Equal(t, []string{"a", "b", "c"}, uniqStrs)
 }
+
+// Benchmarks for generic utilities
+
+func BenchmarkFilter(b *testing.B) {
+	sizes := []int{10, 100, 1000, 10000}
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			ints := make([]int, size)
+			for i := range size {
+				ints[i] = i
+			}
+			b.ResetTimer()
+			for b.Loop() {
+				_ = Filter(ints, func(x int) bool { return x%2 == 0 })
+			}
+		})
+	}
+}
+
+func BenchmarkMap(b *testing.B) {
+	sizes := []int{10, 100, 1000, 10000}
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			ints := make([]int, size)
+			for i := range size {
+				ints[i] = i
+			}
+			b.ResetTimer()
+			for b.Loop() {
+				_ = Map(ints, func(x int) int { return x * x })
+			}
+		})
+	}
+}

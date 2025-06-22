@@ -28,6 +28,17 @@ import (
 func NewRootCmd(version string) *cobra.Command {
 	var cfgFile string
 
+	const exampleConfig = `repo_path: "/path/to/your/repo"
+kubeconfig: "/path/to/your/.kube/config"
+env_type: "dev"
+env_region: "us-phoenix-1"
+env_realm: "oc1"
+category: "tenant"
+log_file: "toolkit.log"
+debug: false
+filter: ""
+`
+
 	rootCmd := &cobra.Command{
 		Use:   "toolkit",
 		Short: "Toolkit CLI",
@@ -50,21 +61,21 @@ func NewRootCmd(version string) *cobra.Command {
 			if cfgFile != "" {
 				viper.SetConfigFile(cfgFile)
 				if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
-					return fmt.Errorf("failed to read config file: %w", err)
+					return fmt.Errorf("read config file: %w", err)
 				}
 			}
 
 			var cfg config.Config
 			if err := viper.Unmarshal(&cfg); err != nil {
-				return fmt.Errorf("failed to unmarshal config: %w", err)
+				return fmt.Errorf("unmarshal config: %w", err)
 			}
 			if err := cfg.Validate(); err != nil {
-				return fmt.Errorf("failed to validate config: %w", err)
+				return fmt.Errorf("validate config: %w", err)
 			}
 
 			logger, err := logging.NewFileLogger(cfg.Debug, cfg.LogFile)
 			if err != nil {
-				return fmt.Errorf("failed to initialize logger: %w", err)
+				return fmt.Errorf("initialize logger: %w", err)
 			}
 			defer func() {
 				_ = logger.Sync()
@@ -88,12 +99,37 @@ func NewRootCmd(version string) *cobra.Command {
 	rootCmd.PersistentFlags().String("env_region", "", "Environment region")
 	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
 	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
+	// Enable shell completion for --category flag using domain.Aliases()
+	_ = rootCmd.RegisterFlagCompletionFunc("category", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return domain.Aliases(), cobra.ShellCompDirectiveNoFileComp
+	})
 	rootCmd.PersistentFlags().StringP("filter", "f", "", "Initial filter for current category")
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
 	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
 
 	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
+
+	// Add "init" sub-command to scaffold an example config file
+	initCmd := &cobra.Command{
+		Use:   "init",
+		Short: "Scaffold an example config file",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Only write if file does not exist
+			if _, err := os.Stat(defaultConfig); err == nil {
+				return fmt.Errorf("config file already exists at %s", defaultConfig)
+			}
+			if err := os.MkdirAll(filepath.Dir(defaultConfig), 0o755); err != nil {
+				return fmt.Errorf("failed to create config directory: %w", err)
+			}
+			if err := os.WriteFile(defaultConfig, []byte(exampleConfig), 0o644); err != nil {
+				return fmt.Errorf("failed to write config file: %w", err)
+			}
+			fmt.Printf("Example config written to %s\n", defaultConfig)
+			return nil
+		},
+	}
+	rootCmd.AddCommand(initCmd)
 
 	return rootCmd
 }
@@ -138,7 +174,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 	)
 	if err != nil {
 		logger.Errorw("failed to create toolkit model", "error", err)
-		return fmt.Errorf("failed to create toolkit model: %w", err)
+		return fmt.Errorf("create toolkit model: %w", err)
 	}
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(ctx))
 	_, err = p.Run()

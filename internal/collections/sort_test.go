@@ -2,6 +2,7 @@ package collections
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -148,4 +149,52 @@ func TestSortKeyedItems(t *testing.T) {
 	require.Equal(t, "a", items[0].GetKey())
 	require.Equal(t, "b", items[1].GetKey())
 	require.Equal(t, "c", items[2].GetKey())
+}
+
+// Benchmarks
+
+type benchKeyedItem struct{ key string }
+
+func (bi benchKeyedItem) GetKey() string { return bi.key }
+
+func BenchmarkSortKeyedItems(b *testing.B) {
+	sizes := []int{10, 100, 1000, 10000}
+	for _, size := range sizes {
+		b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+			// Prepare input slice
+			items := make([]benchKeyedItem, size)
+			for i := range size {
+				items[i] = benchKeyedItem{key: strconv.Itoa(size - i)}
+			}
+			b.ResetTimer()
+			for b.Loop() {
+				tmp := make([]benchKeyedItem, size)
+				copy(tmp, items)
+				SortKeyedItems(tmp)
+			}
+		})
+	}
+}
+
+type benchNamedItem struct{ name string }
+
+func (bi benchNamedItem) GetName() string { return bi.name }
+
+func BenchmarkSortNamedItems(b *testing.B) {
+	sizes := []int{10, 100, 1000, 10000}
+	for _, size := range sizes {
+		b.Run("size="+strconv.Itoa(size), func(b *testing.B) {
+			// Prepare input slice
+			items := make([]benchNamedItem, size)
+			for i := range size {
+				items[i] = benchNamedItem{name: strconv.Itoa(size - i)}
+			}
+			b.ResetTimer()
+			for b.Loop() {
+				tmp := make([]benchNamedItem, size)
+				copy(tmp, items)
+				SortNamedItems(tmp)
+			}
+		})
+	}
 }

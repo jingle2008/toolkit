@@ -290,7 +290,6 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 	tenancyMap := make(map[string]*models.ServiceTenancy)
 
 	for key, attribute := range attributes {
-		// TODO: group_ locals don't resolve
 		if key == "tenancy_name_mapping" ||
 			strings.HasPrefix(key, "group_") ||
 			key == "region_groups" {
