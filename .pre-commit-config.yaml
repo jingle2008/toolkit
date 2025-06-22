@@ -11,6 +11,11 @@ repos:
         entry: go vet ./...
         language: system
         types: [go]
+      - id: gofumpt-local
+        name: gofumpt (local, go run)
+        entry: go run mvdan.cc/gofumpt@latest -w .
+        language: system
+        types: [go]
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.55.2
     hooks:

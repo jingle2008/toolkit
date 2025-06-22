@@ -81,7 +81,8 @@ func MustNewLogger(debug bool) Logger {
 
 // NewFileLogger returns a Logger that writes only to the given file (overwriting it on each run).
 // If debug is true, uses development encoder config, else production config.
-func NewFileLogger(debug bool, filename string) (Logger, error) {
+// logFormat: "console" or "json"
+func NewFileLogger(debug bool, filename string, logFormat string) (Logger, error) {
 	flag := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
 	f, err := os.OpenFile(filename, flag, 0o600) // #nosec G304
 	if err != nil {
@@ -94,8 +95,14 @@ func NewFileLogger(debug bool, filename string) (Logger, error) {
 		encCfg = zap.NewProductionEncoderConfig()
 	}
 	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	var encoder zapcore.Encoder
+	if logFormat == "console" {
+		encoder = zapcore.NewConsoleEncoder(encCfg)
+	} else {
+		encoder = zapcore.NewJSONEncoder(encCfg)
+	}
 	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(encCfg),
+		encoder,
 		zapcore.AddSync(f),
 		zap.DebugLevel,
 	)
@@ -105,7 +112,7 @@ func NewFileLogger(debug bool, filename string) (Logger, error) {
 
 // MustNewFileLogger returns a file Logger or panics if creation fails.
 func MustNewFileLogger(debug bool, filename string) Logger {
-	l, err := NewFileLogger(debug, filename)
+	l, err := NewFileLogger(debug, filename, "console")
 	if err != nil {
 		panic(err)
 	}

@@ -16,7 +16,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 	interrors "github.com/jingle2008/toolkit/internal/errors"
-	"github.com/jingle2008/toolkit/internal/infra/loader"
+	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -74,7 +74,8 @@ filter: ""
 				return interrors.Wrap("validate config", err)
 			}
 
-			logger, err := logging.NewFileLogger(cfg.Debug, cfg.LogFile)
+			logFormat := viper.GetString("log_format")
+			logger, err := logging.NewFileLogger(cfg.Debug, cfg.LogFile, logFormat)
 			if err != nil {
 				return interrors.Wrap("initialize logger", err)
 			}
@@ -101,13 +102,14 @@ filter: ""
 	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
 	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
 	// Enable shell completion for --category flag using domain.Aliases()
-	_ = rootCmd.RegisterFlagCompletionFunc("category", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	_ = rootCmd.RegisterFlagCompletionFunc("category", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return domain.Aliases(), cobra.ShellCompDirectiveNoFileComp
 	})
 	rootCmd.PersistentFlags().StringP("filter", "f", "", "Initial filter for current category")
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
 	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
+	rootCmd.PersistentFlags().String("log_format", "console", "Log format: console or json")
 
 	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
 
@@ -115,15 +117,15 @@ filter: ""
 	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Scaffold an example config file",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			// Only write if file does not exist
 			if _, err := os.Stat(defaultConfig); err == nil {
 				return fmt.Errorf("config file already exists at %s", defaultConfig)
 			}
-			if err := os.MkdirAll(filepath.Dir(defaultConfig), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(defaultConfig), 0o750); err != nil {
 				return interrors.Wrap("failed to create config directory", err)
 			}
-			if err := os.WriteFile(defaultConfig, []byte(exampleConfig), 0o644); err != nil {
+			if err := os.WriteFile(defaultConfig, []byte(exampleConfig), 0o600); err != nil {
 				return interrors.Wrap("failed to write config file", err)
 			}
 			fmt.Printf("Example config written to %s\n", defaultConfig)
@@ -169,7 +171,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithCategory(category),
 		tui.WithLogger(logger),
 		tui.WithContext(ctx),
-		tui.WithLoader(loader.NewProductionLoader()),
+		tui.WithLoader(production.NewLoader()),
 		tui.WithFilter(cfg.Filter),
 		tui.WithVersion(version),
 	)

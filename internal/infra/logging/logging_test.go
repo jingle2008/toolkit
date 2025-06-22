@@ -138,7 +138,7 @@ func TestNewFileLoggerAndMustNewFileLogger(t *testing.T) {
 	tmpfile := "test_log.json"
 	defer func() { _ = os.Remove(tmpfile) }()
 
-	l, err := NewFileLogger(true, tmpfile)
+	l, err := NewFileLogger(true, tmpfile, "console")
 	if err != nil {
 		t.Fatalf("NewFileLogger failed: %v", err)
 	}
