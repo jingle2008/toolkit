@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -48,7 +49,9 @@ filter: ""
 			showVersion, _ := cmd.Flags().GetBool("version")
 			if showVersion {
 				fmt.Println(version)
-				os.Exit(0)
+				// Early exit for version, but allow testability
+				cmd.SilenceUsage = true
+				return nil
 			}
 			return nil
 		},
@@ -57,6 +60,7 @@ filter: ""
 			_ = viper.BindPFlags(cmd.PersistentFlags())
 
 			viper.SetEnvPrefix("toolkit")
+			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 			viper.AutomaticEnv()
 
 			if cfgFile != "" {

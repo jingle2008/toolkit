@@ -58,6 +58,9 @@ linters-settings:
     skip-files-use-default: true
   goimports:
     local-prefixes: github.com/jingle2008/toolkit
+  revive:
+    ignore-generated-header: true
+    severity: warning
   contextcheck:
     # Warn if context.Context is not the first arg in exported funcs
     # (default is true)

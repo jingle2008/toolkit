@@ -1,0 +1,56 @@
+# GoReleaser configuration for toolkit
+# See https://goreleaser.com/customization/ for full options
+
+project_name: toolkit
+
+builds:
+  - id: toolkit
+    main: ./cmd/toolkit/main.go
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - "-s -w -X main.Version={{.Version}}"
+    env:
+      - CGO_ENABLED=0
+
+archives:
+  - id: default
+    builds: [toolkit]
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: jingle2008
+    name: toolkit
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^refactor:'
+      - '^ci:'
+      - '^build:'
+      - '^style:'
+      - '^wip:'
+      - '^Merge pull request'
+      - '^Merge branch'
+
+signs:
+  - artifacts: checksum
+    args: ["--detach-sign"]

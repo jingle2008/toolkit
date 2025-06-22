@@ -17,7 +17,17 @@ repos:
         language: system
         types: [go]
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.55.2
+    rev: v1.64.8
     hooks:
       - id: golangci-lint
         args: ["run"]
+  - repo: https://github.com/incu6us/goimports-reviser
+    rev: v3.10.0
+    hooks:
+      - id: goimports-reviser
+        args: ["-project-name=github.com/jingle2008/toolkit", "-rm-unused", "-set-alias", "-format", "-company-prefixes=github.com/jingle2008"]
+  - repo: https://github.com/mgechev/revive
+    rev: v1.3.7
+    hooks:
+      - id: revive
+        args: ["-config=.revive.toml", "-formatter=stylish", "./..."]
