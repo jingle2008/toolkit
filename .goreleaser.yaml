@@ -59,7 +59,7 @@ signs:
       - --armor
       - --detach-sign
       - --local-user
-      - default
+      - jingle2008@gmail.com
       - --output
       - ${signature}
       - ${artifact}
