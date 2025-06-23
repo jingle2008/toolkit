@@ -1,6 +1,4 @@
 version: 2
-# GoReleaser configuration for toolkit
-# See https://goreleaser.com/customization/ for full options
 
 project_name: toolkit
 
@@ -20,9 +18,7 @@ builds:
       - CGO_ENABLED=0
 
 archives:
-  - id: default
-    ids: [toolkit]
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
       - README.md
@@ -65,12 +61,12 @@ signs:
       - ${artifact}
     signature: "${artifact}.sig"
 
-brews:
+# Only include if using GoReleaser v2.10 or later
+homebrew_casks:
   - name: toolkit
-    tap:
+    repository:
       owner: jingle2008
       name: homebrew-toolkit
     homepage: "https://github.com/jingle2008/toolkit"
     description: "Toolkit CLI: cross-platform command-line tool for cloud and infrastructure automation"
-    install: |
-      bin.install "toolkit"
+    binary: toolkit
