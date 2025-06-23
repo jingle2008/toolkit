@@ -58,6 +58,4 @@ LINT_VERSION ?= v1.64.8
 install-lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(LINT_VERSION)
 
-ci: goimports lint vet test
-	go run golang.org/x/vuln/cmd/govulncheck ./...
-	go run honnef.co/go/tools/cmd/staticcheck ./...
+ci: goimports lint vet test cover-check
