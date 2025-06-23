@@ -68,7 +68,7 @@ brews:
       owner: jingle2008
       name: homebrew-toolkit
     homepage: https://github.com/jingle2008/toolkit
-    description: Toolkit CLI: cross-platform command-line tool for cloud & infra automation
+    description: "Toolkit CLI: cross-platform command-line tool for cloud & infra automation"
     install: |
       bin.install "toolkit"
     test: |
