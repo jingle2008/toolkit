@@ -62,6 +62,18 @@ signs:
     signature: "${artifact}.sig"
 
 # Only include if using GoReleaser v2.10 or later
+brews:
+  - name: toolkit
+    repository:
+      owner: jingle2008
+      name: homebrew-toolkit
+    homepage: https://github.com/jingle2008/toolkit
+    description: Toolkit CLI: cross-platform command-line tool for cloud & infra automation
+    install: |
+      bin.install "toolkit"
+    test: |
+      system "#{bin}/toolkit", "--version"
+
 homebrew_casks:
   - name: toolkit
     repository:
