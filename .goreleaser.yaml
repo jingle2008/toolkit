@@ -1,3 +1,4 @@
+version: 2
 # GoReleaser configuration for toolkit
 # See https://goreleaser.com/customization/ for full options
 
@@ -20,8 +21,7 @@ builds:
 
 archives:
   - id: default
-    builds: [toolkit]
-    format: tar.gz
+    ids: [toolkit]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
