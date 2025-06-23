@@ -5,6 +5,9 @@
 *.so
 *.dylib
 
+# GoReleaser build output
+dist/
+
 # Test binary, coverage, and debug output
 *.test
 *.out
