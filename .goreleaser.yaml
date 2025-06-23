@@ -64,3 +64,13 @@ signs:
       - ${signature}
       - ${artifact}
     signature: "${artifact}.sig"
+
+brews:
+  - name: toolkit
+    tap:
+      owner: jingle2008
+      name: homebrew-toolkit
+    homepage: "https://github.com/jingle2008/toolkit"
+    description: "Toolkit CLI: cross-platform command-line tool for cloud and infrastructure automation"
+    install: |
+      bin.install "toolkit"
