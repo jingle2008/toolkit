@@ -53,4 +53,14 @@ changelog:
 
 signs:
   - artifacts: checksum
-    args: ["--detach-sign"]
+    args:
+      - --batch
+      - --yes
+      - --armor
+      - --detach-sign
+      - --local-user
+      - default
+      - --output
+      - ${signature}
+      - ${artifact}
+    signature: "${artifact}.sig"
