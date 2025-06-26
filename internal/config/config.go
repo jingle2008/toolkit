@@ -12,16 +12,15 @@ import (
 
 // Config holds configuration for the toolkit CLI application.
 type Config struct {
-	RepoPath        string `mapstructure:"repo_path"`
-	KubeConfig      string `mapstructure:"kubeconfig"`
-	EnvType         string `mapstructure:"env_type"`
-	EnvRegion       string `mapstructure:"env_region"`
-	EnvRealm        string `mapstructure:"env_realm"`
-	Category        string `mapstructure:"category"`
-	LogFile         string `mapstructure:"log_file"`
-	Debug           bool   `mapstructure:"debug"`
-	Filter          string `mapstructure:"filter"`
-	RefreshInterval int    `mapstructure:"refresh_interval"`
+	RepoPath   string `mapstructure:"repo_path"`
+	KubeConfig string `mapstructure:"kubeconfig"`
+	EnvType    string `mapstructure:"env_type"`
+	EnvRegion  string `mapstructure:"env_region"`
+	EnvRealm   string `mapstructure:"env_realm"`
+	Category   string `mapstructure:"category"`
+	LogFile    string `mapstructure:"log_file"`
+	Debug      bool   `mapstructure:"debug"`
+	Filter     string `mapstructure:"filter"`
 }
 
 /*
@@ -45,9 +44,6 @@ func (c Config) Validate() error {
 	}
 	if c.Category == "" {
 		return errors.New("config: Category is required")
-	}
-	if c.RefreshInterval <= 0 {
-		return errors.New("config: RefreshInterval must be greater than 0")
 	}
 	_, err := domain.ParseCategory(c.Category)
 	if err != nil {

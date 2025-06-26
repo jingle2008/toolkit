@@ -14,6 +14,3 @@ type FilterMsg struct{ Text string }
 
 // SetFilterMsg is a message to set the filter text in the model.
 type SetFilterMsg struct{ Text string }
-
-// RefreshMsg triggers a periodic refresh for certain categories.
-type RefreshMsg struct{}

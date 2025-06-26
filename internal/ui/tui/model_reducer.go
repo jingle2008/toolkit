@@ -5,7 +5,6 @@ package tui
 import (
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
@@ -114,8 +113,7 @@ func (m *Model) refreshDisplay() {
 }
 
 // processData updates the model's dataset based on the incoming DataMsg.
-func (m *Model) processData(msg DataMsg) tea.Cmd {
-	var cmd tea.Cmd
+func (m *Model) processData(msg DataMsg) {
 	switch data := msg.Data.(type) {
 	case *models.Dataset:
 		m.dataset = data
@@ -125,10 +123,8 @@ func (m *Model) processData(msg DataMsg) tea.Cmd {
 		m.dataset.GpuPools = data
 	case map[string][]models.GpuNode:
 		m.dataset.GpuNodeMap = data
-		cmd = m.triggerRefresh()
 	case map[string][]models.DedicatedAICluster:
 		m.dataset.SetDedicatedAIClusterMap(data)
-		cmd = m.triggerRefresh()
 	case models.TenancyOverrideGroup:
 		m.dataset.Tenants = data.Tenants
 		m.dataset.LimitTenancyOverrideMap = data.LimitTenancyOverrideMap
@@ -137,33 +133,21 @@ func (m *Model) processData(msg DataMsg) tea.Cmd {
 	}
 
 	if msg.Data != nil {
-		m.logger.Infow("data loaded",
-			"category", m.category,
-			"pendingTasks", m.pendingTasks)
 		m.pendingTasks--
 	}
 	m.refreshDisplay()
-	return cmd
-}
-
-func (m *Model) triggerRefresh() tea.Cmd {
-	m.timerStartTime = time.Now()
-	return tea.Tick(m.refreshInterval, func(time.Time) tea.Msg { return RefreshMsg{} })
 }
 
 // handleAdditionalKeys processes extra key events for the current category.
-func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
+func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
 	if !key.Matches(msg, m.keys.Context...) {
-		return nil
+		return
 	}
 
 	item := m.getSelectedItem()
 	if key.Matches(msg, keys.CopyTenant) {
 		m.copyTenantID(item)
-	} else if key.Matches(msg, keys.Refresh) {
-		return m.updateCategory(m.category)
 	}
-	return nil
 }
 
 func (m *Model) copyItemName(item any) {
@@ -216,23 +200,17 @@ func (m *Model) getSelectedItem() any {
 
 // updateCategory changes the current category and loads data if needed.
 func (m *Model) updateCategory(category domain.Category) tea.Cmd {
-	refresh := false
-	if m.category == category {
-		refresh = true
-	} else {
-		m.category = category
-		m.keys = keys.ResolveKeys(m.category, m.viewMode)
-	}
-
+	m.category = category
+	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	switch m.category { //nolint:exhaustive
 	case domain.BaseModel:
 		return m.handleBaseModelCategory()
 	case domain.GpuPool:
 		return m.handleGpuPoolCategory()
 	case domain.GpuNode:
-		return m.handleGpuNodeCategory(refresh)
+		return m.handleGpuNodeCategory()
 	case domain.DedicatedAICluster:
-		return m.handleDedicatedAIClusterCategory(refresh)
+		return m.handleDedicatedAIClusterCategory()
 	case domain.Tenant, domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride:
 		return m.handleTenancyOverridesGroup()
 	case domain.LimitRegionalOverride:
@@ -299,15 +277,15 @@ func (m *Model) handleGpuPoolCategory() tea.Cmd {
 	return refreshDataCmd
 }
 
-func (m *Model) handleGpuNodeCategory(refresh bool) tea.Cmd {
-	if m.dataset == nil || m.dataset.GpuNodeMap == nil || refresh {
+func (m *Model) handleGpuNodeCategory() tea.Cmd {
+	if m.dataset == nil || m.dataset.GpuNodeMap == nil {
 		m.pendingTasks++
 		return loadRequest{category: domain.GpuNode, model: m}.Run
 	}
 	return refreshDataCmd
 }
 
-func (m *Model) handleDedicatedAIClusterCategory(refresh bool) tea.Cmd {
+func (m *Model) handleDedicatedAIClusterCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil {
 		m.pendingTasks++
 		return loadRequest{category: domain.DedicatedAICluster, model: m}.Run

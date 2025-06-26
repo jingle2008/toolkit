@@ -7,7 +7,6 @@ package tui
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -76,10 +75,6 @@ type Model struct {
 
 	// Spinner for loading screen
 	loadingSpinner *spinner.Model
-
-	// Refresh functionality
-	refreshInterval time.Duration
-	timerStartTime  time.Time
 }
 
 /*

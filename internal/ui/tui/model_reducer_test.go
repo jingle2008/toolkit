@@ -90,13 +90,13 @@ func TestHandleGpuPoolCategory(t *testing.T) {
 func TestHandleGpuNodeCategory(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	cmd := m.handleGpuNodeCategory(false)
+	cmd := m.handleGpuNodeCategory()
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 1, m.pendingTasks)
 
 	m = &Model{dataset: &models.Dataset{GpuNodeMap: map[string][]models.GpuNode{}}}
 	m.pendingTasks = 0
-	cmd = m.handleGpuNodeCategory(false)
+	cmd = m.handleGpuNodeCategory()
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 0, m.pendingTasks)
 }
@@ -104,13 +104,13 @@ func TestHandleGpuNodeCategory(t *testing.T) {
 func TestHandleDedicatedAIClusterCategory(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	cmd := m.handleDedicatedAIClusterCategory(false)
+	cmd := m.handleDedicatedAIClusterCategory()
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 1, m.pendingTasks)
 
 	m = &Model{dataset: &models.Dataset{DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{}}}
 	m.pendingTasks = 0
-	cmd = m.handleDedicatedAIClusterCategory(false)
+	cmd = m.handleDedicatedAIClusterCategory()
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 0, m.pendingTasks)
 }

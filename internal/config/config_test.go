@@ -8,13 +8,12 @@ import (
 func TestConfig_Validate(t *testing.T) {
 	t.Parallel()
 	valid := Config{
-		RepoPath:        "repo",
-		KubeConfig:      "kube",
-		EnvType:         "type",
-		EnvRegion:       "region",
-		EnvRealm:        "realm",
-		Category:        "Tenant",
-		RefreshInterval: 10,
+		RepoPath:   "repo",
+		KubeConfig: "kube",
+		EnvType:    "type",
+		EnvRegion:  "region",
+		EnvRealm:   "realm",
+		Category:   "Tenant",
 	}
 	if err := valid.Validate(); err != nil {
 		t.Errorf("expected valid config, got error: %v", err)

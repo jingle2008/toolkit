@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"time"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -85,11 +84,4 @@ func WithFilter(filter string) ModelOption {
 // WithVersion sets the version of the Model.
 func WithVersion(v string) ModelOption {
 	return func(m *Model) { m.version = v }
-}
-
-// WithRefreshInterval sets the interval for auto-refreshing the model.
-func WithRefreshInterval(interval time.Duration) ModelOption {
-	return func(m *Model) {
-		m.refreshInterval = interval
-	}
 }
