@@ -131,6 +131,10 @@ var (
 		key.WithKeys("t"),
 		key.WithHelp("t", "copy tenant ocid"),
 	)
+	Refresh = key.NewBinding(
+		key.WithKeys("r"),
+		key.WithHelp("r", "refresh now"),
+	)
 )
 
 // Category+mode-specific key bindings
@@ -153,8 +157,11 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.GpuPool: {
 		common.ListView: {Confirm},
 	},
+	domain.GpuNode: {
+		common.ListView: {Refresh},
+	},
 	domain.DedicatedAICluster: {
-		common.ListView: {CopyTenant},
+		common.ListView: {CopyTenant, Refresh},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {CopyTenant},

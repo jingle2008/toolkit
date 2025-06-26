@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/config"
@@ -114,6 +115,7 @@ filter: ""
 	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().String("log_format", "console", "Log format: console or json")
+	rootCmd.PersistentFlags().Int("refresh_interval", 10, "Refresh interval in seconds")
 
 	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
 
@@ -178,6 +180,8 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithLoader(production.NewLoader()),
 		tui.WithFilter(cfg.Filter),
 		tui.WithVersion(version),
+		tui.WithRefreshInterval(
+			time.Duration(cfg.RefreshInterval)*time.Second),
 	)
 	if err != nil {
 		logger.Errorw("failed to create toolkit model", "error", err)

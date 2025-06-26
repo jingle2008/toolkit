@@ -5,6 +5,7 @@ package tui
 
 import (
 	"strings"
+	"time"
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
@@ -22,7 +23,7 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		cmds = append(cmds, m.handleKeyMsg(msg)...)
 	case DataMsg:
-		m.handleDataMsg(msg)
+		cmds = append(cmds, m.handleDataMsg(msg))
 	case FilterMsg:
 		m.handleFilterMsg(msg)
 	case SetFilterMsg:
@@ -31,6 +32,8 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleErrMsg(msg)
 	case spinner.TickMsg:
 		cmds = append(cmds, m.handleSpinnerTickMsg(msg))
+	case RefreshMsg:
+		cmds = append(cmds, m.handleAutoRefreshMsg(msg))
 	default:
 		// Future-proof: ignore unknown message types
 	}
@@ -57,8 +60,8 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	return cmds
 }
 
-func (m *Model) handleDataMsg(msg DataMsg) {
-	m.processData(msg)
+func (m *Model) handleDataMsg(msg DataMsg) tea.Cmd {
+	return m.processData(msg)
 }
 
 func (m *Model) handleFilterMsg(msg FilterMsg) {
@@ -84,6 +87,16 @@ func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 	loadingSpinner, cmd := m.loadingSpinner.Update(msg)
 	m.loadingSpinner = &loadingSpinner
 	return cmd
+}
+
+func (m *Model) handleAutoRefreshMsg(_ RefreshMsg) tea.Cmd {
+	elapsed := time.Since(m.timerStartTime)
+	if elapsed < m.refreshInterval {
+		m.logger.Debugw("Skipping auto-refresh due to interval", "elapsed", elapsed, "interval", m.refreshInterval)
+		return nil
+	}
+	m.logger.Debugw("Auto-refreshing after interval", "elapsed", elapsed, "interval", m.refreshInterval)
+	return m.updateCategory(m.category)
 }
 
 // handleNormalKeys processes key events in Normal mode.
@@ -112,7 +125,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	case key.Matches(msg, keys.CopyName):
 		m.copyItemName(m.getSelectedItem())
 	default:
-		m.handleAdditionalKeys(msg)
+		cmds = append(cmds, m.handleAdditionalKeys(msg))
 	}
 
 	return cmds
