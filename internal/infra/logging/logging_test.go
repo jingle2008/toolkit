@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 	"testing"
+
+	"golang.org/x/exp/slog"
 )
 
 type fakeLogger struct {
@@ -166,5 +168,53 @@ func TestNewFileLoggerAndMustNewFileLogger(t *testing.T) {
 	l2 := MustNewFileLogger(true, tmpfile)
 	if l2 == nil {
 		t.Errorf("MustNewFileLogger returned nil logger")
+	}
+}
+
+func TestNewSlogLogger(t *testing.T) {
+	t.Parallel()
+	// Use a basic slog.Logger with a discard handler
+	handler := slog.NewJSONHandler(os.Stdout, nil)
+	logger := slog.New(handler)
+	l := NewSlogLogger(logger, true)
+	if l == nil {
+		t.Errorf("NewSlogLogger returned nil")
+	}
+	if !l.DebugEnabled() {
+		t.Errorf("DebugEnabled should be true")
+	}
+	l2 := l.WithFields("foo", "bar")
+	if l2 == nil {
+		t.Errorf("WithFields should return a logger, got nil")
+	}
+	l.Infow("info", "k", "v")
+	l.Debugw("debug", "k", "v")
+	l.Errorw("error", "k", "v")
+	if err := l.Sync(); err != nil {
+		t.Errorf("Sync should return nil for slogLogger")
+	}
+}
+
+func TestNewFileLogger_SlogFormat(t *testing.T) {
+	t.Parallel()
+	tmpfile := "test_log_slog.json"
+	defer func() { _ = os.Remove(tmpfile) }()
+	l, err := NewFileLogger(true, tmpfile, "slog")
+	if err != nil {
+		t.Fatalf("NewFileLogger with slog format failed: %v", err)
+	}
+	if l == nil {
+		t.Fatalf("NewFileLogger with slog format returned nil logger")
+	}
+	l.Infow("test message", "foo", "bar")
+	if err := l.Sync(); err != nil {
+		t.Errorf("Sync failed: %v", err)
+	}
+	info, err := os.Stat(tmpfile)
+	if err != nil {
+		t.Fatalf("log file not created: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Errorf("log file is empty")
 	}
 }

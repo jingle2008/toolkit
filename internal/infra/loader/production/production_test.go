@@ -68,7 +68,21 @@ func TestLoadPropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 	}
 }
 
-// Optionally, add more tests for LoadGpuPools, LoadGpuNodes, etc., using mocks or testutil if available.
+func TestLoader_AllMethods_NoPanicOnEmptyInput(t *testing.T) {
+	t.Parallel()
+	ldr := NewLoader()
+	ctx := context.Background()
+	env := models.Environment{}
+	// These should not panic, even if they return errors or empty data
+	_, _ = ldr.LoadDataset(ctx, "", env)
+	_, _ = ldr.LoadBaseModels(ctx, "", env)
+	_, _ = ldr.LoadGpuPools(ctx, "", env)
+	// Skip LoadGpuNodes and LoadDedicatedAIClusters: require valid kubeconfig
+	_, _ = ldr.LoadTenancyOverrideGroup(ctx, "", env)
+	_, _ = ldr.LoadLimitRegionalOverrides(ctx, "", env)
+	_, _ = ldr.LoadConsolePropertyRegionalOverrides(ctx, "", env)
+	_, _ = ldr.LoadPropertyRegionalOverrides(ctx, "", env)
+}
 
 func TestLoadBaseModels_Error(t *testing.T) {
 	t.Parallel()
