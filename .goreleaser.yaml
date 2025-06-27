@@ -64,7 +64,7 @@ signs:
 # Only include if using GoReleaser v2.10 or later
 brews:
   - name: toolkit
-    folder: Formula
+    directory: Formula
     repository:
       owner: jingle2008
       name: homebrew-toolkit
