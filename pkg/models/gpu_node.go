@@ -7,13 +7,14 @@ import (
 
 // GpuNode represents a GPU node.
 type GpuNode struct {
-	Name         string `json:"name"`
-	InstanceType string `json:"instanceType"`
-	NodePool     string `json:"poolName"`
-	Allocatable  int    `json:"allocatable"`
-	Allocated    int    `json:"allocated"`
-	IsHealthy    bool   `json:"isHealthy"`
-	IsReady      bool   `json:"isReady"`
+	Name                 string `json:"name"`
+	InstanceType         string `json:"instanceType"`
+	NodePool             string `json:"poolName"`
+	Allocatable          int    `json:"allocatable"`
+	Allocated            int    `json:"allocated"`
+	IsHealthy            bool   `json:"isHealthy"`
+	IsReady              bool   `json:"isReady"`
+	IsSchedulingDisabled bool   `json:"isSchedulingDisabled"` // true if node is cordoned
 }
 
 // GetName returns the name of the GPU node.
@@ -37,6 +38,8 @@ func (n GpuNode) GetStatus() string {
 		return "ERROR: Unhealthy"
 	case !n.IsReady:
 		return "ERROR: Not ready"
+	case n.IsSchedulingDisabled:
+		return "CORDONED"
 	}
 	return "OK"
 }

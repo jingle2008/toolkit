@@ -3,7 +3,9 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/jingle2008/toolkit/internal/infra/logging"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -49,6 +51,13 @@ func DrainNode(ctx context.Context, kubeconfig, contextName, nodeName string) er
 	return drainNode(ctx, clientset, nodeName)
 }
 
+type logWriter struct{ logger logging.Logger }
+
+func (w logWriter) Write(p []byte) (int, error) {
+	w.logger.Infow("kubectl-drain", "msg", strings.TrimSpace(string(p)))
+	return len(p), nil
+}
+
 func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
 	helper := &drain.Helper{
 		Ctx:    ctx,
@@ -69,9 +78,12 @@ func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName 
 }
 
 func drainNode(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
+	logger := logging.FromContext(ctx)
 	helper := &drain.Helper{
 		Ctx:                 ctx,
 		Client:              clientset,
+		Out:                 logWriter{logger},
+		ErrOut:              logWriter{logger},
 		IgnoreAllDaemonSets: true,
 		DeleteEmptyDirData:  true,
 		GracePeriodSeconds:  -1, // Use pod's termination grace period

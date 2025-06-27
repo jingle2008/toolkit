@@ -192,13 +192,14 @@ func (k *Helper) ListGpuNodesWithSelectors(ctx context.Context, selectors ...str
 		allocQty := node.Status.Allocatable[GPUProperty]
 		allocatable, _ := allocQty.AsInt64()
 		gpuNodes = append(gpuNodes, models.GpuNode{
-			Name:         node.Name,
-			InstanceType: node.Labels["beta.kubernetes.io/instance-type"],
-			NodePool:     node.Labels["instance-pool.name"],
-			Allocatable:  int(allocatable),
-			Allocated:    int(gpuAllocationMap[node.Name]),
-			IsHealthy:    isNodeHealthy(node.Status.Conditions),
-			IsReady:      isNodeReady(node.Status.Conditions),
+			Name:                 node.Name,
+			InstanceType:         node.Labels["beta.kubernetes.io/instance-type"],
+			NodePool:             node.Labels["instance-pool.name"],
+			Allocatable:          int(allocatable),
+			Allocated:            int(gpuAllocationMap[node.Name]),
+			IsHealthy:            isNodeHealthy(node.Status.Conditions),
+			IsReady:              isNodeReady(node.Status.Conditions),
+			IsSchedulingDisabled: node.Spec.Unschedulable,
 		})
 	}
 
