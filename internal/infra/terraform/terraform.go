@@ -74,6 +74,7 @@ var localFuncMap = map[string]function.Function{
 	"contains": stdlib.ContainsFunc,
 	"keys":     stdlib.KeysFunc,
 	"flatten":  stdlib.FlattenFunc,
+	"distinct": stdlib.DistinctFunc,
 }
 
 func getLocalAttributesDI(

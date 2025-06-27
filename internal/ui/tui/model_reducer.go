@@ -134,20 +134,25 @@ func (m *Model) processData(msg DataMsg) {
 
 	if msg.Data != nil {
 		m.pendingTasks--
+		m.logger.Infow("data loaded", "category", m.category, "pendingTasks", m.pendingTasks)
 	}
 	m.refreshDisplay()
 }
 
 // handleAdditionalKeys processes extra key events for the current category.
-func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) {
+func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	if !key.Matches(msg, m.keys.Context...) {
-		return
+		return nil
 	}
 
 	item := m.getSelectedItem()
 	if key.Matches(msg, keys.CopyTenant) {
 		m.copyTenantID(item)
+	} else if key.Matches(msg, keys.Refresh) {
+		return m.updateCategory(m.category)
 	}
+
+	return nil
 }
 
 func (m *Model) copyItemName(item any) {
@@ -200,17 +205,23 @@ func (m *Model) getSelectedItem() any {
 
 // updateCategory changes the current category and loads data if needed.
 func (m *Model) updateCategory(category domain.Category) tea.Cmd {
-	m.category = category
-	m.keys = keys.ResolveKeys(m.category, m.viewMode)
+	refresh := false
+	if m.category == category {
+		refresh = true
+	} else {
+		m.category = category
+		m.keys = keys.ResolveKeys(m.category, m.viewMode)
+	}
+
 	switch m.category { //nolint:exhaustive
 	case domain.BaseModel:
 		return m.handleBaseModelCategory()
 	case domain.GpuPool:
 		return m.handleGpuPoolCategory()
 	case domain.GpuNode:
-		return m.handleGpuNodeCategory()
+		return m.handleGpuNodeCategory(refresh)
 	case domain.DedicatedAICluster:
-		return m.handleDedicatedAIClusterCategory()
+		return m.handleDedicatedAIClusterCategory(refresh)
 	case domain.Tenant, domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride:
 		return m.handleTenancyOverridesGroup()
 	case domain.LimitRegionalOverride:
@@ -277,16 +288,16 @@ func (m *Model) handleGpuPoolCategory() tea.Cmd {
 	return refreshDataCmd
 }
 
-func (m *Model) handleGpuNodeCategory() tea.Cmd {
-	if m.dataset == nil || m.dataset.GpuNodeMap == nil {
+func (m *Model) handleGpuNodeCategory(refresh bool) tea.Cmd {
+	if m.dataset == nil || m.dataset.GpuNodeMap == nil || refresh {
 		m.pendingTasks++
 		return loadRequest{category: domain.GpuNode, model: m}.Run
 	}
 	return refreshDataCmd
 }
 
-func (m *Model) handleDedicatedAIClusterCategory() tea.Cmd {
-	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil {
+func (m *Model) handleDedicatedAIClusterCategory(refresh bool) tea.Cmd {
+	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
 		m.pendingTasks++
 		return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
 	}
