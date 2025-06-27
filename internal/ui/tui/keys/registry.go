@@ -135,6 +135,14 @@ var (
 		key.WithKeys("r"),
 		key.WithHelp("r", "refresh now"),
 	)
+	CordonNode = key.NewBinding(
+		key.WithKeys("c"),
+		key.WithHelp("c", "cordon node"),
+	)
+	DrainNode = key.NewBinding(
+		key.WithKeys("e"),
+		key.WithHelp("e", "drain node"),
+	)
 )
 
 // Category+mode-specific key bindings
@@ -158,7 +166,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Confirm},
 	},
 	domain.GpuNode: {
-		common.ListView: {Refresh},
+		common.ListView: {Refresh, CordonNode, DrainNode},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {CopyTenant, Refresh},

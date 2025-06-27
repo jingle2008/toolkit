@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -146,13 +147,56 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	}
 
 	item := m.getSelectedItem()
-	if key.Matches(msg, keys.CopyTenant) {
+	switch {
+	case key.Matches(msg, keys.CopyTenant):
 		m.copyTenantID(item)
-	} else if key.Matches(msg, keys.Refresh) {
+	case key.Matches(msg, keys.Refresh):
 		return m.updateCategory(m.category)
+	case key.Matches(msg, keys.CordonNode):
+		return m.cordonNode(item)
+	case key.Matches(msg, keys.DrainNode):
+		return m.drainNode(item)
 	}
 
 	return nil
+}
+
+func (m *Model) cordonNode(item any) tea.Cmd {
+	if item == nil {
+		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
+		return nil
+	}
+
+	if node, ok := item.(*models.GpuNode); ok {
+		if err := k8s.ToggleCordon(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name); err != nil {
+			m.logger.Errorw("failed to toggle cordon state", "error", err)
+			return nil
+		}
+	} else {
+		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
+		return nil
+	}
+
+	return m.updateCategory(m.category)
+}
+
+func (m *Model) drainNode(item any) tea.Cmd {
+	if item == nil {
+		m.logger.Errorw("no item selected for draining", "category", m.category)
+		return nil
+	}
+
+	if node, ok := item.(*models.GpuNode); ok {
+		if err := k8s.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name); err != nil {
+			m.logger.Errorw("failed to drain node", "error", err)
+			return nil
+		}
+	} else {
+		m.logger.Errorw("unsupported item type for draining", "item", item)
+		return nil
+	}
+
+	return m.updateCategory(m.category)
 }
 
 func (m *Model) copyItemName(item any) {
