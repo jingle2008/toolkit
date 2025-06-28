@@ -28,7 +28,7 @@ var defaultGPUSelectors = []string{
 
 // ListGpuNodes returns a list of GpuNode objects from the given kubernetesClient.
 // If no selectors are provided, DefaultGPUSelectors is used.
-func ListGpuNodes(ctx context.Context, clientset kubernetes.Clientset, selectors ...string) ([]models.GpuNode, error) {
+func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, selectors ...string) ([]models.GpuNode, error) {
 	if len(selectors) == 0 {
 		selectors = defaultGPUSelectors
 	}
@@ -77,7 +77,7 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Clientset, selectors
 	return gpuNodes, nil
 }
 
-func updateGpuAllocations(ctx context.Context, clientset kubernetes.Clientset,
+func updateGpuAllocations(ctx context.Context, clientset kubernetes.Interface,
 	gpuAllocationMap map[string]int64, label string,
 ) error {
 	pods, err := clientset.CoreV1().Pods("").List(ctx, v1.ListOptions{
@@ -125,8 +125,8 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 	return false
 }
 
-func LoadGpuNodes(ctx context.Context, clientset *kubernetes.Clientset) (map[string][]models.GpuNode, error) {
-	nodes, err := ListGpuNodes(ctx, *clientset)
+func LoadGpuNodes(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GpuNode, error) {
+	nodes, err := ListGpuNodes(ctx, clientset)
 	if err != nil {
 		return nil, err
 	}

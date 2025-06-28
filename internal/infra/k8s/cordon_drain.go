@@ -40,6 +40,9 @@ func (w logWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+var runCordonOrUncordon = drain.RunCordonOrUncordon
+var runNodeDrain = drain.RunNodeDrain
+
 func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
 	helper := &drain.Helper{
 		Ctx:    ctx,
@@ -56,7 +59,7 @@ func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName 
 	cordonState := !node.Spec.Unschedulable
 
 	// Apply the new state
-	return drain.RunCordonOrUncordon(helper, node, cordonState)
+	return runCordonOrUncordon(helper, node, cordonState)
 }
 
 func drainNode(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
@@ -70,5 +73,5 @@ func drainNode(ctx context.Context, clientset kubernetes.Interface, nodeName str
 		DeleteEmptyDirData:  true,
 		GracePeriodSeconds:  -1, // Use pod's termination grace period
 	}
-	return drain.RunNodeDrain(helper, nodeName)
+	return runNodeDrain(helper, nodeName)
 }

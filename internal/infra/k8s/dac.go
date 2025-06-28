@@ -12,7 +12,7 @@ import (
 )
 
 // ListDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
-func ListDedicatedAIClusters(ctx context.Context, client *dynamic.DynamicClient) ([]models.DedicatedAICluster, error) {
+func ListDedicatedAIClusters(ctx context.Context, client dynamic.Interface) ([]models.DedicatedAICluster, error) {
 	v1Clusters, err := listDedicatedAIClustersV1(ctx, client)
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func ListDedicatedAIClusters(ctx context.Context, client *dynamic.DynamicClient)
 // listDedicatedAIClustersGeneric fetches DedicatedAIClusters using a GVR and extractor.
 func listDedicatedAIClustersGeneric(
 	ctx context.Context,
-	client *dynamic.DynamicClient,
+	client dynamic.Interface,
 	gvr schema.GroupVersionResource,
 	extract func(item unstructured.Unstructured) models.DedicatedAICluster,
 ) ([]models.DedicatedAICluster, error) {
@@ -43,7 +43,7 @@ func listDedicatedAIClustersGeneric(
 }
 
 // listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
-func listDedicatedAIClustersV1(ctx context.Context, client *dynamic.DynamicClient) ([]models.DedicatedAICluster, error) {
+func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.oracle.com",
 		Version:  "v1alpha1",
@@ -81,7 +81,7 @@ func listDedicatedAIClustersV1(ctx context.Context, client *dynamic.DynamicClien
 }
 
 // listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
-func listDedicatedAIClustersV2(ctx context.Context, client *dynamic.DynamicClient) ([]models.DedicatedAICluster, error) {
+func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.io",
 		Version:  "v1beta1",
@@ -120,7 +120,7 @@ func listDedicatedAIClustersV2(ctx context.Context, client *dynamic.DynamicClien
 /*
 LoadDedicatedAIClusters loads DedicatedAICluster information using the provided DedicatedAIClusterLister.
 */
-func LoadDedicatedAIClusters(ctx context.Context, client *dynamic.DynamicClient) (map[string][]models.DedicatedAICluster, error) {
+func LoadDedicatedAIClusters(ctx context.Context, client dynamic.Interface) (map[string][]models.DedicatedAICluster, error) {
 	dacs, err := ListDedicatedAIClusters(ctx, client)
 	if err != nil {
 		return nil, err

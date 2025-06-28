@@ -3,7 +3,15 @@ package k8s
 import (
 	"testing"
 
+	"context"
+	"errors"
+
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/fake"
+	cgotesting "k8s.io/client-go/testing"
 )
 
 func TestTenantIDFromLabels(t *testing.T) {
@@ -40,4 +48,182 @@ func TestTenantIDFromLabels(t *testing.T) {
 			assert.Equal(t, tt.want, tenantIDFromLabels(tt.labels))
 		})
 	}
+}
+
+func makeUnstructuredDACV1(name, dacType string, size int64, status, tenantID string) *unstructured.Unstructured {
+	obj := map[string]interface{}{
+		"apiVersion": "ome.oracle.com/v1alpha1",
+		"kind":       "DedicatedAICluster",
+		"metadata": map[string]interface{}{
+			"name":   name,
+			"labels": map[string]interface{}{"tenancy-id": tenantID},
+		},
+		"spec": map[string]interface{}{
+			"type":      dacType,
+			"unitShape": "shape",
+			"size":      size,
+		},
+		"status": map[string]interface{}{
+			"status": status,
+		},
+	}
+	return &unstructured.Unstructured{Object: obj}
+}
+
+func makeUnstructuredDACV2(name, profile string, count int64, status, tenantID string) *unstructured.Unstructured {
+	obj := map[string]interface{}{
+		"apiVersion": "ome.io/v1beta1",
+		"kind":       "DedicatedAICluster",
+		"metadata": map[string]interface{}{
+			"name":   name,
+			"labels": map[string]interface{}{"tenancy-id": tenantID},
+		},
+		"spec": map[string]interface{}{
+			"profile": profile,
+			"count":   count,
+		},
+		"status": map[string]interface{}{
+			"dacLifecycleState": status,
+		},
+	}
+	return &unstructured.Unstructured{Object: obj}
+}
+
+func TestListDedicatedAIClusters_HappyPath(t *testing.T) {
+	scheme := runtime.NewScheme()
+	// Seed both v1 and v2 objects
+	objs := []runtime.Object{
+		makeUnstructuredDACV1("dac1", "GPU", 2, "ready", "tid1"),
+		makeUnstructuredDACV2("dac2", "profileA", 3, "active", "tid2"),
+	}
+	listKinds := map[schema.GroupVersionResource]string{
+		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
+		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+	}
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
+
+	ctx := context.Background()
+	clusters, err := ListDedicatedAIClusters(ctx, client)
+	assert.NoError(t, err)
+	assert.Len(t, clusters, 2)
+}
+
+func TestListDedicatedAIClusters_ErrorV1(t *testing.T) {
+	scheme := runtime.NewScheme()
+	listKinds := map[schema.GroupVersionResource]string{
+		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
+		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+	}
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
+	// Patch the client to return error for v1alpha1
+	gvrV1 := schema.GroupVersionResource{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}
+	client.PrependReactor("list", "dedicatedaiclusters", func(action cgotesting.Action) (handled bool, ret runtime.Object, err error) {
+		if action.GetResource() == gvrV1 {
+			return true, nil, errors.New("v1 error")
+		}
+		return false, nil, nil
+	})
+
+	ctx := context.Background()
+	_, err := ListDedicatedAIClusters(ctx, client)
+	assert.Error(t, err)
+}
+
+func TestListDedicatedAIClusters_ErrorV2(t *testing.T) {
+	scheme := runtime.NewScheme()
+	listKinds := map[schema.GroupVersionResource]string{
+		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
+		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+	}
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
+	// Patch the client to return error for v1beta1
+	gvrV2 := schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}
+	client.PrependReactor("list", "dedicatedaiclusters", func(action cgotesting.Action) (handled bool, ret runtime.Object, err error) {
+		if action.GetResource() == gvrV2 {
+			return true, nil, errors.New("v2 error")
+		}
+		return false, nil, nil
+	})
+
+	ctx := context.Background()
+	_, err := ListDedicatedAIClusters(ctx, client)
+	assert.Error(t, err)
+}
+
+func TestLoadDedicatedAIClusters_HappyPath(t *testing.T) {
+	scheme := runtime.NewScheme()
+	objs := []runtime.Object{
+		makeUnstructuredDACV1("dac1", "GPU", 2, "ready", "tid1"),
+		makeUnstructuredDACV2("dac2", "profileA", 3, "active", "tid2"),
+	}
+	listKinds := map[schema.GroupVersionResource]string{
+		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
+		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+	}
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
+
+	ctx := context.Background()
+	result, err := LoadDedicatedAIClusters(ctx, client)
+	assert.NoError(t, err)
+	assert.Contains(t, result, "tid1")
+	assert.Contains(t, result, "tid2")
+}
+
+func TestLoadDedicatedAIClusters_Empty(t *testing.T) {
+	scheme := runtime.NewScheme()
+	listKinds := map[schema.GroupVersionResource]string{
+		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
+		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+	}
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
+	ctx := context.Background()
+	result, err := LoadDedicatedAIClusters(ctx, client)
+	assert.NoError(t, err)
+	assert.Len(t, result, 0)
+}
+
+func TestListDedicatedAIClusters_MalformedObject(t *testing.T) {
+	scheme := runtime.NewScheme()
+	// Object missing spec/status fields
+	obj := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "ome.oracle.com/v1alpha1",
+		"kind":       "DedicatedAICluster",
+		"metadata": map[string]interface{}{
+			"name":   "dac-bad",
+			"labels": map[string]interface{}{"tenancy-id": "tid-bad"},
+		},
+	}}
+	listKinds := map[schema.GroupVersionResource]string{
+		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
+		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+	}
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, obj)
+
+	ctx := context.Background()
+	clusters, err := ListDedicatedAIClusters(ctx, client)
+	assert.NoError(t, err)
+	assert.Len(t, clusters, 1) // Should still return, with defaults
+}
+
+func TestListDedicatedAIClustersV2_MalformedObject(t *testing.T) {
+	scheme := runtime.NewScheme()
+	// Object missing spec/status fields
+	obj := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "ome.io/v1beta1",
+		"kind":       "DedicatedAICluster",
+		"metadata": map[string]interface{}{
+			"name":   "dac-bad-v2",
+			"labels": map[string]interface{}{"tenancy-id": "tid-bad-v2"},
+		},
+	}}
+	listKinds := map[schema.GroupVersionResource]string{
+		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
+		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+	}
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, obj)
+
+	ctx := context.Background()
+	clusters, err := listDedicatedAIClustersV2(ctx, client)
+	assert.NoError(t, err)
+	assert.Len(t, clusters, 1)
 }

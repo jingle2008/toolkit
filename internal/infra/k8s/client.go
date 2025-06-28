@@ -1,6 +1,8 @@
 package k8s
 
 import (
+	"fmt"
+
 	interrors "github.com/jingle2008/toolkit/internal/errors"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -21,6 +23,9 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 }
 
 func NewClientsetFromRestConfig(config *rest.Config) (*kubernetes.Clientset, error) {
+	if config == nil {
+		return nil, interrors.Wrap("nil config", fmt.Errorf("config is nil"))
+	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, interrors.Wrap("failed to create k8s client", err)
@@ -37,6 +42,9 @@ func NewClientsetFromKubeConfig(kubeconfig, ctx string) (*kubernetes.Clientset, 
 }
 
 func NewDynamicClient(config *rest.Config) (*dynamic.DynamicClient, error) {
+	if config == nil {
+		return nil, interrors.Wrap("nil config", fmt.Errorf("config is nil"))
+	}
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, interrors.Wrap("failed to create dynamic client", err)
