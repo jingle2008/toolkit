@@ -3,7 +3,6 @@ package k8s
 import (
 	"fmt"
 
-	interrors "github.com/jingle2008/toolkit/internal/errors"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -17,18 +16,18 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		loadingRules, overrides).ClientConfig()
 	if err != nil {
-		return nil, interrors.Wrap("failed to load kubeconfig", err)
+		return nil, fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
 	return config, nil
 }
 
 func NewClientsetFromRestConfig(config *rest.Config) (*kubernetes.Clientset, error) {
 	if config == nil {
-		return nil, interrors.Wrap("nil config", fmt.Errorf("config is nil"))
+		return nil, fmt.Errorf("nil config: %w", fmt.Errorf("config is nil"))
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, interrors.Wrap("failed to create k8s client", err)
+		return nil, fmt.Errorf("failed to create k8s client: %w", err)
 	}
 	return clientset, nil
 }
@@ -36,18 +35,18 @@ func NewClientsetFromRestConfig(config *rest.Config) (*kubernetes.Clientset, err
 func NewClientsetFromKubeConfig(kubeconfig, ctx string) (*kubernetes.Clientset, error) {
 	config, err := NewConfig(kubeconfig, ctx)
 	if err != nil {
-		return nil, interrors.Wrap("failed to create config from kubeconfig", err)
+		return nil, fmt.Errorf("failed to create config from kubeconfig: %w", err)
 	}
 	return NewClientsetFromRestConfig(config)
 }
 
 func NewDynamicClient(config *rest.Config) (*dynamic.DynamicClient, error) {
 	if config == nil {
-		return nil, interrors.Wrap("nil config", fmt.Errorf("config is nil"))
+		return nil, fmt.Errorf("nil config: %w", fmt.Errorf("config is nil"))
 	}
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return nil, interrors.Wrap("failed to create dynamic client", err)
+		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 	return dynamicClient, nil
 }
@@ -55,7 +54,7 @@ func NewDynamicClient(config *rest.Config) (*dynamic.DynamicClient, error) {
 func NewDynamicClientFromKubeConfig(kubeconfig, ctx string) (*dynamic.DynamicClient, error) {
 	config, err := NewConfig(kubeconfig, ctx)
 	if err != nil {
-		return nil, interrors.Wrap("failed to create config from kubeconfig", err)
+		return nil, fmt.Errorf("failed to create config from kubeconfig: %w", err)
 	}
 	return NewDynamicClient(config)
 }

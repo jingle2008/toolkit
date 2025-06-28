@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-
-	interrors "github.com/jingle2008/toolkit/internal/errors"
 )
 
 // Category represents a logical grouping for toolkit data.
@@ -189,5 +187,5 @@ func ParseCategory(s string) (Category, error) {
 	if c, ok := catLookup[key]; ok {
 		return c, nil
 	}
-	return CategoryUnknown, interrors.Wrap(fmt.Sprintf("parse category %q", s), ErrUnknownCategory)
+	return CategoryUnknown, fmt.Errorf("parse category %q: %w", s, ErrUnknownCategory)
 }

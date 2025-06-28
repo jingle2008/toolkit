@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
-	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
@@ -256,8 +255,8 @@ func TestModelUpdateBranches(t *testing.T) {
 func TestCenterTextReturnsCenteredText(t *testing.T) {
 	t.Parallel()
 	result := view.CenterText("hello", 10, 3)
-	testutil.Contains(t, result, "hello")
-	testutil.GreaterOrEqual(t, len(result), 10)
+	assert.Contains(t, result, "hello")
+	assert.GreaterOrEqual(t, len(result), 10)
 }
 
 func TestNewModelInitializesFields(t *testing.T) {
@@ -272,13 +271,13 @@ func TestNewModelInitializesFields(t *testing.T) {
 		WithLogger(logging.NewNoOpLogger()),
 	)
 	require.NoError(t, err)
-	testutil.NotNil(t, m)
-	testutil.Equal(t, "/repo", m.repoPath)
-	testutil.Equal(t, "/kube", m.kubeConfig)
-	testutil.Equal(t, env, m.environment)
-	testutil.Equal(t, domain.Tenant, m.category)
-	testutil.NotNil(t, m.table)
-	testutil.NotNil(t, m.textInput)
+	require.NotNil(t, m)
+	assert.Equal(t, "/repo", m.repoPath)
+	assert.Equal(t, "/kube", m.kubeConfig)
+	assert.Equal(t, env, m.environment)
+	assert.Equal(t, domain.Tenant, m.category)
+	require.NotNil(t, m.table)
+	require.NotNil(t, m.textInput)
 }
 
 func TestModelContextStringAndInfoView(t *testing.T) {
@@ -297,13 +296,13 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 	m.context = &domain.ToolkitContext{Name: "scopeA", Category: domain.Tenant}
 	m.viewMode = common.ListView
 	cs := m.contextString()
-	testutil.Contains(t, cs, "LimitTenancyOverride")
-	testutil.Contains(t, cs, "scopeA")
+	assert.Contains(t, cs, "LimitTenancyOverride")
+	assert.Contains(t, cs, "scopeA")
 
 	info := m.infoView()
-	testutil.Contains(t, info, "Realm:")
-	testutil.Contains(t, info, "Type:")
-	testutil.Contains(t, info, "Region:")
+	assert.Contains(t, info, "Realm:")
+	assert.Contains(t, info, "Type:")
+	assert.Contains(t, info, "Region:")
 }
 
 func TestModel_DetailView_and_ExitDetailView(t *testing.T) {

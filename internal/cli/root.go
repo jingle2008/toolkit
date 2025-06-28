@@ -16,7 +16,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
-	interrors "github.com/jingle2008/toolkit/internal/errors"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui"
@@ -66,22 +65,22 @@ filter: ""
 			if cfgFile != "" {
 				viper.SetConfigFile(cfgFile)
 				if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
-					return interrors.Wrap("read config file", err)
+					return fmt.Errorf("read config file: %w", err)
 				}
 			}
 
 			var cfg config.Config
 			if err := viper.Unmarshal(&cfg); err != nil {
-				return interrors.Wrap("unmarshal config", err)
+				return fmt.Errorf("unmarshal config: %w", err)
 			}
 			if err := cfg.Validate(); err != nil {
-				return interrors.Wrap("validate config", err)
+				return fmt.Errorf("validate config: %w", err)
 			}
 
 			logFormat := viper.GetString("log_format")
 			logger, err := logging.NewFileLogger(cfg.Debug, cfg.LogFile, logFormat)
 			if err != nil {
-				return interrors.Wrap("initialize logger", err)
+				return fmt.Errorf("initialize logger: %w", err)
 			}
 			defer func() {
 				_ = logger.Sync()
@@ -127,10 +126,10 @@ filter: ""
 				return fmt.Errorf("config file already exists at %s", defaultConfig)
 			}
 			if err := os.MkdirAll(filepath.Dir(defaultConfig), 0o750); err != nil {
-				return interrors.Wrap("failed to create config directory", err)
+				return fmt.Errorf("failed to create config directory: %w", err)
 			}
 			if err := os.WriteFile(defaultConfig, []byte(exampleConfig), 0o600); err != nil {
-				return interrors.Wrap("failed to write config file", err)
+				return fmt.Errorf("failed to write config file: %w", err)
 			}
 			fmt.Printf("Example config written to %s\n", defaultConfig)
 			return nil
@@ -181,13 +180,13 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 	)
 	if err != nil {
 		logger.Errorw("failed to create toolkit model", "error", err)
-		return interrors.Wrap("create toolkit model", err)
+		return fmt.Errorf("create toolkit model: %w", err)
 	}
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(ctx))
 	_, err = p.Run()
 	if err != nil && !errors.Is(err, context.Canceled) {
 		logger.Errorw("program error", "error", err)
-		return interrors.Wrap("program error", err)
+		return fmt.Errorf("program error: %w", err)
 	}
 	return nil
 }

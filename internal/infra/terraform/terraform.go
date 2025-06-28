@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"maps"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,8 +17,6 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"github.com/jingle2008/toolkit/internal/collections"
-	interrors "github.com/jingle2008/toolkit/internal/errors"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
 	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
@@ -85,13 +84,13 @@ func getLocalAttributesDI(
 ) (hclsyntax.Attributes, error) {
 	tfFiles, err := listFilesFunc(ctx, dirPath, ".tf")
 	if err != nil {
-		return nil, interrors.Wrap("failed to open file", err)
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 
 	attributes := make(hclsyntax.Attributes)
 	for _, file := range tfFiles {
 		if err := updateLocalAttributesFunc(file, attributes); err != nil {
-			return nil, interrors.Wrap("update local attributes", err)
+			return nil, fmt.Errorf("update local attributes: %w", err)
 		}
 	}
 
@@ -325,7 +324,9 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 		tenancies = append(tenancies, *tenancy)
 	}
 
-	collections.SortKeyedItems(tenancies)
+	slices.SortFunc(tenancies, func(a, b models.ServiceTenancy) int {
+		return strings.Compare(a.GetKey(), b.GetKey())
+	})
 	return tenancies, nil
 }
 
@@ -601,7 +602,9 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 
 	gpuPools = append(gpuPools, pools...)
 
-	collections.SortNamedItems(gpuPools)
+	slices.SortFunc(gpuPools, func(a, b models.GpuPool) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 	return gpuPools, nil
 }
 
@@ -676,7 +679,9 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 			}
 		}
 
-		collections.SortKeyedItems(modelArtifacts)
+		slices.SortFunc(modelArtifacts, func(a, b models.ModelArtifact) int {
+			return strings.Compare(a.GetKey(), b.GetKey())
+		})
 		modelArtifactMap[modelName] = modelArtifacts
 	}
 

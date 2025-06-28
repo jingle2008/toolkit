@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/glamour"
-	interrors "github.com/jingle2008/toolkit/internal/errors"
 )
 
 // Renderer abstracts rendering JSON to a string (for viewport/detail).
@@ -22,7 +21,7 @@ func (ProductionRenderer) RenderJSON(data any, width int) (string, error) {
 		glamour.WithWordWrap(width),
 	)
 	if err != nil {
-		return "", interrors.Wrap("error creating TermRenderer", err)
+		return "", fmt.Errorf("error creating TermRenderer: %w", err)
 	}
 	details := fmt.Sprintf("```json\n%v\n```", data)
 	return renderer.Render(details)

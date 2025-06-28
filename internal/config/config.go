@@ -6,8 +6,9 @@ package config
 import (
 	"errors"
 
+	"fmt"
+
 	domain "github.com/jingle2008/toolkit/internal/domain"
-	interrors "github.com/jingle2008/toolkit/internal/errors"
 )
 
 // Config holds configuration for the toolkit CLI application.
@@ -47,7 +48,7 @@ func (c Config) Validate() error {
 	}
 	_, err := domain.ParseCategory(c.Category)
 	if err != nil {
-		return interrors.Wrap("config: invalid category", err)
+		return fmt.Errorf("config: invalid category: %w", err)
 	}
 	return nil
 }

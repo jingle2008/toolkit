@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +17,7 @@ func TestLoadFile_JSON(t *testing.T) {
 	tmp := t.TempDir() + "/foo.json"
 	_ = os.WriteFile(tmp, []byte(`{"a":42}`), 0o600) // #nosec G306
 	val, err := LoadFile[Foo](tmp)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 42, val.A)
 }
 
@@ -32,10 +31,10 @@ func TestLoadFile_Success(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/sample.json"
 	err := os.WriteFile(path, []byte(`{"a":42}`), 0o600) // #nosec G306
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 
 	result, err := LoadFile[sample](path)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 42, result.A)
 }
 
@@ -45,10 +44,11 @@ func TestLoadFile_UnsupportedExt(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/sample.yaml"
 	err := os.WriteFile(path, []byte("a: 1"), 0o600) // #nosec G306
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 
 	_, err = LoadFile[sample](path)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "extension")
 }
 
@@ -58,7 +58,7 @@ func TestLoadFile_MissingFile(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/notfound.json"
 	_, err := LoadFile[sample](path)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadFile_BadExt(t *testing.T) {
@@ -69,7 +69,7 @@ func TestLoadFile_BadExt(t *testing.T) {
 	tmp := t.TempDir() + "/foo.bad"
 	_ = os.WriteFile(tmp, []byte(`{"a":42}`), 0o600) // #nosec G306
 	_, err := LoadFile[Foo](tmp)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadFile_BadJSON(t *testing.T) {
@@ -80,7 +80,7 @@ func TestLoadFile_BadJSON(t *testing.T) {
 	tmp := t.TempDir() + "/foo.json"
 	_ = os.WriteFile(tmp, []byte(`{notjson}`), 0o600) // #nosec G306
 	_, err := LoadFile[Foo](tmp)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestPrettyJSON(t *testing.T) {
@@ -89,7 +89,7 @@ func TestPrettyJSON(t *testing.T) {
 		A int `json:"a"`
 	}
 	out, err := PrettyJSON(Foo{A: 7})
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, out, `"a": 7`)
 
 	// error path: non-serializable value
@@ -107,7 +107,7 @@ func TestPrettyJSON_Success(t *testing.T) {
 		Y int    `json:"y"`
 	}{"foo", 7}
 	out, err := PrettyJSON(obj)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, out, "{\n    \"x\": \"foo\",\n    \"y\": 7\n}")
 }
 
@@ -127,8 +127,8 @@ func TestLoadFile_FromTestdata(t *testing.T) {
 		A int `json:"a"`
 	}
 	tmp := t.TempDir() + "/sample.json"
-	testutil.RequireNoError(t, os.WriteFile(tmp, sampleJSON, 0o600))
+	require.NoError(t, os.WriteFile(tmp, sampleJSON, 0o600))
 	val, err := LoadFile[sample](tmp)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 123, val.A)
 }

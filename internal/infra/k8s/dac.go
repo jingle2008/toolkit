@@ -2,8 +2,9 @@ package k8s
 
 import (
 	"context"
+	"slices"
+	"strings"
 
-	"github.com/jingle2008/toolkit/internal/collections"
 	models "github.com/jingle2008/toolkit/pkg/models"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -132,7 +133,9 @@ func LoadDedicatedAIClusters(ctx context.Context, client dynamic.Interface) (map
 	}
 
 	for _, v := range result {
-		collections.SortKeyedItems(v)
+		slices.SortFunc(v, func(a, b models.DedicatedAICluster) int {
+			return strings.Compare(a.GetKey(), b.GetKey())
+		})
 	}
 
 	return result, nil

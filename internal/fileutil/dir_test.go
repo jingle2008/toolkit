@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestListFiles(t *testing.T) {
@@ -19,13 +20,13 @@ func TestListFiles(t *testing.T) {
 	_ = os.WriteFile(goFile, []byte("y"), 0o600)  // #nosec G306
 
 	files, err := ListFiles(context.Background(), dir, ".txt")
-	testutil.RequireNoError(t, err)
-	testutil.Equal(t, 1, len(files))
-	testutil.Contains(t, files[0], "foo.txt")
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(files))
+	assert.Contains(t, files[0], "foo.txt")
 
 	// error path: non-existent dir
 	_, err = ListFiles(context.Background(), dir+"/nope", ".txt")
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestListFiles_MatchExt(t *testing.T) {
@@ -34,24 +35,24 @@ func TestListFiles_MatchExt(t *testing.T) {
 	files := []string{"a.go", "b.txt", "c.go"}
 	for _, name := range files {
 		err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o600) // #nosec G306
-		testutil.RequireNoError(t, err)
+		require.NoError(t, err)
 	}
 	out, err := ListFiles(context.Background(), dir, ".go")
-	testutil.RequireNoError(t, err)
-	testutil.Equal(t, 2, len(out))
-	testutil.Contains(t, out[0], ".go")
-	testutil.Contains(t, out[1], ".go")
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(out))
+	assert.Contains(t, out[0], ".go")
+	assert.Contains(t, out[1], ".go")
 }
 
 func TestListFiles_NoMatch(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	_, err := ListFiles(context.Background(), dir, ".json")
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestListFiles_NonExistentDir(t *testing.T) {
 	t.Parallel()
 	_, err := ListFiles(context.Background(), "/no/such/dir", ".go")
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }

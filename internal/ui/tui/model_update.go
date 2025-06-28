@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
-	interrors "github.com/jingle2008/toolkit/internal/errors"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
@@ -46,7 +45,7 @@ func (r loadRequest) Run() tea.Msg {
 		data, err = r.model.loader.LoadPropertyRegionalOverrides(r.model.ctx, r.model.repoPath, r.model.environment)
 	}
 	if err != nil {
-		return ErrMsg{Err: interrors.Wrap(fmt.Sprintf("failed to load %s", r.category), err)}
+		return ErrMsg{Err: fmt.Errorf("failed to load %s: %w", r.category, err)}
 	}
 	return DataMsg{Data: data}
 }

@@ -8,8 +8,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/testutil"
 	"github.com/jingle2008/toolkit/pkg/models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // mockNamedItem implements models.NamedItem for testing
@@ -24,14 +25,14 @@ func TestLoadOverrides_Success(t *testing.T) {
 	dir := t.TempDir()
 	item := mockNamedItem{Name: "foo"}
 	data, err := json.Marshal(item)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(dir, "foo.json"), data, 0o600) // #nosec G306
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 
 	out, err := loadOverrides[mockNamedItem](context.Background(), dir)
-	testutil.RequireNoError(t, err)
-	testutil.Equal(t, 1, len(out))
-	testutil.Equal(t, "foo", out[0].Name)
+	require.NoError(t, err)
+	assert.Equal(t, 1, len(out))
+	assert.Equal(t, "foo", out[0].Name)
 }
 
 func TestLoadOverridesDI_ListFilesError(t *testing.T) {
@@ -42,7 +43,7 @@ func TestLoadOverridesDI_ListFilesError(t *testing.T) {
 		func(_ context.Context, _, _ string) ([]string, error) { return nil, os.ErrNotExist },
 		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadOverridesDI_LoadFileError(t *testing.T) {
@@ -54,7 +55,7 @@ func TestLoadOverridesDI_LoadFileError(t *testing.T) {
 		func(_ context.Context, _, _ string) ([]string, error) { return files, nil },
 		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadOverridesDI_Empty(t *testing.T) {
@@ -65,8 +66,8 @@ func TestLoadOverridesDI_Empty(t *testing.T) {
 		func(_ context.Context, _, _ string) ([]string, error) { return []string{}, nil },
 		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
-	testutil.RequireNoError(t, err)
-	testutil.Equal(t, 0, len(out))
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(out))
 }
 
 func TestLoadOverrides_ErrorOnBadFile(t *testing.T) {
@@ -74,16 +75,16 @@ func TestLoadOverrides_ErrorOnBadFile(t *testing.T) {
 	dir := t.TempDir()
 	// Write a file with invalid JSON
 	err := os.WriteFile(filepath.Join(dir, "bad.json"), []byte("{not json"), 0o600) // #nosec G306
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 
 	_, err = loadOverrides[mockNamedItem](context.Background(), dir)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadOverrides_ErrorOnNoDir(t *testing.T) {
 	t.Parallel()
 	_, err := loadOverrides[mockNamedItem](context.Background(), "/no/such/dir")
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadTenancyOverrides_Success(t *testing.T) {
@@ -94,18 +95,18 @@ func TestLoadTenancyOverrides_Success(t *testing.T) {
 	tenant := "tenant1"
 	tenantDir := filepath.Join(root, name, "regional_values", realm, tenant)
 	err := os.MkdirAll(tenantDir, 0o750) // #nosec G301
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	item := mockNamedItem{Name: "bar"}
 	data, err := json.Marshal(item)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(tenantDir, "bar.json"), data, 0o600) // #nosec G306
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 
 	out, err := loadTenancyOverrides[mockNamedItem](context.Background(), root, realm, name)
-	testutil.RequireNoError(t, err)
-	testutil.Contains(t, out, tenant)
-	testutil.Equal(t, 1, len(out[tenant]))
-	testutil.Equal(t, "bar", out[tenant][0].Name)
+	require.NoError(t, err)
+	assert.Contains(t, out, tenant)
+	assert.Equal(t, 1, len(out[tenant]))
+	assert.Equal(t, "bar", out[tenant][0].Name)
 }
 
 func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
@@ -116,7 +117,7 @@ func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
 		func(string) ([]string, error) { return nil, os.ErrNotExist },
 		func(_ context.Context, _ string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
@@ -128,7 +129,7 @@ func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 		func(string) ([]string, error) { return tenants, nil },
 		func(_ context.Context, _ string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
@@ -139,7 +140,7 @@ func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
 		func(string) ([]string, error) { return []string{}, nil },
 		func(_ context.Context, _ string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetConfigPath(t *testing.T) {
@@ -147,7 +148,7 @@ func TestGetConfigPath(t *testing.T) {
 	root := "/repo"
 	name := "limits"
 	expected := "/repo/limitss/oc1_limits.json"
-	testutil.Equal(t, expected, getConfigPath(root, name))
+	assert.Equal(t, expected, getConfigPath(root, name))
 }
 
 func TestSortNamedItems(t *testing.T) {
@@ -159,10 +160,10 @@ func TestSortNamedItems(t *testing.T) {
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].name < items[j].name
 	})
-	testutil.Equal(t, "a", items[0].name)
-	testutil.Equal(t, "a", items[1].name)
-	testutil.Equal(t, "b", items[2].name)
-	testutil.Equal(t, "c", items[3].name)
+	assert.Equal(t, "a", items[0].name)
+	assert.Equal(t, "a", items[1].name)
+	assert.Equal(t, "b", items[2].name)
+	assert.Equal(t, "c", items[3].name)
 }
 
 func TestSortKeyedItems(t *testing.T) {
@@ -174,16 +175,16 @@ func TestSortKeyedItems(t *testing.T) {
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].key < items[j].key
 	})
-	testutil.Equal(t, "a", items[0].key)
-	testutil.Equal(t, "a", items[1].key)
-	testutil.Equal(t, "b", items[2].key)
-	testutil.Equal(t, "c", items[3].key)
+	assert.Equal(t, "a", items[0].key)
+	assert.Equal(t, "a", items[1].key)
+	assert.Equal(t, "b", items[2].key)
+	assert.Equal(t, "c", items[3].key)
 }
 
 func TestListSubDirs(t *testing.T) {
 	t.Parallel()
 	dir, err := os.MkdirTemp("", "testsubdirs")
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(dir) }()
 
 	// create subdirs
@@ -195,38 +196,38 @@ func TestListSubDirs(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "file.txt"), []byte("x"), 0o600) // #nosec G306
 
 	dirs, err := listSubDirs(dir)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	// convert to base names for comparison
 	for i := range dirs {
 		dirs[i] = filepath.Base(dirs[i])
 	}
-	testutil.ElementsMatch(t, []string{sub1, sub2}, dirs)
+	assert.ElementsMatch(t, []string{sub1, sub2}, dirs)
 
 	// error path: non-existent dir
 	_, err = listSubDirs(filepath.Join(dir, "nope"))
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadOverrides_Error(t *testing.T) {
 	t.Parallel()
 	// Should error on non-existent dir
 	_, err := loadOverrides[models.Tenant](context.Background(), "/no/such/dir")
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 
 	// Should error on bad JSON file
 	dir, err := os.MkdirTemp("", "badjson")
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(dir) }()
 	badFile := filepath.Join(dir, "bad.json")
 	_ = os.WriteFile(badFile, []byte("{not valid json"), 0o600) // #nosec G306
 	_, err = loadOverrides[models.Tenant](context.Background(), dir)
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadTenancyOverrides_Error(t *testing.T) {
 	t.Parallel()
 	_, err := loadTenancyOverrides[models.Tenant](context.Background(), "/no/such/dir", "realm", "name")
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestGetTenants(t *testing.T) {
@@ -236,12 +237,12 @@ func TestGetTenants(t *testing.T) {
 		"Tenant2": {idMap: map[string]struct{}{"id2": {}}, overrides: []int{4, 5, 6}},
 	}
 	tenants := getTenants(m)
-	testutil.Equal(t, 2, len(tenants))
+	assert.Equal(t, 2, len(tenants))
 	names := []string{tenants[0].Name, tenants[1].Name}
-	testutil.Contains(t, names, "Tenant1")
-	testutil.Contains(t, names, "Tenant2")
-	testutil.ElementsMatch(t, []string{"id1"}, tenants[0].IDs)
-	testutil.ElementsMatch(t, []string{"id2"}, tenants[1].IDs)
+	assert.Contains(t, names, "Tenant1")
+	assert.Contains(t, names, "Tenant2")
+	assert.ElementsMatch(t, []string{"id1"}, tenants[0].IDs)
+	assert.ElementsMatch(t, []string{"id2"}, tenants[1].IDs)
 }
 
 type testOverride struct {
@@ -268,10 +269,10 @@ func TestUpdateTenants(t *testing.T) {
 		},
 	}
 	updateTenants(tenantMap, overrideMap, 1)
-	testutil.Contains(t, tenantMap, "TenantA")
-	testutil.Contains(t, tenantMap, "TenantB")
-	testutil.Equal(t, 2, tenantMap["TenantA"].overrides[1])
-	testutil.Equal(t, 1, tenantMap["TenantB"].overrides[1])
+	assert.Contains(t, tenantMap, "TenantA")
+	assert.Contains(t, tenantMap, "TenantB")
+	assert.Equal(t, 2, tenantMap["TenantA"].overrides[1])
+	assert.Equal(t, 1, tenantMap["TenantB"].overrides[1])
 }
 
 func TestGetEnvironments(t *testing.T) {
@@ -293,25 +294,25 @@ func TestGetEnvironments(t *testing.T) {
 		},
 	}
 	envs := getEnvironments(tenancies)
-	testutil.Equal(t, 3, len(envs))
+	assert.Equal(t, 3, len(envs))
 	regions := []string{envs[0].Region, envs[1].Region, envs[2].Region}
-	testutil.Contains(t, regions, "us-phx-1")
-	testutil.Contains(t, regions, "us-ashburn-1")
-	testutil.Contains(t, regions, "eu-frankfurt-1")
+	assert.Contains(t, regions, "us-phx-1")
+	assert.Contains(t, regions, "us-ashburn-1")
+	assert.Contains(t, regions, "eu-frankfurt-1")
 }
 
 func TestIsValidEnvironment(t *testing.T) {
 	t.Parallel()
 	env := models.Environment{}
 	all := []models.Environment{{}, {}}
-	testutil.Equal(t, true, isValidEnvironment(env, all))
-	testutil.Equal(t, false, isValidEnvironment(models.Environment{}, []models.Environment{}))
+	assert.Equal(t, true, isValidEnvironment(env, all))
+	assert.Equal(t, false, isValidEnvironment(models.Environment{}, []models.Environment{}))
 }
 
 func TestLoadDataset_Error(t *testing.T) {
 	t.Parallel()
 	_, err := LoadDataset(context.Background(), "/no/such/path", models.Environment{})
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadDataset_ContextCanceled(t *testing.T) {
@@ -319,7 +320,7 @@ func TestLoadDataset_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, err := LoadDataset(ctx, "/no/such/path", models.Environment{})
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadDataset_Success(t *testing.T) {
@@ -350,21 +351,21 @@ locals {
 	limitDef := models.LimitDefinitionGroup{Values: []models.LimitDefinition{{Name: "foo"}}}
 	limitDefPath := filepath.Join(limitDefSubdir, realm+"_limits_definition.json")
 	data, err := json.Marshal(limitDef)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	_ = os.WriteFile(limitDefPath, data, 0o600)
 
 	// Console property definition group
 	consoleDef := models.ConsolePropertyDefinitionGroup{Values: []models.ConsolePropertyDefinition{{Name: "bar"}}}
 	consoleDefPath := filepath.Join(consoleDefSubdir, realm+"_console_properties_definition.json")
 	data, err = json.Marshal(consoleDef)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	_ = os.WriteFile(consoleDefPath, data, 0o600)
 
 	// Property definition group
 	propDef := models.PropertyDefinitionGroup{Values: []models.PropertyDefinition{{Name: "baz"}}}
 	propDefPath := filepath.Join(propDefSubdir, realm+"_properties_definition.json")
 	data, err = json.Marshal(propDef)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	_ = os.WriteFile(propDefPath, data, 0o600)
 
 	// Tenancy overrides
@@ -377,17 +378,17 @@ locals {
 	limitOverride := models.LimitTenancyOverride{TenantID: "tenant1"}
 	limitOverridePath := filepath.Join(limitTenancyDir, "limits_tenancy_overrides.json")
 	data, err = json.Marshal(limitOverride)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	_ = os.WriteFile(limitOverridePath, data, 0o600)
 	consoleOverride := models.ConsolePropertyTenancyOverride{TenantID: "tenant1"}
 	consoleOverridePath := filepath.Join(consoleTenancyDir, "console_properties_tenancy_overrides.json")
 	data, err = json.Marshal(consoleOverride)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	_ = os.WriteFile(consoleOverridePath, data, 0o600)
 	propOverride := models.PropertyTenancyOverride{Tag: "tenant1"}
 	propOverridePath := filepath.Join(propTenancyDir, "properties_tenancy_overrides.json")
 	data, err = json.Marshal(propOverride)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	_ = os.WriteFile(propOverridePath, data, 0o600)
 
 	// Regional overrides
@@ -400,12 +401,12 @@ locals {
 	consoleRegOverride := models.ConsolePropertyRegionalOverride{Name: "cpr"}
 	consoleRegOverridePath := filepath.Join(consoleRegOverrideDir, "console_properties_regional_overrides.json")
 	data, err = json.Marshal(consoleRegOverride)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	_ = os.WriteFile(consoleRegOverridePath, data, 0o600)
 	propRegOverride := models.PropertyRegionalOverride{Name: "pr"}
 	propRegOverridePath := filepath.Join(propRegOverrideDir, "properties_regional_overrides.json")
 	data, err = json.Marshal(propRegOverride)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 	_ = os.WriteFile(propRegOverridePath, data, 0o600)
 	// Add a dummy file for limits_regional_overrides to avoid directory read error
 	_ = os.WriteFile(filepath.Join(limitRegOverrideDir, "dummy.json"), []byte("{}"), 0o600)
@@ -430,13 +431,13 @@ locals {
 	_ = os.WriteFile(tfPath, []byte(tfContent), 0o600)
 
 	ds, err := LoadDataset(context.Background(), tmp, env)
-	testutil.RequireNoError(t, err)
-	testutil.Equal(t, "foo", ds.LimitDefinitionGroup.Values[0].Name)
-	testutil.Equal(t, "bar", ds.ConsolePropertyDefinitionGroup.Values[0].Name)
-	testutil.Equal(t, "baz", ds.PropertyDefinitionGroup.Values[0].Name)
-	testutil.Equal(t, "tenant1", ds.Tenants[0].Name)
-	testutil.Equal(t, "cpr", ds.ConsolePropertyRegionalOverrides[0].Name)
-	testutil.Equal(t, "pr", ds.PropertyRegionalOverrides[0].Name)
+	require.NoError(t, err)
+	assert.Equal(t, "foo", ds.LimitDefinitionGroup.Values[0].Name)
+	assert.Equal(t, "bar", ds.ConsolePropertyDefinitionGroup.Values[0].Name)
+	assert.Equal(t, "baz", ds.PropertyDefinitionGroup.Values[0].Name)
+	assert.Equal(t, "tenant1", ds.Tenants[0].Name)
+	assert.Equal(t, "cpr", ds.ConsolePropertyRegionalOverrides[0].Name)
+	assert.Equal(t, "pr", ds.PropertyRegionalOverrides[0].Name)
 }
 
 func TestValidateEnvironment_Success(t *testing.T) {
@@ -444,30 +445,30 @@ func TestValidateEnvironment_Success(t *testing.T) {
 	env := models.Environment{Region: "us-phx-1"}
 	all := []models.Environment{{Region: "us-phx-1"}, {Region: "us-ashburn-1"}}
 	err := validateEnvironment(env, all)
-	testutil.RequireNoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestLoadDefinitionGroups_Error(t *testing.T) {
 	t.Parallel()
 	_, _, _, err := loadDefinitionGroups("/no/such/path") //nolint:dogsled // we only need err
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
 	t.Parallel()
 	_, err := LoadTenancyOverrideGroup(context.Background(), "/no/such/path", "realm") //nolint:dogsled // we only need err
-	testutil.RequireError(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadRegionalOverrides_MissingDir(t *testing.T) {
 	t.Parallel()
 	out, err := LoadLimitRegionalOverrides(context.Background(), "/no/such/path", "realm")
-	testutil.RequireNoError(t, err)
-	testutil.Equal(t, 0, len(out))
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(out))
 	out2, err := LoadConsolePropertyRegionalOverrides(context.Background(), "/no/such/path", "realm")
-	testutil.RequireNoError(t, err)
-	testutil.Equal(t, 0, len(out2))
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(out2))
 	out3, err := LoadPropertyRegionalOverrides(context.Background(), "/no/such/path", "realm")
-	testutil.RequireNoError(t, err)
-	testutil.Equal(t, 0, len(out3))
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(out3))
 }
