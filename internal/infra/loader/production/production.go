@@ -54,11 +54,11 @@ LoadGpuNodes loads GPU nodes from the given kube config and environment.
 Implements the Loader interface but is not yet migrated.
 */
 func (Loader) LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error) {
-	helper, err := k8s.NewHelper(kubeCfg, env.GetKubeContext())
+	client, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.GetKubeContext())
 	if err != nil {
 		return nil, err
 	}
-	return k8s.LoadGpuNodes(ctx, helper)
+	return k8s.LoadGpuNodes(ctx, client)
 }
 
 /*
@@ -66,11 +66,11 @@ LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config a
 Implements the Loader interface but is not yet migrated.
 */
 func (Loader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	helper, err := k8s.NewHelper(kubeCfg, env.GetKubeContext())
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.GetKubeContext())
 	if err != nil {
 		return nil, err
 	}
-	return k8s.LoadDedicatedAIClusters(ctx, helper)
+	return k8s.LoadDedicatedAIClusters(ctx, client)
 }
 
 // LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.

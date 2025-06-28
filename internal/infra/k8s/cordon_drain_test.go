@@ -9,14 +9,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestClientsetFromKubeconfig_BadPath(t *testing.T) {
-	t.Parallel()
-	_, err := clientsetFromKubeconfig("/not/a/real/path", "")
-	if err == nil {
-		t.Error("expected error for bad kubeconfig path")
-	}
-}
-
 func TestToggleCordon_TogglesState(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
