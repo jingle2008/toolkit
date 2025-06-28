@@ -6,9 +6,8 @@ package jsonutil
 
 import (
 	"encoding/json"
-	"path/filepath"
-
 	"fmt"
+	"path/filepath"
 
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
 )

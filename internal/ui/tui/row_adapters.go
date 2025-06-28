@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
-	logging "github.com/jingle2008/toolkit/internal/infra/logging"
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 

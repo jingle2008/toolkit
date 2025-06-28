@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/jingle2008/toolkit/internal/infra/logging"
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/drain"
@@ -40,8 +40,10 @@ func (w logWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-var runCordonOrUncordon = drain.RunCordonOrUncordon
-var runNodeDrain = drain.RunNodeDrain
+var (
+	runCordonOrUncordon = drain.RunCordonOrUncordon
+	runNodeDrain        = drain.RunNodeDrain
+)
 
 func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
 	helper := &drain.Helper{

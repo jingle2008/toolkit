@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-
 	"slices"
+	"strings"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"

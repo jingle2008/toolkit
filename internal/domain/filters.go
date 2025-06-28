@@ -8,9 +8,13 @@ import (
 // FilterByFilterable returns a filtered slice of items matching the provided filter string.
 // T must implement models.NamedFilterable.
 func FilterByFilterable[T models.NamedFilterable](items []T, filter string) []T {
-	return collections.Filter(items, func(val T) bool {
-		return collections.IsMatch(val, filter, true)
-	})
+	var out []T
+	for _, val := range items {
+		if collections.IsMatch(val, filter, true) {
+			out = append(out, val)
+		}
+	}
+	return out
 }
 
 // FilterTenants returns a filtered slice of Tenant matching the provided filter string.

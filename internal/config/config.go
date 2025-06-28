@@ -5,7 +5,6 @@ package config
 
 import (
 	"errors"
-
 	"fmt"
 
 	domain "github.com/jingle2008/toolkit/internal/domain"

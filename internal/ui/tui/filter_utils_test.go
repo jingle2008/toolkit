@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	logging "github.com/jingle2008/toolkit/internal/infra/logging"
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 )

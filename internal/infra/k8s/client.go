@@ -21,7 +21,7 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	return config, nil
 }
 
-func NewClientsetFromRestConfig(config *rest.Config) (*kubernetes.Clientset, error) {
+func NewClientsetFromRestConfig(config *rest.Config) (kubernetes.Interface, error) {
 	if config == nil {
 		return nil, fmt.Errorf("nil config: %w", fmt.Errorf("config is nil"))
 	}
@@ -32,7 +32,7 @@ func NewClientsetFromRestConfig(config *rest.Config) (*kubernetes.Clientset, err
 	return clientset, nil
 }
 
-func NewClientsetFromKubeConfig(kubeconfig, ctx string) (*kubernetes.Clientset, error) {
+func NewClientsetFromKubeConfig(kubeconfig, ctx string) (kubernetes.Interface, error) {
 	config, err := NewConfig(kubeconfig, ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config from kubeconfig: %w", err)
@@ -40,7 +40,7 @@ func NewClientsetFromKubeConfig(kubeconfig, ctx string) (*kubernetes.Clientset, 
 	return NewClientsetFromRestConfig(config)
 }
 
-func NewDynamicClient(config *rest.Config) (*dynamic.DynamicClient, error) {
+func NewDynamicClient(config *rest.Config) (dynamic.Interface, error) {
 	if config == nil {
 		return nil, fmt.Errorf("nil config: %w", fmt.Errorf("config is nil"))
 	}
@@ -51,7 +51,7 @@ func NewDynamicClient(config *rest.Config) (*dynamic.DynamicClient, error) {
 	return dynamicClient, nil
 }
 
-func NewDynamicClientFromKubeConfig(kubeconfig, ctx string) (*dynamic.DynamicClient, error) {
+func NewDynamicClientFromKubeConfig(kubeconfig, ctx string) (dynamic.Interface, error) {
 	config, err := NewConfig(kubeconfig, ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config from kubeconfig: %w", err)

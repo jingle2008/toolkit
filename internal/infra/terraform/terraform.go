@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
-	logging "github.com/jingle2008/toolkit/internal/infra/logging"
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"

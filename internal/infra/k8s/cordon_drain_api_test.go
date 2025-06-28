@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/infra/logging"
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/kubernetes/fake"
 	drainpkg "k8s.io/kubectl/pkg/drain"

@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
-	logging "github.com/jingle2008/toolkit/internal/infra/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 )

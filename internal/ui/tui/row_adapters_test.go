@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/domain"
-	logging "github.com/jingle2008/toolkit/internal/infra/logging"
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"go.uber.org/zap"
 )

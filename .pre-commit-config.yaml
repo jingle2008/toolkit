@@ -16,6 +16,11 @@ repos:
         entry: go run mvdan.cc/gofumpt@latest -w .
         language: system
         types: [go]
+      - id: govulncheck
+        name: govulncheck
+        entry: govulncheck ./...
+        language: system
+        types: [go]
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.64.8
     hooks:
