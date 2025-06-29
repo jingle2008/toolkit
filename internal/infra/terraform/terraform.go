@@ -4,6 +4,7 @@ Package terraform provides functions for loading and managing infrastructure dat
 package terraform
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -176,10 +177,10 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 		keys = append(keys, key)
 	}
 
-	sort.Slice(keys, func(i, j int) bool {
-		vi := len(attributes[keys[i]].Expr.Variables())
-		vj := len(attributes[keys[j]].Expr.Variables())
-		return vi < vj
+	slices.SortFunc(keys, func(a, b string) int {
+		vi := len(attributes[a].Expr.Variables())
+		vj := len(attributes[b].Expr.Variables())
+		return cmp.Compare(vi, vj)
 	})
 
 	const maxIterations = 100

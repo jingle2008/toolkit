@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -157,8 +158,8 @@ func TestSortNamedItems(t *testing.T) {
 	// implement GetName for named
 	items := []named{{"b"}, {"a"}, {"c"}, {"a"}}
 	// sort using name field
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].name < items[j].name
+	slices.SortFunc(items, func(a, b named) int {
+		return strings.Compare(a.name, b.name)
 	})
 	assert.Equal(t, "a", items[0].name)
 	assert.Equal(t, "a", items[1].name)
@@ -172,8 +173,8 @@ func TestSortKeyedItems(t *testing.T) {
 	// implement GetKey for keyed
 	items := []keyed{{"b"}, {"a"}, {"c"}, {"a"}}
 	// sort using key field
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].key < items[j].key
+	slices.SortFunc(items, func(a, b keyed) int {
+		return strings.Compare(a.key, b.key)
 	})
 	assert.Equal(t, "a", items[0].key)
 	assert.Equal(t, "a", items[1].key)

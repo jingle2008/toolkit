@@ -2,7 +2,7 @@ package tui
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -198,8 +198,8 @@ func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 			baseModels = append(baseModels, model)
 		}
 	}
-	sort.Slice(baseModels, func(i, j int) bool {
-		return baseModels[i].GetKey() < baseModels[j].GetKey()
+	slices.SortFunc(baseModels, func(a, b *models.BaseModel) int {
+		return strings.Compare(a.GetKey(), b.GetKey())
 	})
 	results := make([]table.Row, 0, len(baseModels))
 	for _, val := range baseModels {

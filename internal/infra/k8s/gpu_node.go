@@ -1,9 +1,10 @@
 package k8s
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
@@ -142,10 +143,10 @@ func LoadGpuNodes(ctx context.Context, clientset kubernetes.Interface) (map[stri
 
 	// sort by free GPUs
 	for _, v := range result {
-		sort.Slice(v, func(i, j int) bool {
-			vi := v[i].Allocatable - v[i].Allocated
-			vj := v[j].Allocatable - v[j].Allocated
-			return vi > vj
+		slices.SortFunc(v, func(a, b models.GpuNode) int {
+			ai := a.Allocatable - a.Allocated
+			bi := b.Allocatable - b.Allocated
+			return cmp.Compare(bi, ai)
 		})
 	}
 
