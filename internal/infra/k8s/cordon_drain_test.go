@@ -10,8 +10,7 @@ import (
 	"k8s.io/kubectl/pkg/drain"
 )
 
-func TestToggleCordon_TogglesState(t *testing.T) {
-	t.Parallel()
+func TestToggleCordon_TogglesState(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	node := &corev1.Node{
@@ -40,6 +39,7 @@ func TestToggleCordon_TogglesState(t *testing.T) {
 }
 
 func TestToggleCordon_NodeNotFound(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	err := toggleCordon(ctx, cs, "missing-node")
@@ -48,7 +48,7 @@ func TestToggleCordon_NodeNotFound(t *testing.T) {
 	}
 }
 
-func TestToggleCordon_CordonOrUncordonError(t *testing.T) {
+func TestToggleCordon_CordonOrUncordonError(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	node := &corev1.Node{
@@ -59,7 +59,7 @@ func TestToggleCordon_CordonOrUncordonError(t *testing.T) {
 
 	orig := runCordonOrUncordon
 	defer func() { runCordonOrUncordon = orig }()
-	runCordonOrUncordon = func(helper *drain.Helper, node *corev1.Node, desired bool) error {
+	runCordonOrUncordon = func(_ *drain.Helper, _ *corev1.Node, _ bool) error {
 		return context.DeadlineExceeded
 	}
 
@@ -69,28 +69,28 @@ func TestToggleCordon_CordonOrUncordonError(t *testing.T) {
 	}
 }
 
-func TestDrainNode_HappyPath(t *testing.T) {
+func TestDrainNode_HappyPath(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	node := &corev1.Node{
-		ObjectMeta: v1.ObjectMeta{Name: "n3"},
+		ObjectMeta: v1.ObjectMeta{Name: "dn3"},
 		Spec:       corev1.NodeSpec{Unschedulable: false},
 	}
 	_ = cs.Tracker().Add(node)
 
 	orig := runNodeDrain
 	defer func() { runNodeDrain = orig }()
-	runNodeDrain = func(helper *drain.Helper, nodeName string) error {
+	runNodeDrain = func(_ *drain.Helper, _ string) error {
 		return nil
 	}
 
-	err := drainNode(ctx, cs, "n3")
+	err := drainNode(ctx, cs, "dn3")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
 
-func TestDrainNode_Error(t *testing.T) {
+func TestDrainNode_Error(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	node := &corev1.Node{
@@ -101,7 +101,7 @@ func TestDrainNode_Error(t *testing.T) {
 
 	orig := runNodeDrain
 	defer func() { runNodeDrain = orig }()
-	runNodeDrain = func(helper *drain.Helper, nodeName string) error {
+	runNodeDrain = func(_ *drain.Helper, _ string) error {
 		return context.Canceled
 	}
 

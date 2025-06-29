@@ -1,3 +1,6 @@
+/*
+Package collections provides generic filtering and searching utilities for filterable and named items.
+*/
 package collections
 
 import (

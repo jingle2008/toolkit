@@ -20,7 +20,7 @@ func writeTempKubeconfig(t *testing.T, config *api.Config) string {
 	return path
 }
 
-func TestNewConfig(t *testing.T) {
+func TestNewConfig(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	validConfig := api.NewConfig()
 	validConfig.Clusters["test"] = &api.Cluster{Server: "https://127.0.0.1"}
 	validConfig.Contexts["test"] = &api.Context{Cluster: "test", AuthInfo: "user"}
@@ -42,6 +42,7 @@ func TestNewConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			cfg, err := NewConfig(tt.kubeconfig, tt.ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewConfig() error = %v, wantErr %v", err, tt.wantErr)
@@ -54,6 +55,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewClientsetFromRestConfig(t *testing.T) {
+	t.Parallel()
 	// Use a minimal valid rest.Config for fake client
 	cfg := &rest.Config{Host: "https://127.0.0.1"}
 	clientset, err := NewClientsetFromRestConfig(cfg)
@@ -71,7 +73,7 @@ func TestNewClientsetFromRestConfig(t *testing.T) {
 	}
 }
 
-func TestNewClientsetFromKubeConfig(t *testing.T) {
+func TestNewClientsetFromKubeConfig(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	validConfig := api.NewConfig()
 	validConfig.Clusters["test"] = &api.Cluster{Server: "https://127.0.0.1"}
 	validConfig.Contexts["test"] = &api.Context{Cluster: "test", AuthInfo: "user"}
@@ -92,6 +94,7 @@ func TestNewClientsetFromKubeConfig(t *testing.T) {
 }
 
 func TestNewDynamicClient(t *testing.T) {
+	t.Parallel()
 	// Use a minimal valid rest.Config for fake dynamic client
 	cfg := &rest.Config{Host: "https://127.0.0.1"}
 	_, err := NewDynamicClient(cfg)
@@ -106,7 +109,7 @@ func TestNewDynamicClient(t *testing.T) {
 	}
 }
 
-func TestNewDynamicClientFromKubeConfig(t *testing.T) {
+func TestNewDynamicClientFromKubeConfig(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	validConfig := api.NewConfig()
 	validConfig.Clusters["test"] = &api.Cluster{Server: "https://127.0.0.1"}
 	validConfig.Contexts["test"] = &api.Context{Cluster: "test", AuthInfo: "user"}

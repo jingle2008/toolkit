@@ -89,6 +89,7 @@ func makeUnstructuredDACV2(name, profile string, count int64, status, tenantID s
 }
 
 func TestListDedicatedAIClusters_HappyPath(t *testing.T) {
+	t.Parallel()
 	scheme := runtime.NewScheme()
 	// Seed both v1 and v2 objects
 	objs := []runtime.Object{
@@ -108,6 +109,7 @@ func TestListDedicatedAIClusters_HappyPath(t *testing.T) {
 }
 
 func TestListDedicatedAIClusters_ErrorV1(t *testing.T) {
+	t.Parallel()
 	scheme := runtime.NewScheme()
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
@@ -129,6 +131,7 @@ func TestListDedicatedAIClusters_ErrorV1(t *testing.T) {
 }
 
 func TestListDedicatedAIClusters_ErrorV2(t *testing.T) {
+	t.Parallel()
 	scheme := runtime.NewScheme()
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
@@ -150,6 +153,7 @@ func TestListDedicatedAIClusters_ErrorV2(t *testing.T) {
 }
 
 func TestLoadDedicatedAIClusters_HappyPath(t *testing.T) {
+	t.Parallel()
 	scheme := runtime.NewScheme()
 	objs := []runtime.Object{
 		makeUnstructuredDACV1("dac1", "GPU", 2, "ready", "tid1"),
@@ -169,6 +173,7 @@ func TestLoadDedicatedAIClusters_HappyPath(t *testing.T) {
 }
 
 func TestLoadDedicatedAIClusters_Empty(t *testing.T) {
+	t.Parallel()
 	scheme := runtime.NewScheme()
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
@@ -182,6 +187,7 @@ func TestLoadDedicatedAIClusters_Empty(t *testing.T) {
 }
 
 func TestListDedicatedAIClusters_MalformedObject(t *testing.T) {
+	t.Parallel()
 	scheme := runtime.NewScheme()
 	// Object missing spec/status fields
 	obj := &unstructured.Unstructured{Object: map[string]interface{}{
@@ -205,6 +211,7 @@ func TestListDedicatedAIClusters_MalformedObject(t *testing.T) {
 }
 
 func TestListDedicatedAIClustersV2_MalformedObject(t *testing.T) {
+	t.Parallel()
 	scheme := runtime.NewScheme()
 	// Object missing spec/status fields
 	obj := &unstructured.Unstructured{Object: map[string]interface{}{

@@ -125,6 +125,10 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 	return false
 }
 
+/*
+LoadGpuNodes returns a map of node pool names to slices of GpuNode, sorted by free GPUs descending.
+It fetches all GPU nodes and groups them by their node pool label.
+*/
 func LoadGpuNodes(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GpuNode, error) {
 	nodes, err := ListGpuNodes(ctx, clientset)
 	if err != nil {

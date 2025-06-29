@@ -90,31 +90,31 @@ func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
 
-	switch {
-	case key.Matches(msg, keys.Quit):
-		return []tea.Cmd{tea.Quit}
-	case key.Matches(msg, keys.NextCategory):
-		cmds = append(cmds, m.handleNextCategory())
-	case key.Matches(msg, keys.PrevCategory):
-		cmds = append(cmds, m.handlePrevCategory())
-	case key.Matches(msg, keys.FilterList):
-		m.enterEditMode(common.FilterTarget)
-	case key.Matches(msg, keys.PasteFilter):
-		cmds = append(cmds, m.pasteFilter())
-	case key.Matches(msg, keys.JumpTo):
-		m.enterEditMode(common.AliasTarget)
-	case key.Matches(msg, keys.ViewDetails):
-		m.enterDetailView()
-	case key.Matches(msg, keys.Confirm):
-		cmds = append(cmds, m.enterContext())
-	case key.Matches(msg, keys.Help):
-		m.enterHelpView()
-	case key.Matches(msg, keys.CopyName):
-		m.copyItemName(m.getSelectedItem())
-	default:
-		cmds = append(cmds, m.handleAdditionalKeys(msg))
+	// Dispatch table for key handlers
+	keyHandlers := []struct {
+		match  key.Binding
+		action func() []tea.Cmd
+	}{
+		{keys.Quit, func() []tea.Cmd { return []tea.Cmd{tea.Quit} }},
+		{keys.NextCategory, func() []tea.Cmd { return []tea.Cmd{m.handleNextCategory()} }},
+		{keys.PrevCategory, func() []tea.Cmd { return []tea.Cmd{m.handlePrevCategory()} }},
+		{keys.FilterList, func() []tea.Cmd { m.enterEditMode(common.FilterTarget); return nil }},
+		{keys.PasteFilter, func() []tea.Cmd { return []tea.Cmd{m.pasteFilter()} }},
+		{keys.JumpTo, func() []tea.Cmd { m.enterEditMode(common.AliasTarget); return nil }},
+		{keys.ViewDetails, func() []tea.Cmd { m.enterDetailView(); return nil }},
+		{keys.Confirm, func() []tea.Cmd { return []tea.Cmd{m.enterContext()} }},
+		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
+		{keys.CopyName, func() []tea.Cmd { m.copyItemName(m.getSelectedItem()); return nil }},
 	}
 
+	for _, h := range keyHandlers {
+		if key.Matches(msg, h.match) {
+			cmds = append(cmds, h.action()...)
+			return cmds
+		}
+	}
+
+	cmds = append(cmds, m.handleAdditionalKeys(msg))
 	return cmds
 }
 

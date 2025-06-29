@@ -40,71 +40,88 @@ debug: false
 filter: ""
 `
 
-	rootCmd := &cobra.Command{
-		Use:   "toolkit",
-		Short: "Toolkit CLI",
-		Long:  "Toolkit CLI for managing and visualizing infrastructure and configuration.",
-		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			showVersion, _ := cmd.Flags().GetBool("version")
-			if showVersion {
-				fmt.Println(version)
-				// Early exit for version, but allow testability
-				cmd.SilenceUsage = true
-				return nil
-			}
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			_ = viper.BindPFlags(cmd.Flags())
-			_ = viper.BindPFlags(cmd.PersistentFlags())
-
-			viper.SetEnvPrefix("toolkit")
-			viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-			viper.AutomaticEnv()
-
-			if cfgFile != "" {
-				viper.SetConfigFile(cfgFile)
-				if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
-					return fmt.Errorf("read config file: %w", err)
-				}
-			}
-
-			var cfg config.Config
-			if err := viper.Unmarshal(&cfg); err != nil {
-				return fmt.Errorf("unmarshal config: %w", err)
-			}
-			if err := cfg.Validate(); err != nil {
-				return fmt.Errorf("validate config: %w", err)
-			}
-
-			logFormat := viper.GetString("log_format")
-			logger, err := logging.NewFileLogger(cfg.Debug, cfg.LogFile, logFormat)
-			if err != nil {
-				return fmt.Errorf("initialize logger: %w", err)
-			}
-			defer func() {
-				_ = logger.Sync()
-			}()
-			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-			defer stop()
-			if err := runToolkit(ctx, logger, cfg, version); err != nil {
-				logger.Errorw("fatal error", "error", err)
-				return err
-			}
-			return nil
-		},
-	}
-
 	home := homedir.HomeDir()
 	defaultKube := filepath.Join(home, ".kube", "config")
 	defaultConfig := filepath.Join(home, ".config", "toolkit", "config.yaml")
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", defaultConfig, "Path to config file (YAML or JSON)")
+
+	rootCmd := &cobra.Command{
+		Use:               "toolkit",
+		Short:             "Toolkit CLI",
+		Long:              "Toolkit CLI for managing and visualizing infrastructure and configuration.",
+		PersistentPreRunE: persistentPreRunE(version),
+		RunE:              runRootE(&cfgFile, version),
+	}
+
+	addPersistentFlags(rootCmd, &cfgFile, defaultKube, defaultConfig)
+	addInitCommand(rootCmd, defaultConfig, exampleConfig)
+
+	return rootCmd
+}
+
+// persistentPreRunE returns the PersistentPreRunE function for the root command.
+func persistentPreRunE(version string) func(cmd *cobra.Command, _ []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
+		showVersion, _ := cmd.Flags().GetBool("version")
+		if showVersion {
+			fmt.Println(version)
+			cmd.SilenceUsage = true
+			return nil
+		}
+		return nil
+	}
+}
+
+// runRootE returns the RunE function for the root command.
+func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
+		_ = viper.BindPFlags(cmd.Flags())
+		_ = viper.BindPFlags(cmd.PersistentFlags())
+
+		viper.SetEnvPrefix("toolkit")
+		viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+		viper.AutomaticEnv()
+
+		if *cfgFile != "" {
+			viper.SetConfigFile(*cfgFile)
+			if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("read config file: %w", err)
+			}
+		}
+
+		var cfg config.Config
+		if err := viper.Unmarshal(&cfg); err != nil {
+			return fmt.Errorf("unmarshal config: %w", err)
+		}
+		if err := cfg.Validate(); err != nil {
+			return fmt.Errorf("validate config: %w", err)
+		}
+
+		logFormat := viper.GetString("log_format")
+		logger, err := logging.NewFileLogger(cfg.Debug, cfg.LogFile, logFormat)
+		if err != nil {
+			return fmt.Errorf("initialize logger: %w", err)
+		}
+		defer func() {
+			_ = logger.Sync()
+		}()
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		if err := runToolkit(ctx, logger, cfg, version); err != nil {
+			logger.Errorw("fatal error", "error", err)
+			return err
+		}
+		return nil
+	}
+}
+
+// addPersistentFlags adds persistent flags to the root command.
+func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, defaultConfig string) {
+	rootCmd.PersistentFlags().StringVar(cfgFile, "config", defaultConfig, "Path to config file (YAML or JSON)")
 	rootCmd.PersistentFlags().String("repo_path", "", "Path to the repository")
 	rootCmd.PersistentFlags().String("env_type", "", "Environment type (e.g. dev, prod)")
 	rootCmd.PersistentFlags().String("env_region", "", "Environment region")
 	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
 	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
-	// Enable shell completion for --category flag using domain.Aliases()
 	_ = rootCmd.RegisterFlagCompletionFunc("category", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return domain.Aliases(), cobra.ShellCompDirectiveNoFileComp
 	})
@@ -113,15 +130,15 @@ filter: ""
 	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().String("log_format", "console", "Log format: console or json")
-
 	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
+}
 
-	// Add "init" sub-command to scaffold an example config file
+// addInitCommand adds the "init" subcommand to the root command.
+func addInitCommand(rootCmd *cobra.Command, defaultConfig, exampleConfig string) {
 	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Scaffold an example config file",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			// Only write if file does not exist
 			if _, err := os.Stat(defaultConfig); err == nil {
 				return fmt.Errorf("config file already exists at %s", defaultConfig)
 			}
@@ -136,8 +153,6 @@ filter: ""
 		},
 	}
 	rootCmd.AddCommand(initCmd)
-
-	return rootCmd
 }
 
 // Execute runs the root command.

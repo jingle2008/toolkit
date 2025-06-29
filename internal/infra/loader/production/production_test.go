@@ -4,13 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func TestNewLoaderImplementsInterface(t *testing.T) {
 	t.Parallel()
-	var _ loader.Loader = NewLoader()
+	_ = NewLoader()
 }
 
 func TestLoadDataset_Error(t *testing.T) {

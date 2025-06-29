@@ -10,7 +10,7 @@ import (
 	drainpkg "k8s.io/kubectl/pkg/drain"
 )
 
-func TestToggleCordon_API(t *testing.T) {
+func TestToggleCordon_API(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 	// Add a node to the fake client
@@ -22,8 +22,9 @@ func TestToggleCordon_API(t *testing.T) {
 }
 
 func TestLogWriter_Write(t *testing.T) {
+	t.Parallel()
 	called := false
-	logger := &mockLogger{onInfo: func(msg string, kv ...interface{}) {
+	logger := &mockLogger{onInfo: func(_ string, _ ...interface{}) {
 		called = true
 	}}
 	w := logWriter{logger: logger}
@@ -47,15 +48,15 @@ func (m *mockLogger) DebugEnabled() bool {
 	return false
 }
 
-func (m *mockLogger) Debugw(msg string, kv ...interface{}) {}
+func (m *mockLogger) Debugw(_ string, _ ...interface{}) {}
 
-func (m *mockLogger) Errorw(msg string, kv ...interface{}) {}
+func (m *mockLogger) Errorw(_ string, _ ...interface{}) {}
 
 func (m *mockLogger) Sync() error { return nil }
 
-func (m *mockLogger) WithFields(kv ...any) logging.Logger { return m }
+func (m *mockLogger) WithFields(_ ...any) logging.Logger { return m }
 
-func TestDrainNode_API(t *testing.T) {
+func TestDrainNode_API(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 	node := makeNode("n2", map[string]string{}, 0, false, nil)
@@ -63,7 +64,7 @@ func TestDrainNode_API(t *testing.T) {
 	// Patch runNodeDrain to simulate success
 	orig := runNodeDrain
 	defer func() { runNodeDrain = orig }()
-	runNodeDrain = func(helper *drainpkg.Helper, nodeName string) error {
+	runNodeDrain = func(_ *drainpkg.Helper, _ string) error {
 		return nil
 	}
 	err := drainNode(ctx, client, "n2")

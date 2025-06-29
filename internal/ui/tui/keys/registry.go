@@ -131,14 +131,17 @@ var (
 		key.WithKeys("t"),
 		key.WithHelp("t", "copy tenant ocid"),
 	)
+	// Refresh is a key binding for refreshing the current view or data.
 	Refresh = key.NewBinding(
 		key.WithKeys("r"),
 		key.WithHelp("r", "refresh now"),
 	)
+	// CordonNode is a key binding for cordoning a node in the GPU node list.
 	CordonNode = key.NewBinding(
 		key.WithKeys("c"),
 		key.WithHelp("c", "cordon node"),
 	)
+	// DrainNode is a key binding for draining a node in the GPU node list.
 	DrainNode = key.NewBinding(
 		key.WithKeys("e"),
 		key.WithHelp("e", "drain node"),

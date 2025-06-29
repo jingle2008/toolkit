@@ -56,6 +56,7 @@ func makePod(name, nodeName string, gpuReq int64, label string) *corev1.Pod {
 }
 
 func TestListGpuNodes_HappyPath(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	node := makeNode("n1", map[string]string{
 		"nvidia.com/gpu.present":           "true",
@@ -81,6 +82,7 @@ func TestListGpuNodes_HappyPath(t *testing.T) {
 }
 
 func TestListGpuNodes_NoGPUNodes(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 	nodes, err := ListGpuNodes(ctx, client)
@@ -89,6 +91,7 @@ func TestListGpuNodes_NoGPUNodes(t *testing.T) {
 }
 
 func TestListGpuNodes_Unschedulable(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	node := makeNode("n2", map[string]string{
 		"nvidia.com/gpu.present": "true",
@@ -102,11 +105,12 @@ func TestListGpuNodes_Unschedulable(t *testing.T) {
 }
 
 func TestListGpuNodes_ErrorFromNodesList(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 	// Simulate error by clearing reactors and adding one that returns error
-	client.Fake.ReactionChain = nil
-	client.Fake.PrependReactor("list", "nodes", func(action cgotesting.Action) (bool, runtime.Object, error) {
+	client.ReactionChain = nil
+	client.PrependReactor("list", "nodes", func(_ cgotesting.Action) (bool, runtime.Object, error) {
 		return true, nil, assert.AnError
 	})
 	_, err := ListGpuNodes(ctx, client)
@@ -114,6 +118,7 @@ func TestListGpuNodes_ErrorFromNodesList(t *testing.T) {
 }
 
 func TestListGpuNodes_ErrorFromPodsList(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	node := makeNode("n3", map[string]string{
 		"nvidia.com/gpu.present": "true",
@@ -121,7 +126,7 @@ func TestListGpuNodes_ErrorFromPodsList(t *testing.T) {
 	}, 1, false, nil)
 	client := fake.NewSimpleClientset(node)
 	// Simulate error from Pods().List
-	client.Fake.PrependReactor("list", "pods", func(action cgotesting.Action) (bool, runtime.Object, error) {
+	client.PrependReactor("list", "pods", func(_ cgotesting.Action) (bool, runtime.Object, error) {
 		return true, nil, assert.AnError
 	})
 	nodes, err := ListGpuNodes(ctx, client)
@@ -131,6 +136,7 @@ func TestListGpuNodes_ErrorFromPodsList(t *testing.T) {
 }
 
 func TestLoadGpuNodes_HappyPath(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	node := makeNode("n4", map[string]string{
 		"nvidia.com/gpu.present": "true",
@@ -144,6 +150,7 @@ func TestLoadGpuNodes_HappyPath(t *testing.T) {
 }
 
 func TestLoadGpuNodes_Empty(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 	result, err := LoadGpuNodes(ctx, client)

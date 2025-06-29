@@ -1,3 +1,6 @@
+/*
+Package k8s provides Kubernetes client utilities for loading configs and creating typed and dynamic clients.
+*/
 package k8s
 
 import (
@@ -21,6 +24,10 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	return config, nil
 }
 
+/*
+NewClientsetFromRestConfig creates a new Kubernetes clientset from the given rest.Config.
+Returns an error if the config is nil or client creation fails.
+*/
 func NewClientsetFromRestConfig(config *rest.Config) (kubernetes.Interface, error) {
 	if config == nil {
 		return nil, fmt.Errorf("nil config: %w", fmt.Errorf("config is nil"))
@@ -32,6 +39,10 @@ func NewClientsetFromRestConfig(config *rest.Config) (kubernetes.Interface, erro
 	return clientset, nil
 }
 
+/*
+NewClientsetFromKubeConfig creates a new Kubernetes clientset from a kubeconfig file and context.
+Returns an error if config loading or client creation fails.
+*/
 func NewClientsetFromKubeConfig(kubeconfig, ctx string) (kubernetes.Interface, error) {
 	config, err := NewConfig(kubeconfig, ctx)
 	if err != nil {
@@ -40,6 +51,10 @@ func NewClientsetFromKubeConfig(kubeconfig, ctx string) (kubernetes.Interface, e
 	return NewClientsetFromRestConfig(config)
 }
 
+/*
+NewDynamicClient creates a new dynamic Kubernetes client from the given rest.Config.
+Returns an error if the config is nil or client creation fails.
+*/
 func NewDynamicClient(config *rest.Config) (dynamic.Interface, error) {
 	if config == nil {
 		return nil, fmt.Errorf("nil config: %w", fmt.Errorf("config is nil"))
@@ -51,6 +66,10 @@ func NewDynamicClient(config *rest.Config) (dynamic.Interface, error) {
 	return dynamicClient, nil
 }
 
+/*
+NewDynamicClientFromKubeConfig creates a new dynamic Kubernetes client from a kubeconfig file and context.
+Returns an error if config loading or client creation fails.
+*/
 func NewDynamicClientFromKubeConfig(kubeconfig, ctx string) (dynamic.Interface, error) {
 	config, err := NewConfig(kubeconfig, ctx)
 	if err != nil {

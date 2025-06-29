@@ -103,7 +103,7 @@ func TestUpdateContent_DetailsView(t *testing.T) {
 
 type testRenderer struct{}
 
-func (testRenderer) RenderJSON(content any, width int) (string, error) {
+func (testRenderer) RenderJSON(_ any, _ int) (string, error) {
 	return "rendered", nil
 }
 
@@ -121,7 +121,7 @@ func TestUpdateContent_Error(t *testing.T) {
 
 type errRenderer struct{}
 
-func (errRenderer) RenderJSON(content any, width int) (string, error) {
+func (errRenderer) RenderJSON(_ any, _ int) (string, error) {
 	return "", errors.New("fail")
 }
 

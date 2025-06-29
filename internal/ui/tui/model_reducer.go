@@ -257,26 +257,33 @@ func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 		m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	}
 
-	switch m.category { //nolint:exhaustive
-	case domain.BaseModel:
-		return m.handleBaseModelCategory()
-	case domain.GpuPool:
-		return m.handleGpuPoolCategory()
-	case domain.GpuNode:
-		return m.handleGpuNodeCategory(refresh)
-	case domain.DedicatedAICluster:
-		return m.handleDedicatedAIClusterCategory(refresh)
-	case domain.Tenant, domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride:
-		return m.handleTenancyOverridesGroup()
-	case domain.LimitRegionalOverride:
-		return m.handleLimitRegionalOverrideCategory()
-	case domain.ConsolePropertyRegionalOverride:
-		return m.handleConsolePropertyRegionalOverrideCategory()
-	case domain.PropertyRegionalOverride:
-		return m.handlePropertyRegionalOverrideCategory()
-	default:
-		return refreshDataCmd
+	// Dispatch table for category handlers
+	type handlerFn func(*Model, bool) tea.Cmd
+	handlers := map[domain.Category]handlerFn{
+		domain.BaseModel:                       func(m *Model, _ bool) tea.Cmd { return m.handleBaseModelCategory() },
+		domain.GpuPool:                         func(m *Model, _ bool) tea.Cmd { return m.handleGpuPoolCategory() },
+		domain.GpuNode:                         func(m *Model, refresh bool) tea.Cmd { return m.handleGpuNodeCategory(refresh) },
+		domain.DedicatedAICluster:              func(m *Model, refresh bool) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh) },
+		domain.LimitRegionalOverride:           func(m *Model, _ bool) tea.Cmd { return m.handleLimitRegionalOverrideCategory() },
+		domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory() },
+		domain.PropertyRegionalOverride:        func(m *Model, _ bool) tea.Cmd { return m.handlePropertyRegionalOverrideCategory() },
 	}
+
+	// Grouped handler for tenancy overrides
+	tenancyOverrides := map[domain.Category]struct{}{
+		domain.Tenant:                         {},
+		domain.LimitTenancyOverride:           {},
+		domain.ConsolePropertyTenancyOverride: {},
+		domain.PropertyTenancyOverride:        {},
+	}
+
+	if fn, ok := handlers[m.category]; ok {
+		return fn(m, refresh)
+	}
+	if _, ok := tenancyOverrides[m.category]; ok {
+		return m.handleTenancyOverridesGroup()
+	}
+	return refreshDataCmd
 }
 
 // Lazy loaders for realm-specific categories
