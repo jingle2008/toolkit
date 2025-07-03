@@ -62,14 +62,14 @@ func (m *Model) handleDataMsg(msg DataMsg) {
 }
 
 func (m *Model) handleFilterMsg(msg FilterMsg) {
-	if msg.Text == m.newFilter {
-		FilterTable(m, msg.Text)
+	if string(msg) == m.newFilter {
+		FilterTable(m, string(msg))
 	}
 }
 
 func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
-	m.newFilter = msg.Text
-	m.textInput.SetValue(msg.Text)
+	m.newFilter = string(msg)
+	m.textInput.SetValue(string(msg))
 	return func() tea.Msg {
 		return FilterMsg(msg)
 	}
@@ -77,7 +77,7 @@ func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
 
 func (m *Model) handleErrMsg(msg ErrMsg) {
 	m.pendingTasks--
-	m.err = msg.Err
+	m.err = msg
 }
 
 func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {

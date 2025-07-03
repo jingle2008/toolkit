@@ -16,7 +16,7 @@ func (m *Model) loadData() tea.Cmd {
 	return func() tea.Msg {
 		dataset, err := m.loader.LoadDataset(m.ctx, m.repoPath, m.environment)
 		if err != nil {
-			return ErrMsg{Err: err}
+			return ErrMsg(err)
 		}
 		return DataMsg{Data: dataset}
 	}
@@ -28,7 +28,7 @@ func setFilter(filter string) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		return SetFilterMsg{Text: filter}
+		return SetFilterMsg(filter)
 	}
 }
 

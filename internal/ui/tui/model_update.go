@@ -45,7 +45,7 @@ func (r loadRequest) Run() tea.Msg {
 		data, err = r.model.loader.LoadPropertyRegionalOverrides(r.model.ctx, r.model.repoPath, r.model.environment)
 	}
 	if err != nil {
-		return ErrMsg{Err: fmt.Errorf("failed to load %s: %w", r.category, err)}
+		return ErrMsg(fmt.Errorf("failed to load %s: %w", r.category, err))
 	}
 	return DataMsg{Data: data}
 }

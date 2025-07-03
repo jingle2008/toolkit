@@ -23,6 +23,6 @@ func FilterTable(m *Model, filter string) {
 func DebounceFilter(m *Model) tea.Cmd {
 	m.newFilter = strings.ToLower(m.textInput.Value())
 	return tea.Tick(100*time.Millisecond, func(_ time.Time) tea.Msg {
-		return FilterMsg{Text: m.newFilter}
+		return FilterMsg(m.newFilter)
 	})
 }

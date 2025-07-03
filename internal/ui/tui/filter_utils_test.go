@@ -23,5 +23,5 @@ func TestDebounceFilter(t *testing.T) {
 	msg := cmd()
 	filterMsg, ok := msg.(FilterMsg)
 	assert.True(t, ok)
-	assert.Equal(t, "foo", filterMsg.Text)
+	assert.Equal(t, "foo", string(filterMsg))
 }

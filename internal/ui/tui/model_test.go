@@ -138,8 +138,8 @@ func checkLoadDataResult(t *testing.T, msg any, wantData *models.Dataset, wantEr
 		if !ok {
 			t.Fatalf("expected ErrMsg, got %T", msg)
 		}
-		if !errors.Is(emsg.Err, wantError) {
-			t.Errorf("ErrMsg.Err = %v, want %v", emsg.Err, wantError)
+		if !errors.Is(emsg, wantError) {
+			t.Errorf("ErrMsg = %v, want %v", emsg, wantError)
 		}
 	default:
 		t.Fatalf("invalid test case: no wantData or wantError")
@@ -234,7 +234,7 @@ func TestProcessDataAndErrorMsg(t *testing.T) {
 	// processData with map[string][]models.DedicatedAICluster
 	m.processData(DataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
 	// Update with errorMsg
-	m.Update(ErrMsg{Err: nil})
+	m.Update(ErrMsg(nil))
 }
 
 func TestModelUpdateBranches(t *testing.T) {
@@ -247,9 +247,9 @@ func TestModelUpdateBranches(t *testing.T) {
 	// Simulate dataMsg
 	m.Update(DataMsg{Data: m.dataset})
 	// Simulate filterMsg
-	m.Update(FilterMsg{Text: "tenant1"})
+	m.Update(FilterMsg("tenant1"))
 	// Simulate errMsg
-	m.Update(ErrMsg{Err: nil})
+	m.Update(ErrMsg(nil))
 }
 
 func TestCenterTextReturnsCenteredText(t *testing.T) {

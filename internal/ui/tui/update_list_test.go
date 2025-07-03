@@ -15,7 +15,7 @@ func TestHandleSetFilterMsg(t *testing.T) {
 	m := &Model{
 		textInput: &ti,
 	}
-	msg := SetFilterMsg{Text: "foo"}
+	msg := SetFilterMsg("foo")
 	cmd := m.handleSetFilterMsg(msg)
 	assert.Equal(t, "foo", m.newFilter)
 	assert.Equal(t, "foo", m.textInput.Value())
