@@ -158,6 +158,8 @@ func (m *Model) handleEditKeys(msg tea.KeyMsg) []tea.Cmd {
 	cmds = append(cmds, cmd)
 
 	switch {
+	case msg.Type == tea.KeyCtrlC:
+		cmds = append(cmds, tea.Quit)
 	case key.Matches(msg, keys.Confirm):
 		if m.editTarget == common.AliasTarget {
 			cmd := m.changeCategory()

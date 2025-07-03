@@ -92,8 +92,8 @@ func (m *Model) updateLayout(w, h int) {
 	helpHeight := lipgloss.Height(m.help.View(m.keys))
 	top := statusHeight + helpHeight
 	if m.viewMode == common.DetailsView {
-		m.viewport.Width = w // - borderWidth, seems a bug in bubbletea
-		m.viewport.Height = h - borderHeight - top
+		m.viewport.Width = w
+		m.viewport.Height = h - top
 		m.updateContent(w - borderWidth)
 	} else {
 		headerHeight := lipgloss.Height(m.styles.Header.Render("test"))

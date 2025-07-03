@@ -6,11 +6,9 @@ package tui
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
 /*
@@ -59,12 +57,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // reduce is a pure state reducer for Model, used for testability.
 func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if key.Matches(msg, keys.Quit) {
-			return m, tea.Quit
-		}
-	case tea.WindowSizeMsg:
+	if msg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.reLayout = true
 		m.updateLayout(msg.Width, msg.Height)
 	}
