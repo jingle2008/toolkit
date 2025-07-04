@@ -4,11 +4,10 @@ import "fmt"
 
 // Tenant represents a tenant entity.
 type Tenant struct {
-	Name                     string   `json:"name"`
-	IDs                      []string `json:"ids"`
-	LimitOverrides           int      `json:"limit_overrides"`
-	ConsolePropertyOverrides int      `json:"console_property_overrides"`
-	PropertyOverrides        int      `json:"property_overrides"`
+	Name       string   `json:"name"`
+	IDs        []string `json:"ids"`
+	IsInternal bool     `json:"is_internal"`
+	Note       string   `json:"note,omitempty"`
 }
 
 // GetName returns the name of the tenant.
@@ -27,14 +26,8 @@ func (t Tenant) GetTenantID() string {
 	return ""
 }
 
-// GetOverrides returns a string summarizing the tenant's overrides.
-func (t Tenant) GetOverrides() string {
-	return fmt.Sprintf("%d/%d/%d",
-		t.LimitOverrides, t.ConsolePropertyOverrides, t.PropertyOverrides)
-}
-
 // GetFilterableFields returns filterable fields for the tenant.
 func (t Tenant) GetFilterableFields() []string {
 	fields := t.IDs[1:]
-	return append(fields, t.GetTenantID(), t.Name)
+	return append(fields, t.GetTenantID(), t.Name, fmt.Sprint(t.IsInternal), t.Note)
 }

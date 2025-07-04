@@ -122,32 +122,67 @@ func loadRegionalOverrides[T models.NamedItem](ctx context.Context, root, realm,
 	return overrides, nil
 }
 
-type tenantInfo struct {
-	idMap     map[string]struct{}
-	overrides []int
+type idMap map[string]struct{}
+
+func merge[T any](value T, override *T) T {
+	if override == nil {
+		return value
+	}
+	return *override
 }
 
-func getTenants(tenantMap map[string]tenantInfo) []models.Tenant {
-	tenants := make([]models.Tenant, 0, len(tenantMap))
+func getTenants(tenantMap map[string]idMap, tenantMeta []models.TenantMetadata) []models.Tenant {
+	// Build id -> TenantMetadata map for quick lookup
+	idToMeta := make(map[string]models.TenantMetadata, len(tenantMeta))
+	consumed := make(map[string]bool, len(tenantMeta))
+	for _, m := range tenantMeta {
+		idToMeta[m.ID] = m
+	}
 
-	lo, cpo, po := 0, 0, 0
+	tenants := make([]models.Tenant, 0, len(tenantMap)+len(tenantMeta))
+
+	// First: process tenantMap, merging with metadata if any id matches
 	for k, v := range tenantMap {
-		ids := make([]string, 0, len(v.idMap))
-		for k := range v.idMap {
-			ids = append(ids, k)
+		ids := make([]string, 0, len(v))
+		for id := range v {
+			ids = append(ids, id)
 		}
+
+		tenantName := k
+		isInternal := true
+		note := ""
+		for _, id := range ids {
+			if m, ok := idToMeta[id]; ok {
+				tenantName = merge(tenantName, m.Name)
+				isInternal = merge(isInternal, m.IsInternal)
+				note = merge(note, m.Note)
+				consumed[id] = true
+				break
+			}
+		}
+
 		tenant := models.Tenant{
-			IDs:                      ids,
-			Name:                     k,
-			LimitOverrides:           v.overrides[0],
-			ConsolePropertyOverrides: v.overrides[1],
-			PropertyOverrides:        v.overrides[2],
+			IDs:        ids,
+			Name:       tenantName,
+			IsInternal: isInternal,
+			Note:       note,
 		}
 		tenants = append(tenants, tenant)
+	}
 
-		lo += v.overrides[0]
-		cpo += v.overrides[1]
-		po += v.overrides[2]
+	// Second: add any metadata entries not matched above
+	for _, m := range tenantMeta {
+		if consumed[m.ID] || m.Name == nil || m.IsInternal == nil {
+			continue
+		}
+
+		tenant := models.Tenant{
+			IDs:        []string{m.ID},
+			Name:       *m.Name,
+			IsInternal: *m.IsInternal,
+			Note:       merge("", m.Note),
+		}
+		tenants = append(tenants, tenant)
 	}
 
 	slices.SortFunc(tenants, func(a, b models.Tenant) int {
@@ -157,22 +192,18 @@ func getTenants(tenantMap map[string]tenantInfo) []models.Tenant {
 }
 
 func updateTenants[T models.TenancyOverride](
-	tenantMap map[string]tenantInfo, overrideMap map[string][]T, index int,
+	tenantMap map[string]idMap, overrideMap map[string][]T,
 ) {
 	for name, overrides := range overrideMap {
 		info, ok := tenantMap[name]
 		if !ok {
-			info = tenantInfo{
-				idMap:     make(map[string]struct{}),
-				overrides: make([]int, 3),
-			}
+			info = idMap{}
 			tenantMap[name] = info
 		}
 
 		for _, o := range overrides {
 			tenantID := o.GetTenantID()
-			info.idMap[tenantID] = struct{}{}
-			info.overrides[index]++
+			info[tenantID] = struct{}{}
 		}
 	}
 }
@@ -201,7 +232,7 @@ func isValidEnvironment(env models.Environment, allEnvs []models.Environment) bo
 
 // LoadDataset loads a Dataset from the given repository path and environment.
 // Now accepts context.Context as the first parameter.
-func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (*models.Dataset, error) {
+func LoadDataset(ctx context.Context, repoPath string, env models.Environment, metadata *models.Metadata) (*models.Dataset, error) {
 	serviceTenancies, err := terraform.LoadServiceTenancies(ctx, repoPath)
 	if err != nil {
 		return nil, err
@@ -219,7 +250,7 @@ func LoadDataset(ctx context.Context, repoPath string, env models.Environment) (
 		return nil, err
 	}
 
-	tenancyOverrideGroup, err := LoadTenancyOverrideGroup(ctx, repoPath, realm)
+	tenancyOverrideGroup, err := LoadTenancyOverrideGroup(ctx, repoPath, realm, metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -313,8 +344,8 @@ func loadDefinitionGroups(repoPath string) (
 /*
 LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.
 */
-func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string) (models.TenancyOverrideGroup, error) {
-	tenantMap := make(map[string]tenantInfo)
+func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metadata *models.Metadata) (models.TenancyOverrideGroup, error) {
+	tenantMap := make(map[string]idMap)
 	limitsRoot := getLimitsRoot(repoPath)
 
 	limitTenancyOverrideMap, err := loadTenancyOverrides[models.LimitTenancyOverride](
@@ -322,23 +353,23 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string) (mode
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	updateTenants(tenantMap, limitTenancyOverrideMap, 0)
+	updateTenants(tenantMap, limitTenancyOverrideMap)
 
 	consolePropertyTenancyOverrideMap, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](
 		ctx, limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey)
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	updateTenants(tenantMap, consolePropertyTenancyOverrideMap, 1)
+	updateTenants(tenantMap, consolePropertyTenancyOverrideMap)
 
 	propertyTenancyOverrideMap, err := loadTenancyOverrides[models.PropertyTenancyOverride](
 		ctx, limitsRoot, realm, propertiesKey+tenancyOverridesKey)
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	updateTenants(tenantMap, propertyTenancyOverrideMap, 2)
+	updateTenants(tenantMap, propertyTenancyOverrideMap)
 
-	tenants := getTenants(tenantMap)
+	tenants := getTenants(tenantMap, metadata.GetTenants(realm))
 	return models.TenancyOverrideGroup{
 		Tenants:                           tenants,
 		LimitTenancyOverrideMap:           limitTenancyOverrideMap,

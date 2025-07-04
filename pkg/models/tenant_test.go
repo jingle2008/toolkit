@@ -9,15 +9,11 @@ import (
 func TestTenant_Getters(t *testing.T) {
 	t.Parallel()
 	tenant := Tenant{
-		Name:                     "tenantA",
-		IDs:                      []string{"id1", "id2"},
-		LimitOverrides:           1,
-		ConsolePropertyOverrides: 2,
-		PropertyOverrides:        3,
+		Name: "tenantA",
+		IDs:  []string{"id1", "id2"},
 	}
 	assert.Equal(t, "tenantA", tenant.GetName())
 	assert.Equal(t, "id1 (+1)", tenant.GetTenantID())
-	assert.Equal(t, "1/2/3", tenant.GetOverrides())
 	fields := tenant.GetFilterableFields()
 	assert.Contains(t, fields, "tenantA")
 	assert.Contains(t, fields, "id1 (+1)")

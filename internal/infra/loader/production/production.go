@@ -10,21 +10,34 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 /*
 Loader implements all loader interfaces using the production utils package.
 */
-// Loader implements all loader interfaces using the production utils package.
 type Loader struct {
-	// Add dependencies here for future extensibility, e.g.:
-	// K8sFactory func(kubeCfg, context string) (k8s.Helper, error)
+	metadataFile string
+	metadata     *models.Metadata
 }
 
 // NewLoader returns a Loader implementation for production use.
-func NewLoader() loader.Loader {
-	return &Loader{}
+func NewLoader(ctx context.Context, metadataFile string) loader.Loader {
+	l := &Loader{
+		metadataFile: metadataFile,
+		metadata:     &models.Metadata{},
+	}
+
+	if metadataFile != "" {
+		m, err := configloader.LoadMetadata(metadataFile)
+		if err != nil {
+			logging.FromContext(ctx).Errorw("failed to load metadata file", "file", metadataFile, "error", err)
+		} else {
+			l.metadata = m
+		}
+	}
+	return l
 }
 
 /*
@@ -35,8 +48,8 @@ must be updated to accept context.Context as the first parameter.
 /*
 LoadDataset loads a dataset from the given repo and environment.
 */
-func (Loader) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
-	return configloader.LoadDataset(ctx, repo, env)
+func (l Loader) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
+	return configloader.LoadDataset(ctx, repo, env, l.metadata)
 }
 
 // LoadBaseModels loads base models from the given repo and environment.
@@ -74,8 +87,8 @@ func (Loader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env m
 }
 
 // LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.
-func (Loader) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
-	return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm)
+func (l Loader) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
+	return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, l.metadata)
 }
 
 /*

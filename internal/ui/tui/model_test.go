@@ -162,7 +162,7 @@ func newTestModel(t *testing.T) *Model {
 	require.NoError(t, err)
 	m.dataset = &models.Dataset{
 		Tenants: []models.Tenant{
-			{Name: "tenant1", IDs: []string{"id1"}, LimitOverrides: 1, ConsolePropertyOverrides: 2, PropertyOverrides: 3},
+			{Name: "tenant1", IDs: []string{"id1"}},
 		},
 		Environments: []models.Environment{
 			{Realm: "realm", Type: "type", Region: "region"},

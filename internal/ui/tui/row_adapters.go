@@ -128,7 +128,8 @@ func (t TenantRow) Render(_ string) []string {
 	return []string{
 		t.Name,
 		models.Tenant(t).GetTenantID(),
-		models.Tenant(t).GetOverrides(),
+		fmt.Sprint(t.IsInternal),
+		t.Note,
 	}
 }
 

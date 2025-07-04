@@ -16,25 +16,19 @@ func Test_getHeaders_returns_expected_headers(t *testing.T) {
 	headers := getHeaders(domain.Tenant)
 	assert.NotNil(t, headers)
 	assert.Equal(t, "Name", headers[0].text)
-	assert.InEpsilon(t, 0.25, headers[0].ratio, 0.0001)
+	assert.InEpsilon(t, 0.20, headers[0].ratio, 0.0001)
 }
 
 func Test_getTenants_returns_rows(t *testing.T) {
 	t.Parallel()
 	tenants := []models.Tenant{
 		{
-			Name:                     "TenantA",
-			IDs:                      []string{"idA"},
-			LimitOverrides:           1,
-			ConsolePropertyOverrides: 2,
-			PropertyOverrides:        3,
+			Name: "TenantA",
+			IDs:  []string{"idA"},
 		},
 		{
-			Name:                     "TenantB",
-			IDs:                      []string{"idB", "idB2"},
-			LimitOverrides:           4,
-			ConsolePropertyOverrides: 5,
-			PropertyOverrides:        6,
+			Name: "TenantB",
+			IDs:  []string{"idB", "idB2"},
 		},
 	}
 	tenantStructs := domain.FilterTenants(tenants, "")
@@ -43,12 +37,11 @@ func Test_getTenants_returns_rows(t *testing.T) {
 		rows = append(rows, table.Row{
 			val.Name,
 			val.GetTenantID(),
-			val.GetOverrides(),
 		})
 	}
 	assert.Len(t, rows, 2)
-	assert.Equal(t, table.Row{"TenantA", "idA", "1/2/3"}, rows[0])
-	assert.Equal(t, table.Row{"TenantB", "idB (+1)", "4/5/6"}, rows[1])
+	assert.Equal(t, table.Row{"TenantA", "idA"}, rows[0])
+	assert.Equal(t, table.Row{"TenantB", "idB (+1)"}, rows[1])
 }
 
 func Test_getTableRow_DedicatedAICluster(t *testing.T) {

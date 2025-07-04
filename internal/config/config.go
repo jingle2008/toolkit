@@ -12,15 +12,16 @@ import (
 
 // Config holds configuration for the toolkit CLI application.
 type Config struct {
-	RepoPath   string `mapstructure:"repo_path"`
-	KubeConfig string `mapstructure:"kubeconfig"`
-	EnvType    string `mapstructure:"env_type"`
-	EnvRegion  string `mapstructure:"env_region"`
-	EnvRealm   string `mapstructure:"env_realm"`
-	Category   string `mapstructure:"category"`
-	LogFile    string `mapstructure:"log_file"`
-	Debug      bool   `mapstructure:"debug"`
-	Filter     string `mapstructure:"filter"`
+	RepoPath     string `mapstructure:"repo_path"`
+	KubeConfig   string `mapstructure:"kubeconfig"`
+	EnvType      string `mapstructure:"env_type"`
+	EnvRegion    string `mapstructure:"env_region"`
+	EnvRealm     string `mapstructure:"env_realm"`
+	Category     string `mapstructure:"category"`
+	LogFile      string `mapstructure:"log_file"`
+	Debug        bool   `mapstructure:"debug"`
+	Filter       string `mapstructure:"filter"`
+	MetadataFile string `mapstructure:"metadata_file"`
 }
 
 /*

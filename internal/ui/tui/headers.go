@@ -9,9 +9,10 @@ type header struct {
 
 var headerDefinitions = map[domain.Category][]header{
 	domain.Tenant: {
-		{"Name", 0.25},
-		{"OCID", 0.65},
-		{"LO/CPO/PO", 0.1},
+		{"Name", 0.20},
+		{"OCID", 0.60},
+		{"Internal", 0.1},
+		{"Note", 0.1},
 	},
 	domain.LimitDefinition: {
 		{"Name", 0.32},
@@ -90,7 +91,7 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Name", 0.15},
 		{"Realm", 0.1},
 		{"Environment", 0.1},
-		{"HomeRegion", 0.15},
+		{"Home Region", 0.15},
 		{"Regions", 0.5},
 	},
 	domain.GpuPool: {

@@ -172,18 +172,12 @@ func TestGetTenants(t *testing.T) { //nolint:cyclop,gocognit
 	t.Parallel()
 	tenants := []models.Tenant{
 		{
-			Name:                     "tenant1",
-			IDs:                      []string{"id1"},
-			LimitOverrides:           1,
-			ConsolePropertyOverrides: 2,
-			PropertyOverrides:        3,
+			Name: "tenant1",
+			IDs:  []string{"id1"},
 		},
 		{
-			Name:                     "tenant2",
-			IDs:                      []string{"id2"},
-			LimitOverrides:           4,
-			ConsolePropertyOverrides: 5,
-			PropertyOverrides:        6,
+			Name: "tenant2",
+			IDs:  []string{"id2"},
 		},
 	}
 

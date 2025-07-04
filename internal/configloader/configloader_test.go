@@ -233,11 +233,11 @@ func TestLoadTenancyOverrides_Error(t *testing.T) {
 
 func TestGetTenants(t *testing.T) {
 	t.Parallel()
-	m := map[string]tenantInfo{
-		"Tenant1": {idMap: map[string]struct{}{"id1": {}}, overrides: []int{1, 2, 3}},
-		"Tenant2": {idMap: map[string]struct{}{"id2": {}}, overrides: []int{4, 5, 6}},
+	m := map[string]idMap{
+		"Tenant1": map[string]struct{}{"id1": {}},
+		"Tenant2": map[string]struct{}{"id2": {}},
 	}
-	tenants := getTenants(m)
+	tenants := getTenants(m, nil)
 	assert.Equal(t, 2, len(tenants))
 	names := []string{tenants[0].Name, tenants[1].Name}
 	assert.Contains(t, names, "Tenant1")
@@ -256,10 +256,10 @@ func (t testOverride) GetTenantID() string { return t.tenantID }
 func TestUpdateTenants(t *testing.T) {
 	t.Parallel()
 	// Just test that it doesn't panic on empty input
-	updateTenants(map[string]tenantInfo{}, map[string][]testOverride{}, 0)
+	updateTenants(map[string]idMap{}, map[string][]testOverride{})
 
 	// Test with actual data
-	tenantMap := make(map[string]tenantInfo)
+	tenantMap := make(map[string]idMap)
 	overrideMap := map[string][]testOverride{
 		"TenantA": {
 			{tenantID: "idA"},
@@ -269,11 +269,9 @@ func TestUpdateTenants(t *testing.T) {
 			{tenantID: "idC"},
 		},
 	}
-	updateTenants(tenantMap, overrideMap, 1)
+	updateTenants(tenantMap, overrideMap)
 	assert.Contains(t, tenantMap, "TenantA")
 	assert.Contains(t, tenantMap, "TenantB")
-	assert.Equal(t, 2, tenantMap["TenantA"].overrides[1])
-	assert.Equal(t, 1, tenantMap["TenantB"].overrides[1])
 }
 
 func TestGetEnvironments(t *testing.T) {
@@ -312,7 +310,7 @@ func TestIsValidEnvironment(t *testing.T) {
 
 func TestLoadDataset_Error(t *testing.T) {
 	t.Parallel()
-	_, err := LoadDataset(context.Background(), "/no/such/path", models.Environment{})
+	_, err := LoadDataset(context.Background(), "/no/such/path", models.Environment{}, &models.Metadata{})
 	require.Error(t, err)
 }
 
@@ -320,7 +318,7 @@ func TestLoadDataset_ContextCanceled(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := LoadDataset(ctx, "/no/such/path", models.Environment{})
+	_, err := LoadDataset(ctx, "/no/such/path", models.Environment{}, &models.Metadata{})
 	require.Error(t, err)
 }
 
@@ -431,7 +429,7 @@ locals {
 	tfPath := filepath.Join(shepTargetsDir, "tenancy.tf")
 	_ = os.WriteFile(tfPath, []byte(tfContent), 0o600)
 
-	ds, err := LoadDataset(context.Background(), tmp, env)
+	ds, err := LoadDataset(context.Background(), tmp, env, &models.Metadata{})
 	require.NoError(t, err)
 	assert.Equal(t, "foo", ds.LimitDefinitionGroup.Values[0].Name)
 	assert.Equal(t, "bar", ds.ConsolePropertyDefinitionGroup.Values[0].Name)
@@ -457,7 +455,7 @@ func TestLoadDefinitionGroups_Error(t *testing.T) {
 
 func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
 	t.Parallel()
-	_, err := LoadTenancyOverrideGroup(context.Background(), "/no/such/path", "realm") //nolint:dogsled // we only need err
+	_, err := LoadTenancyOverrideGroup(context.Background(), "/no/such/path", "realm", &models.Metadata{}) //nolint:dogsled // we only need err
 	require.Error(t, err)
 }
 

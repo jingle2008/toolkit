@@ -38,11 +38,13 @@ category: "tenant"
 log_file: "toolkit.log"
 debug: false
 filter: ""
+metadata_file: "" # Optional path to a YAML or JSON file with additional metadata (e.g. tenants)
 `
 
 	home := homedir.HomeDir()
 	defaultKube := filepath.Join(home, ".kube", "config")
 	defaultConfig := filepath.Join(home, ".config", "toolkit", "config.yaml")
+	defaultMetadata := filepath.Join(home, ".config", "toolkit", "metadata.yaml")
 
 	rootCmd := &cobra.Command{
 		Use:               "toolkit",
@@ -52,7 +54,7 @@ filter: ""
 		RunE:              runRootE(&cfgFile, version),
 	}
 
-	addPersistentFlags(rootCmd, &cfgFile, defaultKube, defaultConfig)
+	addPersistentFlags(rootCmd, &cfgFile, defaultKube, defaultConfig, defaultMetadata)
 	addInitCommand(rootCmd, defaultConfig, exampleConfig)
 
 	return rootCmd
@@ -115,7 +117,7 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 }
 
 // addPersistentFlags adds persistent flags to the root command.
-func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, defaultConfig string) {
+func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, defaultConfig, defaultMetadata string) {
 	rootCmd.PersistentFlags().StringVar(cfgFile, "config", defaultConfig, "Path to config file (YAML or JSON)")
 	rootCmd.PersistentFlags().String("repo_path", "", "Path to the repository")
 	rootCmd.PersistentFlags().String("env_type", "", "Environment type (e.g. dev, prod)")
@@ -126,6 +128,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 		return domain.Aliases(), cobra.ShellCompDirectiveNoFileComp
 	})
 	rootCmd.PersistentFlags().StringP("filter", "f", "", "Initial filter for current category")
+	rootCmd.PersistentFlags().String("metadata_file", defaultMetadata, "Optional path to a YAML or JSON file with additional metadata (e.g. tenants)")
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
 	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
@@ -189,7 +192,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithCategory(category),
 		tui.WithLogger(logger),
 		tui.WithContext(ctx),
-		tui.WithLoader(production.NewLoader()),
+		tui.WithLoader(production.NewLoader(ctx, cfg.MetadataFile)),
 		tui.WithFilter(cfg.Filter),
 		tui.WithVersion(version),
 	)
