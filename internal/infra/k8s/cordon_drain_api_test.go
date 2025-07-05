@@ -6,6 +6,7 @@ import (
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 	drainpkg "k8s.io/kubectl/pkg/drain"
 )
@@ -24,21 +25,21 @@ func TestToggleCordon_API(t *testing.T) { //nolint:paralleltest // paralleltest 
 func TestLogWriter_Write(t *testing.T) {
 	t.Parallel()
 	called := false
-	logger := &mockLogger{onInfo: func(_ string, _ ...interface{}) {
+	logger := &mockLogger{onInfo: func(_ string, _ ...any) {
 		called = true
 	}}
 	w := logWriter{logger: logger}
 	n, err := w.Write([]byte("test message"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, len("test message"), n)
 	assert.True(t, called)
 }
 
 type mockLogger struct {
-	onInfo func(msg string, kv ...interface{})
+	onInfo func(msg string, kv ...any)
 }
 
-func (m *mockLogger) Infow(msg string, kv ...interface{}) {
+func (m *mockLogger) Infow(msg string, kv ...any) {
 	if m.onInfo != nil {
 		m.onInfo(msg, kv...)
 	}
@@ -48,9 +49,9 @@ func (m *mockLogger) DebugEnabled() bool {
 	return false
 }
 
-func (m *mockLogger) Debugw(_ string, _ ...interface{}) {}
+func (m *mockLogger) Debugw(_ string, _ ...any) {}
 
-func (m *mockLogger) Errorw(_ string, _ ...interface{}) {}
+func (m *mockLogger) Errorw(_ string, _ ...any) {}
 
 func (m *mockLogger) Sync() error { return nil }
 

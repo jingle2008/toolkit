@@ -2,11 +2,11 @@ package configloader
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
+	fs "github.com/jingle2008/toolkit/internal/fileutil"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"gopkg.in/yaml.v3"
 )
@@ -18,14 +18,16 @@ func LoadMetadata(path string) (*models.Metadata, error) {
 	case ".json":
 		return jsonutil.LoadFile[models.Metadata](path)
 	case ".yaml", ".yml":
-		return loadYAML(path)
+		return loadYAML(path, ext)
 	default:
 		return nil, fmt.Errorf("unsupported metadata file extension: %s", ext)
 	}
 }
 
-func loadYAML(path string) (*models.Metadata, error) {
-	data, err := os.ReadFile(path)
+func loadYAML(path, ext string) (*models.Metadata, error) {
+	allowedExt := map[string]struct{}{ext: {}}
+	baseDir := filepath.Dir(path)
+	data, err := fs.SafeReadFile(path, baseDir, allowedExt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read YAML file: %w", err)
 	}

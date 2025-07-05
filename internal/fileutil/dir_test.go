@@ -21,7 +21,7 @@ func TestListFiles(t *testing.T) {
 
 	files, err := ListFiles(context.Background(), dir, ".txt")
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(files))
+	assert.Len(t, files, 1)
 	assert.Contains(t, files[0], "foo.txt")
 
 	// error path: non-existent dir
@@ -39,7 +39,7 @@ func TestListFiles_MatchExt(t *testing.T) {
 	}
 	out, err := ListFiles(context.Background(), dir, ".go")
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(out))
+	assert.Len(t, out, 2)
 	assert.Contains(t, out[0], ".go")
 	assert.Contains(t, out[1], ".go")
 }

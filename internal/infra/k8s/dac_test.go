@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -50,19 +51,19 @@ func TestTenantIDFromLabels(t *testing.T) {
 }
 
 func makeUnstructuredDACV1(name, dacType string, size int64, status, tenantID string) *unstructured.Unstructured {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"apiVersion": "ome.oracle.com/v1alpha1",
 		"kind":       "DedicatedAICluster",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":   name,
-			"labels": map[string]interface{}{"tenancy-id": tenantID},
+			"labels": map[string]any{"tenancy-id": tenantID},
 		},
-		"spec": map[string]interface{}{
+		"spec": map[string]any{
 			"type":      dacType,
 			"unitShape": "shape",
 			"size":      size,
 		},
-		"status": map[string]interface{}{
+		"status": map[string]any{
 			"status": status,
 		},
 	}
@@ -70,18 +71,18 @@ func makeUnstructuredDACV1(name, dacType string, size int64, status, tenantID st
 }
 
 func makeUnstructuredDACV2(name, profile string, count int64, status, tenantID string) *unstructured.Unstructured {
-	obj := map[string]interface{}{
+	obj := map[string]any{
 		"apiVersion": "ome.io/v1beta1",
 		"kind":       "DedicatedAICluster",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":   name,
-			"labels": map[string]interface{}{"tenancy-id": tenantID},
+			"labels": map[string]any{"tenancy-id": tenantID},
 		},
-		"spec": map[string]interface{}{
+		"spec": map[string]any{
 			"profile": profile,
 			"count":   count,
 		},
-		"status": map[string]interface{}{
+		"status": map[string]any{
 			"dacLifecycleState": status,
 		},
 	}
@@ -104,7 +105,7 @@ func TestListDedicatedAIClusters_HappyPath(t *testing.T) {
 
 	ctx := context.Background()
 	clusters, err := ListDedicatedAIClusters(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, clusters, 2)
 }
 
@@ -167,7 +168,7 @@ func TestLoadDedicatedAIClusters_HappyPath(t *testing.T) {
 
 	ctx := context.Background()
 	result, err := LoadDedicatedAIClusters(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, result, "tid1")
 	assert.Contains(t, result, "tid2")
 }
@@ -182,20 +183,20 @@ func TestLoadDedicatedAIClusters_Empty(t *testing.T) {
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
 	ctx := context.Background()
 	result, err := LoadDedicatedAIClusters(ctx, client)
-	assert.NoError(t, err)
-	assert.Len(t, result, 0)
+	require.NoError(t, err)
+	assert.Empty(t, result)
 }
 
 func TestListDedicatedAIClusters_MalformedObject(t *testing.T) {
 	t.Parallel()
 	scheme := runtime.NewScheme()
 	// Object missing spec/status fields
-	obj := &unstructured.Unstructured{Object: map[string]interface{}{
+	obj := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "ome.oracle.com/v1alpha1",
 		"kind":       "DedicatedAICluster",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":   "dac-bad",
-			"labels": map[string]interface{}{"tenancy-id": "tid-bad"},
+			"labels": map[string]any{"tenancy-id": "tid-bad"},
 		},
 	}}
 	listKinds := map[schema.GroupVersionResource]string{
@@ -206,7 +207,7 @@ func TestListDedicatedAIClusters_MalformedObject(t *testing.T) {
 
 	ctx := context.Background()
 	clusters, err := ListDedicatedAIClusters(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, clusters, 1) // Should still return, with defaults
 }
 
@@ -214,12 +215,12 @@ func TestListDedicatedAIClustersV2_MalformedObject(t *testing.T) {
 	t.Parallel()
 	scheme := runtime.NewScheme()
 	// Object missing spec/status fields
-	obj := &unstructured.Unstructured{Object: map[string]interface{}{
+	obj := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "ome.io/v1beta1",
 		"kind":       "DedicatedAICluster",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":   "dac-bad-v2",
-			"labels": map[string]interface{}{"tenancy-id": "tid-bad-v2"},
+			"labels": map[string]any{"tenancy-id": "tid-bad-v2"},
 		},
 	}}
 	listKinds := map[schema.GroupVersionResource]string{
@@ -230,6 +231,6 @@ func TestListDedicatedAIClustersV2_MalformedObject(t *testing.T) {
 
 	ctx := context.Background()
 	clusters, err := listDedicatedAIClustersV2(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, clusters, 1)
 }

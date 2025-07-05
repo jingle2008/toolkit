@@ -32,7 +32,7 @@ func TestLoadOverrides_Success(t *testing.T) {
 
 	out, err := loadOverrides[mockNamedItem](context.Background(), dir)
 	require.NoError(t, err)
-	assert.Equal(t, 1, len(out))
+	assert.Len(t, out, 1)
 	assert.Equal(t, "foo", out[0].Name)
 }
 
@@ -68,7 +68,7 @@ func TestLoadOverridesDI_Empty(t *testing.T) {
 		func(string) (*mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(out))
+	assert.Empty(t, out)
 }
 
 func TestLoadOverrides_ErrorOnBadFile(t *testing.T) {
@@ -106,7 +106,7 @@ func TestLoadTenancyOverrides_Success(t *testing.T) {
 	out, err := loadTenancyOverrides[mockNamedItem](context.Background(), root, realm, name)
 	require.NoError(t, err)
 	assert.Contains(t, out, tenant)
-	assert.Equal(t, 1, len(out[tenant]))
+	assert.Len(t, out[tenant], 1)
 	assert.Equal(t, "bar", out[tenant][0].Name)
 }
 
@@ -238,7 +238,7 @@ func TestGetTenants(t *testing.T) {
 		"Tenant2": map[string]struct{}{"id2": {}},
 	}
 	tenants := getTenants(m, nil)
-	assert.Equal(t, 2, len(tenants))
+	assert.Len(t, tenants, 2)
 	names := []string{tenants[0].Name, tenants[1].Name}
 	assert.Contains(t, names, "Tenant1")
 	assert.Contains(t, names, "Tenant2")
@@ -293,7 +293,7 @@ func TestGetEnvironments(t *testing.T) {
 		},
 	}
 	envs := getEnvironments(tenancies)
-	assert.Equal(t, 3, len(envs))
+	assert.Len(t, envs, 3)
 	regions := []string{envs[0].Region, envs[1].Region, envs[2].Region}
 	assert.Contains(t, regions, "us-phx-1")
 	assert.Contains(t, regions, "us-ashburn-1")
@@ -304,8 +304,8 @@ func TestIsValidEnvironment(t *testing.T) {
 	t.Parallel()
 	env := models.Environment{}
 	all := []models.Environment{{}, {}}
-	assert.Equal(t, true, isValidEnvironment(env, all))
-	assert.Equal(t, false, isValidEnvironment(models.Environment{}, []models.Environment{}))
+	assert.True(t, isValidEnvironment(env, all))
+	assert.False(t, isValidEnvironment(models.Environment{}, []models.Environment{}))
 }
 
 func TestLoadDataset_Error(t *testing.T) {
@@ -463,11 +463,11 @@ func TestLoadRegionalOverrides_MissingDir(t *testing.T) {
 	t.Parallel()
 	out, err := LoadLimitRegionalOverrides(context.Background(), "/no/such/path", "realm")
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(out))
+	assert.Empty(t, out)
 	out2, err := LoadConsolePropertyRegionalOverrides(context.Background(), "/no/such/path", "realm")
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(out2))
+	assert.Empty(t, out2)
 	out3, err := LoadPropertyRegionalOverrides(context.Background(), "/no/such/path", "realm")
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(out3))
+	assert.Empty(t, out3)
 }

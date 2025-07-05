@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +72,7 @@ func TestListGpuNodes_HappyPath(t *testing.T) {
 	client := fake.NewSimpleClientset(node, pod)
 
 	nodes, err := ListGpuNodes(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, nodes, 1)
 	assert.Equal(t, "n1", nodes[0].Name)
 	assert.Equal(t, 4, nodes[0].Allocatable)
@@ -86,8 +87,8 @@ func TestListGpuNodes_NoGPUNodes(t *testing.T) {
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 	nodes, err := ListGpuNodes(ctx, client)
-	assert.NoError(t, err)
-	assert.Len(t, nodes, 0)
+	require.NoError(t, err)
+	assert.Empty(t, nodes)
 }
 
 func TestListGpuNodes_Unschedulable(t *testing.T) {
@@ -99,7 +100,7 @@ func TestListGpuNodes_Unschedulable(t *testing.T) {
 	}, 2, true, nil)
 	client := fake.NewSimpleClientset(node)
 	nodes, err := ListGpuNodes(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, nodes, 1)
 	assert.True(t, nodes[0].IsSchedulingDisabled)
 }
@@ -130,7 +131,7 @@ func TestListGpuNodes_ErrorFromPodsList(t *testing.T) {
 		return true, nil, assert.AnError
 	})
 	nodes, err := ListGpuNodes(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, nodes, 1)
 	assert.Equal(t, 0, nodes[0].Allocated) // error is logged, not returned
 }
@@ -144,7 +145,7 @@ func TestLoadGpuNodes_HappyPath(t *testing.T) {
 	}, 8, false, nil)
 	client := fake.NewSimpleClientset(node)
 	result, err := LoadGpuNodes(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, result, "pool4")
 	assert.Equal(t, "n4", result["pool4"][0].Name)
 }
@@ -154,6 +155,6 @@ func TestLoadGpuNodes_Empty(t *testing.T) {
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 	result, err := LoadGpuNodes(ctx, client)
-	assert.NoError(t, err)
-	assert.Len(t, result, 0)
+	require.NoError(t, err)
+	assert.Empty(t, result)
 }
