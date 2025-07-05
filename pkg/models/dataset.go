@@ -23,15 +23,15 @@ type Dataset struct {
 	DedicatedAIClusterMap             map[string][]DedicatedAICluster
 }
 
-// BuildTenantIDSuffixMap builds a map from tenant ID suffix to tenant name.
-func (d *Dataset) BuildTenantIDSuffixMap() map[string]string {
-	suffixMap := make(map[string]string)
+// buildTenantIDSuffixMap builds a map from tenant ID suffix to tenant index.
+func (d *Dataset) buildTenantIDSuffixMap() map[string]int {
+	suffixMap := make(map[string]int)
 
-	for _, tenant := range d.Tenants {
+	for i, tenant := range d.Tenants {
 		for _, id := range tenant.IDs {
 			parts := strings.Split(id, ".")
 			suffix := parts[len(parts)-1]
-			suffixMap[suffix] = tenant.Name
+			suffixMap[suffix] = i
 		}
 	}
 
@@ -41,15 +41,20 @@ func (d *Dataset) BuildTenantIDSuffixMap() map[string]string {
 // SetDedicatedAIClusterMap sets the dedicated AI cluster map using tenant suffixes.
 func (d *Dataset) SetDedicatedAIClusterMap(m map[string][]DedicatedAICluster) {
 	dacMap := make(map[string][]DedicatedAICluster)
-	suffixMap := d.BuildTenantIDSuffixMap()
+	suffixMap := d.buildTenantIDSuffixMap()
 
 	for k, v := range m {
-		tenant, ok := suffixMap[k]
-		if !ok {
-			tenant = k
+		name := k
+		var tenant *Tenant
+		if idx, ok := suffixMap[k]; ok {
+			tenant = &d.Tenants[idx]
+			name = tenant.Name
 		}
 
-		dacMap[tenant] = v
+		dacMap[name] = v
+		for i := range v {
+			v[i].Owner = tenant
+		}
 	}
 
 	d.DedicatedAIClusterMap = dacMap

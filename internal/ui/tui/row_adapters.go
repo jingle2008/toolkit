@@ -107,6 +107,7 @@ func (d DedicatedAIClusterRow) Render(scope string) []string {
 	}
 	return []string{
 		scope,
+		models.DedicatedAICluster(d).GetOwnerState(),
 		d.Name,
 		d.Type,
 		unitShapeOrProfile,

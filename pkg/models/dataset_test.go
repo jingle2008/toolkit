@@ -14,7 +14,7 @@ func TestDataset_BuildTenantIDSuffixMap(t *testing.T) {
 			{Name: "tenant2", IDs: []string{"id.tenant2"}},
 		},
 	}
-	suffixMap := ds.BuildTenantIDSuffixMap()
+	suffixMap := ds.buildTenantIDSuffixMap()
 	assert.Contains(t, suffixMap, "tenant1")
 	assert.Contains(t, suffixMap, "tenant2")
 }
