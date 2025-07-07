@@ -33,7 +33,7 @@ func (n DedicatedAICluster) GetFilterableFields() []string {
 		n.Profile,
 		n.GetOwnerState(),
 		n.ModelName,
-		fmt.Sprintf("%.2f", n.GetIdleRate()),
+		fmt.Sprintf("%.2f", n.GetUsage()),
 	}
 }
 
@@ -50,11 +50,11 @@ func (n DedicatedAICluster) GetOwnerState() string {
 	return state
 }
 
-func (n DedicatedAICluster) GetIdleRate() float64 {
-	total := n.TotalReplicas
-	if total <= 0 {
-		total = 1
+func (n DedicatedAICluster) GetUsage() string {
+	if n.TotalReplicas <= 0 {
+		return "n/a"
 	}
 
-	return float64(n.IdleReplicas) / float64(total)
+	rate := 1.0 - float64(n.IdleReplicas)/float64(n.TotalReplicas)
+	return fmt.Sprintf("%.0f%%", rate*100)
 }
