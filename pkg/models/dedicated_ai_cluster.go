@@ -4,14 +4,17 @@ import "fmt"
 
 // DedicatedAICluster represents a dedicated AI cluster resource.
 type DedicatedAICluster struct {
-	Name      string  `json:"name"`
-	Status    string  `json:"status"`
-	TenantID  string  `json:"tenantId"`
-	Type      string  `json:"type,omitempty"`
-	UnitShape string  `json:"unitShape,omitempty"`
-	Size      int     `json:"size,omitempty"`
-	Profile   string  `json:"profile,omitempty"`
-	Owner     *Tenant `json:"owner,omitempty"`
+	Name          string  `json:"name"`
+	Status        string  `json:"status"`
+	TenantID      string  `json:"tenantId"`
+	Type          string  `json:"type,omitempty"`
+	UnitShape     string  `json:"unitShape,omitempty"`
+	Size          int     `json:"size,omitempty"`
+	Profile       string  `json:"profile,omitempty"`
+	Owner         *Tenant `json:"owner,omitempty"`
+	ModelName     string  `json:"modelName,omitempty"`
+	TotalReplicas int     `json:"totalReplicas"`
+	IdleReplicas  int     `json:"idleReplicas"`
 }
 
 // GetName returns the name of the dedicated AI cluster.
@@ -21,7 +24,17 @@ func (n DedicatedAICluster) GetName() string {
 
 // GetFilterableFields returns filterable fields for the dedicated AI cluster.
 func (n DedicatedAICluster) GetFilterableFields() []string {
-	return []string{n.Name, n.Type, n.UnitShape, n.Status, n.TenantID, n.Profile, n.GetOwnerState()}
+	return []string{
+		n.Name,
+		n.Type,
+		n.UnitShape,
+		n.Status,
+		n.TenantID,
+		n.Profile,
+		n.GetOwnerState(),
+		n.ModelName,
+		fmt.Sprintf("%.2f", n.GetIdleRate()),
+	}
 }
 
 // GetKey returns the key of the dedicated AI cluster.
@@ -35,4 +48,13 @@ func (n DedicatedAICluster) GetOwnerState() string {
 		state = fmt.Sprint(n.Owner.IsInternal)
 	}
 	return state
+}
+
+func (n DedicatedAICluster) GetIdleRate() float64 {
+	total := n.TotalReplicas
+	if total <= 0 {
+		total = 1
+	}
+
+	return float64(n.IdleReplicas) / float64(total)
 }

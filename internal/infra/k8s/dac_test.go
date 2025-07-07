@@ -230,7 +230,7 @@ func TestListDedicatedAIClustersV2_MalformedObject(t *testing.T) {
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, obj)
 
 	ctx := context.Background()
-	clusters, err := listDedicatedAIClustersV2(ctx, client)
+	clusters, err := listDedicatedAIClustersV2(ctx, client, PodCache{byNS: map[string][]*unstructured.Unstructured{}})
 	require.NoError(t, err)
 	assert.Len(t, clusters, 1)
 }

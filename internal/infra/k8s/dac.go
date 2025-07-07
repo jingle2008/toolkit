@@ -14,11 +14,15 @@ import (
 
 // ListDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
 func ListDedicatedAIClusters(ctx context.Context, client dynamic.Interface) ([]models.DedicatedAICluster, error) {
-	v1Clusters, err := listDedicatedAIClustersV1(ctx, client)
+	cache, err := buildPodCache(ctx, client)
 	if err != nil {
 		return nil, err
 	}
-	v2Clusters, err := listDedicatedAIClustersV2(ctx, client)
+	v1Clusters, err := listDedicatedAIClustersV1(ctx, client, cache)
+	if err != nil {
+		return nil, err
+	}
+	v2Clusters, err := listDedicatedAIClustersV2(ctx, client, cache)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +48,7 @@ func listDedicatedAIClustersGeneric(
 }
 
 // listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
-func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface) ([]models.DedicatedAICluster, error) {
+func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, cache PodCache) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.oracle.com",
 		Version:  "v1alpha1",
@@ -70,19 +74,23 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface) ([
 			statusStr = "pending"
 		}
 
+		stats := cache.getPodStats(ctx, name)
 		return models.DedicatedAICluster{
-			Name:      name,
-			Type:      dacType,
-			UnitShape: unitShape,
-			Size:      int(size),
-			Status:    statusStr,
-			TenantID:  tenantID,
+			Name:          name,
+			Type:          dacType,
+			UnitShape:     unitShape,
+			Size:          int(size),
+			Status:        statusStr,
+			TenantID:      tenantID,
+			ModelName:     stats.ModelName,
+			IdleReplicas:  stats.IdlePods,
+			TotalReplicas: stats.TotalPods,
 		}
 	})
 }
 
 // listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
-func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface) ([]models.DedicatedAICluster, error) {
+func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, cache PodCache) ([]models.DedicatedAICluster, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.io",
 		Version:  "v1beta1",
@@ -108,12 +116,17 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface) ([
 			statusStr = "pending"
 		}
 
+		stats := cache.getPodStats(ctx, name)
 		return models.DedicatedAICluster{
-			Name:     name,
-			Profile:  profile,
-			Size:     int(count),
-			Status:   statusStr,
-			TenantID: tenantID,
+			Name:          name,
+			Profile:       profile,
+			Size:          int(count),
+			Status:        statusStr,
+			TenantID:      tenantID,
+			ModelName:     stats.ModelName,
+			IdleReplicas:  stats.IdlePods,
+			TotalReplicas: stats.TotalPods,
+			Type:          stats.Type,
 		}
 	})
 }
