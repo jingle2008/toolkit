@@ -54,7 +54,7 @@ func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 		UnitShape: "A100",
 	}
 	row := GetTableRow(nil, "TenantX", cluster)
-	assert.Equal(t, table.Row{"TenantX", "n/a", "DAC1", "GPU", "A100", "4", "Active"}, row)
+	assert.Equal(t, table.Row{"TenantX", "DAC1", "n/a", "n/a", "GPU", "A100", "4", "Active"}, row)
 }
 
 func Test_getEnvironments_returns_rows(t *testing.T) {

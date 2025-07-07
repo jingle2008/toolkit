@@ -100,6 +100,7 @@ func TestListDedicatedAIClusters_HappyPath(t *testing.T) {
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
 		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+		{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
 	}
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
 
@@ -115,6 +116,7 @@ func TestListDedicatedAIClusters_ErrorV1(t *testing.T) {
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
 		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+		{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
 	}
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
 	// Patch the client to return error for v1alpha1
@@ -137,6 +139,7 @@ func TestListDedicatedAIClusters_ErrorV2(t *testing.T) {
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
 		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+		{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
 	}
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
 	// Patch the client to return error for v1beta1
@@ -163,6 +166,7 @@ func TestLoadDedicatedAIClusters_HappyPath(t *testing.T) {
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
 		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+		{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
 	}
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
 
@@ -179,6 +183,7 @@ func TestLoadDedicatedAIClusters_Empty(t *testing.T) {
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
 		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+		{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
 	}
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
 	ctx := context.Background()
@@ -202,6 +207,7 @@ func TestListDedicatedAIClusters_MalformedObject(t *testing.T) {
 	listKinds := map[schema.GroupVersionResource]string{
 		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
 		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+		{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
 	}
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, obj)
 

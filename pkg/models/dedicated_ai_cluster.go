@@ -33,7 +33,7 @@ func (n DedicatedAICluster) GetFilterableFields() []string {
 		n.Profile,
 		n.GetOwnerState(),
 		n.ModelName,
-		fmt.Sprintf("%.2f", n.GetUsage()),
+		n.GetUsage(),
 	}
 }
 
