@@ -37,6 +37,18 @@ git clone https://github.com/jingle2008/toolkit.git
 cd toolkit && make
 ```
 
+```zsh
+# From homebrew (macOS)
+brew tap jingle2008/homebrew-toolkit
+brew install --cask toolkit
+
+# Step to resolve macOS security prompt after installation:
+1. Go to System Settings > Privacy & Security.
+2. Look for the toolkit app under the Security section.
+3. Click Open Anyway and enter your password if prompted.
+4. In the pop-up window, click Open to run the app.
+```
+
 ---
 
 ## Usage
