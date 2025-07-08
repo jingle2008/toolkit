@@ -8,7 +8,6 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -27,10 +26,6 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleFilterMsg(msg)
 	case SetFilterMsg:
 		cmds = append(cmds, m.handleSetFilterMsg(msg))
-	case ErrMsg:
-		m.handleErrMsg(msg)
-	case spinner.TickMsg:
-		cmds = append(cmds, m.handleSpinnerTickMsg(msg))
 	default:
 		// Future-proof: ignore unknown message types
 	}
@@ -43,9 +38,6 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
-	if m.pendingTasks > 0 {
-		return cmds
-	}
 	if key.Matches(msg, keys.Back) {
 		m.backToLastState()
 	}
@@ -73,17 +65,6 @@ func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
 	return func() tea.Msg {
 		return FilterMsg(msg)
 	}
-}
-
-func (m *Model) handleErrMsg(msg ErrMsg) {
-	m.pendingTasks--
-	m.err = msg
-}
-
-func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
-	loadingSpinner, cmd := m.loadingSpinner.Update(msg)
-	m.loadingSpinner = &loadingSpinner
-	return cmd
 }
 
 // handleNormalKeys processes key events in Normal mode.
@@ -138,7 +119,7 @@ func (m *Model) handleNextCategory() tea.Cmd {
 		next = int(domain.Tenant)
 	}
 	category := domain.Category(next)
-	return m.updateCategory(category)
+	return tea.Sequence(m.updateCategory(category)...)
 }
 
 func (m *Model) handlePrevCategory() tea.Cmd {
@@ -147,7 +128,7 @@ func (m *Model) handlePrevCategory() tea.Cmd {
 		prev = int(domain.DedicatedAICluster)
 	}
 	category := domain.Category(prev)
-	return m.updateCategory(category)
+	return tea.Sequence(m.updateCategory(category)...)
 }
 
 // handleEditKeys processes key events in Edit mode.

@@ -134,7 +134,7 @@ func (m *Model) processData(msg DataMsg) {
 	}
 
 	if msg.Data != nil {
-		m.pendingTasks--
+		m.endTask(true)
 		m.logger.Infow("data loaded", "category", m.category, "pendingTasks", m.pendingTasks)
 	}
 	m.refreshDisplay()
@@ -151,7 +151,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.CopyTenant):
 		m.copyTenantID(item)
 	case key.Matches(msg, keys.Refresh):
-		return m.updateCategory(m.category)
+		return tea.Sequence(m.updateCategory(m.category)...)
 	case key.Matches(msg, keys.CordonNode):
 		return m.cordonNode(item)
 	case key.Matches(msg, keys.DrainNode):
@@ -177,7 +177,7 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 		return nil
 	}
 
-	return m.updateCategory(m.category)
+	return tea.Sequence(m.updateCategory(m.category)...)
 }
 
 func (m *Model) drainNode(item any) tea.Cmd {
@@ -196,7 +196,7 @@ func (m *Model) drainNode(item any) tea.Cmd {
 		return nil
 	}
 
-	return m.updateCategory(m.category)
+	return tea.Sequence(m.updateCategory(m.category)...)
 }
 
 func (m *Model) copyItemName(item any) {
@@ -248,7 +248,7 @@ func (m *Model) getSelectedItem() any {
 }
 
 // updateCategory changes the current category and loads data if needed.
-func (m *Model) updateCategory(category domain.Category) tea.Cmd {
+func (m *Model) updateCategory(category domain.Category) []tea.Cmd {
 	refresh := false
 	if m.category == category {
 		refresh = true
@@ -277,13 +277,21 @@ func (m *Model) updateCategory(category domain.Category) tea.Cmd {
 		domain.PropertyTenancyOverride:        {},
 	}
 
+	var (
+		cmd  tea.Cmd
+		cmds []tea.Cmd
+	)
 	if fn, ok := handlers[m.category]; ok {
-		return fn(m, refresh)
+		cmd = fn(m, refresh)
+	} else if _, ok := tenancyOverrides[m.category]; ok {
+		cmd = m.handleTenancyOverridesGroup()
 	}
-	if _, ok := tenancyOverrides[m.category]; ok {
-		return m.handleTenancyOverridesGroup()
+	if cmd != nil {
+		cmds = append(cmds, m.beginTask(), cmd)
+	} else {
+		cmds = append(cmds, refreshDataCmd)
 	}
-	return refreshDataCmd
+	return cmds
 }
 
 // Lazy loaders for realm-specific categories
@@ -293,66 +301,58 @@ func (m *Model) handleTenancyOverridesGroup() tea.Cmd {
 		m.dataset.LimitTenancyOverrideMap == nil ||
 		m.dataset.ConsolePropertyTenancyOverrideMap == nil ||
 		m.dataset.PropertyTenancyOverrideMap == nil {
-		m.pendingTasks++
 		return loadRequest{category: domain.Tenant, model: m}.Run
 	}
-	return refreshDataCmd
+	return nil
 }
 
 func (m *Model) handleLimitRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.LimitRegionalOverrides == nil {
-		m.pendingTasks++
 		return loadRequest{category: domain.LimitRegionalOverride, model: m}.Run
 	}
-	return refreshDataCmd
+	return nil
 }
 
 func (m *Model) handleConsolePropertyRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.ConsolePropertyRegionalOverrides == nil {
-		m.pendingTasks++
 		return loadRequest{category: domain.ConsolePropertyRegionalOverride, model: m}.Run
 	}
-	return refreshDataCmd
+	return nil
 }
 
 func (m *Model) handlePropertyRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.PropertyRegionalOverrides == nil {
-		m.pendingTasks++
 		return loadRequest{category: domain.PropertyRegionalOverride, model: m}.Run
 	}
-	return refreshDataCmd
+	return nil
 }
 
 func (m *Model) handleBaseModelCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.BaseModelMap == nil {
-		m.pendingTasks++
 		return loadRequest{category: domain.BaseModel, model: m}.Run
 	}
-	return refreshDataCmd
+	return nil
 }
 
 func (m *Model) handleGpuPoolCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuPools == nil {
-		m.pendingTasks++
 		return loadRequest{category: domain.GpuPool, model: m}.Run
 	}
-	return refreshDataCmd
+	return nil
 }
 
 func (m *Model) handleGpuNodeCategory(refresh bool) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuNodeMap == nil || refresh {
-		m.pendingTasks++
 		return loadRequest{category: domain.GpuNode, model: m}.Run
 	}
-	return refreshDataCmd
+	return nil
 }
 
 func (m *Model) handleDedicatedAIClusterCategory(refresh bool) tea.Cmd {
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
-		m.pendingTasks++
 		return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
 	}
-	return refreshDataCmd
+	return nil
 }
 
 // enterDetailView switches the model into detail view mode.
@@ -394,7 +394,7 @@ func (m *Model) changeCategory() tea.Cmd {
 	if m.category == category {
 		return nil
 	}
-	return m.updateCategory(category)
+	return tea.Sequence(m.updateCategory(category)...)
 }
 
 // enterContext moves the model into a new context based on the selected row.
@@ -412,18 +412,48 @@ func (m *Model) enterContext() tea.Cmd {
 	switch {
 	case m.category.IsScope():
 		m.context = &appContext
-		return m.updateCategory(m.category.ScopedCategories()[0])
+		return tea.Sequence(m.updateCategory(m.category.ScopedCategories()[0])...)
 	case m.category == domain.Environment:
 		env := *collections.FindByName(m.dataset.Environments, target)
 		if !m.environment.Equals(env) {
 			m.environment = env
 			m.dataset.ResetScopedData()
-			return tea.Batch(
-				m.updateCategory(domain.Tenant),
-			)
+			return tea.Sequence(m.updateCategory(domain.Tenant)...)
 		}
 	default:
 		m.enterDetailView()
 	}
 	return nil
+}
+
+/*
+beginTask increments the pendingTasks counter and switches to LoadingView if needed.
+Call this before starting an async task.
+*/
+func (m *Model) beginTask() tea.Cmd {
+	var cmd tea.Cmd
+	if m.pendingTasks == 0 {
+		m.lastViewMode = m.viewMode
+		m.viewMode = common.LoadingView
+		cmd = m.loadingSpinner.Tick // start the spinner
+	}
+	m.pendingTasks++
+	return cmd
+}
+
+/*
+endTask decrements the pendingTasks counter and restores the previous view mode if all tasks are done.
+Call this after an async task completes.
+*/
+func (m *Model) endTask(success bool) {
+	if m.pendingTasks > 0 {
+		m.pendingTasks--
+	}
+	if m.pendingTasks == 0 {
+		if success {
+			m.viewMode = m.lastViewMode
+		} else {
+			m.viewMode = common.ErrorView
+		}
+	}
 }

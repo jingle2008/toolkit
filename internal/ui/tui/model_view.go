@@ -98,18 +98,14 @@ func (m *Model) updateContent(width int) {
 
 // View renders the current state of the model as a string.
 func (m *Model) View() string {
-	if m.pendingTasks > 0 {
-		// Compose spinner and message
+	switch m.viewMode {
+	case common.LoadingView:
 		spin := m.loadingSpinner.View()
 		msg := fmt.Sprintf("%s Loading data: %s …", spin, m.category.String())
 		return view.CenterText(msg, m.viewWidth, m.viewHeight)
-	}
-	if m.err != nil {
+	case common.ErrorView:
 		return view.CenterText(m.err.Error(), m.viewWidth, m.viewHeight)
-	}
-
-	// Show full help view if in HelpView mode
-	if m.viewMode == common.HelpView {
+	case common.HelpView:
 		return view.CenterText(m.fullHelpView(), m.viewWidth, m.viewHeight)
 	}
 

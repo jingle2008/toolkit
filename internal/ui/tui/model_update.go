@@ -62,13 +62,17 @@ func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateLayout(msg.Width, msg.Height)
 	}
 
-	switch m.viewMode { //nolint:exhaustive
+	switch m.viewMode {
 	case common.HelpView:
 		return m.updateHelpView(msg)
 	case common.ListView:
 		return m.updateListView(msg)
 	case common.DetailsView:
 		return m.updateDetailView(msg)
+	case common.LoadingView:
+		return m.updateLoadingView(msg)
+	case common.ErrorView:
+		return m.updateErrorView(msg)
 	}
 	return m, nil
 }

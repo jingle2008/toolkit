@@ -11,14 +11,16 @@ import (
 )
 
 // loadData loads the dataset for the current model.
-func (m *Model) loadData() tea.Cmd {
-	m.pendingTasks++
-	return func() tea.Msg {
-		dataset, err := m.loader.LoadDataset(m.ctx, m.repoPath, m.environment)
-		if err != nil {
-			return ErrMsg(err)
-		}
-		return DataMsg{Data: dataset}
+func (m *Model) loadData() []tea.Cmd {
+	return []tea.Cmd{
+		m.beginTask(),
+		func() tea.Msg {
+			dataset, err := m.loader.LoadDataset(m.ctx, m.repoPath, m.environment)
+			if err != nil {
+				return ErrMsg(err)
+			}
+			return DataMsg{Data: dataset}
+		},
 	}
 }
 
@@ -42,13 +44,10 @@ var lazyLoadedCategories = map[domain.Category]struct{}{
 
 // Init implements the tea.Model interface and initializes the model.
 func (m *Model) Init() tea.Cmd {
-	cmds := []tea.Cmd{
-		m.loadingSpinner.Tick,
-		m.loadData(),
-	}
+	cmds := m.loadData()
 
 	if _, ok := lazyLoadedCategories[m.category]; ok {
-		cmds = append(cmds, m.updateCategory(m.category))
+		cmds = append(cmds, m.updateCategory(m.category)...)
 	}
 
 	cmds = append(cmds, setFilter(m.newFilter))

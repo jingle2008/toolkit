@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -11,10 +12,10 @@ import (
 
 func TestHandleTenancyOverridesGroup(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	s := spinner.New()
+	m := &Model{loadingSpinner: &s}
 	cmd := m.handleTenancyOverridesGroup()
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 1, m.pendingTasks)
 
 	// Now with all required fields non-nil
 	m = &Model{
@@ -24,102 +25,109 @@ func TestHandleTenancyOverridesGroup(t *testing.T) {
 			ConsolePropertyTenancyOverrideMap: map[string][]models.ConsolePropertyTenancyOverride{},
 			PropertyTenancyOverrideMap:        map[string][]models.PropertyTenancyOverride{},
 		},
+		loadingSpinner: &s,
 	}
-	m.pendingTasks = 0
 	cmd = m.handleTenancyOverridesGroup()
-	assert.NotNil(t, cmd)
-	assert.Equal(t, 0, m.pendingTasks)
+	assert.Nil(t, cmd)
 }
 
 func TestHandleLimitRegionalOverrideCategory(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	s := spinner.New()
+	m := &Model{loadingSpinner: &s}
 	cmd := m.handleLimitRegionalOverrideCategory()
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 1, m.pendingTasks)
 
-	m = &Model{dataset: &models.Dataset{LimitRegionalOverrides: []models.LimitRegionalOverride{}}}
-	m.pendingTasks = 0
+	m = &Model{
+		dataset:        &models.Dataset{LimitRegionalOverrides: []models.LimitRegionalOverride{}},
+		loadingSpinner: &s,
+	}
 	cmd = m.handleLimitRegionalOverrideCategory()
-	assert.NotNil(t, cmd)
-	assert.Equal(t, 0, m.pendingTasks)
+	assert.Nil(t, cmd)
 }
 
 func TestHandleConsolePropertyRegionalOverrideCategory(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	s := spinner.New()
+	m := &Model{loadingSpinner: &s}
 	cmd := m.handleConsolePropertyRegionalOverrideCategory()
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 1, m.pendingTasks)
 
-	m = &Model{dataset: &models.Dataset{ConsolePropertyRegionalOverrides: []models.ConsolePropertyRegionalOverride{}}}
-	m.pendingTasks = 0
+	m = &Model{
+		dataset:        &models.Dataset{ConsolePropertyRegionalOverrides: []models.ConsolePropertyRegionalOverride{}},
+		loadingSpinner: &s,
+	}
 	cmd = m.handleConsolePropertyRegionalOverrideCategory()
-	assert.NotNil(t, cmd)
-	assert.Equal(t, 0, m.pendingTasks)
+	assert.Nil(t, cmd)
 }
 
 func TestHandlePropertyRegionalOverrideCategory(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	s := spinner.New()
+	m := &Model{loadingSpinner: &s}
 	cmd := m.handlePropertyRegionalOverrideCategory()
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 1, m.pendingTasks)
 
-	m = &Model{dataset: &models.Dataset{PropertyRegionalOverrides: []models.PropertyRegionalOverride{}}}
-	m.pendingTasks = 0
+	m = &Model{
+		dataset:        &models.Dataset{PropertyRegionalOverrides: []models.PropertyRegionalOverride{}},
+		loadingSpinner: &s,
+	}
 	cmd = m.handlePropertyRegionalOverrideCategory()
-	assert.NotNil(t, cmd)
-	assert.Equal(t, 0, m.pendingTasks)
+	assert.Nil(t, cmd)
 }
 
 func TestHandleGpuPoolCategory(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	s := spinner.New()
+	m := &Model{loadingSpinner: &s}
 	cmd := m.handleGpuPoolCategory()
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 1, m.pendingTasks)
 
-	m = &Model{dataset: &models.Dataset{GpuPools: []models.GpuPool{}}}
-	m.pendingTasks = 0
+	m = &Model{
+		dataset:        &models.Dataset{GpuPools: []models.GpuPool{}},
+		loadingSpinner: &s,
+	}
 	cmd = m.handleGpuPoolCategory()
-	assert.NotNil(t, cmd)
-	assert.Equal(t, 0, m.pendingTasks)
+	assert.Nil(t, cmd)
 }
 
 func TestHandleGpuNodeCategory(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	s := spinner.New()
+	m := &Model{loadingSpinner: &s}
 	cmd := m.handleGpuNodeCategory(false)
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 1, m.pendingTasks)
 
-	m = &Model{dataset: &models.Dataset{GpuNodeMap: map[string][]models.GpuNode{}}}
-	m.pendingTasks = 0
+	m = &Model{
+		dataset:        &models.Dataset{GpuNodeMap: map[string][]models.GpuNode{}},
+		loadingSpinner: &s,
+	}
 	cmd = m.handleGpuNodeCategory(false)
-	assert.NotNil(t, cmd)
-	assert.Equal(t, 0, m.pendingTasks)
+	assert.Nil(t, cmd)
 }
 
 func TestHandleDedicatedAIClusterCategory(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	s := spinner.New()
+	m := &Model{loadingSpinner: &s}
 	cmd := m.handleDedicatedAIClusterCategory(false)
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 1, m.pendingTasks)
 
-	m = &Model{dataset: &models.Dataset{DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{}}}
-	m.pendingTasks = 0
+	m = &Model{
+		dataset:        &models.Dataset{DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{}},
+		loadingSpinner: &s,
+	}
 	cmd = m.handleDedicatedAIClusterCategory(false)
-	assert.NotNil(t, cmd)
-	assert.Equal(t, 0, m.pendingTasks)
+	assert.Nil(t, cmd)
 }
 
 func TestEnterContext(t *testing.T) {
 	t.Parallel()
+	s := spinner.New()
 	m := &Model{
-		table:    &table.Model{},
-		category: domain.Tenant,
+		table:          &table.Model{},
+		category:       domain.Tenant,
+		loadingSpinner: &s,
 	}
 	// Simulate a selected row
 	m.table.SetRows([]table.Row{{"row1"}})

@@ -35,8 +35,10 @@ func TestHandleSpinnerTickMsg(t *testing.T) {
 
 func TestHandleNextCategory(t *testing.T) {
 	t.Parallel()
+	s := spinner.New()
 	m := &Model{
-		category: domain.Tenant,
+		category:       domain.Tenant,
+		loadingSpinner: &s,
 	}
 	cmd := m.handleNextCategory()
 	assert.NotNil(t, cmd)
@@ -44,8 +46,10 @@ func TestHandleNextCategory(t *testing.T) {
 
 func TestHandlePrevCategory(t *testing.T) {
 	t.Parallel()
+	s := spinner.New()
 	m := &Model{
-		category: domain.Tenant,
+		category:       domain.Tenant,
+		loadingSpinner: &s,
 	}
 	cmd := m.handlePrevCategory()
 	assert.NotNil(t, cmd)

@@ -125,10 +125,10 @@ func (errRenderer) RenderJSON(_ any, _ int) (string, error) {
 	return "", errors.New("fail")
 }
 
-func TestView_PendingTasks(t *testing.T) {
+func TestView_LoadingView(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
-	m.pendingTasks = 1
+	m.viewMode = common.LoadingView
 	out := m.View()
 	assert.Contains(t, out, "Loading data")
 }
@@ -137,6 +137,7 @@ func TestView_Error(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.err = errors.New("fail")
+	m.viewMode = common.ErrorView
 	out := m.View()
 	assert.Contains(t, out, "fail")
 }
