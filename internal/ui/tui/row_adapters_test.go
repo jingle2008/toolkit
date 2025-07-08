@@ -51,7 +51,7 @@ func TestGetTableRow_GpuNodeAndDedicatedAICluster(t *testing.T) {
 		Status:    "Active",
 	}
 	row = GetTableRow(logger, tenant, cluster)
-	if row[0] != tenant || row[1] != "dac1" || row[2] != "n/a" || row[3] != "n/a" {
+	if row[0] != tenant || row[1] != "dac1" || row[2] != "" || row[3] != "" {
 		t.Errorf("DedicatedAICluster dispatch failed: %v", row)
 	}
 }
@@ -142,7 +142,7 @@ func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
 			Size:      4,
 			Status:    "Active",
 		}).ToRow("scope")
-		if row[0] != "scope" || row[1] != "dac1" || row[2] != "n/a" || row[3] != "n/a" || row[4] != "GPU" || row[5] != "shapeA" || row[6] != "4" || row[7] != "Active" {
+		if row[0] != "scope" || row[1] != "dac1" || row[2] != "" || row[3] != "" || row[4] != "GPU" || row[5] != "shapeA" || row[6] != "4" || row[7] != "Active" {
 			t.Errorf("unexpected row: %v", row)
 		}
 	})
@@ -156,7 +156,7 @@ func TestDedicatedAIClusterRow_ToRow(t *testing.T) {
 			Size:      2,
 			Status:    "Inactive",
 		}).ToRow("scope2")
-		if row2[0] != "scope2" || row2[1] != "dac2" || row2[2] != "n/a" || row2[3] != "n/a" || row2[4] != "GPU" || row2[5] != "profileA" || row2[6] != "2" || row2[7] != "Inactive" {
+		if row2[0] != "scope2" || row2[1] != "dac2" || row2[2] != "" || row2[3] != "" || row2[4] != "GPU" || row2[5] != "profileA" || row2[6] != "2" || row2[7] != "Inactive" {
 			t.Errorf("unexpected row2: %v", row2)
 		}
 	})

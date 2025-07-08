@@ -43,7 +43,7 @@ func (n DedicatedAICluster) GetKey() string {
 }
 
 func (n DedicatedAICluster) GetOwnerState() string {
-	state := "n/a"
+	var state string
 	if n.Owner != nil {
 		state = fmt.Sprint(n.Owner.IsInternal)
 	}
@@ -52,7 +52,7 @@ func (n DedicatedAICluster) GetOwnerState() string {
 
 func (n DedicatedAICluster) GetUsage() string {
 	if n.TotalReplicas <= 0 {
-		return "n/a"
+		return ""
 	}
 
 	rate := 1.0 - float64(n.IdleReplicas)/float64(n.TotalReplicas)

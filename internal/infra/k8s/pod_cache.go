@@ -67,7 +67,7 @@ func (c PodCache) getPodStats(ctx context.Context, namespace string) PodStats {
 
 func getUniqeKey(logger logging.Logger, m map[string]struct{}, label, namespace string) string {
 	if len(m) == 0 {
-		return "n/a"
+		return ""
 	}
 
 	keys := make([]string, 0, len(m))
@@ -78,7 +78,7 @@ func getUniqeKey(logger logging.Logger, m map[string]struct{}, label, namespace 
 	if len(keys) > 1 {
 		logger.Errorw("multiple label values found on workload pods in namespace",
 			"label", label, "values", keys, "namesapce", namespace)
-		return "n/a"
+		return ""
 	}
 
 	return keys[0]

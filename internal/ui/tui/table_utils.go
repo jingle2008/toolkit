@@ -396,7 +396,7 @@ func findDedicatedAICluster(dataset *models.Dataset, key models.ItemKey) any {
 getItemKeyString returns a string representation of the ItemKey for a given category.
 */
 func getItemKeyString(category domain.Category, key models.ItemKey) string {
-	switch category { //nolint:exhaustive
+	switch category {
 	case domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride, domain.Environment,
 		domain.ServiceTenancy, domain.GpuPool, domain.ModelArtifact, domain.LimitRegionalOverride,
@@ -406,6 +406,8 @@ func getItemKeyString(category domain.Category, key models.ItemKey) string {
 		domain.PropertyTenancyOverride, domain.DedicatedAICluster, domain.GpuNode:
 		k := key.(models.ScopedItemKey)
 		return fmt.Sprintf("%s/%s", k.Scope, k.Name)
+	case domain.CategoryUnknown:
+		// exhaustive
 	}
 
 	return "UNKNOWN"
