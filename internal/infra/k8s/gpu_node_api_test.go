@@ -131,9 +131,8 @@ func TestListGpuNodes_ErrorFromPodsList(t *testing.T) {
 		return true, nil, assert.AnError
 	})
 	nodes, err := ListGpuNodes(ctx, client)
-	require.NoError(t, err)
-	assert.Len(t, nodes, 1)
-	assert.Equal(t, 0, nodes[0].Allocated) // error is logged, not returned
+	require.Error(t, err)
+	assert.Nil(t, nodes)
 }
 
 func TestLoadGpuNodes_HappyPath(t *testing.T) {

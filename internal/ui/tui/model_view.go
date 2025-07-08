@@ -107,23 +107,25 @@ func (m *Model) View() string {
 		return view.CenterText(m.err.Error(), m.viewWidth, m.viewHeight)
 	case common.HelpView:
 		return view.CenterText(m.fullHelpView(), m.viewWidth, m.viewHeight)
+	case common.ListView:
+		helpView := m.help.View(m.keys)
+		infoView := m.infoValueStyle.
+			Width(m.viewWidth - lipgloss.Width(helpView)).Render(m.infoView())
+		header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
+		mainContent := m.baseStyle.Render(m.table.View())
+		status := m.statusView()
+		return lipgloss.JoinVertical(lipgloss.Left, header, status, mainContent)
+	case common.DetailsView:
+		helpView := m.help.View(m.keys)
+		infoView := m.infoValueStyle.
+			Width(m.viewWidth - lipgloss.Width(helpView)).Render(m.infoView())
+		header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
+		mainContent := m.viewport.View()
+		status := m.statusView()
+		return lipgloss.JoinVertical(lipgloss.Left, header, status, mainContent)
+	default:
+		return ""
 	}
-
-	helpView := m.help.View(m.keys)
-	infoView := m.infoValueStyle.
-		Width(m.viewWidth - lipgloss.Width(helpView)).Render(m.infoView())
-	header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
-
-	var mainContent string
-	if m.viewMode == common.ListView {
-		mainContent = m.baseStyle.Render(m.table.View())
-	} else {
-		mainContent = m.viewport.View()
-	}
-
-	status := m.statusView()
-
-	return lipgloss.JoinVertical(lipgloss.Left, header, status, mainContent)
 }
 
 /*

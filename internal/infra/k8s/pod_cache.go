@@ -102,11 +102,14 @@ func getLabels(item *unstructured.Unstructured) map[string]string {
 func buildPodCache(ctx context.Context, client dynamic.Interface) (PodCache, error) {
 	cache := PodCache{byNS: make(map[string][]*unstructured.Unstructured)}
 
-	processPodQueries(ctx, client, gpuPodSelectors, runningPodSelector,
+	err := processPodQueries(ctx, client, gpuPodSelectors, runningPodSelector,
 		listPodsWithSelectors,
 		func(ns string, pods []*unstructured.Unstructured) {
 			cache.byNS[ns] = append(cache.byNS[ns], pods...)
 		})
+	if err != nil {
+		return cache, err
+	}
 
 	return cache, nil
 }

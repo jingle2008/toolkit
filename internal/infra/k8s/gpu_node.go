@@ -36,11 +36,14 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, selectors
 		gpuAllocationMap[node.Name] = 0
 	}
 
-	processPodQueries(ctx, clientset, selectors, runningPodSelector,
+	err = processPodQueries(ctx, clientset, selectors, runningPodSelector,
 		getGpuAllocations,
 		func(node string, usage int64) {
 			gpuAllocationMap[node] += usage
 		})
+	if err != nil {
+		return nil, err
+	}
 
 	gpuNodes := make([]models.GpuNode, 0, len(nodes.Items))
 	for _, node := range nodes.Items {

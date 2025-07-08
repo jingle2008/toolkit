@@ -98,39 +98,36 @@ func processPodQueries[C any, V any](
 	fieldSelector string,
 	podsMapper func(context.Context, C, string, string) (map[string]V, error),
 	valueReducer func(string, V),
-) {
+) error {
 	eg, egCtx := errgroup.WithContext(ctx)
-	type result struct {
-		valueMap map[string]V
-		selector string
-		err      error
-	}
 
-	resCh := make(chan result, len(labelSelectors))
+	resCh := make(chan map[string]V, len(labelSelectors))
 	for _, selector := range labelSelectors {
 		selCopy := selector
 		eg.Go(func() error {
 			m, err := podsMapper(egCtx, client, selCopy, fieldSelector)
 			if err != nil {
-				resCh <- result{err: err, selector: selCopy}
-				return nil
+				return fmt.Errorf("selector %q: %w", selCopy, err)
 			}
-			resCh <- result{valueMap: m}
+			resCh <- m
 			return nil
 		})
 	}
-	_ = eg.Wait()
-	close(resCh)
+	go func() {
+		_ = eg.Wait()
+		close(resCh)
+	}()
 
 	logger := logging.FromContext(ctx)
 	for r := range resCh {
-		if r.err != nil {
-			logger.Errorw("failed to load pods", "selector", r.selector, "error", r.err)
-			continue
-		}
-
-		for key, value := range r.valueMap {
+		for key, value := range r {
 			valueReducer(key, value)
 		}
 	}
+
+	if err := eg.Wait(); err != nil {
+		logger.Errorw("failed to load pods", "error", err)
+		return err
+	}
+	return nil
 }

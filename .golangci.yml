@@ -1,4 +1,4 @@
-version: 2
+# version: 2
 # golangci-lint configuration
 # - paralleltest: enforces t.Parallel() in tests; use //nolint:paralleltest with justification for serial tests
 # See CONTRIBUTING.md for test best practices.

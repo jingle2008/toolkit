@@ -12,6 +12,7 @@ type fakeErrMsg string
 func (e fakeErrMsg) Error() string { return string(e) }
 
 func TestUpdateLoadingView_QuitKey(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	m.loadingSpinner = &spinner.Model{}
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
@@ -22,6 +23,7 @@ func TestUpdateLoadingView_QuitKey(t *testing.T) {
 }
 
 func TestUpdateLoadingView_ErrMsg(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	m.loadingSpinner = &spinner.Model{}
 	msg := ErrMsg(fakeErrMsg("fail"))
@@ -35,6 +37,7 @@ func TestUpdateLoadingView_ErrMsg(t *testing.T) {
 }
 
 func TestUpdateLoadingView_SpinnerTickMsg(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	m.loadingSpinner = &spinner.Model{}
 	msg := spinner.TickMsg{}

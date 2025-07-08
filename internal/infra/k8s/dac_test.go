@@ -110,50 +110,47 @@ func TestListDedicatedAIClusters_HappyPath(t *testing.T) {
 	assert.Len(t, clusters, 2)
 }
 
-func TestListDedicatedAIClusters_ErrorV1(t *testing.T) {
+func TestListDedicatedAIClusters_ErrorCases(t *testing.T) {
 	t.Parallel()
-	scheme := runtime.NewScheme()
-	listKinds := map[schema.GroupVersionResource]string{
-		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
-		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
-		{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
+	cases := []struct {
+		name   string
+		gvr    schema.GroupVersionResource
+		errMsg string
+	}{
+		{
+			name:   "ErrorV1",
+			gvr:    schema.GroupVersionResource{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"},
+			errMsg: "v1 error",
+		},
+		{
+			name:   "ErrorV2",
+			gvr:    schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"},
+			errMsg: "v2 error",
+		},
 	}
-	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
-	// Patch the client to return error for v1alpha1
-	gvrV1 := schema.GroupVersionResource{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}
-	client.PrependReactor("list", "dedicatedaiclusters", func(action cgotesting.Action) (handled bool, ret runtime.Object, err error) {
-		if action.GetResource() == gvrV1 {
-			return true, nil, errors.New("v1 error")
-		}
-		return false, nil, nil
-	})
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			scheme := runtime.NewScheme()
+			listKinds := map[schema.GroupVersionResource]string{
+				{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
+				{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
+				{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
+			}
+			client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
+			// Patch the client to return error for the test case GVR
+			client.PrependReactor("list", "dedicatedaiclusters", func(action cgotesting.Action) (handled bool, ret runtime.Object, err error) {
+				if action.GetResource() == tc.gvr {
+					return true, nil, errors.New(tc.errMsg)
+				}
+				return false, nil, nil
+			})
 
-	ctx := context.Background()
-	_, err := ListDedicatedAIClusters(ctx, client)
-	assert.Error(t, err)
-}
-
-func TestListDedicatedAIClusters_ErrorV2(t *testing.T) {
-	t.Parallel()
-	scheme := runtime.NewScheme()
-	listKinds := map[schema.GroupVersionResource]string{
-		{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}: "DedicatedAIClusterList",
-		{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}:          "DedicatedAIClusterList",
-		{Group: "", Version: "v1", Resource: "pods"}:                                    "PodList",
+			ctx := context.Background()
+			_, err := ListDedicatedAIClusters(ctx, client)
+			assert.Error(t, err)
+		})
 	}
-	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
-	// Patch the client to return error for v1beta1
-	gvrV2 := schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}
-	client.PrependReactor("list", "dedicatedaiclusters", func(action cgotesting.Action) (handled bool, ret runtime.Object, err error) {
-		if action.GetResource() == gvrV2 {
-			return true, nil, errors.New("v2 error")
-		}
-		return false, nil, nil
-	})
-
-	ctx := context.Background()
-	_, err := ListDedicatedAIClusters(ctx, client)
-	assert.Error(t, err)
 }
 
 func TestLoadDedicatedAIClusters_HappyPath(t *testing.T) {
