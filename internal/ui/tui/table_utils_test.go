@@ -350,7 +350,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		IsReady:      true,
 	}
 	row := GetTableRow(nil, "TenantX", node)
-	assert.Equal(t, table.Row{"poolA", "node1", "A100.8", "8", "6", "true", "true", "OK"}, row)
+	assert.Equal(t, table.Row{"poolA", "node1", "A100.8", "8", "6", "true", "true", "", "OK"}, row)
 
 	// LimitTenancyOverride
 	lto := models.LimitTenancyOverride{

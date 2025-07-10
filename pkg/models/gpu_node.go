@@ -15,6 +15,7 @@ type GpuNode struct {
 	IsHealthy            bool   `json:"isHealthy"`
 	IsReady              bool   `json:"isReady"`
 	IsSchedulingDisabled bool   `json:"isSchedulingDisabled"` // true if node is cordoned
+	Age                  string `json:"age"`
 }
 
 // GetName returns the name of the GPU node.

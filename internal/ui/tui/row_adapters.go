@@ -87,6 +87,7 @@ func (n GpuNodeRow) Render(_ string) []string {
 		fmt.Sprint(n.Allocatable - n.Allocated),
 		fmt.Sprint(n.IsHealthy),
 		fmt.Sprint(n.IsReady),
+		n.Age,
 		models.GpuNode(n).GetStatus(),
 	}
 }
