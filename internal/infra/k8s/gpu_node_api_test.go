@@ -68,7 +68,7 @@ func TestListGpuNodes_HappyPath(t *testing.T) {
 		{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
 	})
 
-	pod := makePod("p1", "n1", 2, "app")
+	pod := makePod("p1", "n1", 2, servingLabelV1)
 	client := fake.NewSimpleClientset(node, pod)
 
 	nodes, err := ListGpuNodes(ctx, client)

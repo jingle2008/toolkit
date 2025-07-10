@@ -30,42 +30,51 @@ func (c PodCache) getPodStats(ctx context.Context, namespace string) PodStats {
 	logger := logging.FromContext(ctx)
 	for _, item := range pods {
 		labels := getLabels(item)
-		app := labels[appLabel]
-		if app == idleTagV1 || app == idleTagV2 {
+		if labels[appLabel] == reservationLabel {
 			idlePods++
 			continue
 		}
 
-		if modelName, ok := labels[baseModelLabel]; ok {
+		annos := getAnnotations(item)
+		if modelName, ok := annos[baseModelLabelV2]; ok {
+			modelNameMap[modelName] = struct{}{}
+		} else if modelName, ok := labels[baseModelLabelV1]; ok {
 			modelNameMap[modelName] = struct{}{}
 		} else {
-			logger.Errorw("workload pod without base model label",
+			logger.Errorw("workload pod without base model annotation/label",
 				"pod", item.GetName(), "namespace", item.GetNamespace())
 		}
 
-		if component, ok := labels[componentLabel]; ok {
-			componentMap[component] = struct{}{}
+		if _, ok := labels[servingLabelV1]; ok {
+			componentMap[servingLabelV1] = struct{}{}
+		} else if _, ok := labels[servingLabelV2]; ok {
+			componentMap[servingLabelV2] = struct{}{}
+		} else if _, ok := labels[trainingLabelV2]; ok {
+			componentMap[trainingLabelV2] = struct{}{}
 		} else {
-			logger.Errorw("workload pod without componment label",
+			logger.Errorw("workload pod without serving/training label",
 				"pod", item.GetName(), "namespace", item.GetNamespace())
 		}
 	}
 
-	component := getUniqeKey(logger, componentMap, componentLabel, namespace)
+	component := getUniqeKey(logger, componentMap, namespace)
 	workloadType := component
-	if component == predictorTag {
+	switch component {
+	case servingLabelV1, servingLabelV2:
 		workloadType = "Hosting"
+	case trainingLabelV2:
+		workloadType = "Fine-tuning"
 	}
 
 	return PodStats{
 		IdlePods:  idlePods,
 		TotalPods: totalPods,
-		ModelName: getUniqeKey(logger, modelNameMap, baseModelLabel, namespace),
+		ModelName: getUniqeKey(logger, modelNameMap, namespace),
 		Type:      workloadType,
 	}
 }
 
-func getUniqeKey(logger logging.Logger, m map[string]struct{}, label, namespace string) string {
+func getUniqeKey(logger logging.Logger, m map[string]struct{}, namespace string) string {
 	if len(m) == 0 {
 		return ""
 	}
@@ -76,8 +85,8 @@ func getUniqeKey(logger logging.Logger, m map[string]struct{}, label, namespace 
 	}
 
 	if len(keys) > 1 {
-		logger.Errorw("multiple label values found on workload pods in namespace",
-			"label", label, "values", keys, "namesapce", namespace)
+		logger.Errorw("multiple configs found on workload pods in namespace",
+			"values", keys, "namespace", namespace)
 		return ""
 	}
 
@@ -97,6 +106,21 @@ func getLabels(item *unstructured.Unstructured) map[string]string {
 		}
 	}
 	return labels
+}
+
+// getAnnotations safely extracts annotations from an unstructured pod.
+func getAnnotations(item *unstructured.Unstructured) map[string]string {
+	annos := make(map[string]string)
+	raw, found, _ := unstructured.NestedMap(item.Object, "metadata", "annotations")
+	if !found {
+		return annos
+	}
+	for k, v := range raw {
+		if s, ok := v.(string); ok {
+			annos[k] = s
+		}
+	}
+	return annos
 }
 
 func buildPodCache(ctx context.Context, client dynamic.Interface) (PodCache, error) {

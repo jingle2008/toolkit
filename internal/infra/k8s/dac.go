@@ -156,11 +156,10 @@ func LoadDedicatedAIClusters(ctx context.Context, client dynamic.Interface) (map
 
 func tenantIDFromLabels(labels map[string]any) string {
 	value := labels["tenancy-id"]
-	if value == nil {
-		return "UNKNOWN_TENANCY"
-	}
-	if str, ok := value.(string); ok {
-		return str
+	if value != nil {
+		if str, ok := value.(string); ok {
+			return str
+		}
 	}
 	return "UNKNOWN_TENANCY"
 }

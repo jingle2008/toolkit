@@ -16,18 +16,20 @@ import (
 
 const (
 	runningPodSelector = "status.phase=Running"
-	idleTagV1          = "dummy"
-	idleTagV2          = "reservation"
+	reservationLabel   = "reservation"
+	servingLabelV1     = "ome.oracle.com/inferenceservice"
+	servingLabelV2     = "ome.io/inferenceservice"
+	trainingLabelV2    = "ome.io/trainingjob"
 	appLabel           = "app"
-	componentLabel     = "component"
-	predictorTag       = "predictor"
-	baseModelLabel     = "base-model-name"
+	baseModelLabelV1   = "base-model-name"
+	baseModelLabelV2   = "ome.io/base-model-name"
 )
 
 var gpuPodSelectors = []string{
-	fmt.Sprintf("%s in (%s,%s)", appLabel, idleTagV1, idleTagV2),
-	fmt.Sprintf("%s=%s", componentLabel, predictorTag),
-	"ome.oracle.com/trainingjob",
+	fmt.Sprintf("%s=%s", appLabel, reservationLabel),
+	servingLabelV1,
+	servingLabelV2,
+	trainingLabelV2,
 }
 
 func getGpuAllocations(
