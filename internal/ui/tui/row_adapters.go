@@ -25,8 +25,8 @@ type LimitTenancyOverrideRow models.LimitTenancyOverride
 // Render implements the Renderer interface for LimitTenancyOverrideRow.
 func (l LimitTenancyOverrideRow) Render(scope string) []string {
 	return []string{
-		scope,
 		l.Name,
+		scope,
 		strings.Join(l.Regions, ", "),
 		fmt.Sprint(l.Values[0].Min),
 		fmt.Sprint(l.Values[0].Max),
@@ -44,8 +44,8 @@ type ConsolePropertyTenancyOverrideRow models.ConsolePropertyTenancyOverride
 // Render implements the Renderer interface for ConsolePropertyTenancyOverrideRow.
 func (c ConsolePropertyTenancyOverrideRow) Render(scope string) []string {
 	return []string{
-		scope,
 		c.Name,
+		scope,
 		strings.Join(c.GetRegions(), ", "),
 		c.GetValue(),
 	}
@@ -62,8 +62,8 @@ type PropertyTenancyOverrideRow models.PropertyTenancyOverride
 // Render implements the Renderer interface for PropertyTenancyOverrideRow.
 func (p PropertyTenancyOverrideRow) Render(scope string) []string {
 	return []string{
-		scope,
 		p.Name,
+		scope,
 		strings.Join(p.GetRegions(), ", "),
 		p.GetValue(),
 	}
@@ -80,8 +80,8 @@ type GpuNodeRow models.GpuNode
 // Render implements the Renderer interface for GpuNodeRow.
 func (n GpuNodeRow) Render(_ string) []string {
 	return []string{
-		n.NodePool,
 		n.Name,
+		n.NodePool,
 		n.InstanceType,
 		fmt.Sprint(n.Allocatable),
 		fmt.Sprint(n.Allocatable - n.Allocated),
@@ -107,8 +107,8 @@ func (d DedicatedAIClusterRow) Render(scope string) []string {
 		unitShapeOrProfile = d.Profile
 	}
 	return []string{
-		scope,
 		d.Name,
+		scope,
 		models.DedicatedAICluster(d).GetOwnerState(),
 		models.DedicatedAICluster(d).GetUsage(),
 		d.Type,
@@ -185,9 +185,9 @@ type ModelArtifactRow models.ModelArtifact
 // Render implements the Renderer interface for ModelArtifactRow.
 func (val ModelArtifactRow) Render(_ string) []string {
 	return []string{
+		val.Name,
 		val.ModelName,
 		models.ModelArtifact(val).GetGpuConfig(),
-		val.Name,
 		val.TensorRTVersion,
 	}
 }

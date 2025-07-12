@@ -32,21 +32,21 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Value", 0.12},
 	},
 	domain.LimitTenancyOverride: {
-		{"Tenant", 0.24},
 		{"Name", 0.4},
+		{"Tenant", 0.24},
 		{"Regions", 0.2},
 		{"Min", 0.08},
 		{"Max", 0.08},
 	},
 	domain.ConsolePropertyTenancyOverride: {
-		{"Tenant", 0.25},
 		{"Name", 0.4},
+		{"Tenant", 0.25},
 		{"Regions", 0.25},
 		{"Value", 0.1},
 	},
 	domain.PropertyTenancyOverride: {
-		{"Tenant", 0.25},
 		{"Name", 0.4},
+		{"Tenant", 0.25},
 		{"Regions", 0.25},
 		{"Value", 0.1},
 	},
@@ -67,8 +67,8 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Value", 0.2},
 	},
 	domain.BaseModel: {
-		{"Internal Name", 0.28},
 		{"Name", 0.26},
+		{"Internal Name", 0.28},
 		{"Version", 0.08},
 		{"DAC Shape", 0.16},
 		{"Caps", 0.04},
@@ -76,9 +76,9 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Flags", 0.08},
 	},
 	domain.ModelArtifact: {
+		{"Name", 0.5},
 		{"Model", 0.3},
 		{"GPU Config", 0.1},
-		{"Name", 0.5},
 		{"TensorRT", 0.1},
 	},
 	domain.Environment: {
@@ -103,8 +103,8 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Capacity Type", 0.1},
 	},
 	domain.GpuNode: {
-		{"Pool", 0.22},
 		{"Name", 0.15},
+		{"Pool", 0.22},
 		{"Type", 0.15},
 		{"Total", 0.06},
 		{"Free", 0.06},
@@ -114,8 +114,8 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Status", 0.18},
 	},
 	domain.DedicatedAICluster: {
-		{"Tenant", 0.16},
 		{"Name", 0.42},
+		{"Tenant", 0.16},
 		{"Internal", 0.05},
 		{"Usage", 0.05},
 		{"Type", 0.06},

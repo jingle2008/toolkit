@@ -54,7 +54,7 @@ func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 		UnitShape: "A100",
 	}
 	row := GetTableRow(nil, "TenantX", cluster)
-	assert.Equal(t, table.Row{"TenantX", "DAC1", "", "", "GPU", "A100", "4", "", "Active"}, row)
+	assert.Equal(t, table.Row{"DAC1", "TenantX", "", "", "GPU", "A100", "4", "", "Active"}, row)
 }
 
 func Test_getEnvironments_returns_rows(t *testing.T) {
@@ -249,7 +249,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 	rows := getBaseModels(baseModels, "")
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{
-		"bm1", "BM1", "v1", "", "C/C*2", "1024", "EXP/INT/LTS/RTD",
+		"BM1", "bm1", "v1", "", "C/C*2", "1024", "EXP/INT/LTS/RTD",
 	}, rows[0])
 }
 
@@ -269,12 +269,12 @@ func Test_getModelArtifacts_returns_rows(t *testing.T) {
 		},
 	}, domain.ModelArtifact, nil, "", "", true)
 	assert.Len(t, rows, 1)
-	assert.Equal(t, table.Row{"M1", "2x A100", "artifactA", "8.0"}, rows[0])
+	assert.Equal(t, table.Row{"artifactA", "M1", "2x A100", "8.0"}, rows[0])
 }
 
 func Test_getItemKey_and_getItemKeyString(t *testing.T) {
 	t.Parallel()
-	row := table.Row{"TenantX", "DAC1", "GPU", "A100", "4", "Active"}
+	row := table.Row{"DAC1", "TenantX", "GPU", "A100", "4", "Active"}
 	key := getItemKey(domain.DedicatedAICluster, row)
 	assert.Equal(t, models.ScopedItemKey{Scope: "TenantX", Name: "DAC1"}, key)
 	keyStr := getItemKeyString(domain.DedicatedAICluster, key)
@@ -314,7 +314,7 @@ func Test_getTableRows_and_scoped_items(t *testing.T) {
 	}
 	rows := getTableRows(nil, dataset, domain.LimitTenancyOverride, &domain.ToolkitContext{Name: "TenantA", Category: domain.Tenant}, "", "", true)
 	assert.Len(t, rows, 1)
-	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, rows[0])
+	assert.Equal(t, table.Row{"LimitA", "TenantA", "us-phoenix-1", "1", "10"}, rows[0])
 
 	// Test getTableRows for ConsolePropertyRegionalOverride (uses getRegionalOverrides)
 	overrides := []mockOverride{
@@ -350,7 +350,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		IsReady:      true,
 	}
 	row := GetTableRow(nil, "TenantX", node)
-	assert.Equal(t, table.Row{"poolA", "node1", "A100.8", "8", "6", "true", "true", "", "OK"}, row)
+	assert.Equal(t, table.Row{"node1", "poolA", "A100.8", "8", "6", "true", "true", "", "OK"}, row)
 
 	// LimitTenancyOverride
 	lto := models.LimitTenancyOverride{
@@ -361,7 +361,7 @@ func Test_getTableRow_other_types(t *testing.T) {
 		},
 	}
 	row2 := GetTableRow(nil, "TenantA", lto)
-	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, row2)
+	assert.Equal(t, table.Row{"LimitA", "TenantA", "us-phoenix-1", "1", "10"}, row2)
 
 	// PropertyRegionalOverride edge: empty regions and values
 	pro := models.PropertyRegionalOverride{
@@ -412,18 +412,18 @@ func TestGetItemKeyAndString(t *testing.T) {
 		{domain.LimitDefinition, table.Row{"limdef"}, "limdef"},
 		{domain.ConsolePropertyDefinition, table.Row{"cpdef"}, "cpdef"},
 		{domain.PropertyDefinition, table.Row{"pdef"}, "pdef"},
-		{domain.LimitTenancyOverride, table.Row{"tenant1", "limdef"}, "tenant1/limdef"},
-		{domain.ConsolePropertyTenancyOverride, table.Row{"tenant1", "cpdef"}, "tenant1/cpdef"},
-		{domain.PropertyTenancyOverride, table.Row{"tenant1", "pdef"}, "tenant1/pdef"},
+		{domain.LimitTenancyOverride, table.Row{"limdef", "tenant1"}, "tenant1/limdef"},
+		{domain.ConsolePropertyTenancyOverride, table.Row{"cpdef", "tenant1"}, "tenant1/cpdef"},
+		{domain.PropertyTenancyOverride, table.Row{"pdef", "tenant1"}, "tenant1/pdef"},
 		{domain.ConsolePropertyRegionalOverride, table.Row{"cpdef"}, "cpdef"},
 		{domain.PropertyRegionalOverride, table.Row{"pdef"}, "pdef"},
-		{domain.BaseModel, table.Row{"bm1", "BM1", "v1", "", "C,C*2", "1024", "EXP/INT/LTS/RTD"}, "bm1"},
-		{domain.ModelArtifact, table.Row{"model", "gpu", "artifact"}, "artifact"},
+		{domain.BaseModel, table.Row{"BM1", "bm1", "v1", "", "C,C*2", "1024", "EXP/INT/LTS/RTD"}, "bm1"},
+		{domain.ModelArtifact, table.Row{"artifact", "gpu", "model"}, "artifact"},
 		{domain.Environment, table.Row{"env"}, "env"},
 		{domain.ServiceTenancy, table.Row{"svc"}, "svc"},
 		{domain.GpuPool, table.Row{"pool"}, "pool"},
-		{domain.GpuNode, table.Row{"pool", "node"}, "pool/node"},
-		{domain.DedicatedAICluster, table.Row{"tenant1", "dac"}, "tenant1/dac"},
+		{domain.GpuNode, table.Row{"node", "pool"}, "pool/node"},
+		{domain.DedicatedAICluster, table.Row{"dac", "tenant1"}, "tenant1/dac"},
 	}
 	for _, tt := range tests {
 		key := getItemKey(tt.category, tt.row)
@@ -704,5 +704,5 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 	}
 	rows := getBaseModels(m, "a")
 	assert.Len(t, rows, 1)
-	assert.Contains(t, rows[0][0], "a")
+	assert.Contains(t, rows[0][0], "A")
 }

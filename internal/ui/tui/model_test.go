@@ -394,15 +394,15 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 			"bm1": bm,
 		},
 	}
-	// Table row for BaseModel: [InternalName, Name, Version, Type]
+	// Table row for BaseModel: [Name, InternalName, Version, Type]
 	tbl := table.New()
 	tbl.SetColumns([]table.Column{
-		{Title: "InternalName", Width: 10},
 		{Title: "Name", Width: 10},
+		{Title: "InternalName", Width: 10},
 		{Title: "Version", Width: 10},
 		{Title: "Type", Width: 10},
 	})
-	tbl.SetRows([]table.Row{{"v1", "bm1", "v1", "typeA"}})
+	tbl.SetRows([]table.Row{{"bm1", "v1", "v1", "typeA"}})
 	tbl.SetCursor(0)
 
 	env := models.Environment{

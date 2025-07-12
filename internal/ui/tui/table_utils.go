@@ -211,8 +211,8 @@ func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 			shapeDisplay = fmt.Sprintf("%dx %s", shape.QuotaUnit, shape.Name)
 		}
 		results = append(results, table.Row{
-			val.InternalName,
 			val.Name,
+			val.InternalName,
 			val.Version,
 			shapeDisplay,
 			strings.Join(val.GetCapabilities(), "/"),
@@ -234,13 +234,13 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
 		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
-		domain.PropertyRegionalOverride, domain.BaseModel:
+		domain.PropertyRegionalOverride, domain.ModelArtifact:
 		return row[0]
+	case domain.BaseModel:
+		return row[1] // Internal Name is now at index 1
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
-		return models.ScopedItemKey{Scope: row[0], Name: row[1]}
-	case domain.ModelArtifact:
-		return row[2]
+		return models.ScopedItemKey{Scope: row[1], Name: row[0]}
 	}
 
 	return nil
