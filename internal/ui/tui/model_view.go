@@ -66,9 +66,10 @@ func (m *Model) statusView() string {
 
 	statsCell := m.statsStyle.Render(
 		fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
-	inputCell := m.statusText.
-		Width(m.viewWidth - w(contextCell) - w(statsCell)).
-		Render(m.textInput.View())
+	m.textInput.Width = m.viewWidth - w(contextCell) - w(statsCell) -
+		w(m.textInput.Prompt) - // prompt takes extra space
+		1 // 1 for cursor
+	inputCell := m.textInput.View()
 
 	return lipgloss.JoinHorizontal(lipgloss.Top,
 		contextCell,

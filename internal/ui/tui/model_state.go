@@ -126,8 +126,7 @@ func initStyles(m *Model) {
 		Inherit(m.statusBarStyle).
 		Foreground(lipgloss.Color("#FFFDF5")).
 		Background(lipgloss.Color("#FF5F87")).
-		Padding(0, 1).
-		MarginRight(1)
+		Padding(0, 1)
 
 	m.statsStyle = m.statusNugget.
 		Background(lipgloss.Color("#A550DF")).
@@ -195,7 +194,7 @@ func setDefaults(m *Model) {
 	if m.textInput == nil {
 		ti := textinput.New()
 		ti.CharLimit = 256
-		ti.Prompt = "🐶> "
+		ti.Prompt = " 🐶> "
 		m.textInput = &ti
 	}
 	if m.viewport == nil {
