@@ -1,9 +1,7 @@
 package k8s
 
 import (
-	"cmp"
 	"context"
-	"slices"
 	"time"
 
 	models "github.com/jingle2008/toolkit/pkg/models"
@@ -86,7 +84,7 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 }
 
 /*
-LoadGpuNodes returns a map of node pool names to slices of GpuNode, sorted by free GPUs descending.
+LoadGpuNodes returns a map of node pool names to slices of GpuNode.
 It fetches all GPU nodes and groups them by their node pool label.
 */
 func LoadGpuNodes(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GpuNode, error) {
@@ -99,15 +97,5 @@ func LoadGpuNodes(ctx context.Context, clientset kubernetes.Interface) (map[stri
 	for _, node := range nodes {
 		result[node.NodePool] = append(result[node.NodePool], node)
 	}
-
-	// sort by free GPUs
-	for _, v := range result {
-		slices.SortFunc(v, func(a, b models.GpuNode) int {
-			ai := a.Allocatable - a.Allocated
-			bi := b.Allocatable - b.Allocated
-			return cmp.Compare(bi, ai)
-		})
-	}
-
 	return result, nil
 }

@@ -2,8 +2,6 @@ package k8s
 
 import (
 	"context"
-	"slices"
-	"strings"
 	"time"
 
 	models "github.com/jingle2008/toolkit/pkg/models"
@@ -157,13 +155,6 @@ func LoadDedicatedAIClusters(ctx context.Context, client dynamic.Interface) (map
 	for _, dac := range dacs {
 		result[dac.TenantID] = append(result[dac.TenantID], dac)
 	}
-
-	for _, v := range result {
-		slices.SortFunc(v, func(a, b models.DedicatedAICluster) int {
-			return strings.Compare(a.Name, b.Name)
-		})
-	}
-
 	return result, nil
 }
 

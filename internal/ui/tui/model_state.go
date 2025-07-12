@@ -91,6 +91,8 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		category:     domain.Tenant, // or a sensible default
 		viewMode:     common.ListView,
 		lastViewMode: common.ListView,
+		sortColumn:   "Name",
+		sortAsc:      true,
 	}
 
 	initStyles(m)

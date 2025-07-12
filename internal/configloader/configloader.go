@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
@@ -71,9 +69,6 @@ func loadOverridesDI[T models.NamedItem](
 		overrides = append(overrides, *override)
 	}
 
-	slices.SortFunc(overrides, func(a, b T) int {
-		return strings.Compare(a.GetName(), b.GetName())
-	})
 	return overrides, nil
 }
 
@@ -185,9 +180,6 @@ func getTenants(tenantMap map[string]idMap, tenantMeta []models.TenantMetadata) 
 		tenants = append(tenants, tenant)
 	}
 
-	slices.SortFunc(tenants, func(a, b models.Tenant) int {
-		return strings.Compare(a.Name, b.Name)
-	})
 	return tenants
 }
 
@@ -214,9 +206,6 @@ func getEnvironments(tenancies []models.ServiceTenancy) []models.Environment {
 		environments = append(environments, t.Environments()...)
 	}
 
-	slices.SortFunc(environments, func(a, b models.Environment) int {
-		return strings.Compare(a.GetName(), b.GetName())
-	})
 	return environments
 }
 
@@ -302,7 +291,7 @@ func validateEnvironment(env models.Environment, allEnvs []models.Environment) e
 	return nil
 }
 
-// loadDefinitionGroups loads and sorts the definition groups.
+// loadDefinitionGroups loads the definition groups.
 // NOTE: Definitions are always loaded from the "oc1" realm, regardless of the user's selected realm.
 func loadDefinitionGroups(repoPath string) (
 	*models.LimitDefinitionGroup,
@@ -316,27 +305,18 @@ func loadDefinitionGroups(repoPath string) (
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	slices.SortFunc(limitGroup.Values, func(a, b models.LimitDefinition) int {
-		return strings.Compare(a.Name, b.Name)
-	})
 
 	consolePropertyDefinitionPath := getConfigPath(limitsRoot, consolePropertiesKey+definitionSuffix)
 	consolePropertyDefinitionGroup, err := jsonutil.LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	slices.SortFunc(consolePropertyDefinitionGroup.Values, func(a, b models.ConsolePropertyDefinition) int {
-		return strings.Compare(a.Name, b.Name)
-	})
 
 	propertyDefinitionPath := getConfigPath(limitsRoot, propertiesKey+definitionSuffix)
 	propertyDefinitionGroup, err := jsonutil.LoadFile[models.PropertyDefinitionGroup](propertyDefinitionPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	slices.SortFunc(propertyDefinitionGroup.Values, func(a, b models.PropertyDefinition) int {
-		return strings.Compare(a.Name, b.Name)
-	})
 
 	return limitGroup, consolePropertyDefinitionGroup, propertyDefinitionGroup, nil
 }

@@ -151,12 +151,8 @@ func (m *Model) processData(msg DataMsg) {
 
 // handleAdditionalKeys processes extra key events for the current category.
 func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
-	if !key.Matches(msg, m.keys.Context...) {
-		return nil
-	}
-
 	// Generic column sort shortcut: Shift+<first letter>
-	if len(msg.String()) == 1 && msg.Type == tea.KeyRunes && msg.Alt == false {
+	if len(msg.String()) == 1 && msg.Type == tea.KeyRunes && !msg.Alt {
 		pressed := msg.String()
 		if pressed == strings.ToUpper(pressed) && pressed != strings.ToLower(pressed) {
 			hotkeyToCol := make(map[string]string)
@@ -173,10 +169,15 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 					m.sortColumn = col
 					m.sortAsc = true
 				}
+				m.updateColumns()
 				m.updateRows()
 				return nil
 			}
 		}
+	}
+
+	if !key.Matches(msg, m.keys.Context...) {
+		return nil
 	}
 
 	item := m.getSelectedItem()
@@ -288,6 +289,8 @@ func (m *Model) updateCategory(category domain.Category) []tea.Cmd {
 	} else {
 		m.category = category
 		m.keys = keys.ResolveKeys(m.category, m.viewMode)
+		m.sortColumn = "Name"
+		m.sortAsc = true
 	}
 
 	// Dispatch table for category handlers

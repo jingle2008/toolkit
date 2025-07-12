@@ -83,12 +83,12 @@ func FullKeyMap() KeyMap {
 // Mode-specific key bindings
 var (
 	NextCategory = key.NewBinding(
-		key.WithKeys("shift+right"),
-		key.WithHelp("shift+→", "next category"),
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "next category"),
 	)
 	PrevCategory = key.NewBinding(
-		key.WithKeys("shift+left"),
-		key.WithHelp("shift+←", "previous category"),
+		key.WithKeys("shift+tab"),
+		key.WithHelp("shift+tab", "previous category"),
 	)
 	FilterList = key.NewBinding(
 		key.WithKeys("/"),

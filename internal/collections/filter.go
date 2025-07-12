@@ -4,7 +4,6 @@ Package collections provides generic filtering and searching utilities for filte
 package collections
 
 import (
-	"sort"
 	"strings"
 
 	models "github.com/jingle2008/toolkit/pkg/models"
@@ -59,31 +58,18 @@ func FilterSlice[T models.NamedFilterable](items []T, name *string, filter strin
 }
 
 /*
-getSortedKeys returns the sorted keys of the given map.
-*/
-func getSortedKeys[T any](m map[string]T) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-	return keys
-}
-
-/*
 filterMap performs the given action on items in the map that match the filter and name.
 Return false in the action to stop further processing.
 */
 func filterMap[T models.NamedFilterable](m map[string][]T, name *string,
 	filter string, action func(int, string, T) bool,
 ) {
-	idx, keys := 0, getSortedKeys(m)
+	idx := 0
 
-	for _, key := range keys {
+	for key, value := range m {
 		matchKey := strings.Contains(strings.ToLower(key), filter)
 
-		for _, val := range m[key] {
+		for _, val := range value {
 			if (name == nil || *name == val.GetName()) &&
 				(matchKey || IsMatch(val, filter, true)) {
 				if !action(idx, key, val) {

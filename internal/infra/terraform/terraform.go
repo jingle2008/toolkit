@@ -325,9 +325,6 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 		tenancies = append(tenancies, *tenancy)
 	}
 
-	slices.SortFunc(tenancies, func(a, b models.ServiceTenancy) int {
-		return strings.Compare(a.Name, b.Name)
-	})
 	return tenancies, nil
 }
 
@@ -602,10 +599,6 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 	}
 
 	gpuPools = append(gpuPools, pools...)
-
-	slices.SortFunc(gpuPools, func(a, b models.GpuPool) int {
-		return strings.Compare(a.Name, b.Name)
-	})
 	return gpuPools, nil
 }
 
@@ -680,9 +673,6 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 			}
 		}
 
-		slices.SortFunc(modelArtifacts, func(a, b models.ModelArtifact) int {
-			return strings.Compare(a.Name, b.Name)
-		})
 		modelArtifactMap[modelName] = modelArtifacts
 	}
 
