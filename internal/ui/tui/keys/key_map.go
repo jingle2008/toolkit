@@ -34,20 +34,28 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return rows
 }
 
-// Help returns the help key binding from the global keys.
+/*
+Help returns the help key binding from the global keys.
+It matches by key ("h") or help text ("help"), case-insensitive.
+*/
 func (k KeyMap) Help() key.Binding {
-	return findBindingByHelp(k.Global, "Help")
+	for _, b := range k.Global {
+		h := b.Help()
+		if strings.EqualFold(h.Key, "h") || strings.EqualFold(h.Desc, "help") {
+			return b
+		}
+	}
+	return key.Binding{}
 }
 
-// Quit returns the quit key binding from the global keys.
+/*
+Quit returns the quit key binding from the global keys.
+It matches by key ("q") or help text ("quit"), case-insensitive.
+*/
 func (k KeyMap) Quit() key.Binding {
-	return findBindingByHelp(k.Global, "Quit")
-}
-
-// findBindingByHelp finds a key.Binding in the slice by its help text.
-func findBindingByHelp(bindings []key.Binding, help string) key.Binding {
-	for _, b := range bindings {
-		if b.Help().Key == help || b.Help().Desc == help {
+	for _, b := range k.Global {
+		h := b.Help()
+		if strings.EqualFold(h.Key, "q") || strings.EqualFold(h.Desc, "quit") {
 			return b
 		}
 	}

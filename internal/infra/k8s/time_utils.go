@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -17,4 +18,31 @@ func FormatAge(d time.Duration) string {
 	default:
 		return fmt.Sprintf("%ds", int(d.Seconds()))
 	}
+}
+
+// ParseAge converts strings like "10s", "3m", "4h", "2d" to seconds.
+// Unsupported or malformed inputs return 0.
+func ParseAge(s string) int64 {
+	if len(s) < 2 {
+		return 0
+	}
+	unit := s[len(s)-1]
+	mult := int64(0)
+	switch unit {
+	case 's':
+		mult = 1
+	case 'm':
+		mult = 60
+	case 'h':
+		mult = 3600
+	case 'd':
+		mult = 86400
+	default:
+		return 0
+	}
+	v, err := strconv.ParseInt(s[:len(s)-1], 10, 64)
+	if err != nil || v < 0 {
+		return 0
+	}
+	return v * mult
 }
