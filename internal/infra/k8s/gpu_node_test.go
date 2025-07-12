@@ -126,9 +126,9 @@ func TestFormatAge(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
 			t.Parallel()
-			got := formatAge(tt.dur)
+			got := FormatAge(tt.dur)
 			if got != tt.expected {
-				t.Errorf("formatAge(%v) = %q, want %q", tt.dur, got, tt.expected)
+				t.Errorf("FormatAge(%v) = %q, want %q", tt.dur, got, tt.expected)
 			}
 		})
 	}

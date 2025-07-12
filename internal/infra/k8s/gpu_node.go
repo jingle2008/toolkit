@@ -3,7 +3,6 @@ package k8s
 import (
 	"cmp"
 	"context"
-	"fmt"
 	"slices"
 	"time"
 
@@ -51,7 +50,7 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, selectors
 	for _, node := range nodes.Items {
 		allocQty := node.Status.Allocatable[gpuProperty]
 		allocatable, _ := allocQty.AsInt64()
-		age := formatAge(time.Since(node.CreationTimestamp.Time))
+		age := FormatAge(time.Since(node.CreationTimestamp.Time))
 		gpuNodes = append(gpuNodes, models.GpuNode{
 			Name:                 node.Name,
 			InstanceType:         node.Labels["beta.kubernetes.io/instance-type"],
@@ -66,19 +65,6 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, selectors
 	}
 
 	return gpuNodes, nil
-}
-
-func formatAge(d time.Duration) string {
-	switch {
-	case d.Hours() >= 48:
-		return fmt.Sprintf("%dd", int(d.Hours())/24)
-	case d.Hours() >= 1:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	case d.Minutes() >= 1:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	default:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	}
 }
 
 func isNodeHealthy(conditions []corev1.NodeCondition) bool {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"time"
 
 	models "github.com/jingle2008/toolkit/pkg/models"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,6 +60,11 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, ca
 		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
 		status, _, _ := unstructured.NestedMap(item.Object, "status")
 		labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
+		creationTimestampStr, _, _ := unstructured.NestedString(item.Object, "metadata", "creationTimestamp")
+		var age string
+		if t, err := time.Parse(time.RFC3339, creationTimestampStr); err == nil {
+			age = FormatAge(time.Since(t))
+		}
 
 		dacType, _ := spec["type"].(string)
 		unitShape, _ := spec["unitShape"].(string)
@@ -85,6 +91,7 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, ca
 			ModelName:     stats.ModelName,
 			IdleReplicas:  stats.IdlePods,
 			TotalReplicas: stats.TotalPods,
+			Age:           age,
 		}
 	})
 }
@@ -101,6 +108,11 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
 		status, _, _ := unstructured.NestedMap(item.Object, "status")
 		labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
+		creationTimestampStr, _, _ := unstructured.NestedString(item.Object, "metadata", "creationTimestamp")
+		var age string
+		if t, err := time.Parse(time.RFC3339, creationTimestampStr); err == nil {
+			age = FormatAge(time.Since(t))
+		}
 
 		profile, _ := spec["profile"].(string)
 		count, _ := spec["count"].(int64)
@@ -127,6 +139,7 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 			IdleReplicas:  stats.IdlePods,
 			TotalReplicas: stats.TotalPods,
 			Type:          stats.Type,
+			Age:           age,
 		}
 	})
 }

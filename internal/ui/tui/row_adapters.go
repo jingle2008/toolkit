@@ -114,6 +114,7 @@ func (d DedicatedAIClusterRow) Render(scope string) []string {
 		d.Type,
 		unitShapeOrProfile,
 		fmt.Sprint(d.Size),
+		d.Age,
 		d.Status,
 	}
 }

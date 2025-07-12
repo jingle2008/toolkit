@@ -15,6 +15,7 @@ type DedicatedAICluster struct {
 	ModelName     string  `json:"modelName,omitempty"`
 	TotalReplicas int     `json:"totalReplicas"`
 	IdleReplicas  int     `json:"idleReplicas"`
+	Age           string  `json:"age"`
 }
 
 // GetName returns the name of the dedicated AI cluster.
@@ -34,6 +35,7 @@ func (n DedicatedAICluster) GetFilterableFields() []string {
 		n.GetOwnerState(),
 		n.ModelName,
 		n.GetUsage(),
+		n.Age,
 	}
 }
 

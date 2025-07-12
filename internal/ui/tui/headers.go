@@ -114,13 +114,14 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Status", 0.18},
 	},
 	domain.DedicatedAICluster: {
-		{"Tenant", 0.18},
+		{"Tenant", 0.16},
 		{"Name", 0.42},
 		{"Internal", 0.05},
 		{"Usage", 0.05},
 		{"Type", 0.06},
-		{"Shape/Profile", 0.15},
+		{"Shape/Profile", 0.13},
 		{"Size", 0.04},
+		{"Age", 0.04},
 		{"Status", 0.05},
 	},
 }
