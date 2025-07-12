@@ -71,8 +71,8 @@ var headerDefinitions = map[domain.Category][]header{
 		{"Name", 0.26},
 		{"Version", 0.08},
 		{"DAC Shape", 0.16},
-		{"Caps", 0.06},
-		{"Max Tokens", 0.08},
+		{"Caps", 0.04},
+		{"Max Tokens", 0.1},
 		{"Flags", 0.08},
 	},
 	domain.ModelArtifact: {
@@ -90,7 +90,7 @@ var headerDefinitions = map[domain.Category][]header{
 	domain.ServiceTenancy: {
 		{"Name", 0.15},
 		{"Realm", 0.1},
-		{"Environment", 0.1},
+		{"Type", 0.1},
 		{"Home Region", 0.15},
 		{"Regions", 0.5},
 	},

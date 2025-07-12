@@ -3,6 +3,7 @@ package keys
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 )
@@ -21,23 +22,26 @@ func (k KeyMap) ShortHelp() []key.Binding {
 
 // FullHelp returns a full list of key bindings for help display, chunked per category.
 func (k KeyMap) FullHelp() [][]key.Binding {
+	cat := slices.Concat(k.Global, k.Mode, k.Context)
+	slices.SortFunc(cat, func(c1, c2 key.Binding) int {
+		return strings.Compare(c1.Help().Desc, c2.Help().Desc)
+	})
+
 	rows := [][]key.Binding{}
-	for _, cat := range [][]key.Binding{k.Context, k.Mode, k.Global} {
-		for chunk := range slices.Chunk(cat, 5) {
-			rows = append(rows, chunk)
-		}
+	for chunk := range slices.Chunk(cat, 5) {
+		rows = append(rows, chunk)
 	}
 	return rows
 }
 
 // Help returns the help key binding from the global keys.
 func (k KeyMap) Help() key.Binding {
-	return findBindingByHelp(k.Global, "help")
+	return findBindingByHelp(k.Global, "Help")
 }
 
 // Quit returns the quit key binding from the global keys.
 func (k KeyMap) Quit() key.Binding {
-	return findBindingByHelp(k.Global, "quit")
+	return findBindingByHelp(k.Global, "Quit")
 }
 
 // findBindingByHelp finds a key.Binding in the slice by its help text.

@@ -5,6 +5,7 @@ package tui
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/atotto/clipboard"
@@ -98,8 +99,8 @@ func (m *Model) updateLayout(w, h int) {
 	borderWidth := borderStyle.GetLeftSize() + borderStyle.GetRightSize()
 	borderHeight := borderStyle.GetTopSize() + borderStyle.GetBottomSize()
 	statusHeight := lipgloss.Height(m.statusView())
-	helpHeight := lipgloss.Height(m.help.View(m.keys))
-	top := statusHeight + helpHeight
+	infoHeight := lipgloss.Height(m.infoView())
+	top := statusHeight + infoHeight
 	if m.viewMode == common.DetailsView {
 		m.viewport.Width = w
 		m.viewport.Height = h - top
@@ -149,35 +150,33 @@ func (m *Model) processData(msg DataMsg) {
 	m.refreshDisplay()
 }
 
-// handleAdditionalKeys processes extra key events for the current category.
-func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
-	// Generic column sort shortcut: Shift+<first letter>
-	if len(msg.String()) == 1 && msg.Type == tea.KeyRunes && !msg.Alt {
-		pressed := msg.String()
-		if pressed == strings.ToUpper(pressed) && pressed != strings.ToLower(pressed) {
-			hotkeyToCol := make(map[string]string)
-			for _, h := range m.headers {
-				if len(h.text) > 0 {
-					hotkey := strings.ToUpper(string(h.text[0]))
-					hotkeyToCol[hotkey] = h.text
-				}
-			}
-			if col, ok := hotkeyToCol[pressed]; ok {
-				if m.sortColumn == col {
-					m.sortAsc = !m.sortAsc
-				} else {
-					m.sortColumn = col
-					m.sortAsc = true
-				}
-				m.updateColumns()
-				m.updateRows()
-				return nil
-			}
-		}
+func (m *Model) sortTableByColumn(column string) tea.Cmd {
+	if m.sortColumn == column {
+		m.sortAsc = !m.sortAsc
+	} else {
+		m.sortColumn = column
+		m.sortAsc = true
 	}
 
-	if !key.Matches(msg, m.keys.Context...) {
+	m.updateColumns()
+	m.updateRows()
+	return nil
+}
+
+// handleAdditionalKeys processes extra key events for the current category.
+func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
+	allowList := append(m.keys.Context, keys.SortName)
+	idx := slices.IndexFunc(allowList, func(b key.Binding) bool {
+		return key.Matches(msg, b)
+	})
+
+	if idx < 0 {
 		return nil
+	}
+
+	binding := allowList[idx]
+	if column, ok := strings.CutPrefix(binding.Help().Desc, keys.SortPrefix); ok {
+		return m.sortTableByColumn(column)
 	}
 
 	item := m.getSelectedItem()

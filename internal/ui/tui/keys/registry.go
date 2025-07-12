@@ -6,27 +6,29 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
+const SortPrefix = "Sort "
+
 // Global key bindings (always active)
 var (
 	Quit = key.NewBinding(
 		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("q", "quit"),
+		key.WithHelp("<q>", "Quit"),
 	)
 	Help = key.NewBinding(
 		key.WithKeys("?", "h"),
-		key.WithHelp("?/h", "toggle help"),
+		key.WithHelp("<?/h>", "Help"),
 	)
 	Back = key.NewBinding(
 		key.WithKeys("esc"),
-		key.WithHelp("esc", "go back"),
+		key.WithHelp("<esc>", "Back/Clear"),
 	)
 	ViewDetails = key.NewBinding(
 		key.WithKeys("y"),
-		key.WithHelp("y", "toggle details"),
+		key.WithHelp("<y>", "Toggle Details"),
 	)
 	CopyName = key.NewBinding(
-		key.WithKeys("n"),
-		key.WithHelp("n", "copy name"),
+		key.WithKeys("c"),
+		key.WithHelp("<c>", "Copy"),
 	)
 )
 
@@ -84,36 +86,42 @@ func FullKeyMap() KeyMap {
 var (
 	NextCategory = key.NewBinding(
 		key.WithKeys("tab"),
-		key.WithHelp("tab", "next category"),
+		key.WithHelp("<tab>", "Next Category"),
 	)
 	PrevCategory = key.NewBinding(
 		key.WithKeys("shift+tab"),
-		key.WithHelp("shift+tab", "previous category"),
+		key.WithHelp("<shift+tab>", "Previous Category"),
 	)
-	FilterList = key.NewBinding(
+	FilterMode = key.NewBinding(
 		key.WithKeys("/"),
-		key.WithHelp("/", "filter list"),
+		key.WithHelp("</term>", "Filter mode"),
 	)
-	JumpTo = key.NewBinding(
+	CommandMode = key.NewBinding(
 		key.WithKeys(":"),
-		key.WithHelp(":", "jump to category"),
+		key.WithHelp("<:cmd>", "Command mode"),
 	)
 	PasteFilter = key.NewBinding(
 		key.WithKeys("p"),
-		key.WithHelp("p", "paste as filter"),
+		key.WithHelp("<p>", "Paste Filter"),
 	)
 	Confirm = key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("enter", "enter context"),
+		key.WithHelp("<enter>", "View/Enter"),
+	)
+	SortName = key.NewBinding(
+		key.WithKeys("N"),
+		key.WithHelp("<shift+n>", SortPrefix+"Name"),
 	)
 )
 
 var listModeKeys = []key.Binding{
 	NextCategory,
 	PrevCategory,
-	JumpTo,
-	FilterList,
+	CommandMode,
+	FilterMode,
 	PasteFilter,
+	SortName,
+	Confirm,
 }
 
 var detailsModeKeys = []key.Binding{
@@ -124,64 +132,111 @@ var (
 	// CopyObject is a key binding for copying the value of an item in the details view.
 	CopyObject = key.NewBinding(
 		key.WithKeys("o"),
-		key.WithHelp("o", "copy object as JSON"),
+		key.WithHelp("<o>", "Copy Object"),
 	)
 	// CopyTenant is a key binding for copying the tenant ID in the tenant context.
 	CopyTenant = key.NewBinding(
 		key.WithKeys("t"),
-		key.WithHelp("t", "copy tenant ocid"),
+		key.WithHelp("<t>", "Copy Tenant ID"),
 	)
 	// Refresh is a key binding for refreshing the current view or data.
 	Refresh = key.NewBinding(
-		key.WithKeys("r"),
-		key.WithHelp("r", "refresh now"),
+		key.WithKeys("ctrl+r"),
+		key.WithHelp("<ctrl+r>", "Refresh"),
 	)
 	// CordonNode is a key binding for cordoning a node in the GPU node list.
 	CordonNode = key.NewBinding(
 		key.WithKeys("c"),
-		key.WithHelp("c", "cordon node"),
+		key.WithHelp("<c>", "Cordon"),
+	)
+	UncordonNode = key.NewBinding(
+		key.WithKeys("u"),
+		key.WithHelp("<u>", "Uncordon"),
 	)
 	// DrainNode is a key binding for draining a node in the GPU node list.
 	DrainNode = key.NewBinding(
-		key.WithKeys("e"),
-		key.WithHelp("e", "drain node"),
+		key.WithKeys("r"),
+		key.WithHelp("<r>", "Drain"),
+	)
+	SortInternal = key.NewBinding(
+		key.WithKeys("I"),
+		key.WithHelp("<shift+i>", SortPrefix+"Internal"),
+	)
+	SortValue = key.NewBinding(
+		key.WithKeys("V"),
+		key.WithHelp("<shift+v>", SortPrefix+"Value"),
+	)
+	SortRegions = key.NewBinding(
+		key.WithKeys("R"),
+		key.WithHelp("<shift+r>", SortPrefix+"Regions"),
+	)
+	SortTenant = key.NewBinding(
+		key.WithKeys("T"),
+		key.WithHelp("<shift+t>", SortPrefix+"Tenant"),
+	)
+	SortMaxTokens = key.NewBinding(
+		key.WithKeys("M"),
+		key.WithHelp("<shift+m>", SortPrefix+"Max Tokens"),
+	)
+	SortSize = key.NewBinding(
+		key.WithKeys("S"),
+		key.WithHelp("<shift+s>", SortPrefix+"Size"),
+	)
+	SortFree = key.NewBinding(
+		key.WithKeys("F"),
+		key.WithHelp("<shift+f>", SortPrefix+"Free"),
+	)
+	SortAge = key.NewBinding(
+		key.WithKeys("A"),
+		key.WithHelp("<shift+a>", SortPrefix+"Age"),
+	)
+	SortUsage = key.NewBinding(
+		key.WithKeys("U"),
+		key.WithHelp("<shift+u>", SortPrefix+"Usage"),
 	)
 )
 
 // Category+mode-specific key bindings
 var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.BaseModel: {
-		common.ListView: {Confirm},
+		common.ListView: {SortMaxTokens},
 	},
 	domain.Tenant: {
-		common.ListView: {Confirm, CopyTenant},
+		common.ListView: {SortInternal, CopyTenant},
 	},
-	domain.LimitDefinition: {
-		common.ListView: {Confirm},
-	},
+
 	domain.ConsolePropertyDefinition: {
-		common.ListView: {Confirm},
+		common.ListView: {SortValue},
 	},
 	domain.PropertyDefinition: {
-		common.ListView: {Confirm},
+		common.ListView: {SortValue},
 	},
 	domain.GpuPool: {
-		common.ListView: {Confirm},
+		common.ListView: {SortSize},
 	},
 	domain.GpuNode: {
-		common.ListView: {Refresh, CordonNode, DrainNode},
+		common.ListView: {SortFree, SortAge, Refresh, CordonNode, DrainNode, UncordonNode},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {CopyTenant, Refresh},
+		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh},
 	},
 	domain.LimitTenancyOverride: {
-		common.ListView: {CopyTenant},
+		common.ListView: {SortTenant, SortRegions, CopyTenant},
 	},
 	domain.ConsolePropertyTenancyOverride: {
-		common.ListView: {CopyTenant},
+		common.ListView: {SortTenant, SortRegions, SortValue, CopyTenant},
 	},
 	domain.PropertyTenancyOverride: {
-		common.ListView: {CopyTenant},
+		common.ListView: {SortTenant, SortRegions, SortValue, CopyTenant},
+	},
+	domain.LimitRegionalOverride: {
+		common.ListView: {SortRegions},
+	},
+	domain.PropertyRegionalOverride: {
+		common.ListView: {SortRegions, SortValue},
+	},
+	domain.ConsolePropertyRegionalOverride: {
+		common.ListView: {SortRegions, SortValue},
 	},
 }
 

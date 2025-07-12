@@ -109,16 +109,14 @@ func (m *Model) View() string {
 		return view.CenterText(m.fullHelpView(), m.viewWidth, m.viewHeight)
 	case common.ListView:
 		helpView := m.help.View(m.keys)
-		infoView := m.infoValueStyle.
-			Width(m.viewWidth - lipgloss.Width(helpView)).Render(m.infoView())
+		infoView := m.infoValueStyle.Render(m.infoView())
 		header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
 		mainContent := m.baseStyle.Render(m.table.View())
 		status := m.statusView()
 		return lipgloss.JoinVertical(lipgloss.Left, header, status, mainContent)
 	case common.DetailsView:
 		helpView := m.help.View(m.keys)
-		infoView := m.infoValueStyle.
-			Width(m.viewWidth - lipgloss.Width(helpView)).Render(m.infoView())
+		infoView := m.infoValueStyle.Render(m.infoView())
 		header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
 		mainContent := m.viewport.View()
 		status := m.statusView()
@@ -156,27 +154,10 @@ func (m *Model) fullHelpView() string {
 		}
 		b.WriteString("\n")
 	}
-	renderSection("Category-specific Actions", km.Context)
-	renderSection("Mode-specific Actions", km.Mode)
-	renderSection("Global Actions", km.Global)
+	renderSection("Resource Actions", km.Context)
+	renderSection("View-specific Actions", km.Mode)
+	renderSection("General Actions", km.Global)
 	renderSection("Table Actions", m.getTableBinding())
-
-	// Dynamic sort hotkeys
-	if len(m.headers) > 0 {
-		fmt.Fprintln(&b, m.helpHeader.Render("Column Sort (⇧<letter>)"))
-		used := map[string]bool{}
-		for _, h := range m.headers {
-			if len(h.text) > 0 {
-				hotkey := strings.ToUpper(string(h.text[0]))
-				if !used[hotkey] {
-					renderRow("⇧"+hotkey, "sort "+h.text)
-					used[hotkey] = true
-				}
-			}
-		}
-		b.WriteString("\n")
-	}
-
 	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())
 }
 

@@ -135,7 +135,7 @@ func initStyles(m *Model) {
 
 	m.statusText = lipgloss.NewStyle().Inherit(m.statusBarStyle)
 	m.infoKeyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
-	m.infoValueStyle = lipgloss.NewStyle()
+	m.infoValueStyle = lipgloss.NewStyle().Width(30)
 
 	// Help view styles
 	m.helpBorder = lipgloss.NewStyle().

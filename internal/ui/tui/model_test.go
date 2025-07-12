@@ -344,15 +344,15 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 	m.updateListView(prevCatMsg)
 
 	// Simulate FilterItems key
-	if len(keys.FilterList.Keys()) > 0 {
-		keyStr = keys.FilterList.Keys()[0]
+	if len(keys.FilterMode.Keys()) > 0 {
+		keyStr = keys.FilterMode.Keys()[0]
 	}
 	filterMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
 	m.updateListView(filterMsg)
 
 	// Simulate JumpTo key
-	if len(keys.JumpTo.Keys()) > 0 {
-		keyStr = keys.JumpTo.Keys()[0]
+	if len(keys.CommandMode.Keys()) > 0 {
+		keyStr = keys.CommandMode.Keys()[0]
 	}
 	jumpToMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
 	m.updateListView(jumpToMsg)
