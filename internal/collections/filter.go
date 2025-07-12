@@ -23,6 +23,10 @@ func IsMatch(item models.Filterable, filter string, ignoreCase bool) bool {
 	}
 
 	for _, value := range item.GetFilterableFields() {
+		if value == "" {
+			continue
+		}
+
 		if ignoreCase {
 			value = strings.ToLower(value)
 		}

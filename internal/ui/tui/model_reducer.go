@@ -5,6 +5,7 @@ package tui
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
@@ -23,7 +24,7 @@ var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
 
 // updateRows updates the table rows based on the current model state.
 func (m *Model) updateRows() {
-	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter)
+	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc)
 	table.WithRows(rows)(m.table)
 
 	idx := m.findContextIndex(rows)
@@ -46,7 +47,15 @@ func (m *Model) updateColumns() {
 			remaining -= width
 		}
 		width -= m.styles.Header.GetHorizontalFrameSize()
-		columns[i] = table.Column{Title: header.text, Width: width}
+		title := header.text
+		if m.sortColumn != "" && strings.EqualFold(header.text, m.sortColumn) {
+			if m.sortAsc {
+				title += " ↑"
+			} else {
+				title += " ↓"
+			}
+		}
+		columns[i] = table.Column{Title: title, Width: width}
 	}
 	table.WithColumns(columns)(m.table)
 }
@@ -144,6 +153,30 @@ func (m *Model) processData(msg DataMsg) {
 func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	if !key.Matches(msg, m.keys.Context...) {
 		return nil
+	}
+
+	// Generic column sort shortcut: Shift+<first letter>
+	if len(msg.String()) == 1 && msg.Type == tea.KeyRunes && msg.Alt == false {
+		pressed := msg.String()
+		if pressed == strings.ToUpper(pressed) && pressed != strings.ToLower(pressed) {
+			hotkeyToCol := make(map[string]string)
+			for _, h := range m.headers {
+				if len(h.text) > 0 {
+					hotkey := strings.ToUpper(string(h.text[0]))
+					hotkeyToCol[hotkey] = h.text
+				}
+			}
+			if col, ok := hotkeyToCol[pressed]; ok {
+				if m.sortColumn == col {
+					m.sortAsc = !m.sortAsc
+				} else {
+					m.sortColumn = col
+					m.sortAsc = true
+				}
+				m.updateRows()
+				return nil
+			}
+		}
 	}
 
 	item := m.getSelectedItem()

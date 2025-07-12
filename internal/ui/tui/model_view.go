@@ -160,6 +160,23 @@ func (m *Model) fullHelpView() string {
 	renderSection("Mode-specific Actions", km.Mode)
 	renderSection("Global Actions", km.Global)
 	renderSection("Table Actions", m.getTableBinding())
+
+	// Dynamic sort hotkeys
+	if len(m.headers) > 0 {
+		fmt.Fprintln(&b, m.helpHeader.Render("Column Sort (⇧<letter>)"))
+		used := map[string]bool{}
+		for _, h := range m.headers {
+			if len(h.text) > 0 {
+				hotkey := strings.ToUpper(string(h.text[0]))
+				if !used[hotkey] {
+					renderRow("⇧"+hotkey, "sort "+h.text)
+					used[hotkey] = true
+				}
+			}
+		}
+		b.WriteString("\n")
+	}
+
 	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())
 }
 

@@ -87,13 +87,66 @@ func getHeaders(category domain.Category) []header {
 getTableRows returns the table rows for a given category, using the appropriate handler.
 If the context is not valid for the category, it is set to nil.
 */
-func getTableRows(logger logging.Logger, dataset *models.Dataset, category domain.Category, context *domain.ToolkitContext, filter string) []table.Row {
+func getTableRows(logger logging.Logger, dataset *models.Dataset, category domain.Category, context *domain.ToolkitContext, filter string, sortColumn string, sortAsc bool) []table.Row {
 	if context != nil && !context.Category.IsScopeOf(category) {
 		context = nil
 	}
 
 	if handler, exists := categoryHandlers[category]; exists {
-		return handler(logger, dataset, context, filter)
+		rows := handler(logger, dataset, context, filter)
+		if sortColumn != "" && len(rows) > 0 {
+			headers := getHeaders(category)
+			colIdx := -1
+			for i, h := range headers {
+				if strings.EqualFold(h.text, sortColumn) {
+					colIdx = i
+					break
+				}
+			}
+			if colIdx >= 0 {
+				// Special handling for Age column
+				if strings.EqualFold(sortColumn, "Age") {
+					ageValue := func(s string) int64 {
+						if len(s) < 2 {
+							return 0
+						}
+						n := len(s)
+						val := s[:n-1]
+						unit := s[n-1:]
+						mult := int64(1)
+						switch unit {
+						case "s":
+							mult = 1
+						case "m":
+							mult = 60
+						case "h":
+							mult = 3600
+						case "d":
+							mult = 86400
+						}
+						var v int64
+						fmt.Sscanf(val, "%d", &v)
+						return v * mult
+					}
+					slices.SortFunc(rows, func(a, b table.Row) int {
+						av := ageValue(a[colIdx])
+						bv := ageValue(b[colIdx])
+						if sortAsc {
+							return int(av - bv)
+						}
+						return int(bv - av)
+					})
+				} else {
+					slices.SortFunc(rows, func(a, b table.Row) int {
+						if sortAsc {
+							return strings.Compare(a[colIdx], b[colIdx])
+						}
+						return strings.Compare(b[colIdx], a[colIdx])
+					})
+				}
+			}
+		}
+		return rows
 	}
 
 	return nil

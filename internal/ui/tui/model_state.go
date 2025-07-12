@@ -75,6 +75,10 @@ type Model struct {
 
 	// Spinner for loading screen
 	loadingSpinner *spinner.Model
+
+	// Table sorting state
+	sortColumn string
+	sortAsc    bool
 }
 
 /*

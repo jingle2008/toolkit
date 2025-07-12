@@ -7,6 +7,11 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 )
 
+var AgeSort = key.NewBinding(
+	key.WithKeys("A"),
+	key.WithHelp("⇧A", "sort age"),
+)
+
 // KeyMap holds key bindings for the TUI, composed of global, mode, and context (category+mode) keys.
 type KeyMap struct {
 	Global  []key.Binding // always active

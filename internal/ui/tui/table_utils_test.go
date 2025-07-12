@@ -267,7 +267,7 @@ func Test_getModelArtifacts_returns_rows(t *testing.T) {
 				},
 			},
 		},
-	}, domain.ModelArtifact, nil, "")
+	}, domain.ModelArtifact, nil, "", "", true)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"M1", "2x A100", "artifactA", "8.0"}, rows[0])
 }
@@ -312,7 +312,7 @@ func Test_getTableRows_and_scoped_items(t *testing.T) {
 			},
 		},
 	}
-	rows := getTableRows(nil, dataset, domain.LimitTenancyOverride, &domain.ToolkitContext{Name: "TenantA", Category: domain.Tenant}, "")
+	rows := getTableRows(nil, dataset, domain.LimitTenancyOverride, &domain.ToolkitContext{Name: "TenantA", Category: domain.Tenant}, "", "", true)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"TenantA", "LimitA", "us-phoenix-1", "1", "10"}, rows[0])
 
@@ -383,7 +383,7 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 			t.Errorf("expected panic for nil dataset")
 		}
 	}()
-	_ = getTableRows(nil, nil, domain.Tenant, nil, "")
+	_ = getTableRows(nil, nil, domain.Tenant, nil, "", "", true)
 }
 
 // mockDefinition implements models.Definition for testing getPropertyDefinitions
@@ -444,7 +444,7 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 	ds := &models.Dataset{}
 	for _, cat := range categories {
 		headers := getHeaders(cat)
-		_ = getTableRows(nil, ds, cat, nil, "")
+		_ = getTableRows(nil, ds, cat, nil, "", "", true)
 		// Extra assertions for coverage
 		if len(headers) > 0 {
 			require.NotEmpty(t, headers[0].text)
@@ -540,7 +540,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 			require.InDelta(t, 1.0, sum, 0.1, "header ratios should sum to ~1")
 		}
 		// getTableRows should not panic
-		_ = getTableRows(nil, ds, cat, nil, "")
+		_ = getTableRows(nil, ds, cat, nil, "", "", true)
 	}
 }
 
@@ -682,7 +682,7 @@ func TestFilterRows(t *testing.T) {
 
 func TestGetTableRows_UnknownCategory(t *testing.T) {
 	t.Parallel()
-	rows := getTableRows(nil, &models.Dataset{}, domain.Category(9999), nil, "")
+	rows := getTableRows(nil, &models.Dataset{}, domain.Category(9999), nil, "", "", true)
 	assert.Nil(t, rows)
 }
 
