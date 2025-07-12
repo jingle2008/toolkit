@@ -129,6 +129,9 @@ func TestEnterContext(t *testing.T) {
 		category:       domain.Tenant,
 		loadingSpinner: &s,
 	}
+	// Seed initial history as in NewModel
+	m.history = []domain.Category{m.category}
+	m.historyIdx = 0
 	// Simulate a selected row
 	m.table.SetRows([]table.Row{{"row1"}})
 	// Select the first row (SetCursor(0) if available)

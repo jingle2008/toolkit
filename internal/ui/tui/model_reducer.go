@@ -280,8 +280,28 @@ func (m *Model) getSelectedItem() any {
 	return findItem(m.dataset, m.category, key)
 }
 
-// updateCategory changes the current category and loads data if needed.
+/*
+updateCategory changes the current category and loads data if needed.
+This version records the navigation in history.
+*/
 func (m *Model) updateCategory(category domain.Category) []tea.Cmd {
+	cmds := m.updateCategoryCore(category)
+	m.pushHistory(category)
+	return cmds
+}
+
+/*
+updateCategoryNoHist changes the current category and loads data if needed,
+but does NOT record the navigation in history.
+*/
+func (m *Model) updateCategoryNoHist(category domain.Category) []tea.Cmd {
+	return m.updateCategoryCore(category)
+}
+
+/*
+updateCategoryCore contains the shared logic for changing category.
+*/
+func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	refresh := false
 	if m.category == category {
 		refresh = true

@@ -114,7 +114,20 @@ var (
 	)
 )
 
+var (
+	BackHist = key.NewBinding(
+		key.WithKeys("["),
+		key.WithHelp("<[>", "History Back"),
+	)
+	FwdHist = key.NewBinding(
+		key.WithKeys("]"),
+		key.WithHelp("<]>", "History Forward"),
+	)
+)
+
 var listModeKeys = []key.Binding{
+	BackHist,
+	FwdHist,
 	NextCategory,
 	PrevCategory,
 	CommandMode,

@@ -77,6 +77,8 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		action func() []tea.Cmd
 	}{
 		{keys.Quit, func() []tea.Cmd { return []tea.Cmd{tea.Quit} }},
+		{keys.BackHist, func() []tea.Cmd { return []tea.Cmd{m.moveHistory(-1)} }},
+		{keys.FwdHist, func() []tea.Cmd { return []tea.Cmd{m.moveHistory(1)} }},
 		{keys.NextCategory, func() []tea.Cmd { return []tea.Cmd{m.handleNextCategory()} }},
 		{keys.PrevCategory, func() []tea.Cmd { return []tea.Cmd{m.handlePrevCategory()} }},
 		{keys.FilterMode, func() []tea.Cmd { m.enterEditMode(common.FilterTarget); return nil }},
@@ -157,4 +159,45 @@ func (m *Model) handleEditKeys(msg tea.KeyMsg) []tea.Cmd {
 		}
 	}
 	return cmds
+}
+
+// maxHistory is the maximum number of entries to keep in navigation history.
+const maxHistory = 20
+
+// pushHistory records a category change, discarding any
+// "future" items if we are not at the end of the list.
+// It also enforces a cap of maxHistory entries.
+func (m *Model) pushHistory(cat domain.Category) {
+	// ignore dups
+	if m.historyIdx >= 0 && m.history[m.historyIdx] == cat {
+		return
+	}
+	// truncate forward part when user branches
+	if m.historyIdx+1 < len(m.history) {
+		m.history = m.history[:m.historyIdx+1]
+	}
+	m.history = append(m.history, cat)
+	m.historyIdx = len(m.history) - 1
+
+	// Cap history size
+	if len(m.history) > maxHistory {
+		shift := len(m.history) - maxHistory
+		m.history = m.history[shift:]
+		m.historyIdx -= shift
+		if m.historyIdx < 0 {
+			m.historyIdx = 0
+		}
+	}
+}
+
+// moveHistory moves idx ±1 (dir = -1 back, +1 forward)
+// and returns a tea.Cmd that switches category WITHOUT recording.
+func (m *Model) moveHistory(dir int) tea.Cmd {
+	target := m.historyIdx + dir
+	if target < 0 || target >= len(m.history) {
+		return nil // out of bounds
+	}
+	m.historyIdx = target
+	cat := m.history[m.historyIdx]
+	return tea.Sequence(m.updateCategoryNoHist(cat)...)
 }

@@ -79,6 +79,10 @@ type Model struct {
 	// Table sorting state
 	sortColumn string
 	sortAsc    bool
+
+	// Category navigation history
+	history    []domain.Category // chronological list of visited categories
+	historyIdx int               // index of the current position in history
 }
 
 /*
@@ -93,6 +97,8 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		lastViewMode: common.ListView,
 		sortColumn:   "Name",
 		sortAsc:      true,
+		history:      []domain.Category{},
+		historyIdx:   -1,
 	}
 
 	initStyles(m)
@@ -101,6 +107,12 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		return nil, err
 	}
 	setDefaults(m)
+
+	// Seed initial category in history if not already present
+	if len(m.history) == 0 {
+		m.history = []domain.Category{m.category}
+		m.historyIdx = 0
+	}
 
 	// Initialize keys based on initial category and mode
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
