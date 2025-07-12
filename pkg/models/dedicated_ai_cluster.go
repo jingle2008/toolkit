@@ -39,11 +39,6 @@ func (n DedicatedAICluster) GetFilterableFields() []string {
 	}
 }
 
-// GetKey returns the key of the dedicated AI cluster.
-func (n DedicatedAICluster) GetKey() string {
-	return fmt.Sprintf("%s-%s-%s", n.Type, n.UnitShape, n.Name)
-}
-
 func (n DedicatedAICluster) GetOwnerState() string {
 	var state string
 	if n.Owner != nil {

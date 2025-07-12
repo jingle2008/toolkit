@@ -326,7 +326,7 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 	}
 
 	slices.SortFunc(tenancies, func(a, b models.ServiceTenancy) int {
-		return strings.Compare(a.GetKey(), b.GetKey())
+		return strings.Compare(a.Name, b.Name)
 	})
 	return tenancies, nil
 }
@@ -681,7 +681,7 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 		}
 
 		slices.SortFunc(modelArtifacts, func(a, b models.ModelArtifact) int {
-			return strings.Compare(a.GetKey(), b.GetKey())
+			return strings.Compare(a.Name, b.Name)
 		})
 		modelArtifactMap[modelName] = modelArtifacts
 	}

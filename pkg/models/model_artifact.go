@@ -16,11 +16,6 @@ func (m ModelArtifact) GetName() string {
 	return m.Name
 }
 
-// GetKey returns the key of the model artifact.
-func (m ModelArtifact) GetKey() string {
-	return fmt.Sprintf("%s-%s", m.ModelName, m.GpuShape)
-}
-
 // GetGpuConfig returns the GPU configuration string for the model artifact.
 func (m ModelArtifact) GetGpuConfig() string {
 	return fmt.Sprintf("%dx %s", m.GpuCount, m.GpuShape)

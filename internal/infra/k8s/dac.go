@@ -160,7 +160,7 @@ func LoadDedicatedAIClusters(ctx context.Context, client dynamic.Interface) (map
 
 	for _, v := range result {
 		slices.SortFunc(v, func(a, b models.DedicatedAICluster) int {
-			return strings.Compare(a.GetKey(), b.GetKey())
+			return strings.Compare(a.Name, b.Name)
 		})
 	}
 

@@ -15,7 +15,6 @@ func TestEnvironment_GettersAndEquals(t *testing.T) {
 	}
 	assert.Equal(t, "dev-phx", env.GetName())
 	assert.ElementsMatch(t, []string{"dev", "us-phoenix-1", "oc1", "dev-phx"}, env.GetFilterableFields())
-	assert.Equal(t, "oc1-dev-phx", env.GetKey())
 	assert.IsType(t, "", env.GetKubeContext())
 
 	env2 := Environment{

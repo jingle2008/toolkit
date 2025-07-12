@@ -215,7 +215,7 @@ func getEnvironments(tenancies []models.ServiceTenancy) []models.Environment {
 	}
 
 	slices.SortFunc(environments, func(a, b models.Environment) int {
-		return strings.Compare(a.GetKey(), b.GetKey())
+		return strings.Compare(a.GetName(), b.GetName())
 	})
 	return environments
 }

@@ -26,32 +26,6 @@ func (e Environment) Equals(o Environment) bool {
 	return e.Realm == o.Realm && e.GetName() == o.GetName()
 }
 
-// GetKey returns the key of the environment.
-func (e Environment) GetKey() string {
-	return fmt.Sprintf("%s-%s-%s", e.Realm, e.Type, Region(e.Region).GetCode())
-}
-
-/*
-ExampleEnvironment_GetKey demonstrates how to use the GetKey method of Environment.
-
-	package main
-
-	import (
-		"fmt"
-		"github.com/jingle2008/toolkit/pkg/models"
-	)
-
-	func main() {
-		env := models.Environment{
-			Type:   "dev",
-			Region: "us-phoenix-1",
-			Realm:  "oc1",
-		}
-		fmt.Println(env.GetKey())
-		// Output: oc1-dev-phx
-	}
-*/
-
 // GetKubeContext returns the Kubernetes context string for the environment.
 func (e Environment) GetKubeContext() string {
 	envType := e.Type

@@ -9,7 +9,6 @@ import (
 type testImpl struct{}
 
 func (testImpl) GetName() string               { return "n" }
-func (testImpl) GetKey() string                { return "k" }
 func (testImpl) GetFilterableFields() []string { return []string{"f"} }
 func (testImpl) GetTenantID() string           { return "tid" }
 func (testImpl) GetRegions() []string          { return []string{"r"} }
@@ -20,7 +19,6 @@ func (testImpl) GetDescription() string        { return "desc" }
 func TestDefinitionInterfaces(t *testing.T) {
 	t.Parallel()
 	var _ Filterable = testImpl{}
-	var _ KeyedItem = testImpl{}
 	var _ NamedItem = testImpl{}
 	var _ NamedFilterable = testImpl{}
 	var _ Definition = testImpl{}

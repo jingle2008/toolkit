@@ -5,11 +5,6 @@ type Filterable interface {
 	GetFilterableFields() []string
 }
 
-// KeyedItem represents an item with a unique key.
-type KeyedItem interface {
-	GetKey() string
-}
-
 // NamedItem represents an item with a name.
 type NamedItem interface {
 	GetName() string

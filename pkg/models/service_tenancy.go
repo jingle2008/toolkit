@@ -1,7 +1,5 @@
 package models
 
-import "fmt"
-
 // ServiceTenancy represents a service tenancy entity.
 type ServiceTenancy struct {
 	Name        string   `json:"tenancy_name"`
@@ -34,9 +32,4 @@ func (t ServiceTenancy) Environments() []Environment {
 	}
 
 	return environments
-}
-
-// GetKey returns the key of the service tenancy.
-func (t ServiceTenancy) GetKey() string {
-	return fmt.Sprintf("%s-%s-%s", t.Realm, t.Environment, t.Name)
 }

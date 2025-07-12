@@ -97,11 +97,6 @@ func (m BaseModel) GetName() string {
 	return m.Name
 }
 
-// GetKey returns the key of the base model.
-func (m BaseModel) GetKey() string {
-	return fmt.Sprintf("%s-%s-%s", m.Type, m.Name, m.Version)
-}
-
 // GetCapabilities returns the capabilities of the base model.
 func (m BaseModel) GetCapabilities() []string {
 	keys := make([]string, 0, len(m.Capabilities))
@@ -133,7 +128,7 @@ func (m BaseModel) GetDefaultDacShape() *DACShape {
 	}
 
 	if len(shapes) > 1 {
-		panic(fmt.Sprintf("More than 1 default DAC shapes found for model: %s", m.GetKey()))
+		panic(fmt.Sprintf("More than 1 default DAC shapes found for model: %s", m.InternalName))
 	}
 
 	for _, value := range shapes {

@@ -199,7 +199,7 @@ func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
 		}
 	}
 	slices.SortFunc(baseModels, func(a, b *models.BaseModel) int {
-		return strings.Compare(a.GetKey(), b.GetKey())
+		return strings.Compare(a.Name, b.Name)
 	})
 	results := make([]table.Row, 0, len(baseModels))
 	for _, val := range baseModels {
