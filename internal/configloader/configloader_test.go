@@ -239,6 +239,9 @@ func TestGetTenants(t *testing.T) {
 	}
 	tenants := getTenants(m, nil)
 	assert.Len(t, tenants, 2)
+	slices.SortFunc(tenants, func(t1, t2 models.Tenant) int {
+		return strings.Compare(t1.Name, t2.Name)
+	})
 	names := []string{tenants[0].Name, tenants[1].Name}
 	assert.Contains(t, names, "Tenant1")
 	assert.Contains(t, names, "Tenant2")

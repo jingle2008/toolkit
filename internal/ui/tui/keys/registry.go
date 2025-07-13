@@ -212,6 +212,10 @@ var (
 		key.WithKeys("ctrl+a"),
 		key.WithHelp("<ctrl+a>", "Show Alias"),
 	)
+	SortType = key.NewBinding(
+		key.WithKeys("T"),
+		key.WithHelp("<shift+t>", SortPrefix+"Type"),
+	)
 )
 
 // Category+mode-specific key bindings
@@ -233,7 +237,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize},
 	},
 	domain.GpuNode: {
-		common.ListView: {SortFree, SortAge, Refresh, CordonNode, DrainNode, UncordonNode},
+		common.ListView: {SortFree, SortType, SortAge, Refresh, CordonNode, DrainNode, UncordonNode},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh},
@@ -256,17 +260,27 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.ConsolePropertyRegionalOverride: {
 		common.ListView: {SortRegions, SortValue},
 	},
+	domain.Environment: {
+		common.ListView: {SortType},
+	},
+	domain.ServiceTenancy: {
+		common.ListView: {SortType},
+	},
 }
 
 // ResolveKeys returns the composed KeyMap for the given category and UI mode.
 func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
-	ViewDetails.SetEnabled(cat != domain.Alias) // no details to view
-	CopyName.SetEnabled(cat != domain.GpuNode)  // conflict with cordon
+	// no details to view for alias
+	viewDetailsEnabled := cat != domain.Alias
+	// conflict with cordon in listView
+	copyNameEnabled := cat != domain.GpuNode || mode != common.ListView
+	ViewDetails.SetEnabled(viewDetailsEnabled)
+	CopyName.SetEnabled(copyNameEnabled)
 	for i, b := range globalKeys {
 		if b.Help() == ViewDetails.Help() {
-			globalKeys[i].SetEnabled(cat != domain.Alias)
+			globalKeys[i].SetEnabled(viewDetailsEnabled)
 		} else if b.Help() == CopyName.Help() {
-			globalKeys[i].SetEnabled(cat != domain.GpuNode)
+			globalKeys[i].SetEnabled(copyNameEnabled)
 		}
 	}
 
