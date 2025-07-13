@@ -88,7 +88,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.Confirm, func() []tea.Cmd { return []tea.Cmd{m.enterContext()} }},
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
 		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn(common.NameCol)} }},
-		{keys.ShowAlias, func() []tea.Cmd { return m.updateCategory(domain.Alias) }},
+		{keys.ToggleAlias, func() []tea.Cmd { return m.toggleAliases() }},
 	}
 
 	for _, h := range keyHandlers {
@@ -104,6 +104,14 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 
 	cmds = append(cmds, m.handleAdditionalKeys(msg))
 	return cmds
+}
+
+func (m *Model) toggleAliases() []tea.Cmd {
+	if m.category == domain.Alias {
+		return []tea.Cmd{m.moveHistory(-1)}
+	} else {
+		return m.updateCategory(domain.Alias)
+	}
 }
 
 func (*Model) pasteFilter() tea.Cmd {

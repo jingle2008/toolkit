@@ -121,7 +121,7 @@ var listModeKeys = []key.Binding{
 	PasteFilter,
 	SortName,
 	Confirm,
-	ShowAlias,
+	ToggleAlias,
 }
 
 var detailsModeKeys = []key.Binding{
@@ -194,17 +194,17 @@ var (
 		key.WithKeys("U"),
 		key.WithHelp("<shift+u>", SortPrefix+common.UsageCol),
 	)
-	ShowAlias = key.NewBinding(
+	ToggleAlias = key.NewBinding(
 		key.WithKeys("ctrl+a"),
-		key.WithHelp("<ctrl+a>", "Show Alias"),
+		key.WithHelp("<ctrl+a>", "Toggle Alias"),
 	)
 	SortType = key.NewBinding(
 		key.WithKeys("T"),
 		key.WithHelp("<shift+t>", SortPrefix+common.TypeCol),
 	)
-	ShowFaulty = key.NewBinding(
+	ToggleFaulty = key.NewBinding(
 		key.WithKeys("ctrl+z"),
-		key.WithHelp("<ctrl+z>", "Show Faulty"),
+		key.WithHelp("<ctrl+z>", "Toggle Faulty"),
 	)
 )
 
@@ -214,7 +214,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortMaxTokens},
 	},
 	domain.Tenant: {
-		common.ListView: {SortInternal, CopyTenant, ShowFaulty},
+		common.ListView: {SortInternal, CopyTenant, ToggleFaulty},
 	},
 
 	domain.ConsolePropertyDefinition: {
@@ -227,10 +227,10 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize},
 	},
 	domain.GpuNode: {
-		common.ListView: {SortFree, SortType, SortAge, Refresh, CordonNode, DrainNode, UncordonNode, ShowFaulty},
+		common.ListView: {SortFree, SortType, SortAge, Refresh, CordonNode, DrainNode, UncordonNode, ToggleFaulty},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ShowFaulty},
+		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {SortTenant, SortRegions, CopyTenant},

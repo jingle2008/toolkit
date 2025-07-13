@@ -178,7 +178,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 		return m.sortTableByColumn(column)
 	}
 
-	if key.Matches(msg, keys.ShowFaulty) {
+	if key.Matches(msg, keys.ToggleFaulty) {
 		return m.toggleFaultyList()
 	}
 
@@ -478,7 +478,6 @@ func (m *Model) changeCategory() tea.Cmd {
 
 // enterContext moves the model into a new context based on the selected row.
 func (m *Model) enterContext() tea.Cmd {
-	m.showFaulty = false
 	row := m.table.SelectedRow()
 	if len(row) == 0 {
 		return nil
