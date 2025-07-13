@@ -8,6 +8,10 @@ type header struct {
 }
 
 var headerDefinitions = map[domain.Category][]header{
+	domain.Alias: {
+		{"Name", 0.4},
+		{"Aliases", 0.6},
+	},
 	domain.Tenant: {
 		{"Name", 0.20},
 		{"OCID", 0.60},

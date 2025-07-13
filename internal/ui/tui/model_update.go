@@ -83,8 +83,8 @@ func (m *Model) enterEditMode(target common.EditTarget) {
 	m.editTarget = target
 	m.textInput.Focus()
 
-	// Provide category suggestions using domain.Aliases().
-	keys := domain.Aliases()
+	// Provide category suggestions using domain.Aliases.
+	keys := domain.Aliases
 	if target == common.AliasTarget {
 		m.textInput.Reset()
 	} else if len(m.textInput.Value()) > 0 {

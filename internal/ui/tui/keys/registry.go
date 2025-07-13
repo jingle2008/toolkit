@@ -135,6 +135,7 @@ var listModeKeys = []key.Binding{
 	PasteFilter,
 	SortName,
 	Confirm,
+	ShowAlias,
 }
 
 var detailsModeKeys = []key.Binding{
@@ -207,6 +208,10 @@ var (
 		key.WithKeys("U"),
 		key.WithHelp("<shift+u>", SortPrefix+"Usage"),
 	)
+	ShowAlias = key.NewBinding(
+		key.WithKeys("ctrl+a"),
+		key.WithHelp("<ctrl+a>", "Show Alias"),
+	)
 )
 
 // Category+mode-specific key bindings
@@ -255,6 +260,13 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 
 // ResolveKeys returns the composed KeyMap for the given category and UI mode.
 func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
+	ViewDetails.SetEnabled(cat != domain.Alias)
+	for i, b := range globalKeys {
+		if b.Help() == ViewDetails.Help() {
+			globalKeys[i].SetEnabled(cat != domain.Alias)
+		}
+	}
+
 	km := KeyMap{
 		Global: globalKeys,
 	}

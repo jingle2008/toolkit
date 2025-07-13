@@ -125,7 +125,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
 	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
 	_ = rootCmd.RegisterFlagCompletionFunc("category", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return domain.Aliases(), cobra.ShellCompDirectiveNoFileComp
+		return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
 	})
 	rootCmd.PersistentFlags().StringP("filter", "f", "", "Initial filter for current category")
 	rootCmd.PersistentFlags().String("metadata_file", defaultMetadata, "Optional path to a YAML or JSON file with additional metadata (e.g. tenants)")

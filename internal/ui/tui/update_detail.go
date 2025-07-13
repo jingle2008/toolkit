@@ -25,7 +25,7 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(keyMsg, keys.Help):
 			m.enterHelpView()
 		case key.Matches(keyMsg, keys.CopyObject):
-			m.copyItemAsJSON(findItem(m.dataset, m.category, m.choice))
+			m.copyItemJSON(findItem(m.dataset, m.category, m.choice))
 		}
 	}
 
@@ -34,7 +34,7 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *Model) copyItemAsJSON(item any) {
+func (m *Model) copyItemJSON(item any) {
 	content, err := jsonutil.PrettyJSON(item)
 	if err != nil {
 		m.logger.Errorw("failed to convert item to JSON", "error", err)

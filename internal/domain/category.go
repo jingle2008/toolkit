@@ -6,6 +6,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -51,10 +52,12 @@ const (
 	GpuNode
 	// DedicatedAICluster is a category for dedicated AI clusters.
 	DedicatedAICluster
+	// Alias is a category for reporting all aliases.
+	Alias
 )
 
 /*
-NOTE: Category iteration should use the explicit range [Tenant, DedicatedAICluster].
+NOTE: Category iteration should use the explicit range [Tenant, Alias].
 Do not rely on a sentinel value.
 */
 
@@ -108,56 +111,55 @@ func (e Category) ScopedCategories() []Category {
 	}
 }
 
+func (e Category) GetAliases() []string {
+	cat := e.String()
+	short := GetInitials(cat)
+	aliases := []string{strings.ToLower(short), strings.ToLower(cat)}
+
+	if e == DedicatedAICluster {
+		aliases = append(aliases, "dac")
+	}
+	return aliases
+}
+
+func (e Category) GetName() string {
+	return e.String()
+}
+
+func (e Category) GetFilterableFields() []string {
+	return e.GetAliases()
+}
+
+func GetInitials(s string) string {
+	re := regexp.MustCompile(`[A-Z]`)
+	initials := re.FindAllString(s, -1)
+	return strings.Join(initials, "")
+}
+
 /*
 Parsing and alias logic for Category.
 */
 
-// catLookup maps lowercased/trimmed aliases to Category values.
-var catLookup = map[string]Category{
-	"tenant":                          Tenant,
-	"t":                               Tenant,
-	"limitdefinition":                 LimitDefinition,
-	"ld":                              LimitDefinition,
-	"consolepropertydefinition":       ConsolePropertyDefinition,
-	"cpd":                             ConsolePropertyDefinition,
-	"propertydefinition":              PropertyDefinition,
-	"pd":                              PropertyDefinition,
-	"limittenancyoverride":            LimitTenancyOverride,
-	"lto":                             LimitTenancyOverride,
-	"consolepropertytenancyoverride":  ConsolePropertyTenancyOverride,
-	"cpto":                            ConsolePropertyTenancyOverride,
-	"propertytenancyoverride":         PropertyTenancyOverride,
-	"pto":                             PropertyTenancyOverride,
-	"limitregionaloverride":           LimitRegionalOverride,
-	"lro":                             LimitRegionalOverride,
-	"consolepropertyregionaloverride": ConsolePropertyRegionalOverride,
-	"cpro":                            ConsolePropertyRegionalOverride,
-	"propertyregionaloverride":        PropertyRegionalOverride,
-	"pro":                             PropertyRegionalOverride,
-	"basemodel":                       BaseModel,
-	"bm":                              BaseModel,
-	"modelartifact":                   ModelArtifact,
-	"ma":                              ModelArtifact,
-	"environment":                     Environment,
-	"e":                               Environment,
-	"servicetenancy":                  ServiceTenancy,
-	"st":                              ServiceTenancy,
-	"gpupool":                         GpuPool,
-	"gp":                              GpuPool,
-	"gpunode":                         GpuNode,
-	"gn":                              GpuNode,
-	"dedicatedaicluster":              DedicatedAICluster,
-	"dac":                             DedicatedAICluster,
-}
+var (
+	aliasToCat map[string]Category
+	Aliases    []string
+	Categories []Category
+)
 
-// Aliases returns all canonical alias strings for autocomplete, etc.
-func Aliases() []string {
-	keys := make([]string, 0, len(catLookup))
-	for k := range catLookup {
-		keys = append(keys, k)
+func init() {
+	aliasToCat = make(map[string]Category)
+
+	for c := Tenant; c <= Alias; c++ {
+		for _, a := range c.GetAliases() {
+			aliasToCat[a] = c
+		}
+		Categories = append(Categories, c)
 	}
 
-	return keys
+	Aliases = make([]string, 0, len(aliasToCat))
+	for k := range aliasToCat {
+		Aliases = append(Aliases, k)
+	}
 }
 
 // ErrUnknownCategory is returned when a string cannot be parsed into a known Category.
@@ -184,7 +186,7 @@ func (e Category) Definition() Category {
 // ParseCategory parses a string (case-insensitive, with common aliases) into a Category enum.
 func ParseCategory(s string) (Category, error) {
 	key := strings.ToLower(strings.TrimSpace(s))
-	if c, ok := catLookup[key]; ok {
+	if c, ok := aliasToCat[key]; ok {
 		return c, nil
 	}
 	return CategoryUnknown, fmt.Errorf("parse category %q: %w", s, ErrUnknownCategory)

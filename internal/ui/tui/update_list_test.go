@@ -86,7 +86,7 @@ func TestHistoryCap20(t *testing.T) {
 		historyIdx: -1,
 	}
 	// Add 25 categories, should cap at 20
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		m.pushHistory(domain.Category(i))
 	}
 	assert.Equal(t, 20, len(m.history))

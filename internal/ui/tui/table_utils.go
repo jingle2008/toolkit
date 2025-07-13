@@ -12,6 +12,11 @@ import (
 )
 
 var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset, *domain.ToolkitContext, string) []table.Row{
+	domain.Alias: func(_ logging.Logger, _ *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
+		return filterRows(domain.Categories, filter, func(c domain.Category) table.Row {
+			return CategoryRow(c).ToRow("")
+		})
+	},
 	domain.Tenant: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string) []table.Row {
 		return filterRows(dataset.Tenants, filter, func(t models.Tenant) table.Row {
 			return TenantRow(t).ToRow("")

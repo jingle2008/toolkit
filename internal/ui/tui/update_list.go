@@ -88,6 +88,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.Confirm, func() []tea.Cmd { return []tea.Cmd{m.enterContext()} }},
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
 		{keys.CopyName, func() []tea.Cmd { m.copyItemName(m.getSelectedItem()); return nil }},
+		{keys.ShowAlias, func() []tea.Cmd { return m.updateCategory(domain.Alias) }},
 	}
 
 	for _, h := range keyHandlers {

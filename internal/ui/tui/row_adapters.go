@@ -179,6 +179,20 @@ func (e EnvironmentRow) ToRow(scope string) table.Row {
 	return table.Row(e.Render(scope))
 }
 
+// CategoryRow adapts alias information for table rendering.
+type CategoryRow domain.Category
+
+// Render implements the Renderer interface for AliasRow.
+func (r CategoryRow) Render(_ string) []string {
+	c := domain.Category(r)
+	return []string{c.String(), strings.Join(c.GetAliases(), ", ")}
+}
+
+// ToRow returns a table.Row for the AliasRow.
+func (r CategoryRow) ToRow(scope string) table.Row {
+	return table.Row(r.Render(scope))
+}
+
 // ModelArtifactRow adapts models.ModelArtifact for table rendering.
 type ModelArtifactRow models.ModelArtifact
 

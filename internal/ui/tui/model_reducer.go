@@ -460,13 +460,9 @@ func (m *Model) enterContext() tea.Cmd {
 	}
 
 	target := row[0]
-	appContext := domain.ToolkitContext{
-		Category: m.category,
-		Name:     target,
-	}
 	switch {
 	case m.category.IsScope():
-		m.context = &appContext
+		m.context = &domain.ToolkitContext{Category: m.category, Name: target}
 		return tea.Sequence(m.updateCategory(m.category.ScopedCategories()[0])...)
 	case m.category == domain.Environment:
 		env := *collections.FindByName(m.dataset.Environments, target)
@@ -474,6 +470,10 @@ func (m *Model) enterContext() tea.Cmd {
 			m.environment = env
 			m.dataset.ResetScopedData()
 			return tea.Sequence(m.updateCategory(domain.Tenant)...)
+		}
+	case m.category == domain.Alias:
+		if cat, _ := domain.ParseCategory(target); cat != m.category {
+			return tea.Sequence(m.updateCategory(cat)...)
 		}
 	default:
 		m.enterDetailView()

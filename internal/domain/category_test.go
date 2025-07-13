@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,16 +114,24 @@ func TestCategory_Definition(t *testing.T) {
 
 func TestAliases(t *testing.T) {
 	t.Parallel()
-	aliases := Aliases()
-	assert.NotEmpty(t, aliases, "Aliases() should not return an empty slice")
+	aliases := Aliases
+	assert.NotEmpty(t, aliases, "Aliases should not be empty")
 
-	// Check that all keys in catLookup are present in the result
-	expected := make(map[string]struct{})
-	for k := range catLookup {
-		expected[k] = struct{}{}
-	}
+	// Check that all aliases in Aliases are present in the aliasToCat map
 	for _, alias := range aliases {
-		delete(expected, alias)
+		_, ok := aliasToCat[alias]
+		assert.True(t, ok, "Alias %q should be present in aliasToCat", alias)
 	}
-	assert.Empty(t, expected, "All catLookup keys should be present in Aliases() result")
+
+	// Check that every category's GetAliases() are present in Aliases
+	aliasSet := make(map[string]struct{}, len(aliases))
+	for _, a := range aliases {
+		aliasSet[a] = struct{}{}
+	}
+	for c := Tenant; c <= Alias; c++ {
+		for _, a := range c.GetAliases() {
+			_, ok := aliasSet[strings.ToLower(strings.TrimSpace(a))]
+			assert.True(t, ok, "Category %v alias %q should be present in Aliases", c, a)
+		}
+	}
 }
