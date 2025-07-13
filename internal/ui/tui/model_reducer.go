@@ -186,7 +186,9 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.Refresh):
 		return tea.Sequence(m.updateCategory(m.category)...)
 	case key.Matches(msg, keys.CordonNode):
-		return m.cordonNode(item)
+		return m.cordonNode(item, true)
+	case key.Matches(msg, keys.UncordonNode):
+		return m.cordonNode(item, false)
 	case key.Matches(msg, keys.DrainNode):
 		return m.drainNode(item)
 	}
@@ -194,15 +196,21 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
-func (m *Model) cordonNode(item any) tea.Cmd {
+func (m *Model) cordonNode(item any, desired bool) tea.Cmd {
 	if item == nil {
 		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
 		return nil
 	}
 
 	if node, ok := item.(*models.GpuNode); ok {
-		if err := k8s.ToggleCordon(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name); err != nil {
-			m.logger.Errorw("failed to toggle cordon state", "error", err)
+		var err error
+		if desired {
+			err = k8s.CordonNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
+		} else {
+			err = k8s.UncordonNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
+		}
+		if err != nil {
+			m.logger.Errorw("failed to set cordon state", "error", err, "cordon", desired)
 			return nil
 		}
 	} else {

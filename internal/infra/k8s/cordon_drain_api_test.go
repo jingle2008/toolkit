@@ -11,14 +11,17 @@ import (
 	drainpkg "k8s.io/kubectl/pkg/drain"
 )
 
-func TestToggleCordon_API(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
+func TestSetCordon_API(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
 	// Add a node to the fake client
 	node := makeNode("n1", map[string]string{}, 0, false, nil)
 	_ = client.Tracker().Add(node)
-	// Should not error
-	err := toggleCordon(ctx, client, "n1")
+	// Should not error (cordon)
+	err := setCordon(ctx, client, "n1", true)
+	assert.NoError(t, err)
+	// Should not error (uncordon)
+	err = setCordon(ctx, client, "n1", false)
 	assert.NoError(t, err)
 }
 

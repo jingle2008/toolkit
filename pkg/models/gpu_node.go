@@ -33,14 +33,14 @@ func (n GpuNode) GetStatus() string {
 	parts := strings.Split(n.InstanceType, ".")
 	count, _ := strconv.Atoi(parts[len(parts)-1])
 	switch {
+	case n.IsSchedulingDisabled:
+		return "WARN: CORDONED"
 	case n.Allocatable != count:
 		return "ERROR: Missing GPUs"
 	case !n.IsHealthy:
 		return "ERROR: Unhealthy"
 	case !n.IsReady:
 		return "ERROR: Not ready"
-	case n.IsSchedulingDisabled:
-		return "CORDONED"
 	}
 	return "OK"
 }

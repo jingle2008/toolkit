@@ -260,10 +260,13 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 
 // ResolveKeys returns the composed KeyMap for the given category and UI mode.
 func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
-	ViewDetails.SetEnabled(cat != domain.Alias)
+	ViewDetails.SetEnabled(cat != domain.Alias) // no details to view
+	CopyName.SetEnabled(cat != domain.GpuNode)  // conflict with cordon
 	for i, b := range globalKeys {
 		if b.Help() == ViewDetails.Help() {
 			globalKeys[i].SetEnabled(cat != domain.Alias)
+		} else if b.Help() == CopyName.Help() {
+			globalKeys[i].SetEnabled(cat != domain.GpuNode)
 		}
 	}
 

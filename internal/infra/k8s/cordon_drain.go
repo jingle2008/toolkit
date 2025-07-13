@@ -11,15 +11,25 @@ import (
 )
 
 /*
-ToggleCordon uses kubectl's drain.Helper to cordon or uncordon a node.
-Returns true if node is cordoned after the call, false if uncordoned.
+CordonNode uses kubectl's drain.Helper to cordon a node.
 */
-func ToggleCordon(ctx context.Context, kubeconfig, contextName, nodeName string) error {
+func CordonNode(ctx context.Context, kubeconfig, contextName, nodeName string) error {
 	clientset, err := NewClientsetFromKubeConfig(kubeconfig, contextName)
 	if err != nil {
 		return err
 	}
-	return toggleCordon(ctx, clientset, nodeName)
+	return setCordon(ctx, clientset, nodeName, true)
+}
+
+/*
+UncordonNode uses kubectl's drain.Helper to uncordon a node.
+*/
+func UncordonNode(ctx context.Context, kubeconfig, contextName, nodeName string) error {
+	clientset, err := NewClientsetFromKubeConfig(kubeconfig, contextName)
+	if err != nil {
+		return err
+	}
+	return setCordon(ctx, clientset, nodeName, false)
 }
 
 /*
@@ -45,7 +55,7 @@ var (
 	runNodeDrain        = drain.RunNodeDrain
 )
 
-func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
+func setCordon(ctx context.Context, clientset kubernetes.Interface, nodeName string, desired bool) error {
 	helper := &drain.Helper{
 		Ctx:    ctx,
 		Client: clientset,
@@ -57,11 +67,8 @@ func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName 
 		return err
 	}
 
-	// Determine new cordon state (toggle current value)
-	cordonState := !node.Spec.Unschedulable
-
-	// Apply the new state
-	return runCordonOrUncordon(helper, node, cordonState)
+	// Apply the desired cordon state
+	return runCordonOrUncordon(helper, node, desired)
 }
 
 func drainNode(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {

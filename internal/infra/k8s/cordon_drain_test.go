@@ -10,7 +10,7 @@ import (
 	"k8s.io/kubectl/pkg/drain"
 )
 
-func TestToggleCordon_TogglesState(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
+func TestSetCordon_CordonAndUncordon(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	node := &corev1.Node{
@@ -18,19 +18,19 @@ func TestToggleCordon_TogglesState(t *testing.T) { //nolint:paralleltest // para
 		Spec:       corev1.NodeSpec{Unschedulable: false},
 	}
 	_ = cs.Tracker().Add(node)
-	// First toggle: should cordon (set Unschedulable true)
-	err := toggleCordon(ctx, cs, "n1")
+	// Cordon: should set Unschedulable true
+	err := setCordon(ctx, cs, "n1", true)
 	if err != nil {
-		t.Fatalf("toggleCordon failed: %v", err)
+		t.Fatalf("setCordon (cordon) failed: %v", err)
 	}
 	got, _ := cs.CoreV1().Nodes().Get(ctx, "n1", v1.GetOptions{})
 	if !got.Spec.Unschedulable {
 		t.Error("expected node to be cordoned")
 	}
-	// Second toggle: should uncordon (set Unschedulable false)
-	err = toggleCordon(ctx, cs, "n1")
+	// Uncordon: should set Unschedulable false
+	err = setCordon(ctx, cs, "n1", false)
 	if err != nil {
-		t.Fatalf("toggleCordon failed: %v", err)
+		t.Fatalf("setCordon (uncordon) failed: %v", err)
 	}
 	got, _ = cs.CoreV1().Nodes().Get(ctx, "n1", v1.GetOptions{})
 	if got.Spec.Unschedulable {
@@ -38,17 +38,17 @@ func TestToggleCordon_TogglesState(t *testing.T) { //nolint:paralleltest // para
 	}
 }
 
-func TestToggleCordon_NodeNotFound(t *testing.T) {
+func TestSetCordon_NodeNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
-	err := toggleCordon(ctx, cs, "missing-node")
+	err := setCordon(ctx, cs, "missing-node", true)
 	if err == nil {
 		t.Error("expected error for missing node")
 	}
 }
 
-func TestToggleCordon_CordonOrUncordonError(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
+func TestSetCordon_CordonOrUncordonError(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	node := &corev1.Node{
@@ -63,7 +63,7 @@ func TestToggleCordon_CordonOrUncordonError(t *testing.T) { //nolint:paralleltes
 		return context.DeadlineExceeded
 	}
 
-	err := toggleCordon(ctx, cs, "n2")
+	err := setCordon(ctx, cs, "n2", true)
 	if err == nil {
 		t.Error("expected error from runCordonOrUncordon")
 	}
