@@ -31,3 +31,8 @@ func (t Tenant) GetFilterableFields() []string {
 	fields := t.IDs[1:]
 	return append(fields, t.GetTenantID(), t.Name, fmt.Sprint(t.IsInternal), t.Note)
 }
+
+// IsFaulty returns true if the tenant has multiple IDs.
+func (t Tenant) IsFaulty() bool {
+	return len(t.IDs) > 1
+}

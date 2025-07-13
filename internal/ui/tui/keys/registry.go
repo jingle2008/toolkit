@@ -216,6 +216,10 @@ var (
 		key.WithKeys("T"),
 		key.WithHelp("<shift+t>", SortPrefix+"Type"),
 	)
+	ShowFaulty = key.NewBinding(
+		key.WithKeys("ctrl+z"),
+		key.WithHelp("<ctrl+z>", "Show Faulty"),
+	)
 )
 
 // Category+mode-specific key bindings
@@ -224,7 +228,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortMaxTokens},
 	},
 	domain.Tenant: {
-		common.ListView: {SortInternal, CopyTenant},
+		common.ListView: {SortInternal, CopyTenant, ShowFaulty},
 	},
 
 	domain.ConsolePropertyDefinition: {
@@ -237,10 +241,10 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize},
 	},
 	domain.GpuNode: {
-		common.ListView: {SortFree, SortType, SortAge, Refresh, CordonNode, DrainNode, UncordonNode},
+		common.ListView: {SortFree, SortType, SortAge, Refresh, CordonNode, DrainNode, UncordonNode, ShowFaulty},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh},
+		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ShowFaulty},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {SortTenant, SortRegions, CopyTenant},
@@ -268,21 +272,28 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	},
 }
 
+func toggleKeyBinding(keys []key.Binding, target *key.Binding, enable bool) {
+	target.SetEnabled(enable)
+	for i, b := range keys {
+		if b.Help() == target.Help() {
+			keys[i].SetEnabled(enable)
+			break
+		}
+	}
+}
+
 // ResolveKeys returns the composed KeyMap for the given category and UI mode.
 func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
 	// no details to view for alias
-	viewDetailsEnabled := cat != domain.Alias
+	toggleKeyBinding(globalKeys, &ViewDetails, cat != domain.Alias)
+
 	// conflict with cordon in listView
 	copyNameEnabled := cat != domain.GpuNode || mode != common.ListView
-	ViewDetails.SetEnabled(viewDetailsEnabled)
-	CopyName.SetEnabled(copyNameEnabled)
-	for i, b := range globalKeys {
-		if b.Help() == ViewDetails.Help() {
-			globalKeys[i].SetEnabled(viewDetailsEnabled)
-		} else if b.Help() == CopyName.Help() {
-			globalKeys[i].SetEnabled(copyNameEnabled)
-		}
-	}
+	toggleKeyBinding(globalKeys, &CopyName, copyNameEnabled)
+
+	// no alias when in alias category
+	showAliasEnabled := cat != domain.Alias
+	toggleKeyBinding(listModeKeys, &ShowAlias, showAliasEnabled)
 
 	km := KeyMap{
 		Global: globalKeys,

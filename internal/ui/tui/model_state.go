@@ -83,6 +83,9 @@ type Model struct {
 	// Category navigation history
 	history    []domain.Category // chronological list of visited categories
 	historyIdx int               // index of the current position in history
+
+	// Show only faulty items in list view (Tenant, GpuNode, DedicatedAICluster)
+	showFaulty bool
 }
 
 /*

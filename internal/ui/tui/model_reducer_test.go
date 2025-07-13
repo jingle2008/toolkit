@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -201,4 +202,53 @@ func TestFindContextIndex_ContextCategory_NoMatch(t *testing.T) {
 	}
 	idx := m.findContextIndex(rows)
 	assert.Equal(t, -1, idx)
+}
+
+func TestShowFaultyToggleAllowed(t *testing.T) {
+	m := &Model{
+		category:       domain.Tenant,
+		curFilter:      "",
+		context:        nil,
+		table:          &table.Model{},
+		loadingSpinner: &spinner.Model{},
+		logger:         logging.NewNoOpLogger(),
+		dataset:        &models.Dataset{},
+	}
+	assert.False(t, m.showFaulty)
+	_ = m.showFaultyList()
+	assert.True(t, m.showFaulty)
+	_ = m.showFaultyList()
+	assert.False(t, m.showFaulty)
+}
+
+func TestShowFaultyBlockedByFilter(t *testing.T) {
+	m := &Model{
+		category:       domain.Tenant,
+		curFilter:      "foo",
+		context:        nil,
+		table:          &table.Model{},
+		loadingSpinner: &spinner.Model{},
+		logger:         logging.NewNoOpLogger(),
+		dataset:        &models.Dataset{},
+	}
+	assert.False(t, m.showFaulty)
+	cmd := m.showFaultyList()
+	assert.Nil(t, cmd)
+	assert.False(t, m.showFaulty)
+}
+
+func TestShowFaultyBlockedByContext(t *testing.T) {
+	m := &Model{
+		category:       domain.Tenant,
+		curFilter:      "",
+		context:        &domain.ToolkitContext{Category: domain.Tenant, Name: "X"},
+		table:          &table.Model{},
+		loadingSpinner: &spinner.Model{},
+		logger:         logging.NewNoOpLogger(),
+		dataset:        &models.Dataset{},
+	}
+	assert.False(t, m.showFaulty)
+	cmd := m.showFaultyList()
+	assert.Nil(t, cmd)
+	assert.False(t, m.showFaulty)
 }

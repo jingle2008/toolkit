@@ -25,7 +25,7 @@ var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
 
 // updateRows updates the table rows based on the current model state.
 func (m *Model) updateRows() {
-	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc)
+	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
 	table.WithRows(rows)(m.table)
 
 	idx := m.findContextIndex(rows)
@@ -179,11 +179,16 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 		return m.sortTableByColumn(column)
 	}
 
+	if key.Matches(msg, keys.ShowFaulty) {
+		return m.showFaultyList()
+	}
+
 	item := m.getSelectedItem()
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
 		m.copyTenantID(item)
 	case key.Matches(msg, keys.Refresh):
+		// force refresh
 		return tea.Sequence(m.updateCategory(m.category)...)
 	case key.Matches(msg, keys.CordonNode):
 		return m.cordonNode(item, true)
@@ -194,6 +199,19 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	}
 
 	return nil
+}
+
+func (m *Model) showFaultyList() tea.Cmd {
+	// Only works for Tenant, GpuNode, DedicatedAICluster
+	if m.category != domain.Tenant && m.category != domain.GpuNode && m.category != domain.DedicatedAICluster {
+		return nil
+	}
+	// Only allow toggle if no context and no filter
+	if m.context != nil || m.curFilter != "" {
+		return nil
+	}
+	m.showFaulty = !m.showFaulty
+	return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 }
 
 func (m *Model) cordonNode(item any, desired bool) tea.Cmd {
@@ -218,6 +236,7 @@ func (m *Model) cordonNode(item any, desired bool) tea.Cmd {
 		return nil
 	}
 
+	// force refresh
 	return tea.Sequence(m.updateCategory(m.category)...)
 }
 
@@ -237,6 +256,7 @@ func (m *Model) drainNode(item any) tea.Cmd {
 		return nil
 	}
 
+	// force refresh
 	return tea.Sequence(m.updateCategory(m.category)...)
 }
 
@@ -318,6 +338,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		m.keys = keys.ResolveKeys(m.category, m.viewMode)
 		m.sortColumn = "Name"
 		m.sortAsc = true
+		m.showFaulty = false
 	}
 
 	// Dispatch table for category handlers
@@ -462,6 +483,7 @@ func (m *Model) changeCategory() tea.Cmd {
 
 // enterContext moves the model into a new context based on the selected row.
 func (m *Model) enterContext() tea.Cmd {
+	m.showFaulty = false
 	row := m.table.SelectedRow()
 	if len(row) == 0 {
 		return nil

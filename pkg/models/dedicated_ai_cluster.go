@@ -1,6 +1,9 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // DedicatedAICluster represents a dedicated AI cluster resource.
 type DedicatedAICluster struct {
@@ -54,4 +57,15 @@ func (n DedicatedAICluster) GetUsage() string {
 
 	rate := 1.0 - float64(n.IdleReplicas)/float64(n.TotalReplicas)
 	return fmt.Sprintf("%.0f%%", rate*100)
+}
+
+// IsFaulty returns true if the cluster status is "fail" or "failed".
+func (n DedicatedAICluster) IsFaulty() bool {
+	switch s := n.Status; {
+	case len(s) == 0:
+		return false
+	default:
+		lower := strings.ToLower(s)
+		return lower == "fail" || lower == "failed"
+	}
 }

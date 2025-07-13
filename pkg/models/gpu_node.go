@@ -44,3 +44,8 @@ func (n GpuNode) GetStatus() string {
 	}
 	return "OK"
 }
+
+// IsFaulty returns true if the node is cordoned, missing GPUs, unhealthy, or not ready.
+func (n GpuNode) IsFaulty() bool {
+	return n.GetStatus() != "OK"
+}

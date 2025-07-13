@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -267,7 +268,7 @@ func Test_getModelArtifacts_returns_rows(t *testing.T) {
 				},
 			},
 		},
-	}, domain.ModelArtifact, nil, "", "", true)
+	}, domain.ModelArtifact, nil, "", "", true, false)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"artifactA", "M1", "2x A100", "8.0"}, rows[0])
 }
@@ -312,7 +313,7 @@ func Test_getTableRows_and_scoped_items(t *testing.T) {
 			},
 		},
 	}
-	rows := getTableRows(nil, dataset, domain.LimitTenancyOverride, &domain.ToolkitContext{Name: "TenantA", Category: domain.Tenant}, "", "", true)
+	rows := getTableRows(nil, dataset, domain.LimitTenancyOverride, &domain.ToolkitContext{Name: "TenantA", Category: domain.Tenant}, "", "", true, false)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"LimitA", "TenantA", "us-phoenix-1", "1", "10"}, rows[0])
 
@@ -383,7 +384,7 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 			t.Errorf("expected panic for nil dataset")
 		}
 	}()
-	_ = getTableRows(nil, nil, domain.Tenant, nil, "", "", true)
+	_ = getTableRows(nil, nil, domain.Tenant, nil, "", "", true, false)
 }
 
 // mockDefinition implements models.Definition for testing getPropertyDefinitions
@@ -444,7 +445,7 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 	ds := &models.Dataset{}
 	for _, cat := range categories {
 		headers := getHeaders(cat)
-		_ = getTableRows(nil, ds, cat, nil, "", "", true)
+		_ = getTableRows(nil, ds, cat, nil, "", "", true, false)
 		// Extra assertions for coverage
 		if len(headers) > 0 {
 			require.NotEmpty(t, headers[0].text)
@@ -540,7 +541,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 			require.InDelta(t, 1.0, sum, 0.1, "header ratios should sum to ~1")
 		}
 		// getTableRows should not panic
-		_ = getTableRows(nil, ds, cat, nil, "", "", true)
+		_ = getTableRows(nil, ds, cat, nil, "", "", true, false)
 	}
 }
 
@@ -682,7 +683,7 @@ func TestFilterRows(t *testing.T) {
 
 func TestGetTableRows_UnknownCategory(t *testing.T) {
 	t.Parallel()
-	rows := getTableRows(nil, &models.Dataset{}, domain.Category(9999), nil, "", "", true)
+	rows := getTableRows(nil, &models.Dataset{}, domain.Category(9999), nil, "", "", true, false)
 	assert.Nil(t, rows)
 }
 
@@ -705,4 +706,27 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 	rows := getBaseModels(m, "a")
 	assert.Len(t, rows, 1)
 	assert.Contains(t, rows[0][0], "A")
+}
+
+func TestGetTableRows_AliasCategory(t *testing.T) {
+	t.Parallel()
+	logger := logging.NewNoOpLogger()
+	dataset := &models.Dataset{}
+	rows := getTableRows(logger, dataset, domain.Alias, nil, "", "", true, false)
+	assert.Equal(t, len(domain.Categories), len(rows), "should return one row per category")
+
+	// Find GpuNode row
+	found := false
+	for _, row := range rows {
+		if len(row) > 0 && row[0] == "GpuNode" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "GpuNode row should be present")
+
+	// Filtering
+	filtered := getTableRows(logger, dataset, domain.Alias, nil, "tenant", "", true, false)
+	assert.Equal(t, 1, len(filtered), "filter 'tenant' should return exactly one row")
+	assert.Equal(t, "Tenant", filtered[0][0])
 }
