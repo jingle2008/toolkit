@@ -298,7 +298,7 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 	if key == nil {
 		return nil
 	}
-	switch category { //nolint:exhaustive
+	switch category {
 	case domain.Tenant:
 		return findTenant(dataset, key)
 	case domain.LimitDefinition:
@@ -333,9 +333,12 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 		return findGpuNode(dataset, key)
 	case domain.DedicatedAICluster:
 		return findDedicatedAICluster(dataset, key)
-	default:
-		return nil
+	case domain.Alias:
+		return key
+	case domain.CategoryUnknown:
+		// exhaustive
 	}
+	return nil
 }
 
 func findTenant(dataset *models.Dataset, key models.ItemKey) any {

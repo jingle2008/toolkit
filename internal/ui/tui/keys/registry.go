@@ -40,20 +40,6 @@ var globalKeys = []key.Binding{
 	Quit,
 }
 
-// GlobalKeys returns a copy of the global key bindings (always active).
-func GlobalKeys() []key.Binding { return globalKeys }
-
-// ListModeKeys returns a copy of the key bindings for list mode.
-func ListModeKeys() []key.Binding { return listModeKeys }
-
-// DetailsModeKeys returns a copy of the key bindings for details mode.
-func DetailsModeKeys() []key.Binding { return detailsModeKeys }
-
-// CatContext returns the mapping of category and view mode to context-specific key bindings.
-func CatContext() map[domain.Category]map[common.ViewMode][]key.Binding {
-	return catContext
-}
-
 // FullKeyMap returns a KeyMap with all unique keys in each section.
 func FullKeyMap() KeyMap {
 	// Context keys
@@ -76,7 +62,7 @@ func FullKeyMap() KeyMap {
 	}
 
 	return KeyMap{
-		Global:  GlobalKeys(),
+		Global:  globalKeys,
 		Mode:    append(listModeKeys, detailsModeKeys...),
 		Context: ctx,
 	}
@@ -110,7 +96,7 @@ var (
 	)
 	SortName = key.NewBinding(
 		key.WithKeys("N"),
-		key.WithHelp("<shift+n>", SortPrefix+"Name"),
+		key.WithHelp("<shift+n>", SortPrefix+common.NameCol),
 	)
 )
 
@@ -174,39 +160,39 @@ var (
 	)
 	SortInternal = key.NewBinding(
 		key.WithKeys("I"),
-		key.WithHelp("<shift+i>", SortPrefix+"Internal"),
+		key.WithHelp("<shift+i>", SortPrefix+common.InternalCol),
 	)
 	SortValue = key.NewBinding(
 		key.WithKeys("V"),
-		key.WithHelp("<shift+v>", SortPrefix+"Value"),
+		key.WithHelp("<shift+v>", SortPrefix+common.ValueCol),
 	)
 	SortRegions = key.NewBinding(
 		key.WithKeys("R"),
-		key.WithHelp("<shift+r>", SortPrefix+"Regions"),
+		key.WithHelp("<shift+r>", SortPrefix+common.RegionsCol),
 	)
 	SortTenant = key.NewBinding(
 		key.WithKeys("T"),
-		key.WithHelp("<shift+t>", SortPrefix+"Tenant"),
+		key.WithHelp("<shift+t>", SortPrefix+common.TenantCol),
 	)
 	SortMaxTokens = key.NewBinding(
 		key.WithKeys("M"),
-		key.WithHelp("<shift+m>", SortPrefix+"Max Tokens"),
+		key.WithHelp("<shift+m>", SortPrefix+common.MaxTokensCol),
 	)
 	SortSize = key.NewBinding(
 		key.WithKeys("S"),
-		key.WithHelp("<shift+s>", SortPrefix+"Size"),
+		key.WithHelp("<shift+s>", SortPrefix+common.SizeCol),
 	)
 	SortFree = key.NewBinding(
 		key.WithKeys("F"),
-		key.WithHelp("<shift+f>", SortPrefix+"Free"),
+		key.WithHelp("<shift+f>", SortPrefix+common.FreeCol),
 	)
 	SortAge = key.NewBinding(
 		key.WithKeys("A"),
-		key.WithHelp("<shift+a>", SortPrefix+"Age"),
+		key.WithHelp("<shift+a>", SortPrefix+common.AgeCol),
 	)
 	SortUsage = key.NewBinding(
 		key.WithKeys("U"),
-		key.WithHelp("<shift+u>", SortPrefix+"Usage"),
+		key.WithHelp("<shift+u>", SortPrefix+common.UsageCol),
 	)
 	ShowAlias = key.NewBinding(
 		key.WithKeys("ctrl+a"),
@@ -214,7 +200,7 @@ var (
 	)
 	SortType = key.NewBinding(
 		key.WithKeys("T"),
-		key.WithHelp("<shift+t>", SortPrefix+"Type"),
+		key.WithHelp("<shift+t>", SortPrefix+common.TypeCol),
 	)
 	ShowFaulty = key.NewBinding(
 		key.WithKeys("ctrl+z"),
@@ -272,29 +258,8 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	},
 }
 
-func toggleKeyBinding(keys []key.Binding, target *key.Binding, enable bool) {
-	target.SetEnabled(enable)
-	for i, b := range keys {
-		if b.Help() == target.Help() {
-			keys[i].SetEnabled(enable)
-			break
-		}
-	}
-}
-
 // ResolveKeys returns the composed KeyMap for the given category and UI mode.
 func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
-	// no details to view for alias
-	toggleKeyBinding(globalKeys, &ViewDetails, cat != domain.Alias)
-
-	// conflict with cordon in listView
-	copyNameEnabled := cat != domain.GpuNode || mode != common.ListView
-	toggleKeyBinding(globalKeys, &CopyName, copyNameEnabled)
-
-	// no alias when in alias category
-	showAliasEnabled := cat != domain.Alias
-	toggleKeyBinding(listModeKeys, &ShowAlias, showAliasEnabled)
-
 	km := KeyMap{
 		Global: globalKeys,
 	}

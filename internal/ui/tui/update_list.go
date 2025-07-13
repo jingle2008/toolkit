@@ -87,8 +87,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.ViewDetails, func() []tea.Cmd { m.enterDetailView(); return nil }},
 		{keys.Confirm, func() []tea.Cmd { return []tea.Cmd{m.enterContext()} }},
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
-		{keys.CopyName, func() []tea.Cmd { m.copyItemName(m.getSelectedItem()); return nil }},
-		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn("Name")} }},
+		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn(common.NameCol)} }},
 		{keys.ShowAlias, func() []tea.Cmd { return m.updateCategory(domain.Alias) }},
 	}
 
@@ -97,6 +96,10 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 			cmds = append(cmds, h.action()...)
 			return cmds
 		}
+	}
+
+	if key.Matches(msg, keys.CopyName) {
+		m.copyItemName(m.getSelectedItem())
 	}
 
 	cmds = append(cmds, m.handleAdditionalKeys(msg))

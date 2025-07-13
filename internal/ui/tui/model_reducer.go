@@ -331,7 +331,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	} else {
 		m.category = category
 		m.keys = keys.ResolveKeys(m.category, m.viewMode)
-		m.sortColumn = "Name"
+		m.sortColumn = common.NameCol
 		m.sortAsc = true
 		m.showFaulty = false
 	}

@@ -8,38 +8,6 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
-func TestGlobalKeys(t *testing.T) {
-	t.Parallel()
-	keys := GlobalKeys()
-	if len(keys) == 0 {
-		t.Error("GlobalKeys() returned empty slice")
-	}
-}
-
-func TestListModeKeys(t *testing.T) {
-	t.Parallel()
-	keys := ListModeKeys()
-	if len(keys) == 0 {
-		t.Error("ListModeKeys() returned empty slice")
-	}
-}
-
-func TestDetailsModeKeys(t *testing.T) {
-	t.Parallel()
-	keys := DetailsModeKeys()
-	if len(keys) == 0 {
-		t.Error("DetailsModeKeys() returned empty slice")
-	}
-}
-
-func TestCatContext(t *testing.T) {
-	t.Parallel()
-	ctx := CatContext()
-	if len(ctx) == 0 {
-		t.Error("CatContext() returned empty map")
-	}
-}
-
 func TestFullKeyMap(t *testing.T) {
 	t.Parallel()
 	km := FullKeyMap()
