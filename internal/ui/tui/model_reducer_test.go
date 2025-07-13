@@ -205,6 +205,7 @@ func TestFindContextIndex_ContextCategory_NoMatch(t *testing.T) {
 }
 
 func TestShowFaultyToggleAllowed(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		category:       domain.Tenant,
 		curFilter:      "",
@@ -215,13 +216,14 @@ func TestShowFaultyToggleAllowed(t *testing.T) {
 		dataset:        &models.Dataset{},
 	}
 	assert.False(t, m.showFaulty)
-	_ = m.showFaultyList()
+	_ = m.toggleFaultyList()
 	assert.True(t, m.showFaulty)
-	_ = m.showFaultyList()
+	_ = m.toggleFaultyList()
 	assert.False(t, m.showFaulty)
 }
 
 func TestShowFaultyBlockedByFilter(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		category:       domain.Tenant,
 		curFilter:      "foo",
@@ -232,12 +234,13 @@ func TestShowFaultyBlockedByFilter(t *testing.T) {
 		dataset:        &models.Dataset{},
 	}
 	assert.False(t, m.showFaulty)
-	cmd := m.showFaultyList()
+	cmd := m.toggleFaultyList()
 	assert.Nil(t, cmd)
 	assert.False(t, m.showFaulty)
 }
 
 func TestShowFaultyBlockedByContext(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		category:       domain.Tenant,
 		curFilter:      "",
@@ -248,7 +251,7 @@ func TestShowFaultyBlockedByContext(t *testing.T) {
 		dataset:        &models.Dataset{},
 	}
 	assert.False(t, m.showFaulty)
-	cmd := m.showFaultyList()
+	cmd := m.toggleFaultyList()
 	assert.Nil(t, cmd)
 	assert.False(t, m.showFaulty)
 }

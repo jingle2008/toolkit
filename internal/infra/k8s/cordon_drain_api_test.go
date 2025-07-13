@@ -19,10 +19,10 @@ func TestSetCordon_API(t *testing.T) { //nolint:paralleltest // paralleltest is 
 	_ = client.Tracker().Add(node)
 	// Should not error (cordon)
 	err := setCordon(ctx, client, "n1", true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Should not error (uncordon)
 	err = setCordon(ctx, client, "n1", false)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestLogWriter_Write(t *testing.T) {
@@ -72,5 +72,5 @@ func TestDrainNode_API(t *testing.T) { //nolint:paralleltest // paralleltest is 
 		return nil
 	}
 	err := drainNode(ctx, client, "n2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }

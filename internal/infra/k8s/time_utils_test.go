@@ -3,6 +3,7 @@ package k8s
 import "testing"
 
 func TestParseAge(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input    string
 		expected int64

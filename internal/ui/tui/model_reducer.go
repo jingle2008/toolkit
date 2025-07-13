@@ -165,8 +165,7 @@ func (m *Model) sortTableByColumn(column string) tea.Cmd {
 
 // handleAdditionalKeys processes extra key events for the current category.
 func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
-	allowList := append(m.keys.Context, keys.SortName)
-	idx := slices.IndexFunc(allowList, func(b key.Binding) bool {
+	idx := slices.IndexFunc(m.keys.Context, func(b key.Binding) bool {
 		return key.Matches(msg, b)
 	})
 
@@ -174,13 +173,13 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 		return nil
 	}
 
-	binding := allowList[idx]
+	binding := m.keys.Context[idx]
 	if column, ok := strings.CutPrefix(binding.Help().Desc, keys.SortPrefix); ok {
 		return m.sortTableByColumn(column)
 	}
 
 	if key.Matches(msg, keys.ShowFaulty) {
-		return m.showFaultyList()
+		return m.toggleFaultyList()
 	}
 
 	item := m.getSelectedItem()
@@ -201,11 +200,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
-func (m *Model) showFaultyList() tea.Cmd {
-	// Only works for Tenant, GpuNode, DedicatedAICluster
-	if m.category != domain.Tenant && m.category != domain.GpuNode && m.category != domain.DedicatedAICluster {
-		return nil
-	}
+func (m *Model) toggleFaultyList() tea.Cmd {
 	// Only allow toggle if no context and no filter
 	if m.context != nil || m.curFilter != "" {
 		return nil

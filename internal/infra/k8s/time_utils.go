@@ -27,7 +27,7 @@ func ParseAge(s string) int64 {
 		return 0
 	}
 	unit := s[len(s)-1]
-	mult := int64(0)
+	var mult int64
 	switch unit {
 	case 's':
 		mult = 1

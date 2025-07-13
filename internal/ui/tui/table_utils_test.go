@@ -727,6 +727,6 @@ func TestGetTableRows_AliasCategory(t *testing.T) {
 
 	// Filtering
 	filtered := getTableRows(logger, dataset, domain.Alias, nil, "tenant", "", true, false)
-	assert.Equal(t, 1, len(filtered), "filter 'tenant' should return exactly one row")
+	assert.Len(t, filtered, 1, "filter 'tenant' should return exactly one row")
 	assert.Equal(t, "Tenant", filtered[0][0])
 }

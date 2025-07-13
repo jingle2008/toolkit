@@ -8,6 +8,7 @@ import (
 )
 
 func TestSortByInt(t *testing.T) {
+	t.Parallel()
 	rows := []table.Row{
 		{"foo", "10"},
 		{"bar", "2"},
@@ -34,6 +35,7 @@ func TestSortByInt(t *testing.T) {
 }
 
 func TestSortByPercent(t *testing.T) {
+	t.Parallel()
 	rows := []table.Row{
 		{"foo", "10%"},
 		{"bar", "2%"},
@@ -60,6 +62,7 @@ func TestSortByPercent(t *testing.T) {
 }
 
 func TestSortByString(t *testing.T) {
+	t.Parallel()
 	rows := []table.Row{
 		{"foo", "b"},
 		{"bar", "a"},

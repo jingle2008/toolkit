@@ -65,6 +65,7 @@ func TestHandlePrevCategory(t *testing.T) {
 // --- History/Navigation Tests ---
 
 func TestSeedHistory(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		history:    []domain.Category{},
 		historyIdx: -1,
@@ -75,12 +76,13 @@ func TestSeedHistory(t *testing.T) {
 		m.history = []domain.Category{m.category}
 		m.historyIdx = 0
 	}
-	assert.Equal(t, 1, len(m.history))
+	assert.Len(t, m.history, 1)
 	assert.Equal(t, 0, m.historyIdx)
 	assert.Equal(t, domain.Tenant, m.history[0])
 }
 
 func TestHistoryCap20(t *testing.T) {
+	t.Parallel()
 	m := &Model{
 		history:    []domain.Category{},
 		historyIdx: -1,
@@ -89,7 +91,7 @@ func TestHistoryCap20(t *testing.T) {
 	for i := range 25 {
 		m.pushHistory(domain.Category(i))
 	}
-	assert.Equal(t, 20, len(m.history))
+	assert.Len(t, m.history, 20)
 	assert.Equal(t, 19, m.historyIdx)
 	assert.Equal(t, domain.Category(5), m.history[0])
 	assert.Equal(t, domain.Category(24), m.history[19])
@@ -104,6 +106,7 @@ func makeModelWithHistory(hist []domain.Category, idx int) *Model {
 }
 
 func TestMoveHistoryBackForward(t *testing.T) {
+	t.Parallel()
 	hist := []domain.Category{domain.Tenant, domain.GpuPool, domain.GpuNode}
 	m := makeModelWithHistory(hist, 2)
 	// Move back
@@ -128,6 +131,7 @@ func TestMoveHistoryBackForward(t *testing.T) {
 }
 
 func TestBackForwardKeyBindings(t *testing.T) {
+	t.Parallel()
 	hist := []domain.Category{domain.Tenant, domain.GpuPool}
 	m := makeModelWithHistory(hist, 1)
 	// Simulate "[" key

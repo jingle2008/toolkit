@@ -88,6 +88,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.Confirm, func() []tea.Cmd { return []tea.Cmd{m.enterContext()} }},
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
 		{keys.CopyName, func() []tea.Cmd { m.copyItemName(m.getSelectedItem()); return nil }},
+		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn("Name")} }},
 		{keys.ShowAlias, func() []tea.Cmd { return m.updateCategory(domain.Alias) }},
 	}
 
