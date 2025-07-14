@@ -181,6 +181,7 @@ func GetScopedItems[T models.NamedFilterable](
 	scopeCategory domain.Category,
 	ctx *domain.ToolkitContext,
 	filter string,
+	pred func(T) bool,
 ) []table.Row {
 	var (
 		key  *string
@@ -195,7 +196,7 @@ func GetScopedItems[T models.NamedFilterable](
 		}
 	}
 
-	return collections.FilterMap(g, key, name, filter,
+	return collections.FilterMap(g, key, name, filter, pred,
 		func(s string, v T) table.Row {
 			return GetTableRow(logger, s, v)
 		})

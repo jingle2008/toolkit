@@ -70,7 +70,7 @@ func TestGetScopedItems(t *testing.T) {
 		}},
 	}
 	ctx := &domain.ToolkitContext{Name: "scope1", Category: domain.Tenant}
-	rows := GetScopedItems(logger, m, domain.Tenant, ctx, "")
+	rows := GetScopedItems(logger, m, domain.Tenant, ctx, "", nil)
 	if len(rows) != 1 || rows[0][0] != "limitA" || rows[0][1] != "scope1" {
 		t.Errorf("unexpected GetScopedItems result: %v", rows)
 	}
@@ -184,13 +184,13 @@ func TestGetScopedItems_NilCtxAndNonMatchingCategory(t *testing.T) {
 		}},
 	}
 	// ctx == nil
-	rows := GetScopedItems(logger, m, domain.Tenant, nil, "")
+	rows := GetScopedItems(logger, m, domain.Tenant, nil, "", nil)
 	if len(rows) != 1 || rows[0][0] != "limitA" {
 		t.Errorf("unexpected GetScopedItems result for nil ctx: %v", rows)
 	}
 	// ctx.Category != scopeCategory
 	ctx := &domain.ToolkitContext{Name: "scope1", Category: domain.LimitDefinition}
-	rows2 := GetScopedItems(logger, m, domain.Tenant, ctx, "")
+	rows2 := GetScopedItems(logger, m, domain.Tenant, ctx, "", nil)
 	if len(rows2) != 0 {
 		t.Errorf("expected 0 rows for non-matching category, got: %v", rows2)
 	}

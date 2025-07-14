@@ -39,54 +39,59 @@ func IsMatch(item models.Filterable, filter string, ignoreCase bool) bool {
 }
 
 /*
-FilterSlice performs the given action on items in the slice that match the filter and name.
-Return false in the action to stop further processing.
+FilterSlice returns a slice of items that match the filter and name.
 */
-func FilterSlice[T models.NamedFilterable](items []T, name *string, filter string,
-	action func(int, T) bool,
-) {
-	idx := 0
+/*
+FilterSlice returns a slice of items that match the filter and name.
+If pred is non-nil, the item must also satisfy pred(item).
+*/
+func FilterSlice[T models.NamedFilterable](items []T, name *string, filter string, pred func(T) bool) []T {
+	var out []T
 	for _, item := range items {
-		if (name == nil || *name == item.GetName()) && IsMatch(item, filter, true) {
-			if !action(idx, item) {
-				return
-			}
-
-			idx++
+		if (name == nil || *name == item.GetName()) &&
+			IsMatch(item, filter, true) &&
+			(pred == nil || pred(item)) {
+			out = append(out, item)
 		}
 	}
+	return out
 }
 
-/*
-filterMap performs the given action on items in the map that match the filter and name.
-Return false in the action to stop further processing.
-*/
-func filterMap[T models.NamedFilterable](m map[string][]T, name *string,
-	filter string, action func(int, string, T) bool,
-) {
-	idx := 0
+type kv[T any] struct {
+	Key string
+	Val T
+}
 
+// filterMap returns a slice of key-value pairs matching the filter and name.
+func filterMap[T models.NamedFilterable](m map[string][]T, name *string, filter string, pred func(T) bool) []kv[T] {
+	var out []kv[T]
 	for key, value := range m {
 		matchKey := strings.Contains(strings.ToLower(key), filter)
-
 		for _, val := range value {
 			if (name == nil || *name == val.GetName()) &&
-				(matchKey || IsMatch(val, filter, true)) {
-				if !action(idx, key, val) {
-					return
-				}
-
-				idx++
+				(matchKey || IsMatch(val, filter, true)) &&
+				(pred == nil || pred(val)) {
+				out = append(out, kv[T]{Key: key, Val: val})
 			}
 		}
 	}
+	return out
 }
 
 /*
 FilterMap applies the transform function to all items in the map that match the key, name, and filter, returning a slice of results.
 */
-func FilterMap[T models.NamedFilterable, R any](g map[string][]T,
-	key *string, name *string, filter string, transform func(string, T) R,
+/*
+FilterMap applies the transform function to all items in the map that match the key, name, and filter, returning a slice of results.
+If pred is non-nil, the item must also satisfy pred(item).
+*/
+func FilterMap[T models.NamedFilterable, R any](
+	g map[string][]T,
+	key *string,
+	name *string,
+	filter string,
+	pred func(T) bool,
+	transform func(string, T) R,
 ) []R {
 	var results []R
 
@@ -98,15 +103,13 @@ func FilterMap[T models.NamedFilterable, R any](g map[string][]T,
 
 		results = make([]R, 0, len(items))
 
-		FilterSlice(items, name, filter, func(_ int, val T) bool {
+		for _, val := range FilterSlice(items, name, filter, pred) {
 			results = append(results, transform(*key, val))
-			return true
-		})
+		}
 	} else {
-		filterMap(g, name, filter, func(_ int, key string, val T) bool {
-			results = append(results, transform(key, val))
-			return true
-		})
+		for _, pair := range filterMap(g, name, filter, pred) {
+			results = append(results, transform(pair.Key, pair.Val))
+		}
 	}
 
 	return results

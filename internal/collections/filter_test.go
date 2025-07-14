@@ -20,11 +20,7 @@ func TestFilterSlice_Basic(t *testing.T) {
 	items := []testStruct{{"foo", "bar"}, {"baz", "qux"}}
 	name := "foo"
 	filter := ""
-	var out []testStruct
-	FilterSlice(items, &name, filter, func(_ int, item testStruct) bool {
-		out = append(out, item)
-		return true
-	})
+	out := FilterSlice(items, &name, filter, nil)
 	assert.Len(t, out, 1)
 	assert.Equal(t, "foo", out[0].name)
 }
@@ -32,22 +28,14 @@ func TestFilterSlice_Basic(t *testing.T) {
 func TestFilterSlice_Empty(t *testing.T) {
 	t.Parallel()
 	items := []testStruct{}
-	var out []testStruct
-	FilterSlice(items, nil, "", func(_ int, item testStruct) bool {
-		out = append(out, item)
-		return true
-	})
+	out := FilterSlice(items, nil, "", nil)
 	assert.Empty(t, out)
 }
 
 func TestFilterSlice_CaseInsensitive(t *testing.T) {
 	t.Parallel()
 	items := []testStruct{{"Foo", "Bar"}, {"baz", "qux"}}
-	var out []testStruct
-	FilterSlice(items, nil, "foo", func(_ int, item testStruct) bool {
-		out = append(out, item)
-		return true
-	})
+	out := FilterSlice(items, nil, "foo", nil)
 	assert.Len(t, out, 1)
 	assert.Equal(t, "Foo", out[0].name)
 }
@@ -55,11 +43,7 @@ func TestFilterSlice_CaseInsensitive(t *testing.T) {
 func TestFilterSlice_EmptyFilterReturnsAll(t *testing.T) {
 	t.Parallel()
 	items := []testStruct{{"a", "b"}, {"c", "d"}}
-	var out []testStruct
-	FilterSlice(items, nil, "", func(_ int, item testStruct) bool {
-		out = append(out, item)
-		return true
-	})
+	out := FilterSlice(items, nil, "", nil)
 	assert.Len(t, out, 2)
 }
 
@@ -89,44 +73,28 @@ func TestFilterMap_Basic(t *testing.T) {
 		"a": {{"foo", "bar"}},
 		"b": {{"baz", "qux"}},
 	}
-	out := FilterMap(m, nil, nil, "", func(_ string, item testStruct) testStruct { return item })
+	out := FilterMap(m, nil, nil, "", nil, func(_ string, item testStruct) testStruct { return item })
 	assert.Len(t, out, 2)
 }
 
 func TestFilterMap_Empty(t *testing.T) {
 	t.Parallel()
 	m := map[string][]testStruct{}
-	out := FilterMap(m, nil, nil, "", func(_ string, item testStruct) testStruct { return item })
+	out := FilterMap(m, nil, nil, "", nil, func(_ string, item testStruct) testStruct { return item })
 	assert.Empty(t, out)
 }
 
-// Additional edge-case tests for coverage
 func TestFilterSlice_AllFilteredOut(t *testing.T) {
 	t.Parallel()
 	items := []testStruct{{"foo", "bar"}, {"baz", "qux"}}
-	var out []testStruct
-	FilterSlice(items, nil, "notfound", func(_ int, item testStruct) bool {
-		out = append(out, item)
-		return true
-	})
+	out := FilterSlice(items, nil, "notfound", nil)
 	assert.Empty(t, out)
-}
-
-func TestFilterSlice_NilPredicate(t *testing.T) {
-	t.Parallel()
-	items := []testStruct{{"foo", "bar"}}
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("expected panic with nil predicate")
-		}
-	}()
-	FilterSlice(items, nil, "", nil)
 }
 
 func TestFilterMap_NilMap(t *testing.T) {
 	t.Parallel()
 	var m map[string][]testStruct
-	out := FilterMap(m, nil, nil, "", func(_ string, item testStruct) testStruct { return item })
+	out := FilterMap(m, nil, nil, "", nil, func(_ string, item testStruct) testStruct { return item })
 	assert.Empty(t, out)
 }
 
@@ -135,7 +103,7 @@ func TestFilterMap_AllFilteredOut(t *testing.T) {
 	m := map[string][]testStruct{
 		"a": {{"foo", "bar"}},
 	}
-	out := FilterMap(m, nil, nil, "notfound", func(_ string, item testStruct) testStruct { return item })
+	out := FilterMap(m, nil, nil, "notfound", nil, func(_ string, item testStruct) testStruct { return item })
 	assert.Empty(t, out)
 }
 
@@ -146,7 +114,7 @@ func TestFilterMap_WithKey(t *testing.T) {
 		"b": {{"quux", "corge"}},
 	}
 	key := "a"
-	out := FilterMap(m, &key, nil, "", func(k string, item testStruct) string {
+	out := FilterMap(m, &key, nil, "", nil, func(k string, item testStruct) string {
 		return k + ":" + item.name
 	})
 	assert.Equal(t, []string{"a:foo", "a:baz"}, out)
@@ -158,7 +126,7 @@ func TestFilterMap_WithKeyNotFound(t *testing.T) {
 		"a": {{"foo", "bar"}},
 	}
 	key := "b"
-	out := FilterMap(m, &key, nil, "", func(k string, item testStruct) string { return k + ":" + item.name })
+	out := FilterMap(m, &key, nil, "", nil, func(k string, item testStruct) string { return k + ":" + item.name })
 	assert.Empty(t, out)
 }
 
@@ -169,7 +137,7 @@ func TestFilterMap_WithKeyAndName(t *testing.T) {
 	}
 	key := "a"
 	name := "baz"
-	out := FilterMap(m, &key, &name, "", func(_ string, item testStruct) string { return item.name })
+	out := FilterMap(m, &key, &name, "", nil, func(_ string, item testStruct) string { return item.name })
 	assert.Equal(t, []string{"baz"}, out)
 }
 
@@ -179,7 +147,7 @@ func TestFilterMap_WithKeyAndFilter(t *testing.T) {
 		"a": {{"foo", "bar"}, {"baz", "qux"}},
 	}
 	key := "a"
-	out := FilterMap(m, &key, nil, "qux", func(_ string, item testStruct) string { return item.name })
+	out := FilterMap(m, &key, nil, "qux", nil, func(_ string, item testStruct) string { return item.name })
 	assert.Equal(t, []string{"baz"}, out)
 }
 
@@ -208,9 +176,7 @@ func BenchmarkFilterSlice(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			FilterSlice(data, nil, "item-5", func(_ int, val testStruct) bool {
-				return val.name == "item-5"
-			})
+			_ = FilterSlice(data, nil, "item-5", nil)
 		}
 	})
 }

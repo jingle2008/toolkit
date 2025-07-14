@@ -31,6 +31,7 @@ func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 	row := GetTableRow(nil, "TenantX", cluster)
 	assert.Equal(t, table.Row{"DAC1", "TenantX", "", "", "GPU", "A100", "4", "", "Active"}, row)
 }
+
 func Test_getLimitRegionalOverrides(t *testing.T) {
 	t.Parallel()
 	overrides := []models.LimitRegionalOverride{
@@ -584,7 +585,7 @@ func TestFilterRows(t *testing.T) {
 		{Type: "foo", Region: "us-phx-1"},
 		{Type: "bar", Region: "us-ashburn-1"},
 	}
-	rows := filterRows(items, "foo", func(e models.Environment) table.Row {
+	rows := filterRows(items, "foo", nil, func(e models.Environment) table.Row {
 		return table.Row{e.Type, e.Region}
 	})
 	assert.Len(t, rows, 1)
