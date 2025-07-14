@@ -14,11 +14,6 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Renderer is a UI-agnostic interface for rendering a row as a slice of strings.
-type Renderer interface {
-	Render(scope string) []string
-}
-
 // LimitTenancyOverrideRow adapts models.LimitTenancyOverride for table rendering.
 type LimitTenancyOverrideRow models.LimitTenancyOverride
 

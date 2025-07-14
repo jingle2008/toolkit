@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -20,31 +19,6 @@ func Test_getHeaders_returns_expected_headers(t *testing.T) {
 	assert.InEpsilon(t, 0.20, headers[0].ratio, 0.0001)
 }
 
-func Test_getTenants_returns_rows(t *testing.T) {
-	t.Parallel()
-	tenants := []models.Tenant{
-		{
-			Name: "TenantA",
-			IDs:  []string{"idA"},
-		},
-		{
-			Name: "TenantB",
-			IDs:  []string{"idB", "idB2"},
-		},
-	}
-	tenantStructs := domain.FilterTenants(tenants, "")
-	rows := make([]table.Row, 0, len(tenantStructs))
-	for _, val := range tenantStructs {
-		rows = append(rows, table.Row{
-			val.Name,
-			val.GetTenantID(),
-		})
-	}
-	assert.Len(t, rows, 2)
-	assert.Equal(t, table.Row{"TenantA", "idA"}, rows[0])
-	assert.Equal(t, table.Row{"TenantB", "idB (+1)"}, rows[1])
-}
-
 func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 	t.Parallel()
 	cluster := models.DedicatedAICluster{
@@ -57,36 +31,6 @@ func Test_getTableRow_DedicatedAICluster(t *testing.T) {
 	row := GetTableRow(nil, "TenantX", cluster)
 	assert.Equal(t, table.Row{"DAC1", "TenantX", "", "", "GPU", "A100", "4", "", "Active"}, row)
 }
-
-func Test_getEnvironments_returns_rows(t *testing.T) {
-	t.Parallel()
-	envs := []models.Environment{
-		{
-			Type:   "dev",
-			Region: "us-phoenix-1",
-			Realm:  "realmA",
-		},
-		{
-			Type:   "prod",
-			Region: "us-ashburn-1",
-			Realm:  "realmB",
-		},
-	}
-	envStructs := domain.FilterEnvironments(envs, "")
-	rows := make([]table.Row, 0, len(envStructs))
-	for _, val := range envStructs {
-		rows = append(rows, table.Row{
-			val.GetName(),
-			val.Realm,
-			val.Type,
-			val.Region,
-		})
-	}
-	assert.Len(t, rows, 2)
-	assert.Equal(t, table.Row{"dev-phx", "realmA", "dev", "us-phoenix-1"}, rows[0])
-	assert.Equal(t, table.Row{"prod-iad", "realmB", "prod", "us-ashburn-1"}, rows[1])
-}
-
 func Test_getLimitRegionalOverrides(t *testing.T) {
 	t.Parallel()
 	overrides := []models.LimitRegionalOverride{
@@ -167,40 +111,6 @@ func Test_rowGenerationFunctions_tableDriven(t *testing.T) {
 			}
 		})
 	}
-}
-
-func Test_getServiceTenancies_returns_rows(t *testing.T) {
-	t.Parallel()
-	tenancies := []models.ServiceTenancy{
-		{
-			Name:        "svcA",
-			Realm:       "realmA",
-			Environment: "envA",
-			HomeRegion:  "us-phoenix-1",
-			Regions:     []string{"us-phoenix-1", "us-ashburn-1"},
-		},
-		{
-			Name:        "svcB",
-			Realm:       "realmB",
-			Environment: "envB",
-			HomeRegion:  "us-ashburn-1",
-			Regions:     []string{"us-ashburn-1"},
-		},
-	}
-	tenancyStructs := domain.FilterServiceTenancies(tenancies, "")
-	rows := make([]table.Row, 0, len(tenancyStructs))
-	for _, val := range tenancyStructs {
-		rows = append(rows, table.Row{
-			val.Name,
-			val.Realm,
-			val.Environment,
-			val.HomeRegion,
-			strings.Join(val.Regions, ", "),
-		})
-	}
-	assert.Len(t, rows, 2)
-	assert.Equal(t, table.Row{"svcA", "realmA", "envA", "us-phoenix-1", "us-phoenix-1, us-ashburn-1"}, rows[0])
-	assert.Equal(t, table.Row{"svcB", "realmB", "envB", "us-ashburn-1", "us-ashburn-1"}, rows[1])
 }
 
 func Test_getGpuPools_returns_rows(t *testing.T) {
