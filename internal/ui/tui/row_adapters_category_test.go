@@ -12,13 +12,10 @@ func TestCategoryRow_RenderAndToRow(t *testing.T) {
 	t.Parallel()
 	cat := domain.GpuNode
 	row := CategoryRow(cat)
-	rendered := row.Render("")
+	rendered := []string(row.ToRow("ignored"))
 	assert.Len(t, rendered, 2)
 	assert.Equal(t, "GpuNode", rendered[0])
 	aliases := strings.Split(rendered[1], ", ")
 	assert.Contains(t, aliases, "gn")
 	assert.Contains(t, aliases, "gpunode")
-
-	toRow := row.ToRow("ignored")
-	assert.Equal(t, rendered, []string(toRow))
 }

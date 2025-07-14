@@ -18,6 +18,7 @@ require (
 	github.com/zclconf/go-cty v1.14.4
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
+	golang.org/x/net v0.41.0
 	golang.org/x/sync v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.33.2
@@ -102,7 +103,6 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/term v0.32.0 // indirect

@@ -3,19 +3,17 @@
 package tui
 
 import (
-	"fmt"
 	"math"
 	"slices"
 	"strings"
 
-	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
-	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -185,7 +183,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	item := m.getSelectedItem()
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
-		m.copyTenantID(item)
+		actions.CopyTenantID(item, &m.environment, m.logger)
 	case key.Matches(msg, keys.Refresh):
 		// force refresh
 		return tea.Sequence(m.updateCategory(m.category)...)
@@ -210,18 +208,8 @@ func (m *Model) toggleFaultyList() tea.Cmd {
 }
 
 func (m *Model) cordonNode(item any, desired bool) tea.Cmd {
-	if item == nil {
-		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
-		return nil
-	}
-
 	if node, ok := item.(*models.GpuNode); ok {
-		var err error
-		if desired {
-			err = k8s.CordonNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
-		} else {
-			err = k8s.UncordonNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
-		}
+		err := actions.CordonNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node, desired)
 		if err != nil {
 			m.logger.Errorw("failed to set cordon state", "error", err, "cordon", desired)
 			return nil
@@ -230,19 +218,14 @@ func (m *Model) cordonNode(item any, desired bool) tea.Cmd {
 		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
 		return nil
 	}
-
 	// force refresh
 	return tea.Sequence(m.updateCategory(m.category)...)
 }
 
 func (m *Model) drainNode(item any) tea.Cmd {
-	if item == nil {
-		m.logger.Errorw("no item selected for draining", "category", m.category)
-		return nil
-	}
-
 	if node, ok := item.(*models.GpuNode); ok {
-		if err := k8s.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name); err != nil {
+		err := actions.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node)
+		if err != nil {
 			m.logger.Errorw("failed to drain node", "error", err)
 			return nil
 		}
@@ -250,51 +233,8 @@ func (m *Model) drainNode(item any) tea.Cmd {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
 		return nil
 	}
-
 	// force refresh
 	return tea.Sequence(m.updateCategory(m.category)...)
-}
-
-func (m *Model) copyItemName(item any) {
-	if item == nil {
-		m.logger.Errorw("no item selected for copying name", "category", m.category)
-		return
-	}
-
-	if dac, ok := item.(*models.DedicatedAICluster); ok {
-		id := fmt.Sprintf("ocid1.generativeaidedicatedaicluster.%s.%s.%s",
-			m.environment.Realm, m.environment.Region, dac.Name)
-		if err := clipboard.WriteAll(id); err != nil {
-			m.logger.Errorw("failed to copy id to clipboard", "error", err)
-		}
-	} else if to, ok := item.(models.NamedItem); ok {
-		if err := clipboard.WriteAll(to.GetName()); err != nil {
-			m.logger.Errorw("failed to copy name to clipboard", "error", err)
-		}
-	} else {
-		m.logger.Errorw("unsupported item type for copying name", "item", item)
-	}
-}
-
-// copyTenantId copies the tenant ID from the current row to the clipboard if available.
-func (m *Model) copyTenantID(item any) {
-	if item == nil {
-		m.logger.Errorw("no item selected for copying tenant ID", "category", m.category)
-		return
-	}
-
-	if dac, ok := item.(*models.DedicatedAICluster); ok {
-		tenantID := fmt.Sprintf("ocid1.tenancy.%s..%s", m.environment.Realm, dac.TenantID)
-		if err := clipboard.WriteAll(tenantID); err != nil {
-			m.logger.Errorw("failed to copy tenantID to clipboard", "error", err)
-		}
-	} else if to, ok := item.(models.TenancyOverride); ok {
-		if err := clipboard.WriteAll(to.GetTenantID()); err != nil {
-			m.logger.Errorw("failed to copy tenantID to clipboard", "error", err)
-		}
-	} else {
-		m.logger.Errorw("unsupported item type for copying tenant ID", "item", item)
-	}
 }
 
 // getSelectedItem returns the currently selected item in the table.

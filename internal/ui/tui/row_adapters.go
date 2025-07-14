@@ -22,64 +22,45 @@ type Renderer interface {
 // LimitTenancyOverrideRow adapts models.LimitTenancyOverride for table rendering.
 type LimitTenancyOverrideRow models.LimitTenancyOverride
 
-// Render implements the Renderer interface for LimitTenancyOverrideRow.
-func (l LimitTenancyOverrideRow) Render(scope string) []string {
-	return []string{
+func (l LimitTenancyOverrideRow) ToRow(scope string) table.Row {
+	return table.Row([]string{
 		l.Name,
 		scope,
 		strings.Join(l.Regions, ", "),
 		fmt.Sprint(l.Values[0].Min),
 		fmt.Sprint(l.Values[0].Max),
-	}
-}
-
-// ToRow returns a table.Row for the LimitTenancyOverrideRow, scoped by the given string.
-func (l LimitTenancyOverrideRow) ToRow(scope string) table.Row {
-	return table.Row(l.Render(scope))
+	})
 }
 
 // ConsolePropertyTenancyOverrideRow is a wrapper to implement RowMarshaler for models.ConsolePropertyTenancyOverride.
 type ConsolePropertyTenancyOverrideRow models.ConsolePropertyTenancyOverride
 
-// Render implements the Renderer interface for ConsolePropertyTenancyOverrideRow.
-func (c ConsolePropertyTenancyOverrideRow) Render(scope string) []string {
-	return []string{
+func (c ConsolePropertyTenancyOverrideRow) ToRow(scope string) table.Row {
+	return table.Row([]string{
 		c.Name,
 		scope,
 		strings.Join(c.GetRegions(), ", "),
 		c.GetValue(),
-	}
-}
-
-// ToRow returns a table.Row for the ConsolePropertyTenancyOverrideRow, scoped by the given string.
-func (c ConsolePropertyTenancyOverrideRow) ToRow(scope string) table.Row {
-	return table.Row(c.Render(scope))
+	})
 }
 
 // PropertyTenancyOverrideRow is a wrapper to implement RowMarshaler for models.PropertyTenancyOverride.
 type PropertyTenancyOverrideRow models.PropertyTenancyOverride
 
-// Render implements the Renderer interface for PropertyTenancyOverrideRow.
-func (p PropertyTenancyOverrideRow) Render(scope string) []string {
-	return []string{
+func (p PropertyTenancyOverrideRow) ToRow(scope string) table.Row {
+	return table.Row([]string{
 		p.Name,
 		scope,
 		strings.Join(p.GetRegions(), ", "),
 		p.GetValue(),
-	}
-}
-
-// ToRow returns a table.Row for the PropertyTenancyOverrideRow, scoped by the given string.
-func (p PropertyTenancyOverrideRow) ToRow(scope string) table.Row {
-	return table.Row(p.Render(scope))
+	})
 }
 
 // GpuNodeRow is a wrapper to implement RowMarshaler for models.GpuNode.
 type GpuNodeRow models.GpuNode
 
-// Render implements the Renderer interface for GpuNodeRow.
-func (n GpuNodeRow) Render(_ string) []string {
-	return []string{
+func (n GpuNodeRow) ToRow(scope string) table.Row {
+	return table.Row([]string{
 		n.Name,
 		n.NodePool,
 		n.InstanceType,
@@ -89,24 +70,18 @@ func (n GpuNodeRow) Render(_ string) []string {
 		fmt.Sprint(n.IsReady),
 		n.Age,
 		models.GpuNode(n).GetStatus(),
-	}
-}
-
-// ToRow returns a table.Row for the GpuNodeRow.
-func (n GpuNodeRow) ToRow(scope string) table.Row {
-	return table.Row(n.Render(scope))
+	})
 }
 
 // DedicatedAIClusterRow is a wrapper to implement RowMarshaler for models.DedicatedAICluster.
 type DedicatedAIClusterRow models.DedicatedAICluster
 
-// Render implements the Renderer interface for DedicatedAIClusterRow.
-func (d DedicatedAIClusterRow) Render(scope string) []string {
+func (d DedicatedAIClusterRow) ToRow(scope string) table.Row {
 	unitShapeOrProfile := d.UnitShape
 	if unitShapeOrProfile == "" {
 		unitShapeOrProfile = d.Profile
 	}
-	return []string{
+	return table.Row([]string{
 		d.Name,
 		scope,
 		models.DedicatedAICluster(d).GetOwnerState(),
@@ -116,99 +91,64 @@ func (d DedicatedAIClusterRow) Render(scope string) []string {
 		fmt.Sprint(d.Size),
 		d.Age,
 		d.Status,
-	}
-}
-
-// ToRow returns a table.Row for the DedicatedAIClusterRow, scoped by the given string.
-func (d DedicatedAIClusterRow) ToRow(scope string) table.Row {
-	return table.Row(d.Render(scope))
+	})
 }
 
 // TenantRow is a wrapper to implement RowMarshaler for models.Tenant.
 type TenantRow models.Tenant
 
-// Render implements the Renderer interface for TenantRow.
-func (t TenantRow) Render(_ string) []string {
-	return []string{
+func (t TenantRow) ToRow(scope string) table.Row {
+	return table.Row([]string{
 		t.Name,
 		models.Tenant(t).GetTenantID(),
 		fmt.Sprint(t.IsInternal),
 		t.Note,
-	}
-}
-
-// ToRow returns a table.Row for the TenantRow.
-func (t TenantRow) ToRow(scope string) table.Row {
-	return table.Row(t.Render(scope))
+	})
 }
 
 // ServiceTenancyRow is a wrapper to implement RowMarshaler for models.ServiceTenancy.
 type ServiceTenancyRow models.ServiceTenancy
 
-// Render implements the Renderer interface for ServiceTenancyRow.
-func (s ServiceTenancyRow) Render(_ string) []string {
-	return []string{
+func (s ServiceTenancyRow) ToRow(scope string) table.Row {
+	return table.Row([]string{
 		s.Name,
 		s.Realm,
 		s.Environment,
 		s.HomeRegion,
 		strings.Join(s.Regions, ", "),
-	}
-}
-
-// ToRow returns a table.Row for the ServiceTenancyRow.
-func (s ServiceTenancyRow) ToRow(scope string) table.Row {
-	return table.Row(s.Render(scope))
+	})
 }
 
 // EnvironmentRow is a wrapper to implement RowMarshaler for models.Environment.
 type EnvironmentRow models.Environment
 
-// Render implements the Renderer interface for EnvironmentRow.
-func (e EnvironmentRow) Render(_ string) []string {
-	return []string{
+func (e EnvironmentRow) ToRow(scope string) table.Row {
+	return table.Row([]string{
 		models.Environment(e).GetName(),
 		e.Realm,
 		e.Type,
 		e.Region,
-	}
-}
-
-// ToRow returns a table.Row for the EnvironmentRow.
-func (e EnvironmentRow) ToRow(scope string) table.Row {
-	return table.Row(e.Render(scope))
+	})
 }
 
 // CategoryRow adapts alias information for table rendering.
 type CategoryRow domain.Category
 
-// Render implements the Renderer interface for AliasRow.
-func (r CategoryRow) Render(_ string) []string {
-	c := domain.Category(r)
-	return []string{c.String(), strings.Join(c.GetAliases(), ", ")}
-}
-
-// ToRow returns a table.Row for the AliasRow.
 func (r CategoryRow) ToRow(scope string) table.Row {
-	return table.Row(r.Render(scope))
+	c := domain.Category(r)
+	return table.Row([]string{c.String(), strings.Join(c.GetAliases(), ", ")})
 }
 
 // ModelArtifactRow adapts models.ModelArtifact for table rendering.
 type ModelArtifactRow models.ModelArtifact
 
-// Render implements the Renderer interface for ModelArtifactRow.
-func (val ModelArtifactRow) Render(_ string) []string {
-	return []string{
+func (val ModelArtifactRow) ToRow(scope string) table.Row {
+	return table.Row([]string{
 		val.Name,
 		val.ModelName,
 		models.ModelArtifact(val).GetGpuConfig(),
 		val.TensorRTVersion,
-	}
-}
-
-// ToRow returns a table.Row for the ModelArtifactRow.
-func (val ModelArtifactRow) ToRow(scope string) table.Row {
-	return table.Row(val.Render(scope))
+	})
 }
 
 /*

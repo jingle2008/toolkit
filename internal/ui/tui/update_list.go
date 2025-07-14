@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
@@ -99,7 +100,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	}
 
 	if key.Matches(msg, keys.CopyName) {
-		m.copyItemName(m.getSelectedItem())
+		actions.CopyItemName(m.getSelectedItem(), &m.environment, m.logger)
 	}
 
 	cmds = append(cmds, m.handleAdditionalKeys(msg))
