@@ -16,7 +16,7 @@ func FilterTable(m *Model, filter string) {
 		return
 	}
 	m.curFilter = filter
-	m.updateRows()
+	m.updateRows(true)
 }
 
 // DebounceFilter triggers a debounced filter update for the model's text input.

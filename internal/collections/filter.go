@@ -119,9 +119,9 @@ func FilterMap[T models.NamedFilterable, R any](
 FindByName returns a pointer to the item with the given name, or nil if not found.
 */
 func FindByName[T models.NamedItem](items []T, name string) *T {
-	for _, item := range items {
-		if item.GetName() == name {
-			return &item
+	for i := range items {
+		if items[i].GetName() == name {
+			return &items[i]
 		}
 	}
 

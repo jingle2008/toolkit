@@ -6,10 +6,8 @@ import (
 	"fmt"
 
 	"github.com/atotto/clipboard"
-	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"golang.org/x/net/context"
 )
 
 // CopyItemName copies the name or ID of an item to the clipboard.
@@ -53,23 +51,4 @@ func CopyTenantID(item any, env *models.Environment, logger logging.Logger) {
 	} else {
 		logger.Errorw("unsupported item type for copying tenant ID", "item", item)
 	}
-}
-
-// CordonNode cordons or uncordons a GPU node.
-func CordonNode(ctx context.Context, kubeConfig, kubeContext string, node *models.GpuNode, desired bool) error {
-	if node == nil {
-		return fmt.Errorf("no node selected")
-	}
-	if desired {
-		return k8s.CordonNode(ctx, kubeConfig, kubeContext, node.Name)
-	}
-	return k8s.UncordonNode(ctx, kubeConfig, kubeContext, node.Name)
-}
-
-// DrainNode drains a GPU node.
-func DrainNode(ctx context.Context, kubeConfig, kubeContext string, node *models.GpuNode) error {
-	if node == nil {
-		return fmt.Errorf("no node selected")
-	}
-	return k8s.DrainNode(ctx, kubeConfig, kubeContext, node.Name)
 }

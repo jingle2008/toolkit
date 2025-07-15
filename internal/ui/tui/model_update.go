@@ -102,7 +102,7 @@ func (m *Model) backToLastState() {
 		FilterTable(m, "")
 	} else if m.context != nil && m.context.Category.IsScopeOf(m.category) {
 		m.context = nil
-		m.updateRows()
+		m.updateRows(true)
 	}
 }
 

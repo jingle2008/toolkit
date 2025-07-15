@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -22,15 +23,19 @@ import (
 var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
 
 // updateRows updates the table rows based on the current model state.
-func (m *Model) updateRows() {
+func (m *Model) updateRows(autoSelect bool) {
 	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
 	table.WithRows(rows)(m.table)
 
-	idx := m.findContextIndex(rows)
-	if idx >= 0 {
-		m.table.SetCursor(idx)
+	if autoSelect {
+		idx := m.findContextIndex(rows)
+		if idx >= 0 {
+			m.table.SetCursor(idx)
+		} else {
+			m.table.GotoTop()
+		}
 	} else {
-		m.table.GotoTop()
+		m.table.UpdateViewport()
 	}
 }
 
@@ -118,7 +123,7 @@ func (m *Model) refreshDisplay() {
 	m.newFilter = ""
 	m.textInput.Reset()
 	m.updateColumns()
-	m.updateRows()
+	m.updateRows(true)
 }
 
 // processData updates the model's dataset based on the incoming DataMsg.
@@ -157,7 +162,7 @@ func (m *Model) sortTableByColumn(column string) tea.Cmd {
 	}
 
 	m.updateColumns()
-	m.updateRows()
+	m.updateRows(true)
 	return nil
 }
 
@@ -187,12 +192,10 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.Refresh):
 		// force refresh
 		return tea.Sequence(m.updateCategory(m.category)...)
-	case key.Matches(msg, keys.CordonNode):
-		return m.cordonNode(item, true)
-	case key.Matches(msg, keys.UncordonNode):
-		return m.cordonNode(item, false)
+	case key.Matches(msg, keys.ToggleCordon):
+		m.cordonNode(item)
 	case key.Matches(msg, keys.DrainNode):
-		return m.drainNode(item)
+		m.drainNode(item)
 	}
 
 	return nil
@@ -207,34 +210,37 @@ func (m *Model) toggleFaultyList() tea.Cmd {
 	return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 }
 
-func (m *Model) cordonNode(item any, desired bool) tea.Cmd {
+func (m *Model) cordonNode(item any) {
+	if item == nil {
+		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
+		return
+	}
+
 	if node, ok := item.(*models.GpuNode); ok {
-		err := actions.CordonNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node, desired)
-		if err != nil {
-			m.logger.Errorw("failed to set cordon state", "error", err, "cordon", desired)
-			return nil
+		if state, err := k8s.ToggleCordon(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name); err != nil {
+			m.logger.Errorw("failed to toggle cordon state", "error", err)
+		} else {
+			node.IsSchedulingDisabled = state
+			m.updateRows(false)
 		}
 	} else {
 		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
-		return nil
 	}
-	// force refresh
-	return tea.Sequence(m.updateCategory(m.category)...)
 }
 
-func (m *Model) drainNode(item any) tea.Cmd {
+func (m *Model) drainNode(item any) {
+	if item == nil {
+		m.logger.Errorw("no item selected for draining", "category", m.category)
+		return
+	}
+
 	if node, ok := item.(*models.GpuNode); ok {
-		err := actions.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node)
-		if err != nil {
+		if err := k8s.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name); err != nil {
 			m.logger.Errorw("failed to drain node", "error", err)
-			return nil
 		}
 	} else {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
-		return nil
 	}
-	// force refresh
-	return tea.Sequence(m.updateCategory(m.category)...)
 }
 
 // getSelectedItem returns the currently selected item in the table.

@@ -144,14 +144,10 @@ var (
 		key.WithKeys("ctrl+r"),
 		key.WithHelp("<ctrl+r>", "Refresh"),
 	)
-	// CordonNode is a key binding for cordoning a node in the GPU node list.
-	CordonNode = key.NewBinding(
-		key.WithKeys("c"),
-		key.WithHelp("<c>", "Cordon"),
-	)
-	UncordonNode = key.NewBinding(
-		key.WithKeys("u"),
-		key.WithHelp("<u>", "Uncordon"),
+	// ToggleCordon is a key binding for cordoning a node in the GPU node list.
+	ToggleCordon = key.NewBinding(
+		key.WithKeys("C"),
+		key.WithHelp("<shift+c>", "Toggle Cordon"),
 	)
 	// DrainNode is a key binding for draining a node in the GPU node list.
 	DrainNode = key.NewBinding(
@@ -227,7 +223,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize},
 	},
 	domain.GpuNode: {
-		common.ListView: {SortFree, SortType, SortAge, Refresh, CordonNode, DrainNode, UncordonNode, ToggleFaulty},
+		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty},
