@@ -190,7 +190,6 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.CopyTenant):
 		actions.CopyTenantID(item, &m.environment, m.logger)
 	case key.Matches(msg, keys.Refresh):
-		// force refresh
 		return tea.Sequence(m.updateCategory(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):
 		m.cordonNode(item)

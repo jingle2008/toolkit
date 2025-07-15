@@ -20,10 +20,10 @@ func TestToggleCordon_API(t *testing.T) { //nolint:paralleltest // paralleltest 
 	// Should not error
 	state, err := toggleCordon(ctx, client, "n1")
 	require.NoError(t, err)
-	assert.Equal(t, true, state)
+	assert.True(t, state)
 	state, err = toggleCordon(ctx, client, "n1")
 	require.NoError(t, err)
-	assert.Equal(t, false, state)
+	assert.False(t, state)
 }
 
 func TestLogWriter_Write(t *testing.T) {

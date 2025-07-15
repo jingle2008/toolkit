@@ -23,6 +23,10 @@ func (k KeyMap) ShortHelp() []key.Binding {
 // FullHelp returns a full list of key bindings for help display, chunked per category.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	cat := slices.Concat(k.Global, k.Mode, k.Context)
+	// skip sort keys
+	cat = slices.DeleteFunc(cat, func(b key.Binding) bool {
+		return strings.HasPrefix(b.Help().Desc, SortPrefix)
+	})
 	slices.SortFunc(cat, func(c1, c2 key.Binding) int {
 		return strings.Compare(c1.Help().Desc, c2.Help().Desc)
 	})
