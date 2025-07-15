@@ -221,37 +221,3 @@ func TestShowFaultyToggleAllowed(t *testing.T) {
 	_ = m.toggleFaultyList()
 	assert.False(t, m.showFaulty)
 }
-
-func TestShowFaultyBlockedByFilter(t *testing.T) {
-	t.Parallel()
-	m := &Model{
-		category:       domain.Tenant,
-		curFilter:      "foo",
-		context:        nil,
-		table:          &table.Model{},
-		loadingSpinner: &spinner.Model{},
-		logger:         logging.NewNoOpLogger(),
-		dataset:        &models.Dataset{},
-	}
-	assert.False(t, m.showFaulty)
-	cmd := m.toggleFaultyList()
-	assert.Nil(t, cmd)
-	assert.False(t, m.showFaulty)
-}
-
-func TestShowFaultyBlockedByContext(t *testing.T) {
-	t.Parallel()
-	m := &Model{
-		category:       domain.Tenant,
-		curFilter:      "",
-		context:        &domain.ToolkitContext{Category: domain.Tenant, Name: "X"},
-		table:          &table.Model{},
-		loadingSpinner: &spinner.Model{},
-		logger:         logging.NewNoOpLogger(),
-		dataset:        &models.Dataset{},
-	}
-	assert.False(t, m.showFaulty)
-	cmd := m.toggleFaultyList()
-	assert.Nil(t, cmd)
-	assert.False(t, m.showFaulty)
-}

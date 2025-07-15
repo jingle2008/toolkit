@@ -38,13 +38,10 @@ func (m *Model) infoView() string {
 
 func (m *Model) contextString() string {
 	scope := "all"
-	if m.context != nil && m.context.Category.IsScopeOf(m.category) {
-		scope = m.context.Name
-	}
-
 	if m.viewMode == common.DetailsView {
-		keyString := getItemKeyString(m.category, m.choice)
-		scope = fmt.Sprintf("%s/%s", scope, keyString)
+		scope = getItemKeyString(m.category, m.choice)
+	} else if m.context != nil && m.context.Category.IsScopeOf(m.category) {
+		scope = m.context.Name
 	}
 
 	return fmt.Sprintf("%s (%s)", m.category.String(), scope)
@@ -102,29 +99,32 @@ func (m *Model) View() string {
 	switch m.viewMode {
 	case common.LoadingView:
 		spin := m.loadingSpinner.View()
-		msg := fmt.Sprintf("%s Loading data: %s …", spin, m.category.String())
-		return view.CenterText(msg, m.viewWidth, m.viewHeight)
+		return m.centered(fmt.Sprintf("%s Loading data: %s …", spin, m.category.String()))
 	case common.ErrorView:
-		return view.CenterText(m.err.Error(), m.viewWidth, m.viewHeight)
+		return m.centered(m.err.Error())
 	case common.HelpView:
-		return view.CenterText(m.fullHelpView(), m.viewWidth, m.viewHeight)
+		return m.centered(m.fullHelpView())
 	case common.ListView:
-		helpView := m.help.View(m.keys)
-		infoView := m.infoValueStyle.Render(m.infoView())
-		header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
-		mainContent := m.baseStyle.Render(m.table.View())
-		status := m.statusView()
-		return lipgloss.JoinVertical(lipgloss.Left, header, status, mainContent)
+		return m.frame(m.baseStyle.Render(m.table.View()))
 	case common.DetailsView:
-		helpView := m.help.View(m.keys)
-		infoView := m.infoValueStyle.Render(m.infoView())
-		header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
-		mainContent := m.viewport.View()
-		status := m.statusView()
-		return lipgloss.JoinVertical(lipgloss.Left, header, status, mainContent)
+		return m.frame(m.viewport.View())
 	default:
 		return ""
 	}
+}
+
+// centered is a thin wrapper around view.CenterText using model dims.
+func (m *Model) centered(msg string) string {
+	return view.CenterText(msg, m.viewWidth, m.viewHeight)
+}
+
+// frame builds the common header + status frame and injects main.
+func (m *Model) frame(main string) string {
+	helpView := m.help.View(m.keys)
+	infoView := m.infoValueStyle.Render(m.infoView())
+	header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
+	status := m.statusView()
+	return lipgloss.JoinVertical(lipgloss.Left, header, status, main)
 }
 
 /*

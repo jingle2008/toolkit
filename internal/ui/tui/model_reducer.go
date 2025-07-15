@@ -201,12 +201,9 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (m *Model) toggleFaultyList() tea.Cmd {
-	// Only allow toggle if no context and no filter
-	if m.context != nil || m.curFilter != "" {
-		return nil
-	}
 	m.showFaulty = !m.showFaulty
-	return tea.Sequence(m.updateCategoryNoHist(m.category)...)
+	m.updateRows(true)
+	return nil
 }
 
 func (m *Model) cordonNode(item any) {
