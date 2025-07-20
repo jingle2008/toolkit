@@ -40,9 +40,6 @@ func IsMatch(item models.Filterable, filter string, ignoreCase bool) bool {
 
 /*
 FilterSlice returns a slice of items that match the filter and name.
-*/
-/*
-FilterSlice returns a slice of items that match the filter and name.
 If pred is non-nil, the item must also satisfy pred(item).
 */
 func FilterSlice[T models.NamedFilterable](items []T, name *string, filter string, pred func(T) bool) []T {
@@ -57,58 +54,29 @@ func FilterSlice[T models.NamedFilterable](items []T, name *string, filter strin
 	return out
 }
 
-type kv[T any] struct {
-	Key string
-	Val T
-}
-
-// filterMap returns a slice of key-value pairs matching the filter and name.
-func filterMap[T models.NamedFilterable](m map[string][]T, name *string, filter string, pred func(T) bool) []kv[T] {
-	var out []kv[T]
-	for key, value := range m {
-		matchKey := strings.Contains(strings.ToLower(key), filter)
-		for _, val := range value {
-			if (name == nil || *name == val.GetName()) &&
-				(matchKey || IsMatch(val, filter, true)) &&
-				(pred == nil || pred(val)) {
-				out = append(out, kv[T]{Key: key, Val: val})
-			}
-		}
-	}
-	return out
-}
-
-/*
-FilterMap applies the transform function to all items in the map that match the key, name, and filter, returning a slice of results.
-*/
-/*
-FilterMap applies the transform function to all items in the map that match the key, name, and filter, returning a slice of results.
-If pred is non-nil, the item must also satisfy pred(item).
-*/
-func FilterMap[T models.NamedFilterable, R any](
+func FilterMap[T models.NamedFilterable](
 	g map[string][]T,
 	key *string,
 	name *string,
 	filter string,
 	pred func(T) bool,
-	transform func(string, T) R,
-) []R {
-	var results []R
-
+) map[string][]T {
+	var results map[string][]T
 	if key != nil {
-		items, ok := g[*key]
-		if !ok {
-			return []R{}
-		}
-
-		results = make([]R, 0, len(items))
-
-		for _, val := range FilterSlice(items, name, filter, pred) {
-			results = append(results, transform(*key, val))
+		if items, ok := g[*key]; ok {
+			results = map[string][]T{*key: FilterSlice(items, name, filter, pred)}
 		}
 	} else {
-		for _, pair := range filterMap(g, name, filter, pred) {
-			results = append(results, transform(pair.Key, pair.Val))
+		results = make(map[string][]T)
+		for key, value := range g {
+			matchKey := strings.Contains(strings.ToLower(key), filter)
+			for _, val := range value {
+				if (name == nil || *name == val.GetName()) &&
+					(matchKey || IsMatch(val, filter, true)) &&
+					(pred == nil || pred(val)) {
+					results[key] = append(results[key], val)
+				}
+			}
 		}
 	}
 

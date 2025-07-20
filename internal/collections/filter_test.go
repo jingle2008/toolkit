@@ -73,14 +73,14 @@ func TestFilterMap_Basic(t *testing.T) {
 		"a": {{"foo", "bar"}},
 		"b": {{"baz", "qux"}},
 	}
-	out := FilterMap(m, nil, nil, "", nil, func(_ string, item testStruct) testStruct { return item })
+	out := FilterMap(m, nil, nil, "", nil)
 	assert.Len(t, out, 2)
 }
 
 func TestFilterMap_Empty(t *testing.T) {
 	t.Parallel()
 	m := map[string][]testStruct{}
-	out := FilterMap(m, nil, nil, "", nil, func(_ string, item testStruct) testStruct { return item })
+	out := FilterMap(m, nil, nil, "", nil)
 	assert.Empty(t, out)
 }
 
@@ -94,7 +94,7 @@ func TestFilterSlice_AllFilteredOut(t *testing.T) {
 func TestFilterMap_NilMap(t *testing.T) {
 	t.Parallel()
 	var m map[string][]testStruct
-	out := FilterMap(m, nil, nil, "", nil, func(_ string, item testStruct) testStruct { return item })
+	out := FilterMap(m, nil, nil, "", nil)
 	assert.Empty(t, out)
 }
 
@@ -103,7 +103,7 @@ func TestFilterMap_AllFilteredOut(t *testing.T) {
 	m := map[string][]testStruct{
 		"a": {{"foo", "bar"}},
 	}
-	out := FilterMap(m, nil, nil, "notfound", nil, func(_ string, item testStruct) testStruct { return item })
+	out := FilterMap(m, nil, nil, "notfound", nil)
 	assert.Empty(t, out)
 }
 
@@ -114,10 +114,12 @@ func TestFilterMap_WithKey(t *testing.T) {
 		"b": {{"quux", "corge"}},
 	}
 	key := "a"
-	out := FilterMap(m, &key, nil, "", nil, func(k string, item testStruct) string {
-		return k + ":" + item.name
-	})
-	assert.Equal(t, []string{"a:foo", "a:baz"}, out)
+	out := FilterMap(m, &key, nil, "", nil)
+	assert.Len(t, out, 1)
+	assert.Contains(t, out, "a")
+	assert.Len(t, out["a"], 2)
+	names := []string{out["a"][0].name, out["a"][1].name}
+	assert.ElementsMatch(t, []string{"foo", "baz"}, names)
 }
 
 func TestFilterMap_WithKeyNotFound(t *testing.T) {
@@ -126,7 +128,7 @@ func TestFilterMap_WithKeyNotFound(t *testing.T) {
 		"a": {{"foo", "bar"}},
 	}
 	key := "b"
-	out := FilterMap(m, &key, nil, "", nil, func(k string, item testStruct) string { return k + ":" + item.name })
+	out := FilterMap(m, &key, nil, "", nil)
 	assert.Empty(t, out)
 }
 
@@ -137,8 +139,11 @@ func TestFilterMap_WithKeyAndName(t *testing.T) {
 	}
 	key := "a"
 	name := "baz"
-	out := FilterMap(m, &key, &name, "", nil, func(_ string, item testStruct) string { return item.name })
-	assert.Equal(t, []string{"baz"}, out)
+	out := FilterMap(m, &key, &name, "", nil)
+	assert.Len(t, out, 1)
+	assert.Contains(t, out, "a")
+	assert.Len(t, out["a"], 1)
+	assert.Equal(t, "baz", out["a"][0].name)
 }
 
 func TestFilterMap_WithKeyAndFilter(t *testing.T) {
@@ -147,8 +152,11 @@ func TestFilterMap_WithKeyAndFilter(t *testing.T) {
 		"a": {{"foo", "bar"}, {"baz", "qux"}},
 	}
 	key := "a"
-	out := FilterMap(m, &key, nil, "qux", nil, func(_ string, item testStruct) string { return item.name })
-	assert.Equal(t, []string{"baz"}, out)
+	out := FilterMap(m, &key, nil, "qux", nil)
+	assert.Len(t, out, 1)
+	assert.Contains(t, out, "a")
+	assert.Len(t, out["a"], 1)
+	assert.Equal(t, "baz", out["a"][0].name)
 }
 
 func TestFindByName_EmptySlice(t *testing.T) {
