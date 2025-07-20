@@ -20,16 +20,16 @@ const (
 func (v ViewMode) String() string {
 	switch v {
 	case ListView:
-		return "list"
+		return "List"
 	case DetailsView:
-		return "details"
+		return "Details"
 	case LoadingView:
-		return "loading"
+		return "Loading"
 	case HelpView:
-		return "help"
+		return "Help"
 	case ErrorView:
-		return "error"
+		return "Error"
 	default:
-		return "unknown"
+		return "Unknown"
 	}
 }

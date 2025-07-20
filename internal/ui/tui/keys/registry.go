@@ -40,34 +40,6 @@ var globalKeys = []key.Binding{
 	Quit,
 }
 
-// FullKeyMap returns a KeyMap with all unique keys in each section.
-func FullKeyMap() KeyMap {
-	// Context keys
-	ctx := []key.Binding{}
-	seen := map[string]struct{}{}
-	add := func(b key.Binding) {
-		k := b.Help().Key + "|" + b.Help().Desc
-		if _, ok := seen[k]; !ok {
-			seen[k] = struct{}{}
-			ctx = append(ctx, b)
-		}
-	}
-
-	for _, byMode := range catContext {
-		for _, bindings := range byMode {
-			for _, b := range bindings {
-				add(b)
-			}
-		}
-	}
-
-	return KeyMap{
-		Global:  globalKeys,
-		Mode:    append(listModeKeys, detailsModeKeys...),
-		Context: ctx,
-	}
-}
-
 // Mode-specific key bindings
 var (
 	NextCategory = key.NewBinding(

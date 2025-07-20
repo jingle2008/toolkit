@@ -46,12 +46,12 @@ func TestViewModeString(t *testing.T) {
 		val  ViewMode
 		want string
 	}{
-		{ListView, "list"},
-		{DetailsView, "details"},
-		{LoadingView, "loading"},
-		{HelpView, "help"},
-		{ErrorView, "error"},
-		{ViewMode(99), "unknown"},
+		{ListView, "List"},
+		{DetailsView, "Details"},
+		{LoadingView, "Loading"},
+		{HelpView, "Help"},
+		{ErrorView, "Error"},
+		{ViewMode(99), "Unknown"},
 	}
 	for _, tt := range tests {
 		if got := tt.val.String(); got != tt.want {

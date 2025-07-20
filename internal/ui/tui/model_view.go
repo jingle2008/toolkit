@@ -13,7 +13,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
@@ -132,7 +131,6 @@ fullHelpView renders all key bindings in sections for the help screen,
 with improved formatting and styling.
 */
 func (m *Model) fullHelpView() string {
-	km := keys.FullKeyMap()
 	const keyCol = 12
 	var b strings.Builder
 
@@ -155,10 +153,15 @@ func (m *Model) fullHelpView() string {
 		}
 		b.WriteString("\n")
 	}
-	renderSection("Resource Actions", km.Context)
-	renderSection("View-specific Actions", km.Mode)
-	renderSection("General Actions", km.Global)
-	renderSection("Table Actions", m.getTableBinding())
+	renderSection("Resource Actions", m.keys.Context)
+	renderSection(fmt.Sprintf("%s View Actions", m.lastViewMode), m.keys.Mode)
+	renderSection("General Actions", m.keys.Global)
+	switch m.lastViewMode {
+	case common.ListView:
+		renderSection("Table Actions", m.getTableBinding())
+	case common.DetailsView:
+		renderSection("Viewport Actions", m.getViewportBinding())
+	}
 	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())
 }
 
@@ -172,5 +175,16 @@ func (m *Model) getTableBinding() []key.Binding {
 		m.table.KeyMap.PageDown,
 		m.table.KeyMap.GotoTop,
 		m.table.KeyMap.GotoBottom,
+	}
+}
+
+func (m *Model) getViewportBinding() []key.Binding {
+	return []key.Binding{
+		m.viewport.KeyMap.Up,
+		m.viewport.KeyMap.Down,
+		m.viewport.KeyMap.HalfPageUp,
+		m.viewport.KeyMap.HalfPageDown,
+		m.viewport.KeyMap.PageUp,
+		m.viewport.KeyMap.PageDown,
 	}
 }

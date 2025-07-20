@@ -8,14 +8,6 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
-func TestFullKeyMap(t *testing.T) {
-	t.Parallel()
-	km := FullKeyMap()
-	if len(km.Global) == 0 || len(km.Mode) == 0 {
-		t.Error("FullKeyMap() missing keys")
-	}
-}
-
 func TestResolveKeys(t *testing.T) {
 	t.Parallel()
 	km := ResolveKeys(domain.Tenant, common.ListView)
