@@ -38,3 +38,17 @@ func TestLimitDefinitionGroup_AndOthers(t *testing.T) {
 	pdg := PropertyDefinitionGroup{}
 	assert.IsType(t, []PropertyDefinition{}, pdg.Values)
 }
+
+func TestMetadata_GetTenants(t *testing.T) {
+	t.Parallel()
+	tenants := []TenantMetadata{
+		{ID: "oc1.t1.dev"},
+		{ID: "oc1.t2.prod"},
+		{ID: "oc1.t3.dev"},
+	}
+	m := Metadata{Tenants: tenants}
+	devs := m.GetTenants("dev")
+	assert.Len(t, devs, 2)
+	assert.Equal(t, "oc1.t1.dev", devs[0].ID)
+	assert.Equal(t, "oc1.t3.dev", devs[1].ID)
+}

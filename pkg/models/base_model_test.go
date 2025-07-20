@@ -8,6 +8,43 @@ import (
 
 func TestBaseModel_Getters(t *testing.T) {
 	t.Parallel()
+	// IsFaulty always returns false
+	assert.False(t, BaseModel{}.IsFaulty())
+
+	// Panic on duplicate default DAC shape
+	t.Run("panic on duplicate default DAC", func(t *testing.T) {
+		cap1 := &Capability{
+			ChartValues: &ChartValues{
+				ModelMetaData: &ModelMetaData{
+					DacShapeConfigs: &DacShapeConfigs{
+						CompatibleDACShapes: []DACShape{
+							{Name: "A", Default: true},
+						},
+					},
+				},
+			},
+		}
+		cap2 := &Capability{
+			ChartValues: &ChartValues{
+				ModelMetaData: &ModelMetaData{
+					DacShapeConfigs: &DacShapeConfigs{
+						CompatibleDACShapes: []DACShape{
+							{Name: "B", Default: true},
+						},
+					},
+				},
+			},
+		}
+		bm := BaseModel{
+			InternalName: "panic-test",
+			Capabilities: map[string]*Capability{
+				"cap1": cap1,
+				"cap2": cap2,
+			},
+		}
+		assert.Panics(t, func() { bm.GetDefaultDacShape() })
+	})
+
 	bm := BaseModel{
 		Type:     "testType",
 		Name:     "testName",
