@@ -31,6 +31,11 @@ func (c LimitDefinition) GetFilterableFields() []string {
 	return []string{c.Name, c.Description}
 }
 
+// IsFaulty returns false by default for LimitDefinition.
+func (c LimitDefinition) IsFaulty() bool {
+	return false
+}
+
 // LimitRange represents a min/max range for a limit override.
 type LimitRange struct {
 	Min int `json:"min"`
@@ -54,6 +59,11 @@ func (o LimitRegionalOverride) GetName() string {
 // GetFilterableFields returns filterable fields for the limit regional override.
 func (o LimitRegionalOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name)
+}
+
+// IsFaulty returns false by default for LimitRegionalOverride.
+func (o LimitRegionalOverride) IsFaulty() bool {
+	return false
 }
 
 // LimitTenancyOverride represents a tenancy override for a limit.

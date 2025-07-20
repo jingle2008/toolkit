@@ -25,3 +25,8 @@ func (m ModelArtifact) GetGpuConfig() string {
 func (m ModelArtifact) GetFilterableFields() []string {
 	return []string{m.Name, m.GetGpuConfig(), m.ModelName}
 }
+
+// IsFaulty returns false by default for ModelArtifact.
+func (m ModelArtifact) IsFaulty() bool {
+	return false
+}

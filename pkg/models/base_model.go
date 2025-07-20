@@ -151,6 +151,11 @@ func (m BaseModel) GetFilterableFields() []string {
 		m.GetFlags(), shapeName)
 }
 
+// IsFaulty returns false by default for BaseModel.
+func (m BaseModel) IsFaulty() bool {
+	return false
+}
+
 // GetFlags returns the flags for the base model.
 func (m BaseModel) GetFlags() string {
 	flags := []string{}

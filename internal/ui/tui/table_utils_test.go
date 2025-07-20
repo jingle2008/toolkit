@@ -39,7 +39,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 			LifeCyclePhase:      "DEPRECATED",
 		},
 	}
-	rows := getBaseModels(baseModels, "")
+	rows := getBaseModels(baseModels, "", false)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{
 		"BM1", "bm1", "v1", "", "C/C*2", "1024", "EXP/INT/LTS/RTD",
@@ -326,7 +326,7 @@ func TestFilterRows(t *testing.T) {
 		{Type: "foo", Region: "us-phx-1"},
 		{Type: "bar", Region: "us-ashburn-1"},
 	}
-	rows := filterRows(items, "foo", nil, func(e models.Environment) table.Row {
+	rows := filterRows(items, "foo", false, func(e models.Environment) table.Row {
 		return table.Row{e.Type, e.Region}
 	})
 	assert.Len(t, rows, 1)
@@ -355,7 +355,7 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 		"a": {InternalName: "a", Name: "A"},
 		"b": {InternalName: "b", Name: "B"},
 	}
-	rows := getBaseModels(m, "a")
+	rows := getBaseModels(m, "a", false)
 	assert.Len(t, rows, 1)
 	assert.Contains(t, rows[0][0], "A")
 }

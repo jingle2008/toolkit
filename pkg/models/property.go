@@ -29,6 +29,11 @@ func (c PropertyDefinition) GetFilterableFields() []string {
 	return []string{c.Name, c.Description}
 }
 
+// IsFaulty returns false by default for PropertyDefinition.
+func (c PropertyDefinition) IsFaulty() bool {
+	return false
+}
+
 // PropertyRegionalOverride represents a regional override for a property.
 type PropertyRegionalOverride struct {
 	Realms  []string `json:"realms"`
@@ -58,6 +63,11 @@ func (o PropertyRegionalOverride) GetValue() string {
 // GetFilterableFields returns filterable fields for the property regional override.
 func (o PropertyRegionalOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name)
+}
+
+// IsFaulty returns false by default for PropertyRegionalOverride.
+func (o PropertyRegionalOverride) IsFaulty() bool {
+	return false
 }
 
 // PropertyTenancyOverride represents a tenancy override for a property.

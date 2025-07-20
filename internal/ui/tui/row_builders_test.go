@@ -46,6 +46,7 @@ func (f fakeDef) GetName() string               { return f.name }
 func (f fakeDef) GetDescription() string        { return f.desc }
 func (f fakeDef) GetValue() string              { return f.value }
 func (f fakeDef) GetFilterableFields() []string { return []string{f.name, f.desc, f.value} }
+func (fakeDef) IsFaulty() bool                  { return false }
 
 func Test_definitionToRow(t *testing.T) {
 	def := fakeDef{"n", "d", "v"}
@@ -109,6 +110,7 @@ func (f fakeDefOverride) GetName() string               { return f.name }
 func (f fakeDefOverride) GetValue() string              { return f.value }
 func (f fakeDefOverride) GetRegions() []string          { return f.regions }
 func (f fakeDefOverride) GetFilterableFields() []string { return append(f.regions, f.name, f.value) }
+func (fakeDefOverride) IsFaulty() bool                  { return false }
 
 func Test_propertyTenancyOverrideToRow(t *testing.T) {
 	def := fakeDefOverride{"PD1", "val", []string{"us", "eu"}}

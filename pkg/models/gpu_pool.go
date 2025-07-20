@@ -24,6 +24,11 @@ func (p GpuPool) GetFilterableFields() []string {
 	return []string{p.Name, p.Shape, p.CapacityType}
 }
 
+// IsFaulty returns false by default for GpuPool.
+func (p GpuPool) IsFaulty() bool {
+	return false
+}
+
 // GetGPUs returns the total number of GPUs in the pool.
 func (p GpuPool) GetGPUs() int {
 	parts := strings.Split(p.Shape, ".")

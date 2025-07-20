@@ -130,6 +130,10 @@ func (e Category) GetFilterableFields() []string {
 	return e.GetAliases()
 }
 
+func (e Category) IsFaulty() bool {
+	return false
+}
+
 func GetInitials(s string) string {
 	re := regexp.MustCompile(`[A-Z]`)
 	initials := re.FindAllString(s, -1)

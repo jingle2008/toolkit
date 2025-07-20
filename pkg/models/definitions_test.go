@@ -15,6 +15,7 @@ func (testImpl) GetRegions() []string          { return []string{"r"} }
 func (testImpl) GetValue() string              { return "v" }
 func (testImpl) Environments() []Environment   { return nil }
 func (testImpl) GetDescription() string        { return "desc" }
+func (testImpl) IsFaulty() bool                { return false }
 
 func TestDefinitionInterfaces(t *testing.T) {
 	t.Parallel()

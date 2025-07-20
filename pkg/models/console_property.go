@@ -27,6 +27,11 @@ func (c ConsolePropertyDefinition) GetFilterableFields() []string {
 	return []string{c.Name, c.Description}
 }
 
+// IsFaulty returns false by default for ConsolePropertyDefinition.
+func (c ConsolePropertyDefinition) IsFaulty() bool {
+	return false
+}
+
 // ConsolePropertyRegionalOverride represents a regional override for a console property.
 type ConsolePropertyRegionalOverride struct {
 	Realms  []string `json:"realms"`
@@ -58,6 +63,11 @@ func (o ConsolePropertyRegionalOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name)
 }
 
+// IsFaulty returns false by default for ConsolePropertyRegionalOverride.
+func (o ConsolePropertyRegionalOverride) IsFaulty() bool {
+	return false
+}
+
 // ConsolePropertyTenancyOverride represents a tenancy override for a console property.
 type ConsolePropertyTenancyOverride struct {
 	TenantID string `json:"tenant_id"`
@@ -72,4 +82,9 @@ func (o ConsolePropertyTenancyOverride) GetTenantID() string {
 // GetFilterableFields returns filterable fields for the console property tenancy override.
 func (o ConsolePropertyTenancyOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name, o.TenantID)
+}
+
+// IsFaulty returns false by default for ConsolePropertyTenancyOverride.
+func (o ConsolePropertyTenancyOverride) IsFaulty() bool {
+	return false
 }

@@ -15,71 +15,59 @@ func faultyPred[T models.Faulty](t T) bool {
 }
 
 var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset, *domain.ToolkitContext, string, bool) []table.Row{
-	domain.Alias: func(_ logging.Logger, _ *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(domain.Categories, filter, nil, aliasToRow)
+	domain.Alias: func(_ logging.Logger, _ *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(domain.Categories, filter, faultyOnly, aliasToRow)
 	},
 	domain.Tenant: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		var pred func(models.Tenant) bool
-		if faultyOnly {
-			pred = faultyPred
-		}
-		return filterRows(dataset.Tenants, filter, pred, tenantToRow)
+		return filterRows(dataset.Tenants, filter, faultyOnly, tenantToRow)
 	},
-	domain.LimitDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.LimitDefinitionGroup.Values, filter, nil, limitDefinitionToRow)
+	domain.LimitDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.LimitDefinitionGroup.Values, filter, faultyOnly, limitDefinitionToRow)
 	},
-	domain.ConsolePropertyDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.ConsolePropertyDefinitionGroup.Values, filter, nil, definitionToRow)
+	domain.ConsolePropertyDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.ConsolePropertyDefinitionGroup.Values, filter, faultyOnly, definitionToRow)
 	},
-	domain.PropertyDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.PropertyDefinitionGroup.Values, filter, nil, definitionToRow)
+	domain.PropertyDefinition: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.PropertyDefinitionGroup.Values, filter, faultyOnly, definitionToRow)
 	},
-	domain.LimitTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return GetScopedItems(dataset.LimitTenancyOverrideMap, domain.Tenant, context, filter, nil, limitTenancyOverrideToRow)
+	domain.LimitTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRowsScoped(dataset.LimitTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly, limitTenancyOverrideToRow)
 	},
-	domain.ConsolePropertyTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return GetScopedItems(dataset.ConsolePropertyTenancyOverrideMap, domain.Tenant, context, filter, nil, propertyTenancyOverrideToRow)
+	domain.ConsolePropertyTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRowsScoped(dataset.ConsolePropertyTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly, propertyTenancyOverrideToRow)
 	},
-	domain.PropertyTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return GetScopedItems(dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter, nil, propertyTenancyOverrideToRow)
+	domain.PropertyTenancyOverride: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRowsScoped(dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly, propertyTenancyOverrideToRow)
 	},
-	domain.LimitRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.LimitRegionalOverrides, filter, nil, limitRegionalOverrideToRow)
+	domain.LimitRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.LimitRegionalOverrides, filter, faultyOnly, limitRegionalOverrideToRow)
 	},
-	domain.ConsolePropertyRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.ConsolePropertyRegionalOverrides, filter, nil, propertyRegionalOverrideToRow)
+	domain.ConsolePropertyRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.ConsolePropertyRegionalOverrides, filter, faultyOnly, propertyRegionalOverrideToRow)
 	},
-	domain.PropertyRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.PropertyRegionalOverrides, filter, nil, propertyRegionalOverrideToRow)
+	domain.PropertyRegionalOverride: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.PropertyRegionalOverrides, filter, faultyOnly, propertyRegionalOverrideToRow)
 	},
-	domain.BaseModel: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return getBaseModels(dataset.BaseModelMap, filter)
+	domain.BaseModel: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return getBaseModels(dataset.BaseModelMap, filter, faultyOnly)
 	},
-	domain.ModelArtifact: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return GetScopedItems(dataset.ModelArtifactMap, domain.BaseModel, context, filter, nil, modelArtifactToRow)
+	domain.ModelArtifact: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRowsScoped(dataset.ModelArtifactMap, domain.BaseModel, context, filter, faultyOnly, modelArtifactToRow)
 	},
-	domain.Environment: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.Environments, filter, nil, environmentToRow)
+	domain.Environment: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.Environments, filter, faultyOnly, environmentToRow)
 	},
-	domain.ServiceTenancy: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.ServiceTenancies, filter, nil, serviceTenancyToRow)
+	domain.ServiceTenancy: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.ServiceTenancies, filter, faultyOnly, serviceTenancyToRow)
 	},
-	domain.GpuPool: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, _ bool) []table.Row {
-		return filterRows(dataset.GpuPools, filter, nil, gpuPoolToRow)
+	domain.GpuPool: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.GpuPools, filter, faultyOnly, gpuPoolToRow)
 	},
 	domain.GpuNode: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		var pred func(models.GpuNode) bool
-		if faultyOnly {
-			pred = faultyPred
-		}
-		return GetScopedItems(dataset.GpuNodeMap, domain.GpuPool, context, filter, pred, gpuNodeToRow)
+		return filterRowsScoped(dataset.GpuNodeMap, domain.GpuPool, context, filter, faultyOnly, gpuNodeToRow)
 	},
 	domain.DedicatedAICluster: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		var pred func(models.DedicatedAICluster) bool
-		if faultyOnly {
-			pred = faultyPred
-		}
-		return GetScopedItems(dataset.DedicatedAIClusterMap, domain.Tenant, context, filter, pred, dedicatedAIClusterToRow)
+		return filterRowsScoped(dataset.DedicatedAIClusterMap, domain.Tenant, context, filter, faultyOnly, dedicatedAIClusterToRow)
 	},
 }
 
@@ -119,7 +107,12 @@ func getTableRows(logger logging.Logger, dataset *models.Dataset, category domai
 filterRows filters a slice of items using the provided filter and row function.
 It returns a slice of table.Row for items that match the filter.
 */
-func filterRows[T models.NamedFilterable](items []T, filter string, pred func(T) bool, rowFn func(T) table.Row) []table.Row {
+func filterRows[T models.NamedFilterable](items []T, filter string, faultyOnly bool, rowFn func(T) table.Row) []table.Row {
+	var pred func(T) bool
+	if faultyOnly {
+		pred = faultyPred
+	}
+
 	matches := collections.FilterSlice(items, nil, filter, pred)
 	results := make([]table.Row, 0, len(matches))
 	for _, m := range matches {
@@ -131,23 +124,23 @@ func filterRows[T models.NamedFilterable](items []T, filter string, pred func(T)
 /*
 getBaseModels returns table rows for a map of BaseModel, filtered by the provided filter string.
 */
-func getBaseModels(m map[string]*models.BaseModel, filter string) []table.Row {
+func getBaseModels(m map[string]*models.BaseModel, filter string, faultyOnly bool) []table.Row {
 	baseModels := make([]*models.BaseModel, 0, len(m))
 	for _, model := range m {
 		baseModels = append(baseModels, model)
 	}
 
-	return filterRows(baseModels, filter, nil, baseModelToRow)
+	return filterRows(baseModels, filter, faultyOnly, baseModelToRow)
 }
 
-// GetScopedItems is used for tenancy and other scoped overrides.
+// filterRowsScoped is used for tenancy and other scoped overrides.
 // Accepts a Logger interface for decoupling from zap.
-func GetScopedItems[T models.NamedFilterable](
+func filterRowsScoped[T models.NamedFilterable](
 	g map[string][]T,
 	scopeCategory domain.Category,
 	ctx *domain.ToolkitContext,
 	filter string,
-	pred func(T) bool,
+	faultyOnly bool,
 	rowFn func(T, string) table.Row,
 ) []table.Row {
 	var (
@@ -163,6 +156,10 @@ func GetScopedItems[T models.NamedFilterable](
 		}
 	}
 
+	var pred func(T) bool
+	if faultyOnly {
+		pred = faultyPred
+	}
 	matches := collections.FilterMap(g, key, name, filter, pred)
 	results := make([]table.Row, 0, len(matches))
 	for key, m := range matches {

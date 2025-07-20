@@ -14,6 +14,7 @@ type testStruct struct {
 
 func (t testStruct) GetName() string               { return t.name }
 func (t testStruct) GetFilterableFields() []string { return []string{t.name, t.value} }
+func (testStruct) IsFaulty() bool                  { return false }
 
 func TestFilterSlice_Basic(t *testing.T) {
 	t.Parallel()

@@ -21,6 +21,11 @@ func (e Environment) GetFilterableFields() []string {
 	return []string{e.Type, e.Region, e.Realm, e.GetName()}
 }
 
+// IsFaulty returns false by default for Environment.
+func (e Environment) IsFaulty() bool {
+	return false
+}
+
 // Equals returns true if the environment is equal to another environment.
 func (e Environment) Equals(o Environment) bool {
 	return e.Realm == o.Realm && e.GetName() == o.GetName()

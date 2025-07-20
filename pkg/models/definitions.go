@@ -14,6 +14,7 @@ type NamedItem interface {
 type NamedFilterable interface {
 	NamedItem
 	Filterable
+	Faulty
 }
 
 // Definition represents a definition item with description and value.

@@ -19,6 +19,11 @@ func (t ServiceTenancy) GetFilterableFields() []string {
 	return append(t.Regions, t.Name, t.Realm, t.HomeRegion, t.Environment)
 }
 
+// IsFaulty returns false by default for ServiceTenancy.
+func (t ServiceTenancy) IsFaulty() bool {
+	return false
+}
+
 // Environments returns the environments for the service tenancy.
 func (t ServiceTenancy) Environments() []Environment {
 	environments := make([]Environment, 0, len(t.Regions))
