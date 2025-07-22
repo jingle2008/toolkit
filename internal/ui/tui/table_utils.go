@@ -49,7 +49,7 @@ var categoryHandlers = map[domain.Category]func(logging.Logger, *models.Dataset,
 		return filterRows(dataset.PropertyRegionalOverrides, filter, faultyOnly, propertyRegionalOverrideToRow)
 	},
 	domain.BaseModel: func(_ logging.Logger, dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return getBaseModels(dataset.BaseModelMap, filter, faultyOnly)
+		return filterRows(dataset.BaseModels, filter, faultyOnly, baseModelToRow)
 	},
 	domain.ModelArtifact: func(logger logging.Logger, dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
 		return filterRowsScoped(dataset.ModelArtifactMap, domain.BaseModel, context, filter, faultyOnly, modelArtifactToRow)
@@ -121,18 +121,6 @@ func filterRows[T models.NamedFilterable](items []T, filter string, faultyOnly b
 	return results
 }
 
-/*
-getBaseModels returns table rows for a map of BaseModel, filtered by the provided filter string.
-*/
-func getBaseModels(m map[string]*models.BaseModel, filter string, faultyOnly bool) []table.Row {
-	baseModels := make([]*models.BaseModel, 0, len(m))
-	for _, model := range m {
-		baseModels = append(baseModels, model)
-	}
-
-	return filterRows(baseModels, filter, faultyOnly, baseModelToRow)
-}
-
 // filterRowsScoped is used for tenancy and other scoped overrides.
 // Accepts a Logger interface for decoupling from zap.
 func filterRowsScoped[T models.NamedFilterable](
@@ -181,10 +169,8 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
 		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
-		domain.PropertyRegionalOverride, domain.ModelArtifact, domain.Alias:
+		domain.PropertyRegionalOverride, domain.ModelArtifact, domain.Alias, domain.BaseModel:
 		return row[0]
-	case domain.BaseModel:
-		return row[1] // Internal Name is now at index 1
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
 		return models.ScopedItemKey{Scope: row[1], Name: row[0]}
@@ -298,13 +284,7 @@ func findPropertyRegionalOverride(dataset *models.Dataset, key models.ItemKey) a
 }
 
 func findBaseModel(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(string)
-	for _, value := range dataset.BaseModelMap {
-		if value.InternalName == k {
-			return value
-		}
-	}
-	return nil
+	return collections.FindByName(dataset.BaseModels, key.(string))
 }
 
 func findModelArtifact(dataset *models.Dataset, key models.ItemKey) any {

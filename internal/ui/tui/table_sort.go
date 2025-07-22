@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	k8stime "github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
 // sortRows sorts rows in-place by column & direction.
@@ -18,12 +19,16 @@ func sortRows(rows []table.Row, headers []header, sortColumn string, asc bool) {
 		return
 	}
 
-	intCols := map[string]struct{}{"Free": {}, "Size": {}, "Max Tokens": {}}
+	intCols := map[string]struct{}{
+		common.FreeCol:    {},
+		common.SizeCol:    {},
+		common.ContextCol: {},
+	}
 
 	switch {
-	case strings.EqualFold(sortColumn, "Age"):
+	case strings.EqualFold(sortColumn, common.AgeCol):
 		sortByAge(rows, colIdx, asc)
-	case strings.EqualFold(sortColumn, "Usage"):
+	case strings.EqualFold(sortColumn, common.UsageCol):
 		sortByPercent(rows, colIdx, asc)
 	case hasIntHeader(intCols, sortColumn):
 		sortByInt(rows, colIdx, asc)

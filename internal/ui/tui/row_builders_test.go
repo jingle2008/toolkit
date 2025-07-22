@@ -145,7 +145,7 @@ func Test_propertyRegionalOverrideToRow(t *testing.T) {
 }
 
 func Test_baseModelToRow(t *testing.T) {
-	bm := &models.BaseModel{
+	bm := models.BaseModel{
 		Name:         "BM1",
 		InternalName: "bm1",
 		Version:      "v1",

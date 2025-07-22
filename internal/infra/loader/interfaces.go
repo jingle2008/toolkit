@@ -20,7 +20,7 @@ BaseModelLoader defines an interface for loading base models.
 */
 type BaseModelLoader interface {
 	// LoadBaseModels loads base models from the given repo and environment.
-	LoadBaseModels(ctx context.Context, repo string, env models.Environment) (map[string]*models.BaseModel, error)
+	LoadBaseModels(ctx context.Context, repo string, env models.Environment) ([]models.BaseModel, error)
 }
 
 /*

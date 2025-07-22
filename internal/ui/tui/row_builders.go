@@ -126,7 +126,7 @@ func propertyRegionalOverrideToRow[T models.DefinitionOverride](val T) table.Row
 }
 
 // BaseModel
-func baseModelToRow(val *models.BaseModel) table.Row {
+func baseModelToRow(val models.BaseModel) table.Row {
 	shape := val.GetDefaultDacShape()
 	var shapeDisplay string
 	if shape != nil {
@@ -134,12 +134,13 @@ func baseModelToRow(val *models.BaseModel) table.Row {
 	}
 	return table.Row{
 		val.Name,
-		val.InternalName,
+		val.DisplayName,
 		val.Version,
 		shapeDisplay,
-		strings.Join(val.GetCapabilities(), "/"),
+		val.ParameterSize,
 		fmt.Sprint(val.MaxTokens),
 		val.GetFlags(),
+		val.Status,
 	}
 }
 

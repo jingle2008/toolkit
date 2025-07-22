@@ -21,28 +21,23 @@ func Test_getHeaders_returns_expected_headers(t *testing.T) {
 
 func Test_getBaseModels_returns_rows(t *testing.T) {
 	t.Parallel()
-	baseModels := map[string]*models.BaseModel{
-		"bm1": {
-			InternalName: "bm1",
-			Name:         "BM1",
-			Version:      "v1",
-			Type:         "typeA",
-			Category:     "catA",
-			MaxTokens:    1024,
-			Capabilities: map[string]*models.Capability{
-				"cap1": {Capability: "cap1", Replicas: 0},
-				"cap2": {Capability: "cap2", Replicas: 2},
-			},
-			IsExperimental:      true,
-			IsInternal:          true,
-			IsLongTermSupported: true,
-			LifeCyclePhase:      "DEPRECATED",
+	baseModels := []models.BaseModel{
+		{
+			InternalName:   "bm1",
+			Name:           "BM1",
+			Version:        "v1",
+			Type:           "typeA",
+			MaxTokens:      1024,
+			Capabilities:   []string{"cap1", "cap2"},
+			IsExperimental: true,
+			IsInternal:     true,
+			LifeCyclePhase: "DEPRECATED",
 		},
 	}
-	rows := getBaseModels(baseModels, "", false)
+	rows := filterRows(baseModels, "", false, baseModelToRow)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{
-		"BM1", "bm1", "v1", "", "C/C*2", "1024", "EXP/INT/LTS/RTD",
+		"BM1", "bm1", "v1", "", "cap1/cap2", "1024", "EXP/INT/LTS/RTD",
 	}, rows[0])
 }
 
@@ -160,9 +155,7 @@ func buildFullTestDataset() *models.Dataset {
 		GpuPools:         []models.GpuPool{{Name: "pool1"}},
 		GpuNodeMap:       map[string][]models.GpuNode{"pool1": {{NodePool: "pool1", Name: "node1"}}},
 		ServiceTenancies: []models.ServiceTenancy{{Name: "svc1"}},
-		BaseModelMap: map[string]*models.BaseModel{
-			"bm1": {InternalName: "v1", Name: "bm1", Version: "v1", Type: "typeA"},
-		},
+		BaseModels:       []models.BaseModel{{InternalName: "v1", Name: "bm1", Version: "v1", Type: "typeA"}},
 		ModelArtifactMap: map[string][]models.ModelArtifact{
 			"artifact1": {{ModelName: "bm1", Name: "artifact1"}},
 		},
@@ -265,7 +258,7 @@ func TestFindItem_AllCategories(t *testing.T) {
 		{domain.PropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "pdef"}, &ds.PropertyTenancyOverrideMap["tenant1"][0]},
 		{domain.ConsolePropertyRegionalOverride, "cpdef", &ds.ConsolePropertyRegionalOverrides[0]},
 		{domain.PropertyRegionalOverride, "pdef", &ds.PropertyRegionalOverrides[0]},
-		{domain.BaseModel, "v1", ds.BaseModelMap["bm1"]},
+		{domain.BaseModel, "v1", &ds.BaseModels[0]},
 		{domain.ModelArtifact, "artifact1", &ds.ModelArtifactMap["artifact1"][0]},
 		{domain.Environment, "type1-UNKNOWN", &ds.Environments[0]},
 		{domain.ServiceTenancy, "svc1", &ds.ServiceTenancies[0]},
@@ -351,11 +344,11 @@ func TestGetItemKey_AndFindItem(t *testing.T) {
 
 func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 	t.Parallel()
-	m := map[string]*models.BaseModel{
-		"a": {InternalName: "a", Name: "A"},
-		"b": {InternalName: "b", Name: "B"},
+	m := []models.BaseModel{
+		{InternalName: "a", Name: "A"},
+		{InternalName: "b", Name: "B"},
 	}
-	rows := getBaseModels(m, "a", false)
+	rows := filterRows(m, "a", false, baseModelToRow)
 	assert.Len(t, rows, 1)
 	assert.Contains(t, rows[0][0], "A")
 }

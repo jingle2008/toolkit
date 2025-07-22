@@ -72,7 +72,7 @@ func TestResetScopedData(t *testing.T) {
 		LimitRegionalOverrides:            []LimitRegionalOverride{{}},
 		ConsolePropertyRegionalOverrides:  []ConsolePropertyRegionalOverride{{}},
 		PropertyRegionalOverrides:         []PropertyRegionalOverride{{}},
-		BaseModelMap:                      map[string]*BaseModel{"x": nil},
+		BaseModels:                        []BaseModel{},
 		GpuPools:                          []GpuPool{{}},
 		GpuNodeMap:                        map[string][]GpuNode{"x": nil},
 		DedicatedAIClusterMap:             map[string][]DedicatedAICluster{"x": nil},
@@ -85,7 +85,7 @@ func TestResetScopedData(t *testing.T) {
 		d.LimitRegionalOverrides != nil ||
 		d.ConsolePropertyRegionalOverrides != nil ||
 		d.PropertyRegionalOverrides != nil ||
-		d.BaseModelMap != nil ||
+		d.BaseModels != nil ||
 		d.GpuPools != nil ||
 		d.GpuNodeMap != nil ||
 		d.DedicatedAIClusterMap != nil {

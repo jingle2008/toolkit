@@ -26,7 +26,7 @@ func (r loadRequest) Run() tea.Msg {
 	)
 	switch r.category { //nolint:exhaustive
 	case domain.BaseModel:
-		data, err = r.model.loader.LoadBaseModels(r.model.ctx, r.model.repoPath, r.model.environment)
+		data, err = r.model.loader.LoadBaseModels(r.model.ctx, r.model.kubeConfig, r.model.environment)
 	case domain.GpuPool:
 		data, err = r.model.loader.LoadGpuPools(r.model.ctx, r.model.repoPath, r.model.environment)
 	case domain.GpuNode:

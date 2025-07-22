@@ -143,8 +143,8 @@ var (
 		key.WithHelp("<shift+t>", SortPrefix+common.TenantCol),
 	)
 	SortMaxTokens = key.NewBinding(
-		key.WithKeys("M"),
-		key.WithHelp("<shift+m>", SortPrefix+common.MaxTokensCol),
+		key.WithKeys("C"),
+		key.WithHelp("<shift+c>", SortPrefix+common.ContextCol),
 	)
 	SortSize = key.NewBinding(
 		key.WithKeys("S"),
@@ -179,12 +179,11 @@ var (
 // Category+mode-specific key bindings
 var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.BaseModel: {
-		common.ListView: {SortMaxTokens},
+		common.ListView: {SortMaxTokens, ToggleFaulty},
 	},
 	domain.Tenant: {
 		common.ListView: {SortInternal, CopyTenant, ToggleFaulty},
 	},
-
 	domain.ConsolePropertyDefinition: {
 		common.ListView: {SortValue},
 	},

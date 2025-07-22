@@ -28,8 +28,8 @@ func (f fakeLoader) LoadDataset(_ context.Context, _ string, _ models.Environmen
 	return f.dataset, f.err
 }
 
-func (f fakeLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environment) (map[string]*models.BaseModel, error) {
-	return map[string]*models.BaseModel{}, nil
+func (f fakeLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environment) ([]models.BaseModel, error) {
+	return []models.BaseModel{}, nil
 }
 
 func (f fakeLoader) LoadGpuPools(_ context.Context, _ string, _ models.Environment) ([]models.GpuPool, error) {
@@ -388,11 +388,9 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	t.Parallel()
 	// Setup a Model with a BaseModel in the dataset and table
-	bm := &models.BaseModel{InternalName: "v1", Name: "bm1", Version: "v1", Type: "typeA"}
+	bm := models.BaseModel{InternalName: "v1", Name: "bm1", Version: "v1", Type: "typeA"}
 	ds := &models.Dataset{
-		BaseModelMap: map[string]*models.BaseModel{
-			"bm1": bm,
-		},
+		BaseModels: []models.BaseModel{bm},
 	}
 	// Table row for BaseModel: [Name, InternalName, Version, Type]
 	tbl := table.New()
@@ -475,7 +473,7 @@ func TestModel_changeCategory(t *testing.T) {
 		WithLogger(logging.NewNoOpLogger()),
 	)
 	m.dataset = &models.Dataset{
-		BaseModelMap:          map[string]*models.BaseModel{},
+		BaseModels:            []models.BaseModel{},
 		GpuPools:              []models.GpuPool{},
 		GpuNodeMap:            map[string][]models.GpuNode{},
 		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{},

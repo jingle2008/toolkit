@@ -11,8 +11,8 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-// ListDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
-func ListDedicatedAIClusters(ctx context.Context, client dynamic.Interface) ([]models.DedicatedAICluster, error) {
+// listDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.
+func listDedicatedAIClusters(ctx context.Context, client dynamic.Interface) ([]models.DedicatedAICluster, error) {
 	cache, err := buildPodCache(ctx, client)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 LoadDedicatedAIClusters loads DedicatedAICluster information using the provided DedicatedAIClusterLister.
 */
 func LoadDedicatedAIClusters(ctx context.Context, client dynamic.Interface) (map[string][]models.DedicatedAICluster, error) {
-	dacs, err := ListDedicatedAIClusters(ctx, client)
+	dacs, err := listDedicatedAIClusters(ctx, client)
 	if err != nil {
 		return nil, err
 	}

@@ -52,9 +52,15 @@ func (l Loader) LoadDataset(ctx context.Context, repo string, env models.Environ
 	return configloader.LoadDataset(ctx, repo, env, l.metadata)
 }
 
-// LoadBaseModels loads base models from the given repo and environment.
-func (Loader) LoadBaseModels(ctx context.Context, repo string, env models.Environment) (map[string]*models.BaseModel, error) {
-	return terraform.LoadBaseModels(ctx, repo, env)
+/*
+LoadBaseModels loads base models from the cluster using the provided kubeconfig and environment.
+*/
+func (Loader) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Environment) ([]models.BaseModel, error) {
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.GetKubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.LoadBaseModels(ctx, client)
 }
 
 // LoadGpuPools loads GPU pools from the given repo and environment.

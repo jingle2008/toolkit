@@ -131,8 +131,8 @@ func (m *Model) processData(msg DataMsg) {
 	switch data := msg.Data.(type) {
 	case *models.Dataset:
 		m.dataset = data
-	case map[string]*models.BaseModel:
-		m.dataset.BaseModelMap = data
+	case []models.BaseModel:
+		m.dataset.BaseModels = data
 	case []models.GpuPool:
 		m.dataset.GpuPools = data
 	case map[string][]models.GpuNode:
@@ -349,7 +349,7 @@ func (m *Model) handlePropertyRegionalOverrideCategory() tea.Cmd {
 }
 
 func (m *Model) handleBaseModelCategory() tea.Cmd {
-	if m.dataset == nil || m.dataset.BaseModelMap == nil {
+	if m.dataset == nil || m.dataset.BaseModels == nil {
 		return loadRequest{category: domain.BaseModel, model: m}.Run
 	}
 	return nil

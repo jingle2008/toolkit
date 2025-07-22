@@ -105,7 +105,7 @@ func TestListDedicatedAIClusters_HappyPath(t *testing.T) {
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, objs...)
 
 	ctx := context.Background()
-	clusters, err := ListDedicatedAIClusters(ctx, client)
+	clusters, err := listDedicatedAIClusters(ctx, client)
 	require.NoError(t, err)
 	assert.Len(t, clusters, 2)
 }
@@ -147,7 +147,7 @@ func TestListDedicatedAIClusters_ErrorCases(t *testing.T) {
 			})
 
 			ctx := context.Background()
-			_, err := ListDedicatedAIClusters(ctx, client)
+			_, err := listDedicatedAIClusters(ctx, client)
 			assert.Error(t, err)
 		})
 	}
@@ -209,7 +209,7 @@ func TestListDedicatedAIClusters_MalformedObject(t *testing.T) {
 	client := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds, obj)
 
 	ctx := context.Background()
-	clusters, err := ListDedicatedAIClusters(ctx, client)
+	clusters, err := listDedicatedAIClusters(ctx, client)
 	require.NoError(t, err)
 	assert.Len(t, clusters, 1) // Should still return, with defaults
 }
