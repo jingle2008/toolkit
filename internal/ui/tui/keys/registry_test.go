@@ -32,6 +32,7 @@ func TestKeyBindingHelp(t *testing.T) {
 }
 
 func TestResolveKeys_GlobalAndContext(t *testing.T) {
+	t.Parallel()
 	km := ResolveKeys(domain.BaseModel, common.ListView)
 	assert.NotNil(t, km.Global)
 	assert.NotEmpty(t, km.Mode)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
@@ -38,6 +39,7 @@ func newCBM(name string, spec, status map[string]any, labels, ann map[string]str
 }
 
 func TestLoadBaseModels_FakeDynamic(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	// Full-featured CR
@@ -87,7 +89,7 @@ func TestLoadBaseModels_FakeDynamic(t *testing.T) {
 	client := dynamicfake.NewSimpleDynamicClient(scheme, obj1, obj2)
 
 	modelsOut, err := LoadBaseModels(ctx, client)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, modelsOut, 2)
 
 	// Sort by Name to ensure deterministic order

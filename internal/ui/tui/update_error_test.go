@@ -8,6 +8,7 @@ import (
 )
 
 func TestUpdateErrorView_Quit(t *testing.T) {
+	t.Parallel()
 	m := &Model{}
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}}
 	model, cmd := m.updateErrorView(msg)

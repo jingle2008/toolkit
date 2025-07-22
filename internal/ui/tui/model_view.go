@@ -95,6 +95,7 @@ func (m *Model) updateContent(width int) {
 
 // View renders the current state of the model as a string.
 func (m *Model) View() string {
+	// exhaustive:common.ViewMode
 	switch m.viewMode {
 	case common.LoadingView:
 		spin := m.loadingSpinner.View()
@@ -161,6 +162,8 @@ func (m *Model) fullHelpView() string {
 		renderSection("Table Actions", m.getTableBinding())
 	case common.DetailsView:
 		renderSection("Viewport Actions", m.getViewportBinding())
+	case common.LoadingView, common.HelpView, common.ErrorView:
+		// No additional sections for these view modes
 	}
 	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())
 }

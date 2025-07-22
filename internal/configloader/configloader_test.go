@@ -476,17 +476,19 @@ func TestLoadRegionalOverrides_MissingDir(t *testing.T) {
 }
 
 func TestMerge_PrimitivesAndPointers(t *testing.T) {
+	t.Parallel()
 	// string
 	assert.Equal(t, "a", merge("a", nil))
 	b := "b"
 	assert.Equal(t, "b", merge("a", &b))
 	// bool
-	assert.Equal(t, true, merge(true, nil))
+	assert.True(t, merge(true, nil))
 	bb := false
-	assert.Equal(t, false, merge(true, &bb))
+	assert.False(t, merge(true, &bb))
 }
 
 func TestGetTenants_MergeAndUnmatched(t *testing.T) {
+	t.Parallel()
 	// tenantMap has two tenants, metadata has one matching and one extra
 	tenantMap := map[string]idMap{
 		"TenantA": {"idA": {}},

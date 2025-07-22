@@ -24,7 +24,7 @@ var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
 
 // updateRows updates the table rows based on the current model state.
 func (m *Model) updateRows(autoSelect bool) {
-	rows := getTableRows(m.logger, m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
+	rows := getTableRows(m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {

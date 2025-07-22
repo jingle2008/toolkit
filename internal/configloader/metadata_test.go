@@ -10,6 +10,7 @@ import (
 )
 
 func TestLoadMetadata_JSON(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "meta.json")
 	content := `{"tenants":[{"id":"t1","name":"Tenant1","isInternal":true}]}`
@@ -22,6 +23,7 @@ func TestLoadMetadata_JSON(t *testing.T) {
 }
 
 func TestLoadMetadata_YAML(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "meta.yaml")
 	content := `
@@ -40,18 +42,20 @@ tenants:
 }
 
 func TestLoadMetadata_UnsupportedExtension(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "meta.txt")
 	require.NoError(t, os.WriteFile(path, []byte("irrelevant"), 0o600))
 	_, err := LoadMetadata(path)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported metadata file extension")
 }
 
 func TestLoadMetadata_InvalidYAML(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "meta.yaml")
 	require.NoError(t, os.WriteFile(path, []byte("not: [valid"), 0o600))
 	_, err := LoadMetadata(path)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

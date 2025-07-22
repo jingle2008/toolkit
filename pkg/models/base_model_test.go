@@ -7,6 +7,7 @@ import (
 )
 
 func TestBaseModelFields(t *testing.T) {
+	t.Parallel()
 	bm := BaseModel{
 		Capabilities: []string{"generation", "embedding"},
 		DacShapeConfigs: &DacShapeConfigs{
@@ -20,11 +21,13 @@ func TestBaseModelFields(t *testing.T) {
 }
 
 func TestBaseModelIsFaulty(t *testing.T) {
+	t.Parallel()
 	bm := BaseModel{}
 	assert.True(t, bm.IsFaulty())
 }
 
 func TestBaseModel_GetDefaultDacShape(t *testing.T) {
+	t.Parallel()
 	// No DacShapeConfigs
 	bm := BaseModel{}
 	assert.Nil(t, bm.GetDefaultDacShape())
@@ -57,6 +60,7 @@ func TestBaseModel_GetDefaultDacShape(t *testing.T) {
 }
 
 func TestBaseModel_GetFlags(t *testing.T) {
+	t.Parallel()
 	// All flags
 	bm := BaseModel{
 		IsExperimental:    true,
@@ -80,6 +84,7 @@ func TestBaseModel_GetFlags(t *testing.T) {
 }
 
 func TestBaseModel_IsFaulty(t *testing.T) {
+	t.Parallel()
 	bm := BaseModel{Status: "Ready"}
 	assert.False(t, bm.IsFaulty())
 	bm = BaseModel{Status: "Creating"}
@@ -89,6 +94,7 @@ func TestBaseModel_IsFaulty(t *testing.T) {
 }
 
 func TestBaseModel_GetFilterableFields(t *testing.T) {
+	t.Parallel()
 	bm := BaseModel{
 		Capabilities: []string{"capA", "capB"},
 		Name:         "n",
@@ -109,6 +115,7 @@ func TestBaseModel_GetFilterableFields(t *testing.T) {
 }
 
 func TestDacShapeConfigs_Empty(t *testing.T) {
+	t.Parallel()
 	cfg := DacShapeConfigs{}
 	assert.Empty(t, cfg.CompatibleDACShapes)
 }

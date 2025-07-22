@@ -16,13 +16,7 @@ const gpuProperty corev1.ResourceName = "nvidia.com/gpu"
 // nodeCondGpuUnhealthy is the condition type for unhealthy GPU nodes.
 const nodeCondGpuUnhealthy corev1.NodeConditionType = "GpuUnhealthy"
 
-// listGpuNodes returns a list of GpuNode objects from the given kubernetesClient.
-// If no selectors are provided, DefaultGPUSelectors is used.
-func listGpuNodes(ctx context.Context, clientset kubernetes.Interface, selectors ...string) ([]models.GpuNode, error) {
-	if len(selectors) == 0 {
-		selectors = gpuPodSelectors
-	}
-
+func listGpuNodes(ctx context.Context, clientset kubernetes.Interface) ([]models.GpuNode, error) {
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, v1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.present=true",
 	})
@@ -35,7 +29,7 @@ func listGpuNodes(ctx context.Context, clientset kubernetes.Interface, selectors
 		gpuAllocationMap[node.Name] = 0
 	}
 
-	err = processPodQueries(ctx, clientset, selectors, runningPodSelector,
+	err = processPodQueries(ctx, clientset, gpuPodSelectors, runningPodSelector,
 		getGpuAllocations,
 		func(node string, usage int64) {
 			gpuAllocationMap[node] += usage

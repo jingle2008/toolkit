@@ -25,16 +25,13 @@ func LoadBaseModels(ctx context.Context, client dynamic.Interface) ([]models.Bas
 	}
 	result := make([]models.BaseModel, 0, len(list.Items))
 	for _, item := range list.Items {
-		bm, err := parseBaseModel(&item)
-		if err != nil {
-			return nil, fmt.Errorf("parse ClusterBaseModel %q: %w", item.GetName(), err)
-		}
+		bm := parseBaseModel(&item)
 		result = append(result, bm)
 	}
 	return result, nil
 }
 
-func parseBaseModel(obj *unstructured.Unstructured) (models.BaseModel, error) {
+func parseBaseModel(obj *unstructured.Unstructured) models.BaseModel {
 	spec, _, _ := unstructured.NestedMap(obj.Object, "spec")
 	status, _, _ := unstructured.NestedMap(obj.Object, "status")
 	capabilities, _, _ := unstructured.NestedStringSlice(spec, "modelCapabilities")
@@ -97,7 +94,7 @@ func parseBaseModel(obj *unstructured.Unstructured) (models.BaseModel, error) {
 		Status:               state,
 	}
 
-	return bm, nil
+	return bm
 }
 
 func unmarshalYaml[T any](text string) *T {

@@ -10,12 +10,14 @@ import (
 )
 
 func Test_aliasToRow(t *testing.T) {
+	t.Parallel()
 	cat := domain.Tenant
 	row := aliasToRow(cat)
 	assert.Equal(t, table.Row{cat.String(), "t, tenant"}, row)
 }
 
 func Test_tenantToRow(t *testing.T) {
+	t.Parallel()
 	tenant := models.Tenant{
 		Name:       "T1",
 		IDs:        []string{"tid1"},
@@ -27,6 +29,7 @@ func Test_tenantToRow(t *testing.T) {
 }
 
 func Test_limitDefinitionToRow(t *testing.T) {
+	t.Parallel()
 	ld := models.LimitDefinition{
 		Name:        "LD1",
 		Description: "desc",
@@ -49,12 +52,14 @@ func (f fakeDef) GetFilterableFields() []string { return []string{f.name, f.desc
 func (fakeDef) IsFaulty() bool                  { return false }
 
 func Test_definitionToRow(t *testing.T) {
+	t.Parallel()
 	def := fakeDef{"n", "d", "v"}
 	row := definitionToRow(def)
 	assert.Equal(t, table.Row{"n", "d", "v"}, row)
 }
 
 func Test_environmentToRow(t *testing.T) {
+	t.Parallel()
 	env := models.Environment{
 		Type:   "dev",
 		Region: "us-phoenix-1",
@@ -65,6 +70,7 @@ func Test_environmentToRow(t *testing.T) {
 }
 
 func Test_serviceTenancyToRow(t *testing.T) {
+	t.Parallel()
 	s := models.ServiceTenancy{
 		Name:        "S1",
 		Realm:       "realm",
@@ -77,6 +83,7 @@ func Test_serviceTenancyToRow(t *testing.T) {
 }
 
 func Test_gpuPoolToRow(t *testing.T) {
+	t.Parallel()
 	g := models.GpuPool{
 		Name:         "GP1",
 		Shape:        "NVIDIA.A100.8",
@@ -90,6 +97,7 @@ func Test_gpuPoolToRow(t *testing.T) {
 }
 
 func Test_limitTenancyOverrideToRow(t *testing.T) {
+	t.Parallel()
 	lt := models.LimitTenancyOverride{
 		LimitRegionalOverride: models.LimitRegionalOverride{
 			Name:    "LTO1",
@@ -113,12 +121,14 @@ func (f fakeDefOverride) GetFilterableFields() []string { return append(f.region
 func (fakeDefOverride) IsFaulty() bool                  { return false }
 
 func Test_propertyTenancyOverrideToRow(t *testing.T) {
+	t.Parallel()
 	def := fakeDefOverride{"PD1", "val", []string{"us", "eu"}}
 	row := propertyTenancyOverrideToRow(def, "tenant2")
 	assert.Equal(t, table.Row{"PD1", "tenant2", "us, eu", "val"}, row)
 }
 
 func Test_limitRegionalOverrideToRow(t *testing.T) {
+	t.Parallel()
 	// With values
 	lr := models.LimitRegionalOverride{
 		Name:    "LR1",
@@ -139,12 +149,14 @@ func Test_limitRegionalOverrideToRow(t *testing.T) {
 }
 
 func Test_propertyRegionalOverrideToRow(t *testing.T) {
+	t.Parallel()
 	def := fakeDefOverride{"PR1", "v", []string{"us"}}
 	row := propertyRegionalOverrideToRow(def)
 	assert.Equal(t, table.Row{"PR1", "us", "v"}, row)
 }
 
 func Test_baseModelToRow(t *testing.T) {
+	t.Parallel()
 	bm := models.BaseModel{
 		Name:         "BM1",
 		InternalName: "bm1",
@@ -159,6 +171,7 @@ func Test_baseModelToRow(t *testing.T) {
 }
 
 func Test_modelArtifactToRow(t *testing.T) {
+	t.Parallel()
 	ma := models.ModelArtifact{
 		Name:            "artifactA",
 		ModelName:       "M1",
@@ -171,6 +184,7 @@ func Test_modelArtifactToRow(t *testing.T) {
 }
 
 func Test_gpuNodeToRow(t *testing.T) {
+	t.Parallel()
 	gn := models.GpuNode{
 		Name:         "node1",
 		NodePool:     "pool1",
@@ -189,6 +203,7 @@ func Test_gpuNodeToRow(t *testing.T) {
 }
 
 func Test_dedicatedAIClusterToRow(t *testing.T) {
+	t.Parallel()
 	dac := models.DedicatedAICluster{
 		Name:      "dac1",
 		Type:      "t",
