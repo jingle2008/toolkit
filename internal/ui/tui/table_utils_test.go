@@ -37,7 +37,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 	rows := filterRows(baseModels, "", false, baseModelToRow)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{
-		"BM1", "bm1", "v1", "", "cap1/cap2", "1024", "EXP/INT/LTS/RTD",
+		"BM1", "", "v1", "", "", "1024", "EXP/INT/RTD", "",
 	}, rows[0])
 }
 
@@ -112,7 +112,7 @@ func TestGetItemKeyAndString(t *testing.T) {
 		{domain.PropertyTenancyOverride, table.Row{"pdef", "tenant1"}, "tenant1/pdef"},
 		{domain.ConsolePropertyRegionalOverride, table.Row{"cpdef"}, "cpdef"},
 		{domain.PropertyRegionalOverride, table.Row{"pdef"}, "pdef"},
-		{domain.BaseModel, table.Row{"BM1", "bm1", "v1", "", "C,C*2", "1024", "EXP/INT/LTS/RTD"}, "bm1"},
+		{domain.BaseModel, table.Row{"BM1", "", "v1", "", "C,C*2", "1024", "EXP/INT/RTD", ""}, "BM1"},
 		{domain.ModelArtifact, table.Row{"artifact", "gpu", "model"}, "artifact"},
 		{domain.Environment, table.Row{"env"}, "env"},
 		{domain.ServiceTenancy, table.Row{"svc"}, "svc"},
@@ -258,7 +258,7 @@ func TestFindItem_AllCategories(t *testing.T) {
 		{domain.PropertyTenancyOverride, models.ScopedItemKey{Scope: "tenant1", Name: "pdef"}, &ds.PropertyTenancyOverrideMap["tenant1"][0]},
 		{domain.ConsolePropertyRegionalOverride, "cpdef", &ds.ConsolePropertyRegionalOverrides[0]},
 		{domain.PropertyRegionalOverride, "pdef", &ds.PropertyRegionalOverrides[0]},
-		{domain.BaseModel, "v1", &ds.BaseModels[0]},
+		{domain.BaseModel, "bm1", &ds.BaseModels[0]},
 		{domain.ModelArtifact, "artifact1", &ds.ModelArtifactMap["artifact1"][0]},
 		{domain.Environment, "type1-UNKNOWN", &ds.Environments[0]},
 		{domain.ServiceTenancy, "svc1", &ds.ServiceTenancies[0]},

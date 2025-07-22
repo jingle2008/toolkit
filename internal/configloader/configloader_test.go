@@ -474,3 +474,48 @@ func TestLoadRegionalOverrides_MissingDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, out3)
 }
+
+func TestMerge_PrimitivesAndPointers(t *testing.T) {
+	// string
+	assert.Equal(t, "a", merge("a", nil))
+	b := "b"
+	assert.Equal(t, "b", merge("a", &b))
+	// bool
+	assert.Equal(t, true, merge(true, nil))
+	bb := false
+	assert.Equal(t, false, merge(true, &bb))
+}
+
+func TestGetTenants_MergeAndUnmatched(t *testing.T) {
+	// tenantMap has two tenants, metadata has one matching and one extra
+	tenantMap := map[string]idMap{
+		"TenantA": {"idA": {}},
+		"TenantB": {"idB": {}},
+	}
+	name := "TenantA-override"
+	isInternal := false
+	note := "note"
+	tenantMeta := []models.TenantMetadata{
+		{ID: "idA", Name: &name, IsInternal: &isInternal, Note: &note},
+		{ID: "idC", Name: &name, IsInternal: &isInternal, Note: &note},
+	}
+	tenants := getTenants(tenantMap, tenantMeta)
+	// Should have 3 tenants: TenantA merged, TenantB as is, idC as extra
+	assert.Len(t, tenants, 3)
+	var foundMerged, foundB, foundC bool
+	for _, tnt := range tenants {
+		switch {
+		case tnt.Name == name && tnt.IDs[0] == "idA":
+			foundMerged = true
+			assert.Equal(t, isInternal, tnt.IsInternal)
+			assert.Equal(t, note, tnt.Note)
+		case tnt.Name == "TenantB" && tnt.IDs[0] == "idB":
+			foundB = true
+		case tnt.Name == name && tnt.IDs[0] == "idC":
+			foundC = true
+		}
+	}
+	assert.True(t, foundMerged)
+	assert.True(t, foundB)
+	assert.True(t, foundC)
+}

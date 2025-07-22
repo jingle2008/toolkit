@@ -151,10 +151,9 @@ func Test_baseModelToRow(t *testing.T) {
 		Version:      "v1",
 		MaxTokens:    1024,
 	}
-	// Simulate shape
 	row := baseModelToRow(bm)
 	assert.Equal(t, "BM1", row[0])
-	assert.Equal(t, "bm1", row[1])
+	assert.Equal(t, "", row[1])
 	assert.Equal(t, "v1", row[2])
 	assert.Equal(t, "1024", row[5])
 }

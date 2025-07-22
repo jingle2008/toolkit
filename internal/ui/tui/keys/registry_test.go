@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestResolveKeys(t *testing.T) {
@@ -28,4 +29,20 @@ func TestKeyBindingHelp(t *testing.T) {
 	if b.Help().Key != "x" || b.Help().Desc != "desc" {
 		t.Error("key.Binding Help() did not return expected values")
 	}
+}
+
+func TestResolveKeys_GlobalAndContext(t *testing.T) {
+	km := ResolveKeys(domain.BaseModel, common.ListView)
+	assert.NotNil(t, km.Global)
+	assert.NotEmpty(t, km.Mode)
+	assert.NotEmpty(t, km.Context)
+
+	km2 := ResolveKeys(domain.BaseModel, common.DetailsView)
+	assert.NotNil(t, km2.Global)
+	assert.NotEmpty(t, km2.Mode)
+	assert.Empty(t, km2.Context)
+
+	km3 := ResolveKeys(domain.Tenant, common.ListView)
+	assert.NotNil(t, km3.Global)
+	assert.NotEmpty(t, km3.Context)
 }

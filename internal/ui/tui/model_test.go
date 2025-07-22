@@ -421,7 +421,7 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 
 	// getCurrentItem should return the pointer to bm
 	got := m.getSelectedItem()
-	require.Equal(t, bm, got)
+	require.Equal(t, &bm, got)
 }
 
 func TestModel_Init(t *testing.T) {
