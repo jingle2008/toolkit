@@ -21,7 +21,6 @@ func sortRows(rows []table.Row, headers []header, sortColumn string, asc bool) {
 
 	intCols := map[string]struct{}{
 		common.FreeCol:    {},
-		common.SizeCol:    {},
 		common.ContextCol: {},
 	}
 
@@ -30,6 +29,8 @@ func sortRows(rows []table.Row, headers []header, sortColumn string, asc bool) {
 		sortByAge(rows, colIdx, asc)
 	case strings.EqualFold(sortColumn, common.UsageCol):
 		sortByPercent(rows, colIdx, asc)
+	case strings.EqualFold(sortColumn, common.SizeCol):
+		sortBySize(rows, colIdx, asc)
 	case hasIntHeader(intCols, sortColumn):
 		sortByInt(rows, colIdx, asc)
 	default:
@@ -68,6 +69,49 @@ func sortByPercent(rows []table.Row, colIdx int, asc bool) {
 		}
 		return int(bv - av)
 	})
+}
+
+// sortBySize sorts rows by size strings like "6B", "3.5M", "1.2T".
+func sortBySize(rows []table.Row, colIdx int, asc bool) {
+	slices.SortFunc(rows, func(a, b table.Row) int {
+		av, _ := parseSize(a[colIdx])
+		bv, _ := parseSize(b[colIdx])
+		if asc {
+			return int(av - bv)
+		}
+		return int(bv - av)
+	})
+}
+
+// parseSize parses strings like "6B", "3.5M", "1.2T" into int64.
+// 6B/b = 6e9, 3.5M/m = 3.5e6, 1.2T/t = 1.2e12. No suffix = plain number.
+func parseSize(s string) (int64, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, nil
+	}
+	n := len(s)
+	if n == 0 {
+		return 0, nil
+	}
+	last := s[n-1]
+	var mult float64 = 1
+	switch last {
+	case 'B', 'b':
+		mult = 1e9
+		s = s[:n-1]
+	case 'M', 'm':
+		mult = 1e6
+		s = s[:n-1]
+	case 'T', 't':
+		mult = 1e12
+		s = s[:n-1]
+	}
+	num, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	if err != nil {
+		return 0, err
+	}
+	return int64(num*mult + 0.5), nil // round to nearest int
 }
 
 func sortByString(rows []table.Row, colIdx int, asc bool) {

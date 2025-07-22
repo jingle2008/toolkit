@@ -179,7 +179,7 @@ var (
 // Category+mode-specific key bindings
 var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.BaseModel: {
-		common.ListView: {SortMaxTokens, ToggleFaulty},
+		common.ListView: {SortSize, SortMaxTokens, ToggleFaulty},
 	},
 	domain.Tenant: {
 		common.ListView: {SortInternal, CopyTenant, ToggleFaulty},
