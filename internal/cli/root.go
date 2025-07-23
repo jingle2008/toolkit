@@ -149,7 +149,7 @@ Fish:
   $ toolkit completion fish | source
   $ toolkit completion fish > ~/.config/fish/completions/toolkit.fish
 `,
-		Args:      cobra.ExactValidArgs(1),
+		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		ValidArgs: []string{"bash", "zsh", "fish"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
@@ -195,7 +195,7 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 func fetchLatestRelease() (string, error) {
 	const url = "https://api.github.com/repos/jingle2008/toolkit/releases/latest"
 	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
 	}
@@ -205,7 +205,11 @@ func fetchLatestRelease() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			return
+		}
+	}()
 	if resp.StatusCode != 200 {
 		return "", errors.New("unexpected status: " + resp.Status)
 	}

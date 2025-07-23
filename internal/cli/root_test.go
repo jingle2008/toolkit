@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -39,6 +41,53 @@ func TestRootCmd_UnknownFlag(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "unknown flag") {
 		t.Errorf("expected unknown flag error, got: %s", buf.String())
+	}
+}
+
+func TestCompletion(t *testing.T) {
+	t.Parallel()
+	shells := []string{"bash", "zsh", "fish"}
+	for _, sh := range shells {
+		cmd := NewRootCmd("vtest")
+		buf := new(bytes.Buffer)
+		cmd.SetOut(buf)
+		cmd.SetErr(buf)
+		cmd.SetArgs([]string{"completion", sh})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("%s completion: %v", sh, err)
+		}
+		if buf.Len() == 0 {
+			t.Fatalf("%s completion produced no output", sh)
+		}
+	}
+}
+
+func TestInitCreatesConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"init"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	path := filepath.Join(home, ".config", "toolkit", "config.yaml")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("config.yaml not created: %v", err)
+	}
+}
+
+func TestDefaultFlags(t *testing.T) {
+	t.Parallel()
+	cmd := NewRootCmd("vtest")
+	tests := []struct{ name, want string }{
+		{"log_format", "console"},
+		{"log_file", "toolkit.log"},
+	}
+	for _, tc := range tests {
+		got, _ := cmd.PersistentFlags().GetString(tc.name)
+		if got != tc.want {
+			t.Errorf("%s default %q, want %q", tc.name, got, tc.want)
+		}
 	}
 }
 
