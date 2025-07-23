@@ -43,7 +43,7 @@ func TestCategory_String(t *testing.T) {
 func TestCategory_IsScope(t *testing.T) {
 	t.Parallel()
 	scopeCases := []Category{
-		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool, BaseModel,
+		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool,
 	}
 	nonScopeCases := []Category{
 		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
@@ -76,7 +76,6 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		{ConsolePropertyDefinition, []Category{ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride}},
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},
 		{GpuPool, []Category{GpuNode}},
-		{BaseModel, []Category{ModelArtifact}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.scope.String(), func(t *testing.T) {
@@ -97,7 +96,6 @@ func TestCategory_IsScopeOf(t *testing.T) {
 	assert.True(t, Tenant.IsScopeOf(DedicatedAICluster))
 	assert.False(t, Tenant.IsScopeOf(GpuNode))
 	assert.False(t, LimitTenancyOverride.IsScopeOf(Tenant))
-	assert.True(t, BaseModel.IsScopeOf(ModelArtifact))
 }
 
 func TestCategory_Definition(t *testing.T) {

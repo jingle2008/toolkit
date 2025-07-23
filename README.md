@@ -8,7 +8,7 @@
 Toolkit is a collection of reusable Go components exposed through a modular CLI and optional TUI (built with [Bubble Tea](https://github.com/charmbracelet/bubbletea)).  
 It targets day-to-day DevOps & development automation: querying Kubernetes, parsing Terraform plans, mass-editing config files, and inspecting large data tables directly in your terminal.
 
-- [Kubernetes Client Fakes & Testing Patterns](docs/k8s-fake-patterns.md)
+- [Kubernetes Client Fakes & Testing Patterns](docs/guide/k8s-fake-patterns.md)
 
 ---
 
@@ -47,6 +47,23 @@ brew install --cask toolkit
 2. Look for the toolkit app under the Security section.
 3. Click Open Anyway and enter your password if prompted.
 4. In the pop-up window, click Open to run the app.
+```
+
+---
+
+## Getting Started
+
+After installation, try these quick commands:
+
+```sh
+toolkit init
+# Scaffold an example config file at ~/.config/toolkit/config.yaml
+
+toolkit completion bash   # or zsh/fish
+# Output shell completion script for your shell
+
+toolkit version --check
+# Print your installed version and check for updates
 ```
 
 ---

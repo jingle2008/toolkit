@@ -5,13 +5,17 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/config"
@@ -47,30 +51,18 @@ metadata_file: "" # Optional path to a YAML or JSON file with additional metadat
 	defaultMetadata := filepath.Join(home, ".config", "toolkit", "metadata.yaml")
 
 	rootCmd := &cobra.Command{
-		Use:               "toolkit",
-		Short:             "Toolkit CLI",
-		Long:              "Toolkit CLI for managing and visualizing infrastructure and configuration.",
-		PersistentPreRunE: persistentPreRunE(version),
-		RunE:              runRootE(&cfgFile, version),
+		Use:   "toolkit",
+		Short: "Toolkit CLI",
+		Long:  "Toolkit CLI for managing and visualizing infrastructure and configuration.",
+		RunE:  runRootE(&cfgFile, version),
 	}
 
 	addPersistentFlags(rootCmd, &cfgFile, defaultKube, defaultConfig, defaultMetadata)
 	addInitCommand(rootCmd, defaultConfig, exampleConfig)
+	addCompletionCommand(rootCmd)
+	addVersionCheckCommand(rootCmd, version)
 
 	return rootCmd
-}
-
-// persistentPreRunE returns the PersistentPreRunE function for the root command.
-func persistentPreRunE(version string) func(cmd *cobra.Command, _ []string) error {
-	return func(cmd *cobra.Command, _ []string) error {
-		showVersion, _ := cmd.Flags().GetBool("version")
-		if showVersion {
-			fmt.Println(version)
-			cmd.SilenceUsage = true
-			return nil
-		}
-		return nil
-	}
 }
 
 // runRootE returns the RunE function for the root command.
@@ -133,7 +125,104 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().String("log_format", "console", "Log format: console or json")
-	rootCmd.Flags().BoolP("version", "v", false, "Print version and exit")
+}
+
+func addCompletionCommand(rootCmd *cobra.Command) {
+	completionCmd := &cobra.Command{
+		Use:   "completion [bash|zsh|fish]",
+		Short: "Generate shell completion scripts",
+		Long: `To load completions:
+
+Bash:
+  $ source <(toolkit completion bash)
+  # To load completions for each session, execute once:
+  # Linux:
+  $ toolkit completion bash > /etc/bash_completion.d/toolkit
+  # macOS:
+  $ toolkit completion bash > /usr/local/etc/bash_completion.d/toolkit
+
+Zsh:
+  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
+  $ toolkit completion zsh > "${fpath[1]}/_toolkit"
+
+Fish:
+  $ toolkit completion fish | source
+  $ toolkit completion fish > ~/.config/fish/completions/toolkit.fish
+`,
+		Args:      cobra.ExactValidArgs(1),
+		ValidArgs: []string{"bash", "zsh", "fish"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			switch args[0] {
+			case "bash":
+				return rootCmd.GenBashCompletion(cmd.OutOrStdout())
+			case "zsh":
+				return rootCmd.GenZshCompletion(cmd.OutOrStdout())
+			case "fish":
+				return rootCmd.GenFishCompletion(cmd.OutOrStdout(), true)
+			default:
+				return fmt.Errorf("unsupported shell: %s", args[0])
+			}
+		},
+	}
+	rootCmd.AddCommand(completionCmd)
+}
+
+func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number and check for updates",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			fmt.Printf("toolkit version: %s\n", currentVersion)
+			check, _ := cmd.Flags().GetBool("check")
+			if check {
+				latest, err := fetchLatestRelease()
+				if err != nil {
+					return fmt.Errorf("failed to check latest version: %w", err)
+				}
+				if latest == currentVersion {
+					fmt.Println("You are running the latest version.")
+				} else {
+					fmt.Printf("A newer version is available: %s\n", latest)
+				}
+			}
+			return nil
+		},
+	}
+	versionCmd.Flags().Bool("check", false, "Check for the latest release on GitHub")
+	rootCmd.AddCommand(versionCmd)
+}
+
+func fetchLatestRelease() (string, error) {
+	const url = "https://api.github.com/repos/jingle2008/toolkit/releases/latest"
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "toolkit")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return "", errors.New("unexpected status: " + resp.Status)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	var result struct {
+		Tag string `json:"tag_name"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", err
+	}
+	if result.Tag == "" {
+		return "", errors.New("no tag_name in GitHub response")
+	}
+	return result.Tag, nil
 }
 
 // addInitCommand adds the "init" subcommand to the root command.

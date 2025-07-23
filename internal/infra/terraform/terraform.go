@@ -73,7 +73,7 @@ func getLocalAttributesDI(
 	return attributes, nil
 }
 
-func getLocalAttributes(ctx context.Context, dirPath string) (hclsyntax.Attributes, error) {
+func GetLocalAttributes(ctx context.Context, dirPath string) (hclsyntax.Attributes, error) {
 	return getLocalAttributesDI(ctx, dirPath, fs.ListFiles, updateLocalAttributes)
 }
 
@@ -107,7 +107,7 @@ func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 
 func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environment) (map[string]cty.Value, error) { //nolint:cyclop
 	logger := logging.FromContext(ctx)
-	attributes, err := getLocalAttributes(ctx, dirPath)
+	attributes, err := GetLocalAttributes(ctx, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode HCL: %w", err)
 	}
@@ -221,7 +221,7 @@ Now accepts context.Context as the first parameter.
 */
 func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.ServiceTenancy, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
-	attributes, err := getLocalAttributes(ctx, dirPath)
+	attributes, err := GetLocalAttributes(ctx, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse attributes: %w", err)
 	}

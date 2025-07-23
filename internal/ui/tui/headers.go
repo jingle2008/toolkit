@@ -85,7 +85,7 @@ var headerDefinitions = map[domain.Category][]header{
 	},
 	domain.ModelArtifact: {
 		{common.NameCol, 0.5},
-		{"Model", 0.3},
+		{"Model Internal Name", 0.3},
 		{"GPU Config", 0.1},
 		{"TensorRT", 0.1},
 	},

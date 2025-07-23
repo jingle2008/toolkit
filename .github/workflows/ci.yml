@@ -16,10 +16,20 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.24"
       - name: Install dependencies
         run: go mod tidy
-      - name: Run unit tests
+      - name: Run go vet
+        run: go vet ./...
+      - name: Run staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          version: "latest"
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - name: Run unit tests (race)
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - name: Run make test
         run: make test
 
   integration-test:
@@ -30,8 +40,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.24"
       - name: Install dependencies
         run: go mod tidy
-      - name: Run integration tests
+      - name: Run go vet
+        run: go vet ./...
+      - name: Run staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          version: "latest"
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - name: Run integration tests (race)
+        run: go test -race ./test/integration/...
+      - name: Run make test-int
         run: make test-int

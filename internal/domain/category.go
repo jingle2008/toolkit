@@ -74,7 +74,7 @@ func (e Category) IsScopeOf(o Category) bool {
 // IsScope returns true if the category is a scope category.
 func (e Category) IsScope() bool {
 	switch e { //nolint:exhaustive
-	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool, BaseModel:
+	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool:
 		return true
 	}
 	return false
@@ -104,8 +104,6 @@ func (e Category) ScopedCategories() []Category {
 		}
 	case GpuPool:
 		return []Category{GpuNode}
-	case BaseModel:
-		return []Category{ModelArtifact}
 	default:
 		return nil
 	}
