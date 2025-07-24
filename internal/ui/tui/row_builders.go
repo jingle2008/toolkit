@@ -162,7 +162,7 @@ func gpuNodeToRow(val models.GpuNode, _ string) table.Row {
 		val.InstanceType,
 		fmt.Sprint(val.Allocatable),
 		fmt.Sprint(val.Allocatable - val.Allocated),
-		fmt.Sprint(val.IsHealthy),
+		fmt.Sprint(val.IsHealthy()),
 		fmt.Sprint(val.IsReady),
 		val.Age,
 		val.GetStatus(),

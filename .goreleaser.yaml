@@ -83,3 +83,5 @@ homebrew_casks:
     homepage: "https://github.com/jingle2008/toolkit"
     description: "Toolkit CLI: cross-platform command-line tool for cloud and infrastructure automation"
     binary: toolkit
+    names:
+      - Toolkit

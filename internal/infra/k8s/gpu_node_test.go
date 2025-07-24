@@ -9,48 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func TestIsNodeHealthy(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name  string
-		conds []corev1.NodeCondition
-		want  bool
-	}{
-		{
-			name: "healthy GPU",
-			conds: []corev1.NodeCondition{
-				{Type: nodeCondGpuUnhealthy, Status: corev1.ConditionFalse},
-			},
-			want: true,
-		},
-		{
-			name: "unhealthy GPU",
-			conds: []corev1.NodeCondition{
-				{Type: nodeCondGpuUnhealthy, Status: corev1.ConditionTrue},
-			},
-			want: false,
-		},
-		{
-			name: "no GPU condition",
-			conds: []corev1.NodeCondition{
-				{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
-			},
-			want: false,
-		},
-		{
-			name:  "empty conditions",
-			conds: nil,
-			want:  false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			assert.Equal(t, tt.want, isNodeHealthy(tt.conds))
-		})
-	}
-}
-
 func TestIsNodeReady(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -69,13 +27,6 @@ func TestIsNodeReady(t *testing.T) {
 			name: "not ready node",
 			conds: []corev1.NodeCondition{
 				{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
-			},
-			want: false,
-		},
-		{
-			name: "no ready condition",
-			conds: []corev1.NodeCondition{
-				{Type: nodeCondGpuUnhealthy, Status: corev1.ConditionFalse},
 			},
 			want: false,
 		},
@@ -132,4 +83,26 @@ func TestFormatAge(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetNodeIssues(t *testing.T) {
+	t.Parallel()
+	conds := []corev1.NodeCondition{
+		{Type: corev1.NodeMemoryPressure, Status: corev1.ConditionTrue, Message: "memory pressure!"},
+		{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, Message: "disk ok"},
+		{Type: corev1.NodePIDPressure, Status: corev1.ConditionTrue, Message: "pid pressure!"},
+		{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionTrue, Message: "network unavailable!"},
+		{Type: nodeCondGpuBus, Status: corev1.ConditionTrue, Message: "gpu bus error!"},
+		{Type: nodeCondGpuCount, Status: corev1.ConditionTrue, Message: "gpu count mismatch!"},
+		{Type: corev1.NodeReady, Status: corev1.ConditionTrue, Message: "node is ready"},
+	}
+	want := []string{
+		"memory pressure!",
+		"pid pressure!",
+		"network unavailable!",
+		"gpu bus error!",
+		"gpu count mismatch!",
+	}
+	got := getNodeIssues(conds)
+	assert.ElementsMatch(t, want, got)
 }

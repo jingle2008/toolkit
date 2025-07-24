@@ -13,8 +13,10 @@ import (
 // gpuProperty is the Kubernetes resource name for GPU.
 const gpuProperty corev1.ResourceName = "nvidia.com/gpu"
 
-// nodeCondGpuUnhealthy is the condition type for unhealthy GPU nodes.
-const nodeCondGpuUnhealthy corev1.NodeConditionType = "GpuUnhealthy"
+const (
+	nodeCondGpuBus   corev1.NodeConditionType = "GpuBus"
+	nodeCondGpuCount corev1.NodeConditionType = "GpuCount"
+)
 
 func listGpuNodes(ctx context.Context, clientset kubernetes.Interface) ([]models.GpuNode, error) {
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, v1.ListOptions{
@@ -43,29 +45,42 @@ func listGpuNodes(ctx context.Context, clientset kubernetes.Interface) ([]models
 		allocQty := node.Status.Allocatable[gpuProperty]
 		allocatable, _ := allocQty.AsInt64()
 		age := FormatAge(time.Since(node.CreationTimestamp.Time))
+		issues := getNodeIssues(node.Status.Conditions)
 		gpuNodes = append(gpuNodes, models.GpuNode{
 			Name:                 node.Name,
 			InstanceType:         node.Labels["beta.kubernetes.io/instance-type"],
 			NodePool:             node.Labels["instance-pool.name"],
 			Allocatable:          int(allocatable),
 			Allocated:            int(gpuAllocationMap[node.Name]),
-			IsHealthy:            isNodeHealthy(node.Status.Conditions),
 			IsReady:              isNodeReady(node.Status.Conditions),
 			IsSchedulingDisabled: node.Spec.Unschedulable,
 			Age:                  age,
+			Issues:               issues,
 		})
 	}
 
 	return gpuNodes, nil
 }
 
-func isNodeHealthy(conditions []corev1.NodeCondition) bool {
-	for _, condition := range conditions {
-		if condition.Type == nodeCondGpuUnhealthy {
-			return condition.Status == corev1.ConditionFalse
+// getNodeIssues returns a list of messages for alarming node conditions.
+func getNodeIssues(conditions []corev1.NodeCondition) []string {
+	issues := make([]string, 0)
+	for _, c := range conditions {
+		switch c.Type {
+		case corev1.NodeMemoryPressure,
+			corev1.NodeDiskPressure,
+			corev1.NodePIDPressure,
+			corev1.NodeNetworkUnavailable,
+			nodeCondGpuBus,
+			nodeCondGpuCount:
+			if c.Status == corev1.ConditionTrue {
+				issues = append(issues, c.Message)
+			}
+		case corev1.NodeReady:
+			// exhaustive check
 		}
 	}
-	return false
+	return issues
 }
 
 func isNodeReady(conditions []corev1.NodeCondition) bool {

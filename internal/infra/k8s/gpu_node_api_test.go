@@ -64,7 +64,6 @@ func TestListGpuNodes_HappyPath(t *testing.T) {
 		"beta.kubernetes.io/instance-type": "g4dn.xlarge",
 		"instance-pool.name":               "pool1",
 	}, 4, false, []corev1.NodeCondition{
-		{Type: nodeCondGpuUnhealthy, Status: corev1.ConditionFalse},
 		{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
 	})
 
@@ -77,7 +76,7 @@ func TestListGpuNodes_HappyPath(t *testing.T) {
 	assert.Equal(t, "n1", nodes[0].Name)
 	assert.Equal(t, 4, nodes[0].Allocatable)
 	assert.Equal(t, 2, nodes[0].Allocated)
-	assert.True(t, nodes[0].IsHealthy)
+	assert.True(t, nodes[0].IsHealthy())
 	assert.True(t, nodes[0].IsReady)
 	assert.False(t, nodes[0].IsSchedulingDisabled)
 }

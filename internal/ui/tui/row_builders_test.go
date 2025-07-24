@@ -191,7 +191,6 @@ func Test_gpuNodeToRow(t *testing.T) {
 		InstanceType: "NVIDIA.A100.8",
 		Allocatable:  8,
 		Allocated:    2,
-		IsHealthy:    true,
 		IsReady:      false,
 		Age:          "1d",
 	}

@@ -14,7 +14,6 @@ func TestGpuNode_Getters(t *testing.T) {
 		NodePool:     "poolA",
 		Allocatable:  8,
 		Allocated:    4,
-		IsHealthy:    true,
 		IsReady:      true,
 	}
 	assert.Equal(t, "node1", node.GetName())
@@ -26,7 +25,6 @@ func TestGpuNode_Getters(t *testing.T) {
 		InstanceType: "NVIDIA.A100.8",
 		NodePool:     "poolB",
 		Allocatable:  7, // mismatch
-		IsHealthy:    true,
 		IsReady:      true,
 	}
 	assert.Equal(t, "ERROR: Missing GPUs", node2.GetStatus())
@@ -36,7 +34,7 @@ func TestGpuNode_Getters(t *testing.T) {
 		InstanceType: "NVIDIA.A100.8",
 		NodePool:     "poolC",
 		Allocatable:  8,
-		IsHealthy:    false,
+		Issues:       []string{"bad"},
 		IsReady:      true,
 	}
 	assert.Equal(t, "ERROR: Unhealthy", node3.GetStatus())
@@ -46,7 +44,6 @@ func TestGpuNode_Getters(t *testing.T) {
 		InstanceType: "NVIDIA.A100.8",
 		NodePool:     "poolD",
 		Allocatable:  8,
-		IsHealthy:    true,
 		IsReady:      false,
 	}
 	assert.Equal(t, "ERROR: Not ready", node4.GetStatus())
