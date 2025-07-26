@@ -69,3 +69,22 @@ func (n DedicatedAICluster) IsFaulty() bool {
 		return lower == "fail" || lower == "failed"
 	}
 }
+
+func normalizeRegion(region string) string {
+	r := Region(region)
+	if r == RegionIAD || r == RegionPHX {
+		return r.GetCode()
+	}
+	return region
+}
+
+// GetID returns the OCID for the DedicatedAICluster.
+func (d DedicatedAICluster) GetID(realm, region string) string {
+	region = normalizeRegion(region)
+	return fmt.Sprintf("ocid1.generativeaidedicatedaicluster.%s.%s.%s", realm, region, d.Name)
+}
+
+// GetTenantID returns the OCID for the tenancy of the DedicatedAICluster.
+func (d DedicatedAICluster) GetTenantID(realm string) string {
+	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, d.TenantID)
+}

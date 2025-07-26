@@ -3,8 +3,6 @@
 package actions
 
 import (
-	"fmt"
-
 	"github.com/atotto/clipboard"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -18,8 +16,7 @@ func CopyItemName(item any, env *models.Environment, logger logging.Logger) {
 	}
 
 	if dac, ok := item.(*models.DedicatedAICluster); ok {
-		id := fmt.Sprintf("ocid1.generativeaidedicatedaicluster.%s.%s.%s",
-			env.Realm, env.Region, dac.Name)
+		id := dac.GetID(env.Realm, env.Region)
 		if err := clipboard.WriteAll(id); err != nil {
 			logger.Errorw("failed to copy id to clipboard", "error", err)
 		}
@@ -40,7 +37,7 @@ func CopyTenantID(item any, env *models.Environment, logger logging.Logger) {
 	}
 
 	if dac, ok := item.(*models.DedicatedAICluster); ok {
-		tenantID := fmt.Sprintf("ocid1.tenancy.%s..%s", env.Realm, dac.TenantID)
+		tenantID := dac.GetTenantID(env.Realm)
 		if err := clipboard.WriteAll(tenantID); err != nil {
 			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
 		}
