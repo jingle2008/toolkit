@@ -83,6 +83,16 @@ const (
 	RegionSABogota1 Region = "sa-bogota-1"
 	// RegionSAValparaiso1 region Valparaiso
 	RegionSAValparaiso1 Region = "sa-valparaiso-1"
+	// RegionAPSingapore2 region Singapore
+	RegionAPSingapore2 Region = "ap-singapore-2"
+	// RegionMERiyadh1 region Riyadh
+	RegionMERiyadh1 Region = "me-riyadh-1"
+	// RegionAPDelhi1 region Delhi
+	RegionAPDelhi1 Region = "ap-delhi-1"
+	// RegionAPKulai1 region Kulai
+	RegionAPKulai1 Region = "ap-kulai-1"
+	// RegionAPBatam1 region Batam
+	RegionAPBatam1 Region = "ap-batam-1"
 	// RegionUSLangley1 region Langley
 	RegionUSLangley1 Region = "us-langley-1"
 	// RegionUSLuke1 region Luke
@@ -127,10 +137,30 @@ const (
 	RegionEUJovanovac1 Region = "eu-jovanovac-1"
 	// RegionMEDccDoha1 region Doha
 	RegionMEDccDoha1 Region = "me-dcc-doha-1"
+	// RegionUSSomerset1 region Somerset
+	RegionUSSomerset1 Region = "us-somerset-1"
+	// RegionUSThames1 region Thames
+	RegionUSThames1 Region = "us-thames-1"
 	// RegionEUDccZurich1 region Zurich
 	RegionEUDccZurich1 Region = "eu-dcc-zurich-1"
+	// RegionEUCrissier1 region Crissier
+	RegionEUCrissier1 Region = "eu-crissier-1"
 	// RegionMEAbudhabi3 region Abudhabi
 	RegionMEAbudhabi3 Region = "me-abudhabi-3"
+	// RegionMEAlain1 region Alain
+	RegionMEAlain1 Region = "me-alain-1"
+	// RegionMEAbudhabi2 region Abudhabi
+	RegionMEAbudhabi2 Region = "me-abudhabi-2"
+	// RegionMEAbudhabi4 region Abudhabi
+	RegionMEAbudhabi4 Region = "me-abudhabi-4"
+	// RegionAPSeoul2 region Seoul
+	RegionAPSeoul2 Region = "ap-seoul-2"
+	// RegionAPSuwon1 region Suwon
+	RegionAPSuwon1 Region = "ap-suwon-1"
+	// RegionAPChuncheon2 region Chuncheon
+	RegionAPChuncheon2 Region = "ap-chuncheon-2"
+	// RegionUSAshburn2 region Ashburn
+	RegionUSAshburn2 Region = "us-ashburn-2"
 	// RegionTacoma is a region not part of the official SDK.
 	RegionTacoma Region = "us-tacoma-1"
 	// RegionAPDccTokyo1 is a region not part of the official SDK.
@@ -184,6 +214,11 @@ var shortNameRegion = map[string]Region{
 	"aga": RegionUSSaltlake2,
 	"bog": RegionSABogota1,
 	"vap": RegionSAValparaiso1,
+	"xsp": RegionAPSingapore2,
+	"ruh": RegionMERiyadh1,
+	"onm": RegionAPDelhi1,
+	"fyv": RegionAPKulai1,
+	"hsg": RegionAPBatam1,
 	"lfi": RegionUSLangley1,
 	"luf": RegionUSLuke1,
 	"ric": RegionUSGovAshburn1,
@@ -206,8 +241,18 @@ var shortNameRegion = map[string]Region{
 	"str": RegionEUFrankfurt2,
 	"beg": RegionEUJovanovac1,
 	"doh": RegionMEDccDoha1,
+	"ebb": RegionUSSomerset1,
+	"ebl": RegionUSThames1,
 	"avz": RegionEUDccZurich1,
+	"avf": RegionEUCrissier1,
 	"ahu": RegionMEAbudhabi3,
+	"rba": RegionMEAlain1,
+	"rkt": RegionMEAbudhabi2,
+	"shj": RegionMEAbudhabi4,
+	"dtz": RegionAPSeoul2,
+	"dln": RegionAPSuwon1,
+	"bno": RegionAPChuncheon2,
+	"yxj": RegionUSAshburn2,
 	"tiw": RegionTacoma,
 	"tyo": RegionAPDccTokyo1,
 	"dca": RegionUSGovSterling2,
