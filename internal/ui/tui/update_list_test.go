@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/stopwatch"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -51,9 +52,11 @@ func TestHandleNextCategory(t *testing.T) {
 func TestHandlePrevCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
+	w := stopwatch.New()
 	m := &Model{
 		category:       domain.Tenant,
 		loadingSpinner: &s,
+		loadingTimer:   &w,
 	}
 	// Seed initial history as in NewModel
 	m.history = []domain.Category{m.category}
@@ -102,6 +105,7 @@ func makeModelWithHistory(hist []domain.Category, idx int) *Model {
 		history:        append([]domain.Category{}, hist...),
 		historyIdx:     idx,
 		loadingSpinner: &spinner.Model{},
+		loadingTimer:   &stopwatch.Model{},
 	}
 }
 

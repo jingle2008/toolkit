@@ -13,6 +13,7 @@ import (
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() []tea.Cmd {
 	return []tea.Cmd{
+		m.loadingTimer.Init(),
 		m.beginTask(),
 		func() tea.Msg {
 			dataset, err := m.loader.LoadDataset(m.ctx, m.repoPath, m.environment)

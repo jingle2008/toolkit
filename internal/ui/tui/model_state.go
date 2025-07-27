@@ -7,9 +7,11 @@ package tui
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/stopwatch"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -75,6 +77,9 @@ type Model struct {
 
 	// Spinner for loading screen
 	loadingSpinner *spinner.Model
+
+	// Stopwatch for loading duration
+	loadingTimer *stopwatch.Model
 
 	// Table sorting state
 	sortColumn string
@@ -235,5 +240,9 @@ func setDefaults(m *Model) {
 				Foreground(lipgloss.Color("205"))),
 		)
 		m.loadingSpinner = &loadingSpinner
+	}
+	if m.loadingTimer == nil {
+		sw := stopwatch.NewWithInterval(time.Millisecond * 500)
+		m.loadingTimer = &sw
 	}
 }

@@ -99,7 +99,8 @@ func (m *Model) View() string {
 	switch m.viewMode {
 	case common.LoadingView:
 		spin := m.loadingSpinner.View()
-		return m.centered(fmt.Sprintf("%s Loading data: %s …", spin, m.category.String()))
+		sw := m.loadingTimer.View()
+		return m.centered(fmt.Sprintf("%s Loading data: %s … %s", spin, m.category.String(), sw))
 	case common.ErrorView:
 		return m.centered(m.err.Error())
 	case common.HelpView:

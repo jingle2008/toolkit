@@ -115,7 +115,7 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 			if tc.init {
 				msg = m.Init()()
 			} else {
-				msg = m.loadData()[1]()
+				msg = m.loadData()[2]()
 			}
 			checkLoadDataResult(t, msg, tc.wantData, tc.wantError)
 		})

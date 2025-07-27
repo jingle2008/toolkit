@@ -21,7 +21,7 @@ func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		return m, m.handleSpinnerTickMsg(msg)
 	}
-	return m, nil
+	return m, m.handleStopwatchMsg(msg)
 }
 
 func (m *Model) handleErrMsg(msg ErrMsg) {
@@ -32,5 +32,11 @@ func (m *Model) handleErrMsg(msg ErrMsg) {
 func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 	loadingSpinner, cmd := m.loadingSpinner.Update(msg)
 	m.loadingSpinner = &loadingSpinner
+	return cmd
+}
+
+func (m *Model) handleStopwatchMsg(msg tea.Msg) tea.Cmd {
+	timer, cmd := m.loadingTimer.Update(msg)
+	m.loadingTimer = &timer
 	return cmd
 }

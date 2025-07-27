@@ -456,7 +456,11 @@ func (m *Model) beginTask() tea.Cmd {
 	if m.pendingTasks == 0 {
 		m.lastViewMode = m.viewMode
 		m.viewMode = common.LoadingView
-		cmd = m.loadingSpinner.Tick // start the spinner
+		m.loadingTimer.Reset()
+		cmd = tea.Batch(
+			m.loadingSpinner.Tick,  // start the spinner
+			m.loadingTimer.Start(), // start the stopwatch
+		)
 	}
 	m.pendingTasks++
 	return cmd
@@ -471,6 +475,13 @@ func (m *Model) endTask(success bool) {
 		m.pendingTasks--
 	}
 	if m.pendingTasks == 0 {
+		m.loadingTimer.Stop()
+		elapsed := m.loadingTimer.Elapsed().String()
+		m.logger.Infow("data load completed",
+			"category", m.category,
+			"success", success,
+			"elapsed", elapsed,
+		)
 		if success {
 			m.viewMode = m.lastViewMode
 		} else {

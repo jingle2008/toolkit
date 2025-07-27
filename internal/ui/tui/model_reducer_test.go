@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/stopwatch"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -125,10 +126,12 @@ func TestHandleDedicatedAIClusterCategory(t *testing.T) {
 func TestEnterContext(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
+	w := stopwatch.Model{}
 	m := &Model{
 		table:          &table.Model{},
 		category:       domain.Tenant,
 		loadingSpinner: &s,
+		loadingTimer:   &w,
 	}
 	// Seed initial history as in NewModel
 	m.history = []domain.Category{m.category}
