@@ -171,12 +171,21 @@ func gpuNodeToRow(val models.GpuNode, _ string) table.Row {
 
 // DedicatedAICluster
 func dedicatedAIClusterToRow(val models.DedicatedAICluster, tenant string) table.Row {
+	return dedicatedAIClusterToRowInternal(val, tenant, nil)
+}
+
+func dedicatedAIClusterToRowInternal(val models.DedicatedAICluster, tenant string, name *string) table.Row {
 	unitShapeOrProfile := val.UnitShape
 	if unitShapeOrProfile == "" {
 		unitShapeOrProfile = val.Profile
 	}
+
+	if name == nil {
+		name = &val.Name
+	}
+
 	return table.Row{
-		val.Name,
+		*name,
 		tenant,
 		val.GetOwnerState(),
 		val.GetUsage(),

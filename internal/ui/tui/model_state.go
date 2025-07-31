@@ -7,8 +7,10 @@ package tui
 import (
 	"context"
 	"errors"
+	"os"
 	"time"
 
+	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/stopwatch"
@@ -91,6 +93,9 @@ type Model struct {
 
 	// Show only faulty items in list view (Tenant, GpuNode, DedicatedAICluster)
 	showFaulty bool
+
+	// Export CSV popup state
+	dirPicker *filepicker.Model
 }
 
 /*
@@ -225,14 +230,17 @@ func setDefaults(m *Model) {
 		m.viewport = &vp
 	}
 	if m.help == nil {
+		keyStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("33"))
+		descStyle := lipgloss.NewStyle()
 		hm := help.New()
 		hm.ShowAll = true
-		hm.Styles.FullKey = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("33"))
-		hm.Styles.FullDesc = lipgloss.NewStyle()
+		hm.Styles.FullKey = keyStyle
+		hm.Styles.FullDesc = descStyle
+		hm.Styles.ShortKey = keyStyle
+		hm.Styles.ShortDesc = descStyle
 		m.help = &hm
 	}
-
 	if m.loadingSpinner == nil {
 		loadingSpinner := spinner.New(
 			spinner.WithSpinner(spinner.Points),
@@ -244,5 +252,14 @@ func setDefaults(m *Model) {
 	if m.loadingTimer == nil {
 		sw := stopwatch.NewWithInterval(time.Millisecond * 500)
 		m.loadingTimer = &sw
+	}
+	if m.dirPicker == nil {
+		homeDir, _ := os.UserHomeDir()
+		p := filepicker.New()
+		p.CurrentDirectory = homeDir
+		p.DirAllowed = true
+		p.FileAllowed = false
+		p.SetHeight(15)
+		m.dirPicker = &p
 	}
 }

@@ -73,6 +73,8 @@ func (m *Model) reduce(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateLoadingView(msg)
 	case common.ErrorView:
 		return m.updateErrorView(msg)
+	case common.ExportView:
+		return m.updateExportView(msg)
 	}
 	return m, nil
 }

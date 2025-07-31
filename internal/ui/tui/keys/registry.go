@@ -81,6 +81,10 @@ var (
 		key.WithKeys("]"),
 		key.WithHelp("<]>", "History Forward"),
 	)
+	ExportCSV = key.NewBinding(
+		key.WithKeys("e"),
+		key.WithHelp("<e>", "Export CSV"),
+	)
 )
 
 var listModeKeys = []key.Binding{
@@ -94,6 +98,7 @@ var listModeKeys = []key.Binding{
 	SortName,
 	Confirm,
 	ToggleAlias,
+	ExportCSV,
 }
 
 var detailsModeKeys = []key.Binding{

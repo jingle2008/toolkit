@@ -90,6 +90,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
 		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn(common.NameCol)} }},
 		{keys.ToggleAlias, func() []tea.Cmd { return m.toggleAliases() }},
+		{keys.ExportCSV, func() []tea.Cmd { return m.enterExportView() }},
 	}
 
 	for _, h := range keyHandlers {
@@ -113,6 +114,21 @@ func (m *Model) toggleAliases() []tea.Cmd {
 	} else {
 		return m.updateCategory(domain.Alias)
 	}
+}
+
+func (m *Model) enterExportView() []tea.Cmd {
+	m.lastViewMode = m.viewMode
+	m.viewMode = common.ExportView
+
+	var cmd tea.Cmd
+	if m.dirPicker.Path != "" {
+		cmd = func() tea.Msg {
+			return tea.KeyMsg{Type: tea.KeyType(tea.KeyBackspace)}
+		}
+	} else {
+		cmd = m.dirPicker.Init()
+	}
+	return []tea.Cmd{cmd}
 }
 
 func (*Model) pasteFilter() tea.Cmd {

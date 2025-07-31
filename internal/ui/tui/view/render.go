@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour/styles"
 )
 
 // Renderer abstracts rendering JSON to a string (for viewport/detail).
@@ -17,7 +18,7 @@ type ProductionRenderer struct{}
 // RenderJSON renders the given data as JSON in a markdown code block using glamour.
 func (ProductionRenderer) RenderJSON(data any, width int) (string, error) {
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithStandardStyle(styles.DarkStyle), // auto style has delay of 5 to 10s after upgrade
 		glamour.WithWordWrap(width),
 	)
 	if err != nil {
