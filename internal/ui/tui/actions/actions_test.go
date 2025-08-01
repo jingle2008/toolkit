@@ -1,3 +1,4 @@
+//nolint:paralleltest // tests use global state → data race under t.Parallel
 package actions
 
 import (
@@ -37,7 +38,6 @@ func (f *fakeLogger) WithFields(...any) logging.Logger { return f }
 func (f *fakeLogger) DebugEnabled() bool               { return false }
 
 func TestCopyItemName_Nil(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	CopyItemName(nil, &models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[0], "no item selected")
@@ -48,7 +48,6 @@ type fakeNamed struct{ name string }
 func (f fakeNamed) GetName() string { return f.name }
 
 func TestCopyItemName_NamedItem(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil
@@ -57,7 +56,6 @@ func TestCopyItemName_NamedItem(t *testing.T) {
 }
 
 func TestCopyItemName_DedicatedAICluster(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil
@@ -67,7 +65,6 @@ func TestCopyItemName_DedicatedAICluster(t *testing.T) {
 }
 
 func TestCopyItemName_Unsupported(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	CopyItemName(123, &models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[len(logger.msgs)-1], "unsupported item type")
@@ -78,7 +75,6 @@ type fakeTenancyOverride struct{ tenantID string }
 func (f fakeTenancyOverride) GetTenantID() string { return f.tenantID }
 
 func TestCopyTenantID_TenancyOverride(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil
@@ -88,7 +84,6 @@ func TestCopyTenantID_TenancyOverride(t *testing.T) {
 }
 
 func TestCopyTenantID_DedicatedAICluster(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil
@@ -98,21 +93,18 @@ func TestCopyTenantID_DedicatedAICluster(t *testing.T) {
 }
 
 func TestCopyTenantID_Nil(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	CopyTenantID(nil, &models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[0], "no item selected")
 }
 
 func TestCopyTenantID_Unsupported(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	CopyTenantID(123, &models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[len(logger.msgs)-1], "unsupported item type")
 }
 
 func TestCopyItemName_ClipboardError(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	clipboardErr = errors.New("fail")
 	CopyItemName(fakeNamed{"foo"}, &models.Environment{}, logger)
@@ -121,7 +113,6 @@ func TestCopyItemName_ClipboardError(t *testing.T) {
 }
 
 func TestCopyTenantID_ClipboardError(t *testing.T) {
-	t.Parallel()
 	logger := &fakeLogger{}
 	clipboardErr = errors.New("fail")
 	to := fakeTenancyOverride{"tid"}

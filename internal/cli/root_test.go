@@ -1,3 +1,4 @@
+//nolint:paralleltest // cobra uses global state → data race under t.Parallel
 package cli
 
 import (
@@ -9,7 +10,6 @@ import (
 )
 
 func TestRootCmd_HelpOutput(t *testing.T) {
-	t.Parallel()
 	cmd := NewRootCmd("vtest")
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
@@ -29,7 +29,6 @@ func TestRootCmd_HelpOutput(t *testing.T) {
 }
 
 func TestRootCmd_UnknownFlag(t *testing.T) {
-	t.Parallel()
 	cmd := NewRootCmd("vtest")
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
@@ -45,7 +44,6 @@ func TestRootCmd_UnknownFlag(t *testing.T) {
 }
 
 func TestCompletion(t *testing.T) {
-	t.Parallel()
 	shells := []string{"bash", "zsh", "fish"}
 	for _, sh := range shells {
 		cmd := NewRootCmd("vtest")
@@ -77,7 +75,6 @@ func TestInitCreatesConfig(t *testing.T) {
 }
 
 func TestDefaultFlags(t *testing.T) {
-	t.Parallel()
 	cmd := NewRootCmd("vtest")
 	tests := []struct{ name, want string }{
 		{"log_format", "console"},
@@ -88,6 +85,36 @@ func TestDefaultFlags(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("%s default %q, want %q", tc.name, got, tc.want)
 		}
+	}
+}
+
+func TestVersionCommand(t *testing.T) {
+	cmd := NewRootCmd("vtest")
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"version"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("version: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "vtest") {
+		t.Errorf("version output missing version: %q", out)
+	}
+}
+
+func TestVersionCommandWithCheck(t *testing.T) {
+	cmd := NewRootCmd("vtest")
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	cmd.SetArgs([]string{"version", "--check"})
+	// This will hit the real GitHub API, so in a real test, you'd want to monkey-patch fetchLatestRelease.
+	// For now, just check that it doesn't panic and prints something.
+	_ = cmd.Execute()
+	out := buf.String()
+	if !strings.Contains(out, "toolkit version: vtest") {
+		t.Errorf("version --check output missing version: %q", out)
 	}
 }
 
