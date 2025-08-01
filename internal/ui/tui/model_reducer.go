@@ -189,7 +189,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.CopyTenant):
 		actions.CopyTenantID(item, &m.environment, m.logger)
 	case key.Matches(msg, keys.Refresh):
-		return tea.Sequence(m.updateCategory(m.category)...)
+		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):
 		m.cordonNode(item)
 	case key.Matches(msg, keys.DrainNode):
@@ -455,9 +455,9 @@ func (m *Model) beginTask() tea.Cmd {
 	if m.pendingTasks == 0 {
 		m.lastViewMode = m.viewMode
 		m.viewMode = common.LoadingView
-		m.loadingTimer.Reset()
-		cmd = tea.Batch(
-			m.loadingSpinner.Tick,  // start the spinner
+		cmd = tea.Sequence(
+			m.loadingSpinner.Tick, // start the spinner
+			m.loadingTimer.Reset(),
 			m.loadingTimer.Start(), // start the stopwatch
 		)
 	}
@@ -474,7 +474,6 @@ func (m *Model) endTask(success bool) {
 		m.pendingTasks--
 	}
 	if m.pendingTasks == 0 {
-		m.loadingTimer.Stop()
 		elapsed := m.loadingTimer.Elapsed().String()
 		m.logger.Infow("data load completed",
 			"category", m.category,
