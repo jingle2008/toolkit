@@ -109,9 +109,8 @@ func (m *Model) updateLayout(w, h int) {
 		m.viewport.Height = h - top
 		m.updateContent(w - borderWidth)
 	} else {
-		headerHeight := lipgloss.Height(m.styles.Header.Render("test"))
 		table.WithWidth(w - borderWidth)(m.table)
-		table.WithHeight(h - borderHeight - headerHeight - top)(m.table)
+		table.WithHeight(h - borderHeight - top)(m.table)
 		m.updateColumns()
 		m.table.UpdateViewport()
 	}
