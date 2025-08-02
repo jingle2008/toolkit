@@ -187,7 +187,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	item := m.getSelectedItem()
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
-		actions.CopyTenantID(item, &m.environment, m.logger)
+		actions.CopyTenantID(item, m.environment, m.logger)
 	case key.Matches(msg, keys.Refresh):
 		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):

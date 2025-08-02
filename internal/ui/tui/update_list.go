@@ -28,6 +28,10 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleFilterMsg(msg)
 	case SetFilterMsg:
 		cmds = append(cmds, m.handleSetFilterMsg(msg))
+	case deleteErrMsg:
+		m.handleDeleteErrMsg(msg)
+	case deleteDoneMsg:
+		m.handleDeleteDoneMsg(msg)
 	default:
 		// Future-proof: ignore unknown message types
 	}
@@ -110,15 +114,6 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	return cmds
 }
 
-func (m *Model) deleteItemFromLocal(itemKey models.ItemKey) {
-	deleteItem(m.dataset, m.category, itemKey)
-	idx := m.table.Cursor()
-	if idx+1 >= len(m.table.Rows()) {
-		m.table.MoveUp(1)
-	}
-	m.updateRows(false)
-}
-
 /*
 handleDelete handles the generic delete action based on the current category.
 For DedicatedAICluster, it deletes via SDK and removes the row locally.
@@ -129,14 +124,44 @@ func (m *Model) handleDelete() []tea.Cmd {
 	}
 
 	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	return m.DeleteDedicatedAICluster(itemKey)
+}
+
+func (m *Model) DeleteDedicatedAICluster(itemKey models.ItemKey) []tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
 	dac := item.(*models.DedicatedAICluster)
-	if err := actions.DeleteDedicatedAICluster(m.ctx, dac, m.environment, m.logger); err != nil {
-		m.logger.Errorw("failed to delete DAC", "dac", dac, "error", err)
-		return nil
+	prevState := dac.Status
+	dac.Status = "Deleting"
+	m.updateRows(false)
+	return []tea.Cmd{
+		func() tea.Msg {
+			if err := actions.DeleteDedicatedAICluster(m.ctx, dac, m.environment, m.logger); err != nil {
+				return deleteErrMsg{
+					err:       err,
+					key:       itemKey,
+					prevState: prevState,
+				}
+			}
+			return deleteDoneMsg{key: itemKey}
+		},
 	}
-	m.deleteItemFromLocal(itemKey)
-	return nil
+}
+
+func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
+	m.logger.Errorw("failed to delete DAC", "key", msg.key, "error", msg.err)
+	item := findItem(m.dataset, m.category, msg.key)
+	dac := item.(*models.DedicatedAICluster)
+	dac.Status = msg.prevState
+	m.updateRows(false)
+}
+
+func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
+	deleteItem(m.dataset, m.category, msg.key)
+	idx := m.table.Cursor()
+	if idx+1 >= len(m.table.Rows()) {
+		m.table.MoveUp(1)
+	}
+	m.updateRows(false)
 }
 
 func (m *Model) toggleAliases() []tea.Cmd {
