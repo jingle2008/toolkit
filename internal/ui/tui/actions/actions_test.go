@@ -39,7 +39,7 @@ func (f *fakeLogger) DebugEnabled() bool               { return false }
 
 func TestCopyItemName_Nil(t *testing.T) {
 	logger := &fakeLogger{}
-	CopyItemName(nil, &models.Environment{}, logger)
+	CopyItemName(nil, models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[0], "no item selected")
 }
 
@@ -51,7 +51,7 @@ func TestCopyItemName_NamedItem(t *testing.T) {
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil
-	CopyItemName(fakeNamed{"foo"}, &models.Environment{}, logger)
+	CopyItemName(fakeNamed{"foo"}, models.Environment{}, logger)
 	assert.Equal(t, "foo", clipboardValue)
 }
 
@@ -60,13 +60,13 @@ func TestCopyItemName_DedicatedAICluster(t *testing.T) {
 	clipboardValue = ""
 	clipboardErr = nil
 	dac := &models.DedicatedAICluster{}
-	env := &models.Environment{Realm: "realm", Region: "region"}
+	env := models.Environment{Realm: "realm", Region: "region"}
 	CopyItemName(dac, env, logger)
 }
 
 func TestCopyItemName_Unsupported(t *testing.T) {
 	logger := &fakeLogger{}
-	CopyItemName(123, &models.Environment{}, logger)
+	CopyItemName(123, models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[len(logger.msgs)-1], "unsupported item type")
 }
 
@@ -79,7 +79,7 @@ func TestCopyTenantID_TenancyOverride(t *testing.T) {
 	clipboardValue = ""
 	clipboardErr = nil
 	to := fakeTenancyOverride{"tid"}
-	CopyTenantID(to, &models.Environment{}, logger)
+	CopyTenantID(to, models.Environment{}, logger)
 	assert.Equal(t, "tid", clipboardValue)
 }
 
@@ -88,26 +88,26 @@ func TestCopyTenantID_DedicatedAICluster(t *testing.T) {
 	clipboardValue = ""
 	clipboardErr = nil
 	dac := &models.DedicatedAICluster{}
-	env := &models.Environment{Realm: "realm"}
+	env := models.Environment{Realm: "realm"}
 	CopyTenantID(dac, env, logger)
 }
 
 func TestCopyTenantID_Nil(t *testing.T) {
 	logger := &fakeLogger{}
-	CopyTenantID(nil, &models.Environment{}, logger)
+	CopyTenantID(nil, models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[0], "no item selected")
 }
 
 func TestCopyTenantID_Unsupported(t *testing.T) {
 	logger := &fakeLogger{}
-	CopyTenantID(123, &models.Environment{}, logger)
+	CopyTenantID(123, models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[len(logger.msgs)-1], "unsupported item type")
 }
 
 func TestCopyItemName_ClipboardError(t *testing.T) {
 	logger := &fakeLogger{}
 	clipboardErr = errors.New("fail")
-	CopyItemName(fakeNamed{"foo"}, &models.Environment{}, logger)
+	CopyItemName(fakeNamed{"foo"}, models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[len(logger.msgs)-1], "failed to copy name")
 	clipboardErr = nil
 }
@@ -116,7 +116,7 @@ func TestCopyTenantID_ClipboardError(t *testing.T) {
 	logger := &fakeLogger{}
 	clipboardErr = errors.New("fail")
 	to := fakeTenancyOverride{"tid"}
-	CopyTenantID(to, &models.Environment{}, logger)
+	CopyTenantID(to, models.Environment{}, logger)
 	assert.Contains(t, logger.msgs[len(logger.msgs)-1], "failed to copy tenantID")
 	clipboardErr = nil
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -91,6 +92,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn(common.NameCol)} }},
 		{keys.ToggleAlias, func() []tea.Cmd { return m.toggleAliases() }},
 		{keys.ExportCSV, func() []tea.Cmd { return m.enterExportView() }},
+		{keys.Delete, func() []tea.Cmd { return m.handleDelete() }},
 	}
 
 	for _, h := range keyHandlers {
@@ -101,11 +103,40 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	}
 
 	if key.Matches(msg, keys.CopyName) {
-		actions.CopyItemName(m.getSelectedItem(), &m.environment, m.logger)
+		actions.CopyItemName(m.getSelectedItem(), m.environment, m.logger)
 	}
 
 	cmds = append(cmds, m.handleAdditionalKeys(msg))
 	return cmds
+}
+
+func (m *Model) deleteItemFromLocal(itemKey models.ItemKey) {
+	deleteItem(m.dataset, m.category, itemKey)
+	idx := m.table.Cursor()
+	if idx+1 >= len(m.table.Rows()) {
+		m.table.MoveUp(1)
+	}
+	m.updateRows(false)
+}
+
+/*
+handleDelete handles the generic delete action based on the current category.
+For DedicatedAICluster, it deletes via SDK and removes the row locally.
+*/
+func (m *Model) handleDelete() []tea.Cmd {
+	if m.category != domain.DedicatedAICluster {
+		return nil
+	}
+
+	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	item := findItem(m.dataset, m.category, itemKey)
+	dac := item.(*models.DedicatedAICluster)
+	if err := actions.DeleteDedicatedAICluster(m.ctx, dac, m.environment, m.logger); err != nil {
+		m.logger.Errorw("failed to delete DAC", "dac", dac, "error", err)
+		return nil
+	}
+	m.deleteItemFromLocal(itemKey)
+	return nil
 }
 
 func (m *Model) toggleAliases() []tea.Cmd {

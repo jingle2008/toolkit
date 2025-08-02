@@ -11,7 +11,7 @@ import (
 var clipboardWriteAll = clipboard.WriteAll
 
 // CopyItemName copies the name or ID of an item to the clipboard.
-func CopyItemName(item any, env *models.Environment, logger logging.Logger) {
+func CopyItemName(item any, env models.Environment, logger logging.Logger) {
 	if item == nil {
 		logger.Errorw("no item selected for copying name")
 		return
@@ -32,7 +32,7 @@ func CopyItemName(item any, env *models.Environment, logger logging.Logger) {
 }
 
 // CopyTenantID copies the tenant ID from the current row to the clipboard if available.
-func CopyTenantID(item any, env *models.Environment, logger logging.Logger) {
+func CopyTenantID(item any, env models.Environment, logger logging.Logger) {
 	if item == nil {
 		logger.Errorw("no item selected for copying tenant ID")
 		return

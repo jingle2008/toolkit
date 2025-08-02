@@ -85,6 +85,10 @@ var (
 		key.WithKeys("e"),
 		key.WithHelp("<e>", "Export CSV"),
 	)
+	Delete = key.NewBinding(
+		key.WithKeys("ctrl+x"),
+		key.WithHelp("<ctrl+x>", "Delete"),
+	)
 )
 
 var listModeKeys = []key.Binding{
@@ -202,7 +206,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty},
+		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty, Delete},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {SortTenant, SortRegions, CopyTenant},

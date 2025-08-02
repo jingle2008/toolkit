@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/collections"
@@ -324,22 +325,34 @@ func findDedicatedAICluster(dataset *models.Dataset, key models.ItemKey) any {
 	return nil
 }
 
+func deleteItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) {
+	if key == nil {
+		return
+	}
+
+	if category == domain.DedicatedAICluster {
+		deleteDedicatedAICluster(dataset, key)
+	}
+}
+
+func deleteDedicatedAICluster(dataset *models.Dataset, key models.ItemKey) {
+	k := key.(models.ScopedItemKey)
+	if items, ok := dataset.DedicatedAIClusterMap[k.Scope]; ok {
+		items = slices.DeleteFunc(items, func(dac models.DedicatedAICluster) bool {
+			return dac.Name == k.Name
+		})
+		dataset.DedicatedAIClusterMap[k.Scope] = items
+	}
+}
+
 /*
 getItemKeyString returns a string representation of the ItemKey for a given category.
 */
 func getItemKeyString(category domain.Category, key models.ItemKey) string {
-	switch category {
-	case domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
-		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride, domain.Environment,
-		domain.ServiceTenancy, domain.GpuPool, domain.ModelArtifact, domain.LimitRegionalOverride,
-		domain.BaseModel, domain.Alias:
-		return key.(string)
-	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
-		domain.PropertyTenancyOverride, domain.DedicatedAICluster, domain.GpuNode:
-		k := key.(models.ScopedItemKey)
+	if k, ok := key.(string); ok {
+		return k
+	} else if k, ok := key.(models.ScopedItemKey); ok {
 		return fmt.Sprintf("%s/%s", k.Scope, k.Name)
-	case domain.CategoryUnknown:
-		// exhaustive
 	}
 
 	return "UNKNOWN"

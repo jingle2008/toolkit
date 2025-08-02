@@ -22,7 +22,7 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(keyMsg, keys.Back, keys.ViewDetails):
 			m.exitDetailView()
 		case key.Matches(keyMsg, keys.CopyName):
-			actions.CopyItemName(findItem(m.dataset, m.category, m.choice), &m.environment, m.logger)
+			actions.CopyItemName(findItem(m.dataset, m.category, m.choice), m.environment, m.logger)
 		case key.Matches(keyMsg, keys.Help):
 			m.enterHelpView()
 		case key.Matches(keyMsg, keys.CopyObject):
