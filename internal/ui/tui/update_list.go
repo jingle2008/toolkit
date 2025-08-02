@@ -138,30 +138,42 @@ func (m *Model) DeleteDedicatedAICluster(itemKey models.ItemKey) []tea.Cmd {
 			if err := actions.DeleteDedicatedAICluster(m.ctx, dac, m.environment, m.logger); err != nil {
 				return deleteErrMsg{
 					err:       err,
+					category:  domain.DedicatedAICluster,
 					key:       itemKey,
 					prevState: prevState,
 				}
 			}
-			return deleteDoneMsg{key: itemKey}
+			return deleteDoneMsg{
+				category: domain.DedicatedAICluster,
+				key:      itemKey,
+			}
 		},
 	}
 }
 
 func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
 	m.logger.Errorw("failed to delete DAC", "key", msg.key, "error", msg.err)
-	item := findItem(m.dataset, m.category, msg.key)
+	item := findItem(m.dataset, msg.category, msg.key)
 	dac := item.(*models.DedicatedAICluster)
 	dac.Status = msg.prevState
-	m.updateRows(false)
+
+	// update view if current
+	if msg.category == m.category {
+		m.updateRows(false)
+	}
 }
 
 func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
-	deleteItem(m.dataset, m.category, msg.key)
-	idx := m.table.Cursor()
-	if idx+1 >= len(m.table.Rows()) {
-		m.table.MoveUp(1)
+	deleteItem(m.dataset, msg.category, msg.key)
+
+	// update view if current
+	if msg.category == m.category {
+		idx := m.table.Cursor()
+		if idx+1 >= len(m.table.Rows()) {
+			m.table.MoveUp(1)
+		}
+		m.updateRows(false)
 	}
-	m.updateRows(false)
 }
 
 func (m *Model) toggleAliases() []tea.Cmd {

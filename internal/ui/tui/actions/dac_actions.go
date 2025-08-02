@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -17,7 +19,7 @@ import (
 DeleteDedicatedAICluster deletes a DedicatedAICluster using the OCI Generative AI SDK.
 */
 func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluster, env models.Environment, logger logging.Logger) error {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
 	client, err := oci.GetGenAIClient(env, logger)
@@ -42,10 +44,19 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 	delReq := generativeai.DeleteDedicatedAiClusterRequest{
 		DedicatedAiClusterId: &dacID,
 	}
-	if delResp, err := client.DeleteDedicatedAiCluster(ctx, delReq); err != nil {
+	delResp, err := client.DeleteDedicatedAiCluster(ctx, delReq)
+	if err != nil {
 		return fmt.Errorf("failed to delete DedicatedAICluster: %w, request id: %s",
-			err, *delResp.OpcRequestId)
+			err, delResp.OpcRequestId)
 	}
+
+	// Poll work request status before returning
+	if err := waitForWorkRequest(ctx, client, delResp.OpcWorkRequestId, logger); err != nil {
+		return fmt.Errorf("DedicatedAICluster deletion did not complete successfully: %w", err)
+	}
+
+	logger.Infow("DedicatedAICluster is deleted successfully", "id",
+		dacID, "opc-request-id", delResp.OpcRequestId)
 
 	return nil
 }
@@ -65,17 +76,29 @@ func deleteEndpointsInDAC(
 		return fmt.Errorf("failed to list endpoints: %w", err)
 	}
 
-	count := 0
 	logger.Infow("endpoints found", "count", len(listResp.Items))
+
+	var count int32
+	const maxConcurrent = 5
+	sem := make(chan struct{}, maxConcurrent)
+	g, gctx := errgroup.WithContext(ctx)
+
 	for _, item := range listResp.Items {
 		if *item.DedicatedAiClusterId != *dac.Id {
 			continue
 		}
 
+		sem <- struct{}{}
 		count++
-		if err := deleteEndpoint(ctx, client, &item, logger); err != nil {
-			return err
-		}
+		ep := item // capture loop variable
+		g.Go(func() error {
+			defer func() { <-sem }()
+			return deleteEndpoint(gctx, client, &ep, logger)
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	logger.Infow("endpoints deleted", "count", count)
@@ -97,8 +120,46 @@ func deleteEndpoint(
 		return fmt.Errorf("failed to delete endpoint: %w", err)
 	}
 
+	// Poll work request status before returning
+	if err := waitForWorkRequest(ctx, client, delResp.OpcWorkRequestId, logger); err != nil {
+		return fmt.Errorf("endpoint deletion did not complete successfully: %w", err)
+	}
+
 	logger.Infow("endpoint is deleted successfully", "id",
 		endpoint.Id, "opc-request-id", delResp.OpcRequestId)
 
 	return nil
+}
+
+func waitForWorkRequest(
+	ctx context.Context,
+	client *generativeai.GenerativeAiClient,
+	workRequestID *string,
+	logger logging.Logger,
+) error {
+	const interval = 5 * time.Second
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			wrReq := generativeai.GetWorkRequestRequest{WorkRequestId: workRequestID}
+			wrResp, err := client.GetWorkRequest(ctx, wrReq)
+			if err != nil {
+				logger.Infow("failed to get work request status", "level", "warn", "workRequestId", *workRequestID, "err", err)
+				continue
+			}
+			status := string(wrResp.Status)
+			if status == "SUCCEEDED" {
+				return nil
+			}
+			if status == "FAILED" {
+				return fmt.Errorf("work request %s failed", *workRequestID)
+			}
+			// Otherwise, keep polling for Accepted/InProgress
+		}
+	}
 }

@@ -3,7 +3,10 @@ Package tui defines message types for the TUI model.
 */
 package tui
 
-import "github.com/jingle2008/toolkit/pkg/models"
+import (
+	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/pkg/models"
+)
 
 // ErrMsg is a message containing an error.
 type ErrMsg error
@@ -18,11 +21,13 @@ type FilterMsg string
 type SetFilterMsg string
 
 type deleteDoneMsg struct {
-	key models.ItemKey
+	category domain.Category
+	key      models.ItemKey
 }
 
 type deleteErrMsg struct {
 	err       error
+	category  domain.Category
 	key       models.ItemKey
 	prevState string
 }
