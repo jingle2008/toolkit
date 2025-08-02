@@ -346,9 +346,9 @@ func deleteDedicatedAICluster(dataset *models.Dataset, key models.ItemKey) {
 }
 
 /*
-getItemKeyString returns a string representation of the ItemKey for a given category.
+getItemKeyString returns a string representation of the ItemKey.
 */
-func getItemKeyString(category domain.Category, key models.ItemKey) string {
+func getItemKeyString(key models.ItemKey) string {
 	if k, ok := key.(string); ok {
 		return k
 	} else if k, ok := key.(models.ScopedItemKey); ok {

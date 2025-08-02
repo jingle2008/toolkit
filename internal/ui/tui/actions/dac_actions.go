@@ -47,7 +47,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 	delResp, err := client.DeleteDedicatedAiCluster(ctx, delReq)
 	if err != nil {
 		return fmt.Errorf("failed to delete DedicatedAICluster: %w, request id: %s",
-			err, delResp.OpcRequestId)
+			err, *delResp.OpcRequestId)
 	}
 
 	// Poll work request status before returning

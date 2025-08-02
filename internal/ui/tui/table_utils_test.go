@@ -64,7 +64,7 @@ func Test_getItemKey_and_getItemKeyString(t *testing.T) {
 	row := table.Row{"DAC1", "TenantX", "GPU", "A100", "4", "Active"}
 	key := getItemKey(domain.DedicatedAICluster, row)
 	assert.Equal(t, models.ScopedItemKey{Scope: "TenantX", Name: "DAC1"}, key)
-	keyStr := getItemKeyString(domain.DedicatedAICluster, key)
+	keyStr := getItemKeyString(key)
 	assert.Equal(t, "TenantX/DAC1", keyStr)
 }
 
@@ -121,7 +121,7 @@ func TestGetItemKeyAndString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		key := getItemKey(tt.category, tt.row)
-		str := getItemKeyString(tt.category, key)
+		str := getItemKeyString(key)
 		require.Equal(t, tt.keyStr, str, "category %v", tt.category)
 	}
 }
@@ -301,14 +301,14 @@ func TestGetHeaders_UnknownCategory(t *testing.T) {
 
 func TestGetItemKeyString_Simple(t *testing.T) {
 	t.Parallel()
-	key := getItemKeyString(domain.Tenant, "foo")
+	key := getItemKeyString("foo")
 	assert.Equal(t, "foo", key)
 }
 
 func TestGetItemKeyString_Scoped(t *testing.T) {
 	t.Parallel()
 	k := models.ScopedItemKey{Scope: "scope", Name: "name"}
-	key := getItemKeyString(domain.LimitTenancyOverride, k)
+	key := getItemKeyString(k)
 	assert.Equal(t, "scope/name", key)
 }
 

@@ -38,7 +38,7 @@ func (m *Model) infoView() string {
 func (m *Model) contextString() string {
 	scope := "all"
 	if m.viewMode == common.DetailsView {
-		scope = getItemKeyString(m.category, m.choice)
+		scope = getItemKeyString(m.choice)
 	} else if m.context != nil && m.context.Category.IsScopeOf(m.category) {
 		scope = m.context.Name
 	}
