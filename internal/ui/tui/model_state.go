@@ -70,6 +70,7 @@ type Model struct {
 	statusText     lipgloss.Style
 	infoKeyStyle   lipgloss.Style
 	infoValueStyle lipgloss.Style
+	stats          tableStats
 
 	// Help view styles
 	helpBorder lipgloss.Style

@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- Table stats: Added a new `tableStats` type (map[string]int) and integrated it into the TUI. The table now displays aggregate statistics for selected columns in the status bar for GpuPool, GpuNode, and DedicatedAICluster categories.
+- `getTableRows` now returns both rows and stats, and stats are computed for specific columns per category.
+- Status bar displays stats in "key: value" format.
+- All usages and tests updated for new signature and behaviour.
+
 - Generic filter utility using Go generics; deduplicated filter logic and tests for environment, service, and tenant domains.
 - Table-driven tests for all domain filters.
 - Migration to `spf13/pflag` for CLI flags.

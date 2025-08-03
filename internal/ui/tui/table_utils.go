@@ -3,12 +3,22 @@ package tui
 import (
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
+
+type tableStats map[string]int
+
+var statsColumns = map[domain.Category][]string{
+	domain.GpuPool:            {common.SizeCol, "GPUs"},
+	domain.GpuNode:            {"Total", common.FreeCol},
+	domain.DedicatedAICluster: {common.SizeCol},
+}
 
 func faultyPred[T models.Faulty](t T) bool {
 	return t.IsFaulty()
@@ -85,8 +95,9 @@ func getHeaders(category domain.Category) []header {
 /*
 getTableRows returns the table rows for a given category, using the appropriate handler.
 If the context is not valid for the category, it is set to nil.
+Returns: rows, stats (nil if not applicable)
 */
-func getTableRows(dataset *models.Dataset, category domain.Category, context *domain.ToolkitContext, filter string, sortColumn string, sortAsc bool, faultyOnly bool) []table.Row {
+func getTableRows(dataset *models.Dataset, category domain.Category, context *domain.ToolkitContext, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
 	if context != nil && !context.Category.IsScopeOf(category) {
 		context = nil
 	}
@@ -97,10 +108,39 @@ func getTableRows(dataset *models.Dataset, category domain.Category, context *do
 			headers := getHeaders(category)
 			sortRows(rows, headers, sortColumn, sortAsc)
 		}
-		return rows
+		return rows, computeStats(category, rows)
 	}
 
-	return nil
+	return nil, nil
+}
+
+// computeStats calculates stats for the given category and rows.
+func computeStats(category domain.Category, rows []table.Row) tableStats {
+	cols, ok := statsColumns[category]
+	if !ok || len(rows) == 0 {
+		return nil
+	}
+	headers := getHeaders(category)
+	idx := make(map[string]int)
+	for i, h := range headers {
+		idx[h.text] = i
+	}
+	totals := make(tableStats)
+	for _, col := range cols {
+		columnIdx, ok := idx[col]
+		if !ok {
+			return nil // header missing, bail out
+		}
+		sum := 0
+		for _, r := range rows {
+			v, err := strconv.Atoi(r[columnIdx])
+			if err == nil {
+				sum += v
+			}
+		}
+		totals[col] = sum
+	}
+	return totals
 }
 
 /*

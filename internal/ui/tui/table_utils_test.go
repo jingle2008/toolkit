@@ -42,7 +42,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 
 func Test_getModelArtifacts_returns_rows(t *testing.T) {
 	t.Parallel()
-	rows := getTableRows(&models.Dataset{
+	rows, _ := getTableRows(&models.Dataset{
 		ModelArtifactMap: map[string][]models.ModelArtifact{
 			"M1": {
 				{
@@ -91,7 +91,7 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 			t.Errorf("expected panic for nil dataset")
 		}
 	}()
-	_ = getTableRows(nil, domain.Tenant, nil, "", "", true, false)
+	_, _ = getTableRows(nil, domain.Tenant, nil, "", "", true, false)
 }
 
 func TestGetItemKeyAndString(t *testing.T) {
@@ -138,7 +138,7 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 	ds := &models.Dataset{}
 	for _, cat := range categories {
 		headers := getHeaders(cat)
-		_ = getTableRows(ds, cat, nil, "", "", true, false)
+		_, _ = getTableRows(ds, cat, nil, "", "", true, false)
 		// Extra assertions for coverage
 		if len(headers) > 0 {
 			require.NotEmpty(t, headers[0].text)
@@ -232,7 +232,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 			require.InDelta(t, 1.0, sum, 0.1, "header ratios should sum to ~1")
 		}
 		// getTableRows should not panic
-		_ = getTableRows(ds, cat, nil, "", "", true, false)
+		_, _ = getTableRows(ds, cat, nil, "", "", true, false)
 	}
 }
 
@@ -327,7 +327,7 @@ func TestFilterRows(t *testing.T) {
 
 func TestGetTableRows_UnknownCategory(t *testing.T) {
 	t.Parallel()
-	rows := getTableRows(&models.Dataset{}, domain.Category(9999), nil, "", "", true, false)
+	rows, _ := getTableRows(&models.Dataset{}, domain.Category(9999), nil, "", "", true, false)
 	assert.Nil(t, rows)
 }
 
@@ -355,7 +355,7 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 func TestGetTableRows_AliasCategory(t *testing.T) {
 	t.Parallel()
 	dataset := &models.Dataset{}
-	rows := getTableRows(dataset, domain.Alias, nil, "", "", true, false)
+	rows, _ := getTableRows(dataset, domain.Alias, nil, "", "", true, false)
 	assert.Equal(t, len(domain.Categories), len(rows), "should return one row per category")
 
 	// Find GpuNode row
@@ -369,7 +369,7 @@ func TestGetTableRows_AliasCategory(t *testing.T) {
 	assert.True(t, found, "GpuNode row should be present")
 
 	// Filtering
-	filtered := getTableRows(dataset, domain.Alias, nil, "tenant", "", true, false)
+	filtered, _ := getTableRows(dataset, domain.Alias, nil, "tenant", "", true, false)
 	assert.Len(t, filtered, 1, "filter 'tenant' should return exactly one row")
 	assert.Equal(t, "Tenant", filtered[0][0])
 }

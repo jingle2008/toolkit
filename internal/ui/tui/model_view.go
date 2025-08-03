@@ -5,6 +5,7 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/mattn/go-runewidth"
@@ -60,8 +61,20 @@ func (m *Model) statusView() string {
 	ctx := truncateString(m.contextString(), maxCtx)
 	contextCell := m.contextStyle.Render(ctx)
 
-	statsCell := m.statsStyle.Render(
-		fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
+	statsText := strings.Builder{}
+	if m.stats != nil {
+		keys := make([]string, 0, len(m.stats))
+		for k := range m.stats {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			statsText.WriteString(fmt.Sprintf("%s: %d • ", k, m.stats[k]))
+		}
+	}
+	statsText.WriteString(fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
+	statsCell := m.statsStyle.Render(statsText.String())
+
 	m.textInput.Width = m.viewWidth - w(contextCell) - w(statsCell) -
 		w(m.textInput.Prompt) - // prompt takes extra space
 		1 // 1 for cursor

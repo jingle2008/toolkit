@@ -22,9 +22,13 @@ import (
 
 var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
 
-// updateRows updates the table rows based on the current model state.
+/*
+updateRows updates the table rows based on the current model state.
+Now also sets m.stats from getTableRows.
+*/
 func (m *Model) updateRows(autoSelect bool) {
-	rows := getTableRows(m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
+	rows, stats := getTableRows(m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
+	m.stats = stats
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
