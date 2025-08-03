@@ -79,7 +79,7 @@ func Test_getServiceEndpoint(t *testing.T) {
 func Test_getGenAIClientWithDeps(t *testing.T) {
 	t.Parallel()
 	makeProvider := func(err error) configProviderFunc {
-		return func(path, profile, session string) (common.ConfigurationProvider, error) {
+		return func(_ /*OciConfigPath*/, _ /*profile*/, _ string) (common.ConfigurationProvider, error) {
 			if err != nil {
 				return nil, err
 			}

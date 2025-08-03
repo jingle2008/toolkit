@@ -62,6 +62,10 @@ func TestSetDedicatedAIClusterMap(t *testing.T) {
 	}
 }
 
+/*
+TestResetScopedData checks that ResetScopedData nils all relevant fields.
+*/
+//nolint:cyclop // test is clear and further splitting would reduce readability
 func TestResetScopedData(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{

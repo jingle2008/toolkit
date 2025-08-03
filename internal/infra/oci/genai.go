@@ -6,13 +6,15 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 )
 
-const OCI_CONFIG_PATH = "~/.oci/config"
+/*
+OciConfigPath is the default path to the OCI CLI config file.
+*/
+const OciConfigPath = "~/.oci/config"
 
 type (
 	configProviderFunc func(string, string, string) (common.ConfigurationProvider, error)
@@ -26,7 +28,7 @@ func getGenAIClientWithDeps(
 	clientFn genAIClientFunc,
 ) (*generativeai.GenerativeAiClient, error) {
 	profile := strings.ToUpper(env.Realm)
-	provider, err := providerFn(OCI_CONFIG_PATH, profile, "")
+	provider, err := providerFn(OciConfigPath, profile, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get OCI config provider: %w", err)
 	}
@@ -44,8 +46,10 @@ func getGenAIClientWithDeps(
 	return &client, nil
 }
 
-// GetGenAIClient returns a ConfigurationProvider for the given profile (profile name is uppercased).
-func GetGenAIClient(env models.Environment, logger logging.Logger) (*generativeai.GenerativeAiClient, error) {
+/*
+GetGenAIClient returns a ConfigurationProvider for the given profile (profile name is uppercased).
+*/
+func GetGenAIClient(env models.Environment) (*generativeai.GenerativeAiClient, error) {
 	return getGenAIClientWithDeps(
 		env,
 		common.ConfigurationProviderForSessionTokenWithProfile,

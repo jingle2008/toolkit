@@ -127,6 +127,9 @@ func (m *Model) handleDelete() []tea.Cmd {
 	return m.DeleteDedicatedAICluster(itemKey)
 }
 
+/*
+DeleteDedicatedAICluster deletes a DedicatedAICluster item and updates the UI accordingly.
+*/
 func (m *Model) DeleteDedicatedAICluster(itemKey models.ItemKey) []tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
 	dac := item.(*models.DedicatedAICluster)
@@ -179,9 +182,8 @@ func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
 func (m *Model) toggleAliases() []tea.Cmd {
 	if m.category == domain.Alias {
 		return []tea.Cmd{m.moveHistory(-1)}
-	} else {
-		return m.updateCategory(domain.Alias)
 	}
+	return m.updateCategory(domain.Alias)
 }
 
 func (m *Model) enterExportView() []tea.Cmd {

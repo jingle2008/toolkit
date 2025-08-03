@@ -73,6 +73,9 @@ func getLocalAttributesDI(
 	return attributes, nil
 }
 
+/*
+GetLocalAttributes loads and returns all local attributes from Terraform files in the specified directory.
+*/
 func GetLocalAttributes(ctx context.Context, dirPath string) (hclsyntax.Attributes, error) {
 	return getLocalAttributesDI(ctx, dirPath, fs.ListFiles, updateLocalAttributes)
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,7 @@ func TestDeleteDedicatedAICluster_ClientError(t *testing.T) {
 	defer func() { getGenAIClient = origGetGenAIClient }()
 
 	// Patch getGenAIClient to simulate client creation error
-	getGenAIClient = func(env models.Environment, logger logging.Logger) (*generativeai.GenerativeAiClient, error) {
+	getGenAIClient = func(_ models.Environment) (*generativeai.GenerativeAiClient, error) {
 		return nil, errors.New("client creation failed")
 	}
 

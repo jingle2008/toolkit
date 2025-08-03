@@ -42,6 +42,9 @@ func (n DedicatedAICluster) GetFilterableFields() []string {
 	}
 }
 
+/*
+GetOwnerState returns the state of the owner (internal/external) for the dedicated AI cluster.
+*/
 func (n DedicatedAICluster) GetOwnerState() string {
 	var state string
 	if n.Owner != nil {
@@ -50,6 +53,9 @@ func (n DedicatedAICluster) GetOwnerState() string {
 	return state
 }
 
+/*
+GetUsage returns the usage percentage as a string for the dedicated AI cluster.
+*/
 func (n DedicatedAICluster) GetUsage() string {
 	if n.TotalReplicas <= 0 {
 		return ""
@@ -79,12 +85,12 @@ func normalizeRegion(region string) string {
 }
 
 // GetID returns the OCID for the DedicatedAICluster.
-func (d DedicatedAICluster) GetID(realm, region string) string {
+func (n DedicatedAICluster) GetID(realm, region string) string {
 	region = normalizeRegion(region)
-	return fmt.Sprintf("ocid1.generativeaidedicatedaicluster.%s.%s.%s", realm, region, d.Name)
+	return fmt.Sprintf("ocid1.generativeaidedicatedaicluster.%s.%s.%s", realm, region, n.Name)
 }
 
 // GetTenantID returns the OCID for the tenancy of the DedicatedAICluster.
-func (d DedicatedAICluster) GetTenantID(realm string) string {
-	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, d.TenantID)
+func (n DedicatedAICluster) GetTenantID(realm string) string {
+	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, n.TenantID)
 }

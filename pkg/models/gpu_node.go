@@ -10,7 +10,7 @@ type GpuNode struct {
 	Name                 string   `json:"name"`
 	InstanceType         string   `json:"instanceType"`
 	NodePool             string   `json:"poolName"`
-	CompartmentId        string   `json:"compartmentId"`
+	CompartmentID        string   `json:"compartmentId"`
 	ID                   string   `json:"id"`
 	Allocatable          int      `json:"allocatable"`
 	Allocated            int      `json:"allocated"`
@@ -47,6 +47,9 @@ func (n GpuNode) GetStatus() string {
 	return "OK"
 }
 
+/*
+IsHealthy returns true if the GPU node has no issues.
+*/
 func (n GpuNode) IsHealthy() bool {
 	return len(n.Issues) == 0
 }

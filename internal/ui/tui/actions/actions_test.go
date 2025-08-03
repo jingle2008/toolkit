@@ -28,7 +28,7 @@ type fakeLogger struct {
 	msgs []string
 }
 
-func (f *fakeLogger) Errorw(msg string, kv ...any) {
+func (f *fakeLogger) Errorw(msg string, _ ...any) {
 	f.msgs = append(f.msgs, msg)
 }
 func (f *fakeLogger) Debugw(string, ...any)            {}
@@ -55,7 +55,7 @@ func TestCopyItemName_NamedItem(t *testing.T) {
 	assert.Equal(t, "foo", clipboardValue)
 }
 
-func TestCopyItemName_DedicatedAICluster(t *testing.T) {
+func TestCopyItemName_DedicatedAICluster(_ *testing.T) {
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil
@@ -83,7 +83,7 @@ func TestCopyTenantID_TenancyOverride(t *testing.T) {
 	assert.Equal(t, "tid", clipboardValue)
 }
 
-func TestCopyTenantID_DedicatedAICluster(t *testing.T) {
+func TestCopyTenantID_DedicatedAICluster(_ *testing.T) {
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil

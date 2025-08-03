@@ -54,6 +54,9 @@ func FilterSlice[T models.NamedFilterable](items []T, name *string, filter strin
 	return out
 }
 
+// FilterMap returns a map of filtered items from the input map, filtered by key, name, filter, and an optional predicate.
+//
+//nolint:cyclop // function is clear and further splitting would reduce readability
 func FilterMap[T models.NamedFilterable](
 	g map[string][]T,
 	key *string,

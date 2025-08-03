@@ -27,39 +27,39 @@ type dummyLoader struct{}
 
 var errDummy = errors.New("dummy loader: not implemented")
 
-func (dummyLoader) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
+func (dummyLoader) LoadDataset(_ context.Context, _ string, _ models.Environment) (*models.Dataset, error) {
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadBaseModels(ctx context.Context, repo string, env models.Environment) ([]models.BaseModel, error) {
+func (dummyLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environment) ([]models.BaseModel, error) {
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadGpuPools(ctx context.Context, repo string, env models.Environment) ([]models.GpuPool, error) {
+func (dummyLoader) LoadGpuPools(_ context.Context, _ string, _ models.Environment) ([]models.GpuPool, error) {
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadGpuNodes(ctx context.Context, repo string, env models.Environment) (map[string][]models.GpuNode, error) {
+func (dummyLoader) LoadGpuNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GpuNode, error) {
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
+func (dummyLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
+func (dummyLoader) LoadTenancyOverrideGroup(_ context.Context, _ string, _ models.Environment) (models.TenancyOverrideGroup, error) {
 	return models.TenancyOverrideGroup{}, errDummy
 }
 
-func (dummyLoader) LoadLimitRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.LimitRegionalOverride, error) {
+func (dummyLoader) LoadLimitRegionalOverrides(_ context.Context, _ string, _ models.Environment) ([]models.LimitRegionalOverride, error) {
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadConsolePropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.ConsolePropertyRegionalOverride, error) {
+func (dummyLoader) LoadConsolePropertyRegionalOverrides(_ context.Context, _ string, _ models.Environment) ([]models.ConsolePropertyRegionalOverride, error) {
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadPropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.PropertyRegionalOverride, error) {
+func (dummyLoader) LoadPropertyRegionalOverrides(_ context.Context, _ string, _ models.Environment) ([]models.PropertyRegionalOverride, error) {
 	return nil, errDummy
 }
 

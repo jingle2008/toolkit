@@ -6,6 +6,9 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
+/*
+SortPrefix is the prefix used for sort key help text.
+*/
 const SortPrefix = "Sort "
 
 // Global key bindings (always active)
@@ -73,18 +76,22 @@ var (
 )
 
 var (
+	// BackHist is a key binding for navigating back in history.
 	BackHist = key.NewBinding(
 		key.WithKeys("["),
 		key.WithHelp("<[>", "History Back"),
 	)
+	// FwdHist is a key binding for navigating forward in history.
 	FwdHist = key.NewBinding(
 		key.WithKeys("]"),
 		key.WithHelp("<]>", "History Forward"),
 	)
+	// ExportCSV is a key binding for exporting table data to CSV.
 	ExportCSV = key.NewBinding(
 		key.WithKeys("e"),
 		key.WithHelp("<e>", "Export CSV"),
 	)
+	// Delete is a key binding for deleting an item.
 	Delete = key.NewBinding(
 		key.WithKeys("ctrl+x"),
 		key.WithHelp("<ctrl+x>", "Delete"),
@@ -135,50 +142,62 @@ var (
 		key.WithKeys("r"),
 		key.WithHelp("<r>", "Drain"),
 	)
+	// SortInternal is a key binding for sorting by the "Internal" column.
 	SortInternal = key.NewBinding(
 		key.WithKeys("I"),
 		key.WithHelp("<shift+i>", SortPrefix+common.InternalCol),
 	)
+	// SortValue is a key binding for sorting by the "Value" column.
 	SortValue = key.NewBinding(
 		key.WithKeys("V"),
 		key.WithHelp("<shift+v>", SortPrefix+common.ValueCol),
 	)
+	// SortRegions is a key binding for sorting by the "Regions" column.
 	SortRegions = key.NewBinding(
 		key.WithKeys("R"),
 		key.WithHelp("<shift+r>", SortPrefix+common.RegionsCol),
 	)
+	// SortTenant is a key binding for sorting by the "Tenant" column.
 	SortTenant = key.NewBinding(
 		key.WithKeys("T"),
 		key.WithHelp("<shift+t>", SortPrefix+common.TenantCol),
 	)
+	// SortMaxTokens is a key binding for sorting by the "MaxTokens" column.
 	SortMaxTokens = key.NewBinding(
 		key.WithKeys("C"),
 		key.WithHelp("<shift+c>", SortPrefix+common.ContextCol),
 	)
+	// SortSize is a key binding for sorting by the "Size" column.
 	SortSize = key.NewBinding(
 		key.WithKeys("S"),
 		key.WithHelp("<shift+s>", SortPrefix+common.SizeCol),
 	)
+	// SortFree is a key binding for sorting by the "Free" column.
 	SortFree = key.NewBinding(
 		key.WithKeys("F"),
 		key.WithHelp("<shift+f>", SortPrefix+common.FreeCol),
 	)
+	// SortAge is a key binding for sorting by the "Age" column.
 	SortAge = key.NewBinding(
 		key.WithKeys("A"),
 		key.WithHelp("<shift+a>", SortPrefix+common.AgeCol),
 	)
+	// SortUsage is a key binding for sorting by the "Usage" column.
 	SortUsage = key.NewBinding(
 		key.WithKeys("U"),
 		key.WithHelp("<shift+u>", SortPrefix+common.UsageCol),
 	)
+	// ToggleAlias is a key binding for toggling the alias view.
 	ToggleAlias = key.NewBinding(
 		key.WithKeys("ctrl+a"),
 		key.WithHelp("<ctrl+a>", "Toggle Alias"),
 	)
+	// SortType is a key binding for sorting by the "Type" column.
 	SortType = key.NewBinding(
 		key.WithKeys("T"),
 		key.WithHelp("<shift+t>", SortPrefix+common.TypeCol),
 	)
+	// ToggleFaulty is a key binding for toggling the faulty state.
 	ToggleFaulty = key.NewBinding(
 		key.WithKeys("ctrl+z"),
 		key.WithHelp("<ctrl+z>", "Toggle Faulty"),

@@ -53,9 +53,9 @@ cover-check:
 	go test ./... -covermode=atomic -coverprofile=coverage.out
 	go tool cover -func=coverage.out | awk '/total:/ {if ($$3+0 < 80) {print "Coverage below 80%"; exit 1}}'
 
-LINT_VERSION ?= v1.64.8
+LINT_VERSION ?= v2.3.1
 
 install-lint:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(LINT_VERSION)
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(LINT_VERSION)
 
 ci: goimports lint vet test cover-check

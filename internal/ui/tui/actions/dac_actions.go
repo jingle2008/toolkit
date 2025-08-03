@@ -1,5 +1,6 @@
-// Package actions: delete_dac.go
-// Implements synchronous deletion of DedicatedAICluster via OCI Generative AI SDK.
+/*
+Package actions implements synchronous deletion of DedicatedAICluster via OCI Generative AI SDK.
+*/
 package actions
 
 import (
@@ -24,7 +25,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	client, err := getGenAIClient(env, logger)
+	client, err := getGenAIClient(env)
 	if err != nil {
 		return fmt.Errorf("failed to create GenerativeAI client: %w", err)
 	}
@@ -69,9 +70,9 @@ func deleteEndpointsInDAC(
 	dac *generativeai.DedicatedAiCluster,
 	logger logging.Logger,
 ) error {
-	compartmentId := dac.CompartmentId
+	compartmentID := dac.CompartmentId
 	listReq := generativeai.ListEndpointsRequest{
-		CompartmentId: compartmentId,
+		CompartmentId: compartmentID,
 	}
 	listResp, err := client.ListEndpoints(ctx, listReq)
 	if err != nil {

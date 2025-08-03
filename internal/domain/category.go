@@ -109,6 +109,9 @@ func (e Category) ScopedCategories() []Category {
 	}
 }
 
+/*
+GetAliases returns a list of aliases for the Category.
+*/
 func (e Category) GetAliases() []string {
 	cat := e.String()
 	short := GetInitials(cat)
@@ -120,31 +123,43 @@ func (e Category) GetAliases() []string {
 	return aliases
 }
 
+/*
+GetName returns the string name of the Category.
+*/
 func (e Category) GetName() string {
 	return e.String()
 }
 
+/*
+GetFilterableFields returns the filterable fields for the Category.
+*/
 func (e Category) GetFilterableFields() []string {
 	return e.GetAliases()
 }
 
+/*
+IsFaulty returns whether the Category is considered faulty.
+*/
 func (e Category) IsFaulty() bool {
 	return false
 }
 
+/*
+GetInitials returns the initials of a string, used for aliasing.
+*/
 func GetInitials(s string) string {
 	re := regexp.MustCompile(`[A-Z]`)
 	initials := re.FindAllString(s, -1)
 	return strings.Join(initials, "")
 }
 
-/*
-Parsing and alias logic for Category.
-*/
-
 var (
 	aliasToCat map[string]Category
-	Aliases    []string
+
+	// Aliases contains all known aliases for categories.
+	Aliases []string
+
+	// Categories contains all defined categories.
 	Categories []Category
 )
 
@@ -185,7 +200,9 @@ func (e Category) Definition() Category {
 	}
 }
 
-// ParseCategory parses a string (case-insensitive, with common aliases) into a Category enum.
+/*
+ParseCategory parses a string (case-insensitive, with common aliases) into a Category enum.
+*/
 func ParseCategory(s string) (Category, error) {
 	key := strings.ToLower(strings.TrimSpace(s))
 	if c, ok := aliasToCat[key]; ok {

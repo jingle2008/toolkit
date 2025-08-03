@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+/*
+BaseModel represents a base model with its configuration and metadata.
+*/
 type BaseModel struct {
 	Capabilities         []string         `json:"capabilities"`
 	InternalName         string           `json:"internalName"`

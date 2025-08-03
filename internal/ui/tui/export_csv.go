@@ -11,8 +11,11 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// exportTableCSV writes the current table data (with headers) to the given file path.
-// Returns nil on success, or an error.
+/*
+exportTableCSV writes the current table data (with headers) to the given file path.
+Returns nil on success, or an error.
+*/
+//nolint:cyclop // function is clear and further splitting would reduce readability
 func (m *Model) exportTableCSV(outPath string) error {
 	if m == nil || m.table == nil {
 		return fmt.Errorf("no table data to export")
@@ -49,7 +52,7 @@ func (m *Model) exportTableCSV(outPath string) error {
 		rows = filterRowsScoped(
 			m.dataset.DedicatedAIClusterMap, domain.Tenant,
 			m.context, m.curFilter, m.showFaulty,
-			func(val models.DedicatedAICluster, tenant string) table.Row {
+			func(val models.DedicatedAICluster, _ string) table.Row {
 				id := val.GetID(realm, region)
 				return dedicatedAIClusterToRowInternal(
 					val, val.GetTenantID(realm), &id)
