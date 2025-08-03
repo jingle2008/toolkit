@@ -18,6 +18,7 @@ type GpuNode struct {
 	IsSchedulingDisabled bool     `json:"isSchedulingDisabled"` // true if node is cordoned
 	Age                  string   `json:"age"`
 	Issues               []string `json:"issues"`
+	status               string
 }
 
 // GetName returns the name of the GPU node.
@@ -30,8 +31,17 @@ func (n GpuNode) GetFilterableFields() []string {
 	return []string{n.Name, n.InstanceType, n.NodePool, n.GetStatus()}
 }
 
+// SetStatus sets the status of the GPU node.
+func (n *GpuNode) SetStatus(status string) {
+	n.status = status
+}
+
 // GetStatus returns the status of the GPU node.
 func (n GpuNode) GetStatus() string {
+	if n.status != "" {
+		return n.status
+	}
+
 	parts := strings.Split(n.InstanceType, ".")
 	count, _ := strconv.Atoi(parts[len(parts)-1])
 	switch {

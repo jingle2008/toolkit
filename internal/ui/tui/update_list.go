@@ -96,7 +96,6 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn(common.NameCol)} }},
 		{keys.ToggleAlias, func() []tea.Cmd { return m.toggleAliases() }},
 		{keys.ExportCSV, func() []tea.Cmd { return m.enterExportView() }},
-		{keys.Delete, func() []tea.Cmd { return m.handleDelete() }},
 	}
 
 	for _, h := range keyHandlers {
@@ -115,50 +114,92 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 }
 
 /*
-handleDelete handles the generic delete action based on the current category.
+deleteItem handles the generic delete action based on the current category.
 For DedicatedAICluster, it deletes via SDK and removes the row locally.
 */
-func (m *Model) handleDelete() []tea.Cmd {
-	if m.category != domain.DedicatedAICluster {
-		return nil
+func (m *Model) deleteItem(itemKey models.ItemKey) tea.Cmd {
+	switch m.category {
+	case domain.DedicatedAICluster:
+		return m.deleteDedicatedAICluster(itemKey)
+	case domain.GpuNode:
+		return m.deleteGpuNode(itemKey)
+	default:
+		// exhausive
 	}
-
-	itemKey := getItemKey(m.category, m.table.SelectedRow())
-	return m.DeleteDedicatedAICluster(itemKey)
+	return nil
 }
 
 /*
-DeleteDedicatedAICluster deletes a DedicatedAICluster item and updates the UI accordingly.
+deleteDedicatedAICluster deletes a DedicatedAICluster item and updates the UI accordingly.
 */
-func (m *Model) DeleteDedicatedAICluster(itemKey models.ItemKey) []tea.Cmd {
+func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
 	dac := item.(*models.DedicatedAICluster)
 	prevState := dac.Status
 	dac.Status = "Deleting"
 	m.updateRows(false)
-	return []tea.Cmd{
-		func() tea.Msg {
-			if err := actions.DeleteDedicatedAICluster(m.ctx, dac, m.environment, m.logger); err != nil {
-				return deleteErrMsg{
-					err:       err,
-					category:  domain.DedicatedAICluster,
-					key:       itemKey,
-					prevState: prevState,
-				}
+	return func() tea.Msg {
+		if err := actions.DeleteDedicatedAICluster(m.ctx, dac, m.environment, m.logger); err != nil {
+			return deleteErrMsg{
+				err:       err,
+				category:  domain.DedicatedAICluster,
+				key:       itemKey,
+				prevState: prevState,
 			}
-			return deleteDoneMsg{
-				category: domain.DedicatedAICluster,
+		}
+		return deleteDoneMsg{
+			category: domain.DedicatedAICluster,
+			key:      itemKey,
+		}
+	}
+}
+
+func (m *Model) deleteGpuNode(itemKey models.ItemKey) tea.Cmd {
+	item := findItem(m.dataset, m.category, itemKey)
+	node := item.(*models.GpuNode)
+	node.SetStatus("Deleting")
+	m.updateRows(false)
+	return func() tea.Msg {
+		if err := actions.TerminateInstance(m.ctx, node, m.environment, m.logger); err != nil {
+			return deleteErrMsg{
+				err:      err,
+				category: domain.GpuNode,
 				key:      itemKey,
 			}
-		},
+		}
+		return deleteDoneMsg{
+			category: domain.GpuNode,
+			key:      itemKey,
+		}
+	}
+}
+
+func (m *Model) rebootNode(item any) {
+	if item == nil {
+		m.logger.Errorw("no item selected for reboot operation", "category", m.category)
+		return
+	}
+
+	if node, ok := item.(*models.GpuNode); ok {
+		if err := actions.SoftResetInstance(m.ctx, node, m.environment, m.logger); err != nil {
+			m.logger.Errorw("failed to reboot node", "error", err)
+		}
+		node.SetStatus("Rebooting")
+		m.updateRows(false)
+	} else {
+		m.logger.Errorw("unsupported item type for reboot operation", "item", item)
 	}
 }
 
 func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
-	m.logger.Errorw("failed to delete DAC", "key", msg.key, "error", msg.err)
+	m.logger.Errorw("failed to delete item", "key", msg.key, "error", msg.err)
 	item := findItem(m.dataset, msg.category, msg.key)
-	dac := item.(*models.DedicatedAICluster)
-	dac.Status = msg.prevState
+
+	if dac, ok := item.(*models.DedicatedAICluster); ok {
+		dac.Status = msg.prevState
+	} else if node, ok := item.(*models.GpuNode); ok {
+		node.SetStatus(msg.prevState)
+	}
 
 	// update view if current
 	if msg.category == m.category {

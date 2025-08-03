@@ -129,8 +129,13 @@ var (
 	)
 	// Refresh is a key binding for refreshing the current view or data.
 	Refresh = key.NewBinding(
-		key.WithKeys("ctrl+r"),
-		key.WithHelp("<ctrl+r>", "Refresh"),
+		key.WithKeys("r"),
+		key.WithHelp("<r>", "Refresh"),
+	)
+	// RebootNode is a key binding for rebooting a GPU node.
+	RebootNode = key.NewBinding(
+		key.WithKeys("R"),
+		key.WithHelp("<shift+r>", "Reboot Node"),
 	)
 	// ToggleCordon is a key binding for cordoning a node in the GPU node list.
 	ToggleCordon = key.NewBinding(
@@ -139,8 +144,8 @@ var (
 	)
 	// DrainNode is a key binding for draining a node in the GPU node list.
 	DrainNode = key.NewBinding(
-		key.WithKeys("r"),
-		key.WithHelp("<r>", "Drain"),
+		key.WithKeys("D"),
+		key.WithHelp("<shift+d>", "Drain"),
 	)
 	// SortInternal is a key binding for sorting by the "Internal" column.
 	SortInternal = key.NewBinding(
@@ -222,7 +227,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize},
 	},
 	domain.GpuNode: {
-		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty},
+		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty, Delete},

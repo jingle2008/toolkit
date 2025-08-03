@@ -184,7 +184,8 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 		return m.toggleFaultyList()
 	}
 
-	item := m.getSelectedItem()
+	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	item := findItem(m.dataset, m.category, itemKey)
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
 		actions.CopyTenantID(item, m.environment, m.logger)
@@ -194,6 +195,10 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 		m.cordonNode(item)
 	case key.Matches(msg, keys.DrainNode):
 		m.drainNode(item)
+	case key.Matches(msg, keys.Delete):
+		return m.deleteItem(itemKey)
+	case key.Matches(msg, keys.RebootNode):
+		m.rebootNode(item)
 	}
 
 	return nil

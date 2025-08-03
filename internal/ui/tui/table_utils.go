@@ -330,18 +330,23 @@ func deleteItem(dataset *models.Dataset, category domain.Category, key models.It
 		return
 	}
 
-	if category == domain.DedicatedAICluster {
-		deleteDedicatedAICluster(dataset, key)
+	switch category {
+	case domain.DedicatedAICluster:
+		deleteItemInMap(dataset.DedicatedAIClusterMap, key)
+	case domain.GpuNode:
+		deleteItemInMap(dataset.GpuNodeMap, key)
+	default:
+		// exhausive
 	}
 }
 
-func deleteDedicatedAICluster(dataset *models.Dataset, key models.ItemKey) {
+func deleteItemInMap[T models.NamedItem](m map[string][]T, key models.ItemKey) {
 	k := key.(models.ScopedItemKey)
-	if items, ok := dataset.DedicatedAIClusterMap[k.Scope]; ok {
-		items = slices.DeleteFunc(items, func(dac models.DedicatedAICluster) bool {
-			return dac.Name == k.Name
+	if items, ok := m[k.Scope]; ok {
+		items = slices.DeleteFunc(items, func(item T) bool {
+			return item.GetName() == k.Name
 		})
-		dataset.DedicatedAIClusterMap[k.Scope] = items
+		m[k.Scope] = items
 	}
 }
 
