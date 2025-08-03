@@ -10,6 +10,8 @@ type GpuNode struct {
 	Name                 string   `json:"name"`
 	InstanceType         string   `json:"instanceType"`
 	NodePool             string   `json:"poolName"`
+	CompartmentId        string   `json:"compartmentId"`
+	ID                   string   `json:"id"`
 	Allocatable          int      `json:"allocatable"`
 	Allocated            int      `json:"allocated"`
 	IsReady              bool     `json:"isReady"`

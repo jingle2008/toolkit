@@ -50,6 +50,8 @@ func listGpuNodes(ctx context.Context, clientset kubernetes.Interface) ([]models
 			Name:                 node.Name,
 			InstanceType:         node.Labels["beta.kubernetes.io/instance-type"],
 			NodePool:             node.Labels["instance-pool.name"],
+			CompartmentId:        node.Annotations["oci.oraclecloud.com/compartment-id"],
+			ID:                   node.Spec.ProviderID,
 			Allocatable:          int(allocatable),
 			Allocated:            int(gpuAllocationMap[node.Name]),
 			IsReady:              isNodeReady(node.Status.Conditions),
