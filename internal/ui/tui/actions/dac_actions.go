@@ -16,7 +16,17 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 )
 
-var getGenAIClient = oci.GetGenAIClient
+type genAI interface {
+	GetDedicatedAiCluster(ctx context.Context, req generativeai.GetDedicatedAiClusterRequest) (generativeai.GetDedicatedAiClusterResponse, error)
+	DeleteDedicatedAiCluster(ctx context.Context, req generativeai.DeleteDedicatedAiClusterRequest) (generativeai.DeleteDedicatedAiClusterResponse, error)
+	ListEndpoints(ctx context.Context, req generativeai.ListEndpointsRequest) (generativeai.ListEndpointsResponse, error)
+	DeleteEndpoint(ctx context.Context, req generativeai.DeleteEndpointRequest) (generativeai.DeleteEndpointResponse, error)
+	GetWorkRequest(ctx context.Context, req generativeai.GetWorkRequestRequest) (generativeai.GetWorkRequestResponse, error)
+}
+
+var getGenAIClient = func(env models.Environment) (genAI, error) {
+	return oci.GetGenAIClient(env)
+}
 
 /*
 DeleteDedicatedAICluster deletes a DedicatedAICluster using the OCI Generative AI SDK.
@@ -66,7 +76,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 
 func deleteEndpointsInDAC(
 	ctx context.Context,
-	client *generativeai.GenerativeAiClient,
+	client genAI,
 	dac *generativeai.DedicatedAiCluster,
 	logger logging.Logger,
 ) error {
@@ -110,7 +120,7 @@ func deleteEndpointsInDAC(
 
 func deleteEndpoint(
 	ctx context.Context,
-	client *generativeai.GenerativeAiClient,
+	client genAI,
 	endpoint *generativeai.EndpointSummary,
 	logger logging.Logger,
 ) error {
@@ -136,7 +146,7 @@ func deleteEndpoint(
 
 func waitForWorkRequest(
 	ctx context.Context,
-	client *generativeai.GenerativeAiClient,
+	client genAI,
 	workRequestID *string,
 	logger logging.Logger,
 ) error {
