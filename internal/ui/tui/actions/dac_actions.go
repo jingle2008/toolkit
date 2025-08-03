@@ -15,6 +15,8 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 )
 
+var getGenAIClient = oci.GetGenAIClient
+
 /*
 DeleteDedicatedAICluster deletes a DedicatedAICluster using the OCI Generative AI SDK.
 */
@@ -22,7 +24,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	client, err := oci.GetGenAIClient(env, logger)
+	client, err := getGenAIClient(env, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create GenerativeAI client: %w", err)
 	}

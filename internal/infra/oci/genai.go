@@ -14,15 +14,24 @@ import (
 
 const OCI_CONFIG_PATH = "~/.oci/config"
 
-// ConfigProvider returns a ConfigurationProvider for the given profile (profile name is uppercased).
-func GetGenAIClient(env models.Environment, logger logging.Logger) (*generativeai.GenerativeAiClient, error) {
+type (
+	configProviderFunc func(string, string, string) (common.ConfigurationProvider, error)
+	genAIClientFunc    func(common.ConfigurationProvider) (generativeai.GenerativeAiClient, error)
+)
+
+// getGenAIClientWithDeps is like GetGenAIClient but allows dependency injection for testing.
+func getGenAIClientWithDeps(
+	env models.Environment,
+	providerFn configProviderFunc,
+	clientFn genAIClientFunc,
+) (*generativeai.GenerativeAiClient, error) {
 	profile := strings.ToUpper(env.Realm)
-	provider, err := common.ConfigurationProviderForSessionTokenWithProfile(OCI_CONFIG_PATH, profile, "")
+	provider, err := providerFn(OCI_CONFIG_PATH, profile, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get OCI config provider: %w", err)
 	}
 
-	client, err := generativeai.NewGenerativeAiClientWithConfigurationProvider(provider)
+	client, err := clientFn(provider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GenerativeAI client: %w", err)
 	}
@@ -33,6 +42,15 @@ func GetGenAIClient(env models.Environment, logger logging.Logger) (*generativea
 	}
 
 	return &client, nil
+}
+
+// GetGenAIClient returns a ConfigurationProvider for the given profile (profile name is uppercased).
+func GetGenAIClient(env models.Environment, logger logging.Logger) (*generativeai.GenerativeAiClient, error) {
+	return getGenAIClientWithDeps(
+		env,
+		common.ConfigurationProviderForSessionTokenWithProfile,
+		generativeai.NewGenerativeAiClientWithConfigurationProvider,
+	)
 }
 
 // getServiceEndpoint returns the override endpoint for non-production regions.

@@ -118,5 +118,23 @@ func TestVersionCommandWithCheck(t *testing.T) {
 	}
 }
 
+func TestRootCmd_InvalidConfigFile(t *testing.T) {
+	home := t.TempDir()
+	cfgPath := filepath.Join(home, "bad.yaml")
+	_ = os.WriteFile(cfgPath, []byte("not: valid: yaml: [}"), 0o600)
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"--config", cfgPath})
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for invalid config file, got nil")
+	}
+	if !strings.Contains(err.Error(), "read config file") {
+		t.Errorf("expected read config file error, got: %v", err)
+	}
+}
+
 // We cannot easily test Execute() since it calls os.Exit on error.
 // Instead, test NewRootCmd and its RunE logic via the above tests.

@@ -373,3 +373,48 @@ func TestGetTableRows_AliasCategory(t *testing.T) {
 	assert.Len(t, filtered, 1, "filter 'tenant' should return exactly one row")
 	assert.Equal(t, "Tenant", filtered[0][0])
 }
+
+func TestDeleteItem_NilKey_NoMutation(t *testing.T) {
+	t.Parallel()
+	ds := &models.Dataset{
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"tenant1": {{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"}},
+		},
+	}
+	deleteItem(ds, domain.DedicatedAICluster, nil)
+	require.Len(t, ds.DedicatedAIClusterMap["tenant1"], 1)
+	assert.Equal(t, "dac1", ds.DedicatedAIClusterMap["tenant1"][0].Name)
+}
+
+func TestDeleteItem_WrongCategory_NoMutation(t *testing.T) {
+	t.Parallel()
+	ds := &models.Dataset{
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"tenant1": {{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"}},
+		},
+	}
+	key := models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}
+	deleteItem(ds, domain.GpuPool, key) // Not DedicatedAICluster
+	require.Len(t, ds.DedicatedAIClusterMap["tenant1"], 1)
+	assert.Equal(t, "dac1", ds.DedicatedAIClusterMap["tenant1"][0].Name)
+}
+
+func TestDeleteItem_RemoveDedicatedAICluster(t *testing.T) {
+	t.Parallel()
+	ds := &models.Dataset{
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"tenant1": {
+				{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"},
+				{Name: "dac2", Type: "t", UnitShape: "shape", Size: 2, Status: "inactive"},
+			},
+		},
+	}
+	key := models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}
+	deleteItem(ds, domain.DedicatedAICluster, key)
+	remaining := ds.DedicatedAIClusterMap["tenant1"]
+	require.Len(t, remaining, 1)
+	assert.Equal(t, "dac2", remaining[0].Name)
+	// Also check that findItem returns nil for deleted
+	item := findItem(ds, domain.DedicatedAICluster, key)
+	assert.Nil(t, item)
+}
