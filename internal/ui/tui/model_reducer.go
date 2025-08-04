@@ -22,6 +22,38 @@ import (
 
 var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
 
+func (m *Model) getCompartmentID() (string, error) {
+	if m.dataset != nil && m.dataset.GpuNodeMap != nil {
+		for _, v := range m.dataset.GpuNodeMap {
+			for _, n := range v {
+				return n.CompartmentID, nil
+			}
+		}
+	}
+
+	clientset, err := k8s.NewClientsetFromKubeConfig(m.kubeConfig, m.environment.GetKubeContext())
+	if err != nil {
+		return "", err
+	}
+	nodes, err := k8s.ListGpuNodes(m.ctx, clientset, 1)
+	if err != nil || len(nodes) == 0 {
+		return "", err
+	}
+
+	return nodes[0].CompartmentID, nil
+}
+
+func (m *Model) updateGpuPoolState() tea.Cmd {
+	return func() tea.Msg {
+		var err error
+		var compartmentID string
+		if compartmentID, err = m.getCompartmentID(); err == nil {
+			err = actions.PopulateGpuPools(m.ctx, m.dataset.GpuPools, m.environment, compartmentID)
+		}
+		return updateDoneMsg{err: err, category: domain.GpuPool}
+	}
+}
+
 /*
 updateRows updates the table rows based on the current model state.
 Now also sets m.stats from getTableRows.
@@ -130,7 +162,8 @@ func (m *Model) refreshDisplay() {
 }
 
 // processData updates the model's dataset based on the incoming DataMsg.
-func (m *Model) processData(msg DataMsg) {
+func (m *Model) processData(msg DataMsg) tea.Cmd {
+	var cmd tea.Cmd
 	switch data := msg.Data.(type) {
 	case *models.Dataset:
 		m.dataset = data
@@ -138,6 +171,7 @@ func (m *Model) processData(msg DataMsg) {
 		m.dataset.BaseModels = data
 	case []models.GpuPool:
 		m.dataset.GpuPools = data
+		cmd = m.updateGpuPoolState()
 	case map[string][]models.GpuNode:
 		m.dataset.GpuNodeMap = data
 	case map[string][]models.DedicatedAICluster:
@@ -154,6 +188,7 @@ func (m *Model) processData(msg DataMsg) {
 		m.logger.Infow("data loaded", "category", m.category, "pendingTasks", m.pendingTasks)
 	}
 	m.refreshDisplay()
+	return cmd
 }
 
 func (m *Model) sortTableByColumn(column string) tea.Cmd {

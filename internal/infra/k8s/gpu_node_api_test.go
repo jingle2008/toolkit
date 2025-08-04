@@ -70,7 +70,7 @@ func TestListGpuNodes_HappyPath(t *testing.T) {
 	pod := makePod("p1", "n1", 2, servingLabelV1)
 	client := fake.NewSimpleClientset(node, pod)
 
-	nodes, err := listGpuNodes(ctx, client)
+	nodes, err := ListGpuNodes(ctx, client, -1)
 	require.NoError(t, err)
 	assert.Len(t, nodes, 1)
 	assert.Equal(t, "n1", nodes[0].Name)
@@ -85,7 +85,7 @@ func TestListGpuNodes_NoGPUNodes(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
-	nodes, err := listGpuNodes(ctx, client)
+	nodes, err := ListGpuNodes(ctx, client, -1)
 	require.NoError(t, err)
 	assert.Empty(t, nodes)
 }
@@ -98,7 +98,7 @@ func TestListGpuNodes_Unschedulable(t *testing.T) {
 		"instance-pool.name":     "pool2",
 	}, 2, true, nil)
 	client := fake.NewSimpleClientset(node)
-	nodes, err := listGpuNodes(ctx, client)
+	nodes, err := ListGpuNodes(ctx, client, -1)
 	require.NoError(t, err)
 	assert.Len(t, nodes, 1)
 	assert.True(t, nodes[0].IsSchedulingDisabled)
@@ -113,7 +113,7 @@ func TestListGpuNodes_ErrorFromNodesList(t *testing.T) {
 	client.PrependReactor("list", "nodes", func(_ cgotesting.Action) (bool, runtime.Object, error) {
 		return true, nil, assert.AnError
 	})
-	_, err := listGpuNodes(ctx, client)
+	_, err := ListGpuNodes(ctx, client, -1)
 	assert.Error(t, err)
 }
 
@@ -129,7 +129,7 @@ func TestListGpuNodes_ErrorFromPodsList(t *testing.T) {
 	client.PrependReactor("list", "pods", func(_ cgotesting.Action) (bool, runtime.Object, error) {
 		return true, nil, assert.AnError
 	})
-	nodes, err := listGpuNodes(ctx, client)
+	nodes, err := ListGpuNodes(ctx, client, -1)
 	require.Error(t, err)
 	assert.Nil(t, nodes)
 }

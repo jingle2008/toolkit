@@ -63,3 +63,44 @@ func TerminateInstance(
 		node.ID, "opc-request-id", resp.OpcRequestId)
 	return nil
 }
+
+// PopulateGpuPools populates ActualSize and Status for a GpuPool using OCI instance pool API.
+// compartmentID is required to look up the pool.
+func PopulateGpuPools(
+	ctx context.Context,
+	gpuPools []models.GpuPool,
+	env models.Environment,
+	compartmentID string,
+) error {
+	if len(gpuPools) == 0 || compartmentID == "" {
+		return nil // nothing to do
+	}
+
+	mgmtClient, err := oci.GetComputeManagementClient(env)
+	if err != nil {
+		return err
+	}
+
+	req := core.ListInstancePoolsRequest{
+		CompartmentId: &compartmentID,
+	}
+	resp, err := mgmtClient.ListInstancePools(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to list instance pools: %w, request id: %s",
+			err, *resp.OpcRequestId)
+	}
+
+	gpuPoolMap := make(map[string]*models.GpuPool)
+	for i := range gpuPools {
+		gpuPoolMap[gpuPools[i].Name] = &gpuPools[i]
+		gpuPools[i].Status = "NONEXIST"
+	}
+
+	for _, summary := range resp.Items {
+		if pool, ok := gpuPoolMap[*summary.DisplayName]; ok {
+			pool.ActualSize = *summary.Size
+			pool.Status = string(summary.LifecycleState)
+		}
+	}
+	return nil
+}

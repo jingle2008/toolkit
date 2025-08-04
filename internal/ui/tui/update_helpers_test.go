@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/stopwatch"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -80,7 +81,9 @@ func Test_updateLoadingView_SpinnerTick(t *testing.T) {
 	m := &Model{}
 	m.viewMode = common.LoadingView
 	s := spinner.New()
+	r := stopwatch.New()
 	m.loadingSpinner = &s
+	m.loadingTimer = &r
 	msg := spinner.TickMsg{}
 	_, cmd := m.updateLoadingView(msg)
 	require.NotNil(t, cmd)

@@ -31,3 +31,8 @@ type deleteErrMsg struct {
 	key       models.ItemKey
 	prevState string
 }
+
+type updateDoneMsg struct {
+	err      error
+	category domain.Category
+}

@@ -23,7 +23,7 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		cmds = append(cmds, m.handleKeyMsg(msg)...)
 	case DataMsg:
-		m.handleDataMsg(msg)
+		cmds = append(cmds, m.handleDataMsg(msg))
 	case FilterMsg:
 		m.handleFilterMsg(msg)
 	case SetFilterMsg:
@@ -32,6 +32,8 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleDeleteErrMsg(msg)
 	case deleteDoneMsg:
 		m.handleDeleteDoneMsg(msg)
+	case updateDoneMsg:
+		m.handleUpdateDoneMsg(msg)
 	default:
 		// Future-proof: ignore unknown message types
 	}
@@ -55,8 +57,8 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	return cmds
 }
 
-func (m *Model) handleDataMsg(msg DataMsg) {
-	m.processData(msg)
+func (m *Model) handleDataMsg(msg DataMsg) tea.Cmd {
+	return m.processData(msg)
 }
 
 func (m *Model) handleFilterMsg(msg FilterMsg) {
@@ -216,6 +218,20 @@ func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
 		if idx+1 >= len(m.table.Rows()) {
 			m.table.MoveUp(1)
 		}
+		m.updateRows(false)
+	}
+}
+
+func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
+	if msg.err != nil {
+		m.logger.Errorw("failed to update data", "category", msg.category, "error", msg.err)
+		for i := range m.dataset.GpuPools {
+			m.dataset.GpuPools[i].Status = "UNKNOWN"
+		}
+	}
+
+	// update view if current
+	if msg.category == m.category {
 		m.updateRows(false)
 	}
 }

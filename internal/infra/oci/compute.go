@@ -23,3 +23,20 @@ func GetComputeClient(env models.Environment) (*core.ComputeClient, error) {
 	client.SetRegion(env.Region)
 	return &client, nil
 }
+
+/*
+GetComputeManagementClient creates a new OCI ComputeManagementClient for the given region.
+*/
+func GetComputeManagementClient(env models.Environment) (*core.ComputeManagementClient, error) {
+	profile := strings.ToUpper(env.Realm)
+	provider, err := common.ConfigurationProviderForSessionTokenWithProfile(OciConfigPath, profile, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get OCI config provider: %w", err)
+	}
+	client, err := core.NewComputeManagementClientWithConfigurationProvider(provider)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create compute management client: %w", err)
+	}
+	client.SetRegion(env.Region)
+	return &client, nil
+}

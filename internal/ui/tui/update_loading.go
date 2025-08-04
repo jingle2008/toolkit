@@ -9,19 +9,21 @@ import (
 
 // updateLoadingView handles command routing while in LoadingView mode.
 func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, keys.Quit) {
 			return m, tea.Quit
 		}
 	case DataMsg:
-		m.handleDataMsg(msg)
+		cmds = append(cmds, m.handleDataMsg(msg))
 	case ErrMsg:
 		m.handleErrMsg(msg)
 	case spinner.TickMsg:
-		return m, m.handleSpinnerTickMsg(msg)
+		cmds = append(cmds, m.handleSpinnerTickMsg(msg))
 	}
-	return m, m.handleStopwatchMsg(msg)
+	cmds = append(cmds, m.handleStopwatchMsg(msg))
+	return m, tea.Batch(cmds...)
 }
 
 func (m *Model) handleErrMsg(msg ErrMsg) {

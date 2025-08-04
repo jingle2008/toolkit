@@ -93,7 +93,7 @@ func Test_gpuPoolToRow(t *testing.T) {
 	}
 	row := gpuPoolToRow(g)
 	// GetGPUs: shape "NVIDIA.A100.8" * size 2 = 16
-	assert.Equal(t, table.Row{"GP1", "NVIDIA.A100.8", "2", "16", "true", "dedicated"}, row)
+	assert.Equal(t, table.Row{"GP1", "NVIDIA.A100.8", "2", "0", "16", "true", "dedicated", ""}, row)
 }
 
 func Test_limitTenancyOverrideToRow(t *testing.T) {

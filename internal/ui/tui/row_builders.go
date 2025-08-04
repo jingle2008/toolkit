@@ -74,9 +74,11 @@ func gpuPoolToRow(val models.GpuPool) table.Row {
 		val.Name,
 		val.Shape,
 		fmt.Sprint(val.Size),
+		fmt.Sprint(val.ActualSize),
 		fmt.Sprint(val.GetGPUs()),
 		fmt.Sprint(val.IsOkeManaged),
 		val.CapacityType,
+		val.Status,
 	}
 }
 

@@ -18,9 +18,11 @@ const (
 	nodeCondGpuCount corev1.NodeConditionType = "GpuCount"
 )
 
-func listGpuNodes(ctx context.Context, clientset kubernetes.Interface) ([]models.GpuNode, error) {
+// ListGpuNodes lists a list of gpu nodes up to the limit.
+func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, limit int) ([]models.GpuNode, error) {
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, v1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.present=true",
+		Limit:         int64(limit),
 	})
 	if err != nil {
 		return nil, err
@@ -99,7 +101,7 @@ LoadGpuNodes returns a map of node pool names to slices of GpuNode.
 It fetches all GPU nodes and groups them by their node pool label.
 */
 func LoadGpuNodes(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GpuNode, error) {
-	nodes, err := listGpuNodes(ctx, clientset)
+	nodes, err := ListGpuNodes(ctx, clientset, 0)
 	if err != nil {
 		return nil, err
 	}

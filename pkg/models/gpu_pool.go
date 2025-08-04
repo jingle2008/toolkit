@@ -10,6 +10,8 @@ type GpuPool struct {
 	Name         string
 	Shape        string
 	Size         int
+	ActualSize   int
+	Status       string
 	IsOkeManaged bool
 	CapacityType string
 }
@@ -24,9 +26,9 @@ func (p GpuPool) GetFilterableFields() []string {
 	return []string{p.Name, p.Shape, p.CapacityType}
 }
 
-// IsFaulty returns false by default for GpuPool.
+// IsFaulty returns false if actual size is different from desired size.
 func (p GpuPool) IsFaulty() bool {
-	return false
+	return p.ActualSize != p.Size
 }
 
 // GetGPUs returns the total number of GPUs in the pool.

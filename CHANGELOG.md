@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Prevent nil-pointer panic in loading view stopwatch when handling spinner tick during tests (`update_loading.go`, affected Test_updateLoadingView_SpinnerTick).
+
+### Added / Changed
+- GPU pool display now includes **Actual Size** and **Status** columns; fault detection reflects OCI-reported size.
+- New OCI helper `GetComputeManagementClient` and refactored `PopulatePoolFromOCI`.
+- `listGpuNodes` now supports a `limit` parameter via Kubernetes `ListOptions`, plus updated helpers and tests.
+
 ### Added
 - Table stats: Added a new `tableStats` type (map[string]int) and integrated it into the TUI. The table now displays aggregate statistics for selected columns in the status bar for GpuPool, GpuNode, and DedicatedAICluster categories.
 - `getTableRows` now returns both rows and stats, and stats are computed for specific columns per category.
