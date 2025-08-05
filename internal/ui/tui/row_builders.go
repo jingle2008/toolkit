@@ -73,6 +73,7 @@ func gpuPoolToRow(val models.GpuPool) table.Row {
 	return table.Row{
 		val.Name,
 		val.Shape,
+		val.AvailabilityDomain,
 		fmt.Sprint(val.Size),
 		fmt.Sprint(val.ActualSize),
 		fmt.Sprint(val.GetGPUs()),

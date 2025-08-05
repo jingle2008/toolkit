@@ -348,6 +348,8 @@ func loadGpuPools(ctx context.Context, dirPath, poolConfigName string, isOkeMana
 				pool.Size = int(size)
 			case "capacity_type":
 				pool.CapacityType = v.AsString()
+			case "placement_logical_ad":
+				pool.AvailabilityDomain = extractAvailabilityDomain(v)
 			}
 		}
 
@@ -357,6 +359,21 @@ func loadGpuPools(ctx context.Context, dirPath, poolConfigName string, isOkeMana
 	}
 
 	return gpuPools, nil
+}
+
+func extractAvailabilityDomain(v cty.Value) string {
+	t := v.Type()
+	if t.IsPrimitiveType() && t.FriendlyName() == "string" {
+		return v.AsString()
+	} else if t.IsListType() || t.IsTupleType() {
+		if slice := v.AsValueSlice(); len(slice) > 0 {
+			s := slice[0].AsString()
+			if parts := strings.Split(s, "-AD-"); len(parts) == 2 {
+				return "AD-" + parts[1]
+			}
+		}
+	}
+	return ""
 }
 
 /*

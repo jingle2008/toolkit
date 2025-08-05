@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added / Changed
+- GpuPool struct now includes an `AvailabilityDomain` property, extracted from Terraform `placement_logical_ad` (supports both string and list, including `"all"`).
+- Terraform loader (`loadGpuPools`) refactored for lower cyclomatic complexity and improved maintainability.
+- GPU pool table UI updated: new "AD" column displayed after "Shape".
+- All usages and tests updated for new GpuPool field and table column.
+- Unit test for `"placement_logical_ad = \"all\""` case added.
+- Test helpers in terraform_test.go now create required config directories and empty locals for robust test isolation.
+
 ### Fixed
 - Prevent nil-pointer panic in loading view stopwatch when handling spinner tick during tests (`update_loading.go`, affected Test_updateLoadingView_SpinnerTick).
 

@@ -179,6 +179,58 @@ locals {
 	assert.GreaterOrEqual(t, len(pools), 3)
 }
 
+func TestLoadGpuPools_PlacementLogicalAdAll(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
+
+	ipDir := poolsConfigDir(t, dir, "instance_pools_config")
+	// Create required empty dirs for other configs to avoid loader error
+	cnDir := poolsConfigDir(t, dir, "cluster_networks_config")
+	okeDir := poolsConfigDir(t, dir, "oci_oke_nodepools_config")
+	// Write empty locals for the other configs
+	emptyLocals := `
+locals {
+  env_cluster_networks_config = {}
+}
+`
+	err := os.WriteFile(filepath.Join(cnDir, "locals.tf"), []byte(emptyLocals), 0o600)
+	require.NoError(t, err)
+	emptyLocals2 := `
+locals {
+  env_nodepools_config = {}
+}
+`
+	err = os.WriteFile(filepath.Join(okeDir, "locals.tf"), []byte(emptyLocals2), 0o600)
+	require.NoError(t, err)
+	tf := `
+locals {
+  env_instance_pools_config = {
+    "pool1" = {
+      shape = "GPU"
+      size = 2
+      capacity_type = "on-demand"
+      placement_logical_ad = "all"
+    }
+  }
+}
+`
+	err = os.WriteFile(filepath.Join(ipDir, "locals.tf"), []byte(tf), 0o600)
+	require.NoError(t, err)
+
+	pools, err := LoadGpuPools(context.Background(), dir, env)
+	require.NoError(t, err)
+	require.NotNil(t, pools)
+	found := false
+	for _, p := range pools {
+		if p.Name == "pool1" {
+			found = true
+			assert.Equal(t, "all", p.AvailabilityDomain)
+		}
+	}
+	assert.True(t, found, "pool1 not found in loaded pools")
+}
+
 func TestLoadGpuPools_MissingConfig(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

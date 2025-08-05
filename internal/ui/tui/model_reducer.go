@@ -258,10 +258,6 @@ func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
 		m.logger.Errorw("no GPU pool selected for scale up")
 		return nil
 	}
-	if pool.ActualSize >= pool.Size {
-		m.logger.Infow("scale up: actual size is already >= desired size, no action taken")
-		return nil
-	}
 
 	pool.Status = "SCALING"
 	m.updateRows(false)
