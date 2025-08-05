@@ -147,6 +147,11 @@ var (
 		key.WithKeys("D"),
 		key.WithHelp("<shift+d>", "Drain"),
 	)
+	// ScaleUp is a key binding for scaling up a GPU pool.
+	ScaleUp = key.NewBinding(
+		key.WithKeys("U"),
+		key.WithHelp("<shift+u>", "ScaleUp"),
+	)
 	// SortInternal is a key binding for sorting by the "Internal" column.
 	SortInternal = key.NewBinding(
 		key.WithKeys("I"),
@@ -224,7 +229,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortValue},
 	},
 	domain.GpuPool: {
-		common.ListView: {SortSize, ToggleFaulty},
+		common.ListView: {SortSize, ToggleFaulty, ScaleUp},
 	},
 	domain.GpuNode: {
 		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},

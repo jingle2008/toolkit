@@ -38,6 +38,35 @@ func SoftResetInstance(
 	return nil
 }
 
+// IncreasePoolSize scales up the given GPU pool by 1 and returns the work request ID.
+func IncreasePoolSize(
+	ctx context.Context,
+	pool *models.GpuPool,
+	env models.Environment,
+	logger logging.Logger,
+) error {
+	mgmtClient, err := oci.GetComputeManagementClient(env)
+	if err != nil {
+		return fmt.Errorf("failed to create compute management client: %w", err)
+	}
+
+	newSize := pool.ActualSize + 1
+	logger.Infow("scaling up instance pool", "id", pool.ID, "name", pool.Name, "newSize", newSize)
+	resp, err := mgmtClient.UpdateInstancePool(ctx, core.UpdateInstancePoolRequest{
+		InstancePoolId: common.String(pool.ID),
+		UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
+			Size: common.Int(newSize),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update instance pool: %w, request id: %s",
+			err, *resp.OpcRequestId)
+	}
+	logger.Infow("scaling request is submitted successfully", "id",
+		pool.ID, "opc-request-id", resp.OpcRequestId)
+	return nil
+}
+
 // TerminateInstance terminates the given instance, optionally preserving the boot volume.
 func TerminateInstance(
 	ctx context.Context,
@@ -98,6 +127,7 @@ func PopulateGpuPools(
 
 	for _, summary := range resp.Items {
 		if pool, ok := gpuPoolMap[*summary.DisplayName]; ok {
+			pool.ID = *summary.Id
 			pool.ActualSize = *summary.Size
 			pool.Status = string(summary.LifecycleState)
 		}

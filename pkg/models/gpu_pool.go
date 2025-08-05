@@ -7,6 +7,7 @@ import (
 
 // GpuPool represents a pool of GPUs.
 type GpuPool struct {
+	ID           string
 	Name         string
 	Shape        string
 	Size         int

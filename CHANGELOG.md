@@ -14,6 +14,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - New OCI helper `GetComputeManagementClient` and refactored `PopulatePoolFromOCI`.
 - `listGpuNodes` now supports a `limit` parameter via Kubernetes `ListOptions`, plus updated helpers and tests.
 
+- Added "ScaleUp" (shift+u) shortcut for scaling up OCI GPU instance pools, available only in GpuPool list view.
+- Synchronous scale-up logic: status set to "Scaling", pool size increased, and status refreshed after operation.
+- Error handling for scale-up failures; no-op if ActualSize >= Size.
+
+### Changed
+- GpuPool struct field renamed from `InstancePoolId` to `ID` for clarity and consistency.
+
 ### Added
 - Table stats: Added a new `tableStats` type (map[string]int) and integrated it into the TUI. The table now displays aggregate statistics for selected columns in the status bar for GpuPool, GpuNode, and DedicatedAICluster categories.
 - `getTableRows` now returns both rows and stats, and stats are computed for specific columns per category.

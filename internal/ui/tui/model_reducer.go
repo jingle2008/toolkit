@@ -238,9 +238,34 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 		return m.deleteItem(itemKey)
 	case key.Matches(msg, keys.RebootNode):
 		m.rebootNode(item)
+	case key.Matches(msg, keys.ScaleUp):
+		return m.scaleUpGpuPool(item)
 	}
 
 	return nil
+}
+
+func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
+	pool, ok := item.(*models.GpuPool)
+	if !ok || pool == nil {
+		m.logger.Errorw("no GPU pool selected for scale up")
+		return nil
+	}
+	if pool.ActualSize >= pool.Size {
+		m.logger.Infow("scale up: actual size is already >= desired size, no action taken")
+		return nil
+	}
+
+	pool.Status = "SCALING"
+	m.updateRows(false)
+	return func() tea.Msg {
+		err := actions.IncreasePoolSize(m.ctx, pool, m.environment, m.logger)
+		if err != nil {
+			pool.Status = "FAILED"
+			m.updateRows(false)
+		}
+		return nil
+	}
 }
 
 func (m *Model) toggleFaultyList() tea.Cmd {
