@@ -350,7 +350,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	type handlerFn func(*Model, bool) tea.Cmd
 	handlers := map[domain.Category]handlerFn{
 		domain.BaseModel:                       func(m *Model, _ bool) tea.Cmd { return m.handleBaseModelCategory() },
-		domain.GpuPool:                         func(m *Model, _ bool) tea.Cmd { return m.handleGpuPoolCategory() },
+		domain.GpuPool:                         func(m *Model, refresh bool) tea.Cmd { return m.handleGpuPoolCategory(refresh) },
 		domain.GpuNode:                         func(m *Model, refresh bool) tea.Cmd { return m.handleGpuNodeCategory(refresh) },
 		domain.DedicatedAICluster:              func(m *Model, refresh bool) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh) },
 		domain.LimitRegionalOverride:           func(m *Model, _ bool) tea.Cmd { return m.handleLimitRegionalOverrideCategory() },
@@ -423,8 +423,8 @@ func (m *Model) handleBaseModelCategory() tea.Cmd {
 	return nil
 }
 
-func (m *Model) handleGpuPoolCategory() tea.Cmd {
-	if m.dataset == nil || m.dataset.GpuPools == nil {
+func (m *Model) handleGpuPoolCategory(refresh bool) tea.Cmd {
+	if m.dataset == nil || m.dataset.GpuPools == nil || refresh {
 		return loadRequest{category: domain.GpuPool, model: m}.Run
 	}
 	return nil

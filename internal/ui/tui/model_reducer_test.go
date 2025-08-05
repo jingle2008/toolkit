@@ -82,14 +82,14 @@ func TestHandleGpuPoolCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	m := &Model{loadingSpinner: &s}
-	cmd := m.handleGpuPoolCategory()
+	cmd := m.handleGpuPoolCategory(false)
 	assert.NotNil(t, cmd)
 
 	m = &Model{
 		dataset:        &models.Dataset{GpuPools: []models.GpuPool{}},
 		loadingSpinner: &s,
 	}
-	cmd = m.handleGpuPoolCategory()
+	cmd = m.handleGpuPoolCategory(false)
 	assert.Nil(t, cmd)
 }
 

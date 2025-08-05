@@ -229,7 +229,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortValue},
 	},
 	domain.GpuPool: {
-		common.ListView: {SortSize, ToggleFaulty, ScaleUp},
+		common.ListView: {SortSize, ToggleFaulty, ScaleUp, Refresh},
 	},
 	domain.GpuNode: {
 		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
