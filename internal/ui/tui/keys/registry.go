@@ -150,7 +150,7 @@ var (
 	// ScaleUp is a key binding for scaling up a GPU pool.
 	ScaleUp = key.NewBinding(
 		key.WithKeys("U"),
-		key.WithHelp("<shift+u>", "ScaleUp"),
+		key.WithHelp("<shift+u>", "Scale Up"),
 	)
 	// SortInternal is a key binding for sorting by the "Internal" column.
 	SortInternal = key.NewBinding(

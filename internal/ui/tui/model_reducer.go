@@ -204,7 +204,10 @@ func (m *Model) sortTableByColumn(column string) tea.Cmd {
 	return nil
 }
 
-// handleAdditionalKeys processes extra key events for the current category.
+/*
+handleAdditionalKeys processes extra key events for the current category.
+Refactored to reduce cyclomatic complexity by extracting item actions.
+*/
 func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	idx := slices.IndexFunc(m.keys.Context, func(b key.Binding) bool {
 		return key.Matches(msg, b)
@@ -223,6 +226,11 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 		return m.toggleFaultyList()
 	}
 
+	return m.handleItemActions(msg)
+}
+
+// handleItemActions processes per-row actions for the current category.
+func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	itemKey := getItemKey(m.category, m.table.SelectedRow())
 	item := findItem(m.dataset, m.category, itemKey)
 	switch {
@@ -241,7 +249,6 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.ScaleUp):
 		return m.scaleUpGpuPool(item)
 	}
-
 	return nil
 }
 
