@@ -11,6 +11,25 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
+var (
+	newComputeClient func(models.Environment) (computeClient, error) = func(env models.Environment) (computeClient, error) {
+		return oci.GetComputeClient(env)
+	}
+	newComputeMgmtClient func(models.Environment) (computeMgmtClient, error) = func(env models.Environment) (computeMgmtClient, error) {
+		return oci.GetComputeManagementClient(env)
+	}
+)
+
+type computeClient interface {
+	InstanceAction(ctx context.Context, req core.InstanceActionRequest) (core.InstanceActionResponse, error)
+	TerminateInstance(ctx context.Context, req core.TerminateInstanceRequest) (core.TerminateInstanceResponse, error)
+}
+
+type computeMgmtClient interface {
+	UpdateInstancePool(ctx context.Context, req core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error)
+	ListInstancePools(ctx context.Context, req core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error)
+}
+
 // SoftResetInstance performs a soft reset (reboot) of the given instance.
 func SoftResetInstance(
 	ctx context.Context,
@@ -18,7 +37,7 @@ func SoftResetInstance(
 	env models.Environment,
 	logger logging.Logger,
 ) error {
-	client, err := oci.GetComputeClient(env)
+	client, err := newComputeClient(env)
 	if err != nil {
 		return fmt.Errorf("failed to create compute client: %w", err)
 	}
@@ -45,7 +64,7 @@ func IncreasePoolSize(
 	env models.Environment,
 	logger logging.Logger,
 ) error {
-	mgmtClient, err := oci.GetComputeManagementClient(env)
+	mgmtClient, err := newComputeMgmtClient(env)
 	if err != nil {
 		return fmt.Errorf("failed to create compute management client: %w", err)
 	}
@@ -74,7 +93,7 @@ func TerminateInstance(
 	env models.Environment,
 	logger logging.Logger,
 ) error {
-	client, err := oci.GetComputeClient(env)
+	client, err := newComputeClient(env)
 	if err != nil {
 		return fmt.Errorf("failed to create compute client: %w", err)
 	}
@@ -105,7 +124,7 @@ func PopulateGpuPools(
 		return nil // nothing to do
 	}
 
-	mgmtClient, err := oci.GetComputeManagementClient(env)
+	mgmtClient, err := newComputeMgmtClient(env)
 	if err != nil {
 		return err
 	}
