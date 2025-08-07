@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	models "github.com/jingle2008/toolkit/pkg/models"
@@ -28,11 +29,11 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 		return nil, err
 	}
 
+	// 1. GPU allocation: as before, using processPodQueries (4 label selectors)
 	gpuAllocationMap := make(map[string]int64)
 	for _, node := range nodes.Items {
 		gpuAllocationMap[node.Name] = 0
 	}
-
 	err = processPodQueries(ctx, clientset, gpuPodSelectors, runningPodSelector,
 		getGpuAllocations,
 		func(node string, usage int64) {
@@ -42,12 +43,36 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 		return nil, err
 	}
 
+	// 2. Pod issues: one extra query for all pods not Running/Succeeded
+	badPhaseSelector := "status.phase!=Running,status.phase!=Succeeded"
+	badPods, err := clientset.CoreV1().Pods("").List(ctx, v1.ListOptions{
+		FieldSelector: badPhaseSelector,
+	})
+	if err != nil {
+		return nil, err
+	}
+	podIssueMap := make(map[string][]string)
+	for _, p := range badPods.Items {
+		if p.Spec.NodeName == "" {
+			continue
+		}
+		// Defensive: fake clientset does not filter by phase, so skip healthy pods here.
+		if p.Status.Phase == corev1.PodRunning || p.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
+		podIssueMap[p.Spec.NodeName] = append(
+			podIssueMap[p.Spec.NodeName],
+			fmt.Sprintf("pod %s: %s", p.Name, getPodReason(&p)))
+	}
+
 	gpuNodes := make([]models.GpuNode, 0, len(nodes.Items))
 	for _, node := range nodes.Items {
 		allocQty := node.Status.Allocatable[gpuProperty]
 		allocatable, _ := allocQty.AsInt64()
 		age := FormatAge(time.Since(node.CreationTimestamp.Time))
 		issues := getNodeIssues(node.Status.Conditions)
+		// Add pod issues for this node
+		issues = append(issues, podIssueMap[node.Name]...)
 		gpuNodes = append(gpuNodes, models.GpuNode{
 			Name:                 node.Name,
 			InstanceType:         node.Labels["beta.kubernetes.io/instance-type"],
@@ -62,7 +87,6 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 			Issues:               issues,
 		})
 	}
-
 	return gpuNodes, nil
 }
 
@@ -85,6 +109,21 @@ func getNodeIssues(conditions []corev1.NodeCondition) []string {
 		}
 	}
 	return issues
+}
+
+func getPodReason(p *corev1.Pod) string {
+	if p.Status.Reason != "" {
+		return p.Status.Reason
+	}
+	for _, cs := range p.Status.ContainerStatuses {
+		if cs.State.Waiting != nil {
+			return cs.State.Waiting.Reason
+		}
+		if cs.State.Terminated != nil {
+			return cs.State.Terminated.Reason
+		}
+	}
+	return "unknown"
 }
 
 func isNodeReady(conditions []corev1.NodeCondition) bool {

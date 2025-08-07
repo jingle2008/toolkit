@@ -106,3 +106,58 @@ func TestGetNodeIssues(t *testing.T) {
 	got := getNodeIssues(conds)
 	assert.ElementsMatch(t, want, got)
 }
+
+func TestGetPodReason(t *testing.T) {
+	t.Parallel()
+	// 1. Status.Reason present
+	pod1 := &corev1.Pod{
+		Status: corev1.PodStatus{
+			Reason: "Evicted",
+		},
+	}
+	assert.Equal(t, "Evicted", getPodReason(pod1))
+
+	// 2. Waiting state in first container
+	pod2 := &corev1.Pod{
+		Status: corev1.PodStatus{
+			ContainerStatuses: []corev1.ContainerStatus{
+				{
+					State: corev1.ContainerState{
+						Waiting: &corev1.ContainerStateWaiting{Reason: "ImagePullBackOff"},
+					},
+				},
+			},
+		},
+	}
+	assert.Equal(t, "ImagePullBackOff", getPodReason(pod2))
+
+	// 3. Terminated state in first container
+	pod3 := &corev1.Pod{
+		Status: corev1.PodStatus{
+			ContainerStatuses: []corev1.ContainerStatus{
+				{
+					State: corev1.ContainerState{
+						Terminated: &corev1.ContainerStateTerminated{Reason: "OOMKilled"},
+					},
+				},
+			},
+		},
+	}
+	assert.Equal(t, "OOMKilled", getPodReason(pod3))
+
+	// 4. No reason anywhere
+	pod4 := &corev1.Pod{
+		Status: corev1.PodStatus{
+			ContainerStatuses: []corev1.ContainerStatus{
+				{
+					State: corev1.ContainerState{},
+				},
+			},
+		},
+	}
+	assert.Equal(t, "unknown", getPodReason(pod4))
+
+	// 5. No container statuses at all
+	pod5 := &corev1.Pod{}
+	assert.Equal(t, "unknown", getPodReason(pod5))
+}

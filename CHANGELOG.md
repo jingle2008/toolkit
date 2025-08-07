@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- GPU node inspection now reports pod-level issues: for each GPU node, the `Issues` field includes names and reasons of pods scheduled to the node that are Pending/Failed.
+
+### Fixed
+- Unit tests now cover `getPodReason`, ensuring correct extraction logic.
+
 ### Added / Changed
 - GpuPool struct now includes an `AvailabilityDomain` property, extracted from Terraform `placement_logical_ad` (supports both string and list, including `"all"`).
 - Terraform loader (`loadGpuPools`) refactored for lower cyclomatic complexity and improved maintainability.
