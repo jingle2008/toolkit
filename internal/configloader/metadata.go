@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"gopkg.in/yaml.v3"
 )
 
 // LoadMetadata loads tenants from a metadata file (JSON or YAML) and returns a MetadataFile.

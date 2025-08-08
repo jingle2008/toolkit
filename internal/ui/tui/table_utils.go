@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/charmbracelet/bubbles/table"
+
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"

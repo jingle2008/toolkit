@@ -3,9 +3,10 @@ package k8s
 import (
 	"context"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 // PodStats holds pod statistics for a namespace.

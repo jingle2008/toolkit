@@ -6,11 +6,12 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestModel_updateContent_and_View(t *testing.T) {

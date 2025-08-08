@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 const (

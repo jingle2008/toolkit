@@ -6,9 +6,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
+
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 /*

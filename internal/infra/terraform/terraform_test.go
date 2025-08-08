@@ -7,10 +7,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zclconf/go-cty/cty"
+
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func poolsConfigDir(t *testing.T, base, sub string) string {

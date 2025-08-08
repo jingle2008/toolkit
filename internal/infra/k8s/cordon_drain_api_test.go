@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 	drainpkg "k8s.io/kubectl/pkg/drain"
+
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 func TestToggleCordon_API(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package

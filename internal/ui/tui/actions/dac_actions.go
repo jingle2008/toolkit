@@ -10,10 +10,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/oracle/oci-go-sdk/v65/generativeai"
+
 	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/oracle/oci-go-sdk/v65/generativeai"
 )
 
 type genAI interface {

@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/mvdan/gofumpt
-    rev: v0.5.0
+    rev: v0.6.0
     hooks:
       - id: gofumpt
         args: ["-w"]
@@ -9,11 +9,6 @@ repos:
       - id: go-vet
         name: go vet
         entry: go vet ./...
-        language: system
-        types: [go]
-      - id: gofumpt-local
-        name: gofumpt (local, go run)
-        entry: go run mvdan.cc/gofumpt@latest -w .
         language: system
         types: [go]
       - id: govulncheck
@@ -26,11 +21,13 @@ repos:
     hooks:
       - id: golangci-lint
         args: ["run"]
-  - repo: https://github.com/incu6us/goimports-reviser
-    rev: v3.10.0
+  - repo: local
     hooks:
-      - id: goimports-reviser
-        args: ["-project-name=github.com/jingle2008/toolkit", "-rm-unused", "-set-alias", "-format", "-company-prefixes=github.com/jingle2008"]
+      - id: goimports
+        name: goimports
+        entry: goimports -w -local github.com/jingle2008/toolkit .
+        language: system
+        types: [go]
   - repo: https://github.com/mgechev/revive
     rev: v1.3.7
     hooks:

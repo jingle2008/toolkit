@@ -6,10 +6,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 type fakeGenAI struct {

@@ -3,9 +3,10 @@ package tui
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDebounceFilter(t *testing.T) {

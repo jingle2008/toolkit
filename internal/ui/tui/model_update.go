@@ -5,6 +5,7 @@ package tui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 

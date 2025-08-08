@@ -3,6 +3,7 @@ package tui
 import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 

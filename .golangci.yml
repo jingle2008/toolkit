@@ -21,7 +21,6 @@ linters:
     - contextcheck
     - unused
     - dupl
-    # - depguard
     - nilnil
     - prealloc
     - unparam
@@ -40,24 +39,10 @@ issues:
   exclude-use-default: false
 
 linters-settings:
-  gocyclo:
-    min-complexity: 13
   cyclop:
     max-complexity: 13
   prealloc:
     simple: true
-  depguard:
-    list-type: blacklist
-    packages:
-      - github.com/pkg/errors
-    packages-with-error-message:
-      github.com/pkg/errors: "use Go 1.13+ standard errors instead of github.com/pkg/errors"
-    ignore-generated: true
-    ignore-tests: true
-    skip-dirs-use-default: true
-    skip-files-use-default: true
-  goimports:
-    local-prefixes: github.com/jingle2008/toolkit
   revive:
     ignore-generated-header: true
     severity: warning

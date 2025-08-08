@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
-	"github.com/jingle2008/toolkit/internal/domain"
-	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func Test_getHeaders_returns_expected_headers(t *testing.T) {

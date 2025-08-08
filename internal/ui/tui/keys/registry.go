@@ -2,6 +2,7 @@ package keys
 
 import (
 	"github.com/charmbracelet/bubbles/key"
+
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )

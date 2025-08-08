@@ -9,15 +9,22 @@
   The project enforces a minimum code coverage threshold. Use `make cover-check` to verify that coverage is at least 80%. Pull requests that drop coverage below this threshold should be updated with additional tests.
 
 - **Static Analysis & Formatting:**  
-  The linter configuration (`.golangci.yml`) enables strict static analysis, including: `govet`, `staticcheck`, `revive`, `errcheck`, `gocognit`, `ineffassign`, `misspell`, `wastedassign`, `paralleltest`, `gocritic`, `gosec`, `contextcheck`, `unused`, `dupl`, `depguard`, `nilnil`, `prealloc`, `unparam`, `dogsled`, `bodyclose`, and `gocyclo`.  
+  The linter configuration (`.golangci.yml`) enables strict static analysis, including: `govet`, `staticcheck`, `revive`, `errcheck`, `gocognit`, `ineffassign`, `misspell`, `wastedassign`, `paralleltest`, `gocritic`, `gosec`, `contextcheck`, `unused`, `dupl`, `depguard`, `nilnil`, `prealloc`, `unparam`, `dogsled`, `bodyclose`, `cyclop`, and `goimports`.  
   Run `make lint` before submitting changes.
 
   **Formatting:**  
-  Code must be formatted with [gofumpt](https://github.com/mvdan/gofumpt) (a stricter gofmt). This is not run by golangci-lint and must be run separately, e.g.:
+  Code must be formatted with [gofumpt](https://github.com/mvdan/gofumpt) and imports organized with `goimports` (with local prefix set to `github.com/jingle2008/toolkit`).  
+  You can run:
+  ```
+  make fmt
+  make goimports
+  ```
+  or directly:
   ```
   gofumpt -w .
+  goimports -w -local github.com/jingle2008/toolkit .
   ```
-  Consider adding gofumpt as a pre-commit hook or running it in CI to ensure consistent formatting.
+  Consider enabling pre-commit hooks: `pre-commit install`, or run `make ci` before pushing to ensure formatting, lint, and tests pass.
 
 - **Benchmarks:**  
   Add micro-benchmarks for performance-sensitive code using `func BenchmarkXxx(b *testing.B)`. Run `go test -bench ./...` to execute benchmarks. Use `benchstat` to compare results and catch regressions.

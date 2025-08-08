@@ -4,12 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jingle2008/toolkit/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func newCBM(name string, spec, status map[string]any, labels, ann map[string]string) *unstructured.Unstructured {

@@ -7,6 +7,7 @@ package tui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 

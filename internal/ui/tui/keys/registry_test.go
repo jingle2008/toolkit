@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestResolveKeys(t *testing.T) {

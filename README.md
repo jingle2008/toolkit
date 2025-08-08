@@ -22,7 +22,7 @@ It targets day-to-day DevOps & development automation: querying Kubernetes, pars
 | **Config loading & validation** | `internal/config`, `internal/configloader` | JSON / YAML with defaulting & schema checks |
 | **Collections helpers** | `internal/collections` | Generic filter/sort with predicates |
 | **Encoding helpers** | `internal/encoding/jsonutil` | Fast JSON pointer traversal |
-| **Error & logging** | `internal/errors`, `internal/infra/logging` | Typed errors, zap logger |
+| **Error & logging** | `pkg/infra/logging` | Typed errors via std errors; zap logger |
 
 ---
 
@@ -38,15 +38,9 @@ cd toolkit && make
 ```
 
 ```zsh
-# From homebrew (macOS)
+# From Homebrew (macOS/Linux)
 brew tap jingle2008/homebrew-toolkit
-brew install --cask toolkit
-
-# Step to resolve macOS security prompt after installation:
-1. Go to System Settings > Privacy & Security.
-2. Look for the toolkit app under the Security section.
-3. Click Open Anyway and enter your password if prompted.
-4. In the pop-up window, click Open to run the app.
+brew install toolkit
 ```
 
 ---
@@ -76,12 +70,20 @@ toolkit --help                # all global flags
 
 ### Global Flags
 
-| Flag            | Default   | Description                        |
-| --------------- | --------- | ---------------------------------- |
-| `--config, -c`  | *n/a*     | Path to YAML/JSON config file      |
-| `--format, -o`  | `table`   | Output: table/json/yaml            |
-| `--log-level`   | `info`    | zap log level                      |
-| `--no-color`    | `false`   | Disable ANSI colors                |
+| Flag | Default | Description |
+| ---- | ------- | ----------- |
+| `--config` | `~/.config/toolkit/config.yaml` | Path to config file (YAML or JSON) |
+| `--repo_path` |  | Path to the repository |
+| `--env_type` |  | Environment type (e.g. dev, prod) |
+| `--env_region` |  | Environment region |
+| `--env_realm` |  | Environment realm |
+| `--category, -c` |  | Category to display |
+| `--filter, -f` |  | Initial filter for current category |
+| `--metadata_file` | `~/.config/toolkit/metadata.yaml` | Optional additional metadata file |
+| `--kubeconfig` | `~/.kube/config` | Path to kubeconfig file |
+| `--log_file` | `toolkit.log` | Path to log file |
+| `--debug` | `false` | Enable debug logging |
+| `--log_format` | `console` | Log format: console or json |
 
 *(See `internal/cli/root.go` for the authoritative list.)*
 
@@ -102,8 +104,10 @@ toolkit --help                # all global flags
 │   ├── config/             # typed config structs
 │   ├── configloader/       # env + file loader
 │   ├── collections/        # generic filter/sort
-│   ├── encoding/jsonutil/  # JSON helpers
-│   └── errors/             # error helpers
+│   └── encoding/jsonutil/  # JSON helpers
+├── pkg/
+│   ├── infra/logging/      # zap-based logging
+│   └── models/             # domain models and types
 └── test/
     └── integration/
 ```
@@ -161,6 +165,8 @@ go test ./...
 
 ## Developer Workflow
 
+- One-time setup: `make setup` (installs golangci-lint, gofumpt, goimports)
+- Optional: enable git hooks with pre-commit: `pre-commit install`
 - Run `make ci` before pushing to ensure code passes lint and tests.
 - Use `make lint` to check for style and static analysis issues.
 - Use `make test` for a full race-enabled test run.
@@ -169,14 +175,15 @@ go test ./...
 ## Architecture Overview
 
 Toolkit follows a modular, testable architecture:
-- **Loader interfaces** (see `internal/app/toolkit/loader.go`): Abstract data loading for datasets, models, GPU pools, etc. Split by concern for testability and clean dependency injection.
-- **Renderer interfaces** (see `internal/app/toolkit/render.go`): Abstract rendering logic for different output formats (e.g., JSON, table).
-- **Model** (see `internal/app/toolkit/model.go`): Central state and update logic, using the Bubble Tea TUI pattern. Composed via functional options for flexibility.
-- **Category enum** (see `internal/app/toolkit/category.go`): Strongly-typed, extensible grouping for all toolkit data and UI.
+- **Loaders**: `internal/infra/loader` provides concrete and interface-based loaders for datasets (K8s, Terraform, OCI), enabling dependency injection and testability.
+- **TUI Model**: `internal/ui/tui` contains Bubble Tea models, views, and update loop; composed via functional options.
+- **Domain types**: `pkg/models` defines strongly-typed domain models used across loaders and UI.
+- **Category enum**: `internal/domain/category.go` provides strongly-typed categories and parsing.
+- **Logging**: `pkg/infra/logging` wraps zap for structured logs with configurable format and file path.
 
 ## Logging
 
-Toolkit uses [zap](https://github.com/uber-go/zap) for structured, machine-readable logging. Logs are written to `debug.log` by default.
+Toolkit uses [zap](https://github.com/uber-go/zap) for structured, machine-readable logging. By default logs are written to `toolkit.log` (configurable via `--log_file`) and support `--log_format` of `console` or `json`.
 
 ## Contributing
 

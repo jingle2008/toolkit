@@ -3,8 +3,9 @@ package tui
 import (
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/jingle2008/toolkit/internal/domain"
 )
 
 func TestHeaderDefinitions_AllCategoriesPresent(t *testing.T) {

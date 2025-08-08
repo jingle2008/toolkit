@@ -4,11 +4,12 @@ import (
 	"context"
 	"time"
 
-	models "github.com/jingle2008/toolkit/pkg/models"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
+	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
 // listDedicatedAIClusters returns all DedicatedAICluster resources from both v1alpha1 and v1beta1 CRDs.

@@ -7,8 +7,9 @@ import (
 	"github.com/charmbracelet/bubbles/stopwatch"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/jingle2008/toolkit/internal/domain"
 )
 
 func TestHandleSetFilterMsg(t *testing.T) {

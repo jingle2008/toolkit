@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/jingle2008/toolkit/internal/domain"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestWithRepoPath(t *testing.T) {

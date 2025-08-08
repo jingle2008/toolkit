@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jingle2008/toolkit/pkg/models"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // LoadBaseModels returns all ClusterBaseModel CRs as a slice.
