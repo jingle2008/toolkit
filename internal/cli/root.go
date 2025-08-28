@@ -20,7 +20,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"k8s.io/client-go/util/homedir"
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -41,21 +40,26 @@ env_region: "us-phoenix-1"
 env_realm: "oc1"
 category: "tenant"
 log_file: "toolkit.log"
+log_format: "console" # console|json|slog
+log_level: "" # debug|info|warn|error (empty uses debug flag)
 debug: false
 filter: ""
 metadata_file: "" # Optional path to a YAML or JSON file with additional metadata (e.g. tenants)
 `
 
-	home := homedir.HomeDir()
+	home, _ := os.UserHomeDir()
+	cfgDir := filepath.Join(home, ".config")
 	defaultKube := filepath.Join(home, ".kube", "config")
-	defaultConfig := filepath.Join(home, ".config", "toolkit", "config.yaml")
-	defaultMetadata := filepath.Join(home, ".config", "toolkit", "metadata.yaml")
+	defaultConfig := filepath.Join(cfgDir, "toolkit", "config.yaml")
+	defaultMetadata := filepath.Join(cfgDir, "toolkit", "metadata.yaml")
 
 	rootCmd := &cobra.Command{
-		Use:   "toolkit",
-		Short: "Toolkit CLI",
-		Long:  "Toolkit CLI for managing and visualizing infrastructure and configuration.",
-		RunE:  runRootE(&cfgFile, version),
+		Use:           "toolkit",
+		Short:         "Toolkit CLI",
+		Long:          "Toolkit CLI for managing and visualizing infrastructure and configuration.",
+		SilenceUsage:  true,
+		SilenceErrors: false,
+		RunE:          runRootE(&cfgFile, version),
 	}
 
 	addPersistentFlags(rootCmd, &cfgFile, defaultKube, defaultConfig, defaultMetadata)
@@ -63,19 +67,23 @@ metadata_file: "" # Optional path to a YAML or JSON file with additional metadat
 	addCompletionCommand(rootCmd)
 	addVersionCheckCommand(rootCmd, version)
 
+	// Bind persistent flags once so Viper can read them.
+	_ = viper.BindPFlags(rootCmd.PersistentFlags())
+
+	// Initialize Viper: env settings and optional config file read before command execution.
+	cobra.OnInitialize(func() {
+		viper.SetEnvPrefix("toolkit")
+		viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+		viper.AutomaticEnv()
+	})
+
 	return rootCmd
 }
 
 // runRootE returns the RunE function for the root command.
 func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
-		_ = viper.BindPFlags(cmd.Flags())
-		_ = viper.BindPFlags(cmd.PersistentFlags())
-
-		viper.SetEnvPrefix("toolkit")
-		viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-		viper.AutomaticEnv()
-
+		// Parse config file with proper error handling (kept out of OnInitialize to preserve error semantics and tests).
 		if *cfgFile != "" {
 			viper.SetConfigFile(*cfgFile)
 			if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -87,18 +95,36 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 		if err := viper.Unmarshal(&cfg); err != nil {
 			return fmt.Errorf("unmarshal config: %w", err)
 		}
-		if err := cfg.Validate(); err != nil {
-			return fmt.Errorf("validate config: %w", err)
-		}
 
 		logFormat := viper.GetString("log_format")
-		logger, err := logging.NewFileLogger(cfg.Debug, cfg.LogFile, logFormat)
+		switch logFormat {
+		case "console", "json", "slog":
+			// ok
+		default:
+			return fmt.Errorf("invalid log_format %q (valid: console|json|slog)", logFormat)
+		}
+		logLevel := strings.ToLower(viper.GetString("log_level"))
+		switch logLevel {
+		case "", "debug", "info", "warn", "warning", "error":
+			if logLevel == "warning" {
+				logLevel = "warn"
+			}
+		default:
+			return fmt.Errorf("invalid log_level %q (valid: debug|info|warn|error or empty)", logLevel)
+		}
+		logger, err := logging.NewFileLoggerWithLevel(cfg.Debug, cfg.LogFile, logFormat, logLevel)
 		if err != nil {
 			return fmt.Errorf("initialize logger: %w", err)
 		}
 		defer func() {
 			_ = logger.Sync()
 		}()
+
+		// Validate config after log options so flag errors surface first.
+		if err := cfg.Validate(); err != nil {
+			return fmt.Errorf("validate config: %w", err)
+		}
+
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		if err := runToolkit(ctx, logger, cfg, version); err != nil {
@@ -125,12 +151,26 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
 	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
-	rootCmd.PersistentFlags().String("log_format", "console", "Log format: console or json")
+	rootCmd.PersistentFlags().String("log_format", "console", "Log format: console|json|slog")
+	rootCmd.PersistentFlags().String("log_level", "", "Minimum log level: debug|info|warn|error (empty uses debug flag)")
+
+	// Hint shells that these flags take filenames (improves completion UX).
+	_ = rootCmd.MarkFlagFilename("config")
+	_ = rootCmd.MarkFlagFilename("metadata_file")
+	_ = rootCmd.MarkFlagFilename("kubeconfig")
+	_ = rootCmd.MarkFlagFilename("log_file")
+	// Shell completion for enumerated flags.
+	_ = rootCmd.RegisterFlagCompletionFunc("log_format", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{"console", "json", "slog"}, cobra.ShellCompDirectiveNoFileComp
+	})
+	_ = rootCmd.RegisterFlagCompletionFunc("log_level", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		return []string{"debug", "info", "warn", "error"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 func addCompletionCommand(rootCmd *cobra.Command) {
 	completionCmd := &cobra.Command{
-		Use:   "completion [bash|zsh|fish]",
+		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate shell completion scripts",
 		Long: `To load completions:
 
@@ -149,9 +189,14 @@ Zsh:
 Fish:
   $ toolkit completion fish | source
   $ toolkit completion fish > ~/.config/fish/completions/toolkit.fish
+
+PowerShell:
+  PS> toolkit completion powershell | Out-String | Invoke-Expression
+  # To load completions for every new session, run:
+  PS> toolkit completion powershell > $PROFILE
 `,
 		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-		ValidArgs: []string{"bash", "zsh", "fish"},
+		ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
 			case "bash":
@@ -160,6 +205,8 @@ Fish:
 				return rootCmd.GenZshCompletion(cmd.OutOrStdout())
 			case "fish":
 				return rootCmd.GenFishCompletion(cmd.OutOrStdout(), true)
+			case "powershell":
+				return rootCmd.GenPowerShellCompletion(cmd.OutOrStdout())
 			default:
 				return fmt.Errorf("unsupported shell: %s", args[0])
 			}
@@ -176,7 +223,9 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "toolkit version: %s\n", currentVersion)
 			check, _ := cmd.Flags().GetBool("check")
 			if check {
-				latest, err := fetchLatestRelease()
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				latest, err := fetchLatestRelease(ctx)
 				if err != nil {
 					return fmt.Errorf("failed to check latest version: %w", err)
 				}
@@ -193,16 +242,17 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 	rootCmd.AddCommand(versionCmd)
 }
 
-func fetchLatestRelease() (string, error) {
+var httpClient = &http.Client{Timeout: 5 * time.Second}
+
+func fetchLatestRelease(ctx context.Context) (string, error) {
 	const url = "https://api.github.com/repos/jingle2008/toolkit/releases/latest"
-	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("User-Agent", "toolkit")
 
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -211,8 +261,8 @@ func fetchLatestRelease() (string, error) {
 			return
 		}
 	}()
-	if resp.StatusCode != 200 {
-		return "", errors.New("unexpected status: " + resp.Status)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status: %s", resp.Status)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -256,7 +306,7 @@ func addInitCommand(rootCmd *cobra.Command, defaultConfig, exampleConfig string)
 func Execute(version string) {
 	cmd := NewRootCmd(version)
 	if err := cmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
+		// Let Cobra print the error once; just exit with non-zero status.
 		os.Exit(1)
 	}
 }

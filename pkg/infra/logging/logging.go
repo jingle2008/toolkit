@@ -5,10 +5,12 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/slog"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 /*
@@ -145,15 +147,77 @@ If debug is true, uses development encoder config, else production config.
 logFormat: "console", "json", or "slog"
 */
 func NewFileLogger(debug bool, filename string, logFormat string) (Logger, error) {
-	flag := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
-	f, err := os.OpenFile(filename, flag, 0o600) // #nosec G304
-	if err != nil {
-		return nil, err
+	// Delegate to the level-aware constructor; empty level falls back to debug flag.
+	return NewFileLoggerWithLevel(debug, filename, logFormat, "")
+}
+
+func parseZapLevel(level string, debug bool) zapcore.Level {
+	l := strings.ToLower(strings.TrimSpace(level))
+	switch l {
+	case "debug":
+		return zapcore.DebugLevel
+	case "info", "":
+		if l == "" {
+			if debug {
+				return zapcore.DebugLevel
+			}
+			return zapcore.InfoLevel
+		}
+		return zapcore.InfoLevel
+	case "warn", "warning":
+		return zapcore.WarnLevel
+	case "error":
+		return zapcore.ErrorLevel
+	default:
+		return zapcore.InfoLevel
 	}
+}
+
+func parseSlogLevel(level string, debug bool) slog.Level {
+	l := strings.ToLower(strings.TrimSpace(level))
+	switch l {
+	case "debug":
+		return slog.LevelDebug
+	case "info", "":
+		if l == "" {
+			if debug {
+				return slog.LevelDebug
+			}
+			return slog.LevelInfo
+		}
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
+/*
+NewFileLoggerWithLevel returns a Logger that writes to a rotating file with a specified minimum level.
+- debug controls encoder config (development vs production) and is used when level is empty.
+- logFormat: "console", "json", or "slog"
+- logLevel: "debug" | "info" | "warn" | "error" (empty falls back to debug flag)
+*/
+func NewFileLoggerWithLevel(debug bool, filename string, logFormat string, logLevel string) (Logger, error) {
+	// Configure a rotating writer to avoid truncation and unbounded growth.
+	w := &lumberjack.Logger{
+		Filename:   filename,
+		MaxSize:    50, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28,   // days
+		Compress:   true, // gzip old logs
+	}
+
 	if logFormat == "slog" {
-		handler := slog.NewJSONHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug})
+		level := parseSlogLevel(logLevel, debug)
+		handler := slog.NewJSONHandler(w, &slog.HandlerOptions{Level: level})
 		return NewSlogLogger(slog.New(handler), debug), nil
 	}
+
+	// Configure zap encoder based on debug flag.
 	var encCfg zapcore.EncoderConfig
 	if debug {
 		encCfg = zap.NewDevelopmentEncoderConfig()
@@ -161,16 +225,19 @@ func NewFileLogger(debug bool, filename string, logFormat string) (Logger, error
 		encCfg = zap.NewProductionEncoderConfig()
 	}
 	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
 	var encoder zapcore.Encoder
 	if logFormat == "console" {
 		encoder = zapcore.NewConsoleEncoder(encCfg)
 	} else {
 		encoder = zapcore.NewJSONEncoder(encCfg)
 	}
+
+	level := parseZapLevel(logLevel, debug)
 	core := zapcore.NewCore(
 		encoder,
-		zapcore.AddSync(f),
-		zap.DebugLevel,
+		zapcore.AddSync(w),
+		level,
 	)
 	zl := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
 	return NewZapLogger(zl.Sugar(), debug), nil

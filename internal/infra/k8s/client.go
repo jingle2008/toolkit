@@ -4,6 +4,7 @@ Package k8s provides Kubernetes client utilities for loading configs and creatin
 package k8s
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/client-go/dynamic"
@@ -21,6 +22,15 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
+	// Apply sensible defaults for client throttling; allow override if already set.
+	if config.QPS == 0 {
+		config.QPS = 20
+	}
+	if config.Burst == 0 {
+		config.Burst = 40
+	}
+	// Identify this client in user agent.
+	rest.AddUserAgent(config, "toolkit")
 	return config, nil
 }
 
@@ -30,7 +40,7 @@ Returns an error if the config is nil or client creation fails.
 */
 func NewClientsetFromRestConfig(config *rest.Config) (kubernetes.Interface, error) {
 	if config == nil {
-		return nil, fmt.Errorf("nil config: %w", fmt.Errorf("config is nil"))
+		return nil, errors.New("config is nil")
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -57,7 +67,7 @@ Returns an error if the config is nil or client creation fails.
 */
 func NewDynamicClient(config *rest.Config) (dynamic.Interface, error) {
 	if config == nil {
-		return nil, fmt.Errorf("nil config: %w", fmt.Errorf("config is nil"))
+		return nil, errors.New("config is nil")
 	}
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
