@@ -137,42 +137,24 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 	return m, nil
 }
 
-// initStyles initializes all style fields for the model.
+// initStyles initializes all style fields for the model using shared style definitions.
 func initStyles(m *Model) {
-	m.baseStyle = lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240"))
+	s := DefaultStyles()
 
-	m.statusNugget = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Padding(0, 1)
-
-	m.statusBarStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#343433", Dark: "#C1C6B2"}).
-		Background(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#353533"})
-
-	m.contextStyle = lipgloss.NewStyle().
-		Inherit(m.statusBarStyle).
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Background(lipgloss.Color("#FF5F87")).
-		Padding(0, 1)
-
-	m.statsStyle = m.statusNugget.
-		Background(lipgloss.Color("#A550DF")).
-		Align(lipgloss.Right)
-
-	m.statusText = lipgloss.NewStyle().Inherit(m.statusBarStyle)
-	m.infoKeyStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
-	m.infoValueStyle = lipgloss.NewStyle().Width(30)
+	m.baseStyle = s.Base
+	m.statusNugget = s.StatusNugget
+	m.statusBarStyle = s.StatusBar
+	m.contextStyle = s.Context
+	m.statsStyle = s.Stats
+	m.statusText = s.StatusText
+	m.infoKeyStyle = s.InfoKey
+	m.infoValueStyle = s.InfoValue
 
 	// Help view styles
-	m.helpBorder = lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("62")).
-		Padding(1, 2)
-	m.helpHeader = lipgloss.NewStyle().Inherit(m.infoKeyStyle).Underline(true)
-	m.helpKey = lipgloss.NewStyle().Foreground(lipgloss.Color("33"))
-	m.helpDesc = lipgloss.NewStyle()
+	m.helpBorder = s.HelpBorder
+	m.helpHeader = s.HelpHeader
+	m.helpKey = s.HelpKey
+	m.helpDesc = s.HelpDesc
 }
 
 // applyOptions applies all ModelOption functions to the model.
