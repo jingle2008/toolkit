@@ -169,7 +169,11 @@ func applyOptions(m *Model, opts []ModelOption) {
 // newLoadContext cancels any in-flight load and creates a fresh context for the next load.
 func (m *Model) newLoadContext() {
 	if m.loadCancel != nil {
+		// Cancel any in-flight load to prevent stale work
 		m.loadCancel()
+		if m.logger != nil {
+			m.logger.Infow("canceled in-flight load")
+		}
 	}
 	parent := m.ctx
 	if parent == nil {
