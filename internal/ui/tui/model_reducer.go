@@ -21,7 +21,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-var refreshDataCmd tea.Cmd = func() tea.Msg { return DataMsg{} }
+func refreshDataCmd() tea.Cmd { return func() tea.Msg { return DataMsg{} } }
 
 func (m *Model) getCompartmentID() (string, error) {
 	if m.dataset != nil && m.dataset.GpuNodeMap != nil {
@@ -382,7 +382,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	if cmd != nil {
 		cmds = append(cmds, m.beginTask(), cmd)
 	} else {
-		cmds = append(cmds, refreshDataCmd)
+		cmds = append(cmds, refreshDataCmd())
 	}
 	return cmds
 }
@@ -394,56 +394,112 @@ func (m *Model) handleTenancyOverridesGroup() tea.Cmd {
 		m.dataset.LimitTenancyOverrideMap == nil ||
 		m.dataset.ConsolePropertyTenancyOverrideMap == nil ||
 		m.dataset.PropertyTenancyOverrideMap == nil {
-		return loadRequest{category: domain.Tenant, model: m}.Run
+		return loadRequest{
+			category:    domain.Tenant,
+			loader:      m.loader,
+			ctx:         m.ctx,
+			repoPath:    m.repoPath,
+			kubeConfig:  m.kubeConfig,
+			environment: m.environment,
+		}.Run
 	}
 	return nil
 }
 
 func (m *Model) handleLimitRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.LimitRegionalOverrides == nil {
-		return loadRequest{category: domain.LimitRegionalOverride, model: m}.Run
+		return loadRequest{
+			category:    domain.LimitRegionalOverride,
+			loader:      m.loader,
+			ctx:         m.ctx,
+			repoPath:    m.repoPath,
+			kubeConfig:  m.kubeConfig,
+			environment: m.environment,
+		}.Run
 	}
 	return nil
 }
 
 func (m *Model) handleConsolePropertyRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.ConsolePropertyRegionalOverrides == nil {
-		return loadRequest{category: domain.ConsolePropertyRegionalOverride, model: m}.Run
+		return loadRequest{
+			category:    domain.ConsolePropertyRegionalOverride,
+			loader:      m.loader,
+			ctx:         m.ctx,
+			repoPath:    m.repoPath,
+			kubeConfig:  m.kubeConfig,
+			environment: m.environment,
+		}.Run
 	}
 	return nil
 }
 
 func (m *Model) handlePropertyRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.PropertyRegionalOverrides == nil {
-		return loadRequest{category: domain.PropertyRegionalOverride, model: m}.Run
+		return loadRequest{
+			category:    domain.PropertyRegionalOverride,
+			loader:      m.loader,
+			ctx:         m.ctx,
+			repoPath:    m.repoPath,
+			kubeConfig:  m.kubeConfig,
+			environment: m.environment,
+		}.Run
 	}
 	return nil
 }
 
 func (m *Model) handleBaseModelCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.BaseModels == nil {
-		return loadRequest{category: domain.BaseModel, model: m}.Run
+		return loadRequest{
+			category:    domain.BaseModel,
+			loader:      m.loader,
+			ctx:         m.ctx,
+			repoPath:    m.repoPath,
+			kubeConfig:  m.kubeConfig,
+			environment: m.environment,
+		}.Run
 	}
 	return nil
 }
 
 func (m *Model) handleGpuPoolCategory(refresh bool) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuPools == nil || refresh {
-		return loadRequest{category: domain.GpuPool, model: m}.Run
+		return loadRequest{
+			category:    domain.GpuPool,
+			loader:      m.loader,
+			ctx:         m.ctx,
+			repoPath:    m.repoPath,
+			kubeConfig:  m.kubeConfig,
+			environment: m.environment,
+		}.Run
 	}
 	return nil
 }
 
 func (m *Model) handleGpuNodeCategory(refresh bool) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuNodeMap == nil || refresh {
-		return loadRequest{category: domain.GpuNode, model: m}.Run
+		return loadRequest{
+			category:    domain.GpuNode,
+			loader:      m.loader,
+			ctx:         m.ctx,
+			repoPath:    m.repoPath,
+			kubeConfig:  m.kubeConfig,
+			environment: m.environment,
+		}.Run
 	}
 	return nil
 }
 
 func (m *Model) handleDedicatedAIClusterCategory(refresh bool) tea.Cmd {
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
-		return loadRequest{category: domain.DedicatedAICluster, model: m}.Run
+		return loadRequest{
+			category:    domain.DedicatedAICluster,
+			loader:      m.loader,
+			ctx:         m.ctx,
+			repoPath:    m.repoPath,
+			kubeConfig:  m.kubeConfig,
+			environment: m.environment,
+		}.Run
 	}
 	return nil
 }

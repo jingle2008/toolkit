@@ -21,8 +21,12 @@ func TestLoadRequest_Run(t *testing.T) {
 		WithLogger(logging.NewNoOpLogger()),
 	)
 	lr := loadRequest{
-		category: domain.BaseModel,
-		model:    m,
+		category:    domain.BaseModel,
+		loader:      m.loader,
+		ctx:         m.ctx,
+		repoPath:    m.repoPath,
+		kubeConfig:  m.kubeConfig,
+		environment: m.environment,
 	}
 	cmd := lr.Run()
 	assert.NotNil(t, cmd)
