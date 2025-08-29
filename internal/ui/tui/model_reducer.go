@@ -469,112 +469,56 @@ func (m *Model) handleTenancyOverridesGroup() tea.Cmd {
 		m.dataset.LimitTenancyOverrideMap == nil ||
 		m.dataset.ConsolePropertyTenancyOverrideMap == nil ||
 		m.dataset.PropertyTenancyOverrideMap == nil {
-		return loadRequest{
-			category:    domain.Tenant,
-			loader:      m.loader,
-			ctx:         m.loadCtx,
-			repoPath:    m.repoPath,
-			kubeConfig:  m.kubeConfig,
-			environment: m.environment,
-		}.Run
+		return loadTenancyOverrideGroupCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
 	}
 	return nil
 }
 
 func (m *Model) handleLimitRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.LimitRegionalOverrides == nil {
-		return loadRequest{
-			category:    domain.LimitRegionalOverride,
-			loader:      m.loader,
-			ctx:         m.loadCtx,
-			repoPath:    m.repoPath,
-			kubeConfig:  m.kubeConfig,
-			environment: m.environment,
-		}.Run
+		return loadLimitRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
 	}
 	return nil
 }
 
 func (m *Model) handleConsolePropertyRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.ConsolePropertyRegionalOverrides == nil {
-		return loadRequest{
-			category:    domain.ConsolePropertyRegionalOverride,
-			loader:      m.loader,
-			ctx:         m.loadCtx,
-			repoPath:    m.repoPath,
-			kubeConfig:  m.kubeConfig,
-			environment: m.environment,
-		}.Run
+		return loadConsolePropertyRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
 	}
 	return nil
 }
 
 func (m *Model) handlePropertyRegionalOverrideCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.PropertyRegionalOverrides == nil {
-		return loadRequest{
-			category:    domain.PropertyRegionalOverride,
-			loader:      m.loader,
-			ctx:         m.loadCtx,
-			repoPath:    m.repoPath,
-			kubeConfig:  m.kubeConfig,
-			environment: m.environment,
-		}.Run
+		return loadPropertyRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
 	}
 	return nil
 }
 
 func (m *Model) handleBaseModelCategory() tea.Cmd {
 	if m.dataset == nil || m.dataset.BaseModels == nil {
-		return loadRequest{
-			category:    domain.BaseModel,
-			loader:      m.loader,
-			ctx:         m.loadCtx,
-			repoPath:    m.repoPath,
-			kubeConfig:  m.kubeConfig,
-			environment: m.environment,
-		}.Run
+		return loadBaseModelsCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment)
 	}
 	return nil
 }
 
 func (m *Model) handleGpuPoolCategory(refresh bool) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuPools == nil || refresh {
-		return loadRequest{
-			category:    domain.GpuPool,
-			loader:      m.loader,
-			ctx:         m.loadCtx,
-			repoPath:    m.repoPath,
-			kubeConfig:  m.kubeConfig,
-			environment: m.environment,
-		}.Run
+		return loadGpuPoolsCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
 	}
 	return nil
 }
 
 func (m *Model) handleGpuNodeCategory(refresh bool) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuNodeMap == nil || refresh {
-		return loadRequest{
-			category:    domain.GpuNode,
-			loader:      m.loader,
-			ctx:         m.loadCtx,
-			repoPath:    m.repoPath,
-			kubeConfig:  m.kubeConfig,
-			environment: m.environment,
-		}.Run
+		return loadGpuNodesCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment)
 	}
 	return nil
 }
 
 func (m *Model) handleDedicatedAIClusterCategory(refresh bool) tea.Cmd {
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
-		return loadRequest{
-			category:    domain.DedicatedAICluster,
-			loader:      m.loader,
-			ctx:         m.loadCtx,
-			repoPath:    m.repoPath,
-			kubeConfig:  m.kubeConfig,
-			environment: m.environment,
-		}.Run
+		return loadDedicatedAIClustersCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment)
 	}
 	return nil
 }
