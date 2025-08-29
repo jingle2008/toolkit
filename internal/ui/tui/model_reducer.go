@@ -454,6 +454,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		cmd = m.handleTenancyOverridesGroup()
 	}
 	if cmd != nil {
+		m.newLoadContext()
 		cmds = append(cmds, m.beginTask(), cmd)
 	} else {
 		cmds = append(cmds, refreshDataCmd())
@@ -471,7 +472,7 @@ func (m *Model) handleTenancyOverridesGroup() tea.Cmd {
 		return loadRequest{
 			category:    domain.Tenant,
 			loader:      m.loader,
-			ctx:         m.ctx,
+			ctx:         m.loadCtx,
 			repoPath:    m.repoPath,
 			kubeConfig:  m.kubeConfig,
 			environment: m.environment,
@@ -485,7 +486,7 @@ func (m *Model) handleLimitRegionalOverrideCategory() tea.Cmd {
 		return loadRequest{
 			category:    domain.LimitRegionalOverride,
 			loader:      m.loader,
-			ctx:         m.ctx,
+			ctx:         m.loadCtx,
 			repoPath:    m.repoPath,
 			kubeConfig:  m.kubeConfig,
 			environment: m.environment,
@@ -499,7 +500,7 @@ func (m *Model) handleConsolePropertyRegionalOverrideCategory() tea.Cmd {
 		return loadRequest{
 			category:    domain.ConsolePropertyRegionalOverride,
 			loader:      m.loader,
-			ctx:         m.ctx,
+			ctx:         m.loadCtx,
 			repoPath:    m.repoPath,
 			kubeConfig:  m.kubeConfig,
 			environment: m.environment,
@@ -513,7 +514,7 @@ func (m *Model) handlePropertyRegionalOverrideCategory() tea.Cmd {
 		return loadRequest{
 			category:    domain.PropertyRegionalOverride,
 			loader:      m.loader,
-			ctx:         m.ctx,
+			ctx:         m.loadCtx,
 			repoPath:    m.repoPath,
 			kubeConfig:  m.kubeConfig,
 			environment: m.environment,
@@ -527,7 +528,7 @@ func (m *Model) handleBaseModelCategory() tea.Cmd {
 		return loadRequest{
 			category:    domain.BaseModel,
 			loader:      m.loader,
-			ctx:         m.ctx,
+			ctx:         m.loadCtx,
 			repoPath:    m.repoPath,
 			kubeConfig:  m.kubeConfig,
 			environment: m.environment,
@@ -541,7 +542,7 @@ func (m *Model) handleGpuPoolCategory(refresh bool) tea.Cmd {
 		return loadRequest{
 			category:    domain.GpuPool,
 			loader:      m.loader,
-			ctx:         m.ctx,
+			ctx:         m.loadCtx,
 			repoPath:    m.repoPath,
 			kubeConfig:  m.kubeConfig,
 			environment: m.environment,
@@ -555,7 +556,7 @@ func (m *Model) handleGpuNodeCategory(refresh bool) tea.Cmd {
 		return loadRequest{
 			category:    domain.GpuNode,
 			loader:      m.loader,
-			ctx:         m.ctx,
+			ctx:         m.loadCtx,
 			repoPath:    m.repoPath,
 			kubeConfig:  m.kubeConfig,
 			environment: m.environment,
@@ -569,7 +570,7 @@ func (m *Model) handleDedicatedAIClusterCategory(refresh bool) tea.Cmd {
 		return loadRequest{
 			category:    domain.DedicatedAICluster,
 			loader:      m.loader,
-			ctx:         m.ctx,
+			ctx:         m.loadCtx,
 			repoPath:    m.repoPath,
 			kubeConfig:  m.kubeConfig,
 			environment: m.environment,

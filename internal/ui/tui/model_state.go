@@ -36,6 +36,8 @@ type Model struct {
 	pendingTasks   int
 	logger         logging.Logger
 	ctx            context.Context //nolint:containedctx
+	loadCtx        context.Context
+	loadCancel     context.CancelFunc
 	repoPath       string
 	environment    models.Environment
 	viewHeight     int
@@ -162,6 +164,18 @@ func applyOptions(m *Model, opts []ModelOption) {
 	for _, opt := range opts {
 		opt(m)
 	}
+}
+
+// newLoadContext cancels any in-flight load and creates a fresh context for the next load.
+func (m *Model) newLoadContext() {
+	if m.loadCancel != nil {
+		m.loadCancel()
+	}
+	parent := m.ctx
+	if parent == nil {
+		parent = context.Background()
+	}
+	m.loadCtx, m.loadCancel = context.WithCancel(parent)
 }
 
 // validateModel checks required fields and returns an error if any are missing.

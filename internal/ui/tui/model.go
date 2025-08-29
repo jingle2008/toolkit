@@ -16,12 +16,13 @@ func (m *Model) loadData() []tea.Cmd {
 	// bump generation so that responses from previous loads are ignored
 	m.gen++
 	gen := m.gen
+	m.newLoadContext()
 
 	return []tea.Cmd{
 		m.loadingTimer.Init(),
 		m.beginTask(),
 		func() tea.Msg {
-			dataset, err := m.loader.LoadDataset(m.ctx, m.repoPath, m.environment)
+			dataset, err := m.loader.LoadDataset(m.loadCtx, m.repoPath, m.environment)
 			if err != nil {
 				return ErrMsg(err)
 			}
