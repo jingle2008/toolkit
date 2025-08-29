@@ -287,6 +287,9 @@ func (m *Model) handleGpuPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
 		if msg.err != nil {
 			m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
 			pool.Status = "FAILED"
+		} else {
+			// Optimistic success state until enrichment updates the pool
+			pool.Status = "RUNNING"
 		}
 		if m.category == domain.GpuPool {
 			m.updateRows(false)
@@ -301,6 +304,8 @@ func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) {
 			m.logger.Errorw("failed to toggle cordon state", "key", msg.key, "error", msg.err)
 		} else {
 			node.IsSchedulingDisabled = msg.state
+			// Clear transient status so GetStatus reflects current state
+			node.SetStatus("")
 		}
 		if m.category == domain.GpuNode {
 			m.updateRows(false)
@@ -318,8 +323,15 @@ func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) {
 }
 
 func (m *Model) handleRebootNodeResultMsg(msg rebootNodeResultMsg) {
-	if msg.err != nil {
-		m.logger.Errorw("failed to reboot node", "key", msg.key, "error", msg.err)
+	item := findItem(m.dataset, domain.GpuNode, msg.key)
+	if node, ok := item.(*models.GpuNode); ok && node != nil {
+		if msg.err != nil {
+			m.logger.Errorw("failed to reboot node", "key", msg.key, "error", msg.err)
+			node.SetStatus("FAILED")
+		} else {
+			// Clear transient "Rebooting" status to recompute via GetStatus()
+			node.SetStatus("")
+		}
 	}
 	if m.category == domain.GpuNode {
 		m.updateRows(false)
