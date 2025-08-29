@@ -57,5 +57,5 @@ func (m *Model) Init() tea.Cmd {
 	}
 
 	cmds = append(cmds, setFilter(m.newFilter))
-	return tea.Batch(cmds...)
+	return tea.Sequence(cmds...)
 }

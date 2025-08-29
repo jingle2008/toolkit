@@ -244,13 +244,13 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.Refresh):
 		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):
-		m.cordonNode(item)
+		return m.cordonNode(item)
 	case key.Matches(msg, keys.DrainNode):
-		m.drainNode(item)
+		return m.drainNode(item)
 	case key.Matches(msg, keys.Delete):
 		return m.deleteItem(itemKey)
 	case key.Matches(msg, keys.RebootNode):
-		m.rebootNode(item)
+		return m.rebootNode(item)
 	case key.Matches(msg, keys.ScaleUp):
 		return m.scaleUpGpuPool(item)
 	}
@@ -280,36 +280,37 @@ func (m *Model) toggleFaultyList() tea.Cmd {
 	return nil
 }
 
-func (m *Model) cordonNode(item any) {
+func (m *Model) cordonNode(item any) tea.Cmd {
 	if item == nil {
 		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
-		return
+		return nil
 	}
-
-	if node, ok := item.(*models.GpuNode); ok {
-		if state, err := k8s.ToggleCordon(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name); err != nil {
-			m.logger.Errorw("failed to toggle cordon state", "error", err)
-		} else {
-			node.IsSchedulingDisabled = state
-			m.updateRows(false)
-		}
-	} else {
+	node, ok := item.(*models.GpuNode)
+	if !ok {
 		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
+		return nil
+	}
+	key := getItemKey(m.category, m.table.SelectedRow())
+	return func() tea.Msg {
+		state, err := k8s.ToggleCordon(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
+		return cordonNodeResultMsg{key: key, state: state, err: err}
 	}
 }
 
-func (m *Model) drainNode(item any) {
+func (m *Model) drainNode(item any) tea.Cmd {
 	if item == nil {
 		m.logger.Errorw("no item selected for draining", "category", m.category)
-		return
+		return nil
 	}
-
-	if node, ok := item.(*models.GpuNode); ok {
-		if err := k8s.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name); err != nil {
-			m.logger.Errorw("failed to drain node", "error", err)
-		}
-	} else {
+	node, ok := item.(*models.GpuNode)
+	if !ok {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
+		return nil
+	}
+	key := getItemKey(m.category, m.table.SelectedRow())
+	return func() tea.Msg {
+		err := k8s.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
+		return drainNodeResultMsg{key: key, err: err}
 	}
 }
 

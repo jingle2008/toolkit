@@ -39,6 +39,12 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleGpuPoolScaleStartedMsg(msg)
 	case gpuPoolScaleResultMsg:
 		m.handleGpuPoolScaleResultMsg(msg)
+	case cordonNodeResultMsg:
+		m.handleCordonNodeResultMsg(msg)
+	case drainNodeResultMsg:
+		m.handleDrainNodeResultMsg(msg)
+	case rebootNodeResultMsg:
+		m.handleRebootNodeResultMsg(msg)
 	default:
 		// Future-proof: ignore unknown message types
 	}
@@ -181,20 +187,26 @@ func (m *Model) deleteGpuNode(itemKey models.ItemKey) tea.Cmd {
 	}
 }
 
-func (m *Model) rebootNode(item any) {
+func (m *Model) rebootNode(item any) tea.Cmd {
 	if item == nil {
 		m.logger.Errorw("no item selected for reboot operation", "category", m.category)
-		return
+		return nil
 	}
 
-	if node, ok := item.(*models.GpuNode); ok {
-		if err := actions.SoftResetInstance(m.ctx, node, m.environment, m.logger); err != nil {
-			m.logger.Errorw("failed to reboot node", "error", err)
-		}
-		node.SetStatus("Rebooting")
-		m.updateRows(false)
-	} else {
+	node, ok := item.(*models.GpuNode)
+	if !ok {
 		m.logger.Errorw("unsupported item type for reboot operation", "item", item)
+		return nil
+	}
+
+	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	// optimistic UI
+	node.SetStatus("Rebooting")
+	m.updateRows(false)
+
+	return func() tea.Msg {
+		err := actions.SoftResetInstance(m.ctx, node, m.environment, m.logger)
+		return rebootNodeResultMsg{key: itemKey, err: err}
 	}
 }
 
@@ -261,6 +273,38 @@ func (m *Model) handleGpuPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
 		if m.category == domain.GpuPool {
 			m.updateRows(false)
 		}
+	}
+}
+
+func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) {
+	item := findItem(m.dataset, domain.GpuNode, msg.key)
+	if node, ok := item.(*models.GpuNode); ok && node != nil {
+		if msg.err != nil {
+			m.logger.Errorw("failed to toggle cordon state", "key", msg.key, "error", msg.err)
+		} else {
+			node.IsSchedulingDisabled = msg.state
+		}
+		if m.category == domain.GpuNode {
+			m.updateRows(false)
+		}
+	}
+}
+
+func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) {
+	if msg.err != nil {
+		m.logger.Errorw("failed to drain node", "key", msg.key, "error", msg.err)
+	}
+	if m.category == domain.GpuNode {
+		m.updateRows(false)
+	}
+}
+
+func (m *Model) handleRebootNodeResultMsg(msg rebootNodeResultMsg) {
+	if msg.err != nil {
+		m.logger.Errorw("failed to reboot node", "key", msg.key, "error", msg.err)
+	}
+	if m.category == domain.GpuNode {
+		m.updateRows(false)
 	}
 }
 
