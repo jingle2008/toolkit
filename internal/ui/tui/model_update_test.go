@@ -56,7 +56,8 @@ func TestModelUpdate_WindowSizeMsg(t *testing.T) {
 	msg := tea.WindowSizeMsg{Width: 80, Height: 24}
 	_, cmd := m.Update(msg)
 	assert.Nil(t, cmd)
-	assert.True(t, m.reLayout)
+	assert.Equal(t, 80, m.viewWidth)
+	assert.Equal(t, 24, m.viewHeight)
 }
 
 func TestModelReduce_ViewModes(t *testing.T) {

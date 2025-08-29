@@ -11,8 +11,11 @@ import (
 // ErrMsg is a message containing an error.
 type ErrMsg error
 
-// DataMsg is a message containing generic data.
-type DataMsg struct{ Data any }
+// DataMsg is a message containing generic data and a generation id to avoid stale updates.
+type DataMsg struct {
+	Data any
+	Gen  int
+}
 
 // FilterMsg is a message containing filter text.
 type FilterMsg string
@@ -35,4 +38,29 @@ type deleteErrMsg struct {
 type updateDoneMsg struct {
 	err      error
 	category domain.Category
+}
+
+type gpuPoolScaleStartedMsg struct {
+	key models.ItemKey
+}
+
+type gpuPoolScaleResultMsg struct {
+	key models.ItemKey
+	err error
+}
+
+type cordonNodeResultMsg struct {
+	key   models.ItemKey
+	state bool
+	err   error
+}
+
+type drainNodeResultMsg struct {
+	key models.ItemKey
+	err error
+}
+
+type rebootNodeResultMsg struct {
+	key models.ItemKey
+	err error
 }

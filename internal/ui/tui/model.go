@@ -13,6 +13,10 @@ import (
 
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() []tea.Cmd {
+	// bump generation so that responses from previous loads are ignored
+	m.gen++
+	gen := m.gen
+
 	return []tea.Cmd{
 		m.loadingTimer.Init(),
 		m.beginTask(),
@@ -21,7 +25,7 @@ func (m *Model) loadData() []tea.Cmd {
 			if err != nil {
 				return ErrMsg(err)
 			}
-			return DataMsg{Data: dataset}
+			return DataMsg{Data: dataset, Gen: gen}
 		},
 	}
 }
@@ -53,5 +57,5 @@ func (m *Model) Init() tea.Cmd {
 	}
 
 	cmds = append(cmds, setFilter(m.newFilter))
-	return tea.Sequence(cmds...)
+	return tea.Batch(cmds...)
 }

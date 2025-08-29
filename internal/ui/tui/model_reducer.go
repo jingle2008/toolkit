@@ -165,6 +165,10 @@ func (m *Model) refreshDisplay() {
 // processData updates the model's dataset based on the incoming DataMsg.
 func (m *Model) processData(msg DataMsg) tea.Cmd {
 	var cmd tea.Cmd
+	// Drop stale dataset responses based on generation token
+	if _, isDataset := msg.Data.(*models.Dataset); isDataset && msg.Gen != m.gen {
+		return nil
+	}
 	switch data := msg.Data.(type) {
 	case *models.Dataset:
 		m.dataset = data
@@ -260,16 +264,14 @@ func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
 		return nil
 	}
 
-	pool.Status = "SCALING"
-	m.updateRows(false)
-	return func() tea.Msg {
-		err := actions.IncreasePoolSize(m.ctx, pool, m.environment, m.logger)
-		if err != nil {
-			pool.Status = "FAILED"
-			m.updateRows(false)
-		}
-		return nil
-	}
+	key := getItemKey(m.category, m.table.SelectedRow())
+	return tea.Batch(
+		func() tea.Msg { return gpuPoolScaleStartedMsg{key: key} },
+		func() tea.Msg {
+			err := actions.IncreasePoolSize(m.ctx, pool, m.environment, m.logger)
+			return gpuPoolScaleResultMsg{key: key, err: err}
+		},
+	)
 }
 
 func (m *Model) toggleFaultyList() tea.Cmd {
@@ -514,22 +516,14 @@ func (m *Model) enterDetailView() {
 	m.viewMode = common.DetailsView
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	m.choice = getItemKey(m.category, row)
-	if m.reLayout {
-		m.reLayout = false
-		m.updateLayout(m.viewWidth, m.viewHeight)
-	} else {
-		m.updateContent(0)
-	}
+	m.updateLayout(m.viewWidth, m.viewHeight)
 }
 
 // exitDetailView exits detail view mode.
 func (m *Model) exitDetailView() {
 	m.viewMode = common.ListView
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
-	if m.reLayout {
-		m.reLayout = false
-		m.updateLayout(m.viewWidth, m.viewHeight)
-	}
+	m.updateLayout(m.viewWidth, m.viewHeight)
 }
 
 // changeCategory parses the text input and updates the category.

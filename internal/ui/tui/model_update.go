@@ -22,7 +22,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) onResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
-	m.reLayout = true
 	m.updateLayout(msg.Width, msg.Height)
 	return m, nil
 }

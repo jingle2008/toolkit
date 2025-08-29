@@ -57,7 +57,6 @@ type Model struct {
 	viewport       *viewport.Model
 	renderer       view.Renderer
 	loader         loader.Loader
-	reLayout       bool                   // layout needs to be updated
 	context        *domain.ToolkitContext // selected context
 	keys           keys.KeyMap
 	help           *help.Model
@@ -84,6 +83,9 @@ type Model struct {
 
 	// Stopwatch for loading duration
 	loadingTimer *stopwatch.Model
+
+	// Message generation to guard against stale async responses
+	gen int
 
 	// Table sorting state
 	sortColumn string

@@ -35,6 +35,10 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleDeleteDoneMsg(msg)
 	case updateDoneMsg:
 		m.handleUpdateDoneMsg(msg)
+	case gpuPoolScaleStartedMsg:
+		m.handleGpuPoolScaleStartedMsg(msg)
+	case gpuPoolScaleResultMsg:
+		m.handleGpuPoolScaleResultMsg(msg)
 	default:
 		// Future-proof: ignore unknown message types
 	}
@@ -234,6 +238,29 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
 	// update view if current
 	if msg.category == m.category {
 		m.updateRows(false)
+	}
+}
+
+func (m *Model) handleGpuPoolScaleStartedMsg(msg gpuPoolScaleStartedMsg) {
+	item := findItem(m.dataset, domain.GpuPool, msg.key)
+	if pool, ok := item.(*models.GpuPool); ok && pool != nil {
+		pool.Status = "SCALING"
+		if m.category == domain.GpuPool {
+			m.updateRows(false)
+		}
+	}
+}
+
+func (m *Model) handleGpuPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
+	item := findItem(m.dataset, domain.GpuPool, msg.key)
+	if pool, ok := item.(*models.GpuPool); ok && pool != nil {
+		if msg.err != nil {
+			m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
+			pool.Status = "FAILED"
+		}
+		if m.category == domain.GpuPool {
+			m.updateRows(false)
+		}
 	}
 }
 
