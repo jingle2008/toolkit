@@ -18,6 +18,8 @@ func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case DataMsg:
 		cmds = append(cmds, m.handleDataMsg(msg))
+	case datasetLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen}))
 	case baseModelsLoadedMsg:
 		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items))
 	case gpuPoolsLoadedMsg:

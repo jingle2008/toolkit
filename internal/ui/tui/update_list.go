@@ -45,6 +45,8 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleDrainNodeResultMsg(msg)
 	case rebootNodeResultMsg:
 		m.handleRebootNodeResultMsg(msg)
+	case datasetLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen}))
 	case baseModelsLoadedMsg:
 		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items))
 	case gpuPoolsLoadedMsg:

@@ -127,12 +127,17 @@ func checkLoadDataResult(t *testing.T, msg any, wantData *models.Dataset, wantEr
 	t.Helper()
 	switch {
 	case wantData != nil:
-		data, ok := msg.(DataMsg)
-		if !ok {
-			t.Fatalf("expected DataMsg, got %T", msg)
-		}
-		if !reflect.DeepEqual(data.Data, wantData) {
-			t.Errorf("DataMsg.Data = %v, want %v", data.Data, wantData)
+		switch m := msg.(type) {
+		case DataMsg:
+			if !reflect.DeepEqual(m.Data, wantData) {
+				t.Errorf("DataMsg.Data = %v, want %v", m.Data, wantData)
+			}
+		case datasetLoadedMsg:
+			if !reflect.DeepEqual(m.Dataset, wantData) {
+				t.Errorf("datasetLoadedMsg.Dataset = %v, want %v", m.Dataset, wantData)
+			}
+		default:
+			t.Fatalf("expected DataMsg or datasetLoadedMsg, got %T", msg)
 		}
 	case wantError != nil:
 		emsg, ok := msg.(ErrMsg)

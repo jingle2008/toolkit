@@ -17,6 +17,12 @@ type DataMsg struct {
 	Gen  int
 }
 
+// datasetLoadedMsg is a typed message for the initial dataset load, with generation guard.
+type datasetLoadedMsg struct {
+	Dataset *models.Dataset
+	Gen     int
+}
+
 // FilterMsg is a message containing filter text.
 type FilterMsg string
 

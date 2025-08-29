@@ -26,7 +26,7 @@ func (m *Model) loadData() []tea.Cmd {
 			if err != nil {
 				return ErrMsg(err)
 			}
-			return DataMsg{Data: dataset, Gen: gen}
+			return datasetLoadedMsg{Dataset: dataset, Gen: gen}
 		},
 	}
 }
