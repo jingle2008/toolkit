@@ -45,6 +45,22 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleDrainNodeResultMsg(msg)
 	case rebootNodeResultMsg:
 		m.handleRebootNodeResultMsg(msg)
+	case baseModelsLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+	case gpuPoolsLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+	case gpuNodesLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+	case dedicatedAIClustersLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+	case tenancyOverridesLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Group}))
+	case limitRegionalOverridesLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+	case consolePropertyRegionalOverridesLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+	case propertyRegionalOverridesLoadedMsg:
+		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
 	default:
 		// Future-proof: ignore unknown message types
 	}

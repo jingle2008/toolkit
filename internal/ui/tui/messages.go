@@ -64,3 +64,35 @@ type rebootNodeResultMsg struct {
 	key models.ItemKey
 	err error
 }
+
+type baseModelsLoadedMsg struct {
+	Items []models.BaseModel
+}
+
+type gpuPoolsLoadedMsg struct {
+	Items []models.GpuPool
+}
+
+type gpuNodesLoadedMsg struct {
+	Items map[string][]models.GpuNode
+}
+
+type dedicatedAIClustersLoadedMsg struct {
+	Items map[string][]models.DedicatedAICluster
+}
+
+type tenancyOverridesLoadedMsg struct {
+	Group models.TenancyOverrideGroup
+}
+
+type limitRegionalOverridesLoadedMsg struct {
+	Items []models.LimitRegionalOverride
+}
+
+type consolePropertyRegionalOverridesLoadedMsg struct {
+	Items []models.ConsolePropertyRegionalOverride
+}
+
+type propertyRegionalOverridesLoadedMsg struct {
+	Items []models.PropertyRegionalOverride
+}
