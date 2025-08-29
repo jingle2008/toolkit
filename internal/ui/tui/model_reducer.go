@@ -202,7 +202,7 @@ func (m *Model) processData(msg DataMsg) tea.Cmd {
 func (m *Model) handleBaseModelsLoaded(items []models.BaseModel) tea.Cmd {
 	m.dataset.BaseModels = items
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.BaseModel, "pendingTasks", m.pendingTasks)
+	m.logger.Infow("data loaded", "category", domain.BaseModel, "count", len(items), "pendingTasks", m.pendingTasks)
 	m.refreshDisplay()
 	return nil
 }
@@ -211,7 +211,7 @@ func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool) tea.Cmd {
 	m.dataset.GpuPools = items
 	cmd := m.updateGpuPoolState()
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.GpuPool, "pendingTasks", m.pendingTasks)
+	m.logger.Infow("data loaded", "category", domain.GpuPool, "count", len(items), "pendingTasks", m.pendingTasks)
 	m.refreshDisplay()
 	return cmd
 }
@@ -219,7 +219,11 @@ func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool) tea.Cmd {
 func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode) tea.Cmd {
 	m.dataset.GpuNodeMap = items
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.GpuNode, "pendingTasks", m.pendingTasks)
+	total := 0
+	for _, v := range items {
+		total += len(v)
+	}
+	m.logger.Infow("data loaded", "category", domain.GpuNode, "count", total, "pendingTasks", m.pendingTasks)
 	m.refreshDisplay()
 	return nil
 }
@@ -227,7 +231,11 @@ func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode) tea.Cmd 
 func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster) tea.Cmd {
 	m.dataset.SetDedicatedAIClusterMap(items)
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.DedicatedAICluster, "pendingTasks", m.pendingTasks)
+	total := 0
+	for _, v := range items {
+		total += len(v)
+	}
+	m.logger.Infow("data loaded", "category", domain.DedicatedAICluster, "count", total, "pendingTasks", m.pendingTasks)
 	m.refreshDisplay()
 	return nil
 }
@@ -238,7 +246,7 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup) 
 	m.dataset.ConsolePropertyTenancyOverrideMap = group.ConsolePropertyTenancyOverrideMap
 	m.dataset.PropertyTenancyOverrideMap = group.PropertyTenancyOverrideMap
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.Tenant, "pendingTasks", m.pendingTasks)
+	m.logger.Infow("data loaded", "category", domain.Tenant, "tenantCount", len(group.Tenants), "pendingTasks", m.pendingTasks)
 	m.refreshDisplay()
 	return nil
 }
@@ -246,7 +254,7 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup) 
 func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride) tea.Cmd {
 	m.dataset.LimitRegionalOverrides = items
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.LimitRegionalOverride, "pendingTasks", m.pendingTasks)
+	m.logger.Infow("data loaded", "category", domain.LimitRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
 	m.refreshDisplay()
 	return nil
 }
@@ -254,7 +262,7 @@ func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalO
 func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride) tea.Cmd {
 	m.dataset.ConsolePropertyRegionalOverrides = items
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.ConsolePropertyRegionalOverride, "pendingTasks", m.pendingTasks)
+	m.logger.Infow("data loaded", "category", domain.ConsolePropertyRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
 	m.refreshDisplay()
 	return nil
 }
@@ -262,7 +270,7 @@ func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.Cons
 func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride) tea.Cmd {
 	m.dataset.PropertyRegionalOverrides = items
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.PropertyRegionalOverride, "pendingTasks", m.pendingTasks)
+	m.logger.Infow("data loaded", "category", domain.PropertyRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
 	m.refreshDisplay()
 	return nil
 }
@@ -336,6 +344,7 @@ func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
 	}
 
 	key := getItemKey(m.category, m.table.SelectedRow())
+	m.logger.Infow("action started", "action", "scaleUpGpuPool", "pool", getItemKeyString(key))
 	return tea.Batch(
 		func() tea.Msg { return gpuPoolScaleStartedMsg{key: key} },
 		func() tea.Msg {
@@ -362,6 +371,7 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 		return nil
 	}
 	key := getItemKey(m.category, m.table.SelectedRow())
+	m.logger.Infow("action started", "action", "toggleCordon", "node", getItemKeyString(key))
 	return func() tea.Msg {
 		state, err := k8s.ToggleCordon(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
 		return cordonNodeResultMsg{key: key, state: state, err: err}
@@ -379,6 +389,7 @@ func (m *Model) drainNode(item any) tea.Cmd {
 		return nil
 	}
 	key := getItemKey(m.category, m.table.SelectedRow())
+	m.logger.Infow("action started", "action", "drainNode", "node", getItemKeyString(key))
 	return func() tea.Msg {
 		err := k8s.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
 		return drainNodeResultMsg{key: key, err: err}
