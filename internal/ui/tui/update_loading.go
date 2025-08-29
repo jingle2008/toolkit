@@ -19,21 +19,21 @@ func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case DataMsg:
 		cmds = append(cmds, m.handleDataMsg(msg))
 	case baseModelsLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items))
 	case gpuPoolsLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+		cmds = append(cmds, m.handleGpuPoolsLoaded(msg.Items))
 	case gpuNodesLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+		cmds = append(cmds, m.handleGpuNodesLoaded(msg.Items))
 	case dedicatedAIClustersLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+		cmds = append(cmds, m.handleDedicatedAIClustersLoaded(msg.Items))
 	case tenancyOverridesLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Group}))
+		cmds = append(cmds, m.handleTenancyOverridesLoaded(msg.Group))
 	case limitRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+		cmds = append(cmds, m.handleLimitRegionalOverridesLoaded(msg.Items))
 	case consolePropertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+		cmds = append(cmds, m.handleConsolePropertyRegionalOverridesLoaded(msg.Items))
 	case propertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Items}))
+		cmds = append(cmds, m.handlePropertyRegionalOverridesLoaded(msg.Items))
 	case ErrMsg:
 		m.handleErrMsg(msg)
 	case spinner.TickMsg:

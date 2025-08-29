@@ -196,6 +196,77 @@ func (m *Model) processData(msg DataMsg) tea.Cmd {
 	return cmd
 }
 
+// Typed lazy-load handlers (replace DataMsg type-switch path)
+// Each handler updates the dataset, ends the task, logs, refreshes display,
+// and returns any follow-up command (e.g., GPU pool state enrichment).
+func (m *Model) handleBaseModelsLoaded(items []models.BaseModel) tea.Cmd {
+	m.dataset.BaseModels = items
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", domain.BaseModel, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+	return nil
+}
+
+func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool) tea.Cmd {
+	m.dataset.GpuPools = items
+	cmd := m.updateGpuPoolState()
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", domain.GpuPool, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+	return cmd
+}
+
+func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode) tea.Cmd {
+	m.dataset.GpuNodeMap = items
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", domain.GpuNode, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+	return nil
+}
+
+func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster) tea.Cmd {
+	m.dataset.SetDedicatedAIClusterMap(items)
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", domain.DedicatedAICluster, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+	return nil
+}
+
+func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup) tea.Cmd {
+	m.dataset.Tenants = group.Tenants
+	m.dataset.LimitTenancyOverrideMap = group.LimitTenancyOverrideMap
+	m.dataset.ConsolePropertyTenancyOverrideMap = group.ConsolePropertyTenancyOverrideMap
+	m.dataset.PropertyTenancyOverrideMap = group.PropertyTenancyOverrideMap
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", domain.Tenant, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+	return nil
+}
+
+func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride) tea.Cmd {
+	m.dataset.LimitRegionalOverrides = items
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", domain.LimitRegionalOverride, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+	return nil
+}
+
+func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride) tea.Cmd {
+	m.dataset.ConsolePropertyRegionalOverrides = items
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", domain.ConsolePropertyRegionalOverride, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+	return nil
+}
+
+func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride) tea.Cmd {
+	m.dataset.PropertyRegionalOverrides = items
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", domain.PropertyRegionalOverride, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+	return nil
+}
+
 func (m *Model) sortTableByColumn(column string) tea.Cmd {
 	if m.sortColumn == column {
 		m.sortAsc = !m.sortAsc
