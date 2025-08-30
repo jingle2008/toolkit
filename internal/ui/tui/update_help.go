@@ -12,6 +12,7 @@ func (m *Model) updateHelpView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if key.Matches(keyMsg, keys.Back, keys.Help) {
 			m.viewMode = m.lastViewMode
 		} else if key.Matches(keyMsg, keys.Quit) {
+			m.cancelInFlight()
 			return m, tea.Quit
 		}
 	}

@@ -11,6 +11,7 @@ import (
 func (m *Model) updateErrorView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		if key.Matches(msg, keys.Quit) {
+			m.cancelInFlight()
 			return m, tea.Quit
 		}
 	}
