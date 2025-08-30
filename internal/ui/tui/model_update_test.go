@@ -1,18 +1,18 @@
 package tui
 
 import (
+	"context"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-func TestLoadRequest_Run(t *testing.T) {
+func TestTypedLoadBaseModelsCmd_Run(t *testing.T) {
 	t.Parallel()
 	m, _ := NewModel(
 		WithRepoPath("repo"),
@@ -20,16 +20,11 @@ func TestLoadRequest_Run(t *testing.T) {
 		WithLoader(fakeLoader{}),
 		WithLogger(logging.NewNoOpLogger()),
 	)
-	lr := loadRequest{
-		category:    domain.BaseModel,
-		loader:      m.loader,
-		ctx:         m.ctx,
-		repoPath:    m.repoPath,
-		kubeConfig:  m.kubeConfig,
-		environment: m.environment,
-	}
-	cmd := lr.Run()
-	assert.NotNil(t, cmd)
+	// Use a background context for the typed command constructor
+	gen := m.bumpGen()
+	cmd := loadBaseModelsCmd(m.loader, context.Background(), m.kubeConfig, m.environment, gen)
+	msg := cmd()
+	assert.NotNil(t, msg)
 }
 
 func TestModelUpdate_QuitKey(t *testing.T) {

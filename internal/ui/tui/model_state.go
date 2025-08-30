@@ -277,3 +277,8 @@ func (m *Model) cancelInFlight() {
 		}
 	}
 }
+
+// opContext returns a background-derived context with a default timeout for one-shot operations.
+func (m *Model) opContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 30*time.Second)
+}

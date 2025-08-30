@@ -3,6 +3,7 @@
 package tui
 
 import (
+	"context"
 	"math"
 	"slices"
 	"strings"
@@ -23,7 +24,7 @@ import (
 
 func refreshDataCmd() tea.Cmd { return func() tea.Msg { return DataMsg{} } }
 
-func (m *Model) getCompartmentID() (string, error) {
+func (m *Model) getCompartmentID(ctx context.Context) (string, error) {
 	if m.dataset != nil && m.dataset.GpuNodeMap != nil {
 		for _, v := range m.dataset.GpuNodeMap {
 			for _, n := range v {
@@ -36,7 +37,7 @@ func (m *Model) getCompartmentID() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	nodes, err := k8s.ListGpuNodes(m.ctx, clientset, 1)
+	nodes, err := k8s.ListGpuNodes(ctx, clientset, 1)
 	if err != nil || len(nodes) == 0 {
 		return "", err
 	}
@@ -46,10 +47,12 @@ func (m *Model) getCompartmentID() (string, error) {
 
 func (m *Model) updateGpuPoolState() tea.Cmd {
 	return func() tea.Msg {
+		ctx, cancel := m.opContext()
+		defer cancel()
 		var err error
 		var compartmentID string
-		if compartmentID, err = m.getCompartmentID(); err == nil {
-			err = actions.PopulateGpuPools(m.ctx, m.dataset.GpuPools, m.environment, compartmentID)
+		if compartmentID, err = m.getCompartmentID(ctx); err == nil {
+			err = actions.PopulateGpuPools(ctx, m.dataset.GpuPools, m.environment, compartmentID)
 		}
 		return updateDoneMsg{err: err, category: domain.GpuPool}
 	}
@@ -372,7 +375,9 @@ func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
 	return tea.Batch(
 		func() tea.Msg { return gpuPoolScaleStartedMsg{key: key} },
 		func() tea.Msg {
-			err := actions.IncreasePoolSize(m.ctx, pool, m.environment, m.logger)
+			ctx, cancel := m.opContext()
+			defer cancel()
+			err := actions.IncreasePoolSize(ctx, pool, m.environment, m.logger)
 			return gpuPoolScaleResultMsg{key: key, err: err}
 		},
 	)
@@ -397,7 +402,9 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 	key := getItemKey(m.category, m.table.SelectedRow())
 	m.logger.Infow("action started", "action", "toggleCordon", "node", getItemKeyString(key))
 	return func() tea.Msg {
-		state, err := k8s.ToggleCordon(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
+		ctx, cancel := m.opContext()
+		defer cancel()
+		state, err := k8s.ToggleCordon(ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
 		return cordonNodeResultMsg{key: key, state: state, err: err}
 	}
 }
@@ -415,7 +422,9 @@ func (m *Model) drainNode(item any) tea.Cmd {
 	key := getItemKey(m.category, m.table.SelectedRow())
 	m.logger.Infow("action started", "action", "drainNode", "node", getItemKeyString(key))
 	return func() tea.Msg {
-		err := k8s.DrainNode(m.ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
+		ctx, cancel := m.opContext()
+		defer cancel()
+		err := k8s.DrainNode(ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
 		return drainNodeResultMsg{key: key, err: err}
 	}
 }
