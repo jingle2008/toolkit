@@ -170,7 +170,9 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	dac.Status = "Deleting"
 	m.updateRows(false)
 	return func() tea.Msg {
-		if err := actions.DeleteDedicatedAICluster(m.ctx, dac, m.environment, m.logger); err != nil {
+		ctx, cancel := m.opContext()
+		defer cancel()
+		if err := actions.DeleteDedicatedAICluster(ctx, dac, m.environment, m.logger); err != nil {
 			return deleteErrMsg{
 				err:       err,
 				category:  domain.DedicatedAICluster,
@@ -191,7 +193,9 @@ func (m *Model) deleteGpuNode(itemKey models.ItemKey) tea.Cmd {
 	node.SetStatus("Deleting")
 	m.updateRows(false)
 	return func() tea.Msg {
-		if err := actions.TerminateInstance(m.ctx, node, m.environment, m.logger); err != nil {
+		ctx, cancel := m.opContext()
+		defer cancel()
+		if err := actions.TerminateInstance(ctx, node, m.environment, m.logger); err != nil {
 			return deleteErrMsg{
 				err:      err,
 				category: domain.GpuNode,
@@ -223,7 +227,9 @@ func (m *Model) rebootNode(item any) tea.Cmd {
 	m.updateRows(false)
 
 	return func() tea.Msg {
-		err := actions.SoftResetInstance(m.ctx, node, m.environment, m.logger)
+		ctx, cancel := m.opContext()
+		defer cancel()
+		err := actions.SoftResetInstance(ctx, node, m.environment, m.logger)
 		return rebootNodeResultMsg{key: itemKey, err: err}
 	}
 }

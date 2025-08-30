@@ -19,7 +19,7 @@ WithContext sets the context.Context for the Model.
 */
 func WithContext(ctx context.Context) ModelOption {
 	return func(m *Model) {
-		m.ctx = ctx
+		m.parentCtx = ctx
 	}
 }
 

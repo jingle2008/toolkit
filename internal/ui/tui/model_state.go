@@ -35,7 +35,7 @@ It manages state, events, and rendering for the Bubble Tea UI.
 type Model struct {
 	pendingTasks   int
 	logger         logging.Logger
-	ctx            context.Context //nolint:containedctx
+	parentCtx      context.Context
 	loadCtx        context.Context
 	loadCancel     context.CancelFunc
 	repoPath       string
@@ -175,7 +175,7 @@ func (m *Model) newLoadContext() {
 			m.logger.Infow("canceled in-flight load")
 		}
 	}
-	parent := m.ctx
+	parent := m.parentCtx
 	if parent == nil {
 		parent = context.Background()
 	}

@@ -69,7 +69,7 @@ func TestWithContext(t *testing.T) {
 	ctx := context.Background()
 	opt := WithContext(ctx)
 	opt(m)
-	assert.Equal(t, ctx, m.ctx)
+	assert.Equal(t, ctx, m.parentCtx)
 }
 
 func TestWithFilter(t *testing.T) {
