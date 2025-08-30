@@ -11,11 +11,16 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 
+// bumpGen increments the generation counter and returns the new value.
+func (m *Model) bumpGen() int {
+	m.gen++
+	return m.gen
+}
+
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() []tea.Cmd {
 	// bump generation so that responses from previous loads are ignored
-	m.gen++
-	gen := m.gen
+	gen := m.bumpGen()
 	m.newLoadContext()
 
 	return []tea.Cmd{

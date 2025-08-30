@@ -73,32 +73,40 @@ type rebootNodeResultMsg struct {
 
 type baseModelsLoadedMsg struct {
 	Items []models.BaseModel
+	Gen   int
 }
 
 type gpuPoolsLoadedMsg struct {
 	Items []models.GpuPool
+	Gen   int
 }
 
 type gpuNodesLoadedMsg struct {
 	Items map[string][]models.GpuNode
+	Gen   int
 }
 
 type dedicatedAIClustersLoadedMsg struct {
 	Items map[string][]models.DedicatedAICluster
+	Gen   int
 }
 
 type tenancyOverridesLoadedMsg struct {
 	Group models.TenancyOverrideGroup
+	Gen   int
 }
 
 type limitRegionalOverridesLoadedMsg struct {
 	Items []models.LimitRegionalOverride
+	Gen   int
 }
 
 type consolePropertyRegionalOverridesLoadedMsg struct {
 	Items []models.ConsolePropertyRegionalOverride
+	Gen   int
 }
 
 type propertyRegionalOverridesLoadedMsg struct {
 	Items []models.PropertyRegionalOverride
+	Gen   int
 }

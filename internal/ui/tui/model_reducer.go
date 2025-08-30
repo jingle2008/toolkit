@@ -199,7 +199,10 @@ func (m *Model) processData(msg DataMsg) tea.Cmd {
 // Typed lazy-load handlers (replace DataMsg type-switch path)
 // Each handler updates the dataset, ends the task, logs, refreshes display,
 // and returns any follow-up command (e.g., GPU pool state enrichment).
-func (m *Model) handleBaseModelsLoaded(items []models.BaseModel) tea.Cmd {
+func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) tea.Cmd {
+	if gen != m.gen {
+		return nil
+	}
 	m.dataset.BaseModels = items
 	m.endTask(true)
 	m.logger.Infow("data loaded", "category", domain.BaseModel, "count", len(items), "pendingTasks", m.pendingTasks)
@@ -207,7 +210,10 @@ func (m *Model) handleBaseModelsLoaded(items []models.BaseModel) tea.Cmd {
 	return nil
 }
 
-func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool) tea.Cmd {
+func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {
+	if gen != m.gen {
+		return nil
+	}
 	m.dataset.GpuPools = items
 	cmd := m.updateGpuPoolState()
 	m.endTask(true)
@@ -216,7 +222,10 @@ func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool) tea.Cmd {
 	return cmd
 }
 
-func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode) tea.Cmd {
+func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode, gen int) tea.Cmd {
+	if gen != m.gen {
+		return nil
+	}
 	m.dataset.GpuNodeMap = items
 	m.endTask(true)
 	total := 0
@@ -228,7 +237,10 @@ func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode) tea.Cmd 
 	return nil
 }
 
-func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster) tea.Cmd {
+func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) tea.Cmd {
+	if gen != m.gen {
+		return nil
+	}
 	m.dataset.SetDedicatedAIClusterMap(items)
 	m.endTask(true)
 	total := 0
@@ -240,7 +252,10 @@ func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.Dedica
 	return nil
 }
 
-func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup) tea.Cmd {
+func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) tea.Cmd {
+	if gen != m.gen {
+		return nil
+	}
 	m.dataset.Tenants = group.Tenants
 	m.dataset.LimitTenancyOverrideMap = group.LimitTenancyOverrideMap
 	m.dataset.ConsolePropertyTenancyOverrideMap = group.ConsolePropertyTenancyOverrideMap
@@ -251,7 +266,10 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup) 
 	return nil
 }
 
-func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride) tea.Cmd {
+func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) tea.Cmd {
+	if gen != m.gen {
+		return nil
+	}
 	m.dataset.LimitRegionalOverrides = items
 	m.endTask(true)
 	m.logger.Infow("data loaded", "category", domain.LimitRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
@@ -259,7 +277,10 @@ func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalO
 	return nil
 }
 
-func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride) tea.Cmd {
+func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride, gen int) tea.Cmd {
+	if gen != m.gen {
+		return nil
+	}
 	m.dataset.ConsolePropertyRegionalOverrides = items
 	m.endTask(true)
 	m.logger.Infow("data loaded", "category", domain.ConsolePropertyRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
@@ -267,7 +288,10 @@ func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.Cons
 	return nil
 }
 
-func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride) tea.Cmd {
+func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride, gen int) tea.Cmd {
+	if gen != m.gen {
+		return nil
+	}
 	m.dataset.PropertyRegionalOverrides = items
 	m.endTask(true)
 	m.logger.Infow("data loaded", "category", domain.PropertyRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
@@ -436,15 +460,15 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	}
 
 	// Dispatch table for category handlers
-	type handlerFn func(*Model, bool) tea.Cmd
+	type handlerFn func(*Model, bool, int) tea.Cmd
 	handlers := map[domain.Category]handlerFn{
-		domain.BaseModel:                       func(m *Model, _ bool) tea.Cmd { return m.handleBaseModelCategory() },
-		domain.GpuPool:                         func(m *Model, refresh bool) tea.Cmd { return m.handleGpuPoolCategory(refresh) },
-		domain.GpuNode:                         func(m *Model, refresh bool) tea.Cmd { return m.handleGpuNodeCategory(refresh) },
-		domain.DedicatedAICluster:              func(m *Model, refresh bool) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh) },
-		domain.LimitRegionalOverride:           func(m *Model, _ bool) tea.Cmd { return m.handleLimitRegionalOverrideCategory() },
-		domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory() },
-		domain.PropertyRegionalOverride:        func(m *Model, _ bool) tea.Cmd { return m.handlePropertyRegionalOverrideCategory() },
+		domain.BaseModel:                       func(m *Model, _ bool, gen int) tea.Cmd { return m.handleBaseModelCategory(gen) },
+		domain.GpuPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGpuPoolCategory(refresh, gen) },
+		domain.GpuNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGpuNodeCategory(refresh, gen) },
+		domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
+		domain.LimitRegionalOverride:           func(m *Model, _ bool, gen int) tea.Cmd { return m.handleLimitRegionalOverrideCategory(gen) },
+		domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool, gen int) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory(gen) },
+		domain.PropertyRegionalOverride:        func(m *Model, _ bool, gen int) tea.Cmd { return m.handlePropertyRegionalOverrideCategory(gen) },
 	}
 
 	// Grouped handler for tenancy overrides
@@ -460,9 +484,11 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		cmds []tea.Cmd
 	)
 	if fn, ok := handlers[m.category]; ok {
-		cmd = fn(m, refresh)
+		gen := m.bumpGen()
+		cmd = fn(m, refresh, gen)
 	} else if _, ok := tenancyOverrides[m.category]; ok {
-		cmd = m.handleTenancyOverridesGroup()
+		gen := m.bumpGen()
+		cmd = m.handleTenancyOverridesGroup(gen)
 	}
 	if cmd != nil {
 		m.newLoadContext()
@@ -474,62 +500,62 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 }
 
 // Lazy loaders for realm-specific categories
-func (m *Model) handleTenancyOverridesGroup() tea.Cmd {
+func (m *Model) handleTenancyOverridesGroup(gen int) tea.Cmd {
 	if m.dataset == nil ||
 		m.dataset.Tenants == nil ||
 		m.dataset.LimitTenancyOverrideMap == nil ||
 		m.dataset.ConsolePropertyTenancyOverrideMap == nil ||
 		m.dataset.PropertyTenancyOverrideMap == nil {
-		return loadTenancyOverrideGroupCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
+		return loadTenancyOverrideGroupCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handleLimitRegionalOverrideCategory() tea.Cmd {
+func (m *Model) handleLimitRegionalOverrideCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.LimitRegionalOverrides == nil {
-		return loadLimitRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
+		return loadLimitRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handleConsolePropertyRegionalOverrideCategory() tea.Cmd {
+func (m *Model) handleConsolePropertyRegionalOverrideCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.ConsolePropertyRegionalOverrides == nil {
-		return loadConsolePropertyRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
+		return loadConsolePropertyRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handlePropertyRegionalOverrideCategory() tea.Cmd {
+func (m *Model) handlePropertyRegionalOverrideCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.PropertyRegionalOverrides == nil {
-		return loadPropertyRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
+		return loadPropertyRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handleBaseModelCategory() tea.Cmd {
+func (m *Model) handleBaseModelCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.BaseModels == nil {
-		return loadBaseModelsCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment)
+		return loadBaseModelsCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handleGpuPoolCategory(refresh bool) tea.Cmd {
+func (m *Model) handleGpuPoolCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuPools == nil || refresh {
-		return loadGpuPoolsCmd(m.loader, m.loadCtx, m.repoPath, m.environment)
+		return loadGpuPoolsCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handleGpuNodeCategory(refresh bool) tea.Cmd {
+func (m *Model) handleGpuNodeCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuNodeMap == nil || refresh {
-		return loadGpuNodesCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment)
+		return loadGpuNodesCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handleDedicatedAIClusterCategory(refresh bool) tea.Cmd {
+func (m *Model) handleDedicatedAIClusterCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
-		return loadDedicatedAIClustersCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment)
+		return loadDedicatedAIClustersCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }

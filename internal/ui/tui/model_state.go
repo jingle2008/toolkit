@@ -267,3 +267,13 @@ func setDefaults(m *Model) {
 		m.dirPicker = &p
 	}
 }
+
+// cancelInFlight cancels any in-flight async operations (loads, actions).
+func (m *Model) cancelInFlight() {
+	if m.loadCancel != nil {
+		m.loadCancel()
+		if m.logger != nil {
+			m.logger.Infow("canceled in-flight tasks")
+		}
+	}
+}

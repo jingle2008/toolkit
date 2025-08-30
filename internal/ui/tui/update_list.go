@@ -48,21 +48,21 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case datasetLoadedMsg:
 		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen}))
 	case baseModelsLoadedMsg:
-		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items))
+		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items, msg.Gen))
 	case gpuPoolsLoadedMsg:
-		cmds = append(cmds, m.handleGpuPoolsLoaded(msg.Items))
+		cmds = append(cmds, m.handleGpuPoolsLoaded(msg.Items, msg.Gen))
 	case gpuNodesLoadedMsg:
-		cmds = append(cmds, m.handleGpuNodesLoaded(msg.Items))
+		cmds = append(cmds, m.handleGpuNodesLoaded(msg.Items, msg.Gen))
 	case dedicatedAIClustersLoadedMsg:
-		cmds = append(cmds, m.handleDedicatedAIClustersLoaded(msg.Items))
+		cmds = append(cmds, m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen))
 	case tenancyOverridesLoadedMsg:
-		cmds = append(cmds, m.handleTenancyOverridesLoaded(msg.Group))
+		cmds = append(cmds, m.handleTenancyOverridesLoaded(msg.Group, msg.Gen))
 	case limitRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleLimitRegionalOverridesLoaded(msg.Items))
+		cmds = append(cmds, m.handleLimitRegionalOverridesLoaded(msg.Items, msg.Gen))
 	case consolePropertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleConsolePropertyRegionalOverridesLoaded(msg.Items))
+		cmds = append(cmds, m.handleConsolePropertyRegionalOverridesLoaded(msg.Items, msg.Gen))
 	case propertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handlePropertyRegionalOverridesLoaded(msg.Items))
+		cmds = append(cmds, m.handlePropertyRegionalOverridesLoaded(msg.Items, msg.Gen))
 	default:
 		// Future-proof: ignore unknown message types
 	}
@@ -113,7 +113,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		match  key.Binding
 		action func() []tea.Cmd
 	}{
-		{keys.Quit, func() []tea.Cmd { return []tea.Cmd{tea.Quit} }},
+		{keys.Quit, func() []tea.Cmd { return []tea.Cmd{func() tea.Msg { m.cancelInFlight(); return tea.QuitMsg{} }} }},
 		{keys.BackHist, func() []tea.Cmd { return []tea.Cmd{m.moveHistory(-1)} }},
 		{keys.FwdHist, func() []tea.Cmd { return []tea.Cmd{m.moveHistory(1)} }},
 		{keys.NextCategory, func() []tea.Cmd { return []tea.Cmd{m.handleNextCategory()} }},

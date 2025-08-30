@@ -14,6 +14,7 @@ func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, keys.Quit) {
+			m.cancelInFlight()
 			return m, tea.Quit
 		}
 	case DataMsg:
@@ -21,21 +22,21 @@ func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case datasetLoadedMsg:
 		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen}))
 	case baseModelsLoadedMsg:
-		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items))
+		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items, msg.Gen))
 	case gpuPoolsLoadedMsg:
-		cmds = append(cmds, m.handleGpuPoolsLoaded(msg.Items))
+		cmds = append(cmds, m.handleGpuPoolsLoaded(msg.Items, msg.Gen))
 	case gpuNodesLoadedMsg:
-		cmds = append(cmds, m.handleGpuNodesLoaded(msg.Items))
+		cmds = append(cmds, m.handleGpuNodesLoaded(msg.Items, msg.Gen))
 	case dedicatedAIClustersLoadedMsg:
-		cmds = append(cmds, m.handleDedicatedAIClustersLoaded(msg.Items))
+		cmds = append(cmds, m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen))
 	case tenancyOverridesLoadedMsg:
-		cmds = append(cmds, m.handleTenancyOverridesLoaded(msg.Group))
+		cmds = append(cmds, m.handleTenancyOverridesLoaded(msg.Group, msg.Gen))
 	case limitRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleLimitRegionalOverridesLoaded(msg.Items))
+		cmds = append(cmds, m.handleLimitRegionalOverridesLoaded(msg.Items, msg.Gen))
 	case consolePropertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleConsolePropertyRegionalOverridesLoaded(msg.Items))
+		cmds = append(cmds, m.handleConsolePropertyRegionalOverridesLoaded(msg.Items, msg.Gen))
 	case propertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handlePropertyRegionalOverridesLoaded(msg.Items))
+		cmds = append(cmds, m.handlePropertyRegionalOverridesLoaded(msg.Items, msg.Gen))
 	case ErrMsg:
 		m.handleErrMsg(msg)
 	case spinner.TickMsg:

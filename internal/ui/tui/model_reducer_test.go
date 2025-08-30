@@ -17,7 +17,7 @@ func TestHandleTenancyOverridesGroup(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	m := &Model{loadingSpinner: &s}
-	cmd := m.handleTenancyOverridesGroup()
+	cmd := m.handleTenancyOverridesGroup(0)
 	assert.NotNil(t, cmd)
 
 	// Now with all required fields non-nil
@@ -30,7 +30,7 @@ func TestHandleTenancyOverridesGroup(t *testing.T) {
 		},
 		loadingSpinner: &s,
 	}
-	cmd = m.handleTenancyOverridesGroup()
+	cmd = m.handleTenancyOverridesGroup(0)
 	assert.Nil(t, cmd)
 }
 
@@ -38,14 +38,14 @@ func TestHandleLimitRegionalOverrideCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	m := &Model{loadingSpinner: &s}
-	cmd := m.handleLimitRegionalOverrideCategory()
+	cmd := m.handleLimitRegionalOverrideCategory(0)
 	assert.NotNil(t, cmd)
 
 	m = &Model{
 		dataset:        &models.Dataset{LimitRegionalOverrides: []models.LimitRegionalOverride{}},
 		loadingSpinner: &s,
 	}
-	cmd = m.handleLimitRegionalOverrideCategory()
+	cmd = m.handleLimitRegionalOverrideCategory(0)
 	assert.Nil(t, cmd)
 }
 
@@ -53,14 +53,14 @@ func TestHandleConsolePropertyRegionalOverrideCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	m := &Model{loadingSpinner: &s}
-	cmd := m.handleConsolePropertyRegionalOverrideCategory()
+	cmd := m.handleConsolePropertyRegionalOverrideCategory(0)
 	assert.NotNil(t, cmd)
 
 	m = &Model{
 		dataset:        &models.Dataset{ConsolePropertyRegionalOverrides: []models.ConsolePropertyRegionalOverride{}},
 		loadingSpinner: &s,
 	}
-	cmd = m.handleConsolePropertyRegionalOverrideCategory()
+	cmd = m.handleConsolePropertyRegionalOverrideCategory(0)
 	assert.Nil(t, cmd)
 }
 
@@ -68,14 +68,14 @@ func TestHandlePropertyRegionalOverrideCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	m := &Model{loadingSpinner: &s}
-	cmd := m.handlePropertyRegionalOverrideCategory()
+	cmd := m.handlePropertyRegionalOverrideCategory(0)
 	assert.NotNil(t, cmd)
 
 	m = &Model{
 		dataset:        &models.Dataset{PropertyRegionalOverrides: []models.PropertyRegionalOverride{}},
 		loadingSpinner: &s,
 	}
-	cmd = m.handlePropertyRegionalOverrideCategory()
+	cmd = m.handlePropertyRegionalOverrideCategory(0)
 	assert.Nil(t, cmd)
 }
 
@@ -83,14 +83,14 @@ func TestHandleGpuPoolCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	m := &Model{loadingSpinner: &s}
-	cmd := m.handleGpuPoolCategory(false)
+	cmd := m.handleGpuPoolCategory(false, 0)
 	assert.NotNil(t, cmd)
 
 	m = &Model{
 		dataset:        &models.Dataset{GpuPools: []models.GpuPool{}},
 		loadingSpinner: &s,
 	}
-	cmd = m.handleGpuPoolCategory(false)
+	cmd = m.handleGpuPoolCategory(false, 0)
 	assert.Nil(t, cmd)
 }
 
@@ -98,14 +98,14 @@ func TestHandleGpuNodeCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	m := &Model{loadingSpinner: &s}
-	cmd := m.handleGpuNodeCategory(false)
+	cmd := m.handleGpuNodeCategory(false, 0)
 	assert.NotNil(t, cmd)
 
 	m = &Model{
 		dataset:        &models.Dataset{GpuNodeMap: map[string][]models.GpuNode{}},
 		loadingSpinner: &s,
 	}
-	cmd = m.handleGpuNodeCategory(false)
+	cmd = m.handleGpuNodeCategory(false, 0)
 	assert.Nil(t, cmd)
 }
 
@@ -113,14 +113,14 @@ func TestHandleDedicatedAIClusterCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	m := &Model{loadingSpinner: &s}
-	cmd := m.handleDedicatedAIClusterCategory(false)
+	cmd := m.handleDedicatedAIClusterCategory(false, 0)
 	assert.NotNil(t, cmd)
 
 	m = &Model{
 		dataset:        &models.Dataset{DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{}},
 		loadingSpinner: &s,
 	}
-	cmd = m.handleDedicatedAIClusterCategory(false)
+	cmd = m.handleDedicatedAIClusterCategory(false, 0)
 	assert.Nil(t, cmd)
 }
 

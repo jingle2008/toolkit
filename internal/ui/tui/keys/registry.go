@@ -173,8 +173,8 @@ var (
 		key.WithKeys("T"),
 		key.WithHelp("<shift+t>", SortPrefix+common.TenantCol),
 	)
-	// SortMaxTokens is a key binding for sorting by the "MaxTokens" column.
-	SortMaxTokens = key.NewBinding(
+	// SortContext is a key binding for sorting by the "Context" column.
+	SortContext = key.NewBinding(
 		key.WithKeys("C"),
 		key.WithHelp("<shift+c>", SortPrefix+common.ContextCol),
 	)
@@ -218,7 +218,7 @@ var (
 // Category+mode-specific key bindings
 var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.BaseModel: {
-		common.ListView: {SortSize, SortMaxTokens, ToggleFaulty},
+		common.ListView: {SortSize, SortContext, ToggleFaulty},
 	},
 	domain.Tenant: {
 		common.ListView: {SortInternal, CopyTenant, ToggleFaulty},
