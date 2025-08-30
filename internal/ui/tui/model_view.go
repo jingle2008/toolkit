@@ -69,8 +69,13 @@ func (m *Model) statusView() string {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
+		parts := make([]string, 0, len(keys))
 		for _, k := range keys {
-			statsText.WriteString(fmt.Sprintf("%s: %d • ", k, m.stats[k]))
+			parts = append(parts, fmt.Sprintf("%s: %d", k, m.stats[k]))
+		}
+		if len(parts) > 0 {
+			statsText.WriteString(strings.Join(parts, " • "))
+			statsText.WriteString(" ")
 		}
 	}
 	statsText.WriteString(fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
