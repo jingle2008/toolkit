@@ -141,8 +141,11 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 
 // initStyles initializes all style fields for the model using shared style definitions.
 func initStyles(m *Model) {
-	s := DefaultStyles()
+	setStyles(m, DefaultStyles())
+}
 
+// setStyles applies a Styles set to the model's style fields.
+func setStyles(m *Model, s Styles) {
 	m.baseStyle = s.Base
 	m.statusNugget = s.StatusNugget
 	m.statusBarStyle = s.StatusBar
