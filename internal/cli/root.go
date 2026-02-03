@@ -245,7 +245,7 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 
 var (
 	httpClient   = &http.Client{Timeout: 5 * time.Second}
-	httpClientMu sync.Mutex
+	httpClientMu sync.RWMutex
 )
 
 func fetchLatestRelease(ctx context.Context) (string, error) {
@@ -256,14 +256,14 @@ func fetchLatestRelease(ctx context.Context) (string, error) {
 	}
 	req.Header.Set("User-Agent", "toolkit")
 
-	// Serialize usage of the global httpClient so parallel tests can safely override it.
-	httpClientMu.Lock()
+	// Allow concurrent reads while keeping overrides safe in tests.
+	httpClientMu.RLock()
 	client := httpClient
 	if client == nil {
 		client = &http.Client{Timeout: 5 * time.Second}
 	}
+	httpClientMu.RUnlock()
 	resp, err := client.Do(req)
-	httpClientMu.Unlock()
 	if err != nil {
 		return "", err
 	}

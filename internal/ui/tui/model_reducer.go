@@ -167,8 +167,8 @@ func (m *Model) refreshDisplay() {
 // processData updates the model's dataset based on the incoming DataMsg.
 func (m *Model) processData(msg DataMsg) tea.Cmd {
 	var cmd tea.Cmd
-	// Drop stale dataset responses based on generation token
-	if _, isDataset := msg.Data.(*models.Dataset); isDataset && msg.Gen != m.gen {
+	// Drop stale responses based on generation token (allow zero-value Gen).
+	if msg.Gen != 0 && msg.Gen != m.gen {
 		return nil
 	}
 	switch data := msg.Data.(type) {

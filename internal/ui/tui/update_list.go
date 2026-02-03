@@ -97,9 +97,13 @@ func (m *Model) handleFilterMsg(msg FilterMsg) {
 }
 
 func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
-	m.textInput.SetValue(string(msg))
+	val := string(msg)
+	m.textInput.SetValue(val)
+	normalized := strings.ToLower(val)
+	// Invalidate any pending debounce tick that may be in-flight.
+	m.filterNonce++
 	return func() tea.Msg {
-		return FilterMsg(msg)
+		return FilterMsg(normalized)
 	}
 }
 
