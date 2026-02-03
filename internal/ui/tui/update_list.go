@@ -29,6 +29,8 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleFilterMsg(msg)
 	case SetFilterMsg:
 		cmds = append(cmds, m.handleSetFilterMsg(msg))
+	case FilterApplyMsg:
+		cmds = append(cmds, m.handleFilterApplyMsg(msg))
 	case deleteErrMsg:
 		m.handleDeleteErrMsg(msg)
 	case deleteDoneMsg:
@@ -91,17 +93,22 @@ func (m *Model) handleDataMsg(msg DataMsg) tea.Cmd {
 }
 
 func (m *Model) handleFilterMsg(msg FilterMsg) {
-	if string(msg) == m.newFilter {
-		FilterTable(m, string(msg))
-	}
+	FilterTable(m, string(msg))
 }
 
 func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
-	m.newFilter = string(msg)
 	m.textInput.SetValue(string(msg))
 	return func() tea.Msg {
 		return FilterMsg(msg)
 	}
+}
+
+func (m *Model) handleFilterApplyMsg(msg FilterApplyMsg) tea.Cmd {
+	// Only apply if this tick corresponds to the most recent debounce
+	if msg.Nonce == m.filterNonce {
+		FilterTable(m, msg.Value)
+	}
+	return nil
 }
 
 // handleNormalKeys processes key events in Normal mode.

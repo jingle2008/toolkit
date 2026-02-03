@@ -62,6 +62,6 @@ func (m *Model) Init() tea.Cmd {
 		cmds = append(cmds, m.updateCategory(m.category)...)
 	}
 
-	cmds = append(cmds, setFilter(m.newFilter))
+	cmds = append(cmds, setFilter(m.initialFilter))
 	return tea.Sequence(cmds...)
 }

@@ -159,7 +159,6 @@ func (m *Model) updateLayout(w, h int) {
 // refreshDisplay resets filters and updates columns and rows.
 func (m *Model) refreshDisplay() {
 	m.curFilter = ""
-	m.newFilter = ""
 	m.textInput.Reset()
 	m.updateColumns()
 	m.updateRows(true)
@@ -199,6 +198,25 @@ func (m *Model) processData(msg DataMsg) tea.Cmd {
 	return cmd
 }
 
+/*
+applyDataset standardizes how dataset mutations are applied and the UI is refreshed.
+It:
+- Ensures m.dataset is non-nil
+- Applies the provided mutation
+- Calls endTask(true)
+- Logs a consistent "data loaded" message with category and count
+- Refreshes the display
+*/
+func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category, count int) {
+	if m.dataset == nil {
+		m.dataset = &models.Dataset{}
+	}
+	mut(m.dataset)
+	m.endTask(true)
+	m.logger.Infow("data loaded", "category", category, "count", count, "pendingTasks", m.pendingTasks)
+	m.refreshDisplay()
+}
+
 // Typed lazy-load handlers (replace DataMsg type-switch path)
 // Each handler updates the dataset, ends the task, logs, refreshes display,
 // and returns any follow-up command (e.g., GPU pool state enrichment).
@@ -206,10 +224,7 @@ func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) tea.Cm
 	if gen != m.gen {
 		return nil
 	}
-	m.dataset.BaseModels = items
-	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.BaseModel, "count", len(items), "pendingTasks", m.pendingTasks)
-	m.refreshDisplay()
+	m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
 	return nil
 }
 
@@ -217,26 +232,19 @@ func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {
 	if gen != m.gen {
 		return nil
 	}
-	m.dataset.GpuPools = items
-	cmd := m.updateGpuPoolState()
-	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.GpuPool, "count", len(items), "pendingTasks", m.pendingTasks)
-	m.refreshDisplay()
-	return cmd
+	m.applyDataset(func(ds *models.Dataset) { ds.GpuPools = items }, domain.GpuPool, len(items))
+	return m.updateGpuPoolState()
 }
 
 func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode, gen int) tea.Cmd {
 	if gen != m.gen {
 		return nil
 	}
-	m.dataset.GpuNodeMap = items
-	m.endTask(true)
 	total := 0
 	for _, v := range items {
 		total += len(v)
 	}
-	m.logger.Infow("data loaded", "category", domain.GpuNode, "count", total, "pendingTasks", m.pendingTasks)
-	m.refreshDisplay()
+	m.applyDataset(func(ds *models.Dataset) { ds.GpuNodeMap = items }, domain.GpuNode, total)
 	return nil
 }
 
@@ -244,14 +252,11 @@ func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.Dedica
 	if gen != m.gen {
 		return nil
 	}
-	m.dataset.SetDedicatedAIClusterMap(items)
-	m.endTask(true)
 	total := 0
 	for _, v := range items {
 		total += len(v)
 	}
-	m.logger.Infow("data loaded", "category", domain.DedicatedAICluster, "count", total, "pendingTasks", m.pendingTasks)
-	m.refreshDisplay()
+	m.applyDataset(func(ds *models.Dataset) { ds.SetDedicatedAIClusterMap(items) }, domain.DedicatedAICluster, total)
 	return nil
 }
 
@@ -259,13 +264,12 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 	if gen != m.gen {
 		return nil
 	}
-	m.dataset.Tenants = group.Tenants
-	m.dataset.LimitTenancyOverrideMap = group.LimitTenancyOverrideMap
-	m.dataset.ConsolePropertyTenancyOverrideMap = group.ConsolePropertyTenancyOverrideMap
-	m.dataset.PropertyTenancyOverrideMap = group.PropertyTenancyOverrideMap
-	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.Tenant, "tenantCount", len(group.Tenants), "pendingTasks", m.pendingTasks)
-	m.refreshDisplay()
+	m.applyDataset(func(ds *models.Dataset) {
+		ds.Tenants = group.Tenants
+		ds.LimitTenancyOverrideMap = group.LimitTenancyOverrideMap
+		ds.ConsolePropertyTenancyOverrideMap = group.ConsolePropertyTenancyOverrideMap
+		ds.PropertyTenancyOverrideMap = group.PropertyTenancyOverrideMap
+	}, domain.Tenant, len(group.Tenants))
 	return nil
 }
 
@@ -273,10 +277,7 @@ func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalO
 	if gen != m.gen {
 		return nil
 	}
-	m.dataset.LimitRegionalOverrides = items
-	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.LimitRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
-	m.refreshDisplay()
+	m.applyDataset(func(ds *models.Dataset) { ds.LimitRegionalOverrides = items }, domain.LimitRegionalOverride, len(items))
 	return nil
 }
 
@@ -284,10 +285,7 @@ func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.Cons
 	if gen != m.gen {
 		return nil
 	}
-	m.dataset.ConsolePropertyRegionalOverrides = items
-	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.ConsolePropertyRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
-	m.refreshDisplay()
+	m.applyDataset(func(ds *models.Dataset) { ds.ConsolePropertyRegionalOverrides = items }, domain.ConsolePropertyRegionalOverride, len(items))
 	return nil
 }
 
@@ -295,10 +293,7 @@ func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyReg
 	if gen != m.gen {
 		return nil
 	}
-	m.dataset.PropertyRegionalOverrides = items
-	m.endTask(true)
-	m.logger.Infow("data loaded", "category", domain.PropertyRegionalOverride, "count", len(items), "pendingTasks", m.pendingTasks)
-	m.refreshDisplay()
+	m.applyDataset(func(ds *models.Dataset) { ds.PropertyRegionalOverrides = items }, domain.PropertyRegionalOverride, len(items))
 	return nil
 }
 
@@ -492,6 +487,8 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		cmd  tea.Cmd
 		cmds []tea.Cmd
 	)
+
+	m.newLoadContext()
 	if fn, ok := handlers[m.category]; ok {
 		gen := m.bumpGen()
 		cmd = fn(m, refresh, gen)
@@ -500,7 +497,6 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		cmd = m.handleTenancyOverridesGroup(gen)
 	}
 	if cmd != nil {
-		m.newLoadContext()
 		cmds = append(cmds, m.beginTask(), cmd)
 	} else {
 		cmds = append(cmds, refreshDataCmd())

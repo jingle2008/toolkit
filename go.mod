@@ -10,6 +10,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/charmbracelet/glamour v0.9.1
 	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/golangci/golangci-lint/v2 v2.3.1
 	github.com/hashicorp/hcl/v2 v2.20.1
 	github.com/mattn/go-runewidth v0.0.16
@@ -111,7 +112,6 @@ require (
 	github.com/go-toolsmith/astp v1.1.0 // indirect
 	github.com/go-toolsmith/strparse v1.1.0 // indirect
 	github.com/go-toolsmith/typep v1.1.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/go-xmlfmt/xmlfmt v1.1.3 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect

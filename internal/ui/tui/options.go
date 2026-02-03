@@ -78,7 +78,7 @@ func WithLogger(logger logging.Logger) ModelOption {
 // WithFilter sets a starting filter before Init().
 func WithFilter(filter string) ModelOption {
 	return func(m *Model) {
-		m.newFilter = filter
+		m.initialFilter = filter
 	}
 }
 

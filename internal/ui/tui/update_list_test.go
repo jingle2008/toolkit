@@ -18,11 +18,23 @@ func TestHandleSetFilterMsg(t *testing.T) {
 	m := &Model{
 		textInput: &ti,
 	}
-	msg := SetFilterMsg("foo")
+	msg := SetFilterMsg("Foo")
 	cmd := m.handleSetFilterMsg(msg)
-	assert.Equal(t, "foo", m.newFilter)
-	assert.Equal(t, "foo", m.textInput.Value())
-	assert.NotNil(t, cmd)
+	// newFilter removed; text input is updated immediately
+	assert.Equal(t, "Foo", m.textInput.Value())
+	// and a FilterMsg is emitted with lowercased value
+	requireNotNil := func(c tea.Cmd) {
+		if c == nil {
+			t.Fatal("expected non-nil cmd")
+		}
+	}
+	requireNotNil(cmd)
+	got := cmd()
+	fm, ok := got.(FilterMsg)
+	if !ok {
+		t.Fatalf("expected FilterMsg, got %T", got)
+	}
+	assert.Equal(t, "foo", string(fm))
 }
 
 func TestHandleSpinnerTickMsg(t *testing.T) {

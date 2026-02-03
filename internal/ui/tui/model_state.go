@@ -52,7 +52,8 @@ type Model struct {
 	inputMode      common.InputMode
 	textInput      *textinput.Model
 	curFilter      string
-	newFilter      string
+	initialFilter  string
+	filterNonce    int
 	viewMode       common.ViewMode
 	lastViewMode   common.ViewMode // for toggling help view
 	choice         models.ItemKey

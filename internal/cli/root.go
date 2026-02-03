@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -242,7 +243,10 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 	rootCmd.AddCommand(versionCmd)
 }
 
-var httpClient = &http.Client{Timeout: 5 * time.Second}
+var (
+	httpClient   = &http.Client{Timeout: 5 * time.Second}
+	httpClientMu sync.Mutex
+)
 
 func fetchLatestRelease(ctx context.Context) (string, error) {
 	const url = "https://api.github.com/repos/jingle2008/toolkit/releases/latest"
@@ -252,7 +256,14 @@ func fetchLatestRelease(ctx context.Context) (string, error) {
 	}
 	req.Header.Set("User-Agent", "toolkit")
 
-	resp, err := httpClient.Do(req)
+	// Serialize usage of the global httpClient so parallel tests can safely override it.
+	httpClientMu.Lock()
+	client := httpClient
+	if client == nil {
+		client = &http.Client{Timeout: 5 * time.Second}
+	}
+	resp, err := client.Do(req)
+	httpClientMu.Unlock()
 	if err != nil {
 		return "", err
 	}

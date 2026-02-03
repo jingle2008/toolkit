@@ -77,5 +77,5 @@ func TestWithFilter(t *testing.T) {
 	m := &Model{}
 	opt := WithFilter("foo")
 	opt(m)
-	assert.Equal(t, "foo", m.newFilter)
+	assert.Equal(t, "foo", m.initialFilter)
 }

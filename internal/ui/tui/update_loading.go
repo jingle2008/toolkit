@@ -46,11 +46,6 @@ func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) handleErrMsg(msg ErrMsg) {
-	m.err = msg
-	m.endTask(false)
-}
-
 func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 	loadingSpinner, cmd := m.loadingSpinner.Update(msg)
 	m.loadingSpinner = &loadingSpinner

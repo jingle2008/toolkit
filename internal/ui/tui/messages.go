@@ -29,6 +29,12 @@ type FilterMsg string
 // SetFilterMsg is a message to set the filter text in the model.
 type SetFilterMsg string
 
+// FilterApplyMsg carries a debounced filter value and a nonce to drop stale updates.
+type FilterApplyMsg struct {
+	Value string
+	Nonce int
+}
+
 type deleteDoneMsg struct {
 	category domain.Category
 	key      models.ItemKey
