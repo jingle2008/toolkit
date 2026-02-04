@@ -22,7 +22,7 @@ func TestTypedLoadBaseModelsCmd_Run(t *testing.T) {
 	)
 	// Use a background context for the typed command constructor
 	gen := m.bumpGen()
-	cmd := loadBaseModelsCmd(m.loader, context.Background(), m.kubeConfig, m.environment, gen)
+	cmd := loadBaseModelsCmd(context.Background(), m.loader, m.kubeConfig, m.environment, gen)
 	msg := cmd()
 	assert.NotNil(t, msg)
 }

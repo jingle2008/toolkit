@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func TestHandleSetFilterMsg(t *testing.T) {
@@ -35,6 +37,69 @@ func TestHandleSetFilterMsg(t *testing.T) {
 		t.Fatalf("expected FilterMsg, got %T", got)
 	}
 	assert.Equal(t, "foo", string(fm))
+}
+
+func TestHandleFilterApplyMsg(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.curFilter = "old"
+	m.filterNonce = 2
+
+	m.handleFilterApplyMsg(FilterApplyMsg{Value: "new", Nonce: 1})
+	if m.curFilter != "old" {
+		t.Fatalf("unexpected filter update on stale nonce: %q", m.curFilter)
+	}
+
+	m.handleFilterApplyMsg(FilterApplyMsg{Value: "new", Nonce: 2})
+	if m.curFilter != "new" {
+		t.Fatalf("expected filter to update, got %q", m.curFilter)
+	}
+}
+
+func TestHandleDeleteErrMsg_GpuNodeRestoresStatus(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.GpuNode
+	node := models.GpuNode{Name: "node1", NodePool: "pool1"}
+	node.SetStatus("Deleting")
+	m.dataset.GpuNodeMap = map[string][]models.GpuNode{
+		"pool1": {node},
+	}
+	m.updateColumns()
+	m.updateRows(false)
+
+	msg := deleteErrMsg{
+		err:      errors.New("boom"),
+		category: domain.GpuNode,
+		key:      models.ScopedItemKey{Scope: "pool1", Name: "node1"},
+	}
+	msg.prevState = "OK"
+	m.handleDeleteErrMsg(msg)
+
+	got := m.dataset.GpuNodeMap["pool1"][0].GetStatus()
+	if got != "OK" {
+		t.Fatalf("expected status OK, got %q", got)
+	}
+}
+
+func TestHandleDeleteDoneMsg_GpuNodeRemoved(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.GpuNode
+	m.dataset.GpuNodeMap = map[string][]models.GpuNode{
+		"pool1": {{Name: "node1", NodePool: "pool1"}},
+	}
+	m.updateColumns()
+	m.updateRows(false)
+
+	m.handleDeleteDoneMsg(deleteDoneMsg{
+		category: domain.GpuNode,
+		key:      models.ScopedItemKey{Scope: "pool1", Name: "node1"},
+	})
+
+	if len(m.dataset.GpuNodeMap["pool1"]) != 0 {
+		t.Fatalf("expected node removed, got %#v", m.dataset.GpuNodeMap["pool1"])
+	}
 }
 
 func TestHandleSpinnerTickMsg(t *testing.T) {

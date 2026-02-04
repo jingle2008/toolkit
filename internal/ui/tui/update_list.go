@@ -18,25 +18,44 @@ import (
 )
 
 func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
+	cmds := m.routeListMsg(msg)
 
+	updatedTable, cmd := m.table.Update(msg)
+	m.table = &updatedTable
+	cmds = append(cmds, cmd)
+	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		cmds = append(cmds, m.handleKeyMsg(msg)...)
+		return m.handleKeyMsg(msg)
 	case DataMsg:
-		cmds = append(cmds, m.handleDataMsg(msg))
+		return []tea.Cmd{m.handleDataMsg(msg)}
 	case FilterMsg:
 		m.handleFilterMsg(msg)
+		return nil
 	case SetFilterMsg:
-		cmds = append(cmds, m.handleSetFilterMsg(msg))
+		return []tea.Cmd{m.handleSetFilterMsg(msg)}
 	case FilterApplyMsg:
-		cmds = append(cmds, m.handleFilterApplyMsg(msg))
+		m.handleFilterApplyMsg(msg)
+		return nil
 	case deleteErrMsg:
 		m.handleDeleteErrMsg(msg)
+		return nil
 	case deleteDoneMsg:
 		m.handleDeleteDoneMsg(msg)
+		return nil
 	case updateDoneMsg:
 		m.handleUpdateDoneMsg(msg)
+		return nil
+	default:
+		return m.routeListAsyncMsg(msg)
+	}
+}
+
+func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
+	switch msg := msg.(type) {
 	case gpuPoolScaleStartedMsg:
 		m.handleGpuPoolScaleStartedMsg(msg)
 	case gpuPoolScaleResultMsg:
@@ -47,32 +66,44 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleDrainNodeResultMsg(msg)
 	case rebootNodeResultMsg:
 		m.handleRebootNodeResultMsg(msg)
+	default:
+		return m.routeListDataMsg(msg)
+	}
+	return nil
+}
+
+func (m *Model) routeListDataMsg(msg tea.Msg) []tea.Cmd {
+	switch msg := msg.(type) {
 	case datasetLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen}))
+		return []tea.Cmd{m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen})}
 	case baseModelsLoadedMsg:
-		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items, msg.Gen))
+		m.handleBaseModelsLoaded(msg.Items, msg.Gen)
 	case gpuPoolsLoadedMsg:
-		cmds = append(cmds, m.handleGpuPoolsLoaded(msg.Items, msg.Gen))
+		return []tea.Cmd{m.handleGpuPoolsLoaded(msg.Items, msg.Gen)}
+	default:
+		return m.routeListMoreDataMsg(msg)
+	}
+	return nil
+}
+
+func (m *Model) routeListMoreDataMsg(msg tea.Msg) []tea.Cmd {
+	switch msg := msg.(type) {
 	case gpuNodesLoadedMsg:
-		cmds = append(cmds, m.handleGpuNodesLoaded(msg.Items, msg.Gen))
+		m.handleGpuNodesLoaded(msg.Items, msg.Gen)
 	case dedicatedAIClustersLoadedMsg:
-		cmds = append(cmds, m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen))
+		m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen)
 	case tenancyOverridesLoadedMsg:
-		cmds = append(cmds, m.handleTenancyOverridesLoaded(msg.Group, msg.Gen))
+		m.handleTenancyOverridesLoaded(msg.Group, msg.Gen)
 	case limitRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleLimitRegionalOverridesLoaded(msg.Items, msg.Gen))
+		m.handleLimitRegionalOverridesLoaded(msg.Items, msg.Gen)
 	case consolePropertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleConsolePropertyRegionalOverridesLoaded(msg.Items, msg.Gen))
+		m.handleConsolePropertyRegionalOverridesLoaded(msg.Items, msg.Gen)
 	case propertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handlePropertyRegionalOverridesLoaded(msg.Items, msg.Gen))
+		m.handlePropertyRegionalOverridesLoaded(msg.Items, msg.Gen)
 	default:
 		// Future-proof: ignore unknown message types
 	}
-
-	updatedTable, cmd := m.table.Update(msg)
-	m.table = &updatedTable
-	cmds = append(cmds, cmd)
-	return m, tea.Batch(cmds...)
+	return nil
 }
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
@@ -107,12 +138,11 @@ func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
 	}
 }
 
-func (m *Model) handleFilterApplyMsg(msg FilterApplyMsg) tea.Cmd {
+func (m *Model) handleFilterApplyMsg(msg FilterApplyMsg) {
 	// Only apply if this tick corresponds to the most recent debounce
 	if msg.Nonce == m.filterNonce {
 		FilterTable(m, msg.Value)
 	}
-	return nil
 }
 
 // handleNormalKeys processes key events in Normal mode.

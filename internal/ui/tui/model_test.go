@@ -125,30 +125,41 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 
 func checkLoadDataResult(t *testing.T, msg any, wantData *models.Dataset, wantError error) {
 	t.Helper()
-	switch {
-	case wantData != nil:
-		switch m := msg.(type) {
-		case DataMsg:
-			if !reflect.DeepEqual(m.Data, wantData) {
-				t.Errorf("DataMsg.Data = %v, want %v", m.Data, wantData)
-			}
-		case datasetLoadedMsg:
-			if !reflect.DeepEqual(m.Dataset, wantData) {
-				t.Errorf("datasetLoadedMsg.Dataset = %v, want %v", m.Dataset, wantData)
-			}
-		default:
-			t.Fatalf("expected DataMsg or datasetLoadedMsg, got %T", msg)
+	if wantData != nil {
+		assertLoadDataMessage(t, msg, wantData)
+		return
+	}
+	if wantError != nil {
+		assertLoadErrorMessage(t, msg, wantError)
+		return
+	}
+	t.Fatalf("invalid test case: no wantData or wantError")
+}
+
+func assertLoadDataMessage(t *testing.T, msg any, wantData *models.Dataset) {
+	t.Helper()
+	switch m := msg.(type) {
+	case DataMsg:
+		if !reflect.DeepEqual(m.Data, wantData) {
+			t.Errorf("DataMsg.Data = %v, want %v", m.Data, wantData)
 		}
-	case wantError != nil:
-		emsg, ok := msg.(ErrMsg)
-		if !ok {
-			t.Fatalf("expected ErrMsg, got %T", msg)
-		}
-		if !errors.Is(emsg, wantError) {
-			t.Errorf("ErrMsg = %v, want %v", emsg, wantError)
+	case datasetLoadedMsg:
+		if !reflect.DeepEqual(m.Dataset, wantData) {
+			t.Errorf("datasetLoadedMsg.Dataset = %v, want %v", m.Dataset, wantData)
 		}
 	default:
-		t.Fatalf("invalid test case: no wantData or wantError")
+		t.Fatalf("expected DataMsg or datasetLoadedMsg, got %T", msg)
+	}
+}
+
+func assertLoadErrorMessage(t *testing.T, msg any, wantError error) {
+	t.Helper()
+	emsg, ok := msg.(ErrMsg)
+	if !ok {
+		t.Fatalf("expected ErrMsg, got %T", msg)
+	}
+	if !errors.Is(emsg, wantError) {
+		t.Errorf("ErrMsg = %v, want %v", emsg, wantError)
 	}
 }
 

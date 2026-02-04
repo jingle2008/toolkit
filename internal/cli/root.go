@@ -83,13 +83,10 @@ metadata_file: "" # Optional path to a YAML or JSON file with additional metadat
 
 // runRootE returns the RunE function for the root command.
 func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []string) error {
-	return func(cmd *cobra.Command, _ []string) error {
+	return func(_ *cobra.Command, _ []string) error {
 		// Parse config file with proper error handling (kept out of OnInitialize to preserve error semantics and tests).
-		if *cfgFile != "" {
-			viper.SetConfigFile(*cfgFile)
-			if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("read config file: %w", err)
-			}
+		if err := readConfigFile(cfgFile); err != nil {
+			return err
 		}
 
 		var cfg config.Config
@@ -97,22 +94,11 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 			return fmt.Errorf("unmarshal config: %w", err)
 		}
 
-		logFormat := viper.GetString("log_format")
-		switch logFormat {
-		case "console", "json", "slog":
-			// ok
-		default:
-			return fmt.Errorf("invalid log_format %q (valid: console|json|slog)", logFormat)
+		logFormat, logLevel, err := logOptionsFromViper()
+		if err != nil {
+			return err
 		}
-		logLevel := strings.ToLower(viper.GetString("log_level"))
-		switch logLevel {
-		case "", "debug", "info", "warn", "warning", "error":
-			if logLevel == "warning" {
-				logLevel = "warn"
-			}
-		default:
-			return fmt.Errorf("invalid log_level %q (valid: debug|info|warn|error or empty)", logLevel)
-		}
+
 		logger, err := logging.NewFileLoggerWithLevel(cfg.Debug, cfg.LogFile, logFormat, logLevel)
 		if err != nil {
 			return fmt.Errorf("initialize logger: %w", err)
@@ -133,6 +119,51 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 			return err
 		}
 		return nil
+	}
+}
+
+func readConfigFile(cfgFile *string) error {
+	if cfgFile == nil || *cfgFile == "" {
+		return nil
+	}
+	viper.SetConfigFile(*cfgFile)
+	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read config file: %w", err)
+	}
+	return nil
+}
+
+func logOptionsFromViper() (string, string, error) {
+	logFormat := viper.GetString("log_format")
+	if err := validateLogFormat(logFormat); err != nil {
+		return "", "", err
+	}
+	logLevel, err := normalizeLogLevel(viper.GetString("log_level"))
+	if err != nil {
+		return "", "", err
+	}
+	return logFormat, logLevel, nil
+}
+
+func validateLogFormat(logFormat string) error {
+	switch logFormat {
+	case "console", "json", "slog":
+		return nil
+	default:
+		return fmt.Errorf("invalid log_format %q (valid: console|json|slog)", logFormat)
+	}
+}
+
+func normalizeLogLevel(level string) (string, error) {
+	logLevel := strings.ToLower(level)
+	switch logLevel {
+	case "", "debug", "info", "warn", "warning", "error":
+		if logLevel == "warning" {
+			logLevel = "warn"
+		}
+		return logLevel, nil
+	default:
+		return "", fmt.Errorf("invalid log_level %q (valid: debug|info|warn|error or empty)", logLevel)
 	}
 }
 

@@ -220,12 +220,11 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 // Typed lazy-load handlers (replace DataMsg type-switch path)
 // Each handler updates the dataset, ends the task, logs, refreshes display,
 // and returns any follow-up command (e.g., GPU pool state enrichment).
-func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) tea.Cmd {
+func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
 	if gen != m.gen {
-		return nil
+		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
-	return nil
 }
 
 func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {
@@ -236,33 +235,31 @@ func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {
 	return m.updateGpuPoolState()
 }
 
-func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode, gen int) tea.Cmd {
+func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode, gen int) {
 	if gen != m.gen {
-		return nil
+		return
 	}
 	total := 0
 	for _, v := range items {
 		total += len(v)
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.GpuNodeMap = items }, domain.GpuNode, total)
-	return nil
 }
 
-func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) tea.Cmd {
+func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {
 	if gen != m.gen {
-		return nil
+		return
 	}
 	total := 0
 	for _, v := range items {
 		total += len(v)
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.SetDedicatedAIClusterMap(items) }, domain.DedicatedAICluster, total)
-	return nil
 }
 
-func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) tea.Cmd {
+func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) {
 	if gen != m.gen {
-		return nil
+		return
 	}
 	m.applyDataset(func(ds *models.Dataset) {
 		ds.Tenants = group.Tenants
@@ -270,31 +267,27 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 		ds.ConsolePropertyTenancyOverrideMap = group.ConsolePropertyTenancyOverrideMap
 		ds.PropertyTenancyOverrideMap = group.PropertyTenancyOverrideMap
 	}, domain.Tenant, len(group.Tenants))
-	return nil
 }
 
-func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) tea.Cmd {
+func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) {
 	if gen != m.gen {
-		return nil
+		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.LimitRegionalOverrides = items }, domain.LimitRegionalOverride, len(items))
-	return nil
 }
 
-func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride, gen int) tea.Cmd {
+func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride, gen int) {
 	if gen != m.gen {
-		return nil
+		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.ConsolePropertyRegionalOverrides = items }, domain.ConsolePropertyRegionalOverride, len(items))
-	return nil
 }
 
-func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride, gen int) tea.Cmd {
+func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride, gen int) {
 	if gen != m.gen {
-		return nil
+		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.PropertyRegionalOverrides = items }, domain.PropertyRegionalOverride, len(items))
-	return nil
 }
 
 func (m *Model) sortTableByColumn(column string) tea.Cmd {
@@ -511,56 +504,56 @@ func (m *Model) handleTenancyOverridesGroup(gen int) tea.Cmd {
 		m.dataset.LimitTenancyOverrideMap == nil ||
 		m.dataset.ConsolePropertyTenancyOverrideMap == nil ||
 		m.dataset.PropertyTenancyOverrideMap == nil {
-		return loadTenancyOverrideGroupCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
+		return loadTenancyOverrideGroupCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
 func (m *Model) handleLimitRegionalOverrideCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.LimitRegionalOverrides == nil {
-		return loadLimitRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
+		return loadLimitRegionalOverridesCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
 func (m *Model) handleConsolePropertyRegionalOverrideCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.ConsolePropertyRegionalOverrides == nil {
-		return loadConsolePropertyRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
+		return loadConsolePropertyRegionalOverridesCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
 func (m *Model) handlePropertyRegionalOverrideCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.PropertyRegionalOverrides == nil {
-		return loadPropertyRegionalOverridesCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
+		return loadPropertyRegionalOverridesCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
 func (m *Model) handleBaseModelCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.BaseModels == nil {
-		return loadBaseModelsCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment, gen)
+		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }
 
 func (m *Model) handleGpuPoolCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuPools == nil || refresh {
-		return loadGpuPoolsCmd(m.loader, m.loadCtx, m.repoPath, m.environment, gen)
+		return loadGpuPoolsCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
 func (m *Model) handleGpuNodeCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.GpuNodeMap == nil || refresh {
-		return loadGpuNodesCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment, gen)
+		return loadGpuNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }
 
 func (m *Model) handleDedicatedAIClusterCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
-		return loadDedicatedAIClustersCmd(m.loader, m.loadCtx, m.kubeConfig, m.environment, gen)
+		return loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }

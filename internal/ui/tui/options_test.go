@@ -79,3 +79,11 @@ func TestWithFilter(t *testing.T) {
 	opt(m)
 	assert.Equal(t, "foo", m.initialFilter)
 }
+
+func TestWithVersion(t *testing.T) {
+	t.Parallel()
+	m := &Model{}
+	opt := WithVersion("v1.2.3")
+	opt(m)
+	assert.Equal(t, "v1.2.3", m.version)
+}

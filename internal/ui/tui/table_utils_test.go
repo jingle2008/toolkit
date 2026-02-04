@@ -11,6 +11,10 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
+type testFaulty struct{ faulty bool }
+
+func (t testFaulty) IsFaulty() bool { return t.faulty }
+
 func Test_getHeaders_returns_expected_headers(t *testing.T) {
 	t.Parallel()
 	headers := getHeaders(domain.Tenant)
@@ -82,6 +86,26 @@ func Test_findItem_returns_expected(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotNil(t, tenant)
 	assert.Equal(t, "TenantA", tenant.Name)
+}
+
+func TestFaultyPred(t *testing.T) {
+	t.Parallel()
+	assert.True(t, faultyPred(testFaulty{faulty: true}))
+	assert.False(t, faultyPred(testFaulty{faulty: false}))
+}
+
+func TestFindLimitRegionalOverride(t *testing.T) {
+	t.Parallel()
+	dataset := &models.Dataset{
+		LimitRegionalOverrides: []models.LimitRegionalOverride{
+			{Name: "limit-1"},
+		},
+	}
+	item := findLimitRegionalOverride(dataset, "limit-1")
+	require.NotNil(t, item)
+	got, ok := item.(*models.LimitRegionalOverride)
+	assert.True(t, ok)
+	assert.Equal(t, "limit-1", got.Name)
 }
 
 func Test_getTableRows_empty_dataset(t *testing.T) {

@@ -35,8 +35,8 @@ It manages state, events, and rendering for the Bubble Tea UI.
 type Model struct {
 	pendingTasks   int
 	logger         logging.Logger
-	parentCtx      context.Context
-	loadCtx        context.Context
+	parentCtx      context.Context //nolint:containedctx // stored to manage lifecycle across async loads
+	loadCtx        context.Context //nolint:containedctx // stored to manage lifecycle across async loads
 	loadCancel     context.CancelFunc
 	repoPath       string
 	environment    models.Environment

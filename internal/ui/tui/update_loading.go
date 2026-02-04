@@ -10,40 +10,58 @@ import (
 
 // updateLoadingView handles command routing while in LoadingView mode.
 func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
+	cmds, quit := m.routeLoadingMsg(msg)
+	if quit {
+		return m, tea.Quit
+	}
+	cmds = append(cmds, m.handleStopwatchMsg(msg))
+	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) routeLoadingMsg(msg tea.Msg) ([]tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, keys.Quit) {
 			m.cancelInFlight()
-			return m, tea.Quit
+			return nil, true
 		}
+		return nil, false
 	case DataMsg:
-		cmds = append(cmds, m.handleDataMsg(msg))
+		return []tea.Cmd{m.handleDataMsg(msg)}, false
 	case datasetLoadedMsg:
-		cmds = append(cmds, m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen}))
-	case baseModelsLoadedMsg:
-		cmds = append(cmds, m.handleBaseModelsLoaded(msg.Items, msg.Gen))
-	case gpuPoolsLoadedMsg:
-		cmds = append(cmds, m.handleGpuPoolsLoaded(msg.Items, msg.Gen))
-	case gpuNodesLoadedMsg:
-		cmds = append(cmds, m.handleGpuNodesLoaded(msg.Items, msg.Gen))
-	case dedicatedAIClustersLoadedMsg:
-		cmds = append(cmds, m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen))
-	case tenancyOverridesLoadedMsg:
-		cmds = append(cmds, m.handleTenancyOverridesLoaded(msg.Group, msg.Gen))
-	case limitRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleLimitRegionalOverridesLoaded(msg.Items, msg.Gen))
-	case consolePropertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handleConsolePropertyRegionalOverridesLoaded(msg.Items, msg.Gen))
-	case propertyRegionalOverridesLoadedMsg:
-		cmds = append(cmds, m.handlePropertyRegionalOverridesLoaded(msg.Items, msg.Gen))
+		return []tea.Cmd{m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen})}, false
 	case ErrMsg:
 		m.handleErrMsg(msg)
+		return nil, false
 	case spinner.TickMsg:
-		cmds = append(cmds, m.handleSpinnerTickMsg(msg))
+		return []tea.Cmd{m.handleSpinnerTickMsg(msg)}, false
+	default:
+		return m.routeLoadingDataMsg(msg), false
 	}
-	cmds = append(cmds, m.handleStopwatchMsg(msg))
-	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) routeLoadingDataMsg(msg tea.Msg) []tea.Cmd {
+	switch msg := msg.(type) {
+	case baseModelsLoadedMsg:
+		m.handleBaseModelsLoaded(msg.Items, msg.Gen)
+	case gpuPoolsLoadedMsg:
+		return []tea.Cmd{m.handleGpuPoolsLoaded(msg.Items, msg.Gen)}
+	case gpuNodesLoadedMsg:
+		m.handleGpuNodesLoaded(msg.Items, msg.Gen)
+	case dedicatedAIClustersLoadedMsg:
+		m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen)
+	case tenancyOverridesLoadedMsg:
+		m.handleTenancyOverridesLoaded(msg.Group, msg.Gen)
+	case limitRegionalOverridesLoadedMsg:
+		m.handleLimitRegionalOverridesLoaded(msg.Items, msg.Gen)
+	case consolePropertyRegionalOverridesLoadedMsg:
+		m.handleConsolePropertyRegionalOverridesLoaded(msg.Items, msg.Gen)
+	case propertyRegionalOverridesLoadedMsg:
+		m.handlePropertyRegionalOverridesLoaded(msg.Items, msg.Gen)
+	default:
+		// Future-proof: ignore unknown message types
+	}
+	return nil
 }
 
 func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {

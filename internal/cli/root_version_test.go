@@ -23,11 +23,10 @@ func (t rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return http.DefaultTransport.RoundTrip(cloned)
 }
 
+//nolint:paralleltest // uses shared httpClient global; parallel runs race.
 func TestFetchLatestRelease_Success(t *testing.T) {
-	t.Parallel()
-
 	// Test server returns a fixed tag_name in JSON regardless of path.
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"tag_name":"v1.2.3"}`))
 	}))
 	t.Cleanup(srv.Close)
@@ -57,11 +56,10 @@ func TestFetchLatestRelease_Success(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // uses shared httpClient global; parallel runs race.
 func TestFetchLatestRelease_Non200(t *testing.T) {
-	t.Parallel()
-
 	var status int32 = 500
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(int(atomic.LoadInt32(&status)))
 		_, _ = w.Write([]byte(`{"error":"boom"}`))
 	}))

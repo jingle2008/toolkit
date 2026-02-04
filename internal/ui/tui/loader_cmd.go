@@ -12,7 +12,7 @@ import (
 )
 
 // Pure command constructors (preferred over loadRequest)
-func loadBaseModelsCmd(ld loader.Loader, ctx context.Context, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func loadBaseModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadBaseModels(ctx, kubeCfg, env)
 		if err != nil {
@@ -22,7 +22,7 @@ func loadBaseModelsCmd(ld loader.Loader, ctx context.Context, kubeCfg string, en
 	}
 }
 
-func loadGpuPoolsCmd(ld loader.Loader, ctx context.Context, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadGpuPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadGpuPools(ctx, repoPath, env)
 		if err != nil {
@@ -32,7 +32,7 @@ func loadGpuPoolsCmd(ld loader.Loader, ctx context.Context, repoPath string, env
 	}
 }
 
-func loadGpuNodesCmd(ld loader.Loader, ctx context.Context, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func loadGpuNodesCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadGpuNodes(ctx, kubeCfg, env)
 		if err != nil {
@@ -42,7 +42,7 @@ func loadGpuNodesCmd(ld loader.Loader, ctx context.Context, kubeCfg string, env 
 	}
 }
 
-func loadDedicatedAIClustersCmd(ld loader.Loader, ctx context.Context, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)
 		if err != nil {
@@ -52,7 +52,7 @@ func loadDedicatedAIClustersCmd(ld loader.Loader, ctx context.Context, kubeCfg s
 	}
 }
 
-func loadTenancyOverrideGroupCmd(ld loader.Loader, ctx context.Context, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		group, err := ld.LoadTenancyOverrideGroup(ctx, repoPath, env)
 		if err != nil {
@@ -62,7 +62,7 @@ func loadTenancyOverrideGroupCmd(ld loader.Loader, ctx context.Context, repoPath
 	}
 }
 
-func loadLimitRegionalOverridesCmd(ld loader.Loader, ctx context.Context, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadLimitRegionalOverridesCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadLimitRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
@@ -72,7 +72,7 @@ func loadLimitRegionalOverridesCmd(ld loader.Loader, ctx context.Context, repoPa
 	}
 }
 
-func loadConsolePropertyRegionalOverridesCmd(ld loader.Loader, ctx context.Context, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadConsolePropertyRegionalOverridesCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
@@ -82,7 +82,7 @@ func loadConsolePropertyRegionalOverridesCmd(ld loader.Loader, ctx context.Conte
 	}
 }
 
-func loadPropertyRegionalOverridesCmd(ld loader.Loader, ctx context.Context, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadPropertyRegionalOverridesCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadPropertyRegionalOverrides(ctx, repoPath, env)
 		if err != nil {

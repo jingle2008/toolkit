@@ -8,30 +8,36 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+type levelCase struct {
+	name      string
+	level     string
+	debugFlag bool
+	wantZap   zapcore.Level
+	wantSlog  slog.Level
+}
+
+func levelCases() []levelCase {
+	return []levelCase{
+		{"debug", "debug", false, zapcore.DebugLevel, slog.LevelDebug},
+		{"info", "info", false, zapcore.InfoLevel, slog.LevelInfo},
+		{"warn", "warn", false, zapcore.WarnLevel, slog.LevelWarn},
+		{"warning", "warning", false, zapcore.WarnLevel, slog.LevelWarn},
+		{"error", "error", false, zapcore.ErrorLevel, slog.LevelError},
+		{"empty_debug_true", "", true, zapcore.DebugLevel, slog.LevelDebug},
+		{"empty_debug_false", "", false, zapcore.InfoLevel, slog.LevelInfo},
+		{"unknown_defaults_info", "not-a-level", false, zapcore.InfoLevel, slog.LevelInfo},
+	}
+}
+
 func TestParseZapLevel_Mapping(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name      string
-		level     string
-		debugFlag bool
-		want      zapcore.Level
-	}{
-		{"debug", "debug", false, zapcore.DebugLevel},
-		{"info", "info", false, zapcore.InfoLevel},
-		{"warn", "warn", false, zapcore.WarnLevel},
-		{"warning", "warning", false, zapcore.WarnLevel},
-		{"error", "error", false, zapcore.ErrorLevel},
-		{"empty_debug_true", "", true, zapcore.DebugLevel},
-		{"empty_debug_false", "", false, zapcore.InfoLevel},
-		{"unknown_defaults_info", "not-a-level", false, zapcore.InfoLevel},
-	}
-	for _, tc := range tests {
+	for _, tc := range levelCases() {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			got := parseZapLevel(tc.level, tc.debugFlag)
-			if got != tc.want {
-				t.Fatalf("parseZapLevel(%q, debug=%v) = %v, want %v", tc.level, tc.debugFlag, got, tc.want)
+			if got != tc.wantZap {
+				t.Fatalf("parseZapLevel(%q, debug=%v) = %v, want %v", tc.level, tc.debugFlag, got, tc.wantZap)
 			}
 		})
 	}
@@ -39,28 +45,13 @@ func TestParseZapLevel_Mapping(t *testing.T) {
 
 func TestParseSlogLevel_Mapping(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name      string
-		level     string
-		debugFlag bool
-		want      slog.Level
-	}{
-		{"debug", "debug", false, slog.LevelDebug},
-		{"info", "info", false, slog.LevelInfo},
-		{"warn", "warn", false, slog.LevelWarn},
-		{"warning", "warning", false, slog.LevelWarn},
-		{"error", "error", false, slog.LevelError},
-		{"empty_debug_true", "", true, slog.LevelDebug},
-		{"empty_debug_false", "", false, slog.LevelInfo},
-		{"unknown_defaults_info", "not-a-level", false, slog.LevelInfo},
-	}
-	for _, tc := range tests {
+	for _, tc := range levelCases() {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			got := parseSlogLevel(tc.level, tc.debugFlag)
-			if got != tc.want {
-				t.Fatalf("parseSlogLevel(%q, debug=%v) = %v, want %v", tc.level, tc.debugFlag, got, tc.want)
+			if got != tc.wantSlog {
+				t.Fatalf("parseSlogLevel(%q, debug=%v) = %v, want %v", tc.level, tc.debugFlag, got, tc.wantSlog)
 			}
 		})
 	}
