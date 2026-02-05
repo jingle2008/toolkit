@@ -96,19 +96,40 @@ func TestSoftResetInstance_Error(t *testing.T) {
 func TestIncreasePoolSize_Success(t *testing.T) {
 	orig := newComputeMgmtClient
 	defer func() { newComputeMgmtClient = orig }()
+	var gotSize *int
 	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
 		return &fakeMgmtClient{
-			UpdateInstancePoolFunc: func(_ context.Context, _ core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
+			UpdateInstancePoolFunc: func(_ context.Context, req core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
+				gotSize = req.UpdateInstancePoolDetails.Size
 				return core.UpdateInstancePoolResponse{OpcRequestId: strPtr("reqid")}, nil
 			},
 		}, nil
 	}
-	pool := &models.GpuPool{ID: "pid", Name: "pname", ActualSize: 2}
+	pool := &models.GpuPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 5}
 	logger := &testLogger{}
 	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
 	require.NoError(t, err)
+	require.NotNil(t, gotSize)
+	require.Equal(t, 5, *gotSize)
 	require.Contains(t, logger.Infos[0], "scaling up instance pool")
 	require.Contains(t, logger.Infos[1], "scaling request is submitted successfully")
+}
+
+func TestIncreasePoolSize_ActualSizeAtOrAboveDesired_NoOp(t *testing.T) {
+	orig := newComputeMgmtClient
+	defer func() { newComputeMgmtClient = orig }()
+	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
+		return &fakeMgmtClient{
+			UpdateInstancePoolFunc: func(_ context.Context, req core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
+				return core.UpdateInstancePoolResponse{OpcRequestId: strPtr("reqid")}, nil
+			},
+		}, nil
+	}
+	pool := &models.GpuPool{ID: "pid", Name: "pname", ActualSize: 3, Size: 3}
+	logger := &testLogger{}
+	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
+	require.NoError(t, err)
+	require.Empty(t, logger.Infos)
 }
 
 func TestIncreasePoolSize_Error(t *testing.T) {
@@ -121,7 +142,7 @@ func TestIncreasePoolSize_Error(t *testing.T) {
 			},
 		}, nil
 	}
-	pool := &models.GpuPool{ID: "pid", Name: "pname", ActualSize: 2}
+	pool := &models.GpuPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 3}
 	logger := &testLogger{}
 	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
 	require.Error(t, err)

@@ -58,7 +58,7 @@ func SoftResetInstance(
 	return nil
 }
 
-// IncreasePoolSize scales up the given GPU pool by 1 and returns the work request ID.
+// IncreasePoolSize scales up the given GPU pool and returns the work request ID.
 func IncreasePoolSize(
 	ctx context.Context,
 	pool *models.GpuPool,
@@ -70,7 +70,10 @@ func IncreasePoolSize(
 		return fmt.Errorf("failed to create compute management client: %w", err)
 	}
 
-	newSize := pool.ActualSize + 1
+	if pool.ActualSize >= pool.Size {
+		return nil
+	}
+	newSize := pool.Size
 	logger.Infow("scaling up instance pool", "id", pool.ID, "name", pool.Name, "newSize", newSize)
 	resp, err := mgmtClient.UpdateInstancePool(ctx, core.UpdateInstancePoolRequest{
 		InstancePoolId: common.String(pool.ID),
