@@ -1,4 +1,4 @@
-package common
+package common //nolint:revive // allow common package name for shared TUI types
 
 // InputMode represents the current mode of the UI.
 type InputMode int

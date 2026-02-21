@@ -100,7 +100,7 @@ func TestIncreasePoolSize_Success(t *testing.T) {
 	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
 		return &fakeMgmtClient{
 			UpdateInstancePoolFunc: func(_ context.Context, req core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
-				gotSize = req.UpdateInstancePoolDetails.Size
+				gotSize = req.Size
 				return core.UpdateInstancePoolResponse{OpcRequestId: strPtr("reqid")}, nil
 			},
 		}, nil
@@ -120,7 +120,7 @@ func TestIncreasePoolSize_ActualSizeAtOrAboveDesired_NoOp(t *testing.T) {
 	defer func() { newComputeMgmtClient = orig }()
 	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
 		return &fakeMgmtClient{
-			UpdateInstancePoolFunc: func(_ context.Context, req core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
+			UpdateInstancePoolFunc: func(_ context.Context, _ core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
 				return core.UpdateInstancePoolResponse{OpcRequestId: strPtr("reqid")}, nil
 			},
 		}, nil
