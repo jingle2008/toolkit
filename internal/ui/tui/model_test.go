@@ -221,10 +221,18 @@ func TestFilterAndBackToLastState(t *testing.T) {
 	m.textInput.SetValue("tenant1")
 	cmd := DebounceFilter(m)
 	require.NotNil(t, cmd)
-	// Simulate filterMsg
-	FilterTable(m, "tenant1")
+	// Simulate filter apply through async rows computation.
+	cmd = filterTableAsync(m, "tenant1")
+	require.NotNil(t, cmd)
+	rowsMsg, ok := cmd().(tableRowsComputedMsg)
+	require.True(t, ok)
+	m.handleTableRowsComputedMsg(rowsMsg)
 	require.Equal(t, "tenant1", m.curFilter)
-	m.backToLastState()
+	cmd = m.backToLastState()
+	require.NotNil(t, cmd)
+	rowsMsg, ok = cmd().(tableRowsComputedMsg)
+	require.True(t, ok)
+	m.handleTableRowsComputedMsg(rowsMsg)
 	require.Equal(t, "", m.curFilter)
 }
 

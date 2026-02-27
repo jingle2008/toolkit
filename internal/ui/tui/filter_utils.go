@@ -10,15 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// FilterTable updates the model's filter and rows if the filter has changed.
-func FilterTable(m *Model, filter string) {
-	if filter == m.curFilter {
-		return
-	}
-	m.curFilter = filter
-	m.updateRows(true)
-}
-
 func filterTableAsync(m *Model, filter string) tea.Cmd {
 	if filter == m.curFilter {
 		return nil

@@ -180,20 +180,12 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	}
 
 	if key.Matches(msg, keys.CopyName) {
-		cmds = append(cmds, m.copyItemName())
+		cmds = append(cmds, m.copyItemNameCmd(m.getSelectedItem()))
 		return cmds
 	}
 
 	cmds = append(cmds, m.handleAdditionalKeys(msg))
 	return cmds
-}
-
-func (m *Model) copyItemName() tea.Cmd {
-	item := m.getSelectedItem()
-	return func() tea.Msg {
-		actions.CopyItemName(item, m.environment, m.logger)
-		return nil
-	}
 }
 
 /*

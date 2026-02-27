@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
@@ -24,7 +23,8 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(keyMsg, keys.Back, keys.ViewDetails):
 			m.exitDetailView()
 		case key.Matches(keyMsg, keys.CopyName):
-			cmds = append(cmds, m.copyItemNameByChoice())
+			item := findItem(m.dataset, m.category, m.choice)
+			cmds = append(cmds, m.copyItemNameCmd(item))
 		case key.Matches(keyMsg, keys.Help):
 			m.enterHelpView()
 		case key.Matches(keyMsg, keys.CopyObject):
@@ -36,14 +36,6 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.viewport = &updatedViewport
 	cmds = append(cmds, cmd)
 	return m, tea.Batch(cmds...)
-}
-
-func (m *Model) copyItemNameByChoice() tea.Cmd {
-	item := findItem(m.dataset, m.category, m.choice)
-	return func() tea.Msg {
-		actions.CopyItemName(item, m.environment, m.logger)
-		return nil
-	}
 }
 
 func (m *Model) copyItemJSONByChoice() tea.Cmd {
