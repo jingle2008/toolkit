@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -92,23 +93,45 @@ func (m *Model) statusView() string {
 	)
 }
 
-func (m *Model) updateContent(width int) {
+func (m *Model) detailRenderWidth() int {
+	border := m.viewport.Style.GetBorderStyle()
+	width := m.viewWidth - (border.GetLeftSize() + border.GetRightSize())
+	if width < 0 {
+		return 0
+	}
+	return width
+}
+
+func (m *Model) updateContentAsync() tea.Cmd {
 	if m.viewMode != common.DetailsView {
-		return
+		return nil
 	}
 
-	var err error
+	m.detailNonce++
+	nonce := m.detailNonce
 	item := findItem(m.dataset, m.category, m.choice)
-	content, err := jsonutil.PrettyJSON(item)
-	if err != nil {
-		content = err.Error()
+	width := m.detailRenderWidth()
+	renderer := m.renderer
+
+	return func() tea.Msg {
+		content, err := jsonutil.PrettyJSON(item)
+		if err != nil {
+			content = err.Error()
+		}
+		str, err := renderer.RenderJSON(content, width)
+		return detailContentRenderedMsg{Content: str, Err: err, Nonce: nonce}
 	}
-	str, err := m.renderer.RenderJSON(content, width)
-	if err != nil {
-		m.err = fmt.Errorf("error encountered rendering content: %w", err)
+}
+
+func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) {
+	if msg.Nonce != m.detailNonce || m.viewMode != common.DetailsView {
 		return
 	}
-	m.viewport.SetContent(str)
+	if msg.Err != nil {
+		m.err = fmt.Errorf("error encountered rendering content: %w", msg.Err)
+		return
+	}
+	m.viewport.SetContent(msg.Content)
 }
 
 // View renders the current state of the model as a string.

@@ -14,6 +14,16 @@ import (
 
 // updateExportView handles key events and state for the ExportView popup.
 func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case exportDoneMsg:
+		m.viewMode = common.ListView
+		return m, nil
+	case exportErrMsg:
+		m.err = fmt.Errorf("export failed: %w", msg.err)
+		m.viewMode = common.ErrorView
+		return m, nil
+	}
+
 	keyMsg, isKeyMsg := msg.(tea.KeyMsg)
 	if isKeyMsg {
 		switch {
@@ -31,16 +41,19 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	selected, selectedPath := m.dirPicker.DidSelectFile(msg)
 	if selected && isKeyMsg && key.Matches(keyMsg, keys.Confirm) {
 		exportPath := filepath.Join(selectedPath, m.exportFilename())
-		if err := m.exportTableCSV(exportPath); err != nil {
-			m.err = fmt.Errorf("export failed: %w", err)
-			m.viewMode = common.ErrorView
-			return m, nil
-		}
-		m.viewMode = common.ListView
-		return m, nil
+		return m, m.exportTableCSVCmd(exportPath)
 	}
 
 	return m, cmd
+}
+
+func (m *Model) exportTableCSVCmd(outPath string) tea.Cmd {
+	return func() tea.Msg {
+		if err := m.exportTableCSV(outPath); err != nil {
+			return exportErrMsg{err: err}
+		}
+		return exportDoneMsg{}
+	}
 }
 
 func (m *Model) exportFilename() string {

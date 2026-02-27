@@ -63,7 +63,39 @@ updateRows updates the table rows based on the current model state.
 Now also sets m.stats from getTableRows.
 */
 func (m *Model) updateRows(autoSelect bool) {
+	m.rowsNonce++
 	rows, stats := getTableRows(m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
+	m.applyRows(rows, stats, autoSelect)
+}
+
+func (m *Model) updateRowsAsync() tea.Cmd {
+	m.rowsNonce++
+	nonce := m.rowsNonce
+	dataset := m.dataset
+	category := m.category
+	context := m.context
+	filter := m.curFilter
+	sortColumn := m.sortColumn
+	sortAsc := m.sortAsc
+	showFaulty := m.showFaulty
+	return func() tea.Msg {
+		rows, stats := getTableRows(dataset, category, context, filter, sortColumn, sortAsc, showFaulty)
+		return tableRowsComputedMsg{
+			Rows:  rows,
+			Stats: stats,
+			Nonce: nonce,
+		}
+	}
+}
+
+func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
+	if msg.Nonce != m.rowsNonce {
+		return
+	}
+	m.applyRows(msg.Rows, msg.Stats, true)
+}
+
+func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	m.stats = stats
 	table.WithRows(rows)(m.table)
 
@@ -147,7 +179,6 @@ func (m *Model) updateLayout(w, h int) {
 	if m.viewMode == common.DetailsView {
 		m.viewport.Width = w
 		m.viewport.Height = h - top
-		m.updateContent(w - borderWidth)
 	} else {
 		table.WithWidth(w - borderWidth)(m.table)
 		table.WithHeight(h - borderHeight - top - 1)(m.table)
@@ -299,8 +330,7 @@ func (m *Model) sortTableByColumn(column string) tea.Cmd {
 	}
 
 	m.updateColumns()
-	m.updateRows(true)
-	return nil
+	return m.updateRowsAsync()
 }
 
 /*
@@ -334,7 +364,7 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
-		actions.CopyTenantID(item, m.environment, m.logger)
+		return m.copyTenantID(item)
 	case key.Matches(msg, keys.Refresh):
 		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):
@@ -349,6 +379,13 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 		return m.scaleUpGpuPool(item)
 	}
 	return nil
+}
+
+func (m *Model) copyTenantID(item any) tea.Cmd {
+	return func() tea.Msg {
+		actions.CopyTenantID(item, m.environment, m.logger)
+		return nil
+	}
 }
 
 func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
@@ -373,8 +410,7 @@ func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
 
 func (m *Model) toggleFaultyList() tea.Cmd {
 	m.showFaulty = !m.showFaulty
-	m.updateRows(true)
-	return nil
+	return m.updateRowsAsync()
 }
 
 func (m *Model) cordonNode(item any) tea.Cmd {
@@ -559,16 +595,17 @@ func (m *Model) handleDedicatedAIClusterCategory(refresh bool, gen int) tea.Cmd 
 }
 
 // enterDetailView switches the model into detail view mode.
-func (m *Model) enterDetailView() {
+func (m *Model) enterDetailView() tea.Cmd {
 	row := m.table.SelectedRow()
 	if len(row) == 0 {
-		return
+		return nil
 	}
 
 	m.viewMode = common.DetailsView
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	m.choice = getItemKey(m.category, row)
 	m.updateLayout(m.viewWidth, m.viewHeight)
+	return m.updateContentAsync()
 }
 
 // exitDetailView exits detail view mode.
@@ -616,7 +653,7 @@ func (m *Model) enterContext() tea.Cmd {
 			return tea.Sequence(m.updateCategory(cat)...)
 		}
 	default:
-		m.enterDetailView()
+		return m.enterDetailView()
 	}
 	return nil
 }

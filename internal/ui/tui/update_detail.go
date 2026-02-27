@@ -14,7 +14,7 @@ import (
 )
 
 func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+	var cmds []tea.Cmd
 
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
 		switch {
@@ -24,26 +24,43 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(keyMsg, keys.Back, keys.ViewDetails):
 			m.exitDetailView()
 		case key.Matches(keyMsg, keys.CopyName):
-			actions.CopyItemName(findItem(m.dataset, m.category, m.choice), m.environment, m.logger)
+			cmds = append(cmds, m.copyItemNameByChoice())
 		case key.Matches(keyMsg, keys.Help):
 			m.enterHelpView()
 		case key.Matches(keyMsg, keys.CopyObject):
-			m.copyItemJSON(findItem(m.dataset, m.category, m.choice))
+			cmds = append(cmds, m.copyItemJSONByChoice())
 		}
 	}
 
 	updatedViewport, cmd := m.viewport.Update(msg)
 	m.viewport = &updatedViewport
-	return m, cmd
+	cmds = append(cmds, cmd)
+	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) copyItemJSON(item any) {
-	content, err := jsonutil.PrettyJSON(item)
-	if err != nil {
-		m.logger.Errorw("failed to convert item to JSON", "error", err)
-		return
+func (m *Model) copyItemNameByChoice() tea.Cmd {
+	item := findItem(m.dataset, m.category, m.choice)
+	return func() tea.Msg {
+		actions.CopyItemName(item, m.environment, m.logger)
+		return nil
 	}
-	if err := clipboard.WriteAll(content); err != nil {
-		m.logger.Errorw("failed to copy JSON to clipboard", "error", err)
+}
+
+func (m *Model) copyItemJSONByChoice() tea.Cmd {
+	item := findItem(m.dataset, m.category, m.choice)
+	return m.copyItemJSON(item)
+}
+
+func (m *Model) copyItemJSON(item any) tea.Cmd {
+	return func() tea.Msg {
+		content, err := jsonutil.PrettyJSON(item)
+		if err != nil {
+			m.logger.Errorw("failed to convert item to JSON", "error", err)
+			return nil
+		}
+		if err := clipboard.WriteAll(content); err != nil {
+			m.logger.Errorw("failed to copy JSON to clipboard", "error", err)
+		}
+		return nil
 	}
 }

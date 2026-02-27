@@ -33,13 +33,11 @@ func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
 	case DataMsg:
 		return []tea.Cmd{m.handleDataMsg(msg)}
 	case FilterMsg:
-		m.handleFilterMsg(msg)
-		return nil
+		return []tea.Cmd{m.handleFilterMsg(msg)}
 	case SetFilterMsg:
 		return []tea.Cmd{m.handleSetFilterMsg(msg)}
 	case FilterApplyMsg:
-		m.handleFilterApplyMsg(msg)
-		return nil
+		return []tea.Cmd{m.handleFilterApplyMsg(msg)}
 	case deleteErrMsg:
 		m.handleDeleteErrMsg(msg)
 		return nil
@@ -109,7 +107,10 @@ func (m *Model) routeListMoreDataMsg(msg tea.Msg) []tea.Cmd {
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
 	if key.Matches(msg, keys.Back) {
-		m.backToLastState()
+		cmd := m.backToLastState()
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
 	if m.inputMode == common.NormalInput {
 		cmds = append(cmds, m.handleNormalKeys(msg)...)
@@ -123,8 +124,8 @@ func (m *Model) handleDataMsg(msg DataMsg) tea.Cmd {
 	return m.processData(msg)
 }
 
-func (m *Model) handleFilterMsg(msg FilterMsg) {
-	FilterTable(m, string(msg))
+func (m *Model) handleFilterMsg(msg FilterMsg) tea.Cmd {
+	return filterTableAsync(m, string(msg))
 }
 
 func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
@@ -138,11 +139,12 @@ func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
 	}
 }
 
-func (m *Model) handleFilterApplyMsg(msg FilterApplyMsg) {
+func (m *Model) handleFilterApplyMsg(msg FilterApplyMsg) tea.Cmd {
 	// Only apply if this tick corresponds to the most recent debounce
 	if msg.Nonce == m.filterNonce {
-		FilterTable(m, msg.Value)
+		return filterTableAsync(m, msg.Value)
 	}
+	return nil
 }
 
 // handleNormalKeys processes key events in Normal mode.
@@ -159,10 +161,10 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.FwdHist, func() []tea.Cmd { return []tea.Cmd{m.moveHistory(1)} }},
 		{keys.NextCategory, func() []tea.Cmd { return []tea.Cmd{m.handleNextCategory()} }},
 		{keys.PrevCategory, func() []tea.Cmd { return []tea.Cmd{m.handlePrevCategory()} }},
-		{keys.FilterMode, func() []tea.Cmd { m.enterEditMode(common.FilterTarget); return nil }},
+		{keys.FilterMode, func() []tea.Cmd { return []tea.Cmd{m.enterEditMode(common.FilterTarget)} }},
 		{keys.PasteFilter, func() []tea.Cmd { return []tea.Cmd{m.pasteFilter()} }},
-		{keys.CommandMode, func() []tea.Cmd { m.enterEditMode(common.AliasTarget); return nil }},
-		{keys.ViewDetails, func() []tea.Cmd { m.enterDetailView(); return nil }},
+		{keys.CommandMode, func() []tea.Cmd { return []tea.Cmd{m.enterEditMode(common.AliasTarget)} }},
+		{keys.ViewDetails, func() []tea.Cmd { return []tea.Cmd{m.enterDetailView()} }},
 		{keys.Confirm, func() []tea.Cmd { return []tea.Cmd{m.enterContext()} }},
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
 		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn(common.NameCol)} }},
@@ -178,11 +180,20 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	}
 
 	if key.Matches(msg, keys.CopyName) {
-		actions.CopyItemName(m.getSelectedItem(), m.environment, m.logger)
+		cmds = append(cmds, m.copyItemName())
+		return cmds
 	}
 
 	cmds = append(cmds, m.handleAdditionalKeys(msg))
 	return cmds
+}
+
+func (m *Model) copyItemName() tea.Cmd {
+	item := m.getSelectedItem()
+	return func() tea.Msg {
+		actions.CopyItemName(item, m.environment, m.logger)
+		return nil
+	}
 }
 
 /*
@@ -408,12 +419,17 @@ func (m *Model) enterExportView() []tea.Cmd {
 }
 
 func (*Model) pasteFilter() tea.Cmd {
-	if clip, err := clipboard.ReadAll(); err == nil {
-		if clip = strings.TrimSpace(clip); clip != "" {
-			return setFilter(clip)
+	return func() tea.Msg {
+		clip, err := clipboard.ReadAll()
+		if err != nil {
+			return nil
 		}
+		clip = strings.TrimSpace(clip)
+		if clip == "" {
+			return nil
+		}
+		return SetFilterMsg(clip)
 	}
-	return nil
 }
 
 func (m *Model) enterHelpView() {

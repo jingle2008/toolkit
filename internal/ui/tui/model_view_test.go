@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -32,7 +33,11 @@ func TestModel_updateContent_and_View(t *testing.T) {
 	}
 	m.viewMode = common.DetailsView
 	m.choice = "dev-UNKNOWN"
-	m.updateContent(80)
+	cmd := m.updateContentAsync()
+	require.NotNil(t, cmd)
+	msg, ok := cmd().(detailContentRenderedMsg)
+	require.True(t, ok)
+	m.handleDetailContentRenderedMsg(msg)
 	viewStr := m.View()
 	assert.IsType(t, "", viewStr)
 }
@@ -98,7 +103,11 @@ func TestUpdateContent_DetailsView(t *testing.T) {
 	m.dataset = &models.Dataset{}
 	m.viewport.SetContent("")
 	m.renderer = &testRenderer{}
-	m.updateContent(40)
+	cmd := m.updateContentAsync()
+	require.NotNil(t, cmd)
+	msg, ok := cmd().(detailContentRenderedMsg)
+	require.True(t, ok)
+	m.handleDetailContentRenderedMsg(msg)
 	assert.NotEmpty(t, m.viewport.View())
 }
 
@@ -116,7 +125,11 @@ func TestUpdateContent_Error(t *testing.T) {
 	m.dataset = &models.Dataset{}
 	m.viewport.SetContent("")
 	m.renderer = &errRenderer{}
-	m.updateContent(40)
+	cmd := m.updateContentAsync()
+	require.NotNil(t, cmd)
+	msg, ok := cmd().(detailContentRenderedMsg)
+	require.True(t, ok)
+	m.handleDetailContentRenderedMsg(msg)
 	assert.Error(t, m.err)
 }
 

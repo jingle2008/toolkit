@@ -19,6 +19,14 @@ func FilterTable(m *Model, filter string) {
 	m.updateRows(true)
 }
 
+func filterTableAsync(m *Model, filter string) tea.Cmd {
+	if filter == m.curFilter {
+		return nil
+	}
+	m.curFilter = filter
+	return m.updateRowsAsync()
+}
+
 /*
 DebounceFilter triggers a debounced filter update for the model's text input.
 Emits FilterApplyMsg with a nonce so only the most recent tick applies.

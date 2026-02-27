@@ -1,4 +1,6 @@
 // Package common provides shared types and utilities for the TUI components.
+//
+//revive:disable:var-naming
 package common
 
 /*

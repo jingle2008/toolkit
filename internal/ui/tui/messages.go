@@ -4,6 +4,8 @@ Package tui defines message types for the TUI model.
 package tui
 
 import (
+	"github.com/charmbracelet/bubbles/table"
+
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -33,6 +35,18 @@ type SetFilterMsg string
 type FilterApplyMsg struct {
 	Value string
 	Nonce int
+}
+
+type tableRowsComputedMsg struct {
+	Rows  []table.Row
+	Stats tableStats
+	Nonce int
+}
+
+type detailContentRenderedMsg struct {
+	Content string
+	Err     error
+	Nonce   int
 }
 
 type deleteDoneMsg struct {
@@ -74,6 +88,12 @@ type drainNodeResultMsg struct {
 
 type rebootNodeResultMsg struct {
 	key models.ItemKey
+	err error
+}
+
+type exportDoneMsg struct{}
+
+type exportErrMsg struct {
 	err error
 }
 

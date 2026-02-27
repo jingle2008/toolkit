@@ -19,6 +19,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ErrMsg:
 		m.handleErrMsg(msg)
 		return m, nil
+	case tableRowsComputedMsg:
+		m.handleTableRowsComputedMsg(msg)
+		return m, nil
+	case detailContentRenderedMsg:
+		m.handleDetailContentRenderedMsg(msg)
+		return m, nil
 	default:
 		return m.delegateToActiveView(msg)
 	}
@@ -26,6 +32,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) onResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.updateLayout(msg.Width, msg.Height)
+	if m.viewMode == common.DetailsView {
+		return m, m.updateContentAsync()
+	}
 	return m, nil
 }
 

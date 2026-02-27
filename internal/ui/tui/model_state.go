@@ -54,6 +54,8 @@ type Model struct {
 	curFilter      string
 	initialFilter  string
 	filterNonce    int
+	rowsNonce      int
+	detailNonce    int
 	viewMode       common.ViewMode
 	lastViewMode   common.ViewMode // for toggling help view
 	choice         models.ItemKey
