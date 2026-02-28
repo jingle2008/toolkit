@@ -1,8 +1,8 @@
 package tui
 
 import (
+	"bytes"
 	"encoding/csv"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -16,10 +16,7 @@ import (
 
 func TestExportTableCSV_Success(t *testing.T) {
 	t.Parallel()
-	tmpDir := t.TempDir()
-	outPath := filepath.Join(tmpDir, "out.csv")
 
-	// Build a minimal Model with headers and table rows
 	headers := []header{
 		{text: "Name"},
 		{text: "Age"},
@@ -42,17 +39,11 @@ func TestExportTableCSV_Success(t *testing.T) {
 		logger:      fakeLogger{},
 	}
 
-	err := m.exportTableCSV(outPath)
+	var buf bytes.Buffer
+	err := m.writeCSV(&buf)
 	require.NoError(t, err)
 
-	// Read and check the CSV file
-	// #nosec G304 -- test code, not user input
-	f, err := os.Open(outPath)
-	require.NoError(t, err)
-	defer func() {
-		_ = f.Close()
-	}()
-	r := csv.NewReader(f)
+	r := csv.NewReader(&buf)
 	records, err := r.ReadAll()
 	require.NoError(t, err)
 	require.Len(t, records, 3)
