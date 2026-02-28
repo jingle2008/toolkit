@@ -181,7 +181,7 @@ func (m *Model) updateLayout(w, h int) {
 		m.viewport.Height = h - top
 	} else {
 		table.WithWidth(w - borderWidth)(m.table)
-		table.WithHeight(h - borderHeight - top - 1)(m.table)
+		table.WithHeight(h - borderHeight - top)(m.table)
 		m.updateColumns()
 		m.table.UpdateViewport()
 	}
