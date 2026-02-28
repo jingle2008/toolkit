@@ -209,7 +209,11 @@ deleteDedicatedAICluster deletes a DedicatedAICluster item and updates the UI ac
 */
 func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
-	dac := item.(*models.DedicatedAICluster)
+	dac, ok := item.(*models.DedicatedAICluster)
+	if !ok || dac == nil {
+		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
+		return nil
+	}
 	prevState := dac.Status
 	dac.Status = "Deleting"
 	m.updateRows(false)
@@ -233,7 +237,11 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 
 func (m *Model) deleteGpuNode(itemKey models.ItemKey) tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
-	node := item.(*models.GpuNode)
+	node, ok := item.(*models.GpuNode)
+	if !ok || node == nil {
+		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
+		return nil
+	}
 	node.SetStatus("Deleting")
 	m.updateRows(false)
 	return func() tea.Msg {

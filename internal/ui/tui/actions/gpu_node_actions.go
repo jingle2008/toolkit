@@ -49,8 +49,11 @@ func SoftResetInstance(
 		Action:     core.InstanceActionActionSoftreset,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to soft reset instance: %w, request id: %s",
-			err, *resp.OpcRequestId)
+		reqID := ""
+		if resp.OpcRequestId != nil {
+			reqID = *resp.OpcRequestId
+		}
+		return fmt.Errorf("failed to soft reset instance: %w, request id: %s", err, reqID)
 	}
 
 	logger.Infow("reboot request is submitted successfully", "id",
@@ -82,8 +85,11 @@ func IncreasePoolSize(
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update instance pool: %w, request id: %s",
-			err, *resp.OpcRequestId)
+		reqID := ""
+		if resp.OpcRequestId != nil {
+			reqID = *resp.OpcRequestId
+		}
+		return fmt.Errorf("failed to update instance pool: %w, request id: %s", err, reqID)
 	}
 	logger.Infow("scaling request is submitted successfully", "id",
 		pool.ID, "opc-request-id", resp.OpcRequestId)
@@ -108,8 +114,11 @@ func TerminateInstance(
 		PreserveBootVolume: common.Bool(false),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to terminate instance: %w, request id: %s",
-			err, *resp.OpcRequestId)
+		reqID := ""
+		if resp.OpcRequestId != nil {
+			reqID = *resp.OpcRequestId
+		}
+		return fmt.Errorf("failed to terminate instance: %w, request id: %s", err, reqID)
 	}
 	logger.Infow("deletion request is submitted successfully", "id",
 		node.ID, "opc-request-id", resp.OpcRequestId)
@@ -138,8 +147,11 @@ func PopulateGpuPools(
 	}
 	resp, err := mgmtClient.ListInstancePools(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to list instance pools: %w, request id: %s",
-			err, *resp.OpcRequestId)
+		reqID := ""
+		if resp.OpcRequestId != nil {
+			reqID = *resp.OpcRequestId
+		}
+		return fmt.Errorf("failed to list instance pools: %w, request id: %s", err, reqID)
 	}
 
 	gpuPoolMap := make(map[string]*models.GpuPool)
