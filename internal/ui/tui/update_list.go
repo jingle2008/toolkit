@@ -214,6 +214,9 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
 	}
+	if dac.Status == "Deleting" {
+		return nil
+	}
 	prevState := dac.Status
 	dac.Status = "Deleting"
 	m.updateRows(false)
@@ -240,6 +243,9 @@ func (m *Model) deleteGpuNode(itemKey models.ItemKey) tea.Cmd {
 	node, ok := item.(*models.GpuNode)
 	if !ok || node == nil {
 		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
+		return nil
+	}
+	if node.GetStatus() == "Deleting" {
 		return nil
 	}
 	node.SetStatus("Deleting")
@@ -273,6 +279,9 @@ func (m *Model) rebootNode(item any) tea.Cmd {
 		return nil
 	}
 
+	if node.GetStatus() == "Rebooting" {
+		return nil
+	}
 	itemKey := getItemKey(m.category, m.table.SelectedRow())
 	// optimistic UI
 	node.SetStatus("Rebooting")
