@@ -1,4 +1,4 @@
-package common
+package common //nolint:revive // shared TUI types
 
 // ViewMode represents the current UI mode (e.g., list, details).
 type ViewMode int
