@@ -8,6 +8,7 @@
 Toolkit is a collection of reusable Go components exposed through a modular CLI and optional TUI (built with [Bubble Tea](https://github.com/charmbracelet/bubbletea)).  
 It targets day-to-day DevOps & development automation: querying Kubernetes, parsing Terraform plans, mass-editing config files, and inspecting large data tables directly in your terminal.
 
+- [User Manual](docs/USER_MANUAL.md)
 - [Kubernetes Client Fakes & Testing Patterns](docs/guide/k8s-fake-patterns.md)
 
 ---
@@ -83,7 +84,8 @@ toolkit --help                # all global flags
 | `--kubeconfig` | `~/.kube/config` | Path to kubeconfig file |
 | `--log_file` | `toolkit.log` | Path to log file |
 | `--debug` | `false` | Enable debug logging |
-| `--log_format` | `console` | Log format: console or json |
+| `--log_format` | `console` | Log format: `console`, `json`, or `slog` |
+| `--log_level` | | Minimum log level: `debug`, `info`, `warn`, `error` (empty uses `--debug` flag) |
 
 *(See `internal/cli/root.go` for the authoritative list.)*
 
@@ -183,7 +185,7 @@ Toolkit follows a modular, testable architecture:
 
 ## Logging
 
-Toolkit uses [zap](https://github.com/uber-go/zap) for structured, machine-readable logging. By default logs are written to `toolkit.log` (configurable via `--log_file`) and support `--log_format` of `console` or `json`.
+Toolkit uses [zap](https://github.com/uber-go/zap) for structured, machine-readable logging. By default logs are written to `toolkit.log` (configurable via `--log_file`) and support `--log_format` of `console`, `json`, or `slog`. The minimum log level can be set via `--log_level` (`debug`, `info`, `warn`, `error`).
 
 ## Contributing
 
