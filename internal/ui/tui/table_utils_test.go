@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -117,6 +118,28 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 		}
 	}()
 	_, _ = getTableRows(nil, domain.Tenant, nil, "", "", true, false)
+}
+
+func TestGetTableRows_DedicatedAIClusterStats(t *testing.T) {
+	t.Parallel()
+	dataset := &models.Dataset{
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"tenantA": {
+				{Name: "dac-active1", Status: "Active", Size: 3},
+				{Name: "dac-active2", Status: "Active", Size: 2},
+				{Name: "dac-ready", Status: "ready", Size: 3},
+				{Name: "dac-failed", Status: "FAILED", Size: 1},
+				{Name: "dac-other", Status: "Provisioning", Size: 2},
+			},
+		},
+	}
+
+	rows, stats := getTableRows(dataset, domain.DedicatedAICluster, nil, "", "", true, false)
+	require.Len(t, rows, 5)
+	require.NotNil(t, stats)
+	assert.Equal(t, 11, stats[common.SizeCol])
+	assert.Equal(t, 3, stats["Active"])
+	assert.Equal(t, 1, stats["Failed"])
 }
 
 func TestGetItemKeyAndString(t *testing.T) {
