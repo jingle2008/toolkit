@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
 
@@ -117,15 +118,31 @@ func getTableRows(dataset *models.Dataset, category domain.Category, context *do
 
 // computeStats calculates stats for the given category and rows.
 func computeStats(category domain.Category, rows []table.Row) tableStats {
+	if len(rows) == 0 {
+		return nil
+	}
+
+	stats := computeNumericStats(category, rows)
+	if category == domain.DedicatedAICluster {
+		stats = appendDedicatedAIClusterStats(rows, stats)
+	}
+
+	return stats
+}
+
+// computeNumericStats sums numeric columns defined for the category.
+func computeNumericStats(category domain.Category, rows []table.Row) tableStats {
 	cols, ok := statsColumns[category]
 	if !ok || len(rows) == 0 {
 		return nil
 	}
+
 	headers := getHeaders(category)
 	idx := make(map[string]int)
 	for i, h := range headers {
 		idx[h.text] = i
 	}
+
 	totals := make(tableStats)
 	for _, col := range cols {
 		columnIdx, ok := idx[col]
@@ -141,7 +158,33 @@ func computeStats(category domain.Category, rows []table.Row) tableStats {
 		}
 		totals[col] = sum
 	}
+
 	return totals
+}
+
+func appendDedicatedAIClusterStats(rows []table.Row, stats tableStats) tableStats {
+	headers := getHeaders(domain.DedicatedAICluster)
+	statusIdx := -1
+	for i, h := range headers {
+		if h.text == "Status" {
+			statusIdx = i
+			break
+		}
+	}
+
+	var active, failed int
+	for _, r := range rows {
+		switch strings.ToLower(strings.TrimSpace(r[statusIdx])) {
+		case "active", "ready":
+			active++
+		case "fail", "failed":
+			failed++
+		}
+	}
+
+	stats["Active"] = active
+	stats["Failed"] = failed
+	return stats
 }
 
 /*
