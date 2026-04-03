@@ -194,6 +194,7 @@ func dedicatedAIClusterToRowInternal(val models.DedicatedAICluster, tenant strin
 		val.GetOwnerState(),
 		val.GetUsage(),
 		val.Type,
+		val.ModelName,
 		unitShapeOrProfile,
 		fmt.Sprint(val.Size),
 		val.Age,

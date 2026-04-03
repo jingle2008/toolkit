@@ -207,6 +207,7 @@ func Test_dedicatedAIClusterToRow(t *testing.T) {
 	dac := models.DedicatedAICluster{
 		Name:      "dac1",
 		Type:      "t",
+		ModelName: "model-a",
 		UnitShape: "shape",
 		Profile:   "",
 		Size:      1,
@@ -215,6 +216,6 @@ func Test_dedicatedAIClusterToRow(t *testing.T) {
 	}
 	row := dedicatedAIClusterToRow(dac, "tenant1")
 	assert.Equal(t, table.Row{
-		"dac1", "tenant1", dac.GetOwnerState(), dac.GetUsage(), "t", "shape", "1", "2d", "active",
+		"dac1", "tenant1", dac.GetOwnerState(), dac.GetUsage(), "t", "model-a", "shape", "1", "2d", "active",
 	}, row)
 }
