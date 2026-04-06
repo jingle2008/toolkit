@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
 	github.com/golangci/golangci-lint/v2 v2.3.1
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/mattn/go-runewidth v0.0.21
+	github.com/mattn/go-runewidth v0.0.22
 	github.com/oracle/oci-go-sdk/v65 v65.109.3
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
