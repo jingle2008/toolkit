@@ -11,7 +11,7 @@ require (
 	github.com/golangci/golangci-lint/v2 v2.11.4
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/mattn/go-runewidth v0.0.23
-	github.com/oracle/oci-go-sdk/v65 v65.110.0
+	github.com/oracle/oci-go-sdk/v65 v65.112.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1

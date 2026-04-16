@@ -425,8 +425,8 @@ github.com/onsi/ginkgo/v2 v2.28.1 h1:S4hj+HbZp40fNKuLUQOYLDgZLwNUVn19N3Atb98NCyI
 github.com/onsi/ginkgo/v2 v2.28.1/go.mod h1:CLtbVInNckU3/+gC8LzkGUb9oF+e8W8TdUsxPwvdOgE=
 github.com/onsi/gomega v1.39.1 h1:1IJLAad4zjPn2PsnhH70V4DKRFlrCzGBNrNaru+Vf28=
 github.com/onsi/gomega v1.39.1/go.mod h1:hL6yVALoTOxeWudERyfppUcZXjMwIMLnuSfruD2lcfg=
-github.com/oracle/oci-go-sdk/v65 v65.110.0 h1:n5hO4EvcJSsYxyFaAdBNu+pBmsuX2VObZ7g/VEiBDNc=
-github.com/oracle/oci-go-sdk/v65 v65.110.0/go.mod h1:8ZzvzuEG/cFLFZhxg/Mg1w19KqyXBKO3c17QIc5PkGs=
+github.com/oracle/oci-go-sdk/v65 v65.112.0 h1:L4O4SXAHq5T23qxbjaC/4NHikIKGHhrPtBKOtvGxk7Q=
+github.com/oracle/oci-go-sdk/v65 v65.112.0/go.mod h1:8ZzvzuEG/cFLFZhxg/Mg1w19KqyXBKO3c17QIc5PkGs=
 github.com/otiai10/copy v1.2.0/go.mod h1:rrF5dJ5F0t/EWSYODDu4j9/vEeYHMkc8jt0zJChqQWw=
 github.com/otiai10/copy v1.14.0 h1:dCI/t1iTdYGtkvCuBG2BgR6KZa83PTclw4U5n2wAllU=
 github.com/otiai10/copy v1.14.0/go.mod h1:ECfuL02W+/FkTWZWgQqXPWZgW9oeKCSQ5qVfSc4qc4w=
