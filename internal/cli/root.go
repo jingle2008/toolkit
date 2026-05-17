@@ -14,7 +14,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -257,7 +256,7 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 			if check {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
-				latest, err := fetchLatestRelease(ctx)
+				latest, err := fetchLatestRelease(ctx, &http.Client{Timeout: 5 * time.Second})
 				if err != nil {
 					return fmt.Errorf("failed to check latest version: %w", err)
 				}
@@ -274,12 +273,7 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 	rootCmd.AddCommand(versionCmd)
 }
 
-var (
-	httpClient   = &http.Client{Timeout: 5 * time.Second}
-	httpClientMu sync.RWMutex
-)
-
-func fetchLatestRelease(ctx context.Context) (string, error) {
+func fetchLatestRelease(ctx context.Context, client *http.Client) (string, error) {
 	const url = "https://api.github.com/repos/jingle2008/toolkit/releases/latest"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -287,13 +281,9 @@ func fetchLatestRelease(ctx context.Context) (string, error) {
 	}
 	req.Header.Set("User-Agent", "toolkit")
 
-	// Allow concurrent reads while keeping overrides safe in tests.
-	httpClientMu.RLock()
-	client := httpClient
 	if client == nil {
-		client = &http.Client{Timeout: 5 * time.Second}
+		client = http.DefaultClient
 	}
-	httpClientMu.RUnlock()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err

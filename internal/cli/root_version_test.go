@@ -23,31 +23,30 @@ func (t rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return http.DefaultTransport.RoundTrip(cloned)
 }
 
-//nolint:paralleltest // uses shared httpClient global; parallel runs race.
+func newTestClient(t *testing.T, target string) *http.Client {
+	t.Helper()
+	u, err := url.Parse(target)
+	if err != nil {
+		t.Fatalf("parse server url: %v", err)
+	}
+	return &http.Client{
+		Timeout:   time.Second,
+		Transport: rewriteTransport{target: u},
+	}
+}
+
 func TestFetchLatestRelease_Success(t *testing.T) {
+	t.Parallel()
 	// Test server returns a fixed tag_name in JSON regardless of path.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"tag_name":"v1.2.3"}`))
 	}))
 	t.Cleanup(srv.Close)
 
-	u, err := url.Parse(srv.URL)
-	if err != nil {
-		t.Fatalf("parse server url: %v", err)
-	}
-
-	// Override the HTTP client to route requests to our test server.
-	old := httpClient
-	httpClient = &http.Client{
-		Timeout:   time.Second,
-		Transport: rewriteTransport{target: u},
-	}
-	t.Cleanup(func() { httpClient = old })
-
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	tag, err := fetchLatestRelease(ctx)
+	tag, err := fetchLatestRelease(ctx, newTestClient(t, srv.URL))
 	if err != nil {
 		t.Fatalf("fetchLatestRelease error: %v", err)
 	}
@@ -56,8 +55,8 @@ func TestFetchLatestRelease_Success(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // uses shared httpClient global; parallel runs race.
 func TestFetchLatestRelease_Non200(t *testing.T) {
+	t.Parallel()
 	var status int32 = 500
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(int(atomic.LoadInt32(&status)))
@@ -65,22 +64,10 @@ func TestFetchLatestRelease_Non200(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	u, err := url.Parse(srv.URL)
-	if err != nil {
-		t.Fatalf("parse server url: %v", err)
-	}
-
-	old := httpClient
-	httpClient = &http.Client{
-		Timeout:   time.Second,
-		Transport: rewriteTransport{target: u},
-	}
-	t.Cleanup(func() { httpClient = old })
-
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if _, err := fetchLatestRelease(ctx); err == nil {
+	if _, err := fetchLatestRelease(ctx, newTestClient(t, srv.URL)); err == nil {
 		t.Fatalf("expected error for non-200 response, got nil")
 	}
 }
