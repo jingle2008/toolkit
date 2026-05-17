@@ -56,7 +56,7 @@ cover-int:
 	@echo "Open coverage-int.html in your browser to view the integration test report."
 
 cover-check:
-	go test ./... -covermode=atomic -coverprofile=coverage.out
+	go test ./... -race -shuffle=on -count=1 -covermode=atomic -coverprofile=coverage.out
 	go tool cover -func=coverage.out | awk '/total:/ {if ($$3+0 < 80) {print "Coverage below 80%"; exit 1}}'
 
 LINT_VERSION ?= v2.3.1
@@ -69,7 +69,7 @@ setup:
 	go install mvdan.cc/gofumpt@v0.6.0
 	go install golang.org/x/tools/cmd/goimports@v0.28.0
 
-ci: fmt-check goimports-check lint vet test cover-check
+ci: fmt-check goimports-check lint vet cover-check
 
 clean:
 	rm -f coverage.out coverage.html coverage-int.out coverage-int.html toolkit.log
