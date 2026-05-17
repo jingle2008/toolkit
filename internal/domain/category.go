@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"sort"
 	"strings"
 )
 
@@ -177,6 +178,9 @@ func init() {
 	for k := range aliasToCat {
 		Aliases = append(Aliases, k)
 	}
+	// Keep ordering stable so shell completion and TUI suggestions
+	// don't reshuffle across runs of the program.
+	sort.Strings(Aliases)
 }
 
 // ErrUnknownCategory is returned when a string cannot be parsed into a known Category.

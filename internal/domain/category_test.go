@@ -133,6 +133,9 @@ func TestAliases(t *testing.T) {
 			assert.True(t, ok, "Category %v alias %q should be present in Aliases", c, a)
 		}
 	}
+
+	// Aliases must be sorted so shell completion and TUI suggestions are stable.
+	assert.IsIncreasing(t, aliases, "Aliases should be sorted")
 }
 
 func TestParseCategory_GpuNodeShortAlias(t *testing.T) {
