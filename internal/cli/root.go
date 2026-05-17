@@ -5,17 +5,13 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -132,208 +128,6 @@ func readConfigFile(cfgFile *string) error {
 	return nil
 }
 
-func logOptionsFromViper() (string, string, error) {
-	logFormat := viper.GetString("log_format")
-	if err := validateLogFormat(logFormat); err != nil {
-		return "", "", err
-	}
-	logLevel, err := normalizeLogLevel(viper.GetString("log_level"))
-	if err != nil {
-		return "", "", err
-	}
-	return logFormat, logLevel, nil
-}
-
-func validateLogFormat(logFormat string) error {
-	switch logFormat {
-	case "console", "json", "slog":
-		return nil
-	default:
-		return fmt.Errorf("invalid log_format %q (valid: console|json|slog)", logFormat)
-	}
-}
-
-func normalizeLogLevel(level string) (string, error) {
-	logLevel := strings.ToLower(level)
-	switch logLevel {
-	case "", "debug", "info", "warn", "warning", "error":
-		if logLevel == "warning" {
-			logLevel = "warn"
-		}
-		return logLevel, nil
-	default:
-		return "", fmt.Errorf("invalid log_level %q (valid: debug|info|warn|error or empty)", logLevel)
-	}
-}
-
-// addPersistentFlags adds persistent flags to the root command.
-func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, defaultConfig, defaultMetadata string) {
-	rootCmd.PersistentFlags().StringVar(cfgFile, "config", defaultConfig, "Path to config file (YAML or JSON)")
-	rootCmd.PersistentFlags().String("repo_path", "", "Path to the repository")
-	rootCmd.PersistentFlags().String("env_type", "", "Environment type (e.g. dev, prod)")
-	rootCmd.PersistentFlags().String("env_region", "", "Environment region")
-	rootCmd.PersistentFlags().String("env_realm", "", "Environment realm")
-	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
-	_ = rootCmd.RegisterFlagCompletionFunc("category", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
-	})
-	rootCmd.PersistentFlags().StringP("filter", "f", "", "Initial filter for current category")
-	rootCmd.PersistentFlags().String("metadata_file", defaultMetadata, "Optional path to a YAML or JSON file with additional metadata (e.g. tenants)")
-	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
-	rootCmd.PersistentFlags().String("log_file", "toolkit.log", "Path to log file")
-	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
-	rootCmd.PersistentFlags().String("log_format", "console", "Log format: console|json|slog")
-	rootCmd.PersistentFlags().String("log_level", "", "Minimum log level: debug|info|warn|error (empty uses debug flag)")
-
-	// Hint shells that these flags take filenames (improves completion UX).
-	_ = rootCmd.MarkFlagFilename("config")
-	_ = rootCmd.MarkFlagFilename("metadata_file")
-	_ = rootCmd.MarkFlagFilename("kubeconfig")
-	_ = rootCmd.MarkFlagFilename("log_file")
-	// Shell completion for enumerated flags.
-	_ = rootCmd.RegisterFlagCompletionFunc("log_format", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"console", "json", "slog"}, cobra.ShellCompDirectiveNoFileComp
-	})
-	_ = rootCmd.RegisterFlagCompletionFunc("log_level", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"debug", "info", "warn", "error"}, cobra.ShellCompDirectiveNoFileComp
-	})
-}
-
-func addCompletionCommand(rootCmd *cobra.Command) {
-	completionCmd := &cobra.Command{
-		Use:   "completion [bash|zsh|fish|powershell]",
-		Short: "Generate shell completion scripts",
-		Long: `To load completions:
-
-Bash:
-  $ source <(toolkit completion bash)
-  # To load completions for each session, execute once:
-  # Linux:
-  $ toolkit completion bash > /etc/bash_completion.d/toolkit
-  # macOS:
-  $ toolkit completion bash > /usr/local/etc/bash_completion.d/toolkit
-
-Zsh:
-  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
-  $ toolkit completion zsh > "${fpath[1]}/_toolkit"
-
-Fish:
-  $ toolkit completion fish | source
-  $ toolkit completion fish > ~/.config/fish/completions/toolkit.fish
-
-PowerShell:
-  PS> toolkit completion powershell | Out-String | Invoke-Expression
-  # To load completions for every new session, run:
-  PS> toolkit completion powershell > $PROFILE
-`,
-		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-		ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			switch args[0] {
-			case "bash":
-				return rootCmd.GenBashCompletion(cmd.OutOrStdout())
-			case "zsh":
-				return rootCmd.GenZshCompletion(cmd.OutOrStdout())
-			case "fish":
-				return rootCmd.GenFishCompletion(cmd.OutOrStdout(), true)
-			case "powershell":
-				return rootCmd.GenPowerShellCompletion(cmd.OutOrStdout())
-			default:
-				return fmt.Errorf("unsupported shell: %s", args[0])
-			}
-		},
-	}
-	rootCmd.AddCommand(completionCmd)
-}
-
-func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
-	versionCmd := &cobra.Command{
-		Use:   "version",
-		Short: "Print the version number and check for updates",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "toolkit version: %s\n", currentVersion)
-			check, _ := cmd.Flags().GetBool("check")
-			if check {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				latest, err := fetchLatestRelease(ctx, &http.Client{Timeout: 5 * time.Second})
-				if err != nil {
-					return fmt.Errorf("failed to check latest version: %w", err)
-				}
-				if latest == currentVersion {
-					_, _ = fmt.Fprintln(cmd.OutOrStdout(), "You are running the latest version.")
-				} else {
-					_, _ = fmt.Fprintf(cmd.OutOrStdout(), "A newer version is available: %s\n", latest)
-				}
-			}
-			return nil
-		},
-	}
-	versionCmd.Flags().Bool("check", false, "Check for the latest release on GitHub")
-	rootCmd.AddCommand(versionCmd)
-}
-
-func fetchLatestRelease(ctx context.Context, client *http.Client) (string, error) {
-	const url = "https://api.github.com/repos/jingle2008/toolkit/releases/latest"
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", "toolkit")
-
-	if client == nil {
-		client = http.DefaultClient
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil {
-			return
-		}
-	}()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status: %s", resp.Status)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	var result struct {
-		Tag string `json:"tag_name"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", err
-	}
-	if result.Tag == "" {
-		return "", errors.New("no tag_name in GitHub response")
-	}
-	return result.Tag, nil
-}
-
-// addInitCommand adds the "init" subcommand to the root command.
-func addInitCommand(rootCmd *cobra.Command, defaultConfig, exampleConfig string) {
-	initCmd := &cobra.Command{
-		Use:   "init",
-		Short: "Scaffold an example config file",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			if _, err := os.Stat(defaultConfig); err == nil {
-				return fmt.Errorf("config file already exists at %s", defaultConfig)
-			}
-			if err := os.MkdirAll(filepath.Dir(defaultConfig), 0o750); err != nil {
-				return fmt.Errorf("failed to create config directory: %w", err)
-			}
-			if err := os.WriteFile(defaultConfig, []byte(exampleConfig), 0o600); err != nil {
-				return fmt.Errorf("failed to write config file: %w", err)
-			}
-			fmt.Printf("Example config written to %s\n", defaultConfig)
-			return nil
-		},
-	}
-	rootCmd.AddCommand(initCmd)
-}
-
 // Execute runs the root command.
 func Execute(version string) {
 	cmd := NewRootCmd(version)
@@ -343,7 +137,7 @@ func Execute(version string) {
 	}
 }
 
-// runToolkit is moved from main.go for clarity.
+// runToolkit wires the loaded config into the TUI and runs the Bubble Tea program.
 func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, version string) error {
 	category, _ := domain.ParseCategory(cfg.Category)
 	env := models.Environment{
