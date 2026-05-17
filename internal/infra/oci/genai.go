@@ -4,6 +4,7 @@ package oci
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -11,6 +12,13 @@ import (
 
 	"github.com/jingle2008/toolkit/pkg/models"
 )
+
+// templatePlaceholderRE matches "{…}" placeholders that newer oci-go-sdk
+// releases embed in service endpoints (e.g. "{dualStack?ds.:}"). They
+// contain characters like '?' that break url.Parse and never make it
+// past the SDK in resolved requests, so it is safe to remove them when
+// computing a derived non-prod endpoint.
+var templatePlaceholderRE = regexp.MustCompile(`\{[^}]*\}`)
 
 /*
 OciConfigPath is the default path to the OCI CLI config file.
@@ -61,6 +69,9 @@ func GetGenAIClient(env models.Environment) (*generativeai.GenerativeAiClient, e
 // getServiceEndpoint returns the override endpoint for non-production regions.
 func getServiceEndpoint(serviceEndpoint string, envType string) string {
 	prefix := strings.ReplaceAll(envType, "preprod", "ppe")
+	// Strip SDK template placeholders like "{dualStack?ds.:}" — they break
+	// url.Parse and don't belong in the prefixed host we emit.
+	serviceEndpoint = templatePlaceholderRE.ReplaceAllString(serviceEndpoint, "")
 	// Ensure the endpoint has a scheme so url.Parse treats the first
 	// segment as a host rather than a path.
 	if !strings.Contains(serviceEndpoint, "://") {

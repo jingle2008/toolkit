@@ -58,6 +58,16 @@ func Test_getServiceEndpoint(t *testing.T) {
 			wantPath:     "/api",
 			wantRawQuery: "x=1&y=2",
 		},
+		{
+			// oci-go-sdk v65.114+ emits templated endpoints like
+			// "{dualStack?ds.:}". The placeholder must be stripped before
+			// the host is rewritten.
+			name:       "templated dualStack placeholder stripped",
+			serviceURL: "https://generativeai.us-ashburn-1.{dualStack?ds.:}oci.oraclecloud.com",
+			envType:    "dev",
+			wantHost:   "dev.generativeai.us-ashburn-1.oci.oraclecloud.com",
+			wantScheme: "https",
+		},
 	}
 
 	for _, tt := range tests {
