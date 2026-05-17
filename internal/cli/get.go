@@ -426,15 +426,13 @@ func baseModelTable(items []models.BaseModel) ([]string, [][]string) {
 }
 
 func gpuPoolTable(items []models.GpuPool) ([]string, [][]string) {
-	headers := []string{"NAME", "SHAPE", "STATUS", "SIZE", "ACTUAL", "CAPACITY TYPE"}
+	headers := []string{"NAME", "SHAPE", "SIZE", "CAPACITY TYPE"}
 	rows := make([][]string, 0, len(items))
 	for _, p := range items {
 		rows = append(rows, []string{
 			p.Name,
 			p.Shape,
-			p.Status,
 			fmt.Sprintf("%d", p.Size),
-			fmt.Sprintf("%d", p.ActualSize),
 			p.CapacityType,
 		})
 	}
