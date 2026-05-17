@@ -40,8 +40,8 @@ func getGenAIClientWithDeps(
 	}
 
 	client.SetRegion(env.Region)
-	if env.Type != "prod" {
-		client.Host = getServiceEndpoint(client.Endpoint(), env.Type)
+	if env.Type != "prod" && client.Host != "" {
+		client.Host = getServiceEndpoint(client.Host, env.Type)
 	}
 
 	return &client, nil
