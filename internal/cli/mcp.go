@@ -62,13 +62,9 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		}
 
 		// Stdout is reserved for MCP frames — logs go to cfg.LogFile.
-		logFormat, logLevel, err := logOptionsFromViper()
+		logger, err := initLogger(cfg)
 		if err != nil {
 			return err
-		}
-		logger, err := logging.NewFileLoggerWithLevel(cfg.Debug, cfg.LogFile, logFormat, logLevel)
-		if err != nil {
-			return fmt.Errorf("initialize logger: %w", err)
 		}
 		defer func() { _ = logger.Sync() }()
 

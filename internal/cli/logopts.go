@@ -5,6 +5,9 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
+
+	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 func logOptionsFromViper() (string, string, error) {
@@ -17,6 +20,22 @@ func logOptionsFromViper() (string, string, error) {
 		return "", "", err
 	}
 	return logFormat, logLevel, nil
+}
+
+// initLogger reads log_format/log_level from viper and constructs a
+// file-backed logger writing to cfg.LogFile. Stdout is reserved for
+// command output (get) or MCP frames (mcp), so logs never bleed into
+// the data stream.
+func initLogger(cfg config.Config) (logging.Logger, error) {
+	logFormat, logLevel, err := logOptionsFromViper()
+	if err != nil {
+		return nil, err
+	}
+	logger, err := logging.NewFileLoggerWithLevel(cfg.Debug, cfg.LogFile, logFormat, logLevel)
+	if err != nil {
+		return nil, fmt.Errorf("initialize logger: %w", err)
+	}
+	return logger, nil
 }
 
 func validateLogFormat(logFormat string) error {

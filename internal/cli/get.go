@@ -91,13 +91,9 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool) func(cmd *
 		// users who configured `log_format: json` for scripting actually get
 		// JSON. Logs still go to cfg.LogFile by default, keeping stdout
 		// clean for piping.
-		logFormat, logLevel, err := logOptionsFromViper()
+		logger, err := initLogger(cfg)
 		if err != nil {
 			return err
-		}
-		logger, err := logging.NewFileLoggerWithLevel(cfg.Debug, cfg.LogFile, logFormat, logLevel)
-		if err != nil {
-			return fmt.Errorf("initialize logger: %w", err)
 		}
 		defer func() { _ = logger.Sync() }()
 
