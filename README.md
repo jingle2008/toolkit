@@ -89,6 +89,29 @@ toolkit --help                # all global flags
 
 *(See `internal/cli/root.go` for the authoritative list.)*
 
+### Headless `get` (for scripts and LLM integration)
+
+`toolkit get <category>` is the non-TUI equivalent of selecting a category in the interactive UI. It uses the same loaders and emits machine-friendly output for piping into `jq`, posting to LLM tools, or feeding scripts.
+
+```bash
+# JSON array (default pretty-printed)
+toolkit get tenant -o json
+
+# Line-delimited JSON (great for streaming / `xargs`)
+toolkit get gpunode -f us-ashburn-1 -o jsonl
+
+# Plain table (default)
+toolkit get dac
+
+# YAML
+toolkit get basemodel -f cohere -o yaml
+
+# Suppress headers for `cut` / `awk` pipelines
+toolkit get tenant --no-headers
+```
+
+Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit completion bash` for the full list. Logs are written to `--log_file` (default `toolkit.log`) so stdout stays clean for parsing.
+
 ---
 
 ## Project Layout
