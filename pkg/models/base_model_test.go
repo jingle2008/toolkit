@@ -57,6 +57,19 @@ func TestBaseModel_GetDefaultDacShape(t *testing.T) {
 	assert.Equal(t, "B", got.Name)
 	assert.Equal(t, 2, got.QuotaUnit)
 	assert.True(t, got.Default)
+
+	// Multiple defaults: returns the first in declaration order, no panic.
+	bm = BaseModel{
+		DacShapeConfigs: &DacShapeConfigs{
+			CompatibleDACShapes: []DACShape{
+				{Name: "A", QuotaUnit: 1, Default: true},
+				{Name: "B", QuotaUnit: 2, Default: true},
+			},
+		},
+	}
+	got = bm.GetDefaultDacShape()
+	assert.NotNil(t, got)
+	assert.Equal(t, "A", got.Name)
 }
 
 func TestBaseModel_GetFlags(t *testing.T) {

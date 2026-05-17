@@ -2,7 +2,6 @@
 package models
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -50,26 +49,19 @@ func (m BaseModel) GetName() string {
 	return m.Name
 }
 
-// GetDefaultDacShape returns the default DAC shape for the base model.
+// GetDefaultDacShape returns the default DAC shape for the base model,
+// or nil if none is marked default. If multiple shapes are marked default
+// (a malformed config), the first one in declaration order is returned.
 func (m BaseModel) GetDefaultDacShape() *DACShape {
-	shapes := make(map[string]*DACShape)
-
-	if m.DacShapeConfigs != nil {
-		for _, config := range m.DacShapeConfigs.CompatibleDACShapes {
-			if config.Default {
-				shapes[config.Name] = &config
-			}
+	if m.DacShapeConfigs == nil {
+		return nil
+	}
+	for i := range m.DacShapeConfigs.CompatibleDACShapes {
+		shape := &m.DacShapeConfigs.CompatibleDACShapes[i]
+		if shape.Default {
+			return shape
 		}
 	}
-
-	if len(shapes) > 1 {
-		panic(fmt.Sprintf("More than 1 default DAC shapes found for model: %s", m.InternalName))
-	}
-
-	for _, value := range shapes {
-		return value
-	}
-
 	return nil
 }
 
