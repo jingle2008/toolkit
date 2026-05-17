@@ -103,6 +103,44 @@ func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) err
 	return nil
 }
 
+// getVariableDefaults parses `variable "name" { default = ... }` blocks
+// in every .tf file under dirPath and returns the evaluated defaults.
+// Variables without a default are omitted; references to them will then
+// remain unresolved, matching how terraform behaves without -var input.
+func getVariableDefaults(ctx context.Context, dirPath string) (map[string]cty.Value, error) {
+	tfFiles, err := fs.ListFiles(ctx, dirPath, ".tf")
+	if err != nil {
+		return nil, err
+	}
+	defaults := make(map[string]cty.Value)
+	for _, fpath := range tfFiles {
+		parser := hclparse.NewParser()
+		file, diags := parser.ParseHCLFile(fpath)
+		if diags.HasErrors() {
+			continue
+		}
+		body, ok := file.Body.(*hclsyntax.Body)
+		if !ok {
+			continue
+		}
+		for _, block := range body.Blocks {
+			if block.Type != "variable" || len(block.Labels) == 0 {
+				continue
+			}
+			defAttr, ok := block.Body.Attributes["default"]
+			if !ok {
+				continue
+			}
+			val, vdiags := defAttr.Expr.Value(nil)
+			if vdiags.HasErrors() {
+				continue
+			}
+			defaults[block.Labels[0]] = val
+		}
+	}
+	return defaults, nil
+}
+
 func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 	valueMap := object.AsValueMap()
 	valueMap[key] = value
@@ -132,10 +170,16 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 		"execution_target": executionTarget,
 	})
 
-	varObject := cty.ObjectVal(map[string]cty.Value{
-		"region":      cty.StringVal(env.Region),
-		"environment": cty.StringVal(env.Type),
-	})
+	// Start from any defaults declared in this module's variables.tf so
+	// references like `var.worker_nsgs` resolve to their declared defaults
+	// instead of failing. Then layer the toolkit-supplied region /
+	// environment on top so they always reflect the active env.
+	varDefaults, _ := getVariableDefaults(ctx, dirPath)
+	varMap := make(map[string]cty.Value, len(varDefaults)+2)
+	maps.Copy(varMap, varDefaults)
+	varMap["region"] = cty.StringVal(env.Region)
+	varMap["environment"] = cty.StringVal(env.Type)
+	varObject := cty.ObjectVal(varMap)
 
 	dataObject := cty.ObjectVal(map[string]cty.Value{
 		"oci_identity_availability_domains": createAvailabilityDomains(),
