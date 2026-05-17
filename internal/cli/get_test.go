@@ -37,6 +37,27 @@ func TestGetCmd_InvalidOutput(t *testing.T) {
 	}
 }
 
+func TestGetCmd_MissingRequiredSettings(t *testing.T) {
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"get", "tenant"})
+	buf := new(bytes.Buffer)
+	cmd.SetOut(buf)
+	cmd.SetErr(buf)
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error when required settings are missing, got nil")
+	}
+	// Error should name the specific missing flags and NOT mention "Category"
+	// (which the positional arg already supplies).
+	msg := err.Error()
+	if !strings.Contains(msg, "--repo_path") {
+		t.Errorf("expected --repo_path in error, got: %v", err)
+	}
+	if strings.Contains(strings.ToLower(msg), "category is required") {
+		t.Errorf("error should not mention Category, got: %v", err)
+	}
+}
+
 func TestGetCmd_HelpListsExamples(t *testing.T) {
 	cmd := NewRootCmd("vtest")
 	cmd.SetArgs([]string{"get", "--help"})

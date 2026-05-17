@@ -73,8 +73,8 @@ func runGet(format *string, noHeaders, pretty *bool) func(cmd *cobra.Command, ar
 		if err := viper.Unmarshal(&cfg); err != nil {
 			return fmt.Errorf("unmarshal config: %w", err)
 		}
-		if err := cfg.Validate(); err != nil {
-			return fmt.Errorf("validate config: %w (hint: run `toolkit init` to scaffold an example config)", err)
+		if err := validateGetConfig(cfg, cat); err != nil {
+			return err
 		}
 
 		// Logs go to cfg.LogFile so structured stdout stays clean for piping.
@@ -96,6 +96,48 @@ func runGet(format *string, noHeaders, pretty *bool) func(cmd *cobra.Command, ar
 
 		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, opts)
 	}
+}
+
+// validateGetConfig checks the minimum fields needed to load the
+// requested category. Unlike config.Validate (used by the TUI), it
+// does not require Category — the positional arg supplies it — and
+// only requires KubeConfig for cluster-derived categories.
+func validateGetConfig(cfg config.Config, cat domain.Category) error {
+	var missing []string
+	if cfg.RepoPath == "" {
+		missing = append(missing, "--repo_path")
+	}
+	if cfg.EnvType == "" {
+		missing = append(missing, "--env_type")
+	}
+	if cfg.EnvRegion == "" {
+		missing = append(missing, "--env_region")
+	}
+	if cfg.EnvRealm == "" {
+		missing = append(missing, "--env_realm")
+	}
+	if categoryNeedsKubeConfig(cat) && cfg.KubeConfig == "" {
+		missing = append(missing, "--kubeconfig")
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return fmt.Errorf(
+		"missing required setting(s) for `toolkit get %s`: %s\n"+
+			"  set them via flags, environment (TOOLKIT_*), or `toolkit init` to scaffold ~/.config/toolkit/config.yaml",
+		cat, strings.Join(missing, ", "),
+	)
+}
+
+// categoryNeedsKubeConfig reports whether loading cat requires a
+// kubeconfig. The TUI loads these lazily from a live cluster;
+// everything else comes from the on-disk repo.
+func categoryNeedsKubeConfig(cat domain.Category) bool {
+	switch cat { //nolint:exhaustive
+	case domain.BaseModel, domain.GpuNode, domain.DedicatedAICluster:
+		return true
+	}
+	return false
 }
 
 //nolint:cyclop // a simple per-category switch is clearer than a registry here
