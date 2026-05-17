@@ -138,6 +138,11 @@ func validateLoaderConfig(cfg config.Config) []string {
 // does not require Category — the positional arg supplies it — and
 // only requires KubeConfig for cluster-derived categories.
 func validateGetConfig(cfg config.Config, cat domain.Category) error {
+	// Alias is a static dump of domain.Aliases — it never reaches the
+	// loader, so don't gate it on repo_path / env_*.
+	if cat == domain.Alias {
+		return nil
+	}
 	missing := validateLoaderConfig(cfg)
 	if cat.NeedsKubeConfig() && cfg.KubeConfig == "" {
 		missing = append(missing, "--kubeconfig")
@@ -173,6 +178,10 @@ func emitCategory(
 	opts output.Options,
 ) error {
 	switch cat {
+	case domain.Alias:
+		// Static enum dump — no loader call. Handled before the default
+		// branch so it can run without repo_path or env_* set.
+		return writeAliases(w, filter, opts)
 	case domain.BaseModel:
 		items, err := ld.LoadBaseModels(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -356,8 +365,6 @@ func emitFromDataset(
 			opts, serviceTenancyTable)
 	case domain.ModelArtifact:
 		return writeMap(w, filterMap(dataset.ModelArtifactMap, filter), opts, modelArtifactTable, "model")
-	case domain.Alias:
-		return writeAliases(w, filter, opts)
 	default:
 		return fmt.Errorf("category %s is not supported by `toolkit get`", cat)
 	}

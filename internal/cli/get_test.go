@@ -3,6 +3,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -64,6 +65,40 @@ func TestGetCmd_MissingRequiredSettings(t *testing.T) {
 	}
 	if strings.Contains(strings.ToLower(msg), "category is required") {
 		t.Errorf("error should not mention Category, got: %v", err)
+	}
+}
+
+func TestGetCmd_AliasJSON_HappyPath(t *testing.T) {
+	// Scope viper away from the user's real ~/.config/toolkit so the test
+	// doesn't pick up stray repo_path / env values. Alias is a static
+	// enum dump — no loader call — so HOME is the only thing to isolate.
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"get", "alias", "-o", "json"})
+	stdout := new(bytes.Buffer)
+	cmd.SetOut(stdout)
+	cmd.SetErr(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("get alias: %v", err)
+	}
+
+	var items []struct {
+		Alias    string `json:"alias"`
+		Category string `json:"category"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &items); err != nil {
+		t.Fatalf("stdout is not valid JSON: %v\n%s", err, stdout.String())
+	}
+	if len(items) == 0 {
+		t.Fatal("expected at least one alias in JSON output")
+	}
+	for _, it := range items {
+		if it.Alias == "" || it.Category == "" {
+			t.Errorf("entry missing alias or category: %+v", it)
+		}
 	}
 }
 
