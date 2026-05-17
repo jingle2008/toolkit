@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/spf13/viper"
 )
 
 func TestGetCmd_UnknownCategory(t *testing.T) {
@@ -38,6 +40,13 @@ func TestGetCmd_InvalidOutput(t *testing.T) {
 }
 
 func TestGetCmd_MissingRequiredSettings(t *testing.T) {
+	// Point HOME at a tempdir so the default ~/.config/toolkit/config.yaml
+	// resolves to a path that doesn't exist, and clear any viper state
+	// inherited from other tests in this package.
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
 	cmd := NewRootCmd("vtest")
 	cmd.SetArgs([]string{"get", "tenant"})
 	buf := new(bytes.Buffer)

@@ -23,7 +23,7 @@ import (
 )
 
 // addGetCommand wires the `toolkit get <category>` subcommand.
-func addGetCommand(rootCmd *cobra.Command) {
+func addGetCommand(rootCmd *cobra.Command, cfgFile *string) {
 	var (
 		format    string
 		noHeaders bool
@@ -47,7 +47,7 @@ discover them.`,
 		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 			return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
 		},
-		RunE: runGet(&format, &noHeaders, &pretty),
+		RunE: runGet(cfgFile, &format, &noHeaders, &pretty),
 	}
 	getCmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|jsonl|yaml")
 	getCmd.Flags().BoolVar(&noHeaders, "no-headers", false, "omit header row (table only)")
@@ -58,7 +58,7 @@ discover them.`,
 	rootCmd.AddCommand(getCmd)
 }
 
-func runGet(format *string, noHeaders, pretty *bool) func(cmd *cobra.Command, args []string) error {
+func runGet(cfgFile *string, format *string, noHeaders, pretty *bool) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		cat, err := domain.ParseCategory(args[0])
 		if err != nil {
@@ -66,6 +66,14 @@ func runGet(format *string, noHeaders, pretty *bool) func(cmd *cobra.Command, ar
 		}
 		fmtChoice, err := output.ParseFormat(*format)
 		if err != nil {
+			return err
+		}
+
+		// Read the YAML config file (if present) so values like repo_path
+		// flow into viper before Unmarshal. Matches what runRootE does
+		// for the TUI command — without this, `toolkit get` ignored
+		// ~/.config/toolkit/config.yaml.
+		if err := readConfigFile(cfgFile); err != nil {
 			return err
 		}
 
