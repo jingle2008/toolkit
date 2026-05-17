@@ -61,7 +61,15 @@ func GetGenAIClient(env models.Environment) (*generativeai.GenerativeAiClient, e
 // getServiceEndpoint returns the override endpoint for non-production regions.
 func getServiceEndpoint(serviceEndpoint string, envType string) string {
 	prefix := strings.ReplaceAll(envType, "preprod", "ppe")
-	u, _ := url.Parse(serviceEndpoint)
+	// Ensure the endpoint has a scheme so url.Parse treats the first
+	// segment as a host rather than a path.
+	if !strings.Contains(serviceEndpoint, "://") {
+		serviceEndpoint = "https://" + serviceEndpoint
+	}
+	u, err := url.Parse(serviceEndpoint)
+	if err != nil || u.Host == "" {
+		return serviceEndpoint
+	}
 	u.Host = fmt.Sprintf("%s.%s", prefix, u.Host)
 	return u.String()
 }
