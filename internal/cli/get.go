@@ -115,11 +115,12 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool) func(cmd *
 	}
 }
 
-// validateGetConfig checks the minimum fields needed to load the
-// requested category. Unlike config.Validate (used by the TUI), it
-// does not require Category — the positional arg supplies it — and
-// only requires KubeConfig for cluster-derived categories.
-func validateGetConfig(cfg config.Config, cat domain.Category) error {
+// validateLoaderConfig returns the names of missing required flags
+// for any subcommand that needs to call the loader composite. Empty
+// slice means the config has enough to reach the loader; subcommands
+// may add their own category-specific checks on top (see
+// validateGetConfig).
+func validateLoaderConfig(cfg config.Config) []string {
 	var missing []string
 	if cfg.RepoPath == "" {
 		missing = append(missing, "--repo_path")
@@ -133,6 +134,15 @@ func validateGetConfig(cfg config.Config, cat domain.Category) error {
 	if cfg.EnvRealm == "" {
 		missing = append(missing, "--env_realm")
 	}
+	return missing
+}
+
+// validateGetConfig checks the minimum fields needed to load the
+// requested category. Unlike config.Validate (used by the TUI), it
+// does not require Category — the positional arg supplies it — and
+// only requires KubeConfig for cluster-derived categories.
+func validateGetConfig(cfg config.Config, cat domain.Category) error {
+	missing := validateLoaderConfig(cfg)
 	if categoryNeedsKubeConfig(cat) && cfg.KubeConfig == "" {
 		missing = append(missing, "--kubeconfig")
 	}

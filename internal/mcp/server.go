@@ -52,10 +52,20 @@ func NewServer(cfg config.Config, ld loader.Loader, logger logging.Logger, versi
 	return s
 }
 
-// Run blocks until the MCP client disconnects or ctx is canceled.
-// Uses stdio transport — stdin reads JSON-RPC frames, stdout writes
-// them. The caller is responsible for keeping stdout free of any
-// other output (toolkit's logger writes to a file by default).
+// Run blocks until any of:
+//   - stdin reaches EOF (the MCP client closed the pipe),
+//   - ctx is canceled,
+//   - the underlying transport returns a fatal error.
+//
+// Returns nil on a clean client disconnect or ctx cancel, otherwise
+// the transport's error. Uses stdio: stdin reads JSON-RPC frames,
+// stdout writes them. Callers must keep stdout free of any other
+// output (the toolkit logger writes to a file by default — see
+// internal/cli/mcp.go).
+//
+// Single-shot: a second Run on the same *Server reuses the SDK's
+// session list rather than reinitializing cleanly. Construct a fresh
+// Server (via NewServer) if you need to restart.
 func (s *Server) Run(ctx context.Context) error {
 	return s.server.Run(ctx, &sdk.StdioTransport{})
 }

@@ -145,6 +145,14 @@ func WriteYAML(w io.Writer, items any, opts Options) error {
 // The output is stable: map keys are sorted before iteration. The
 // implementation round-trips through JSON so the caller's struct tags
 // (omitempty, custom names, etc.) are honored.
+//
+// Collision rule: if T's JSON encoding already contains a field whose
+// name equals groupField, the map key wins — the existing value is
+// silently overwritten. Callers should choose a groupField that doesn't
+// collide with any of T's tagged fields. The current production callers
+// pick "pool" / "tenant" / "model", none of which clash with the
+// underlying pkg/models types. Test coverage pins this behavior
+// (TestFlattenWithKey_CollisionOverwrites).
 func FlattenWithKey[T any](grouped map[string][]T, groupField string) []map[string]any {
 	keys := make([]string, 0, len(grouped))
 	for k := range grouped {

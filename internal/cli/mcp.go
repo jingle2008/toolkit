@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -52,24 +53,11 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		// MCP needs at minimum RepoPath + the env triple to load data.
 		// KubeConfig is only required for cluster-derived tools; per-tool
 		// failures there surface to the MCP client as tool errors.
-		var missing []string
-		if cfg.RepoPath == "" {
-			missing = append(missing, "--repo_path")
-		}
-		if cfg.EnvType == "" {
-			missing = append(missing, "--env_type")
-		}
-		if cfg.EnvRegion == "" {
-			missing = append(missing, "--env_region")
-		}
-		if cfg.EnvRealm == "" {
-			missing = append(missing, "--env_realm")
-		}
-		if len(missing) > 0 {
+		if missing := validateLoaderConfig(cfg); len(missing) > 0 {
 			return fmt.Errorf(
-				"missing required setting(s) for `toolkit mcp`: %v\n"+
+				"missing required setting(s) for `toolkit mcp`: %s\n"+
 					"  set them via flags, environment (TOOLKIT_*), or `toolkit init`",
-				missing,
+				strings.Join(missing, ", "),
 			)
 		}
 
