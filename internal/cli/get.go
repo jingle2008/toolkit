@@ -143,7 +143,7 @@ func validateLoaderConfig(cfg config.Config) []string {
 // only requires KubeConfig for cluster-derived categories.
 func validateGetConfig(cfg config.Config, cat domain.Category) error {
 	missing := validateLoaderConfig(cfg)
-	if categoryNeedsKubeConfig(cat) && cfg.KubeConfig == "" {
+	if cat.NeedsKubeConfig() && cfg.KubeConfig == "" {
 		missing = append(missing, "--kubeconfig")
 	}
 	if len(missing) > 0 {
@@ -157,23 +157,12 @@ func validateGetConfig(cfg config.Config, cat domain.Category) error {
 	// (a default of ~/.kube/config is bound by the persistent flag),
 	// so stat the file here to fail fast with a clear message instead
 	// of letting client-go produce a deep, generic error.
-	if categoryNeedsKubeConfig(cat) {
+	if cat.NeedsKubeConfig() {
 		if _, err := os.Stat(cfg.KubeConfig); err != nil {
 			return fmt.Errorf("kubeconfig %q not readable: %w", cfg.KubeConfig, err)
 		}
 	}
 	return nil
-}
-
-// categoryNeedsKubeConfig reports whether loading cat requires a
-// kubeconfig. The TUI loads these lazily from a live cluster;
-// everything else comes from the on-disk repo.
-func categoryNeedsKubeConfig(cat domain.Category) bool {
-	switch cat { //nolint:exhaustive
-	case domain.BaseModel, domain.GpuNode, domain.DedicatedAICluster:
-		return true
-	}
-	return false
 }
 
 //nolint:cyclop // a simple per-category switch is clearer than a registry here

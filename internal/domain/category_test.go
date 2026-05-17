@@ -163,6 +163,25 @@ func TestAliases_IterationRange(t *testing.T) {
 	}
 }
 
+func TestCategory_NeedsKubeConfig(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		cat  Category
+		want bool
+	}{
+		{BaseModel, true},
+		{GpuNode, true},
+		{DedicatedAICluster, true},
+		{Tenant, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.cat.String(), func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, tt.cat.NeedsKubeConfig())
+		})
+	}
+}
+
 func TestParseCategory_Unknown(t *testing.T) {
 	t.Parallel()
 	cat, err := ParseCategory("not-real")

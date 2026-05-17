@@ -145,6 +145,17 @@ func (e Category) IsFaulty() bool {
 	return false
 }
 
+// NeedsKubeConfig reports whether loading this category requires a
+// kubeconfig. These categories are sourced from a live cluster; the
+// rest come from the on-disk repo.
+func (e Category) NeedsKubeConfig() bool {
+	switch e { //nolint:exhaustive
+	case BaseModel, GpuNode, DedicatedAICluster:
+		return true
+	}
+	return false
+}
+
 /*
 GetInitials returns the initials of a string, used for aliasing.
 */
