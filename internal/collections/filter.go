@@ -86,6 +86,17 @@ func FilterMap[T models.NamedFilterable](
 	return results
 }
 
+// FilterMapOrAll returns g unchanged when filter is empty, and a
+// filtered copy otherwise. Useful for the common case where callers
+// want "all rows when no filter is set" without conditional plumbing
+// at every callsite.
+func FilterMapOrAll[T models.NamedFilterable](g map[string][]T, filter string) map[string][]T {
+	if filter == "" {
+		return g
+	}
+	return FilterMap(g, nil, nil, filter, nil)
+}
+
 /*
 FindByName returns a pointer to the item with the given name, or nil if not found.
 */

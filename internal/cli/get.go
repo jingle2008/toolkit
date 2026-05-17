@@ -207,13 +207,13 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load gpu nodes: %w", err)
 		}
-		return writeMap(w, filterMap(grouped, filter), opts, gpuNodeTable, "pool")
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), opts, gpuNodeTable, "pool")
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load dedicated AI clusters: %w", err)
 		}
-		return writeMap(w, filterMap(grouped, filter), opts, dacTable, "tenant")
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), opts, dacTable, "tenant")
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
 		domain.ConsolePropertyTenancyOverride,
@@ -304,13 +304,6 @@ func writeMap[T any](
 	}
 }
 
-func filterMap[T models.NamedFilterable](grouped map[string][]T, filter string) map[string][]T {
-	if filter == "" {
-		return grouped
-	}
-	return collections.FilterMap(grouped, nil, nil, filter, nil)
-}
-
 func emitTenancyGroup(
 	w writer,
 	cat domain.Category,
@@ -322,13 +315,13 @@ func emitTenancyGroup(
 	case domain.Tenant:
 		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), opts, tenantTable)
 	case domain.LimitTenancyOverride:
-		return writeMap(w, filterMap(group.LimitTenancyOverrideMap, filter), opts,
+		return writeMap(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), opts,
 			tenancyOverrideTable[models.LimitTenancyOverride], "tenant")
 	case domain.ConsolePropertyTenancyOverride:
-		return writeMap(w, filterMap(group.ConsolePropertyTenancyOverrideMap, filter), opts,
+		return writeMap(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), opts,
 			tenancyOverrideTable[models.ConsolePropertyTenancyOverride], "tenant")
 	case domain.PropertyTenancyOverride:
-		return writeMap(w, filterMap(group.PropertyTenancyOverrideMap, filter), opts,
+		return writeMap(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), opts,
 			tenancyOverrideTable[models.PropertyTenancyOverride], "tenant")
 	default:
 		return fmt.Errorf("category %s not in tenancy group", cat)
@@ -364,7 +357,7 @@ func emitFromDataset(
 			collections.FilterSlice(dataset.ServiceTenancies, nil, filter, nil),
 			opts, serviceTenancyTable)
 	case domain.ModelArtifact:
-		return writeMap(w, filterMap(dataset.ModelArtifactMap, filter), opts, modelArtifactTable, "model")
+		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), opts, modelArtifactTable, "model")
 	default:
 		return fmt.Errorf("category %s is not supported by `toolkit get`", cat)
 	}

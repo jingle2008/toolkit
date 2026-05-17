@@ -10,7 +10,6 @@ import (
 	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
-	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // registerTools attaches the read-only category tools to s.server.
@@ -113,7 +112,7 @@ func (s *Server) handleListGpuNodes(ctx context.Context, _ *sdk.CallToolRequest,
 	if err != nil {
 		return nil, struct{}{}, fmt.Errorf("load gpu nodes: %w", err)
 	}
-	flat := output.FlattenWithKey(filterMap(grouped, normFilter(in.Filter)), "pool")
+	flat := output.FlattenWithKey(collections.FilterMapOrAll(grouped, normFilter(in.Filter)), "pool")
 	return jsonResult(flat, nil)
 }
 
@@ -122,7 +121,7 @@ func (s *Server) handleListDACs(ctx context.Context, _ *sdk.CallToolRequest, in 
 	if err != nil {
 		return nil, struct{}{}, fmt.Errorf("load dedicated AI clusters: %w", err)
 	}
-	flat := output.FlattenWithKey(filterMap(grouped, normFilter(in.Filter)), "tenant")
+	flat := output.FlattenWithKey(collections.FilterMapOrAll(grouped, normFilter(in.Filter)), "tenant")
 	return jsonResult(flat, nil)
 }
 
@@ -149,7 +148,7 @@ func (s *Server) handleListModelArtifacts(ctx context.Context, _ *sdk.CallToolRe
 	if err != nil {
 		return nil, struct{}{}, fmt.Errorf("load dataset: %w", err)
 	}
-	flat := output.FlattenWithKey(filterMap(dataset.ModelArtifactMap, normFilter(in.Filter)), "model")
+	flat := output.FlattenWithKey(collections.FilterMapOrAll(dataset.ModelArtifactMap, normFilter(in.Filter)), "model")
 	return jsonResult(flat, nil)
 }
 
@@ -179,11 +178,11 @@ func (s *Server) handleListTenancyOverrides(ctx context.Context, _ *sdk.CallTool
 	f := normFilter(in.Filter)
 	switch in.Kind {
 	case "limit":
-		return jsonResult(output.FlattenWithKey(filterMap(grp.LimitTenancyOverrideMap, f), "tenant"), nil)
+		return jsonResult(output.FlattenWithKey(collections.FilterMapOrAll(grp.LimitTenancyOverrideMap, f), "tenant"), nil)
 	case "console_property":
-		return jsonResult(output.FlattenWithKey(filterMap(grp.ConsolePropertyTenancyOverrideMap, f), "tenant"), nil)
+		return jsonResult(output.FlattenWithKey(collections.FilterMapOrAll(grp.ConsolePropertyTenancyOverrideMap, f), "tenant"), nil)
 	case "property":
-		return jsonResult(output.FlattenWithKey(filterMap(grp.PropertyTenancyOverrideMap, f), "tenant"), nil)
+		return jsonResult(output.FlattenWithKey(collections.FilterMapOrAll(grp.PropertyTenancyOverrideMap, f), "tenant"), nil)
 	default:
 		return nil, struct{}{}, fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind)
 	}
@@ -240,10 +239,3 @@ func (s *Server) handleListAliases(_ context.Context, _ *sdk.CallToolRequest, _ 
 	return jsonResult(items, nil)
 }
 
-// filterMap mirrors the helper in internal/cli/get.go.
-func filterMap[T models.NamedFilterable](grouped map[string][]T, filter string) map[string][]T {
-	if filter == "" {
-		return grouped
-	}
-	return collections.FilterMap(grouped, nil, nil, filter, nil)
-}
