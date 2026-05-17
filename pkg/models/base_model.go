@@ -52,6 +52,12 @@ func (m BaseModel) GetName() string {
 // GetDefaultDacShape returns the default DAC shape for the base model,
 // or nil if none is marked default. If multiple shapes are marked default
 // (a malformed config), the first one in declaration order is returned.
+//
+// The returned pointer aliases an element of the underlying
+// CompatibleDACShapes slice, which is reached through the *DacShapeConfigs
+// pointer field. Mutating the pointed-to DACShape will be visible to every
+// BaseModel value that shares the same DacShapeConfigs. Treat the result
+// as read-only.
 func (m BaseModel) GetDefaultDacShape() *DACShape {
 	if m.DacShapeConfigs == nil {
 		return nil

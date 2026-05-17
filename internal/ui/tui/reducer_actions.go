@@ -75,15 +75,15 @@ func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
 		return nil
 	}
 
-	key := getItemKey(m.category, m.table.SelectedRow())
-	m.logger.Infow("action started", "action", "scaleUpGpuPool", "pool", getItemKeyString(key))
+	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	m.logger.Infow("action started", "action", "scaleUpGpuPool", "pool", getItemKeyString(itemKey))
 	return tea.Batch(
-		func() tea.Msg { return gpuPoolScaleStartedMsg{key: key} },
+		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey} },
 		func() tea.Msg {
 			ctx, cancel := m.opContext()
 			defer cancel()
 			err := actions.IncreasePoolSize(ctx, pool, m.environment, m.logger)
-			return gpuPoolScaleResultMsg{key: key, err: err}
+			return gpuPoolScaleResultMsg{key: itemKey, err: err}
 		},
 	)
 }
@@ -103,13 +103,13 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
 		return nil
 	}
-	key := getItemKey(m.category, m.table.SelectedRow())
-	m.logger.Infow("action started", "action", "toggleCordon", "node", getItemKeyString(key))
+	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	m.logger.Infow("action started", "action", "toggleCordon", "node", getItemKeyString(itemKey))
 	return func() tea.Msg {
 		ctx, cancel := m.opContext()
 		defer cancel()
 		state, err := k8s.ToggleCordon(ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
-		return cordonNodeResultMsg{key: key, state: state, err: err}
+		return cordonNodeResultMsg{key: itemKey, state: state, err: err}
 	}
 }
 
@@ -123,18 +123,18 @@ func (m *Model) drainNode(item any) tea.Cmd {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
 		return nil
 	}
-	key := getItemKey(m.category, m.table.SelectedRow())
-	m.logger.Infow("action started", "action", "drainNode", "node", getItemKeyString(key))
+	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	m.logger.Infow("action started", "action", "drainNode", "node", getItemKeyString(itemKey))
 	return func() tea.Msg {
 		ctx, cancel := m.opContext()
 		defer cancel()
 		err := k8s.DrainNode(ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
-		return drainNodeResultMsg{key: key, err: err}
+		return drainNodeResultMsg{key: itemKey, err: err}
 	}
 }
 
 // getSelectedItem returns the currently selected item in the table.
 func (m *Model) getSelectedItem() any {
-	key := getItemKey(m.category, m.table.SelectedRow())
-	return findItem(m.dataset, m.category, key)
+	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	return findItem(m.dataset, m.category, itemKey)
 }

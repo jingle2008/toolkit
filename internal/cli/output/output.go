@@ -70,6 +70,17 @@ func WriteJSON(w io.Writer, items any, opts Options) error {
 // slice (each element becomes a line) or a map[string][]T (each value
 // element becomes a line, with the key carried in a "_group" field
 // when keyed input is detected).
+//
+// "_group" is reserved by this writer for keyed-input flattening:
+// callers must not name a JSON field "_group" on any model that may
+// reach this function, otherwise the key would be silently overwritten.
+//
+// TODO(perf): the map path currently marshals the input once, then
+// unmarshals into map[string][]json.RawMessage, then re-marshals each
+// element with the injected "_group" key — roughly 3× the steady-state
+// memory of a streaming writer. Acceptable for current dataset sizes;
+// revisit with a reflect-based streaming implementation if profiles
+// show it as a hotspot.
 func WriteJSONL(w io.Writer, items any, _ Options) error {
 	if items == nil {
 		return nil
