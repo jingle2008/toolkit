@@ -203,13 +203,13 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load gpu nodes: %w", err)
 		}
-		return writeMap(w, filterMap(grouped, filter), opts, gpuNodeTable)
+		return writeMap(w, filterMap(grouped, filter), opts, gpuNodeTable, "pool")
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load dedicated AI clusters: %w", err)
 		}
-		return writeMap(w, filterMap(grouped, filter), opts, dacTable)
+		return writeMap(w, filterMap(grouped, filter), opts, dacTable, "tenant")
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
 		domain.ConsolePropertyTenancyOverride,
@@ -273,19 +273,25 @@ func writeSlice[T any](
 	}
 }
 
+// writeMap renders a grouped slice. For json/jsonl/yaml the input is
+// flattened to []map[string]any with `groupField` carrying the original
+// map key, so consumers see a uniform array of objects (matches the
+// shape MCP tools return). The table path keeps the grouped input so
+// the per-category renderer can show a group column.
 func writeMap[T any](
 	w writer,
 	grouped map[string][]T,
 	opts output.Options,
 	toTable func(map[string][]T) (headers []string, rows [][]string),
+	groupField string,
 ) error {
 	switch opts.Format {
 	case output.FormatJSON:
-		return output.WriteJSON(w, grouped, opts)
+		return output.WriteJSON(w, output.FlattenWithKey(grouped, groupField), opts)
 	case output.FormatJSONL:
-		return output.WriteJSONL(w, grouped, opts)
+		return output.WriteJSONL(w, output.FlattenWithKey(grouped, groupField), opts)
 	case output.FormatYAML:
-		return output.WriteYAML(w, grouped, opts)
+		return output.WriteYAML(w, output.FlattenWithKey(grouped, groupField), opts)
 	case output.FormatTable:
 		headers, rows := toTable(grouped)
 		return output.WriteTable(w, headers, rows, opts)
@@ -313,13 +319,13 @@ func emitTenancyGroup(
 		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), opts, tenantTable)
 	case domain.LimitTenancyOverride:
 		return writeMap(w, filterMap(group.LimitTenancyOverrideMap, filter), opts,
-			tenancyOverrideTable[models.LimitTenancyOverride])
+			tenancyOverrideTable[models.LimitTenancyOverride], "tenant")
 	case domain.ConsolePropertyTenancyOverride:
 		return writeMap(w, filterMap(group.ConsolePropertyTenancyOverrideMap, filter), opts,
-			tenancyOverrideTable[models.ConsolePropertyTenancyOverride])
+			tenancyOverrideTable[models.ConsolePropertyTenancyOverride], "tenant")
 	case domain.PropertyTenancyOverride:
 		return writeMap(w, filterMap(group.PropertyTenancyOverrideMap, filter), opts,
-			tenancyOverrideTable[models.PropertyTenancyOverride])
+			tenancyOverrideTable[models.PropertyTenancyOverride], "tenant")
 	default:
 		return fmt.Errorf("category %s not in tenancy group", cat)
 	}
@@ -354,7 +360,7 @@ func emitFromDataset(
 			collections.FilterSlice(dataset.ServiceTenancies, nil, filter, nil),
 			opts, serviceTenancyTable)
 	case domain.ModelArtifact:
-		return writeMap(w, filterMap(dataset.ModelArtifactMap, filter), opts, modelArtifactTable)
+		return writeMap(w, filterMap(dataset.ModelArtifactMap, filter), opts, modelArtifactTable, "model")
 	case domain.Alias:
 		return writeAliases(w, filter, opts)
 	default:

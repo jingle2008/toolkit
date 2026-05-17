@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"text/tabwriter"
 
@@ -133,6 +134,39 @@ func WriteYAML(w io.Writer, items any, opts Options) error {
 		enc.SetIndent(2)
 	}
 	return enc.Encode(items)
+}
+
+// FlattenWithKey turns a map[string][]T into []map[string]any, injecting
+// the map key into each element under groupField. Used to expose grouped
+// loader data (e.g. GpuNodeMap, DedicatedAIClusterMap) as a uniform
+// array of objects without leaking the underlying map shape to MCP /
+// JSON consumers.
+//
+// The output is stable: map keys are sorted before iteration. The
+// implementation round-trips through JSON so the caller's struct tags
+// (omitempty, custom names, etc.) are honored.
+func FlattenWithKey[T any](grouped map[string][]T, groupField string) []map[string]any {
+	keys := make([]string, 0, len(grouped))
+	for k := range grouped {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var out []map[string]any
+	for _, k := range keys {
+		for _, v := range grouped[k] {
+			raw, err := json.Marshal(v)
+			if err != nil {
+				continue
+			}
+			var m map[string]any
+			if err := json.Unmarshal(raw, &m); err != nil {
+				continue
+			}
+			m[groupField] = k
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 // WriteTable emits a tab-aligned table. opts.NoHeaders suppresses the
