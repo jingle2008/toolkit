@@ -65,22 +65,6 @@ func TestWriteJSONL_Array(t *testing.T) {
 	}
 }
 
-func TestWriteJSONL_MapAddsGroup(t *testing.T) {
-	t.Parallel()
-	var buf bytes.Buffer
-	in := map[string][]map[string]any{
-		"alpha": {{"name": "a1"}, {"name": "a2"}},
-	}
-	require.NoError(t, WriteJSONL(&buf, in, Options{}))
-	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
-	require.Len(t, lines, 2)
-	for _, line := range lines {
-		var obj map[string]any
-		require.NoError(t, json.Unmarshal([]byte(line), &obj))
-		assert.Equal(t, "alpha", obj["_group"])
-	}
-}
-
 func TestWriteYAML(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer

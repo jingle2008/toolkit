@@ -67,21 +67,14 @@ func WriteJSON(w io.Writer, items any, opts Options) error {
 	return enc.Encode(items)
 }
 
-// WriteJSONL emits one JSON object per line. items must be either a
-// slice (each element becomes a line) or a map[string][]T (each value
-// element becomes a line, with the key carried in a "_group" field
-// when keyed input is detected).
+// WriteJSONL emits one JSON object per line. items must be a slice
+// (each element becomes a line) or any single JSON-encodable value
+// (emitted as one line).
 //
-// "_group" is reserved by this writer for keyed-input flattening:
-// callers must not name a JSON field "_group" on any model that may
-// reach this function, otherwise the key would be silently overwritten.
-//
-// TODO(perf): the map path currently marshals the input once, then
-// unmarshals into map[string][]json.RawMessage, then re-marshals each
-// element with the injected "_group" key — roughly 3× the steady-state
-// memory of a streaming writer. Acceptable for current dataset sizes;
-// revisit with a reflect-based streaming implementation if profiles
-// show it as a hotspot.
+// Grouped/map data should be flattened with FlattenWithKey before
+// reaching this function — callers pick the group field name
+// (`pool`, `tenant`, `model`, …) explicitly rather than relying on
+// a magic key.
 func WriteJSONL(w io.Writer, items any, _ Options) error {
 	if items == nil {
 		return nil
@@ -91,34 +84,11 @@ func WriteJSONL(w io.Writer, items any, _ Options) error {
 		return err
 	}
 	enc := json.NewEncoder(w)
-	// Try array first.
 	var arr []json.RawMessage
 	if err := json.Unmarshal(raw, &arr); err == nil {
 		for _, msg := range arr {
 			if err := enc.Encode(msg); err != nil {
 				return err
-			}
-		}
-		return nil
-	}
-	// Then map[string][]any — flatten with a "_group" key.
-	var obj map[string][]json.RawMessage
-	if err := json.Unmarshal(raw, &obj); err == nil {
-		for k, msgs := range obj {
-			for _, msg := range msgs {
-				var fields map[string]json.RawMessage
-				if err := json.Unmarshal(msg, &fields); err != nil {
-					fields = map[string]json.RawMessage{}
-				}
-				groupJSON, _ := json.Marshal(k)
-				fields["_group"] = groupJSON
-				out, err := json.Marshal(fields)
-				if err != nil {
-					return err
-				}
-				if err := enc.Encode(json.RawMessage(out)); err != nil {
-					return err
-				}
 			}
 		}
 		return nil
