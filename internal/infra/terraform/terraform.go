@@ -108,6 +108,7 @@ func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) err
 // Variables without a default are omitted; references to them will then
 // remain unresolved, matching how terraform behaves without -var input.
 func getVariableDefaults(ctx context.Context, dirPath string) (map[string]cty.Value, error) {
+	logger := logging.FromContext(ctx)
 	tfFiles, err := fs.ListFiles(ctx, dirPath, ".tf")
 	if err != nil {
 		return nil, err
@@ -133,6 +134,13 @@ func getVariableDefaults(ctx context.Context, dirPath string) (map[string]cty.Va
 			}
 			val, vdiags := defAttr.Expr.Value(nil)
 			if vdiags.HasErrors() {
+				// Defaults that reference var/local/data or use functions
+				// cannot be evaluated with a nil context. Treat as
+				// "unset" (matches terraform without -var) but record
+				// at debug level so users tracing unresolved refs can
+				// see the default existed.
+				logger.Debugw("skipping non-literal variable default",
+					"var", block.Labels[0], "file", fpath, "errors", vdiags.Errs())
 				continue
 			}
 			defaults[block.Labels[0]] = val

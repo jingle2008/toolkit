@@ -85,8 +85,15 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool) func(cmd *
 			return err
 		}
 
-		// Logs go to cfg.LogFile so structured stdout stays clean for piping.
-		logger, err := logging.NewFileLoggerWithLevel(cfg.Debug, cfg.LogFile, "console", "")
+		// Honor the same log_format / log_level config keys the TUI uses so
+		// users who configured `log_format: json` for scripting actually get
+		// JSON. Logs still go to cfg.LogFile by default, keeping stdout
+		// clean for piping.
+		logFormat, logLevel, err := logOptionsFromViper()
+		if err != nil {
+			return err
+		}
+		logger, err := logging.NewFileLoggerWithLevel(cfg.Debug, cfg.LogFile, logFormat, logLevel)
 		if err != nil {
 			return fmt.Errorf("initialize logger: %w", err)
 		}
@@ -127,14 +134,23 @@ func validateGetConfig(cfg config.Config, cat domain.Category) error {
 	if categoryNeedsKubeConfig(cat) && cfg.KubeConfig == "" {
 		missing = append(missing, "--kubeconfig")
 	}
-	if len(missing) == 0 {
-		return nil
+	if len(missing) > 0 {
+		return fmt.Errorf(
+			"missing required setting(s) for `toolkit get %s`: %s\n"+
+				"  set them via flags, environment (TOOLKIT_*), or `toolkit init` to scaffold ~/.config/toolkit/config.yaml",
+			cat, strings.Join(missing, ", "),
+		)
 	}
-	return fmt.Errorf(
-		"missing required setting(s) for `toolkit get %s`: %s\n"+
-			"  set them via flags, environment (TOOLKIT_*), or `toolkit init` to scaffold ~/.config/toolkit/config.yaml",
-		cat, strings.Join(missing, ", "),
-	)
+	// For cluster-derived categories the path is guaranteed non-empty
+	// (a default of ~/.kube/config is bound by the persistent flag),
+	// so stat the file here to fail fast with a clear message instead
+	// of letting client-go produce a deep, generic error.
+	if categoryNeedsKubeConfig(cat) {
+		if _, err := os.Stat(cfg.KubeConfig); err != nil {
+			return fmt.Errorf("kubeconfig %q not readable: %w", cfg.KubeConfig, err)
+		}
+	}
+	return nil
 }
 
 // categoryNeedsKubeConfig reports whether loading cat requires a
