@@ -4,7 +4,7 @@
 #   make cover     - Unit test coverage report
 #   make cover-int - Integration test coverage report
 
-.PHONY: build lint vet test bench bench-int tidy fmt fmt-check goimports goimports-check cover cover-int cover-check install-lint setup ci
+.PHONY: build lint vet test bench bench-int tidy fmt fmt-check goimports goimports-check cover cover-int cover-check install-lint setup ci clean
 
 VERSION ?= $(shell git describe --tags --always --dirty)
 
@@ -70,3 +70,7 @@ setup:
 	go install golang.org/x/tools/cmd/goimports@v0.28.0
 
 ci: fmt-check goimports-check lint vet test cover-check
+
+clean:
+	rm -f coverage.out coverage.html coverage-int.out coverage-int.html toolkit.log
+	rm -rf bin/
