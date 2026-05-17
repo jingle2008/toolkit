@@ -290,37 +290,44 @@ func getServiceTenancy(object cty.Value, realm string) *models.ServiceTenancy {
 
 /*
 LoadGpuPools loads GpuPool objects from the given repository path and environment.
-Now accepts context.Context as the first parameter.
+
+It reads three sources (self-managed instance pools, self-managed cluster
+networks, OKE-managed nodepools). Failures in individual sources are
+logged to ctx's logger and the function returns the union of pools from
+sources that succeeded. An error is returned only when every source
+fails — that way an unresolvable local in one HCL tree doesn't hide
+working pools from the others.
 */
 func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
-	var gpuPools []models.GpuPool
-
-	// self-managed pools
-	dirPath := filepath.Join(repoPath, "shared_modules/instance_pools_config")
-	pools, err := loadGpuPools(ctx, dirPath, "env_instance_pools_config", false, env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
+	logger := logging.FromContext(ctx)
+	sources := []struct {
+		dir          string
+		localName    string
+		isOkeManaged bool
+	}{
+		{filepath.Join(repoPath, "shared_modules/instance_pools_config"), "env_instance_pools_config", false},
+		{filepath.Join(repoPath, "shared_modules/cluster_networks_config"), "env_cluster_networks_config", false},
+		{filepath.Join(repoPath, "shared_modules/oci_oke_nodepools_config"), "env_nodepools_config", true},
 	}
 
-	gpuPools = append(gpuPools, pools...)
-
-	// self-managed pools (cluster network)
-	dirPath = filepath.Join(repoPath, "shared_modules/cluster_networks_config")
-	pools, err = loadGpuPools(ctx, dirPath, "env_cluster_networks_config", false, env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
+	var (
+		gpuPools []models.GpuPool
+		errs     []error
+	)
+	for _, s := range sources {
+		pools, err := loadGpuPools(ctx, s.dir, s.localName, s.isOkeManaged, env)
+		if err != nil {
+			logger.Errorw("skipping unresolved GpuPool source",
+				"dir", s.dir, "local", s.localName, "error", err)
+			errs = append(errs, fmt.Errorf("%s: %w", s.localName, err))
+			continue
+		}
+		gpuPools = append(gpuPools, pools...)
 	}
 
-	gpuPools = append(gpuPools, pools...)
-
-	// oke-managed pools
-	dirPath = filepath.Join(repoPath, "shared_modules/oci_oke_nodepools_config")
-	pools, err = loadGpuPools(ctx, dirPath, "env_nodepools_config", true, env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse HCL file: %w", err)
+	if len(gpuPools) == 0 && len(errs) > 0 {
+		return nil, fmt.Errorf("failed to parse HCL file: %w", errors.Join(errs...))
 	}
-
-	gpuPools = append(gpuPools, pools...)
 	return gpuPools, nil
 }
 
