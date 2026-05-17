@@ -112,6 +112,44 @@ toolkit get tenant --no-headers
 
 Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit completion bash` for the full list. Logs are written to `--log_file` (default `toolkit.log`) so stdout stays clean for parsing.
 
+For `gpunode`, `dac`, `modelartifact`, and the tenancy-override categories, the structured outputs (`json`, `jsonl`, `yaml`) are a flat array of objects with the originating group key injected as `pool`, `tenant`, or `model` — easier for `jq` and LLM consumers than the previous map-shaped output.
+
+### MCP server (`toolkit mcp`)
+
+For agent integration via the [Model Context Protocol](https://modelcontextprotocol.io), `toolkit mcp` boots a stdio MCP server that exposes the same loader surface as `get` — but as typed tools an AI agent can call directly, no shell-out needed.
+
+Configure once in your MCP client (Claude Desktop / Claude Code):
+
+```jsonc
+{
+  "mcpServers": {
+    "toolkit": {
+      "command": "toolkit",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Tools exposed (all read-only, v1):
+
+| Tool | Description |
+| ---- | ----------- |
+| `list_tenants` | Tenants in the configured realm |
+| `list_base_models` | Base models from the cluster |
+| `list_gpu_pools` | GPU pools (partial-load warnings surfaced) |
+| `list_gpu_nodes` | GPU nodes (flat, with `pool` field) |
+| `list_dacs` | Dedicated AI clusters (flat, with `tenant` field) |
+| `list_environments` | All known toolkit environments |
+| `list_service_tenancies` | Service tenancies from the repo |
+| `list_model_artifacts` | Model artifacts (flat, with `model` field) |
+| `list_definitions` | `kind`: `limit` / `console_property` / `property` |
+| `list_tenancy_overrides` | Same `kind` enum, tenancy-scoped |
+| `list_regional_overrides` | Same `kind` enum, region-scoped |
+| `list_aliases` | Discovery — every category alias |
+
+Every tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments. Each response is a `{ "items": [...], "count": N, "warnings": [...] }` envelope.
+
 ---
 
 ## Project Layout
