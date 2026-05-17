@@ -192,9 +192,14 @@ func (m *Model) enterContext() tea.Cmd {
 		m.context = &domain.ToolkitContext{Category: m.category, Name: target}
 		return tea.Sequence(m.updateCategory(m.category.ScopedCategories()[0])...)
 	case m.category == domain.Environment:
-		env := *collections.FindByName(m.dataset.Environments, target)
-		if !m.environment.Equals(env) {
-			m.environment = env
+		envPtr := collections.FindByName(m.dataset.Environments, target)
+		if envPtr == nil {
+			// Selected row doesn't match any known environment (e.g.
+			// stale table state). Nothing to do.
+			return nil
+		}
+		if !m.environment.Equals(*envPtr) {
+			m.environment = *envPtr
 			m.dataset.ResetScopedData()
 			return tea.Sequence(m.updateCategory(domain.Tenant)...)
 		}

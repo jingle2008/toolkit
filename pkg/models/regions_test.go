@@ -12,6 +12,18 @@ func TestRegion_GetCode(t *testing.T) {
 	assert.Equal(t, "phx", r.GetCode())
 	r = "us-ashburn-1"
 	assert.Equal(t, "iad", r.GetCode())
+
+	// Mapped explicitly after SDK v65.114 added Newark.
+	r = "us-newark-1"
+	assert.Equal(t, "pgc", r.GetCode())
+
+	// Sovereign-cloud / unmapped region: falls back to the city
+	// segment instead of literal "UNKNOWN" so the table stays
+	// identifiable until an explicit mapping is added.
+	r = "ap-westtokyo-1"
+	assert.Equal(t, "westtokyo", r.GetCode())
+
+	// Input doesn't look like a region identifier — still UNKNOWN.
 	r = "unknown-region"
 	assert.Equal(t, "UNKNOWN", r.GetCode())
 }

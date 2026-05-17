@@ -1,5 +1,7 @@
 package models
 
+import "strings"
+
 /*
 Region represents a cloud region identifier.
 */
@@ -173,6 +175,8 @@ const (
 	RegionUSDccPhoenix1 Region = "us-dcc-phoenix-1"
 	// RegionUSDccPhoenix2 is a region not part of the official SDK.
 	RegionUSDccPhoenix2 Region = "us-dcc-phoenix-2"
+	// RegionUSNewark1 region Newark (oc42). Added to oci-go-sdk in v65.114.
+	RegionUSNewark1 Region = "us-newark-1"
 )
 
 var shortNameRegion = map[string]Region{
@@ -259,10 +263,24 @@ var shortNameRegion = map[string]Region{
 	"ftw": RegionUSGovFortworth1,
 	"ifp": RegionUSDccPhoenix1,
 	"gcn": RegionUSDccPhoenix2,
+	"pgc": RegionUSNewark1,
 }
 
 /*
-GetCode returns the short code for the Region, or "UNKNOWN" if not found.
+GetCode returns the short code for the Region.
+
+For regions that haven't been added to the shortNameRegion map yet
+(typically newer SDK additions or sovereign-cloud regions that never
+ship in the public SDK), it falls back to the second-to-last
+dash-delimited segment of the region identifier — e.g.
+
+	"ap-westtokyo-1" -> "westtokyo"
+	"us-newark-1"    -> "pgc" (mapped)
+	"unknown-region" -> "UNKNOWN" (segment count < 3)
+
+The fallback is informational; callers that need the canonical OCI
+region key should add the mapping explicitly. Returns the literal
+"UNKNOWN" for inputs that don't look like region identifiers at all.
 */
 // Code not part of SDK
 func (r Region) GetCode() string {
@@ -271,7 +289,12 @@ func (r Region) GetCode() string {
 			return k
 		}
 	}
-
+	// Fallback: derive a slug from the region name so the table shows
+	// something identifiable rather than literal "UNKNOWN" for regions
+	// that haven't been mapped yet.
+	if parts := strings.Split(string(r), "-"); len(parts) >= 3 {
+		return parts[len(parts)-2]
+	}
 	return "UNKNOWN"
 }
 

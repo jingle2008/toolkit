@@ -514,19 +514,20 @@ func TestModel_enterContext(t *testing.T) {
 	t.Parallel()
 	m, _ := NewModel(
 		WithRepoPath("repo"),
-		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
 		WithLogger(logging.NewNoOpLogger()),
 	)
+	// Region.GetCode("us-phoenix-1") == "phx", so Environment.GetName() == "dev-phx".
 	m.table.SetColumns([]table.Column{{Title: "Region", Width: 10}})
-	m.table.SetRows([]table.Row{{"dev-UNKNOWN"}})
+	m.table.SetRows([]table.Row{{"dev-phx"}})
 	m.category = domain.Environment
 	m.dataset = &models.Dataset{
 		Environments: []models.Environment{
-			{Type: "dev", Region: "us-phx-1", Realm: "oc1"},
+			{Type: "dev", Region: "us-phoenix-1", Realm: "oc1"},
 		},
 	}
 	cmd := m.enterContext()
-	// It is valid for cmd to be nil if no update is needed; just ensure no panic
+	// It is valid for cmd to be nil if no update is needed; just ensure no panic.
 	_ = cmd
 }
