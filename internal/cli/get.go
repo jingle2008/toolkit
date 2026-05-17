@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -18,6 +19,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
+	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -185,7 +187,15 @@ func emitCategory(
 	case domain.GpuPool:
 		items, err := ld.LoadGpuPools(ctx, cfg.RepoPath, env)
 		if err != nil {
-			return fmt.Errorf("load gpu pools: %w", err)
+			// Partial success: items has the rows we could load; surface
+			// the per-source failures on stderr so scripts and LLM
+			// consumers know the result is incomplete, then proceed.
+			var partial *terraform.PartialLoadError
+			if errors.As(err, &partial) {
+				fmt.Fprintf(os.Stderr, "warning: %s\n", partial.Error())
+			} else {
+				return fmt.Errorf("load gpu pools: %w", err)
+			}
 		}
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), opts, gpuPoolTable)
 	case domain.GpuNode:

@@ -341,14 +341,43 @@ func getServiceTenancy(object cty.Value, realm string) *models.ServiceTenancy {
 }
 
 /*
+PartialLoadError signals that some, but not all, of a multi-source loader's
+inputs failed. The returned slice still contains usable data from sources
+that succeeded; callers that care about completeness should detect it via
+errors.As and decide how to surface it (the TUI ignores it; the headless
+CLI prints a warning to stderr).
+*/
+type PartialLoadError struct {
+	// Source is a human-readable label, e.g. "GpuPools".
+	Source string
+	// Errs holds one error per failed source, already wrapped with the
+	// source identifier (e.g. "env_nodepools_config: …").
+	Errs []error
+}
+
+// Error implements error.
+func (e *PartialLoadError) Error() string {
+	return fmt.Sprintf("%s: %d source(s) failed to load: %v",
+		e.Source, len(e.Errs), errors.Join(e.Errs...))
+}
+
+// Unwrap returns the per-source errors so errors.Is / errors.As walk into
+// them. Requires Go 1.20+.
+func (e *PartialLoadError) Unwrap() []error { return e.Errs }
+
+/*
 LoadGpuPools loads GpuPool objects from the given repository path and environment.
 
 It reads three sources (self-managed instance pools, self-managed cluster
 networks, OKE-managed nodepools). Failures in individual sources are
 logged to ctx's logger and the function returns the union of pools from
-sources that succeeded. An error is returned only when every source
-fails — that way an unresolvable local in one HCL tree doesn't hide
-working pools from the others.
+sources that succeeded. Return modes:
+
+  - All sources succeed: (pools, nil).
+  - Some sources fail, some succeed: (pools, *PartialLoadError). Callers
+    can use errors.As to detect and decide whether to surface the
+    partial-failure warning.
+  - Every source fails: (nil, error) with all source errors joined.
 */
 func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
 	logger := logging.FromContext(ctx)
@@ -377,10 +406,14 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 		gpuPools = append(gpuPools, pools...)
 	}
 
-	if len(gpuPools) == 0 && len(errs) > 0 {
+	switch {
+	case len(errs) == 0:
+		return gpuPools, nil
+	case len(gpuPools) == 0:
 		return nil, fmt.Errorf("failed to parse HCL file: %w", errors.Join(errs...))
+	default:
+		return gpuPools, &PartialLoadError{Source: "GpuPools", Errs: errs}
 	}
-	return gpuPools, nil
 }
 
 func loadGpuPools(ctx context.Context, dirPath, poolConfigName string, isOkeManaged bool,

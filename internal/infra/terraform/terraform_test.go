@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -239,6 +240,40 @@ func TestLoadGpuPools_MissingConfig(t *testing.T) {
 	// No config files
 	_, err := LoadGpuPools(context.Background(), dir, env)
 	require.Error(t, err)
+}
+
+// TestLoadGpuPools_PartialFailure exercises the contract that when at
+// least one source succeeds and at least one fails, LoadGpuPools returns
+// the partial pool slice together with a *PartialLoadError. Callers can
+// detect this case via errors.As and decide whether to treat it as fatal.
+func TestLoadGpuPools_PartialFailure(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
+
+	// Two sources resolve cleanly.
+	ipDir := poolsConfigDir(t, dir, "instance_pools_config")
+	require.NoError(t, os.WriteFile(filepath.Join(ipDir, "locals.tf"),
+		[]byte(`locals { env_instance_pools_config = { "pool1" = { shape = "GPU", size = 2 } } }`),
+		0o600))
+	cnDir := poolsConfigDir(t, dir, "cluster_networks_config")
+	require.NoError(t, os.WriteFile(filepath.Join(cnDir, "locals.tf"),
+		[]byte(`locals { env_cluster_networks_config = { "pool2" = { shape = "GPU", node_pool_size = 3 } } }`),
+		0o600))
+	// Third source parses fine but doesn't declare the expected local —
+	// loadGpuPools returns "node pools config env_nodepools_config not resolved".
+	okeDir := poolsConfigDir(t, dir, "oci_oke_nodepools_config")
+	require.NoError(t, os.WriteFile(filepath.Join(okeDir, "locals.tf"),
+		[]byte(`locals { unrelated_local = {} }`),
+		0o600))
+
+	pools, err := LoadGpuPools(context.Background(), dir, env)
+	require.Error(t, err)
+	var partial *PartialLoadError
+	require.True(t, errors.As(err, &partial), "expected *PartialLoadError, got %T: %v", err, err)
+	assert.Equal(t, "GpuPools", partial.Source)
+	assert.Len(t, partial.Errs, 1)
+	assert.GreaterOrEqual(t, len(pools), 2, "should still return pools from working sources")
 }
 
 func TestLoadLocalValueMap_Success(t *testing.T) {

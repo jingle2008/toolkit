@@ -2,12 +2,15 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -26,6 +29,15 @@ func loadGpuPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env
 	return func() tea.Msg {
 		items, err := ld.LoadGpuPools(ctx, repoPath, env)
 		if err != nil {
+			// Partial-success is non-fatal in the TUI: items still has
+			// the rows we could load, and the per-source error has
+			// already been logged inside the terraform package.
+			var partial *terraform.PartialLoadError
+			if errors.As(err, &partial) {
+				logging.FromContext(ctx).Errorw("loaded GPU pools with partial failures",
+					"category", domain.GpuPool, "error", partial)
+				return gpuPoolsLoadedMsg{Items: items, Gen: gen}
+			}
 			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.GpuPool, err))
 		}
 		return gpuPoolsLoadedMsg{Items: items, Gen: gen}
