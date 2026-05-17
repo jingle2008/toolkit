@@ -104,7 +104,7 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 
 		// Validate config after log options so flag errors surface first.
 		if err := cfg.Validate(); err != nil {
-			return fmt.Errorf("validate config: %w", err)
+			return fmt.Errorf("validate config: %w (hint: run `toolkit init` to scaffold an example config)", err)
 		}
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
