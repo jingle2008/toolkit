@@ -3,43 +3,24 @@ package cli
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
-	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
+	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// gpuNodeResolverFn is the seam tests use to fake the k8s lookup. In
-// production it routes through realResolveGpuNode → loader.LoadGpuNodes.
-var gpuNodeResolverFn = realResolveGpuNode
-
-// realResolveGpuNode finds a GpuNode by name in the live cluster.
-// Used by mutation subcommands that need the underlying OCI instance
-// ID (reboot, terminate). Callers may bypass this entirely by passing
-// --ocid; see resolveGpuNode below.
-func realResolveGpuNode(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GpuNode, error) {
+// gpuNodeResolverFn is the seam tests use to fake the k8s lookup.
+// In production it constructs a fresh loader per call and delegates
+// to internal/resolve.GpuNode.
+var gpuNodeResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GpuNode, error) {
 	ld := production.NewLoader(ctx, cfg.MetadataFile)
-	grouped, err := ld.LoadGpuNodes(ctx, cfg.KubeConfig, env)
-	if err != nil {
-		return nil, fmt.Errorf("load gpu nodes: %w", err)
-	}
-	for _, nodes := range grouped {
-		for i := range nodes {
-			if nodes[i].Name == name {
-				return &nodes[i], nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("gpu node %q not found in any pool", name)
+	return resolve.GpuNode(ctx, ld, cfg.KubeConfig, env, name, "")
 }
 
 // resolveGpuNode produces a *GpuNode suitable for handing to the
@@ -55,66 +36,11 @@ func resolveGpuNode(ctx context.Context, cfg config.Config, env models.Environme
 }
 
 // gpuPoolResolverFn is the seam tests use to fake gpu-pool resolution.
-var gpuPoolResolverFn = realResolveGpuPool
-
-// realResolveGpuPool loads gpu pools from the Terraform repo, finds
-// one by name, and enriches it with the live OCI ID + ActualSize.
-// Terraform is the source of truth for Size; OCI fills in the ID
-// (needed by UpdateInstancePool). Partial-load on the Terraform
-// pass is tolerated as long as the named pool is among the rows
-// that did load.
-func realResolveGpuPool(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GpuPool, error) {
+// In production it constructs a fresh loader and delegates to
+// internal/resolve.GpuPool.
+var gpuPoolResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GpuPool, error) {
 	ld := production.NewLoader(ctx, cfg.MetadataFile)
-	pools, err := ld.LoadGpuPools(ctx, cfg.RepoPath, env)
-	if err != nil {
-		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {
-			return nil, fmt.Errorf("load gpu pools: %w", err)
-		}
-		logging.FromContext(ctx).Infow("gpu pools loaded with partial failures", "error", err)
-	}
-
-	idx := -1
-	for i := range pools {
-		if pools[i].Name == name {
-			idx = i
-			break
-		}
-	}
-	if idx < 0 {
-		return nil, fmt.Errorf("gpu pool %q not found in repo", name)
-	}
-
-	compartmentID, err := resolveCompartmentID(ctx, cfg, env)
-	if err != nil {
-		return nil, fmt.Errorf("resolve compartment ID: %w", err)
-	}
-	enriched := []models.GpuPool{pools[idx]}
-	if err := actions.PopulateGpuPools(ctx, enriched, env, compartmentID); err != nil {
-		return nil, fmt.Errorf("populate gpu pool: %w", err)
-	}
-	if enriched[0].ID == "" {
-		return nil, fmt.Errorf("gpu pool %q has no OCID after OCI lookup; may not be applied yet", name)
-	}
-	return &enriched[0], nil
-}
-
-// resolveCompartmentID queries the cluster for any GPU node and
-// returns its CompartmentID. Mirrors the TUI's getCompartmentID
-// fallback path (the TUI prefers the dataset cache; CLI doesn't keep
-// one between invocations).
-func resolveCompartmentID(ctx context.Context, cfg config.Config, env models.Environment) (string, error) {
-	clientset, err := k8s.NewClientsetFromKubeConfig(cfg.KubeConfig, env.GetKubeContext())
-	if err != nil {
-		return "", err
-	}
-	nodes, err := k8s.ListGpuNodes(ctx, clientset, 1)
-	if err != nil {
-		return "", err
-	}
-	if len(nodes) == 0 {
-		return "", fmt.Errorf("no GPU nodes in cluster (cannot resolve compartment ID)")
-	}
-	return nodes[0].CompartmentID, nil
+	return resolve.GpuPool(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name)
 }
 
 // validateScaleConfig is the strictest mutation validator: scale needs

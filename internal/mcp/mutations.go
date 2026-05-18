@@ -2,13 +2,12 @@ package mcp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
-	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -18,14 +17,12 @@ import (
 // live cluster or OCI tenancy. Production callers go through the
 // upstream packages directly.
 var (
-	mcpSetCordonFn          = k8s.SetCordon
-	mcpDrainNodeFn          = k8s.DrainNode
-	mcpSoftResetFn          = actions.SoftResetInstance
-	mcpTerminateFn          = actions.TerminateInstance
-	mcpIncreasePoolSizeFn   = actions.IncreasePoolSize
-	mcpDeleteDACFn          = actions.DeleteDedicatedAICluster
-	mcpPopulateGpuPoolsFn   = actions.PopulateGpuPools
-	mcpResolveCompartmentFn = mcpResolveCompartmentID
+	mcpSetCordonFn        = k8s.SetCordon
+	mcpDrainNodeFn        = k8s.DrainNode
+	mcpSoftResetFn        = actions.SoftResetInstance
+	mcpTerminateFn        = actions.TerminateInstance
+	mcpIncreasePoolSizeFn = actions.IncreasePoolSize
+	mcpDeleteDACFn        = actions.DeleteDedicatedAICluster
 )
 
 // confirmGate is embedded in every mutating tool's input. The field
@@ -210,78 +207,18 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 }
 
 // --- Resolvers ----------------------------------------------------
+//
+// Thin delegations to internal/resolve. The shared package centralizes
+// the find-by-name + OCI-enrichment chain so CLI and MCP agree on
+// partial-load tolerance, "pool has no OCID yet" guards, and the
+// compartment-ID fallback.
 
-// resolveNodeForOCIAction synthesizes a *GpuNode for OCI compute
-// actions. With ocid set, the cluster isn't consulted; otherwise the
-// loader is asked for all GPU nodes and the named one is returned.
 func (s *Server) resolveNodeForOCIAction(ctx context.Context, env models.Environment, name, ocid string) (*models.GpuNode, error) {
-	if ocid != "" {
-		return &models.GpuNode{Name: name, ID: ocid}, nil
-	}
-	grouped, err := s.loader.LoadGpuNodes(ctx, s.cfg.KubeConfig, env)
-	if err != nil {
-		return nil, fmt.Errorf("load gpu nodes: %w", err)
-	}
-	for _, nodes := range grouped {
-		for i := range nodes {
-			if nodes[i].Name == name {
-				return &nodes[i], nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("gpu node %q not found in any pool", name)
+	return resolve.GpuNode(ctx, s.loader, s.cfg.KubeConfig, env, name, ocid)
 }
 
-// resolveGpuPoolForOCIAction loads pools from Terraform, finds the
-// named one, then enriches with OCI ID/ActualSize via
-// PopulateGpuPools. Mirrors the CLI's realResolveGpuPool.
 func (s *Server) resolveGpuPoolForOCIAction(ctx context.Context, env models.Environment, name string) (*models.GpuPool, error) {
-	pools, err := s.loader.LoadGpuPools(ctx, s.cfg.RepoPath, env)
-	if err != nil {
-		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {
-			return nil, fmt.Errorf("load gpu pools: %w", err)
-		}
-		s.logger.Infow("gpu pools loaded with partial failures (mcp)", "error", err)
-	}
-	idx := -1
-	for i := range pools {
-		if pools[i].Name == name {
-			idx = i
-			break
-		}
-	}
-	if idx < 0 {
-		return nil, fmt.Errorf("gpu pool %q not found in repo", name)
-	}
-	compartmentID, err := mcpResolveCompartmentFn(ctx, s, env)
-	if err != nil {
-		return nil, fmt.Errorf("resolve compartment ID: %w", err)
-	}
-	enriched := []models.GpuPool{pools[idx]}
-	if err := mcpPopulateGpuPoolsFn(ctx, enriched, env, compartmentID); err != nil {
-		return nil, fmt.Errorf("populate gpu pool: %w", err)
-	}
-	if enriched[0].ID == "" {
-		return nil, fmt.Errorf("gpu pool %q has no OCID after OCI lookup; may not be applied yet", name)
-	}
-	return &enriched[0], nil
-}
-
-// mcpResolveCompartmentID queries the cluster for any GPU node and
-// returns its CompartmentID. Default value of mcpResolveCompartmentFn.
-func mcpResolveCompartmentID(ctx context.Context, s *Server, env models.Environment) (string, error) {
-	clientset, err := k8s.NewClientsetFromKubeConfig(s.cfg.KubeConfig, env.GetKubeContext())
-	if err != nil {
-		return "", err
-	}
-	nodes, err := k8s.ListGpuNodes(ctx, clientset, 1)
-	if err != nil {
-		return "", err
-	}
-	if len(nodes) == 0 {
-		return "", fmt.Errorf("no GPU nodes in cluster (cannot resolve compartment ID)")
-	}
-	return nodes[0].CompartmentID, nil
+	return resolve.GpuPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
 }
 
 // --- Registration -------------------------------------------------
