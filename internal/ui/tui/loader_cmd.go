@@ -32,8 +32,7 @@ func loadGpuPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env
 			// Partial-success is non-fatal in the TUI: items still has
 			// the rows we could load, and the per-source error has
 			// already been logged inside the terraform package.
-			var partial *terraform.PartialLoadError
-			if errors.As(err, &partial) {
+			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
 				logging.FromContext(ctx).Errorw("loaded GPU pools with partial failures",
 					"category", domain.GpuPool, "error", partial)
 				return gpuPoolsLoadedMsg{Items: items, Gen: gen}

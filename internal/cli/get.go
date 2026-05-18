@@ -194,8 +194,7 @@ func emitCategory(
 			// Partial success: items has the rows we could load; surface
 			// the per-source failures on stderr so scripts and LLM
 			// consumers know the result is incomplete, then proceed.
-			var partial *terraform.PartialLoadError
-			if errors.As(err, &partial) {
+			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
 				fmt.Fprintf(os.Stderr, "warning: %s\n", partial.Error())
 			} else {
 				return fmt.Errorf("load gpu pools: %w", err)

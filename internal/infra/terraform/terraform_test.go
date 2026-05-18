@@ -269,8 +269,8 @@ func TestLoadGpuPools_PartialFailure(t *testing.T) {
 
 	pools, err := LoadGpuPools(context.Background(), dir, env)
 	require.Error(t, err)
-	var partial *PartialLoadError
-	require.True(t, errors.As(err, &partial), "expected *PartialLoadError, got %T: %v", err, err)
+	partial, ok := errors.AsType[*PartialLoadError](err)
+	require.True(t, ok, "expected *PartialLoadError, got %T: %v", err, err)
 	assert.Equal(t, "GpuPools", partial.Source)
 	assert.Len(t, partial.Errs, 1)
 	assert.GreaterOrEqual(t, len(pools), 2, "should still return pools from working sources")

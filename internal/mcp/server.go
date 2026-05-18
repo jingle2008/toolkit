@@ -155,8 +155,8 @@ func jsonResult(items any, warnings []string) (*sdk.CallToolResult, struct{}, er
 // *terraform.PartialLoadError so MCP callers can see what loaded
 // partially without the err being treated as fatal.
 func warningsFromPartial(err error) []string {
-	var partial *terraform.PartialLoadError
-	if !errors.As(err, &partial) {
+	partial, ok := errors.AsType[*terraform.PartialLoadError](err)
+	if !ok {
 		return nil
 	}
 	out := make([]string, 0, len(partial.Errs))
