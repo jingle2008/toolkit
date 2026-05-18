@@ -155,6 +155,140 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 	}
 }
 
+func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	var gotNode *models.GpuNode
+	orig := mcpSoftResetFn
+	defer func() { mcpSoftResetFn = orig }()
+	mcpSoftResetFn = func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+		gotNode = n
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "reboot_node",
+		Arguments: map[string]any{
+			"node":    "node-a",
+			"ocid":    "ocid1.instance.fake",
+			"confirm": true,
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.False(t, res.IsError)
+	if gotNode == nil || gotNode.ID != "ocid1.instance.fake" {
+		t.Errorf("expected synthesized node from --ocid, got: %+v", gotNode)
+	}
+	// Info notification on success.
+	msgs := waitForMsgs(t, rec, 1)
+	body, _ := msgs[0].Data.(string)
+	assert.Contains(t, body, "reboot node/node-a: OK")
+}
+
+func TestIntegration_ScaleGpuPoolTool_ConfirmTrueExecutes(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	// Stub the MCP-level resolver seam so we don't need a fake k8s
+	// + OCI pipeline; the resolver is covered in internal/resolve.
+	origResolve := mcpResolveGpuPoolFn
+	defer func() { mcpResolveGpuPoolFn = origResolve }()
+	mcpResolveGpuPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GpuPool, error) {
+		return &models.GpuPool{Name: name, ID: "ocid1.instancepool.fake", Size: 12, ActualSize: 4}, nil
+	}
+
+	var gotPool *models.GpuPool
+	origInc := mcpIncreasePoolSizeFn
+	defer func() { mcpIncreasePoolSizeFn = origInc }()
+	mcpIncreasePoolSizeFn = func(_ context.Context, p *models.GpuPool, _ models.Environment, _ logging.Logger) error {
+		gotPool = p
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "scale_gpu_pool",
+		Arguments: map[string]any{
+			"name":    "pool-a",
+			"confirm": true,
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.False(t, res.IsError)
+	if gotPool == nil || gotPool.ID != "ocid1.instancepool.fake" {
+		t.Errorf("expected resolver-supplied pool, got: %+v", gotPool)
+	}
+	msgs := waitForMsgs(t, rec, 1)
+	body, _ := msgs[0].Data.(string)
+	assert.Contains(t, body, "scale gpu_pool/pool-a: OK")
+}
+
+func TestIntegration_ScaleGpuPoolTool_ResolverError(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	origResolve := mcpResolveGpuPoolFn
+	defer func() { mcpResolveGpuPoolFn = origResolve }()
+	mcpResolveGpuPoolFn = func(context.Context, *Server, models.Environment, string) (*models.GpuPool, error) {
+		return nil, errors.New("gpu pool \"pool-x\" not found in repo")
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "scale_gpu_pool",
+		Arguments: map[string]any{
+			"name":    "pool-x",
+			"confirm": true,
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.True(t, res.IsError, "expected IsError when resolver fails")
+}
+
+func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	var gotDAC *models.DedicatedAICluster
+	orig := mcpDeleteDACFn
+	defer func() { mcpDeleteDACFn = orig }()
+	mcpDeleteDACFn = func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ logging.Logger) error {
+		gotDAC = d
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "delete_dac",
+		Arguments: map[string]any{
+			"name":    "dac-x",
+			"confirm": true,
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.False(t, res.IsError)
+	if gotDAC == nil || gotDAC.Name != "dac-x" {
+		t.Errorf("expected DAC with Name=dac-x, got: %+v", gotDAC)
+	}
+	msgs := waitForMsgs(t, rec, 1)
+	body, _ := msgs[0].Data.(string)
+	assert.Contains(t, body, "delete dac/dac-x: OK")
+}
+
 func TestIntegration_MutationTool_PerformErrorPropagates(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)

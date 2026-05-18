@@ -15,7 +15,9 @@ import (
 
 // Seam variables — overrideable in tests so handlers don't reach a
 // live cluster or OCI tenancy. Production callers go through the
-// upstream packages directly.
+// upstream packages directly. The resolver seams (mcpResolveGpuNodeFn,
+// mcpResolveGpuPoolFn) cover the lookup-and-enrich chain so handler
+// tests don't have to stub a fake k8s+OCI pipeline.
 var (
 	mcpSetCordonFn        = k8s.SetCordon
 	mcpDrainNodeFn        = k8s.DrainNode
@@ -23,6 +25,12 @@ var (
 	mcpTerminateFn        = actions.TerminateInstance
 	mcpIncreasePoolSizeFn = actions.IncreasePoolSize
 	mcpDeleteDACFn        = actions.DeleteDedicatedAICluster
+	mcpResolveGpuNodeFn   = func(ctx context.Context, s *Server, env models.Environment, name, ocid string) (*models.GpuNode, error) {
+		return resolve.GpuNode(ctx, s.loader, s.cfg.KubeConfig, env, name, ocid)
+	}
+	mcpResolveGpuPoolFn = func(ctx context.Context, s *Server, env models.Environment, name string) (*models.GpuPool, error) {
+		return resolve.GpuPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
+	}
 )
 
 // confirmGate is embedded in every mutating tool's input. The field
@@ -214,11 +222,11 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 // compartment-ID fallback.
 
 func (s *Server) resolveNodeForOCIAction(ctx context.Context, env models.Environment, name, ocid string) (*models.GpuNode, error) {
-	return resolve.GpuNode(ctx, s.loader, s.cfg.KubeConfig, env, name, ocid)
+	return mcpResolveGpuNodeFn(ctx, s, env, name, ocid)
 }
 
 func (s *Server) resolveGpuPoolForOCIAction(ctx context.Context, env models.Environment, name string) (*models.GpuPool, error) {
-	return resolve.GpuPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
+	return mcpResolveGpuPoolFn(ctx, s, env, name)
 }
 
 // --- Registration -------------------------------------------------
