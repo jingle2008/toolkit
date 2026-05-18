@@ -9,8 +9,46 @@ import (
 	"strings"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
+
+// gpuNodeResolverFn is the seam tests use to fake the k8s lookup. In
+// production it routes through realResolveGpuNode → loader.LoadGpuNodes.
+var gpuNodeResolverFn = realResolveGpuNode
+
+// realResolveGpuNode finds a GpuNode by name in the live cluster.
+// Used by mutation subcommands that need the underlying OCI instance
+// ID (reboot, terminate). Callers may bypass this entirely by passing
+// --ocid; see resolveGpuNode below.
+func realResolveGpuNode(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GpuNode, error) {
+	ld := production.NewLoader(ctx, cfg.MetadataFile)
+	grouped, err := ld.LoadGpuNodes(ctx, cfg.KubeConfig, env)
+	if err != nil {
+		return nil, fmt.Errorf("load gpu nodes: %w", err)
+	}
+	for _, nodes := range grouped {
+		for i := range nodes {
+			if nodes[i].Name == name {
+				return &nodes[i], nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("gpu node %q not found in any pool", name)
+}
+
+// resolveGpuNode produces a *GpuNode suitable for handing to the
+// OCI compute actions. If ocid is set, a stub node is synthesized
+// (no cluster call); otherwise the live cluster is consulted via
+// gpuNodeResolverFn. name is always carried for audit / log
+// readability.
+func resolveGpuNode(ctx context.Context, cfg config.Config, env models.Environment, name, ocid string) (*models.GpuNode, error) {
+	if ocid != "" {
+		return &models.GpuNode{Name: name, ID: ocid}, nil
+	}
+	return gpuNodeResolverFn(ctx, cfg, env, name)
+}
 
 // validateMutationConfig checks the minimum settings a mutation
 // subcommand needs. needsKube=true adds the kubeconfig requirement
