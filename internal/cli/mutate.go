@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+
+	"github.com/spf13/viper"
 
 	"github.com/jingle2008/toolkit/internal/config"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
@@ -81,6 +85,46 @@ func validateMutationConfig(cfg config.Config, needsKube, needsRepo bool) error 
 		}
 	}
 	return nil
+}
+
+// withMutationSetup runs the standard prelude every mutation
+// subcommand shares — read the config file, unmarshal, validate per
+// needsKube/needsRepo, init the logger (deferred Sync), wire a
+// signal-cancellable context with the logger attached, and build the
+// Environment triple — then invokes fn with the resolved cfg / env /
+// ctx. Keeps the setup uniform so individual subcommands focus only
+// on flag parsing and their perform closure.
+func withMutationSetup(
+	cfgFile *string,
+	needsKube, needsRepo bool,
+	fn func(ctx context.Context, cfg config.Config, env models.Environment) error,
+) error {
+	if err := readConfigFile(cfgFile); err != nil {
+		return err
+	}
+	var cfg config.Config
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return fmt.Errorf("unmarshal config: %w", err)
+	}
+	if err := validateMutationConfig(cfg, needsKube, needsRepo); err != nil {
+		return err
+	}
+	logger, err := initLogger(cfg)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = logger.Sync() }()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	ctx = logging.WithContext(ctx, logger)
+
+	env := models.Environment{
+		Type:   cfg.EnvType,
+		Region: cfg.EnvRegion,
+		Realm:  cfg.EnvRealm,
+	}
+	return fn(ctx, cfg, env)
 }
 
 // mutationPlan captures everything a mutation subcommand needs to
