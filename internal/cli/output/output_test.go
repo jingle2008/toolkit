@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -22,6 +23,9 @@ func TestParseFormat(t *testing.T) {
 		{"jsonl", FormatJSONL, true},
 		{"yaml", FormatYAML, true},
 		{"table", FormatTable, true},
+		{"csv", FormatCSV, true},
+		{"CSV", FormatCSV, true},
+		{"tsv", FormatTSV, true},
 		{"", "", false},
 		{"toml", "", false},
 	}
@@ -94,6 +98,48 @@ func TestWriteTable_NoHeaders(t *testing.T) {
 	require.NoError(t, WriteTable(&buf, []string{"NAME"}, [][]string{{"alice"}}, Options{NoHeaders: true}))
 	assert.NotContains(t, buf.String(), "NAME")
 	assert.Contains(t, buf.String(), "alice")
+}
+
+func TestWriteDelimited_CSVQuotesEmbeddedComma(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	headers := []string{"NAME", "NOTE"}
+	rows := [][]string{{"alice", "hello, world"}, {"bob", `quoted "value"`}}
+	require.NoError(t, WriteDelimited(&buf, headers, rows, Options{}, ','))
+
+	// Round-trip through encoding/csv to confirm the bytes are valid CSV
+	// and the fields decode back to the original strings.
+	r := csv.NewReader(strings.NewReader(buf.String()))
+	records, err := r.ReadAll()
+	require.NoError(t, err)
+	assert.Equal(t, [][]string{
+		{"NAME", "NOTE"},
+		{"alice", "hello, world"},
+		{"bob", `quoted "value"`},
+	}, records)
+}
+
+func TestWriteDelimited_TSVUsesTabSeparator(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	headers := []string{"NAME", "NOTE"}
+	rows := [][]string{{"alice", "hello, world"}}
+	require.NoError(t, WriteDelimited(&buf, headers, rows, Options{}, '\t'))
+
+	out := buf.String()
+	// Tab is the separator; the comma in "hello, world" must not trigger
+	// quoting, since the field doesn't contain a tab.
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	require.Len(t, lines, 2)
+	assert.Equal(t, "NAME\tNOTE", lines[0])
+	assert.Equal(t, "alice\thello, world", lines[1])
+}
+
+func TestWriteDelimited_NoHeaders(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	require.NoError(t, WriteDelimited(&buf, []string{"NAME"}, [][]string{{"alice"}}, Options{NoHeaders: true}, ','))
+	assert.Equal(t, "alice\n", buf.String())
 }
 
 func TestFlattenWithKey_NilAndEmpty(t *testing.T) {

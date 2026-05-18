@@ -33,7 +33,7 @@ func addGetCommand(rootCmd *cobra.Command, cfgFile *string) {
 	)
 	getCmd := &cobra.Command{
 		Use:   "get <category>",
-		Short: "Print a category's data to stdout (table/json/jsonl/yaml)",
+		Short: "Print a category's data to stdout (table/json/jsonl/yaml/csv/tsv)",
 		Long: `Headless equivalent of the TUI's category view.
 
 Examples:
@@ -41,6 +41,8 @@ Examples:
   toolkit get gpunode -f us-ashburn-1 -o jsonl
   toolkit get dac -o table
   toolkit get basemodel -f cohere -o yaml
+  toolkit get tenant -o csv > tenants.csv
+  toolkit get gpupool -o tsv | cut -f1,3
 
 Category aliases match the TUI (e.g. "tenant"/"t", "gpunode"/"gn",
 "dac", "basemodel"/"bm"). Run with shell completion enabled to
@@ -51,11 +53,11 @@ discover them.`,
 		},
 		RunE: runGet(cfgFile, &format, &noHeaders, &pretty),
 	}
-	getCmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|jsonl|yaml")
-	getCmd.Flags().BoolVar(&noHeaders, "no-headers", false, "omit header row (table only)")
+	getCmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|jsonl|yaml|csv|tsv")
+	getCmd.Flags().BoolVar(&noHeaders, "no-headers", false, "omit header row (table/csv/tsv only)")
 	getCmd.Flags().BoolVar(&pretty, "pretty", true, "pretty-print JSON/YAML output")
 	_ = getCmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"table", "json", "jsonl", "yaml"}, cobra.ShellCompDirectiveNoFileComp
+		return []string{"table", "json", "jsonl", "yaml", "csv", "tsv"}, cobra.ShellCompDirectiveNoFileComp
 	})
 	rootCmd.AddCommand(getCmd)
 }
@@ -271,6 +273,12 @@ func writeSlice[T any](
 	case output.FormatTable:
 		headers, rows := toTable(items)
 		return output.WriteTable(w, headers, rows, opts)
+	case output.FormatCSV:
+		headers, rows := toTable(items)
+		return output.WriteDelimited(w, headers, rows, opts, ',')
+	case output.FormatTSV:
+		headers, rows := toTable(items)
+		return output.WriteDelimited(w, headers, rows, opts, '\t')
 	default:
 		return fmt.Errorf("unsupported format %q", opts.Format)
 	}
@@ -298,6 +306,12 @@ func writeMap[T any](
 	case output.FormatTable:
 		headers, rows := toTable(grouped)
 		return output.WriteTable(w, headers, rows, opts)
+	case output.FormatCSV:
+		headers, rows := toTable(grouped)
+		return output.WriteDelimited(w, headers, rows, opts, ',')
+	case output.FormatTSV:
+		headers, rows := toTable(grouped)
+		return output.WriteDelimited(w, headers, rows, opts, '\t')
 	default:
 		return fmt.Errorf("unsupported format %q", opts.Format)
 	}

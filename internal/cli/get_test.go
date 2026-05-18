@@ -3,6 +3,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -112,9 +113,64 @@ func TestGetCmd_HelpListsExamples(t *testing.T) {
 		t.Fatalf("get --help: %v", err)
 	}
 	out := buf.String()
-	for _, want := range []string{"json", "jsonl", "yaml", "table", "-o"} {
+	for _, want := range []string{"json", "jsonl", "yaml", "table", "csv", "tsv", "-o"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("get --help missing %q in output:\n%s", want, out)
+		}
+	}
+}
+
+func TestGetCmd_AliasCSV_HappyPath(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"get", "alias", "-o", "csv"})
+	stdout := new(bytes.Buffer)
+	cmd.SetOut(stdout)
+	cmd.SetErr(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("get alias -o csv: %v", err)
+	}
+
+	records, err := csv.NewReader(stdout).ReadAll()
+	if err != nil {
+		t.Fatalf("stdout is not valid CSV: %v", err)
+	}
+	if len(records) < 2 {
+		t.Fatalf("expected header + at least one alias row, got %d records", len(records))
+	}
+	if records[0][0] != "ALIAS" || records[0][1] != "CATEGORY" {
+		t.Errorf("unexpected header row: %+v", records[0])
+	}
+}
+
+func TestGetCmd_AliasTSV_HappyPath(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"get", "alias", "-o", "tsv"})
+	stdout := new(bytes.Buffer)
+	cmd.SetOut(stdout)
+	cmd.SetErr(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("get alias -o tsv: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n")
+	if len(lines) < 2 {
+		t.Fatalf("expected header + at least one alias row, got %d lines", len(lines))
+	}
+	if lines[0] != "ALIAS\tCATEGORY" {
+		t.Errorf("unexpected header line: %q", lines[0])
+	}
+	// Every data row must have exactly one tab (two columns).
+	for _, line := range lines[1:] {
+		if strings.Count(line, "\t") != 1 {
+			t.Errorf("expected one tab per data row, got: %q", line)
 		}
 	}
 }

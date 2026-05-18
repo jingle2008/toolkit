@@ -1,6 +1,7 @@
 /*
 Package output renders categorized toolkit data to stdout in
-machine-friendly formats (json / jsonl / yaml) or a human table.
+machine-friendly formats (json / jsonl / yaml / csv / tsv) or a
+human table.
 
 It is intentionally TUI-free: it depends only on stdlib + yaml so
 the headless `toolkit get` command can be used in scripts and from
@@ -9,6 +10,7 @@ LLM agents without paying the Bubble Tea cost.
 package output
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,6 +31,8 @@ const (
 	FormatJSON  Format = "json"
 	FormatJSONL Format = "jsonl"
 	FormatYAML  Format = "yaml"
+	FormatCSV   Format = "csv"
+	FormatTSV   Format = "tsv"
 )
 
 // ParseFormat returns the Format for s, or an error listing valid choices.
@@ -42,8 +46,12 @@ func ParseFormat(s string) (Format, error) {
 		return FormatJSONL, nil
 	case FormatYAML:
 		return FormatYAML, nil
+	case FormatCSV:
+		return FormatCSV, nil
+	case FormatTSV:
+		return FormatTSV, nil
 	default:
-		return "", fmt.Errorf("invalid output format %q (valid: table|json|jsonl|yaml)", s)
+		return "", fmt.Errorf("invalid output format %q (valid: table|json|jsonl|yaml|csv|tsv)", s)
 	}
 }
 
@@ -147,6 +155,25 @@ func FlattenWithKey[T any](grouped map[string][]T, groupField string) []map[stri
 		}
 	}
 	return out
+}
+
+// WriteDelimited emits headers + rows as delimiter-separated values
+// using encoding/csv, which handles quoting for fields containing the
+// separator, double quotes, or newlines. Pass ',' for CSV or '\t' for
+// TSV. opts.NoHeaders suppresses the header row.
+func WriteDelimited(w io.Writer, headers []string, rows [][]string, opts Options, sep rune) error {
+	cw := csv.NewWriter(w)
+	cw.Comma = sep
+	if !opts.NoHeaders && len(headers) > 0 {
+		if err := cw.Write(headers); err != nil {
+			return err
+		}
+	}
+	if err := cw.WriteAll(rows); err != nil {
+		return err
+	}
+	cw.Flush()
+	return cw.Error()
 }
 
 // WriteTable emits a tab-aligned table. opts.NoHeaders suppresses the
