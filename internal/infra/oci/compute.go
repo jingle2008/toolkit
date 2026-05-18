@@ -16,34 +16,37 @@ var (
 	computeMgmtClientFactory  = core.NewComputeManagementClientWithConfigurationProvider
 )
 
-// GetComputeClient creates a new OCI ComputeClient for the given region.
-func GetComputeClient(env models.Environment) (*core.ComputeClient, error) {
+// newOCIClient is the shared scaffold for OCI client factories: build
+// the realm-scoped session-token config provider, hand it to the
+// typed factory, then call SetRegion on the freshly-built client.
+// setRegion is the typed method expression (e.g.
+// (*core.ComputeClient).SetRegion) so the helper stays generic over
+// the concrete client type.
+func newOCIClient[T any](
+	env models.Environment,
+	factory func(common.ConfigurationProvider) (T, error),
+	setRegion func(*T, string),
+	label string,
+) (*T, error) {
 	profile := strings.ToUpper(env.Realm)
 	provider, err := computeConfigProviderFunc(OciConfigPath, profile, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get OCI config provider: %w", err)
 	}
-	client, err := computeClientFactory(provider)
+	client, err := factory(provider)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create compute client: %w", err)
+		return nil, fmt.Errorf("failed to create %s: %w", label, err)
 	}
-	client.SetRegion(env.Region)
+	setRegion(&client, env.Region)
 	return &client, nil
 }
 
-/*
-GetComputeManagementClient creates a new OCI ComputeManagementClient for the given region.
-*/
+// GetComputeClient creates a new OCI ComputeClient for the given region.
+func GetComputeClient(env models.Environment) (*core.ComputeClient, error) {
+	return newOCIClient(env, computeClientFactory, (*core.ComputeClient).SetRegion, "compute client")
+}
+
+// GetComputeManagementClient creates a new OCI ComputeManagementClient for the given region.
 func GetComputeManagementClient(env models.Environment) (*core.ComputeManagementClient, error) {
-	profile := strings.ToUpper(env.Realm)
-	provider, err := computeConfigProviderFunc(OciConfigPath, profile, "")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get OCI config provider: %w", err)
-	}
-	client, err := computeMgmtClientFactory(provider)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create compute management client: %w", err)
-	}
-	client.SetRegion(env.Region)
-	return &client, nil
+	return newOCIClient(env, computeMgmtClientFactory, (*core.ComputeManagementClient).SetRegion, "compute management client")
 }
