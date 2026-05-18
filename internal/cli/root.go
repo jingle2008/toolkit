@@ -66,6 +66,7 @@ metadata_file: "" # Optional path to a YAML or JSON file with additional metadat
 	addMCPCommand(rootCmd, &cfgFile, version)
 	addCordonCommand(rootCmd, &cfgFile)
 	addUncordonCommand(rootCmd, &cfgFile)
+	addDrainCommand(rootCmd, &cfgFile)
 
 	// Bind persistent flags once so Viper can read them.
 	_ = viper.BindPFlags(rootCmd.PersistentFlags())
