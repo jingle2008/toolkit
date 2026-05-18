@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -79,83 +80,88 @@ func registerTools(s *Server) {
 
 // --- Handlers -----------------------------------------------------
 
-func (s *Server) handleListTenants(ctx context.Context, _ *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
 	grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load tenants: %w", err)
+		return failTool(ctx, req, "load tenants", err)
 	}
 	items := collections.FilterSlice(grp.Tenants, nil, normFilter(in.Filter), nil)
 	return jsonResult(items, nil)
 }
 
-func (s *Server) handleListBaseModels(ctx context.Context, _ *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
 	items, err := s.loader.LoadBaseModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load base models: %w", err)
+		return failTool(ctx, req, "load base models", err)
 	}
 	filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
 	return jsonResult(filtered, nil)
 }
 
-func (s *Server) handleListGpuPools(ctx context.Context, _ *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
 	items, err := s.loader.LoadGpuPools(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	warnings := warningsFromPartial(err)
 	if err != nil && len(warnings) == 0 {
-		return nil, struct{}{}, fmt.Errorf("load gpu pools: %w", err)
+		return failTool(ctx, req, "load gpu pools", err)
+	}
+	if len(warnings) > 0 {
+		notify(ctx, req.Session, "warning",
+			fmt.Sprintf("load gpu pools: %d source(s) returned partial results: %s",
+				len(warnings), strings.Join(warnings, "; ")))
 	}
 	filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
 	return jsonResult(filtered, warnings)
 }
 
-func (s *Server) handleListGpuNodes(ctx context.Context, _ *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
 	grouped, err := s.loader.LoadGpuNodes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load gpu nodes: %w", err)
+		return failTool(ctx, req, "load gpu nodes", err)
 	}
 	flat := output.FlattenWithKey(collections.FilterMapOrAll(grouped, normFilter(in.Filter)), "pool")
 	return jsonResult(flat, nil)
 }
 
-func (s *Server) handleListDACs(ctx context.Context, _ *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
 	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load dedicated AI clusters: %w", err)
+		return failTool(ctx, req, "load dedicated AI clusters", err)
 	}
 	flat := output.FlattenWithKey(collections.FilterMapOrAll(grouped, normFilter(in.Filter)), "tenant")
 	return jsonResult(flat, nil)
 }
 
-func (s *Server) handleListEnvironments(ctx context.Context, _ *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load dataset: %w", err)
+		return failTool(ctx, req, "load dataset", err)
 	}
 	items := collections.FilterSlice(dataset.Environments, nil, normFilter(in.Filter), nil)
 	return jsonResult(items, nil)
 }
 
-func (s *Server) handleListServiceTenancies(ctx context.Context, _ *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load dataset: %w", err)
+		return failTool(ctx, req, "load dataset", err)
 	}
 	items := collections.FilterSlice(dataset.ServiceTenancies, nil, normFilter(in.Filter), nil)
 	return jsonResult(items, nil)
 }
 
-func (s *Server) handleListModelArtifacts(ctx context.Context, _ *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load dataset: %w", err)
+		return failTool(ctx, req, "load dataset", err)
 	}
 	flat := output.FlattenWithKey(collections.FilterMapOrAll(dataset.ModelArtifactMap, normFilter(in.Filter)), "model")
 	return jsonResult(flat, nil)
 }
 
-func (s *Server) handleListDefinitions(ctx context.Context, _ *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load dataset: %w", err)
+		return failTool(ctx, req, "load dataset", err)
 	}
 	f := normFilter(in.Filter)
 	switch in.Kind {
@@ -166,14 +172,15 @@ func (s *Server) handleListDefinitions(ctx context.Context, _ *sdk.CallToolReque
 	case "property":
 		return jsonResult(collections.FilterSlice(dataset.PropertyDefinitionGroup.Values, nil, f, nil), nil)
 	default:
-		return nil, struct{}{}, fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind)
+		return failTool(ctx, req, "list_definitions",
+			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }
 
-func (s *Server) handleListTenancyOverrides(ctx context.Context, _ *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
 	grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("load tenancy override group: %w", err)
+		return failTool(ctx, req, "load tenancy override group", err)
 	}
 	f := normFilter(in.Filter)
 	switch in.Kind {
@@ -184,34 +191,36 @@ func (s *Server) handleListTenancyOverrides(ctx context.Context, _ *sdk.CallTool
 	case "property":
 		return jsonResult(output.FlattenWithKey(collections.FilterMapOrAll(grp.PropertyTenancyOverrideMap, f), "tenant"), nil)
 	default:
-		return nil, struct{}{}, fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind)
+		return failTool(ctx, req, "list_tenancy_overrides",
+			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }
 
-func (s *Server) handleListRegionalOverrides(ctx context.Context, _ *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
 	env := s.envFor(in.envOverride)
 	f := normFilter(in.Filter)
 	switch in.Kind {
 	case "limit":
 		items, err := s.loader.LoadLimitRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return nil, struct{}{}, fmt.Errorf("load limit regional overrides: %w", err)
+			return failTool(ctx, req, "load limit regional overrides", err)
 		}
 		return jsonResult(collections.FilterSlice(items, nil, f, nil), nil)
 	case "console_property":
 		items, err := s.loader.LoadConsolePropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return nil, struct{}{}, fmt.Errorf("load console property regional overrides: %w", err)
+			return failTool(ctx, req, "load console property regional overrides", err)
 		}
 		return jsonResult(collections.FilterSlice(items, nil, f, nil), nil)
 	case "property":
 		items, err := s.loader.LoadPropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return nil, struct{}{}, fmt.Errorf("load property regional overrides: %w", err)
+			return failTool(ctx, req, "load property regional overrides", err)
 		}
 		return jsonResult(collections.FilterSlice(items, nil, f, nil), nil)
 	default:
-		return nil, struct{}{}, fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind)
+		return failTool(ctx, req, "list_regional_overrides",
+			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }
 

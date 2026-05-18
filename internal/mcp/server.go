@@ -151,6 +151,32 @@ func jsonResult(items any, warnings []string) (*sdk.CallToolResult, struct{}, er
 	}, struct{}{}, nil
 }
 
+// notify emits a notifications/message to the connected MCP client.
+// Best-effort: errors from Log are intentionally swallowed because a
+// notification failure must not mask the tool's primary response (or
+// error). A nil session — possible if a handler is invoked outside a
+// live transport — silently no-ops.
+func notify(ctx context.Context, sess *sdk.ServerSession, level sdk.LoggingLevel, msg string) {
+	if sess == nil {
+		return
+	}
+	_ = sess.Log(ctx, &sdk.LoggingMessageParams{
+		Level:  level,
+		Logger: "toolkit",
+		Data:   msg,
+	})
+}
+
+// failTool wraps a handler's fatal error path: it emits a
+// notifications/message at "error" level so MCP clients can show the
+// failure live (the tool error itself is also returned and surfaces as
+// a tool-call failure in the response). `what` is the human label
+// (e.g. "load gpu pools"); err is the underlying cause.
+func failTool(ctx context.Context, req *sdk.CallToolRequest, what string, err error) (*sdk.CallToolResult, struct{}, error) {
+	notify(ctx, req.Session, "error", fmt.Sprintf("%s: %v", what, err))
+	return nil, struct{}{}, fmt.Errorf("%s: %w", what, err)
+}
+
 // warningsFromPartial pulls the per-source error strings off a
 // *terraform.PartialLoadError so MCP callers can see what loaded
 // partially without the err being treated as fatal.

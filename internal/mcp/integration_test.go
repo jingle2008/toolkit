@@ -3,6 +3,9 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -56,6 +61,155 @@ func (stubLoader) LoadConsolePropertyRegionalOverrides(context.Context, string, 
 
 func (stubLoader) LoadPropertyRegionalOverrides(context.Context, string, models.Environment) ([]models.PropertyRegionalOverride, error) {
 	return nil, nil
+}
+
+// errBaseModelsLoader makes LoadBaseModels return a fixed error so we
+// can exercise a tool handler's fatal-error path. Everything else
+// inherits stubLoader's empty defaults.
+type errBaseModelsLoader struct {
+	stubLoader
+	err error
+}
+
+func (l errBaseModelsLoader) LoadBaseModels(context.Context, string, models.Environment) ([]models.BaseModel, error) {
+	return nil, l.err
+}
+
+// partialGpuPoolsLoader makes LoadGpuPools return a *terraform.PartialLoadError
+// so we can exercise the partial-success path in handleListGpuPools
+// (tool call still succeeds; a warning notification is emitted).
+type partialGpuPoolsLoader struct {
+	stubLoader
+	err *terraform.PartialLoadError
+}
+
+func (l partialGpuPoolsLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {
+	return nil, l.err
+}
+
+// recorder collects notifications/message frames the server emits.
+type recorder struct {
+	mu   sync.Mutex
+	msgs []*sdk.LoggingMessageParams
+}
+
+func (r *recorder) record(_ context.Context, req *sdk.LoggingMessageRequest) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.msgs = append(r.msgs, req.Params)
+}
+
+func (r *recorder) snapshot() []*sdk.LoggingMessageParams {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]*sdk.LoggingMessageParams, len(r.msgs))
+	copy(out, r.msgs)
+	return out
+}
+
+func newTestPair(t *testing.T, ctx context.Context, ld loader.Loader, rec *recorder) *sdk.ClientSession {
+	t.Helper()
+	srv := NewServer(
+		config.Config{
+			RepoPath:  "/dev/null",
+			EnvType:   "dev",
+			EnvRegion: "us-ashburn-1",
+			EnvRealm:  "oc1",
+		},
+		ld,
+		logging.NewNoOpLogger(),
+		"test",
+	)
+
+	clientT, serverT := sdk.NewInMemoryTransports()
+	serverSess, err := srv.server.Connect(ctx, serverT, nil)
+	require.NoError(t, err, "server.Connect")
+	t.Cleanup(func() { _ = serverSess.Close() })
+
+	client := sdk.NewClient(
+		&sdk.Implementation{Name: "test-client", Version: "v0"},
+		&sdk.ClientOptions{LoggingMessageHandler: rec.record},
+	)
+	clientSess, err := client.Connect(ctx, clientT, nil)
+	require.NoError(t, err, "client.Connect")
+	t.Cleanup(func() { _ = clientSess.Close() })
+
+	// Server gates Log on this — without a level set, notifications drop silently.
+	require.NoError(t, clientSess.SetLoggingLevel(ctx, &sdk.SetLoggingLevelParams{Level: "debug"}))
+	return clientSess
+}
+
+// waitForMsgs polls the recorder until at least n messages have
+// arrived or the deadline expires. Notification delivery on the
+// in-memory transport is asynchronous to the tool response, so we
+// can't synchronously assert right after CallTool returns.
+func waitForMsgs(t *testing.T, rec *recorder, n int) []*sdk.LoggingMessageParams {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		got := rec.snapshot()
+		if len(got) >= n {
+			return got
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("expected ≥%d notifications, got %d", n, len(rec.snapshot()))
+	return nil
+}
+
+func TestIntegration_NotifiesOnHandlerError(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	rec := &recorder{}
+	ld := errBaseModelsLoader{err: errors.New("kube unreachable")}
+	clientSess := newTestPair(t, ctx, ld, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_base_models"})
+	// The SDK surfaces tool handler errors via CallToolResult.IsError,
+	// not a Go error from CallTool itself.
+	require.NoError(t, err, "tools/call transport error")
+	require.NotNil(t, res)
+	assert.True(t, res.IsError, "expected IsError=true on tool failure")
+
+	msgs := waitForMsgs(t, rec, 1)
+	require.NotEmpty(t, msgs)
+	got := msgs[0]
+	assert.Equal(t, sdk.LoggingLevel("error"), got.Level, "expected error-level notification")
+	assert.Equal(t, "toolkit", got.Logger)
+	body, ok := got.Data.(string)
+	require.True(t, ok, "Data should be a string, got %T", got.Data)
+	assert.Contains(t, body, "load base models")
+	assert.Contains(t, body, "kube unreachable")
+}
+
+func TestIntegration_NotifiesOnPartialLoad(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	rec := &recorder{}
+	partial := &terraform.PartialLoadError{
+		Source: "GpuPools",
+		Errs:   []error{errors.New("oke nodepools dir missing")},
+	}
+	ld := partialGpuPoolsLoader{err: partial}
+	clientSess := newTestPair(t, ctx, ld, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
+	require.NoError(t, err, "tools/call transport error")
+	require.NotNil(t, res)
+	assert.False(t, res.IsError, "partial-load should not fail the tool call")
+
+	msgs := waitForMsgs(t, rec, 1)
+	got := msgs[0]
+	assert.Equal(t, sdk.LoggingLevel("warning"), got.Level)
+	body, ok := got.Data.(string)
+	require.True(t, ok, "Data should be a string, got %T", got.Data)
+	assert.Contains(t, body, "load gpu pools")
+	assert.True(t, strings.Contains(body, "oke nodepools dir missing"),
+		"warning body should include the per-source error: %q", body)
 }
 
 // TestIntegration_ToolsListAndCall wires NewServer against a stub
