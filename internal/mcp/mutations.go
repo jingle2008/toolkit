@@ -160,32 +160,48 @@ type deleteDACInput struct {
 
 // --- Handlers -----------------------------------------------------
 
+// handleMutation is the shared entry point for every mutating tool:
+// derive the effective env (audit-logging any override), then dispatch
+// through runMutationTool which enforces the confirm gate and emits the
+// standard audit-log / notification / response envelope. Handlers
+// supply only the action/kind/target labels plus the env-scoped perform
+// closure.
+func (s *Server) handleMutation(
+	ctx context.Context,
+	req *sdk.CallToolRequest,
+	action, kind, target string,
+	confirm bool,
+	override envOverride,
+	perform func(env models.Environment) error,
+) (*sdk.CallToolResult, struct{}, error) {
+	env := s.effectiveMutationEnv(ctx, action, kind, target, override)
+	return s.runMutationTool(ctx, req, action, kind, target, confirm, func() error {
+		return perform(env)
+	})
+}
+
 func (s *Server) handleCordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.effectiveMutationEnv(ctx, "cordon", "node", in.Node, in.envOverride)
-	return s.runMutationTool(ctx, req, "cordon", "node", in.Node, in.Confirm, func() error {
+	return s.handleMutation(ctx, req, "cordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node, true)
 		return err
 	})
 }
 
 func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.effectiveMutationEnv(ctx, "uncordon", "node", in.Node, in.envOverride)
-	return s.runMutationTool(ctx, req, "uncordon", "node", in.Node, in.Confirm, func() error {
+	return s.handleMutation(ctx, req, "uncordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node, false)
 		return err
 	})
 }
 
 func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.effectiveMutationEnv(ctx, "drain", "node", in.Node, in.envOverride)
-	return s.runMutationTool(ctx, req, "drain", "node", in.Node, in.Confirm, func() error {
+	return s.handleMutation(ctx, req, "drain", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		return mcpDrainNodeFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node)
 	})
 }
 
 func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest, in rebootNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.effectiveMutationEnv(ctx, "reboot", "node", in.Node, in.envOverride)
-	return s.runMutationTool(ctx, req, "reboot", "node", in.Node, in.Confirm, func() error {
+	return s.handleMutation(ctx, req, "reboot", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		node, err := mcpResolveGpuNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
 			return err
@@ -195,8 +211,7 @@ func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest,
 }
 
 func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolRequest, in terminateNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.effectiveMutationEnv(ctx, "terminate", "node", in.Node, in.envOverride)
-	return s.runMutationTool(ctx, req, "terminate", "node", in.Node, in.Confirm, func() error {
+	return s.handleMutation(ctx, req, "terminate", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		node, err := mcpResolveGpuNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
 			return err
@@ -206,8 +221,7 @@ func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolReque
 }
 
 func (s *Server) handleScaleGpuPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGpuPoolInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.effectiveMutationEnv(ctx, "scale", "gpu_pool", in.Name, in.envOverride)
-	return s.runMutationTool(ctx, req, "scale", "gpu_pool", in.Name, in.Confirm, func() error {
+	return s.handleMutation(ctx, req, "scale", "gpu_pool", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
 		pool, err := mcpResolveGpuPoolFn(ctx, s, env, in.Name)
 		if err != nil {
 			return err
@@ -217,8 +231,7 @@ func (s *Server) handleScaleGpuPool(ctx context.Context, req *sdk.CallToolReques
 }
 
 func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, in deleteDACInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.effectiveMutationEnv(ctx, "delete", "dac", in.Name, in.envOverride)
-	return s.runMutationTool(ctx, req, "delete", "dac", in.Name, in.Confirm, func() error {
+	return s.handleMutation(ctx, req, "delete", "dac", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
 		dac := &models.DedicatedAICluster{Name: in.Name}
 		return mcpDeleteDACFn(ctx, dac, env, logging.FromContext(ctx))
 	})
