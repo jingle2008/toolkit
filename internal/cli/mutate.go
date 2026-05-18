@@ -5,10 +5,46 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
+	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
+
+// validateMutationConfig checks the minimum settings a mutation
+// subcommand needs. needsKube=true adds the kubeconfig requirement
+// (cluster-scoped mutations: cordon, uncordon, drain). Repo path is
+// not required — mutations resolve targets by name from the live
+// cluster or by --ocid bypass.
+func validateMutationConfig(cfg config.Config, needsKube bool) error {
+	var missing []string
+	if cfg.EnvType == "" {
+		missing = append(missing, "--env_type")
+	}
+	if cfg.EnvRegion == "" {
+		missing = append(missing, "--env_region")
+	}
+	if cfg.EnvRealm == "" {
+		missing = append(missing, "--env_realm")
+	}
+	if needsKube && cfg.KubeConfig == "" {
+		missing = append(missing, "--kubeconfig")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf(
+			"missing required setting(s): %s\n"+
+				"  set them via flags, environment (TOOLKIT_*), or `toolkit init`",
+			strings.Join(missing, ", "),
+		)
+	}
+	if needsKube {
+		if _, err := os.Stat(cfg.KubeConfig); err != nil {
+			return fmt.Errorf("kubeconfig %q not readable: %w", cfg.KubeConfig, err)
+		}
+	}
+	return nil
+}
 
 // mutationPlan captures everything a mutation subcommand needs to
 // confirm, audit, and execute uniformly. Subcommands build a plan +
