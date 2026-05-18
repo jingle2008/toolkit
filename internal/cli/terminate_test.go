@@ -2,7 +2,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"strings"
@@ -16,47 +15,33 @@ import (
 func TestTerminateCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageMutationEnv(t)
 	called := false
-	orig := terminateInstanceFn
-	defer func() { terminateInstanceFn = orig }()
-	terminateInstanceFn = func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
 		called = true
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
 	// Note: dry-run must work without --yes — it only previews.
-	cmd.SetArgs([]string{"terminate", "node-a", "--ocid", "ocid1.instance.fake", "--dry-run"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	out, err := runRootCmd(t, []string{"terminate", "node-a", "--ocid", "ocid1.instance.fake", "--dry-run"}, "")
+	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if called {
 		t.Fatal("--dry-run must not call OCI")
 	}
-	if !strings.Contains(out.String(), "DRY-RUN: would terminate node/node-a") {
-		t.Errorf("expected DRY-RUN line, got: %q", out.String())
+	if !strings.Contains(out, "DRY-RUN: would terminate node/node-a") {
+		t.Errorf("expected DRY-RUN line, got: %q", out)
 	}
 }
 
 func TestTerminateCmd_RequiresExplicitYes(t *testing.T) {
 	stageMutationEnv(t)
 	called := false
-	orig := terminateInstanceFn
-	defer func() { terminateInstanceFn = orig }()
-	terminateInstanceFn = func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
 		called = true
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"terminate", "node-a", "--ocid", "ocid1.instance.fake"})
-	cmd.SetIn(strings.NewReader("y\n")) // typing y must NOT be enough
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	err := cmd.Execute()
+	_, err := runRootCmd(t, []string{"terminate", "node-a", "--ocid", "ocid1.instance.fake"}, "y\n") // typing y must NOT be enough
 	if err == nil {
 		t.Fatal("expected error: destructive op requires --yes")
 	}
@@ -71,50 +56,35 @@ func TestTerminateCmd_RequiresExplicitYes(t *testing.T) {
 func TestTerminateCmd_YesCallsOCI(t *testing.T) {
 	stageMutationEnv(t)
 	var gotNode *models.GpuNode
-	orig := terminateInstanceFn
-	defer func() { terminateInstanceFn = orig }()
-	terminateInstanceFn = func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"terminate", "node-a", "--ocid", "ocid1.instance.fake", "--yes"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	out, err := runRootCmd(t, []string{"terminate", "node-a", "--ocid", "ocid1.instance.fake", "--yes"}, "")
+	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if gotNode == nil || gotNode.ID != "ocid1.instance.fake" {
 		t.Errorf("expected synthesized node from --ocid, got: %+v", gotNode)
 	}
-	if !strings.Contains(out.String(), "terminate node/node-a: OK") {
-		t.Errorf("expected OK, got: %q", out.String())
+	if !strings.Contains(out, "terminate node/node-a: OK") {
+		t.Errorf("expected OK, got: %q", out)
 	}
 }
 
 func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 	stageMutationEnv(t)
-	origResolver := gpuNodeResolverFn
-	defer func() { gpuNodeResolverFn = origResolver }()
-	gpuNodeResolverFn = func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuNode, error) {
+	defer swap(&gpuNodeResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuNode, error) {
 		return &models.GpuNode{Name: name, ID: "ocid1.resolved"}, nil
-	}
+	})()
 	var gotNode *models.GpuNode
-	orig := terminateInstanceFn
-	defer func() { terminateInstanceFn = orig }()
-	terminateInstanceFn = func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"terminate", "node-a", "--yes"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	if _, err := runRootCmd(t, []string{"terminate", "node-a", "--yes"}, ""); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if gotNode == nil || gotNode.ID != "ocid1.resolved" {
@@ -124,18 +94,11 @@ func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 
 func TestTerminateCmd_PerformError(t *testing.T) {
 	stageMutationEnv(t)
-	orig := terminateInstanceFn
-	defer func() { terminateInstanceFn = orig }()
-	terminateInstanceFn = func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
 		return errors.New("instance already terminating")
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"terminate", "node-a", "--ocid", "ocid1.instance.fake", "--yes"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	err := cmd.Execute()
+	_, err := runRootCmd(t, []string{"terminate", "node-a", "--ocid", "ocid1.instance.fake", "--yes"}, "")
 	if err == nil {
 		t.Fatal("expected error to surface")
 	}

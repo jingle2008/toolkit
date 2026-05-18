@@ -2,7 +2,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"strings"
@@ -29,46 +28,32 @@ func stageDACEnv(t *testing.T) {
 func TestDeleteDAC_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageDACEnv(t)
 	called := false
-	orig := deleteDACFn
-	defer func() { deleteDACFn = orig }()
-	deleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
 		called = true
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"delete", "dac", "dac-x", "--dry-run"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	out, err := runRootCmd(t, []string{"delete", "dac", "dac-x", "--dry-run"}, "")
+	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if called {
 		t.Fatal("--dry-run must not call OCI")
 	}
-	if !strings.Contains(out.String(), "DRY-RUN: would delete dac/dac-x") {
-		t.Errorf("expected DRY-RUN line, got: %q", out.String())
+	if !strings.Contains(out, "DRY-RUN: would delete dac/dac-x") {
+		t.Errorf("expected DRY-RUN line, got: %q", out)
 	}
 }
 
 func TestDeleteDAC_RequiresExplicitYes(t *testing.T) {
 	stageDACEnv(t)
 	called := false
-	orig := deleteDACFn
-	defer func() { deleteDACFn = orig }()
-	deleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
 		called = true
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"delete", "dac", "dac-x"})
-	cmd.SetIn(strings.NewReader("y\n")) // typing y must NOT be enough
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	err := cmd.Execute()
+	_, err := runRootCmd(t, []string{"delete", "dac", "dac-x"}, "y\n") // typing y must NOT be enough
 	if err == nil {
 		t.Fatal("expected error: destructive op requires --yes")
 	}
@@ -83,43 +68,30 @@ func TestDeleteDAC_RequiresExplicitYes(t *testing.T) {
 func TestDeleteDAC_YesCallsOCI(t *testing.T) {
 	stageDACEnv(t)
 	var gotDAC *models.DedicatedAICluster
-	orig := deleteDACFn
-	defer func() { deleteDACFn = orig }()
-	deleteDACFn = func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ logging.Logger) error {
+	defer swap(&deleteDACFn, func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ logging.Logger) error {
 		gotDAC = d
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"delete", "dac", "dac-x", "--yes"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	out, err := runRootCmd(t, []string{"delete", "dac", "dac-x", "--yes"}, "")
+	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if gotDAC == nil || gotDAC.Name != "dac-x" {
 		t.Errorf("expected DAC with Name=dac-x, got: %+v", gotDAC)
 	}
-	if !strings.Contains(out.String(), "delete dac/dac-x: OK") {
-		t.Errorf("expected OK, got: %q", out.String())
+	if !strings.Contains(out, "delete dac/dac-x: OK") {
+		t.Errorf("expected OK, got: %q", out)
 	}
 }
 
 func TestDeleteDAC_PerformError(t *testing.T) {
 	stageDACEnv(t)
-	orig := deleteDACFn
-	defer func() { deleteDACFn = orig }()
-	deleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
 		return errors.New("work request FAILED")
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"delete", "dac", "dac-x", "--yes"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	err := cmd.Execute()
+	_, err := runRootCmd(t, []string{"delete", "dac", "dac-x", "--yes"}, "")
 	if err == nil {
 		t.Fatal("expected error to surface")
 	}

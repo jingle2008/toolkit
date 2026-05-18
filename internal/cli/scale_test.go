@@ -2,7 +2,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"strings"
@@ -28,75 +27,54 @@ func stageScaleEnv(t *testing.T) {
 func TestScaleGpuPool_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageScaleEnv(t)
 	called := false
-	origInc := increasePoolSizeFn
-	defer func() { increasePoolSizeFn = origInc }()
-	increasePoolSizeFn = func(context.Context, *models.GpuPool, models.Environment, logging.Logger) error {
+	defer swap(&increasePoolSizeFn, func(context.Context, *models.GpuPool, models.Environment, logging.Logger) error {
 		called = true
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"scale", "gpupool", "pool-a", "--dry-run"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	out, err := runRootCmd(t, []string{"scale", "gpupool", "pool-a", "--dry-run"}, "")
+	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if called {
 		t.Fatal("--dry-run must not call OCI")
 	}
-	if !strings.Contains(out.String(), "DRY-RUN: would scale gpu_pool/pool-a") {
-		t.Errorf("expected DRY-RUN line, got: %q", out.String())
+	if !strings.Contains(out, "DRY-RUN: would scale gpu_pool/pool-a") {
+		t.Errorf("expected DRY-RUN line, got: %q", out)
 	}
 }
 
 func TestScaleGpuPool_HappyPath(t *testing.T) {
 	stageScaleEnv(t)
-	origResolver := gpuPoolResolverFn
-	defer func() { gpuPoolResolverFn = origResolver }()
-	gpuPoolResolverFn = func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuPool, error) {
+	defer swap(&gpuPoolResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuPool, error) {
 		return &models.GpuPool{Name: name, ID: "ocid1.instancepool.fake", Size: 8, ActualSize: 4}, nil
-	}
+	})()
 
 	var gotPool *models.GpuPool
-	origInc := increasePoolSizeFn
-	defer func() { increasePoolSizeFn = origInc }()
-	increasePoolSizeFn = func(_ context.Context, p *models.GpuPool, _ models.Environment, _ logging.Logger) error {
+	defer swap(&increasePoolSizeFn, func(_ context.Context, p *models.GpuPool, _ models.Environment, _ logging.Logger) error {
 		gotPool = p
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"scale", "gpupool", "pool-a", "-y"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	out, err := runRootCmd(t, []string{"scale", "gpupool", "pool-a", "-y"}, "")
+	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if gotPool == nil || gotPool.Name != "pool-a" || gotPool.ID == "" {
 		t.Errorf("unexpected pool handed to IncreasePoolSize: %+v", gotPool)
 	}
-	if !strings.Contains(out.String(), "scale gpu_pool/pool-a: OK") {
-		t.Errorf("expected OK, got: %q", out.String())
+	if !strings.Contains(out, "scale gpu_pool/pool-a: OK") {
+		t.Errorf("expected OK, got: %q", out)
 	}
 }
 
 func TestScaleGpuPool_PoolNotFound(t *testing.T) {
 	stageScaleEnv(t)
-	origResolver := gpuPoolResolverFn
-	defer func() { gpuPoolResolverFn = origResolver }()
-	gpuPoolResolverFn = func(context.Context, config.Config, models.Environment, string) (*models.GpuPool, error) {
+	defer swap(&gpuPoolResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GpuPool, error) {
 		return nil, errors.New("gpu pool \"pool-x\" not found in repo")
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"scale", "gpupool", "pool-x", "-y"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	err := cmd.Execute()
+	_, err := runRootCmd(t, []string{"scale", "gpupool", "pool-x", "-y"}, "")
 	if err == nil {
 		t.Fatal("expected error when pool not found")
 	}
@@ -108,12 +86,7 @@ func TestScaleGpuPool_PoolNotFound(t *testing.T) {
 func TestScaleGpuPool_MissingRepoPath(t *testing.T) {
 	// stageMutationEnv only sets env + kubeconfig; no repo_path.
 	stageMutationEnv(t)
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"scale", "gpupool", "pool-a", "-y"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	err := cmd.Execute()
+	_, err := runRootCmd(t, []string{"scale", "gpupool", "pool-a", "-y"}, "")
 	if err == nil {
 		t.Fatal("expected error when repo_path missing")
 	}
@@ -125,26 +98,19 @@ func TestScaleGpuPool_MissingRepoPath(t *testing.T) {
 func TestScaleGpuPool_InteractiveBail(t *testing.T) {
 	stageScaleEnv(t)
 	called := false
-	origInc := increasePoolSizeFn
-	defer func() { increasePoolSizeFn = origInc }()
-	increasePoolSizeFn = func(context.Context, *models.GpuPool, models.Environment, logging.Logger) error {
+	defer swap(&increasePoolSizeFn, func(context.Context, *models.GpuPool, models.Environment, logging.Logger) error {
 		called = true
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"scale", "gpupool", "pool-a"})
-	cmd.SetIn(strings.NewReader("n\n"))
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	out, err := runRootCmd(t, []string{"scale", "gpupool", "pool-a"}, "n\n")
+	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if called {
 		t.Fatal("must not call OCI after user types n")
 	}
-	if !strings.Contains(out.String(), "aborted") {
-		t.Errorf("expected 'aborted', got: %q", out.String())
+	if !strings.Contains(out, "aborted") {
+		t.Errorf("expected 'aborted', got: %q", out)
 	}
 }

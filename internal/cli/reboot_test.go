@@ -2,7 +2,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"strings"
@@ -18,26 +17,20 @@ import (
 func TestRebootCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageMutationEnv(t)
 	called := false
-	origReset := softResetInstanceFn
-	defer func() { softResetInstanceFn = origReset }()
-	softResetInstanceFn = func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
+	defer swap(&softResetInstanceFn, func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
 		called = true
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"reboot", "node-a", "--ocid", "ocid1.instance.fake", "--dry-run"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	out, err := runRootCmd(t, []string{"reboot", "node-a", "--ocid", "ocid1.instance.fake", "--dry-run"}, "")
+	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if called {
 		t.Fatal("--dry-run must not call OCI")
 	}
-	if !strings.Contains(out.String(), "DRY-RUN: would reboot node/node-a") {
-		t.Errorf("expected DRY-RUN line, got: %q", out.String())
+	if !strings.Contains(out, "DRY-RUN: would reboot node/node-a") {
+		t.Errorf("expected DRY-RUN line, got: %q", out)
 	}
 }
 
@@ -52,27 +45,18 @@ func TestRebootCmd_OcidBypassesResolver(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	resolverCalled := false
-	origResolver := gpuNodeResolverFn
-	defer func() { gpuNodeResolverFn = origResolver }()
-	gpuNodeResolverFn = func(context.Context, config.Config, models.Environment, string) (*models.GpuNode, error) {
+	defer swap(&gpuNodeResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GpuNode, error) {
 		resolverCalled = true
 		return nil, errors.New("should not be called")
-	}
+	})()
 
 	var gotNode *models.GpuNode
-	origReset := softResetInstanceFn
-	defer func() { softResetInstanceFn = origReset }()
-	softResetInstanceFn = func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	defer swap(&softResetInstanceFn, func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"reboot", "node-a", "--ocid", "ocid1.instance.fake", "-y"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	if _, err := runRootCmd(t, []string{"reboot", "node-a", "--ocid", "ocid1.instance.fake", "-y"}, ""); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if resolverCalled {
@@ -85,29 +69,20 @@ func TestRebootCmd_OcidBypassesResolver(t *testing.T) {
 
 func TestRebootCmd_NameResolvesViaCluster(t *testing.T) {
 	stageMutationEnv(t)
-	origResolver := gpuNodeResolverFn
-	defer func() { gpuNodeResolverFn = origResolver }()
-	gpuNodeResolverFn = func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuNode, error) {
+	defer swap(&gpuNodeResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuNode, error) {
 		if name != "node-a" {
 			t.Errorf("resolver got %q, want node-a", name)
 		}
 		return &models.GpuNode{Name: name, ID: "ocid1.resolved"}, nil
-	}
+	})()
 
 	var gotNode *models.GpuNode
-	origReset := softResetInstanceFn
-	defer func() { softResetInstanceFn = origReset }()
-	softResetInstanceFn = func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	defer swap(&softResetInstanceFn, func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"reboot", "node-a", "-y"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	if err := cmd.Execute(); err != nil {
+	if _, err := runRootCmd(t, []string{"reboot", "node-a", "-y"}, ""); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if gotNode == nil || gotNode.ID != "ocid1.resolved" {
@@ -117,18 +92,11 @@ func TestRebootCmd_NameResolvesViaCluster(t *testing.T) {
 
 func TestRebootCmd_ResolverNotFound(t *testing.T) {
 	stageMutationEnv(t)
-	origResolver := gpuNodeResolverFn
-	defer func() { gpuNodeResolverFn = origResolver }()
-	gpuNodeResolverFn = func(context.Context, config.Config, models.Environment, string) (*models.GpuNode, error) {
+	defer swap(&gpuNodeResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GpuNode, error) {
 		return nil, errors.New("gpu node \"node-missing\" not found in any pool")
-	}
+	})()
 
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"reboot", "node-missing", "-y"})
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
-	err := cmd.Execute()
+	_, err := runRootCmd(t, []string{"reboot", "node-missing", "-y"}, "")
 	if err == nil {
 		t.Fatal("expected error when node not found")
 	}
