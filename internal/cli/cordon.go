@@ -54,7 +54,7 @@ func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, verb string, w
 						return err
 					}
 					if !changed {
-						fmt.Fprintf(out, "note: node already %sed; no change made\n", verb)
+						_, _ = fmt.Fprintf(out, "note: node already %sed; no change made\n", verb)
 					}
 					return nil
 				})

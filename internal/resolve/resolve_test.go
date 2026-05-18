@@ -1,3 +1,4 @@
+//nolint:paralleltest // GpuPool / CompartmentID tests mutate shared seam vars (fakeCompartmentResolver, fakePopulate, newClientsetFromKubeFn) and must run sequentially
 package resolve
 
 import (
@@ -43,7 +44,7 @@ func (l stubLoader) LoadGpuNodes(context.Context, string, models.Environment) (m
 }
 
 func (l stubLoader) LoadDedicatedAIClusters(context.Context, string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	return nil, nil
+	return nil, nil //nolint:nilnil // empty-map test stub; resolve tests never read this
 }
 
 func (l stubLoader) LoadTenancyOverrideGroup(context.Context, string, models.Environment) (models.TenancyOverrideGroup, error) {

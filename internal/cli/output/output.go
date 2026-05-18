@@ -22,6 +22,8 @@ import (
 // Format is the on-the-wire encoding for `toolkit get`.
 type Format string
 
+// Supported output formats for `toolkit get` and consumers that
+// share the same encoding contract.
 const (
 	FormatTable Format = "table"
 	FormatJSON  Format = "json"

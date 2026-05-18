@@ -174,7 +174,7 @@ func runMutation(
 	desc := fmt.Sprintf("%s %s/%s", plan.Action, plan.Kind, plan.Target)
 
 	if plan.DryRun {
-		fmt.Fprintf(out, "DRY-RUN: would %s\n", desc)
+		_, _ = fmt.Fprintf(out, "DRY-RUN: would %s\n", desc)
 		logger.Infow("mutation",
 			"action", plan.Action,
 			"kind", plan.Kind,
@@ -195,7 +195,7 @@ func runMutation(
 			return fmt.Errorf("read confirmation: %w", err)
 		}
 		if !ok {
-			fmt.Fprintln(out, "aborted")
+			_, _ = fmt.Fprintln(out, "aborted")
 			return nil
 		}
 	}
@@ -227,7 +227,7 @@ func runMutation(
 		"dry_run", false,
 		"phase", "done",
 	)
-	fmt.Fprintf(out, "%s: OK\n", desc)
+	_, _ = fmt.Fprintf(out, "%s: OK\n", desc)
 	return nil
 }
 

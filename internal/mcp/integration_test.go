@@ -40,11 +40,11 @@ func (stubLoader) LoadGpuPools(context.Context, string, models.Environment) ([]m
 }
 
 func (stubLoader) LoadGpuNodes(context.Context, string, models.Environment) (map[string][]models.GpuNode, error) {
-	return nil, nil
+	return nil, nil //nolint:nilnil // empty-map test stub; integration tests never read this
 }
 
 func (stubLoader) LoadDedicatedAIClusters(context.Context, string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	return nil, nil
+	return nil, nil //nolint:nilnil // empty-map test stub; integration tests never read this
 }
 
 func (stubLoader) LoadTenancyOverrideGroup(context.Context, string, models.Environment) (models.TenancyOverrideGroup, error) {
@@ -107,7 +107,7 @@ func (r *recorder) snapshot() []*sdk.LoggingMessageParams {
 	return out
 }
 
-func newTestPair(t *testing.T, ctx context.Context, ld loader.Loader, rec *recorder, opts ...func(*config.Config)) *sdk.ClientSession {
+func newTestPair(ctx context.Context, t *testing.T, ld loader.Loader, rec *recorder, opts ...func(*config.Config)) *sdk.ClientSession {
 	t.Helper()
 	cfg := config.Config{
 		RepoPath:  "/dev/null",
@@ -143,21 +143,21 @@ func newTestPair(t *testing.T, ctx context.Context, ld loader.Loader, rec *recor
 	return clientSess
 }
 
-// waitForMsgs polls the recorder until at least n messages have
+// waitForMsgs polls the recorder until at least one message has
 // arrived or the deadline expires. Notification delivery on the
 // in-memory transport is asynchronous to the tool response, so we
 // can't synchronously assert right after CallTool returns.
-func waitForMsgs(t *testing.T, rec *recorder, n int) []*sdk.LoggingMessageParams {
+func waitForMsgs(t *testing.T, rec *recorder) []*sdk.LoggingMessageParams {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		got := rec.snapshot()
-		if len(got) >= n {
+		if len(got) >= 1 {
 			return got
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatalf("expected ≥%d notifications, got %d", n, len(rec.snapshot()))
+	t.Fatalf("expected ≥1 notifications, got %d", len(rec.snapshot()))
 	return nil
 }
 
@@ -168,7 +168,7 @@ func TestIntegration_NotifiesOnHandlerError(t *testing.T) {
 
 	rec := &recorder{}
 	ld := errBaseModelsLoader{err: errors.New("kube unreachable")}
-	clientSess := newTestPair(t, ctx, ld, rec)
+	clientSess := newTestPair(ctx, t, ld, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_base_models"})
 	// The SDK surfaces tool handler errors via CallToolResult.IsError,
@@ -177,7 +177,7 @@ func TestIntegration_NotifiesOnHandlerError(t *testing.T) {
 	require.NotNil(t, res)
 	assert.True(t, res.IsError, "expected IsError=true on tool failure")
 
-	msgs := waitForMsgs(t, rec, 1)
+	msgs := waitForMsgs(t, rec)
 	require.NotEmpty(t, msgs)
 	got := msgs[0]
 	assert.Equal(t, sdk.LoggingLevel("error"), got.Level, "expected error-level notification")
@@ -199,14 +199,14 @@ func TestIntegration_NotifiesOnPartialLoad(t *testing.T) {
 		Errs:   []error{errors.New("oke nodepools dir missing")},
 	}
 	ld := partialGpuPoolsLoader{err: partial}
-	clientSess := newTestPair(t, ctx, ld, rec)
+	clientSess := newTestPair(ctx, t, ld, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
 	require.NoError(t, err, "tools/call transport error")
 	require.NotNil(t, res)
 	assert.False(t, res.IsError, "partial-load should not fail the tool call")
 
-	msgs := waitForMsgs(t, rec, 1)
+	msgs := waitForMsgs(t, rec)
 	got := msgs[0]
 	assert.Equal(t, sdk.LoggingLevel("warning"), got.Level)
 	body, ok := got.Data.(string)

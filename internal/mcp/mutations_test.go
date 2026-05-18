@@ -31,7 +31,7 @@ func TestIntegration_MutationTool_RequiresConfirm(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	// confirm omitted (default false) → refused
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
@@ -46,7 +46,7 @@ func TestIntegration_MutationTool_RequiresConfirm(t *testing.T) {
 	}
 
 	// Notification should explain the refusal.
-	msgs := waitForMsgs(t, rec, 1)
+	msgs := waitForMsgs(t, rec)
 	body, _ := msgs[0].Data.(string)
 	if !strings.Contains(body, "refused") {
 		t.Errorf("expected refusal notification, got: %q", body)
@@ -69,7 +69,7 @@ func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "cordon_node",
@@ -96,7 +96,7 @@ func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
 	assert.Equal(t, "node-a", env.Items.Target)
 
 	// Info notification on success.
-	msgs := waitForMsgs(t, rec, 1)
+	msgs := waitForMsgs(t, rec)
 	body, _ := msgs[0].Data.(string)
 	assert.Contains(t, body, "cordon node/node-a: OK")
 }
@@ -114,7 +114,7 @@ func TestIntegration_UncordonTool_PassesWantFalse(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "uncordon_node",
@@ -139,7 +139,7 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "terminate_node",
@@ -169,7 +169,7 @@ func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "reboot_node",
@@ -186,7 +186,7 @@ func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
 		t.Errorf("expected synthesized node from --ocid, got: %+v", gotNode)
 	}
 	// Info notification on success.
-	msgs := waitForMsgs(t, rec, 1)
+	msgs := waitForMsgs(t, rec)
 	body, _ := msgs[0].Data.(string)
 	assert.Contains(t, body, "reboot node/node-a: OK")
 }
@@ -212,7 +212,7 @@ func TestIntegration_ScaleGpuPoolTool_ConfirmTrueExecutes(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "scale_gpu_pool",
@@ -227,7 +227,7 @@ func TestIntegration_ScaleGpuPoolTool_ConfirmTrueExecutes(t *testing.T) {
 	if gotPool == nil || gotPool.ID != "ocid1.instancepool.fake" {
 		t.Errorf("expected resolver-supplied pool, got: %+v", gotPool)
 	}
-	msgs := waitForMsgs(t, rec, 1)
+	msgs := waitForMsgs(t, rec)
 	body, _ := msgs[0].Data.(string)
 	assert.Contains(t, body, "scale gpu_pool/pool-a: OK")
 }
@@ -243,7 +243,7 @@ func TestIntegration_ScaleGpuPoolTool_ResolverError(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "scale_gpu_pool",
@@ -273,7 +273,7 @@ func TestIntegration_MutationTool_HonorsEnvOverride_WhenAllowed(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec, func(c *config.Config) {
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec, func(c *config.Config) {
 		c.MutationEnvOverrideAllowed = true
 	})
 
@@ -308,7 +308,7 @@ func TestIntegration_MutationTool_IgnoresEnvOverride_WhenDisallowed(t *testing.T
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec) // flag NOT set
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec) // flag NOT set
 
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
@@ -349,7 +349,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec, func(c *config.Config) {
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec, func(c *config.Config) {
 		c.MutationEnvOverrideAllowed = true
 	})
 
@@ -427,7 +427,7 @@ func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
@@ -442,7 +442,7 @@ func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
 	if gotDAC == nil || gotDAC.Name != "dac-x" {
 		t.Errorf("expected DAC with Name=dac-x, got: %+v", gotDAC)
 	}
-	msgs := waitForMsgs(t, rec, 1)
+	msgs := waitForMsgs(t, rec)
 	body, _ := msgs[0].Data.(string)
 	assert.Contains(t, body, "delete dac/dac-x: OK")
 }
@@ -458,7 +458,7 @@ func TestIntegration_MutationTool_PerformErrorPropagates(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "drain_node",
@@ -469,7 +469,7 @@ func TestIntegration_MutationTool_PerformErrorPropagates(t *testing.T) {
 	assert.True(t, res.IsError)
 
 	// Error notification carries the underlying message.
-	msgs := waitForMsgs(t, rec, 1)
+	msgs := waitForMsgs(t, rec)
 	var found bool
 	for _, m := range msgs {
 		body, _ := m.Data.(string)
@@ -488,7 +488,7 @@ func TestIntegration_MutationTools_RegisteredInListTools(t *testing.T) {
 	t.Cleanup(cancel)
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	listRes, err := clientSess.ListTools(ctx, &sdk.ListToolsParams{})
 	require.NoError(t, err)
