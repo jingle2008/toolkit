@@ -256,6 +256,39 @@ func TestIntegration_ScaleGpuPoolTool_ResolverError(t *testing.T) {
 	assert.True(t, res.IsError, "expected IsError when resolver fails")
 }
 
+func TestIntegration_MutationTool_HonorsEnvOverride(t *testing.T) {
+	// confirm + per-call env_realm should flow into the env the
+	// handler sees, mirroring list_*'s envOverride behavior.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	var gotEnv models.Environment
+	orig := mcpDeleteDACFn
+	defer func() { mcpDeleteDACFn = orig }()
+	mcpDeleteDACFn = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ logging.Logger) error {
+		gotEnv = env
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+
+	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "delete_dac",
+		Arguments: map[string]any{
+			"name":       "dac-x",
+			"confirm":    true,
+			"env_realm":  "oc2",
+			"env_region": "us-phoenix-1",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "oc2", gotEnv.Realm, "env_realm override should reach the action")
+	assert.Equal(t, "us-phoenix-1", gotEnv.Region, "env_region override should reach the action")
+	// env_type wasn't overridden, so the startup default ("dev") wins.
+	assert.Equal(t, "dev", gotEnv.Type, "unset override field falls back to startup env")
+}
+
 func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)

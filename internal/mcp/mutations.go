@@ -91,39 +91,45 @@ func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, 
 type cordonNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
 	confirmGate
+	envOverride
 }
 
 type drainNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
 	confirmGate
+	envOverride
 }
 
 type rebootNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
 	OCID string `json:"ocid,omitempty" jsonschema:"skip k8s lookup and target this instance OCID directly"`
 	confirmGate
+	envOverride
 }
 
 type terminateNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
 	OCID string `json:"ocid,omitempty" jsonschema:"skip k8s lookup and target this instance OCID directly"`
 	confirmGate
+	envOverride
 }
 
 type scaleGpuPoolInput struct {
 	Name string `json:"name" jsonschema:"the pool name from the Terraform repo (same as toolkit get gpupool)"`
 	confirmGate
+	envOverride
 }
 
 type deleteDACInput struct {
 	Name string `json:"name" jsonschema:"the DAC name (same identifier as toolkit get dac shows)"`
 	confirmGate
+	envOverride
 }
 
 // --- Handlers -----------------------------------------------------
 
 func (s *Server) handleCordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.envFor(envOverride{})
+	env := s.envFor(in.envOverride)
 	return s.runMutationTool(ctx, req, "cordon", "node", in.Node, in.Confirm, func() error {
 		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node, true)
 		return err
@@ -131,7 +137,7 @@ func (s *Server) handleCordonNode(ctx context.Context, req *sdk.CallToolRequest,
 }
 
 func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.envFor(envOverride{})
+	env := s.envFor(in.envOverride)
 	return s.runMutationTool(ctx, req, "uncordon", "node", in.Node, in.Confirm, func() error {
 		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node, false)
 		return err
@@ -139,14 +145,14 @@ func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolReques
 }
 
 func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.envFor(envOverride{})
+	env := s.envFor(in.envOverride)
 	return s.runMutationTool(ctx, req, "drain", "node", in.Node, in.Confirm, func() error {
 		return mcpDrainNodeFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node)
 	})
 }
 
 func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest, in rebootNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.envFor(envOverride{})
+	env := s.envFor(in.envOverride)
 	return s.runMutationTool(ctx, req, "reboot", "node", in.Node, in.Confirm, func() error {
 		node, err := s.resolveNodeForOCIAction(ctx, env, in.Node, in.OCID)
 		if err != nil {
@@ -157,7 +163,7 @@ func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest,
 }
 
 func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolRequest, in terminateNodeInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.envFor(envOverride{})
+	env := s.envFor(in.envOverride)
 	return s.runMutationTool(ctx, req, "terminate", "node", in.Node, in.Confirm, func() error {
 		node, err := s.resolveNodeForOCIAction(ctx, env, in.Node, in.OCID)
 		if err != nil {
@@ -168,7 +174,7 @@ func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolReque
 }
 
 func (s *Server) handleScaleGpuPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGpuPoolInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.envFor(envOverride{})
+	env := s.envFor(in.envOverride)
 	return s.runMutationTool(ctx, req, "scale", "gpu_pool", in.Name, in.Confirm, func() error {
 		pool, err := s.resolveGpuPoolForOCIAction(ctx, env, in.Name)
 		if err != nil {
@@ -179,7 +185,7 @@ func (s *Server) handleScaleGpuPool(ctx context.Context, req *sdk.CallToolReques
 }
 
 func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, in deleteDACInput) (*sdk.CallToolResult, struct{}, error) {
-	env := s.envFor(envOverride{})
+	env := s.envFor(in.envOverride)
 	return s.runMutationTool(ctx, req, "delete", "dac", in.Name, in.Confirm, func() error {
 		dac := &models.DedicatedAICluster{Name: in.Name}
 		return mcpDeleteDACFn(ctx, dac, env, logging.FromContext(ctx))
@@ -208,44 +214,42 @@ func (s *Server) resolveGpuPoolForOCIAction(ctx context.Context, env models.Envi
 // agent explicitly so the contract is discoverable without running
 // the tool to see the refusal.
 func registerMutationTools(s *Server) {
-	// Note: every mutation tool targets the env the server was started
-	// with (env_type / env_region / env_realm from the toolkit config).
-	// Unlike the read-only list_* tools, mutations do NOT accept
-	// per-call env overrides — start a second `toolkit mcp` if you
-	// need to act against a different realm. Any env_* fields in the
-	// arguments are silently ignored by the JSON unmarshaler.
+	// Every mutation tool accepts the same env_type/env_region/env_realm
+	// overrides as the read-only list_* tools — empty fields fall back
+	// to the toolkit config. confirm=true is the safety gate; env
+	// scoping does not add to it.
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "cordon_node",
-		Description: "Cordon (mark unschedulable) a Kubernetes node. Idempotent. Mutating: requires confirm=true to execute, otherwise refuses without acting. Targets the server's startup env only — no per-call env_* override.",
+		Description: "Cordon (mark unschedulable) a Kubernetes node. Idempotent. Mutating: requires confirm=true to execute, otherwise refuses without acting. Accepts env_type/env_region/env_realm to target a different realm than the server's startup env.",
 	}, s.handleCordonNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "uncordon_node",
-		Description: "Uncordon (mark schedulable) a Kubernetes node. Idempotent. Mutating: requires confirm=true. Targets the server's startup env only — no per-call env_* override.",
+		Description: "Uncordon (mark schedulable) a Kubernetes node. Idempotent. Mutating: requires confirm=true. Accepts env_type/env_region/env_realm to target a different realm than the server's startup env.",
 	}, s.handleUncordonNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "drain_node",
-		Description: "Drain pods from a node (cordon + evict). Use before terminate. Mutating: requires confirm=true. Targets the server's startup env only — no per-call env_* override.",
+		Description: "Drain pods from a node (cordon + evict). Use before terminate. Mutating: requires confirm=true. Accepts env_type/env_region/env_realm to target a different realm than the server's startup env.",
 	}, s.handleDrainNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "reboot_node",
-		Description: "Soft-reset the OCI instance backing a GPU node. Fire-and-forget. Mutating: requires confirm=true. Targets the server's startup env only — no per-call env_* override.",
+		Description: "Soft-reset the OCI instance backing a GPU node. Fire-and-forget. Mutating: requires confirm=true. Accepts env_type/env_region/env_realm to target a different realm than the server's startup env.",
 	}, s.handleRebootNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "terminate_node",
-		Description: "Terminate the OCI instance backing a GPU node (boot volume destroyed). DESTRUCTIVE. Mutating: requires confirm=true. Targets the server's startup env only — no per-call env_* override.",
+		Description: "Terminate the OCI instance backing a GPU node (boot volume destroyed). DESTRUCTIVE. Mutating: requires confirm=true. Accepts env_type/env_region/env_realm to target a different realm than the server's startup env.",
 	}, s.handleTerminateNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "scale_gpu_pool",
-		Description: "Push the Terraform-declared pool.Size to OCI for the named GPU pool. No size override: Terraform is the source of truth. Mutating: requires confirm=true. Targets the server's startup env only — no per-call env_* override.",
+		Description: "Push the Terraform-declared pool.Size to OCI for the named GPU pool. No size override: Terraform is the source of truth. Mutating: requires confirm=true. Accepts env_type/env_region/env_realm to target a different realm than the server's startup env.",
 	}, s.handleScaleGpuPool)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "delete_dac",
-		Description: "Delete a dedicated AI cluster and its endpoints (synchronous, polls the work request). DESTRUCTIVE. Mutating: requires confirm=true. Targets the server's startup env only — no per-call env_* override.",
+		Description: "Delete a dedicated AI cluster and its endpoints (synchronous, polls the work request). DESTRUCTIVE. Mutating: requires confirm=true. Accepts env_type/env_region/env_realm to target a different realm than the server's startup env.",
 	}, s.handleDeleteDAC)
 }
