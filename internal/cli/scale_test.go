@@ -7,21 +7,20 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spf13/viper"
-
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // stageScaleEnv wires the env triple, kubeconfig, AND repo_path that
-// validateScaleConfig requires.
+// validateScaleConfig requires. stageMutationEnv already calls
+// viper.Reset and registers the cleanup — adding TOOLKIT_REPO_PATH
+// via t.Setenv is enough because viper picks it up via AutomaticEnv
+// at Unmarshal time.
 func stageScaleEnv(t *testing.T) {
 	t.Helper()
 	stageMutationEnv(t)
 	t.Setenv("TOOLKIT_REPO_PATH", t.TempDir())
-	viper.Reset()
-	t.Cleanup(viper.Reset)
 }
 
 func TestScaleGpuPool_DryRun_DoesNotCallOCI(t *testing.T) {

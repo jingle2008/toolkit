@@ -152,3 +152,29 @@ func TestGetComputeManagementClient_ClientFactoryError(t *testing.T) {
 	require.Nil(t, client)
 	require.Contains(t, err.Error(), "mgmt client error")
 }
+
+// TestNewOCIClient_PropagatesRegionToSetRegion locks the core wiring
+// of the newOCIClient scaffold: whatever region the caller hands in
+// must reach setRegion. The two public wrappers rely on this to make
+// SetRegion(env.Region) happen — without this test the method
+// expression could be replaced with a no-op and the suite would still
+// pass.
+func TestNewOCIClient_PropagatesRegionToSetRegion(t *testing.T) {
+	origProvider := computeConfigProviderFunc
+	defer func() { computeConfigProviderFunc = origProvider }()
+	computeConfigProviderFunc = func(_, _, _ string) (common.ConfigurationProvider, error) {
+		return &fakeProvider{}, nil
+	}
+
+	var gotRegion string
+	factory := func(common.ConfigurationProvider) (core.ComputeClient, error) {
+		return core.ComputeClient{}, nil
+	}
+	setRegion := func(_ *core.ComputeClient, r string) { gotRegion = r }
+
+	env := models.Environment{Realm: "oc1", Region: "us-ashburn-1"}
+	client, err := newOCIClient(env, factory, setRegion, "test client")
+	require.NoError(t, err)
+	require.NotNil(t, client)
+	require.Equal(t, "us-ashburn-1", gotRegion)
+}

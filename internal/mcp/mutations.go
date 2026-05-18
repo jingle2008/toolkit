@@ -47,7 +47,7 @@ type confirmGate struct {
 // MutationEnvOverrideAllowed. Otherwise the override is ignored and
 // the startup env is used unchanged. When the override IS applied and
 // changes the effective env, that's audit-logged for SIEM visibility.
-func (s *Server) effectiveMutationEnv(_ context.Context, action, kind, target string, in envOverride) models.Environment {
+func (s *Server) effectiveMutationEnv(action, kind, target string, in envOverride) models.Environment {
 	startup := s.envFor(envOverride{})
 	if !s.cfg.MutationEnvOverrideAllowed {
 		if in.EnvType != "" || in.EnvRegion != "" || in.EnvRealm != "" {
@@ -174,7 +174,7 @@ func (s *Server) handleMutation(
 	override envOverride,
 	perform func(env models.Environment) error,
 ) (*sdk.CallToolResult, struct{}, error) {
-	env := s.effectiveMutationEnv(ctx, action, kind, target, override)
+	env := s.effectiveMutationEnv(action, kind, target, override)
 	return s.runMutationTool(ctx, req, action, kind, target, confirm, func() error {
 		return perform(env)
 	})

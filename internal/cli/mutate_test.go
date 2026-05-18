@@ -186,3 +186,24 @@ func TestRunMutation_PerformError(t *testing.T) {
 		t.Errorf("must not print OK on perform error, got: %q", out.String())
 	}
 }
+
+// TestWithMutationSetup_InitLoggerError covers the rarely-exercised
+// failure path of the prelude every mutation subcommand shares: a
+// bad log_format must surface as an error from withMutationSetup
+// without invoking fn. Without this test, a future change that broke
+// initLogger error propagation would only be caught at runtime by
+// six near-identical subcommands.
+//
+//nolint:paralleltest // mutates process env + viper singleton
+func TestWithMutationSetup_InitLoggerError(t *testing.T) {
+	stageMutationEnv(t)
+	t.Setenv("TOOLKIT_LOG_FORMAT", "bad-format")
+
+	_, err := runRootCmd(t, []string{"cordon", "node-a", "-y"}, "")
+	if err == nil {
+		t.Fatal("expected error from invalid log_format")
+	}
+	if !strings.Contains(err.Error(), "log_format") {
+		t.Errorf("error should mention log_format, got: %v", err)
+	}
+}
