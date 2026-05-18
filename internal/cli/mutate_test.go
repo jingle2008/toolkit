@@ -1,0 +1,188 @@
+package cli
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"strings"
+	"testing"
+)
+
+func TestConfirmAction(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{"yes", "y\n", true},
+		{"yes-long", "yes\n", true},
+		{"yes-upper", "YES\n", true},
+		{"yes-pad", "  y  \n", true},
+		{"no", "n\n", false},
+		{"empty", "\n", false},
+		{"eof", "", false},
+		{"garbage", "maybe\n", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var out bytes.Buffer
+			got, err := confirmAction(strings.NewReader(tc.in), &out, "Confirm? ")
+			if err != nil {
+				t.Fatalf("confirmAction: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("got %v, want %v", got, tc.want)
+			}
+			if !strings.Contains(out.String(), "Confirm? ") {
+				t.Errorf("prompt missing from output: %q", out.String())
+			}
+		})
+	}
+}
+
+func TestRunMutation_DryRun(t *testing.T) {
+	t.Parallel()
+	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli", DryRun: true}
+	called := false
+	var out bytes.Buffer
+	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
+		called = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("runMutation: %v", err)
+	}
+	if called {
+		t.Fatal("perform must not run on --dry-run")
+	}
+	if !strings.Contains(out.String(), "DRY-RUN: would cordon node/n1") {
+		t.Errorf("expected DRY-RUN line, got: %q", out.String())
+	}
+}
+
+func TestRunMutation_YesSkipsPrompt(t *testing.T) {
+	t.Parallel()
+	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli", Yes: true}
+	called := false
+	var out bytes.Buffer
+	// Stdin reader intentionally empty — Yes must not consume it.
+	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
+		called = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("runMutation: %v", err)
+	}
+	if !called {
+		t.Fatal("perform must run when --yes is set")
+	}
+	if !strings.Contains(out.String(), "cordon node/n1: OK") {
+		t.Errorf("expected OK line, got: %q", out.String())
+	}
+	if strings.Contains(out.String(), "Confirm") {
+		t.Errorf("--yes must not show prompt, got: %q", out.String())
+	}
+}
+
+func TestRunMutation_InteractiveBail(t *testing.T) {
+	t.Parallel()
+	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli"}
+	called := false
+	var out bytes.Buffer
+	err := runMutation(context.Background(), strings.NewReader("n\n"), &out, plan, func(context.Context) error {
+		called = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("runMutation must return nil on bail: %v", err)
+	}
+	if called {
+		t.Fatal("perform must not run after user types n")
+	}
+	if !strings.Contains(out.String(), "Confirm cordon node/n1?") {
+		t.Errorf("expected prompt, got: %q", out.String())
+	}
+	if !strings.Contains(out.String(), "aborted") {
+		t.Errorf("expected aborted line, got: %q", out.String())
+	}
+}
+
+func TestRunMutation_InteractiveYes(t *testing.T) {
+	t.Parallel()
+	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli"}
+	called := false
+	var out bytes.Buffer
+	err := runMutation(context.Background(), strings.NewReader("y\n"), &out, plan, func(context.Context) error {
+		called = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("runMutation: %v", err)
+	}
+	if !called {
+		t.Fatal("perform must run after user types y")
+	}
+}
+
+func TestRunMutation_RequireExplicitYes_NoPrompt(t *testing.T) {
+	t.Parallel()
+	plan := mutationPlan{
+		Action: "terminate", Kind: "node", Target: "n1",
+		Surface: "cli", RequireExplicitYes: true,
+	}
+	called := false
+	var out bytes.Buffer
+	// Stdin says "y" — should still fail because RequireExplicitYes
+	// blocks interactive consent.
+	err := runMutation(context.Background(), strings.NewReader("y\n"), &out, plan, func(context.Context) error {
+		called = true
+		return nil
+	})
+	if err == nil {
+		t.Fatal("expected error when RequireExplicitYes && !Yes")
+	}
+	if !strings.Contains(err.Error(), "--yes") {
+		t.Errorf("error should mention --yes, got: %v", err)
+	}
+	if called {
+		t.Fatal("perform must not run")
+	}
+}
+
+func TestRunMutation_RequireExplicitYes_PassesWithYes(t *testing.T) {
+	t.Parallel()
+	plan := mutationPlan{
+		Action: "terminate", Kind: "node", Target: "n1",
+		Surface: "cli", RequireExplicitYes: true, Yes: true,
+	}
+	called := false
+	var out bytes.Buffer
+	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
+		called = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("runMutation: %v", err)
+	}
+	if !called {
+		t.Fatal("perform must run when both RequireExplicitYes and Yes are set")
+	}
+}
+
+func TestRunMutation_PerformError(t *testing.T) {
+	t.Parallel()
+	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli", Yes: true}
+	want := errors.New("kube unreachable")
+	var out bytes.Buffer
+	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
+		return want
+	})
+	if !errors.Is(err, want) {
+		t.Errorf("expected error to be %v, got %v", want, err)
+	}
+	if strings.Contains(out.String(), "OK") {
+		t.Errorf("must not print OK on perform error, got: %q", out.String())
+	}
+}
