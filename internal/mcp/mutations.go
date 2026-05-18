@@ -47,8 +47,9 @@ func (s *Server) requireConfirm(ctx context.Context, req *sdk.CallToolRequest, a
 	if confirm {
 		return nil, struct{}{}, nil, false
 	}
-	s.logger.Infow("mutation refused (confirm=false)",
+	s.logger.Infow("mutation",
 		"action", action, "kind", kind, "target", target, "surface", "mcp",
+		"phase", "refused",
 	)
 	notify(ctx, req.Session, "info",
 		fmt.Sprintf("%s %s/%s refused: set confirm=true to execute", action, kind, target))
@@ -67,6 +68,10 @@ func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, 
 		"phase", "begin",
 	)
 	if err := perform(); err != nil {
+		s.logger.Errorw("mutation failed",
+			"action", action, "kind", kind, "target", target, "surface", "mcp",
+			"error", err,
+		)
 		return failTool(ctx, req, action+" "+kind+"/"+target, err)
 	}
 	s.logger.Infow("mutation",
