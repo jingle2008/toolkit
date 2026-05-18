@@ -257,6 +257,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		got[tool.Name] = true
 	}
 	want := []string{
+		// Read-only list_* tools.
 		"list_tenants",
 		"list_base_models",
 		"list_gpu_pools",
@@ -269,6 +270,14 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"list_tenancy_overrides",
 		"list_regional_overrides",
 		"list_aliases",
+		// Mutation tools (all gated on confirm=true; see mutations.go).
+		"cordon_node",
+		"uncordon_node",
+		"drain_node",
+		"reboot_node",
+		"terminate_node",
+		"scale_gpu_pool",
+		"delete_dac",
 	}
 	for _, name := range want {
 		assert.True(t, got[name], "tools/list missing %q (got %d tools total)", name, len(listRes.Tools))

@@ -76,6 +76,8 @@ func registerTools(s *Server) {
 		Name:        "list_aliases",
 		Description: "Discovery tool. Lists every category alias and its canonical category name. Useful for an agent that wants to confirm short codes before calling other tools.",
 	}, s.handleListAliases)
+
+	registerMutationTools(s)
 }
 
 // --- Handlers -----------------------------------------------------
