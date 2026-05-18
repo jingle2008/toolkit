@@ -43,12 +43,21 @@ var gpuPoolResolverFn = func(ctx context.Context, cfg config.Config, env models.
 	return resolve.GpuPool(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name)
 }
 
-// validateScaleConfig is the strictest mutation validator: scale needs
-// the Terraform repo (Size source of truth), kubeconfig (compartment
-// lookup), and the env triple (OCI client + kube context).
-func validateScaleConfig(cfg config.Config) error {
+
+// validateMutationConfig checks the minimum settings a mutation
+// subcommand needs.
+//
+//   - needsKube=true  → cluster-scoped mutations (cordon, drain) and
+//     OCI mutations resolving a node by name without --ocid (reboot,
+//     terminate without --ocid). Verifies the kubeconfig path is
+//     readable; the path itself is always populated by the persistent
+//     --kubeconfig flag's default (~/.kube/config), so the "missing
+//     flag" case isn't reachable in normal use.
+//   - needsRepo=true  → mutations sourced from Terraform (scale). The
+//     repo path has no default and must be supplied.
+func validateMutationConfig(cfg config.Config, needsKube, needsRepo bool) error {
 	var missing []string
-	if cfg.RepoPath == "" {
+	if needsRepo && cfg.RepoPath == "" {
 		missing = append(missing, "--repo_path")
 	}
 	if cfg.EnvType == "" {
@@ -59,41 +68,6 @@ func validateScaleConfig(cfg config.Config) error {
 	}
 	if cfg.EnvRealm == "" {
 		missing = append(missing, "--env_realm")
-	}
-	if cfg.KubeConfig == "" {
-		missing = append(missing, "--kubeconfig")
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf(
-			"missing required setting(s) for scale: %s\n"+
-				"  set them via flags, environment (TOOLKIT_*), or `toolkit init`",
-			strings.Join(missing, ", "),
-		)
-	}
-	if _, err := os.Stat(cfg.KubeConfig); err != nil {
-		return fmt.Errorf("kubeconfig %q not readable: %w", cfg.KubeConfig, err)
-	}
-	return nil
-}
-
-// validateMutationConfig checks the minimum settings a mutation
-// subcommand needs. needsKube=true adds the kubeconfig requirement
-// (cluster-scoped mutations: cordon, uncordon, drain). Repo path is
-// not required — mutations resolve targets by name from the live
-// cluster or by --ocid bypass.
-func validateMutationConfig(cfg config.Config, needsKube bool) error {
-	var missing []string
-	if cfg.EnvType == "" {
-		missing = append(missing, "--env_type")
-	}
-	if cfg.EnvRegion == "" {
-		missing = append(missing, "--env_region")
-	}
-	if cfg.EnvRealm == "" {
-		missing = append(missing, "--env_realm")
-	}
-	if needsKube && cfg.KubeConfig == "" {
-		missing = append(missing, "--kubeconfig")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf(

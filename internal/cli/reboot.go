@@ -29,8 +29,9 @@ func addRebootCommand(rootCmd *cobra.Command, cfgFile *string) {
 		Use:   "reboot <node>",
 		Short: "Soft-reset a GPU node's underlying OCI instance.",
 		Long: `Submits a soft-reset (graceful reboot) request to OCI for the
-instance backing <node>. Fire-and-forget: the request returns once
-OCI accepts it; check status via the OCI console or wait-flow tooling.
+instance backing <node>. Fire-and-forget: the call returns as soon as
+OCI accepts the request; check status via the OCI console or any
+wait-flow tooling.
 
 By default <node> is resolved against the live cluster (kube config +
 env triple required). Pass --ocid to skip the cluster lookup when you
@@ -46,7 +47,7 @@ already know the instance OCID.`,
 				return fmt.Errorf("unmarshal config: %w", err)
 			}
 			needsKube := ocid == ""
-			if err := validateMutationConfig(cfg, needsKube); err != nil {
+			if err := validateMutationConfig(cfg, needsKube, false); err != nil {
 				return err
 			}
 			logger, err := initLogger(cfg)

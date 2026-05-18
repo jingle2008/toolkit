@@ -31,7 +31,7 @@ func addDeleteCommand(rootCmd *cobra.Command, cfgFile *string) {
 	)
 	dacCmd := &cobra.Command{
 		Use:   "dac <name>",
-		Short: "Delete a dedicated AI cluster (synchronous; polls work request).",
+		Short: "Delete a dedicated AI cluster (synchronous; polls the work request).",
 		Long: `Deletes the DAC and its endpoints. Synchronous: the call
 blocks until the work request reports SUCCEEDED or FAILED (10-min
 timeout). <name> is the DAC's identifier — the same string the table
@@ -50,7 +50,7 @@ deliberately disabled to prevent reflex "y" answers.`,
 			if err := viper.Unmarshal(&cfg); err != nil {
 				return fmt.Errorf("unmarshal config: %w", err)
 			}
-			if err := validateMutationConfig(cfg, false); err != nil {
+			if err := validateMutationConfig(cfg, false, false); err != nil {
 				return err
 			}
 			logger, err := initLogger(cfg)

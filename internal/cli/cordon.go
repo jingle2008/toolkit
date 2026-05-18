@@ -51,7 +51,7 @@ func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, verb string, w
 			if err := viper.Unmarshal(&cfg); err != nil {
 				return fmt.Errorf("unmarshal config: %w", err)
 			}
-			if err := validateMutationConfig(cfg, true); err != nil {
+			if err := validateMutationConfig(cfg, true, false); err != nil {
 				return err
 			}
 			logger, err := initLogger(cfg)

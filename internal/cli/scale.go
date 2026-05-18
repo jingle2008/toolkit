@@ -28,7 +28,7 @@ var increasePoolSizeFn = actions.IncreasePoolSize
 func addScaleCommand(rootCmd *cobra.Command, cfgFile *string) {
 	scaleCmd := &cobra.Command{
 		Use:   "scale",
-		Short: "Push IaC-declared size to live OCI resources.",
+		Short: "Sync IaC-declared size to OCI.",
 	}
 
 	var (
@@ -54,7 +54,7 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 			if err := viper.Unmarshal(&cfg); err != nil {
 				return fmt.Errorf("unmarshal config: %w", err)
 			}
-			if err := validateScaleConfig(cfg); err != nil {
+			if err := validateMutationConfig(cfg, true, true); err != nil {
 				return err
 			}
 			logger, err := initLogger(cfg)
