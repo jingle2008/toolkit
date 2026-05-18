@@ -29,27 +29,35 @@ type stubLoader struct {
 func (l stubLoader) LoadDataset(context.Context, string, models.Environment) (*models.Dataset, error) {
 	return &models.Dataset{}, nil
 }
+
 func (l stubLoader) LoadBaseModels(context.Context, string, models.Environment) ([]models.BaseModel, error) {
 	return nil, nil
 }
+
 func (l stubLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {
 	return l.pools, l.poolsErr
 }
+
 func (l stubLoader) LoadGpuNodes(context.Context, string, models.Environment) (map[string][]models.GpuNode, error) {
 	return l.nodes, l.nodesErr
 }
+
 func (l stubLoader) LoadDedicatedAIClusters(context.Context, string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	return nil, nil
 }
+
 func (l stubLoader) LoadTenancyOverrideGroup(context.Context, string, models.Environment) (models.TenancyOverrideGroup, error) {
 	return models.TenancyOverrideGroup{}, nil
 }
+
 func (l stubLoader) LoadLimitRegionalOverrides(context.Context, string, models.Environment) ([]models.LimitRegionalOverride, error) {
 	return nil, nil
 }
+
 func (l stubLoader) LoadConsolePropertyRegionalOverrides(context.Context, string, models.Environment) ([]models.ConsolePropertyRegionalOverride, error) {
 	return nil, nil
 }
+
 func (l stubLoader) LoadPropertyRegionalOverrides(context.Context, string, models.Environment) ([]models.PropertyRegionalOverride, error) {
 	return nil, nil
 }

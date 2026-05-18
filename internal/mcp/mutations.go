@@ -224,7 +224,6 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 	})
 }
 
-
 // --- Registration -------------------------------------------------
 
 // mutationToolFooter is appended to every mutation tool's description.
