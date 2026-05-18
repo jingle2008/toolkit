@@ -394,149 +394,126 @@ func writeAliases(w writer, filter string, opts output.Options) error {
 
 // --- Per-category table renderers ---------------------------------
 
-func tenantTable(items []models.Tenant) ([]string, [][]string) {
-	headers := []string{"NAME", "IDS", "INTERNAL", "NOTE"}
+// tableFromSlice builds a (headers, rows) result by mapping each item
+// through row. Captures the boilerplate every flat *Table function
+// repeats: pre-size the rows slice, loop, append.
+func tableFromSlice[T any](items []T, headers []string, row func(T) []string) ([]string, [][]string) {
 	rows := make([][]string, 0, len(items))
-	for _, t := range items {
-		rows = append(rows, []string{
-			t.Name,
-			strings.Join(t.IDs, ","),
-			boolStr(t.IsInternal),
-			t.Note,
-		})
+	for _, item := range items {
+		rows = append(rows, row(item))
 	}
 	return headers, rows
+}
+
+// tableFromGrouped iterates grouped's sorted keys and emits one row
+// per item, with row called as row(parentKey, item). Captures the
+// boilerplate every grouped *Table function repeats.
+func tableFromGrouped[T any](grouped map[string][]T, headers []string, row func(key string, item T) []string) ([]string, [][]string) {
+	rows := make([][]string, 0)
+	for _, k := range sortedKeys(grouped) {
+		for _, item := range grouped[k] {
+			rows = append(rows, row(k, item))
+		}
+	}
+	return headers, rows
+}
+
+func tenantTable(items []models.Tenant) ([]string, [][]string) {
+	return tableFromSlice(items,
+		[]string{"NAME", "IDS", "INTERNAL", "NOTE"},
+		func(t models.Tenant) []string {
+			return []string{t.Name, strings.Join(t.IDs, ","), boolStr(t.IsInternal), t.Note}
+		})
 }
 
 func baseModelTable(items []models.BaseModel) ([]string, [][]string) {
-	headers := []string{"NAME", "INTERNAL", "VENDOR", "TYPE", "VERSION", "STATUS", "FLAGS"}
-	rows := make([][]string, 0, len(items))
-	for _, m := range items {
-		rows = append(rows, []string{
-			m.Name,
-			m.InternalName,
-			m.Vendor,
-			m.Type,
-			m.Version,
-			m.Status,
-			m.GetFlags(),
+	return tableFromSlice(items,
+		[]string{"NAME", "INTERNAL", "VENDOR", "TYPE", "VERSION", "STATUS", "FLAGS"},
+		func(m models.BaseModel) []string {
+			return []string{m.Name, m.InternalName, m.Vendor, m.Type, m.Version, m.Status, m.GetFlags()}
 		})
-	}
-	return headers, rows
 }
 
 func gpuPoolTable(items []models.GpuPool) ([]string, [][]string) {
-	headers := []string{"NAME", "SHAPE", "SIZE", "CAPACITY TYPE"}
-	rows := make([][]string, 0, len(items))
-	for _, p := range items {
-		rows = append(rows, []string{
-			p.Name,
-			p.Shape,
-			fmt.Sprintf("%d", p.Size),
-			p.CapacityType,
+	return tableFromSlice(items,
+		[]string{"NAME", "SHAPE", "SIZE", "CAPACITY TYPE"},
+		func(p models.GpuPool) []string {
+			return []string{p.Name, p.Shape, fmt.Sprintf("%d", p.Size), p.CapacityType}
 		})
-	}
-	return headers, rows
 }
 
 func gpuNodeTable(grouped map[string][]models.GpuNode) ([]string, [][]string) {
-	headers := []string{"POOL", "NAME", "STATUS", "INSTANCE TYPE", "AGE"}
-	rows := make([][]string, 0)
-	for _, k := range sortedKeys(grouped) {
-		for _, n := range grouped[k] {
-			rows = append(rows, []string{k, n.Name, n.GetStatus(), n.InstanceType, n.Age})
-		}
-	}
-	return headers, rows
+	return tableFromGrouped(grouped,
+		[]string{"POOL", "NAME", "STATUS", "INSTANCE TYPE", "AGE"},
+		func(k string, n models.GpuNode) []string {
+			return []string{k, n.Name, n.GetStatus(), n.InstanceType, n.Age}
+		})
 }
 
 func dacTable(grouped map[string][]models.DedicatedAICluster) ([]string, [][]string) {
-	headers := []string{"TENANT", "NAME", "STATUS", "TYPE", "UNIT SHAPE", "SIZE", "MODEL"}
-	rows := make([][]string, 0)
-	for _, k := range sortedKeys(grouped) {
-		for _, d := range grouped[k] {
-			rows = append(rows, []string{
-				k, d.Name, d.Status, d.Type, d.UnitShape, fmt.Sprintf("%d", d.Size), d.ModelName,
-			})
-		}
-	}
-	return headers, rows
+	return tableFromGrouped(grouped,
+		[]string{"TENANT", "NAME", "STATUS", "TYPE", "UNIT SHAPE", "SIZE", "MODEL"},
+		func(k string, d models.DedicatedAICluster) []string {
+			return []string{k, d.Name, d.Status, d.Type, d.UnitShape, fmt.Sprintf("%d", d.Size), d.ModelName}
+		})
 }
 
 func tenancyOverrideTable[T models.NamedItem](grouped map[string][]T) ([]string, [][]string) {
-	headers := []string{"TENANT", "NAME"}
-	rows := make([][]string, 0)
-	for _, k := range sortedKeys(grouped) {
-		for _, v := range grouped[k] {
-			rows = append(rows, []string{k, v.GetName()})
-		}
-	}
-	return headers, rows
+	return tableFromGrouped(grouped,
+		[]string{"TENANT", "NAME"},
+		func(k string, v T) []string { return []string{k, v.GetName()} })
 }
 
 func limitDefinitionTable(items []models.LimitDefinition) ([]string, [][]string) {
-	headers := []string{"NAME", "DESCRIPTION", "SCOPE", "DEFAULT MIN", "DEFAULT MAX"}
-	rows := make([][]string, 0, len(items))
-	for _, d := range items {
-		rows = append(rows, []string{d.Name, d.Description, d.Scope, d.DefaultMin, d.DefaultMax})
-	}
-	return headers, rows
+	return tableFromSlice(items,
+		[]string{"NAME", "DESCRIPTION", "SCOPE", "DEFAULT MIN", "DEFAULT MAX"},
+		func(d models.LimitDefinition) []string {
+			return []string{d.Name, d.Description, d.Scope, d.DefaultMin, d.DefaultMax}
+		})
 }
 
 func definitionTable[T models.Definition](items []T) ([]string, [][]string) {
-	headers := []string{"NAME", "DESCRIPTION"}
-	rows := make([][]string, 0, len(items))
-	for _, d := range items {
-		rows = append(rows, []string{d.GetName(), d.GetDescription()})
-	}
-	return headers, rows
+	return tableFromSlice(items,
+		[]string{"NAME", "DESCRIPTION"},
+		func(d T) []string { return []string{d.GetName(), d.GetDescription()} })
 }
 
 func definitionOverrideTable[T models.DefinitionOverride](items []T) ([]string, [][]string) {
-	headers := []string{"NAME", "REGIONS"}
-	rows := make([][]string, 0, len(items))
-	for _, d := range items {
-		rows = append(rows, []string{d.GetName(), strings.Join(d.GetRegions(), ",")})
-	}
-	return headers, rows
+	return tableFromSlice(items,
+		[]string{"NAME", "REGIONS"},
+		func(d T) []string { return []string{d.GetName(), strings.Join(d.GetRegions(), ",")} })
 }
 
 func environmentTable(items []models.Environment) ([]string, [][]string) {
-	headers := []string{"NAME", "TYPE", "REGION", "REALM"}
-	rows := make([][]string, 0, len(items))
-	for _, e := range items {
-		rows = append(rows, []string{e.GetName(), e.Type, e.Region, e.Realm})
-	}
-	return headers, rows
+	return tableFromSlice(items,
+		[]string{"NAME", "TYPE", "REGION", "REALM"},
+		func(e models.Environment) []string {
+			return []string{e.GetName(), e.Type, e.Region, e.Realm}
+		})
 }
 
 func serviceTenancyTable(items []models.ServiceTenancy) ([]string, [][]string) {
-	headers := []string{"NAME", "REALM", "ENVIRONMENT", "HOME REGION", "REGIONS"}
-	rows := make([][]string, 0, len(items))
-	for _, s := range items {
-		rows = append(rows, []string{s.Name, s.Realm, s.Environment, s.HomeRegion, strings.Join(s.Regions, ",")})
-	}
-	return headers, rows
+	return tableFromSlice(items,
+		[]string{"NAME", "REALM", "ENVIRONMENT", "HOME REGION", "REGIONS"},
+		func(s models.ServiceTenancy) []string {
+			return []string{s.Name, s.Realm, s.Environment, s.HomeRegion, strings.Join(s.Regions, ",")}
+		})
 }
 
 func limitRegionalOverrideTable(items []models.LimitRegionalOverride) ([]string, [][]string) {
-	headers := []string{"NAME", "REGIONS"}
-	rows := make([][]string, 0, len(items))
-	for _, o := range items {
-		rows = append(rows, []string{o.Name, strings.Join(o.Regions, ",")})
-	}
-	return headers, rows
+	return tableFromSlice(items,
+		[]string{"NAME", "REGIONS"},
+		func(o models.LimitRegionalOverride) []string {
+			return []string{o.Name, strings.Join(o.Regions, ",")}
+		})
 }
 
 func modelArtifactTable(grouped map[string][]models.ModelArtifact) ([]string, [][]string) {
-	headers := []string{"MODEL", "NAME", "GPU CONFIG", "TENSORRT"}
-	rows := make([][]string, 0)
-	for _, k := range sortedKeys(grouped) {
-		for _, a := range grouped[k] {
-			rows = append(rows, []string{k, a.Name, a.GetGpuConfig(), a.TensorRTVersion})
-		}
-	}
-	return headers, rows
+	return tableFromGrouped(grouped,
+		[]string{"MODEL", "NAME", "GPU CONFIG", "TENSORRT"},
+		func(k string, a models.ModelArtifact) []string {
+			return []string{k, a.Name, a.GetGpuConfig(), a.TensorRTVersion}
+		})
 }
 
 func sortedKeys[T any](m map[string][]T) []string {
