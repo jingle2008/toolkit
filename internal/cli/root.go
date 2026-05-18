@@ -60,6 +60,7 @@ metadata_file: "" # Optional path to a YAML or JSON file with additional metadat
 
 	addPersistentFlags(rootCmd, &cfgFile, defaultKube, defaultConfig, defaultMetadata)
 	addInitCommand(rootCmd, defaultConfig, exampleConfig)
+	addConfigCommand(rootCmd, &cfgFile)
 	addCompletionCommand(rootCmd)
 	addVersionCheckCommand(rootCmd, version)
 	addGetCommand(rootCmd, &cfgFile)
