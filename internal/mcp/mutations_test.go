@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -256,9 +257,10 @@ func TestIntegration_ScaleGpuPoolTool_ResolverError(t *testing.T) {
 	assert.True(t, res.IsError, "expected IsError when resolver fails")
 }
 
-func TestIntegration_MutationTool_HonorsEnvOverride(t *testing.T) {
-	// confirm + per-call env_realm should flow into the env the
-	// handler sees, mirroring list_*'s envOverride behavior.
+func TestIntegration_MutationTool_HonorsEnvOverride_WhenAllowed(t *testing.T) {
+	// With MutationEnvOverrideAllowed=true, per-call env_* fields flow
+	// into the env the handler hands to the action — same semantics as
+	// list_* tools.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
@@ -271,7 +273,9 @@ func TestIntegration_MutationTool_HonorsEnvOverride(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	clientSess := newTestPair(t, ctx, stubLoader{}, rec)
+	clientSess := newTestPair(t, ctx, stubLoader{}, rec, func(c *config.Config) {
+		c.MutationEnvOverrideAllowed = true
+	})
 
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
@@ -287,6 +291,127 @@ func TestIntegration_MutationTool_HonorsEnvOverride(t *testing.T) {
 	assert.Equal(t, "us-phoenix-1", gotEnv.Region, "env_region override should reach the action")
 	// env_type wasn't overridden, so the startup default ("dev") wins.
 	assert.Equal(t, "dev", gotEnv.Type, "unset override field falls back to startup env")
+}
+
+func TestIntegration_MutationTool_IgnoresEnvOverride_WhenDisallowed(t *testing.T) {
+	// Default (MutationEnvOverrideAllowed=false): the agent's env_*
+	// fields are silently dropped. The action sees the startup env.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	var gotEnv models.Environment
+	orig := mcpDeleteDACFn
+	defer func() { mcpDeleteDACFn = orig }()
+	mcpDeleteDACFn = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ logging.Logger) error {
+		gotEnv = env
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(t, ctx, stubLoader{}, rec) // flag NOT set
+
+	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "delete_dac",
+		Arguments: map[string]any{
+			"name":       "dac-x",
+			"confirm":    true,
+			"env_realm":  "oc2",          // requested
+			"env_region": "us-phoenix-1", // requested
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "oc1", gotEnv.Realm, "env_realm override must be ignored")
+	assert.Equal(t, "us-ashburn-1", gotEnv.Region, "env_region override must be ignored")
+}
+
+// TestIntegration_MutationTool_PropagatesEnvOverride asserts the
+// override reaches every action's input across reboot/terminate/scale
+// — not just delete_dac. These three thread env through additional
+// hops (resolver, OCI client construction) where a future refactor
+// could accidentally drop it.
+func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	// reboot — env reaches the action AND the resolver.
+	var gotResolverEnv, gotActionEnv models.Environment
+	origResolve := mcpResolveGpuNodeFn
+	defer func() { mcpResolveGpuNodeFn = origResolve }()
+	mcpResolveGpuNodeFn = func(_ context.Context, _ *Server, env models.Environment, name, ocid string) (*models.GpuNode, error) {
+		gotResolverEnv = env
+		return &models.GpuNode{Name: name, ID: ocid}, nil
+	}
+	origReset := mcpSoftResetFn
+	defer func() { mcpSoftResetFn = origReset }()
+	mcpSoftResetFn = func(_ context.Context, _ *models.GpuNode, env models.Environment, _ logging.Logger) error {
+		gotActionEnv = env
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(t, ctx, stubLoader{}, rec, func(c *config.Config) {
+		c.MutationEnvOverrideAllowed = true
+	})
+
+	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "reboot_node",
+		Arguments: map[string]any{
+			"node":      "node-a",
+			"ocid":      "ocid1.instance.fake",
+			"confirm":   true,
+			"env_realm": "oc2",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "oc2", gotResolverEnv.Realm, "reboot resolver must see overridden realm")
+	assert.Equal(t, "oc2", gotActionEnv.Realm, "reboot action must see overridden realm")
+
+	// terminate — same shape, different action seam.
+	gotActionEnv = models.Environment{}
+	origTerm := mcpTerminateFn
+	defer func() { mcpTerminateFn = origTerm }()
+	mcpTerminateFn = func(_ context.Context, _ *models.GpuNode, env models.Environment, _ logging.Logger) error {
+		gotActionEnv = env
+		return nil
+	}
+	_, err = clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "terminate_node",
+		Arguments: map[string]any{
+			"node":      "node-a",
+			"ocid":      "ocid1.instance.fake",
+			"confirm":   true,
+			"env_realm": "oc2",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "oc2", gotActionEnv.Realm, "terminate action must see overridden realm")
+
+	// scale — env reaches pool resolver AND IncreasePoolSize.
+	gotResolverEnv = models.Environment{}
+	gotActionEnv = models.Environment{}
+	origPoolResolve := mcpResolveGpuPoolFn
+	defer func() { mcpResolveGpuPoolFn = origPoolResolve }()
+	mcpResolveGpuPoolFn = func(_ context.Context, _ *Server, env models.Environment, name string) (*models.GpuPool, error) {
+		gotResolverEnv = env
+		return &models.GpuPool{Name: name, ID: "ocid1.pool", Size: 4}, nil
+	}
+	origInc := mcpIncreasePoolSizeFn
+	defer func() { mcpIncreasePoolSizeFn = origInc }()
+	mcpIncreasePoolSizeFn = func(_ context.Context, _ *models.GpuPool, env models.Environment, _ logging.Logger) error {
+		gotActionEnv = env
+		return nil
+	}
+	_, err = clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "scale_gpu_pool",
+		Arguments: map[string]any{
+			"name":      "pool-a",
+			"confirm":   true,
+			"env_realm": "oc2",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "oc2", gotResolverEnv.Realm, "scale pool resolver must see overridden realm")
+	assert.Equal(t, "oc2", gotActionEnv.Realm, "scale action must see overridden realm")
 }
 
 func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {

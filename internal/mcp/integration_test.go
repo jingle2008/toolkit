@@ -107,15 +107,19 @@ func (r *recorder) snapshot() []*sdk.LoggingMessageParams {
 	return out
 }
 
-func newTestPair(t *testing.T, ctx context.Context, ld loader.Loader, rec *recorder) *sdk.ClientSession {
+func newTestPair(t *testing.T, ctx context.Context, ld loader.Loader, rec *recorder, opts ...func(*config.Config)) *sdk.ClientSession {
 	t.Helper()
+	cfg := config.Config{
+		RepoPath:  "/dev/null",
+		EnvType:   "dev",
+		EnvRegion: "us-ashburn-1",
+		EnvRealm:  "oc1",
+	}
+	for _, o := range opts {
+		o(&cfg)
+	}
 	srv := NewServer(
-		config.Config{
-			RepoPath:  "/dev/null",
-			EnvType:   "dev",
-			EnvRegion: "us-ashburn-1",
-			EnvRealm:  "oc1",
-		},
+		cfg,
 		ld,
 		logging.NewNoOpLogger(),
 		"test",

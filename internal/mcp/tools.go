@@ -249,4 +249,3 @@ func (s *Server) handleListAliases(_ context.Context, _ *sdk.CallToolRequest, _ 
 	sort.Slice(items, func(i, j int) bool { return items[i].Alias < items[j].Alias })
 	return jsonResult(items, nil)
 }
-

@@ -43,7 +43,6 @@ var gpuPoolResolverFn = func(ctx context.Context, cfg config.Config, env models.
 	return resolve.GpuPool(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name)
 }
 
-
 // validateMutationConfig checks the minimum settings a mutation
 // subcommand needs.
 //
@@ -166,11 +165,12 @@ func runMutation(
 		"phase", "begin",
 	)
 	if err := perform(ctx); err != nil {
-		logger.Errorw("mutation failed",
+		logger.Errorw("mutation",
 			"action", plan.Action,
 			"kind", plan.Kind,
 			"target", plan.Target,
 			"surface", plan.Surface,
+			"phase", "failed",
 			"error", err,
 		)
 		return err

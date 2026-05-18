@@ -24,6 +24,10 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().String("log_format", "console", "Log format: console|json|slog")
 	rootCmd.PersistentFlags().String("log_level", "", "Minimum log level: debug|info|warn|error (empty uses debug flag)")
+	rootCmd.PersistentFlags().Bool("mutation_env_override_allowed", false,
+		"Allow MCP mutation tools to override the startup env_realm/env_region/env_type per call. "+
+			"Default false: mutations only ever target the startup env even if the agent provides override fields. "+
+			"Enable only if the operator's credentials are intended to grant the agent multi-realm authority.")
 
 	// Hint shells that these flags take filenames (improves completion UX).
 	_ = rootCmd.MarkFlagFilename("config")

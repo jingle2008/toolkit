@@ -22,6 +22,15 @@ type Config struct {
 	Debug        bool   `mapstructure:"debug"`
 	Filter       string `mapstructure:"filter"`
 	MetadataFile string `mapstructure:"metadata_file"`
+	// MutationEnvOverrideAllowed opts MCP mutation tools into per-call
+	// env_type / env_region / env_realm overrides. Default false: tools
+	// silently fall back to the startup env, even if the agent provides
+	// override fields. The flip is meaningful: with the override
+	// allowed, a prompt-injection attack that sets confirm=true also
+	// controls which realm is targeted, so the operator's kubeconfig /
+	// OCI credentials decide the maximum blast radius — not the
+	// operator's startup-env choice.
+	MutationEnvOverrideAllowed bool `mapstructure:"mutation_env_override_allowed"`
 }
 
 /*
