@@ -72,9 +72,15 @@ cd toolkit && make
 
 ```zsh
 # From Homebrew (macOS/Linux)
-brew tap jingle2008/homebrew-toolkit
-brew install toolkit
+brew install jingle2008/tap/toolkit
 ```
+
+> **Already on the old `jingle2008/homebrew-toolkit` tap?** It's archived as of v0.3.x and won't receive new releases. Migrate with:
+> ```zsh
+> brew untap jingle2008/homebrew-toolkit
+> brew uninstall toolkit
+> brew install jingle2008/tap/toolkit
+> ```
 
 ---
 

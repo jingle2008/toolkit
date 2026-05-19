@@ -2,7 +2,7 @@
 
 End-to-end flows that compose toolkit's primitives. Each recipe is real and copy-pasteable — set the placeholder values once and the commands work as-is.
 
-> **Prerequisites.** A working `toolkit` install (`brew install jingle2008/toolkit/toolkit`) and a populated config:
+> **Prerequisites.** A working `toolkit` install (`brew install jingle2008/tap/toolkit`) and a populated config:
 > ```bash
 > toolkit init                    # scaffolds ~/.config/toolkit/config.yaml
 > $EDITOR ~/.config/toolkit/config.yaml

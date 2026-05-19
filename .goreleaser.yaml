@@ -105,7 +105,7 @@ brews:
     directory: Formula
     repository:
       owner: jingle2008
-      name: homebrew-toolkit
+      name: homebrew-tap
     homepage: https://github.com/jingle2008/toolkit
     description: "Toolkit CLI: cross-platform command-line tool for cloud & infra automation"
     install: |
@@ -121,6 +121,6 @@ homebrew_casks:
   - name: toolkit
     repository:
       owner: jingle2008
-      name: homebrew-toolkit
+      name: homebrew-tap
     homepage: "https://github.com/jingle2008/toolkit"
     description: "Toolkit CLI: cross-platform command-line tool for cloud and infrastructure automation"

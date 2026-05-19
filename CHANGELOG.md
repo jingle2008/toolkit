@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Breaking
+- Homebrew tap moved from `jingle2008/homebrew-toolkit` to the centralized `jingle2008/homebrew-tap`. Install command is now `brew install jingle2008/tap/toolkit`. Existing users need to `brew untap jingle2008/homebrew-toolkit && brew uninstall toolkit && brew install jingle2008/tap/toolkit`. The old tap is no longer updated.
+
+### Fixed
+- `brews:` block was restored (was removed in v0.3.0's deprecation cleanup, which broke Linuxbrew users) and its `test:` block now invokes `toolkit version` (subcommand) instead of `--version` (which never worked — the CLI doesn't accept it as a flag). `brew test toolkit` now passes on every install.
+
+### Added
+- macOS Developer ID code-signing + Apple notarytool submission via GoReleaser's `notarize.macos` block. Disabled until the five `MACOS_*` secrets are configured (see `docs/release/macos-notarization.md`); when active, drops the Gatekeeper quarantine prompt on first launch.
+
 ## [0.3.0] - 2026-05-19
 
 ### Breaking
