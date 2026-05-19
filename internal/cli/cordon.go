@@ -33,9 +33,33 @@ func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, verb string, w
 		dryRun bool
 		yes    bool
 	)
+	long := `Mark a Kubernetes node unschedulable. Existing pods stay
+where they are; new pods skip the node.
+
+The operation is idempotent: an already-cordoned node returns
+"already cordoned" with no error. Pair with ` + "`toolkit drain`" + ` if
+you want to actually evict the existing pods.
+
+Examples:
+  toolkit cordon gpu-node-42 --dry-run
+  toolkit cordon gpu-node-42 -y
+  toolkit cordon gpu-node-42                # interactive confirm`
+	if !want {
+		long = `Mark a Kubernetes node schedulable again. New pods can land
+on the node; existing assignments are unaffected.
+
+The operation is idempotent: an already-uncordoned node returns
+"already uncordoned" with no error.
+
+Examples:
+  toolkit uncordon gpu-node-42 --dry-run
+  toolkit uncordon gpu-node-42 -y
+  toolkit uncordon gpu-node-42              # interactive confirm`
+	}
 	cmd := &cobra.Command{
 		Use:   verb + " <node>",
 		Short: short,
+		Long:  long,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nodeName := args[0]
