@@ -25,6 +25,38 @@ It targets day-to-day DevOps & development automation: querying Kubernetes, pars
 | **Encoding helpers** | `internal/encoding/jsonutil` | Fast JSON pointer traversal |
 | **Error & logging** | `pkg/infra/logging` | Typed errors via std errors; zap logger |
 
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+    subgraph CFG ["Config sources"]
+        flags["CLI flags<br/>TOOLKIT_* env"]
+        file["~/.config/toolkit/config.yaml"]
+    end
+    flags --> viper((viper<br/>merge))
+    file --> viper
+    viper --> Cfg["config.Config"]
+
+    subgraph SRC ["Data sources"]
+        tf["Terraform repo<br/>(repo_path)"]
+        k8s["Kubernetes API<br/>(kubeconfig)"]
+        oci["OCI APIs<br/>(env_realm)"]
+    end
+
+    Cfg --> Loader
+    tf --> Loader
+    k8s --> Loader
+    oci --> Loader
+    Loader["internal/infra/loader<br/>(composite)"]
+
+    Loader --> TUI["TUI<br/>toolkit"]
+    Loader --> Get["Headless<br/>toolkit get / config / doctor"]
+    Loader --> MCP["MCP server<br/>toolkit mcp"]
+    Loader --> Mut["Mutations<br/>cordon · drain · reboot<br/>scale · delete · terminate"]
+```
+
+The loader composite is the single funnel every entry point goes through, so the four surfaces (TUI, headless `get`, MCP, mutations) all see identical data and the same partial-load semantics.
+
 ---
 
 ## Install
