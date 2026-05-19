@@ -72,6 +72,51 @@ signs:
       - ${artifact}
     signature: "${artifact}.sig"
 
+# Apple Developer ID code-signing + notarytool submission for the
+# darwin archives. Off until the operator wires up the secrets — see
+# docs/release/macos-notarization.md for the manual setup checklist.
+# When all four env vars are present the step runs automatically;
+# missing any one disables it (and the snapshot CI job stays green
+# locally and on PRs).
+notarize:
+  macos:
+    - enabled: '{{ and (isEnvSet "MACOS_SIGN_P12_BASE64") (isEnvSet "MACOS_SIGN_PASSWORD") (isEnvSet "MACOS_NOTARY_KEY") (isEnvSet "MACOS_NOTARY_KEY_ID") (isEnvSet "MACOS_NOTARY_ISSUER_ID") }}'
+      ids:
+        - toolkit
+      sign:
+        # base64-encoded Developer ID Application .p12 (decoded by quill)
+        certificate: "{{ .Env.MACOS_SIGN_P12_BASE64 }}"
+        password: "{{ .Env.MACOS_SIGN_PASSWORD }}"
+      notarize:
+        # App Store Connect API key, base64-encoded PEM
+        key: "{{ .Env.MACOS_NOTARY_KEY }}"
+        key_id: "{{ .Env.MACOS_NOTARY_KEY_ID }}"
+        issuer_id: "{{ .Env.MACOS_NOTARY_ISSUER_ID }}"
+        wait: true
+        timeout: 20m
+
+# Formula path: macOS Homebrew prefers Casks for CLI tools released as
+# prebuilt archives, but Linuxbrew has no Cask support — so a Formula
+# is still needed for Linux brew users. `brews:` is deprecated in v2
+# (warns at goreleaser check time) but functional; revisit if/when v3
+# removes it.
+brews:
+  - name: toolkit
+    directory: Formula
+    repository:
+      owner: jingle2008
+      name: homebrew-toolkit
+    homepage: https://github.com/jingle2008/toolkit
+    description: "Toolkit CLI: cross-platform command-line tool for cloud & infra automation"
+    install: |
+      bin.install "toolkit"
+    # The CLI exposes version as a subcommand, not a flag. Using
+    # --version would error with "unknown flag" and brew test would
+    # fail on every install (regression introduced before v0.2.0;
+    # fixed here).
+    test: |
+      system "#{bin}/toolkit", "version"
+
 homebrew_casks:
   - name: toolkit
     repository:
