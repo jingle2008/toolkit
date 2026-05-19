@@ -28,7 +28,7 @@ func fullCfgContents(repoPath, kubeconfig string) []byte {
 func TestDoctorCmd_AllPass(t *testing.T) {
 	tmp := t.TempDir()
 	repoDir := filepath.Join(tmp, "repo")
-	if err := os.Mkdir(repoDir, 0o755); err != nil {
+	if err := os.Mkdir(repoDir, 0o750); err != nil {
 		t.Fatalf("mkdir repo: %v", err)
 	}
 	kubePath := filepath.Join(tmp, "kube.yaml")
