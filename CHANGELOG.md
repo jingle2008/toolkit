@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-19
+
 ### Added
 - `toolkit get --limit N` and matching `limit` field on every MCP `list_*` tool. Applied after filtering (filter is fuzzy/client-side, so source-side limit at the K8s API would silently break "first N matching" semantics — see commit message for the audit). `0` = unlimited (matches `kubectl --limit`). For grouped categories the cap is across the whole flattened result, not per group.
 
