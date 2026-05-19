@@ -15,7 +15,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: go.mod
+
+      - name: Install syft (SBOM generator)
+        uses: anchore/sbom-action/download-syft@v0
 
       - name: Import GPG private key
         if: env.GPG_PRIVATE_KEY != ''
