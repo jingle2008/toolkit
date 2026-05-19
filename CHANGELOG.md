@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-19
+
+### Breaking
+- `GpuPool` JSON shape changed: fields now use lowercase / camelCase tags (`name`, `shape`, `actualSize`, `capacityType`, `isOkeManaged`, `availabilityDomain`) to match every other model in `pkg/models/`. Scripts that targeted `.Name` / `.Shape` etc. on `toolkit get gpupool -o json` or the MCP `list_gpu_pools` output need to switch to the lowercase keys.
+
+### Added
+- `toolkit doctor` — read-only health-check subcommand that aggregates the file-existence and schema checks scattered across the subcommands into one report. Each row is PASS / FAIL / SKIP with a remediation hint; exit non-zero on any FAIL. Renders `table` (default), `json`, or `yaml`.
+- `docs/recipes.md` — four end-to-end flows: wire `toolkit mcp` into Claude Desktop / Claude Code / Codex CLI; GPU node maintenance window (cordon → drain → reboot → uncordon); tenants → CSV / TSV → spreadsheet; daily GPU-pool digest to Slack via `jq` + `curl` (cron / launchd).
+- Architecture mermaid diagram in the README showing how config + data sources funnel through the loader into the four surfaces (TUI, headless `get`, MCP, mutations).
+
+### Changed
+- Every Kubernetes client call now has a 30s per-request timeout (`internal/infra/k8s/client.go`). A broken or unreachable cluster fails the spinner in seconds instead of hanging on TCP dial / TLS handshake. Override via `k8s.RequestTimeout` before any client is built; setting it to zero restores client-go's no-timeout default.
+- `release-drafter` autolabels PRs from conventional-commit prefixes (`feat:` / `fix:` / `refactor:` / `docs:` / etc.) and resolves the next version automatically (minor on `feat`, patch on most others, major on `breaking` label). Bumps the action to v6.
+- CI now exercises `.goreleaser.yaml` on every push/PR via a `release-snapshot` job, so config drift fails fast instead of on tag push.
+- `toolkit config --validate` is now schema-stable: pass and fail paths emit the same `{valid, config_file, error?}` shape; the redundant `config` key inside the `settings` map is dropped (the top-level `config_file` is authoritative); `--pretty` is exposed for parity with `toolkit get`.
+- `cordon` / `uncordon` `--help` now carries a `Long:` block with examples to match the other mutation subcommands.
+
+### Fixed
+- README mutation table referenced flags that didn't exist (`--confirm`; `--size` on `scale gpupool`). The actual flag is `--yes` / `-y`, and `scale gpupool` derives size from Terraform.
+- `docs/recipes.md` (introduced in this release) initially pointed `jq` at fictional fields (`.status` on GPU nodes; lowercase pool fields before the JSON-tag change; a `{status: .result}` shape in the audit log). Now matches the real envelope.
+- `.goreleaser.yaml` cleared all v2 deprecation warnings: `snapshot.name_template` → `version_template`; legacy `brews:` block removed in favor of `homebrew_casks:`; `homebrew_casks.binary` dropped (auto-detected).
+- `.github/workflows/release.yml` installs `syft` (was missing, killed the first v0.2.0 release attempt) and tracks Go version via `go-version-file: go.mod` instead of a hard pin.
+
 ## [0.2.0] - 2026-05-18
 
 This release adds a headless CLI surface, an MCP server, and node/pool mutation subcommands. Everything previously available only through the TUI is now scriptable.
