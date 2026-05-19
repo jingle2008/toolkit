@@ -164,4 +164,3 @@ func TestConfigCmd_YAMLDecodes(t *testing.T) {
 		t.Error("expected non-nil settings map after YAML decode")
 	}
 }
-
