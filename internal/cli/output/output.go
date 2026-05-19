@@ -58,7 +58,7 @@ func ParseFormat(s string) (Format, error) {
 // Options controls how renderers emit data.
 type Options struct {
 	Format    Format
-	NoHeaders bool // table only: omit header row
+	NoHeaders bool // table/csv/tsv: omit header row
 	Pretty    bool // json/yaml: pretty-print
 }
 

@@ -77,6 +77,73 @@ func TestConfigCmd_JSON_ParsesCleanly(t *testing.T) {
 	if _, ok := view.Settings["repo_path"]; !ok {
 		t.Errorf("expected repo_path in settings, got: %+v", view.Settings)
 	}
+	// The persistent --config flag is bound to viper, but writeConfigView
+	// strips it from settings to avoid a redundant copy of ConfigFile.
+	if _, ok := view.Settings["config"]; ok {
+		t.Errorf("settings should not contain redundant 'config' key, got: %+v", view.Settings)
+	}
+}
+
+func TestConfigCmd_EmptyConfigFlag(t *testing.T) {
+	// `--config ""` disables the config-file read path. The command must
+	// still produce a valid view (exists: false, empty config_file) rather
+	// than panicking or returning an error.
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"--config", "", "config", "-o", "json"})
+	stdout := new(bytes.Buffer)
+	cmd.SetOut(stdout)
+	cmd.SetErr(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("toolkit --config '' config: %v", err)
+	}
+
+	var view struct {
+		ConfigFile string         `json:"config_file"`
+		Exists     bool           `json:"exists"`
+		Settings   map[string]any `json:"settings"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &view); err != nil {
+		t.Fatalf("stdout is not valid JSON: %v\n%s", err, stdout.String())
+	}
+	if view.ConfigFile != "" {
+		t.Errorf("config_file = %q, want empty", view.ConfigFile)
+	}
+	if view.Exists {
+		t.Error("exists should be false when --config is empty")
+	}
+}
+
+func TestConfigCmd_PrettyFalseProducesCompactJSON(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"config", "-o", "json", "--pretty=false"})
+	stdout := new(bytes.Buffer)
+	cmd.SetOut(stdout)
+	cmd.SetErr(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("toolkit config -o json --pretty=false: %v", err)
+	}
+
+	out := stdout.String()
+	// Pretty-printed JSON contains a newline-indent sequence. Compact
+	// must not.
+	if strings.Contains(out, "\n  ") {
+		t.Errorf("expected compact JSON, got pretty:\n%s", out)
+	}
+	// Output should still parse as one JSON value.
+	var view struct {
+		ConfigFile string `json:"config_file"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &view); err != nil {
+		t.Fatalf("compact JSON output not parseable: %v\n%s", err, out)
+	}
 }
 
 func TestConfigCmd_ReadsExistingFile(t *testing.T) {
