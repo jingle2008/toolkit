@@ -205,6 +205,118 @@ func TestConfigCmd_InvalidFormat(t *testing.T) {
 	}
 }
 
+func TestConfigCmd_ValidatePasses(t *testing.T) {
+	tmp := t.TempDir()
+	cfgPath := filepath.Join(tmp, "cfg.yaml")
+	contents := []byte("repo_path: /tmp/repo\n" +
+		"env_type: dev\n" +
+		"env_region: us-phoenix-1\n" +
+		"env_realm: oc1\n" +
+		"category: tenant\n")
+	if err := os.WriteFile(cfgPath, contents, 0o600); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
+	t.Setenv("HOME", tmp)
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"--config", cfgPath, "config", "--validate", "-o", "json"})
+	stdout := new(bytes.Buffer)
+	cmd.SetOut(stdout)
+	cmd.SetErr(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("validate should pass, got: %v\nstdout: %s", err, stdout.String())
+	}
+
+	var view struct {
+		Valid      bool   `json:"valid"`
+		ConfigFile string `json:"config_file"`
+		Error      string `json:"error"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &view); err != nil {
+		t.Fatalf("stdout is not valid JSON: %v\n%s", err, stdout.String())
+	}
+	if !view.Valid {
+		t.Errorf("valid = false, want true; error: %q", view.Error)
+	}
+	if view.ConfigFile != cfgPath {
+		t.Errorf("config_file = %q, want %q", view.ConfigFile, cfgPath)
+	}
+	if view.Error != "" {
+		t.Errorf("error should be empty on pass, got: %q", view.Error)
+	}
+}
+
+func TestConfigCmd_ValidateFailsOnMissingFields(t *testing.T) {
+	// Seed a config that's syntactically valid but missing required
+	// fields. cfg.Validate() should reject it; the command should write
+	// the structured failure on stdout AND return a non-nil error to set
+	// exit code.
+	tmp := t.TempDir()
+	cfgPath := filepath.Join(tmp, "cfg.yaml")
+	if err := os.WriteFile(cfgPath, []byte("env_type: dev\n"), 0o600); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
+	t.Setenv("HOME", tmp)
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"--config", cfgPath, "config", "--validate", "-o", "json"})
+	stdout := new(bytes.Buffer)
+	cmd.SetOut(stdout)
+	cmd.SetErr(new(bytes.Buffer))
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected validation failure to return non-nil error, got nil")
+	}
+	if !strings.Contains(err.Error(), "config validation failed") {
+		t.Errorf("unexpected error wrapper: %v", err)
+	}
+
+	// Structured output is still emitted before the error path returns,
+	// so consumers can parse `.valid` and `.error` from stdout.
+	var view struct {
+		Valid bool   `json:"valid"`
+		Error string `json:"error"`
+	}
+	if jerr := json.Unmarshal(stdout.Bytes(), &view); jerr != nil {
+		t.Fatalf("stdout is not valid JSON: %v\n%s", jerr, stdout.String())
+	}
+	if view.Valid {
+		t.Error("valid should be false")
+	}
+	if view.Error == "" {
+		t.Error("error field should be populated on failure")
+	}
+}
+
+func TestConfigCmd_ValidateYAMLDefault(t *testing.T) {
+	// Default format is yaml; verify the shape is sane and the failure
+	// message reaches the human-readable output.
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"config", "--validate"})
+	stdout := new(bytes.Buffer)
+	cmd.SetOut(stdout)
+	cmd.SetErr(new(bytes.Buffer))
+	// Empty HOME means no defaults from a real file → validation fails.
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("expected validation failure under empty HOME, got nil")
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "valid: false") {
+		t.Errorf("expected `valid: false` in YAML output, got:\n%s", out)
+	}
+	if !strings.Contains(out, "error:") {
+		t.Errorf("expected `error:` line in YAML output, got:\n%s", out)
+	}
+}
+
 func TestConfigCmd_YAMLDecodes(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	viper.Reset()

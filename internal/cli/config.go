@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/jingle2008/toolkit/internal/cli/output"
+	"github.com/jingle2008/toolkit/internal/config"
 )
 
 // addConfigCommand wires `toolkit config`, a read-only inspection of
@@ -17,8 +18,9 @@ import (
 // Counterpart to `toolkit init`, which scaffolds the file.
 func addConfigCommand(rootCmd *cobra.Command, cfgFile *string) {
 	var (
-		format string
-		pretty bool
+		format   string
+		pretty   bool
+		validate bool
 	)
 	cmd := &cobra.Command{
 		Use:   "config",
@@ -31,25 +33,36 @@ Use this to inspect what's currently in effect without opening
 the file manually. The output includes the resolved config-file
 path and whether it exists on disk.
 
-Note: output may include local filesystem paths (repo_path,
-kubeconfig, log_file, metadata_file). Strip those before sharing
-the output in bug reports.
+With --validate, switch to validate mode: emit {valid, config_file,
+error?} and exit non-zero if the merged config wouldn't pass
+config.Validate (the same check the TUI runs before launching).
+Useful in CI/precondition checks: ` + "`toolkit config --validate || abort`" + `.
+
+Note: default-mode output may include local filesystem paths
+(repo_path, kubeconfig, log_file, metadata_file). Strip those
+before sharing the output in bug reports.
 
 Examples:
   toolkit config
   toolkit config -o json
   toolkit config -o json --pretty=false
+  toolkit config --validate
+  toolkit config --validate -o json
   toolkit --config /tmp/alt.yaml config`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			if err := readConfigFile(cfgFile); err != nil {
 				return err
 			}
+			if validate {
+				return writeConfigValidation(c.OutOrStdout(), *cfgFile, format, pretty)
+			}
 			return writeConfigView(c.OutOrStdout(), *cfgFile, format, pretty)
 		},
 	}
 	cmd.Flags().StringVarP(&format, "output", "o", "yaml", "yaml|json")
 	cmd.Flags().BoolVar(&pretty, "pretty", true, "pretty-print JSON/YAML output")
+	cmd.Flags().BoolVar(&validate, "validate", false, "validate the merged config; exit non-zero on failure")
 	_ = cmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"yaml", "json"}, cobra.ShellCompDirectiveNoFileComp
 	})
@@ -94,4 +107,57 @@ func writeConfigView(w io.Writer, cfgFile, format string, pretty bool) error {
 	default:
 		return fmt.Errorf("invalid output format %q (valid: yaml|json)", format)
 	}
+}
+
+// configValidationView is the shape printed in --validate mode. Kept
+// distinct from configView so consumers can rely on a stable schema
+// regardless of which mode the command ran in.
+type configValidationView struct {
+	Valid      bool   `json:"valid" yaml:"valid"`
+	ConfigFile string `json:"config_file" yaml:"config_file"`
+	Error      string `json:"error,omitempty" yaml:"error,omitempty"`
+}
+
+func writeConfigValidation(w io.Writer, cfgFile, format string, pretty bool) error {
+	var (
+		cfg      config.Config
+		validErr error
+	)
+	if err := viper.Unmarshal(&cfg); err != nil {
+		validErr = fmt.Errorf("unmarshal config: %w", err)
+	} else if err := cfg.Validate(); err != nil {
+		validErr = err
+	}
+	view := configValidationView{
+		Valid:      validErr == nil,
+		ConfigFile: cfgFile,
+	}
+	if validErr != nil {
+		view.Error = validErr.Error()
+	}
+
+	opts := output.Options{Pretty: pretty}
+	switch strings.ToLower(format) {
+	case "", "yaml":
+		opts.Format = output.FormatYAML
+		if err := output.WriteYAML(w, view, opts); err != nil {
+			return err
+		}
+	case "json":
+		opts.Format = output.FormatJSON
+		if err := output.WriteJSON(w, view, opts); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid output format %q (valid: yaml|json)", format)
+	}
+
+	if validErr != nil {
+		// Returning an error sets exit code non-zero. The structured
+		// output on stdout already explains the failure; cobra will
+		// additionally print this on stderr, which is the conventional
+		// shape for `if ! cmd; then` callers.
+		return fmt.Errorf("config validation failed: %w", validErr)
+	}
+	return nil
 }
