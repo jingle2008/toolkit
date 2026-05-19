@@ -154,57 +154,33 @@ func TestDoctorCmd_InvalidFormat(t *testing.T) {
 	}
 }
 
-func TestDoctorCmd_KubeconfigSkipWhenEmpty(t *testing.T) {
-	// kubeconfig is "" → SKIP (not FAIL), since some workflows don't
-	// need it. cfg.Validate() still requires KubeConfig in the schema,
-	// so we use --kubeconfig "" to clear viper's bound default and
-	// verify the SKIP path independently.
+// TestCheckPath_TableDriven covers checkPath in isolation so we can
+// assert each {required, value} permutation directly without dragging
+// cobra/viper state into the picture.
+func TestCheckPath_TableDriven(t *testing.T) {
 	tmp := t.TempDir()
-	repoDir := filepath.Join(tmp, "repo")
-	if err := os.Mkdir(repoDir, 0o755); err != nil {
-		t.Fatalf("mkdir repo: %v", err)
+	if err := os.WriteFile(filepath.Join(tmp, "f"), []byte("x"), 0o600); err != nil {
+		t.Fatalf("seed file: %v", err)
 	}
-	cfgPath := filepath.Join(tmp, "cfg.yaml")
-	contents := []byte(
-		"repo_path: " + repoDir + "\n" +
-			"kubeconfig: \"\"\n" +
-			"env_type: dev\n" +
-			"env_region: us-phoenix-1\n" +
-			"env_realm: oc1\n" +
-			"category: tenant\n",
-	)
-	if err := os.WriteFile(cfgPath, contents, 0o600); err != nil {
-		t.Fatalf("seed config: %v", err)
+	cases := []struct {
+		name     string
+		value    string
+		required bool
+		want     checkStatus
+	}{
+		{"required+empty", "", true, statusFail},
+		{"required+missing", filepath.Join(tmp, "missing"), true, statusFail},
+		{"required+present", filepath.Join(tmp, "f"), true, statusPass},
+		{"optional+empty", "", false, statusSkip},
+		{"optional+missing", filepath.Join(tmp, "missing"), false, statusFail},
+		{"optional+present", filepath.Join(tmp, "f"), false, statusPass},
 	}
-
-	t.Setenv("HOME", tmp)
-	viper.Reset()
-	t.Cleanup(viper.Reset)
-
-	cmd := NewRootCmd("vtest")
-	cmd.SetArgs([]string{"--config", cfgPath, "--kubeconfig", "", "doctor", "-o", "json"})
-	stdout := new(bytes.Buffer)
-	cmd.SetOut(stdout)
-	cmd.SetErr(new(bytes.Buffer))
-	// config_schema will FAIL because KubeConfig is required in
-	// config.Validate(); that's not what this test is asserting.
-	_ = cmd.Execute()
-
-	var results []checkResult
-	if err := json.Unmarshal(stdout.Bytes(), &results); err != nil {
-		t.Fatalf("stdout is not valid JSON: %v\n%s", err, stdout.String())
-	}
-	var kube *checkResult
-	for i := range results {
-		if results[i].Name == "kubeconfig" {
-			kube = &results[i]
-			break
-		}
-	}
-	if kube == nil {
-		t.Fatal("kubeconfig row missing from output")
-	}
-	if kube.Status != statusSkip {
-		t.Errorf("kubeconfig with empty value should be SKIP, got %s (%+v)", kube.Status, *kube)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := checkPath("x", tc.value, tc.required, "hint")
+			if got.Status != tc.want {
+				t.Errorf("status = %s, want %s (detail=%q)", got.Status, tc.want, got.Detail)
+			}
+		})
 	}
 }

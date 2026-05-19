@@ -80,14 +80,24 @@ type checkResult struct {
 }
 
 func runDoctor(w io.Writer, cfgFile, format string) error {
+	// Validate format before doing any work — a typo'd -o shouldn't
+	// stat the filesystem (and stays consistent with `config`).
+	normalized := strings.ToLower(format)
+	switch normalized {
+	case "", "table", "json", "yaml":
+	default:
+		return fmt.Errorf("invalid output format %q (valid: table|json|yaml)", format)
+	}
+
 	var cfg config.Config
 	unmarshalErr := viper.Unmarshal(&cfg)
-
 	results := collectChecks(cfgFile, cfg, unmarshalErr)
 
-	switch strings.ToLower(format) {
+	switch normalized {
 	case "", "table":
-		writeDoctorTable(w, results)
+		if err := writeDoctorTable(w, results); err != nil {
+			return err
+		}
 	case "json":
 		if err := output.WriteJSON(w, results, output.Options{Pretty: true}); err != nil {
 			return err
@@ -96,14 +106,10 @@ func runDoctor(w io.Writer, cfgFile, format string) error {
 		if err := output.WriteYAML(w, results, output.Options{Pretty: true}); err != nil {
 			return err
 		}
-	default:
-		return fmt.Errorf("invalid output format %q (valid: table|json|yaml)", format)
 	}
 
-	for _, r := range results {
-		if r.Status == statusFail {
-			return fmt.Errorf("doctor: %d check(s) failed", countFails(results))
-		}
+	if n := countFails(results); n > 0 {
+		return fmt.Errorf("doctor: %d check(s) failed", n)
 	}
 	return nil
 }
@@ -115,7 +121,13 @@ func collectChecks(cfgFile string, cfg config.Config, unmarshalErr error) []chec
 		checkConfigSchema(cfg, unmarshalErr),
 		checkConfigFile(cfgFile),
 		checkPath("repo_path", cfg.RepoPath, true, "set --repo_path or `repo_path:` in config.yaml"),
-		checkPath("kubeconfig", cfg.KubeConfig, false, "set --kubeconfig or run `kind/minikube/oke` setup"),
+		// kubeconfig is `required=true` to match config.Validate(): the
+		// TUI insists on it and the cluster-derived categories (BaseModel,
+		// GpuNode, DAC) refuse to load without it. If you only ever use
+		// repo-derived categories from `toolkit get` and want a SKIP
+		// instead of a FAIL, that's a future cfg.ValidateFor(category)
+		// feature — until then doctor must not contradict Validate.
+		checkPath("kubeconfig", cfg.KubeConfig, true, "set --kubeconfig or run `kind/minikube/oke` setup"),
 		checkMetadataFile(cfg.MetadataFile),
 	}
 }
@@ -230,15 +242,14 @@ func countFails(results []checkResult) int {
 	return n
 }
 
-func writeDoctorTable(w io.Writer, results []checkResult) {
+func writeDoctorTable(w io.Writer, results []checkResult) error {
 	headers := []string{"CHECK", "STATUS", "DETAIL", "HINT"}
 	rows := make([][]string, 0, len(results))
 	for _, r := range results {
 		rows = append(rows, []string{r.Name, string(r.Status), r.Detail, r.Hint})
 	}
-	// Errors from WriteTable can only happen on writer failure, which
-	// for stdout means the consumer hung up. Nothing we can do but
-	// swallow it — the deferred error path inside RunE is already
-	// where doctor surfaces non-zero exit.
-	_ = output.WriteTable(w, headers, rows, output.Options{})
+	// Propagate non-pipe errors. A broken pipe (the consumer hung up)
+	// is fine to surface as well — the cobra error path just sets exit
+	// non-zero, which is what the caller expects in that case.
+	return output.WriteTable(w, headers, rows, output.Options{})
 }
