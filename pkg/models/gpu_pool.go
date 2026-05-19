@@ -7,15 +7,15 @@ import (
 
 // GpuPool represents a pool of GPUs.
 type GpuPool struct {
-	ID                 string
-	Name               string
-	Shape              string
-	Size               int
-	ActualSize         int
-	Status             string
-	IsOkeManaged       bool
-	CapacityType       string
-	AvailabilityDomain string
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Shape              string `json:"shape"`
+	Size               int    `json:"size"`
+	ActualSize         int    `json:"actualSize"`
+	Status             string `json:"status"`
+	IsOkeManaged       bool   `json:"isOkeManaged"`
+	CapacityType       string `json:"capacityType"`
+	AvailabilityDomain string `json:"availabilityDomain"`
 }
 
 // GetName returns the name of the GPU pool.
