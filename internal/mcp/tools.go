@@ -14,40 +14,54 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// --- Grouped item wrappers ---------------------------------------
+// --- Grouped handling ---------------------------------------------
 //
-// MCP clients (and the SDK's reflection-based OutputSchema generator)
-// see these embedded shapes as a flat object with one extra field
-// holding the group key. That preserves the typed-schema benefit
-// the refactor was meant to deliver — previously the grouped handlers
-// returned []map[string]any (via output.FlattenWithKey), which is
-// opaque to the schema generator and shows up as a generic object.
-// Wire format is unchanged.
+// Two flatten paths:
+//
+//   - flattenGrouped: returns []T directly. Used when the group key
+//     is already a top-level field on the value (poolName on GpuNode,
+//     model_name on ModelArtifact). Injecting it again would just
+//     duplicate.
+//   - flattenGroupedTyped + a wrapper: used when the group key is NOT
+//     reliably a top-level field on the value (tenant for DAC). The
+//     wrapper struct embeds the value and adds the group key as a
+//     top-level JSON field.
+//
+// Either way the SDK reflects on the typed return for OutputSchema —
+// no map[string]any leakage.
 
-type gpuNodeWithPool struct {
-	Pool string `json:"pool"`
-	models.GpuNode
-}
-
+// dacWithTenant embeds the DAC value and adds the resolved tenant
+// name. Needed because DAC's own `Owner.Name` is nested (and `Owner`
+// may be nil for unmapped tenants); the map key is the only
+// authoritative source.
 type dacWithTenant struct {
 	Tenant string `json:"tenant"`
 	models.DedicatedAICluster
 }
 
-type modelArtifactWithModel struct {
-	Model string `json:"model"`
-	models.ModelArtifact
+// flattenGrouped concatenates a grouped map[string][]T into a flat
+// []T with deterministic key ordering. Use when the group key is
+// already preserved on each value.
+func flattenGrouped[T models.NamedFilterable](grouped map[string][]T, filter string) []T {
+	filtered := collections.FilterMapOrAll(grouped, normFilter(filter))
+	keys := make([]string, 0, len(filtered))
+	for k := range filtered {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]T, 0)
+	for _, k := range keys {
+		out = append(out, filtered[k]...)
+	}
+	return out
 }
 
-// flattenGroupedTyped is the typed counterpart to output.FlattenWithKey.
-// It applies the shared filter to the grouped map, sorts keys for
-// deterministic output, and wraps each (key, item) pair into W via
-// mkWrap — preserving Go type info through to the SDK schema generator.
+// flattenGroupedTyped is the typed counterpart to output.FlattenWithKey
+// for the wrapper path. mkWrap injects the group key into the output
+// value W. Preserves Go type info through to the SDK schema generator.
 //
-// Used by the three grouped read tools (list_gpu_nodes, list_dacs,
-// list_model_artifacts). The CLI's get path still uses
-// output.FlattenWithKey because CLI consumers don't care about
-// OutputSchema; only the MCP wire shape benefits from typing here.
+// Used only by handleListDACs today; flattenGrouped suffices for the
+// other grouped tools.
 func flattenGroupedTyped[T models.NamedFilterable, W any](
 	grouped map[string][]T,
 	filter string,
@@ -89,7 +103,7 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_nodes",
-		Description: "List GPU nodes across all pools as a flat array. Each item carries the originating pool via NodePool plus a `pool` field added by the server.",
+		Description: "List GPU nodes across all pools as a flat array. The originating pool is preserved on each item as `poolName`.",
 	}, s.handleListGpuNodes)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -109,7 +123,7 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_model_artifacts",
-		Description: "List model artifacts (object-storage paths) as a flat array. Each item carries the owning base-model name via `model`.",
+		Description: "List model artifacts (object-storage paths) as a flat array. The owning base-model name is preserved on each item as `model_name`.",
 	}, s.handleListModelArtifacts)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -189,15 +203,14 @@ func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolReques
 	return listFlatResult(items, in.Filter, warnings)
 }
 
-func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[gpuNodeWithPool], error) {
+func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GpuNode], error) {
 	grouped, err := s.loader.LoadGpuNodes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[gpuNodeWithPool]](ctx, req, "load gpu nodes", err)
+		return failTool[listResult[models.GpuNode]](ctx, req, "load gpu nodes", err)
 	}
-	flat := flattenGroupedTyped(grouped, in.Filter, func(pool string, n models.GpuNode) gpuNodeWithPool {
-		return gpuNodeWithPool{Pool: pool, GpuNode: n}
-	})
-	return jsonResult(flat, nil)
+	// No wrapper: GpuNode.NodePool (JSON `poolName`) already carries
+	// the group key. Wrapping would duplicate.
+	return jsonResult(flattenGrouped(grouped, in.Filter), nil)
 }
 
 func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[dacWithTenant], error) {
@@ -227,15 +240,14 @@ func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallTo
 	return listFlatResult(dataset.ServiceTenancies, in.Filter, nil)
 }
 
-func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[modelArtifactWithModel], error) {
+func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ModelArtifact], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[modelArtifactWithModel]](ctx, req, "load dataset", err)
+		return failTool[listResult[models.ModelArtifact]](ctx, req, "load dataset", err)
 	}
-	flat := flattenGroupedTyped(dataset.ModelArtifactMap, in.Filter, func(model string, a models.ModelArtifact) modelArtifactWithModel {
-		return modelArtifactWithModel{Model: model, ModelArtifact: a}
-	})
-	return jsonResult(flat, nil)
+	// No wrapper: ModelArtifact.ModelName (JSON `model_name`) already
+	// carries the group key.
+	return jsonResult(flattenGrouped(dataset.ModelArtifactMap, in.Filter), nil)
 }
 
 func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {

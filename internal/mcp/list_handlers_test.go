@@ -71,18 +71,16 @@ func (f *fakeGpuNodeLoader) LoadGpuNodes(context.Context, string, models.Environ
 	return f.nodes, nil
 }
 
-// assertGroupedWrapperShape drives one grouped list_* tool call,
-// round-trips StructuredContent through JSON, and runs the supplied
-// extra-assertions closure against the lone item. Used by all three
-// grouped-tool shape tests; factored to avoid `dupl` complaints
-// while keeping each call site readable.
-func assertGroupedWrapperShape(
+// assertGroupedItem drives one list_* tool call against a loader
+// scripted to return a single item, round-trips StructuredContent
+// through JSON, and hands the lone item to the supplied closure.
+// Shared by both flat and wrapper-shape tests so the boilerplate
+// (round-trip, count/length assertions) stays in one place.
+func assertGroupedItem(
 	t *testing.T,
 	toolName string,
 	ld loader.Loader,
-	expectGroupKey string,
-	expectGroupValue string,
-	extra func(t *testing.T, item map[string]any),
+	check func(t *testing.T, item map[string]any),
 ) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -105,28 +103,62 @@ func assertGroupedWrapperShape(
 	require.NoError(t, json.Unmarshal(scBytes, &env))
 	require.Equal(t, 1, env.Count)
 	require.Len(t, env.Items, 1)
-	item := env.Items[0]
-	assert.Equal(t, expectGroupValue, item[expectGroupKey],
-		"group key %q should be flattened to top level", expectGroupKey)
-	extra(t, item)
+	check(t, env.Items[0])
 }
 
-// TestList_GpuNodes_TypedWrapperShape pins the wire shape of the
-// grouped tool: each item is the flat union of GpuNode's JSON fields
-// plus a top-level `pool` key. This is the regression bait for the
-// "is it flattened?" review feedback that prompted the gpuNodeWithPool
-// wrapper to replace map[string]any.
-func TestList_GpuNodes_TypedWrapperShape(t *testing.T) {
+// assertGroupedWrapperShape is for tools that DO wrap the value with
+// an injected group key (e.g. list_dacs adds `tenant`). Verifies the
+// injected key is present alongside the embedded fields.
+func assertGroupedWrapperShape(
+	t *testing.T,
+	toolName string,
+	ld loader.Loader,
+	expectGroupKey string,
+	expectGroupValue string,
+	extra func(t *testing.T, item map[string]any),
+) {
+	t.Helper()
+	assertGroupedItem(t, toolName, ld, func(t *testing.T, item map[string]any) {
+		assert.Equal(t, expectGroupValue, item[expectGroupKey],
+			"group key %q should be flattened to top level", expectGroupKey)
+		extra(t, item)
+	})
+}
+
+// assertGroupedFlatShape is for tools that DON'T wrap (the group key
+// is already a value field — poolName on GpuNode, model_name on
+// ModelArtifact). The closure does its own assertions including
+// checking the redundant key is absent.
+func assertGroupedFlatShape(
+	t *testing.T,
+	toolName string,
+	ld loader.Loader,
+	check func(t *testing.T, item map[string]any),
+) {
+	t.Helper()
+	assertGroupedItem(t, toolName, ld, check)
+}
+
+// TestList_GpuNodes_FlatShape pins the wire shape: each item is a
+// GpuNode object with the originating pool already on it as
+// `poolName`. No wrapper, no separate `pool` field — the loader
+// always sets node.NodePool to the same value as the map key, so
+// injection would just duplicate. Regression bait against
+// accidentally re-wrapping in the future.
+func TestList_GpuNodes_FlatShape(t *testing.T) {
 	t.Parallel()
 	loader := &fakeGpuNodeLoader{
 		nodes: map[string][]models.GpuNode{
-			"pool-a": {{Name: "node-1", IsReady: true}},
+			"pool-a": {{Name: "node-1", NodePool: "pool-a", IsReady: true}},
 		},
 	}
-	assertGroupedWrapperShape(t, "list_gpu_nodes", loader, "pool", "pool-a",
+	assertGroupedFlatShape(t, "list_gpu_nodes", loader,
 		func(t *testing.T, item map[string]any) {
-			assert.Equal(t, "node-1", item["name"], "GpuNode.Name should be flat at top level")
-			assert.Equal(t, true, item["isReady"], "GpuNode.IsReady should be flat at top level")
+			assert.Equal(t, "pool-a", item["poolName"], "originating pool should come through as poolName")
+			assert.Equal(t, "node-1", item["name"])
+			assert.Equal(t, true, item["isReady"])
+			_, hasPool := item["pool"]
+			assert.False(t, hasPool, "redundant `pool` field should not be added (poolName carries it)")
 		})
 }
 
@@ -171,30 +203,33 @@ func TestList_DACs_TypedWrapperShape(t *testing.T) {
 		})
 }
 
-// TestList_ModelArtifacts_TypedWrapperShape — same pattern for the
-// third grouped tool. Completes the regression-bait set so any of
-// the three wrappers regressing fails a test.
-func TestList_ModelArtifacts_TypedWrapperShape(t *testing.T) {
+// TestList_ModelArtifacts_FlatShape pins the wire shape: each item
+// is a ModelArtifact with the originating base model already on it
+// as `model_name`. No `model` field is added — the loader writes
+// ModelName from the same Terraform key used as the map key.
+func TestList_ModelArtifacts_FlatShape(t *testing.T) {
 	t.Parallel()
 	loader := &fakeModelArtifactLoader{
 		artifacts: map[string][]models.ModelArtifact{
-			"cohere.command-r": {{Name: "artifact-1", TensorRTVersion: "9.2"}},
+			"cohere.command-r": {{Name: "artifact-1", ModelName: "cohere.command-r", TensorRTVersion: "9.2"}},
 		},
 	}
-	assertGroupedWrapperShape(t, "list_model_artifacts", loader, "model", "cohere.command-r",
+	assertGroupedFlatShape(t, "list_model_artifacts", loader,
 		func(t *testing.T, item map[string]any) {
-			assert.Equal(t, "artifact-1", item["name"], "ModelArtifact.Name should be flat at top level")
+			assert.Equal(t, "cohere.command-r", item["model_name"], "originating base model should come through as model_name")
+			assert.Equal(t, "artifact-1", item["name"])
 			assert.Equal(t, "9.2", item["tensorrt_version"])
+			_, hasModel := item["model"]
+			assert.False(t, hasModel, "redundant `model` field should not be added (model_name carries it)")
 		})
 }
 
-// TestGroupedWrapper_NoDuplicateGroupKey is the sentinel guard against
-// a future model gaining a `pool` / `tenant` / `model` JSON-tagged
-// field that would silently shadow (or duplicate) the wrapper's
-// group-key field on the wire. encoding/json picks the outer field
-// in Go, but the spec around duplicate JSON keys is undefined; the
-// test fails loudly the day a model adds such a field so we
-// re-architect rather than ship ambiguous output.
+// TestGroupedWrapper_NoDuplicateGroupKey is the sentinel guard
+// against a future model gaining a `tenant` JSON-tagged field that
+// would silently shadow (or duplicate) dacWithTenant's group-key
+// field on the wire. (GpuNode/ModelArtifact dropped their wrappers
+// — see TestList_*_FlatShape — because their group key is already
+// a value field; only DAC still needs a wrapper.)
 func TestGroupedWrapper_NoDuplicateGroupKey(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -203,25 +238,11 @@ func TestGroupedWrapper_NoDuplicateGroupKey(t *testing.T) {
 		groupKey string
 	}{
 		{
-			"gpuNodeWithPool",
-			func() ([]byte, error) {
-				return json.Marshal(gpuNodeWithPool{Pool: "p", GpuNode: models.GpuNode{Name: "n"}})
-			},
-			"pool",
-		},
-		{
 			"dacWithTenant",
 			func() ([]byte, error) {
 				return json.Marshal(dacWithTenant{Tenant: "t", DedicatedAICluster: models.DedicatedAICluster{Name: "d"}})
 			},
 			"tenant",
-		},
-		{
-			"modelArtifactWithModel",
-			func() ([]byte, error) {
-				return json.Marshal(modelArtifactWithModel{Model: "m", ModelArtifact: models.ModelArtifact{Name: "a"}})
-			},
-			"model",
 		},
 	}
 	for _, tc := range cases {

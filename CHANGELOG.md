@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Breaking
+- MCP `list_gpu_nodes` and `list_model_artifacts` no longer inject a `pool` / `model` top-level field — those duplicated the existing `poolName` / `model_name` fields the loader was already setting. Consumers should switch to reading `poolName` (GpuNode) or `model_name` (ModelArtifact). `list_dacs` keeps its `tenant` top-level field — the value's `Owner.Name` is nested and the pointer can be nil for unmapped tenants, so the wrapper still adds information.
+
 ## [0.3.1] - 2026-05-19
 
 ### Breaking
