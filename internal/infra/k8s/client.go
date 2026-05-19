@@ -6,12 +6,31 @@ package k8s
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+// DefaultRequestTimeout caps every client-go call so a broken or
+// unreachable cluster fails fast instead of hanging on a TCP dial /
+// TLS handshake. Without it, an interactive run sits on the spinner
+// until SIGINT — see https://pkg.go.dev/k8s.io/client-go/rest#Config
+// ("Timeout: the maximum length of time to wait before giving up on
+// a server request. A value of zero means no timeout.").
+//
+// Override via the package-level RequestTimeout variable from main()
+// if a different bound is desired; tests use this seam to short-circuit
+// for unit tests that should fail fast.
+var DefaultRequestTimeout = 30 * time.Second
+
+// RequestTimeout is the per-call timeout applied to every rest.Config
+// returned by NewConfig. Initialized to DefaultRequestTimeout; can be
+// overridden at startup before any client is built. A zero value
+// disables the timeout (matches client-go's default of "no timeout").
+var RequestTimeout = DefaultRequestTimeout
 
 // NewConfig loads a rest.Config from kubeconfig/context.
 func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
@@ -28,6 +47,13 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	}
 	if config.Burst == 0 {
 		config.Burst = 40
+	}
+	// Per-call deadline. Bounded so a broken cluster fails the
+	// spinner in seconds, not 75+ seconds of TCP dial wait. Respect
+	// an explicit Timeout already set on the config (loaded from
+	// kubeconfig).
+	if config.Timeout == 0 && RequestTimeout > 0 {
+		config.Timeout = RequestTimeout
 	}
 	// Identify this client in user agent.
 	rest.AddUserAgent(config, "toolkit")
