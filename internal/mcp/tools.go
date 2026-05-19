@@ -16,32 +16,15 @@ import (
 
 // --- Grouped handling ---------------------------------------------
 //
-// Two flatten paths:
-//
-//   - flattenGrouped: returns []T directly. Used when the group key
-//     is already a top-level field on the value (poolName on GpuNode,
-//     model_name on ModelArtifact). Injecting it again would just
-//     duplicate.
-//   - flattenGroupedTyped + a wrapper: used when the group key is NOT
-//     reliably a top-level field on the value (tenant for DAC). The
-//     wrapper struct embeds the value and adds the group key as a
-//     top-level JSON field.
-//
-// Either way the SDK reflects on the typed return for OutputSchema —
-// no map[string]any leakage.
-
-// dacWithTenant embeds the DAC value and adds the resolved tenant
-// name. Needed because DAC's own `Owner.Name` is nested (and `Owner`
-// may be nil for unmapped tenants); the map key is the only
-// authoritative source.
-type dacWithTenant struct {
-	Tenant string `json:"tenant"`
-	models.DedicatedAICluster
-}
-
 // flattenGrouped concatenates a grouped map[string][]T into a flat
-// []T with deterministic key ordering; applies filter + limit. Use
-// when the group key is already preserved on each value.
+// []T with deterministic key ordering; applies filter + limit. Used
+// by every grouped list_* tool: each model already carries its group
+// key as a top-level field (GpuNode.NodePool → poolName,
+// DedicatedAICluster.TenantID → tenantId, ModelArtifact.ModelName →
+// model_name), so wrapping with an injected key would just duplicate.
+//
+// The SDK reflects on the typed return for OutputSchema — no
+// map[string]any leakage.
 func flattenGrouped[T models.NamedFilterable](grouped map[string][]T, filter string, limit int) []T {
 	filtered := collections.FilterMapOrAll(grouped, normFilter(filter))
 	keys := make([]string, 0, len(filtered))
@@ -56,91 +39,63 @@ func flattenGrouped[T models.NamedFilterable](grouped map[string][]T, filter str
 	return collections.TruncateSlice(out, limit)
 }
 
-// flattenGroupedTyped is the typed counterpart to output.FlattenWithKey
-// for the wrapper path. mkWrap injects the group key into the output
-// value W. Preserves Go type info through to the SDK schema generator;
-// applies filter + limit.
-//
-// Used only by handleListDACs today; flattenGrouped suffices for the
-// other grouped tools.
-func flattenGroupedTyped[T models.NamedFilterable, W any](
-	grouped map[string][]T,
-	filter string,
-	limit int,
-	mkWrap func(key string, item T) W,
-) []W {
-	filtered := collections.FilterMapOrAll(grouped, normFilter(filter))
-	keys := make([]string, 0, len(filtered))
-	for k := range filtered {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	out := make([]W, 0)
-	for _, k := range keys {
-		for _, item := range filtered[k] {
-			out = append(out, mkWrap(k, item))
-		}
-	}
-	return collections.TruncateSlice(out, limit)
-}
-
 // registerTools attaches the read-only category tools to s.server.
 // Tool naming convention: list_<category>, mirroring how kubectl /
 // gh expose list operations.
 func registerTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_tenants",
-		Description: "List tenants in the configured realm. Returns Tenant objects {name, ids, is_internal, note}.",
+		Description: "List tenants in the configured realm. Returns Tenant objects {name, ids, is_internal, note}. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListTenants)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_base_models",
-		Description: "List base models loaded from the cluster. Returns BaseModel objects {name, internalName, displayName, vendor, type, version, status, maxTokens, ...}.",
+		Description: "List base models loaded from the cluster. Returns BaseModel objects {name, internalName, displayName, vendor, type, version, status, maxTokens, ...}. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListBaseModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_pools",
-		Description: "List GPU pools (self-managed instance pools, self-managed cluster networks, and OKE-managed nodepools). Returns GpuPool objects. Warnings field is populated when one or more pool sources fail to resolve.",
+		Description: "List GPU pools (self-managed instance pools, self-managed cluster networks, and OKE-managed nodepools). Returns GpuPool objects. Warnings field is populated when one or more pool sources fail to resolve. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListGpuPools)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_nodes",
-		Description: "List GPU nodes across all pools as a flat array. The originating pool is preserved on each item as `poolName`.",
+		Description: "List GPU nodes across all pools as a flat array. The originating pool is preserved on each item as `poolName`. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListGpuNodes)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_dacs",
-		Description: "List dedicated AI clusters as a flat array. Each item carries the owning tenant via Owner.Name plus a `tenant` field added by the server.",
+		Description: "List dedicated AI clusters as a flat array. The owning tenant is preserved on each item as `tenantId`. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListDACs)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_environments",
-		Description: "List all known toolkit environments (type/region/realm tuples). No env_override needed; returns all envs visible to the configured repo.",
+		Description: "List all known toolkit environments (type/region/realm tuples). No env_override needed; returns all envs visible to the configured repo. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListEnvironments)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_service_tenancies",
-		Description: "List service tenancies declared in the toolkit repo. Returns ServiceTenancy objects {name, realm, home_region, regions, environment}.",
+		Description: "List service tenancies declared in the toolkit repo. Returns ServiceTenancy objects {name, realm, home_region, regions, environment}. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListServiceTenancies)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_model_artifacts",
-		Description: "List model artifacts (object-storage paths) as a flat array. The owning base-model name is preserved on each item as `model_name`.",
+		Description: "List model artifacts (object-storage paths) as a flat array. The owning base-model name is preserved on each item as `model_name`. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListModelArtifacts)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_definitions",
-		Description: "List definitions of the given kind. `kind` must be one of: limit, console_property, property.",
+		Description: "List definitions of the given kind. `kind` must be one of: limit, console_property, property. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListDefinitions)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_tenancy_overrides",
-		Description: "List tenancy-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property. Each item carries the owning tenant via `tenant`.",
+		Description: "List tenancy-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property. Each item carries the owning tenant via `tenant`. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListTenancyOverrides)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_regional_overrides",
-		Description: "List regional-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property.",
+		Description: "List regional-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListRegionalOverrides)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -216,15 +171,15 @@ func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolReques
 	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
-func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[dacWithTenant], error) {
+func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.DedicatedAICluster], error) {
 	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[dacWithTenant]](ctx, req, "load dedicated AI clusters", err)
+		return failTool[listResult[models.DedicatedAICluster]](ctx, req, "load dedicated AI clusters", err)
 	}
-	flat := flattenGroupedTyped(grouped, in.Filter, in.Limit, func(tenant string, d models.DedicatedAICluster) dacWithTenant {
-		return dacWithTenant{Tenant: tenant, DedicatedAICluster: d}
-	})
-	return jsonResult(flat, nil)
+	// No wrapper: the loader keys this map by dac.TenantID
+	// (internal/infra/k8s/dac.go:157), which is already the flat
+	// `tenantId` field on each value. Wrapping would duplicate.
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
 func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Environment], error) {

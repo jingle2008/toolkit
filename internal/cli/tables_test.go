@@ -194,7 +194,7 @@ func TestWriteMap_Formats(t *testing.T) {
 	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a"}}}
 	for _, fmt := range []output.Format{output.FormatJSON, output.FormatJSONL, output.FormatYAML, output.FormatTable} {
 		var buf bytes.Buffer
-		err := writeMap(&buf, grouped, 0, output.Options{Format: fmt}, gpuNodeTable, "")
+		err := writeMapFlat(&buf, grouped, 0, output.Options{Format: fmt}, gpuNodeTable)
 		require.NoError(t, err, "format=%s", fmt)
 		got := buf.String()
 		assert.True(t, strings.Contains(got, "n1") || strings.Contains(got, "pool-a"),
@@ -202,7 +202,7 @@ func TestWriteMap_Formats(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, 0, output.Options{Format: "toml"}, gpuNodeTable, "")
+	err := writeMapFlat(&buf, grouped, 0, output.Options{Format: "toml"}, gpuNodeTable)
 	require.Error(t, err)
 }
 
@@ -215,7 +215,7 @@ func TestWriteMap_GpuNodes_NoInjectedPoolField(t *testing.T) {
 	t.Parallel()
 	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a", IsReady: true}}}
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, gpuNodeTable, "")
+	err := writeMapFlat(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, gpuNodeTable)
 	require.NoError(t, err)
 
 	var arr []map[string]any
@@ -263,7 +263,7 @@ func TestWriteMap_Limit_CapsAcrossGroups(t *testing.T) {
 		"pool-b": {{Name: "b1", NodePool: "pool-b"}, {Name: "b2", NodePool: "pool-b"}},
 	}
 	var buf bytes.Buffer
-	require.NoError(t, writeMap(&buf, grouped, 3, output.Options{Format: output.FormatJSON, Pretty: true}, gpuNodeTable, ""))
+	require.NoError(t, writeMapFlat(&buf, grouped, 3, output.Options{Format: output.FormatJSON, Pretty: true}, gpuNodeTable))
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
 	assert.Len(t, arr, 3, "limit=3 across 4 flattened items should yield 3")
@@ -272,22 +272,26 @@ func TestWriteMap_Limit_CapsAcrossGroups(t *testing.T) {
 	assert.Equal(t, "b1", arr[2]["name"], "should spill into pool-b's first item")
 }
 
-// TestWriteMap_DACs_InjectsTenant pins the opposite contract for
-// DACs: tenant is NOT a top-level field on the DAC struct (Owner is
-// nested + nilable), so the wrapper injection must still happen.
-func TestWriteMap_DACs_InjectsTenant(t *testing.T) {
+// TestWriteMap_DACs_NoInjectedTenantField pins the no-inject contract
+// for DAC: the loader keys by dac.TenantID
+// (internal/infra/k8s/dac.go:157), and that value is already on the
+// model as the flat `tenantId` field. Injecting `tenant` would just
+// duplicate. Regression bait against accidentally re-wrapping.
+func TestWriteMap_DACs_NoInjectedTenantField(t *testing.T) {
 	t.Parallel()
 	grouped := map[string][]models.DedicatedAICluster{
-		"acme": {{Name: "dac-1", Status: "READY"}},
+		"acme": {{Name: "dac-1", Status: "READY", TenantID: "acme"}},
 	}
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, dacTable, "tenant")
+	err := writeMapFlat(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, dacTable)
 	require.NoError(t, err)
 
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
 	require.Len(t, arr, 1)
 	item := arr[0]
-	assert.Equal(t, "acme", item["tenant"], "tenant key must be injected for DAC since Owner.Name is nested + nilable")
+	assert.Equal(t, "acme", item["tenantId"], "originating tenant should come through as tenantId")
 	assert.Equal(t, "dac-1", item["name"])
+	_, hasTenant := item["tenant"]
+	assert.False(t, hasTenant, "redundant `tenant` field should not be injected")
 }

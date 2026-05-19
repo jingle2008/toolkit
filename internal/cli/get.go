@@ -215,13 +215,16 @@ func emitCategory(
 		// No top-level `pool` injection: GpuNode.NodePool (json
 		// `poolName`) already carries the group key; the loader sets
 		// it from the same value used as the map key.
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, gpuNodeTable, "")
+		return writeMapFlat(w, collections.FilterMapOrAll(grouped, filter), limit, opts, gpuNodeTable)
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load dedicated AI clusters: %w", err)
 		}
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, dacTable, "tenant")
+		// No top-level `tenant` injection: the loader keys this map
+		// by dac.TenantID (internal/infra/k8s/dac.go:157), which is
+		// already the flat `tenantId` field on each value.
+		return writeMapFlat(w, collections.FilterMapOrAll(grouped, filter), limit, opts, dacTable)
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
 		domain.ConsolePropertyTenancyOverride,
@@ -293,23 +296,38 @@ func writeSlice[T any](
 	}
 }
 
-// writeMap renders a grouped slice. For json/jsonl/yaml two flatten
-// paths exist:
+// writeMapFlat renders a grouped slice without injecting the map key
+// into each value. Use when the group key is already preserved on T
+// (GpuNode.NodePool → poolName, DedicatedAICluster.TenantID →
+// tenantId, ModelArtifact.ModelName → model_name) so injecting it
+// again would duplicate.
 //
-//   - groupField != "" — flatten with key injection via
-//     output.FlattenWithKey. Use when the group key isn't reliably a
-//     field on T (e.g. tenant name on DAC, where Owner.Name is nested
-//     and may be nil; or tenancy overrides where TenantID/Tag comes
-//     from JSON file contents, not the directory name).
-//   - groupField == "" — plain output.Flatten that returns []T. Use
-//     when the group key is already preserved on T (GpuNode.NodePool
-//     → poolName, ModelArtifact.ModelName → model_name) so injecting
-//     it again would duplicate.
+// The table/csv/tsv paths go through `toTable`, which still adds the
+// group key as a column for visual grouping.
+func writeMapFlat[T any](
+	w writer,
+	grouped map[string][]T,
+	limit int,
+	opts output.Options,
+	toTable func(map[string][]T) (headers []string, rows [][]string),
+) error {
+	switch opts.Format {
+	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
+		return writeEncoded(w, opts, collections.TruncateSlice(output.Flatten(grouped), limit))
+	case output.FormatTable, output.FormatCSV, output.FormatTSV:
+		return writeGroupedTable(w, grouped, limit, opts, toTable)
+	default:
+		return fmt.Errorf("unsupported format %q", opts.Format)
+	}
+}
+
+// writeMapWithKey renders a grouped slice and injects the map key as
+// groupField on each emitted object. Use when the group key isn't a
+// field on T (e.g. tenancy overrides, where TenantID/Tag comes from
+// JSON file contents, not the directory name used as the map key).
 //
-// The table/csv/tsv paths are unaffected — they always go through
-// `toTable`, which adds the group key as a column for the visual
-// organizer benefit.
-func writeMap[T any](
+// The table/csv/tsv paths go through `toTable`, same as writeMapFlat.
+func writeMapWithKey[T any](
 	w writer,
 	grouped map[string][]T,
 	limit int,
@@ -317,33 +335,52 @@ func writeMap[T any](
 	toTable func(map[string][]T) (headers []string, rows [][]string),
 	groupField string,
 ) error {
-	flattenAny := func() any {
-		if groupField == "" {
-			return collections.TruncateSlice(output.Flatten(grouped), limit)
-		}
-		return collections.TruncateSlice(output.FlattenWithKey(grouped, groupField), limit)
-	}
 	switch opts.Format {
-	case output.FormatJSON:
-		return output.WriteJSON(w, flattenAny(), opts)
-	case output.FormatJSONL:
-		return output.WriteJSONL(w, flattenAny(), opts)
-	case output.FormatYAML:
-		return output.WriteYAML(w, flattenAny(), opts)
-	case output.FormatTable:
-		headers, rows := toTable(grouped)
-		rows = collections.TruncateSlice(rows, limit)
-		return output.WriteTable(w, headers, rows, opts)
-	case output.FormatCSV:
-		headers, rows := toTable(grouped)
-		rows = collections.TruncateSlice(rows, limit)
-		return output.WriteDelimited(w, headers, rows, opts, ',')
-	case output.FormatTSV:
-		headers, rows := toTable(grouped)
-		rows = collections.TruncateSlice(rows, limit)
-		return output.WriteDelimited(w, headers, rows, opts, '\t')
+	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
+		return writeEncoded(w, opts, collections.TruncateSlice(output.FlattenWithKey(grouped, groupField), limit))
+	case output.FormatTable, output.FormatCSV, output.FormatTSV:
+		return writeGroupedTable(w, grouped, limit, opts, toTable)
 	default:
 		return fmt.Errorf("unsupported format %q", opts.Format)
+	}
+}
+
+// writeEncoded dispatches the json/jsonl/yaml branches for an
+// already-flattened items slice. Shared between writeMapFlat and
+// writeMapWithKey so the two only differ in the flatten step.
+func writeEncoded(w writer, opts output.Options, items any) error {
+	switch opts.Format {
+	case output.FormatJSON:
+		return output.WriteJSON(w, items, opts)
+	case output.FormatJSONL:
+		return output.WriteJSONL(w, items, opts)
+	case output.FormatYAML:
+		return output.WriteYAML(w, items, opts)
+	default:
+		return fmt.Errorf("unsupported encoded format %q", opts.Format)
+	}
+}
+
+// writeGroupedTable dispatches the table/csv/tsv branches for grouped
+// data; the toTable renderer adds the group key as a column.
+func writeGroupedTable[T any](
+	w writer,
+	grouped map[string][]T,
+	limit int,
+	opts output.Options,
+	toTable func(map[string][]T) (headers []string, rows [][]string),
+) error {
+	headers, rows := toTable(grouped)
+	rows = collections.TruncateSlice(rows, limit)
+	switch opts.Format {
+	case output.FormatTable:
+		return output.WriteTable(w, headers, rows, opts)
+	case output.FormatCSV:
+		return output.WriteDelimited(w, headers, rows, opts, ',')
+	case output.FormatTSV:
+		return output.WriteDelimited(w, headers, rows, opts, '\t')
+	default:
+		return fmt.Errorf("unsupported grouped-table format %q", opts.Format)
 	}
 }
 
@@ -359,13 +396,13 @@ func emitTenancyGroup(
 	case domain.Tenant:
 		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, tenantTable)
 	case domain.LimitTenancyOverride:
-		return writeMap(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), limit, opts,
+		return writeMapWithKey(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), limit, opts,
 			tenancyOverrideTable[models.LimitTenancyOverride], "tenant")
 	case domain.ConsolePropertyTenancyOverride:
-		return writeMap(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), limit, opts,
+		return writeMapWithKey(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), limit, opts,
 			tenancyOverrideTable[models.ConsolePropertyTenancyOverride], "tenant")
 	case domain.PropertyTenancyOverride:
-		return writeMap(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), limit, opts,
+		return writeMapWithKey(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), limit, opts,
 			tenancyOverrideTable[models.PropertyTenancyOverride], "tenant")
 	default:
 		return fmt.Errorf("category %s not in tenancy group", cat)
@@ -405,7 +442,7 @@ func emitFromDataset(
 		// No top-level `model` injection: ModelArtifact.ModelName
 		// (json `model_name`) already carries the group key; the
 		// loader sets it from the same Terraform key used for the map.
-		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), limit, opts, modelArtifactTable, "")
+		return writeMapFlat(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), limit, opts, modelArtifactTable)
 	default:
 		return fmt.Errorf("category %s is not supported by `toolkit get`", cat)
 	}

@@ -81,10 +81,9 @@ func WriteJSON(w io.Writer, items any, opts Options) error {
 // (each element becomes a line) or any single JSON-encodable value
 // (emitted as one line).
 //
-// Grouped/map data should be flattened with FlattenWithKey before
-// reaching this function — callers pick the group field name
-// (`pool`, `tenant`, `model`, …) explicitly rather than relying on
-// a magic key.
+// Grouped/map data should be flattened with Flatten (when the group
+// key is already a field on the value) or FlattenWithKey (when the
+// caller needs to inject the map key) before reaching this function.
 func WriteJSONL(w io.Writer, items any, _ Options) error {
 	if items == nil {
 		return nil
@@ -139,7 +138,7 @@ func FlattenWithKey[T any](grouped map[string][]T, groupField string) []map[stri
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	var out []map[string]any
+	out := make([]map[string]any, 0)
 	for _, k := range keys {
 		for _, v := range grouped[k] {
 			raw, err := json.Marshal(v)
