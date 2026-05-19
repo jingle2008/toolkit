@@ -30,6 +30,7 @@ func addGetCommand(rootCmd *cobra.Command, cfgFile *string) {
 		format    string
 		noHeaders bool
 		pretty    bool
+		limit     int
 	)
 	getCmd := &cobra.Command{
 		Use:   "get <category>",
@@ -43,6 +44,7 @@ Examples:
   toolkit get basemodel -f cohere -o yaml
   toolkit get tenant -o csv > tenants.csv
   toolkit get gpupool -o tsv | cut -f1,3
+  toolkit get tenant --limit 10
 
 Category aliases match the TUI (e.g. "tenant"/"t", "gpunode"/"gn",
 "dac", "basemodel"/"bm"). Run with shell completion enabled to
@@ -51,18 +53,19 @@ discover them.`,
 		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 			return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
 		},
-		RunE: runGet(cfgFile, &format, &noHeaders, &pretty),
+		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit),
 	}
 	getCmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|jsonl|yaml|csv|tsv")
 	getCmd.Flags().BoolVar(&noHeaders, "no-headers", false, "omit header row (table/csv/tsv only)")
 	getCmd.Flags().BoolVar(&pretty, "pretty", true, "pretty-print JSON/YAML output")
+	getCmd.Flags().IntVar(&limit, "limit", 0, "max items to return after filter; 0 = unlimited. For grouped categories the cap is across the whole flattened result, not per group.")
 	_ = getCmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"table", "json", "jsonl", "yaml", "csv", "tsv"}, cobra.ShellCompDirectiveNoFileComp
 	})
 	rootCmd.AddCommand(getCmd)
 }
 
-func runGet(cfgFile *string, format *string, noHeaders, pretty *bool) func(cmd *cobra.Command, args []string) error {
+func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		cat, err := domain.ParseCategory(args[0])
 		if err != nil {
@@ -109,7 +112,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool) func(cmd *
 		filter := strings.ToLower(strings.TrimSpace(cfg.Filter))
 		opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty}
 
-		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, opts)
+		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, *limit, opts)
 	}
 }
 
@@ -177,19 +180,20 @@ func emitCategory(
 	cfg config.Config,
 	env models.Environment,
 	filter string,
+	limit int,
 	opts output.Options,
 ) error {
 	switch cat {
 	case domain.Alias:
 		// Static enum dump — no loader call. Handled before the default
 		// branch so it can run without repo_path or env_* set.
-		return writeAliases(w, filter, opts)
+		return writeAliases(w, filter, limit, opts)
 	case domain.BaseModel:
 		items, err := ld.LoadBaseModels(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load base models: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), opts, baseModelTable)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, baseModelTable)
 	case domain.GpuPool:
 		items, err := ld.LoadGpuPools(ctx, cfg.RepoPath, env)
 		if err != nil {
@@ -202,7 +206,7 @@ func emitCategory(
 				return fmt.Errorf("load gpu pools: %w", err)
 			}
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), opts, gpuPoolTable)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, gpuPoolTable)
 	case domain.GpuNode:
 		grouped, err := ld.LoadGpuNodes(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -211,13 +215,13 @@ func emitCategory(
 		// No top-level `pool` injection: GpuNode.NodePool (json
 		// `poolName`) already carries the group key; the loader sets
 		// it from the same value used as the map key.
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), opts, gpuNodeTable, "")
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, gpuNodeTable, "")
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load dedicated AI clusters: %w", err)
 		}
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), opts, dacTable, "tenant")
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, dacTable, "tenant")
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
 		domain.ConsolePropertyTenancyOverride,
@@ -226,31 +230,31 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load tenancy override group: %w", err)
 		}
-		return emitTenancyGroup(w, cat, group, filter, opts)
+		return emitTenancyGroup(w, cat, group, filter, limit, opts)
 	case domain.LimitRegionalOverride:
 		items, err := ld.LoadLimitRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load limit regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), opts, limitRegionalOverrideTable)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, limitRegionalOverrideTable)
 	case domain.ConsolePropertyRegionalOverride:
 		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load console property regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), opts, definitionOverrideTable[models.ConsolePropertyRegionalOverride])
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, definitionOverrideTable[models.ConsolePropertyRegionalOverride])
 	case domain.PropertyRegionalOverride:
 		items, err := ld.LoadPropertyRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load property regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), opts, definitionOverrideTable[models.PropertyRegionalOverride])
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, definitionOverrideTable[models.PropertyRegionalOverride])
 	default:
 		dataset, err := ld.LoadDataset(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load dataset: %w", err)
 		}
-		return emitFromDataset(w, cat, dataset, filter, opts)
+		return emitFromDataset(w, cat, dataset, filter, limit, opts)
 	}
 }
 
@@ -263,9 +267,11 @@ type writer interface {
 func writeSlice[T any](
 	w writer,
 	items []T,
+	limit int,
 	opts output.Options,
 	toTable func([]T) (headers []string, rows [][]string),
 ) error {
+	items = collections.TruncateSlice(items, limit)
 	switch opts.Format {
 	case output.FormatJSON:
 		return output.WriteJSON(w, items, opts)
@@ -306,31 +312,35 @@ func writeSlice[T any](
 func writeMap[T any](
 	w writer,
 	grouped map[string][]T,
+	limit int,
 	opts output.Options,
 	toTable func(map[string][]T) (headers []string, rows [][]string),
 	groupField string,
 ) error {
-	flatten := func() any {
+	flattenAny := func() any {
 		if groupField == "" {
-			return output.Flatten(grouped)
+			return collections.TruncateSlice(output.Flatten(grouped), limit)
 		}
-		return output.FlattenWithKey(grouped, groupField)
+		return collections.TruncateSlice(output.FlattenWithKey(grouped, groupField), limit)
 	}
 	switch opts.Format {
 	case output.FormatJSON:
-		return output.WriteJSON(w, flatten(), opts)
+		return output.WriteJSON(w, flattenAny(), opts)
 	case output.FormatJSONL:
-		return output.WriteJSONL(w, flatten(), opts)
+		return output.WriteJSONL(w, flattenAny(), opts)
 	case output.FormatYAML:
-		return output.WriteYAML(w, flatten(), opts)
+		return output.WriteYAML(w, flattenAny(), opts)
 	case output.FormatTable:
 		headers, rows := toTable(grouped)
+		rows = collections.TruncateSlice(rows, limit)
 		return output.WriteTable(w, headers, rows, opts)
 	case output.FormatCSV:
 		headers, rows := toTable(grouped)
+		rows = collections.TruncateSlice(rows, limit)
 		return output.WriteDelimited(w, headers, rows, opts, ',')
 	case output.FormatTSV:
 		headers, rows := toTable(grouped)
+		rows = collections.TruncateSlice(rows, limit)
 		return output.WriteDelimited(w, headers, rows, opts, '\t')
 	default:
 		return fmt.Errorf("unsupported format %q", opts.Format)
@@ -342,19 +352,20 @@ func emitTenancyGroup(
 	cat domain.Category,
 	group models.TenancyOverrideGroup,
 	filter string,
+	limit int,
 	opts output.Options,
 ) error {
 	switch cat { //nolint:exhaustive
 	case domain.Tenant:
-		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), opts, tenantTable)
+		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, tenantTable)
 	case domain.LimitTenancyOverride:
-		return writeMap(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), opts,
+		return writeMap(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), limit, opts,
 			tenancyOverrideTable[models.LimitTenancyOverride], "tenant")
 	case domain.ConsolePropertyTenancyOverride:
-		return writeMap(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), opts,
+		return writeMap(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), limit, opts,
 			tenancyOverrideTable[models.ConsolePropertyTenancyOverride], "tenant")
 	case domain.PropertyTenancyOverride:
-		return writeMap(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), opts,
+		return writeMap(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), limit, opts,
 			tenancyOverrideTable[models.PropertyTenancyOverride], "tenant")
 	default:
 		return fmt.Errorf("category %s not in tenancy group", cat)
@@ -366,34 +377,35 @@ func emitFromDataset(
 	cat domain.Category,
 	dataset *models.Dataset,
 	filter string,
+	limit int,
 	opts output.Options,
 ) error {
 	switch cat { //nolint:exhaustive
 	case domain.LimitDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.LimitDefinitionGroup.Values, nil, filter, nil),
-			opts, limitDefinitionTable)
+			limit, opts, limitDefinitionTable)
 	case domain.ConsolePropertyDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.ConsolePropertyDefinitionGroup.Values, nil, filter, nil),
-			opts, definitionTable[models.ConsolePropertyDefinition])
+			limit, opts, definitionTable[models.ConsolePropertyDefinition])
 	case domain.PropertyDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.PropertyDefinitionGroup.Values, nil, filter, nil),
-			opts, definitionTable[models.PropertyDefinition])
+			limit, opts, definitionTable[models.PropertyDefinition])
 	case domain.Environment:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.Environments, nil, filter, nil),
-			opts, environmentTable)
+			limit, opts, environmentTable)
 	case domain.ServiceTenancy:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.ServiceTenancies, nil, filter, nil),
-			opts, serviceTenancyTable)
+			limit, opts, serviceTenancyTable)
 	case domain.ModelArtifact:
 		// No top-level `model` injection: ModelArtifact.ModelName
 		// (json `model_name`) already carries the group key; the
 		// loader sets it from the same Terraform key used for the map.
-		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), opts, modelArtifactTable, "")
+		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), limit, opts, modelArtifactTable, "")
 	default:
 		return fmt.Errorf("category %s is not supported by `toolkit get`", cat)
 	}
@@ -404,7 +416,7 @@ type aliasItem struct {
 	Category string `json:"category" yaml:"category"`
 }
 
-func writeAliases(w writer, filter string, opts output.Options) error {
+func writeAliases(w writer, filter string, limit int, opts output.Options) error {
 	items := make([]aliasItem, 0, len(domain.Aliases))
 	for _, a := range domain.Aliases {
 		cat, err := domain.ParseCategory(a)
@@ -420,7 +432,7 @@ func writeAliases(w writer, filter string, opts output.Options) error {
 		items = append(items, aliasItem{Alias: a, Category: catName})
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].Alias < items[j].Alias })
-	return writeSlice(w, items, opts, func(items []aliasItem) ([]string, [][]string) {
+	return writeSlice(w, items, limit, opts, func(items []aliasItem) ([]string, [][]string) {
 		rows := make([][]string, 0, len(items))
 		for _, it := range items {
 			rows = append(rows, []string{it.Alias, it.Category})

@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `toolkit get --limit N` and matching `limit` field on every MCP `list_*` tool. Applied after filtering (filter is fuzzy/client-side, so source-side limit at the K8s API would silently break "first N matching" semantics — see commit message for the audit). `0` = unlimited (matches `kubectl --limit`). For grouped categories the cap is across the whole flattened result, not per group.
+
 ### Breaking
 - MCP `list_gpu_nodes`/`list_model_artifacts` and CLI `toolkit get gpunode|modelartifact -o json|jsonl|yaml` no longer inject a `pool` / `model` top-level field — those duplicated the existing `poolName` / `model_name` fields the loader was already setting. Consumers should switch to reading `poolName` (GpuNode) or `model_name` (ModelArtifact). The `dac` and `*tenancyoverride` categories keep their `tenant` injection (Owner.Name is nested + nilable for DAC; tenancy overrides source TenantID/Tag from JSON content, not the directory name). Table / CSV / TSV output is unaffected — those still use the per-category `POOL`/`MODEL` column for visual grouping.
 

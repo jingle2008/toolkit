@@ -175,14 +175,14 @@ func TestWriteSlice_Formats(t *testing.T) {
 	items := []models.Tenant{{Name: "t1"}}
 	for _, fmt := range []output.Format{output.FormatJSON, output.FormatJSONL, output.FormatYAML, output.FormatTable} {
 		var buf bytes.Buffer
-		err := writeSlice(&buf, items, output.Options{Format: fmt}, tenantTable)
+		err := writeSlice(&buf, items, 0, output.Options{Format: fmt}, tenantTable)
 		require.NoError(t, err, "format=%s", fmt)
 		assert.Contains(t, buf.String(), "t1", "format=%s output: %q", fmt, buf.String())
 	}
 
 	// Unsupported format must surface a clear error.
 	var buf bytes.Buffer
-	err := writeSlice(&buf, items, output.Options{Format: "toml"}, tenantTable)
+	err := writeSlice(&buf, items, 0, output.Options{Format: "toml"}, tenantTable)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported format")
 }
@@ -194,7 +194,7 @@ func TestWriteMap_Formats(t *testing.T) {
 	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a"}}}
 	for _, fmt := range []output.Format{output.FormatJSON, output.FormatJSONL, output.FormatYAML, output.FormatTable} {
 		var buf bytes.Buffer
-		err := writeMap(&buf, grouped, output.Options{Format: fmt}, gpuNodeTable, "")
+		err := writeMap(&buf, grouped, 0, output.Options{Format: fmt}, gpuNodeTable, "")
 		require.NoError(t, err, "format=%s", fmt)
 		got := buf.String()
 		assert.True(t, strings.Contains(got, "n1") || strings.Contains(got, "pool-a"),
@@ -202,7 +202,7 @@ func TestWriteMap_Formats(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, output.Options{Format: "toml"}, gpuNodeTable, "")
+	err := writeMap(&buf, grouped, 0, output.Options{Format: "toml"}, gpuNodeTable, "")
 	require.Error(t, err)
 }
 
@@ -215,7 +215,7 @@ func TestWriteMap_GpuNodes_NoInjectedPoolField(t *testing.T) {
 	t.Parallel()
 	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a", IsReady: true}}}
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, output.Options{Format: output.FormatJSON, Pretty: true}, gpuNodeTable, "")
+	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, gpuNodeTable, "")
 	require.NoError(t, err)
 
 	var arr []map[string]any
@@ -228,6 +228,50 @@ func TestWriteMap_GpuNodes_NoInjectedPoolField(t *testing.T) {
 	assert.False(t, hasPool, "redundant `pool` field should not be injected")
 }
 
+// TestWriteSlice_Limit pins that --limit caps the rendered output
+// after filtering. Limit 0 means no cap (matches kubectl).
+func TestWriteSlice_Limit(t *testing.T) {
+	t.Parallel()
+	items := []models.Tenant{{Name: "t1"}, {Name: "t2"}, {Name: "t3"}}
+
+	var buf bytes.Buffer
+	require.NoError(t, writeSlice(&buf, items, 2, output.Options{Format: output.FormatJSON, Pretty: true}, tenantTable))
+	var arr []map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
+	assert.Len(t, arr, 2, "limit=2 should keep 2 of 3 items")
+	assert.Equal(t, "t1", arr[0]["name"])
+	assert.Equal(t, "t2", arr[1]["name"])
+
+	buf.Reset()
+	require.NoError(t, writeSlice(&buf, items, 0, output.Options{Format: output.FormatJSON, Pretty: true}, tenantTable))
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
+	assert.Len(t, arr, 3, "limit=0 should keep all 3 items")
+
+	buf.Reset()
+	require.NoError(t, writeSlice(&buf, items, 99, output.Options{Format: output.FormatJSON, Pretty: true}, tenantTable))
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
+	assert.Len(t, arr, 3, "limit > len(items) should be a no-op")
+}
+
+// TestWriteMap_Limit_CapsAcrossGroups pins that the limit applies to
+// the flattened output, not per group. Two groups of two items each;
+// limit=3 should yield 3 items across both groups (key-sorted).
+func TestWriteMap_Limit_CapsAcrossGroups(t *testing.T) {
+	t.Parallel()
+	grouped := map[string][]models.GpuNode{
+		"pool-a": {{Name: "a1", NodePool: "pool-a"}, {Name: "a2", NodePool: "pool-a"}},
+		"pool-b": {{Name: "b1", NodePool: "pool-b"}, {Name: "b2", NodePool: "pool-b"}},
+	}
+	var buf bytes.Buffer
+	require.NoError(t, writeMap(&buf, grouped, 3, output.Options{Format: output.FormatJSON, Pretty: true}, gpuNodeTable, ""))
+	var arr []map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
+	assert.Len(t, arr, 3, "limit=3 across 4 flattened items should yield 3")
+	assert.Equal(t, "a1", arr[0]["name"])
+	assert.Equal(t, "a2", arr[1]["name"])
+	assert.Equal(t, "b1", arr[2]["name"], "should spill into pool-b's first item")
+}
+
 // TestWriteMap_DACs_InjectsTenant pins the opposite contract for
 // DACs: tenant is NOT a top-level field on the DAC struct (Owner is
 // nested + nilable), so the wrapper injection must still happen.
@@ -237,7 +281,7 @@ func TestWriteMap_DACs_InjectsTenant(t *testing.T) {
 		"acme": {{Name: "dac-1", Status: "READY"}},
 	}
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, output.Options{Format: output.FormatJSON, Pretty: true}, dacTable, "tenant")
+	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, dacTable, "tenant")
 	require.NoError(t, err)
 
 	var arr []map[string]any

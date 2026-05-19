@@ -40,9 +40,9 @@ type dacWithTenant struct {
 }
 
 // flattenGrouped concatenates a grouped map[string][]T into a flat
-// []T with deterministic key ordering. Use when the group key is
-// already preserved on each value.
-func flattenGrouped[T models.NamedFilterable](grouped map[string][]T, filter string) []T {
+// []T with deterministic key ordering; applies filter + limit. Use
+// when the group key is already preserved on each value.
+func flattenGrouped[T models.NamedFilterable](grouped map[string][]T, filter string, limit int) []T {
 	filtered := collections.FilterMapOrAll(grouped, normFilter(filter))
 	keys := make([]string, 0, len(filtered))
 	for k := range filtered {
@@ -53,18 +53,20 @@ func flattenGrouped[T models.NamedFilterable](grouped map[string][]T, filter str
 	for _, k := range keys {
 		out = append(out, filtered[k]...)
 	}
-	return out
+	return collections.TruncateSlice(out, limit)
 }
 
 // flattenGroupedTyped is the typed counterpart to output.FlattenWithKey
 // for the wrapper path. mkWrap injects the group key into the output
-// value W. Preserves Go type info through to the SDK schema generator.
+// value W. Preserves Go type info through to the SDK schema generator;
+// applies filter + limit.
 //
 // Used only by handleListDACs today; flattenGrouped suffices for the
 // other grouped tools.
 func flattenGroupedTyped[T models.NamedFilterable, W any](
 	grouped map[string][]T,
 	filter string,
+	limit int,
 	mkWrap func(key string, item T) W,
 ) []W {
 	filtered := collections.FilterMapOrAll(grouped, normFilter(filter))
@@ -79,7 +81,7 @@ func flattenGroupedTyped[T models.NamedFilterable, W any](
 			out = append(out, mkWrap(k, item))
 		}
 	}
-	return out
+	return collections.TruncateSlice(out, limit)
 }
 
 // registerTools attaches the read-only category tools to s.server.
@@ -151,11 +153,12 @@ func registerTools(s *Server) {
 
 // --- Handlers -----------------------------------------------------
 
-// listFlatResult applies the shared filter + JSON-envelope step to an
-// already-loaded slice. Captures the trailing pattern of every list_*
-// tool that returns []T directly.
-func listFlatResult[T models.NamedFilterable](items []T, filter string, warnings []string) (*sdk.CallToolResult, listResult[T], error) {
-	return jsonResult(collections.FilterSlice(items, nil, normFilter(filter), nil), warnings)
+// listFlatResult applies the shared filter + limit + JSON-envelope
+// step to an already-loaded slice. Captures the trailing pattern of
+// every list_* tool that returns []T directly.
+func listFlatResult[T models.NamedFilterable](items []T, filter string, limit int, warnings []string) (*sdk.CallToolResult, listResult[T], error) {
+	filtered := collections.FilterSlice(items, nil, normFilter(filter), nil)
+	return jsonResult(collections.TruncateSlice(filtered, limit), warnings)
 }
 
 // toAnySlice copies items into []any. Used by the polymorphic
@@ -178,7 +181,7 @@ func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest
 	if err != nil {
 		return failTool[listResult[models.Tenant]](ctx, req, "load tenants", err)
 	}
-	return listFlatResult(grp.Tenants, in.Filter, nil)
+	return listFlatResult(grp.Tenants, in.Filter, in.Limit, nil)
 }
 
 func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.BaseModel], error) {
@@ -186,7 +189,7 @@ func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequ
 	if err != nil {
 		return failTool[listResult[models.BaseModel]](ctx, req, "load base models", err)
 	}
-	return listFlatResult(items, in.Filter, nil)
+	return listFlatResult(items, in.Filter, in.Limit, nil)
 }
 
 func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GpuPool], error) {
@@ -200,7 +203,7 @@ func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolReques
 			fmt.Sprintf("load gpu pools: %d source(s) returned partial results: %s",
 				len(warnings), strings.Join(warnings, "; ")))
 	}
-	return listFlatResult(items, in.Filter, warnings)
+	return listFlatResult(items, in.Filter, in.Limit, warnings)
 }
 
 func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GpuNode], error) {
@@ -210,7 +213,7 @@ func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolReques
 	}
 	// No wrapper: GpuNode.NodePool (JSON `poolName`) already carries
 	// the group key. Wrapping would duplicate.
-	return jsonResult(flattenGrouped(grouped, in.Filter), nil)
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
 func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[dacWithTenant], error) {
@@ -218,7 +221,7 @@ func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, i
 	if err != nil {
 		return failTool[listResult[dacWithTenant]](ctx, req, "load dedicated AI clusters", err)
 	}
-	flat := flattenGroupedTyped(grouped, in.Filter, func(tenant string, d models.DedicatedAICluster) dacWithTenant {
+	flat := flattenGroupedTyped(grouped, in.Filter, in.Limit, func(tenant string, d models.DedicatedAICluster) dacWithTenant {
 		return dacWithTenant{Tenant: tenant, DedicatedAICluster: d}
 	})
 	return jsonResult(flat, nil)
@@ -229,7 +232,7 @@ func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRe
 	if err != nil {
 		return failTool[listResult[models.Environment]](ctx, req, "load dataset", err)
 	}
-	return listFlatResult(dataset.Environments, in.Filter, nil)
+	return listFlatResult(dataset.Environments, in.Filter, in.Limit, nil)
 }
 
 func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ServiceTenancy], error) {
@@ -237,7 +240,7 @@ func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallTo
 	if err != nil {
 		return failTool[listResult[models.ServiceTenancy]](ctx, req, "load dataset", err)
 	}
-	return listFlatResult(dataset.ServiceTenancies, in.Filter, nil)
+	return listFlatResult(dataset.ServiceTenancies, in.Filter, in.Limit, nil)
 }
 
 func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ModelArtifact], error) {
@@ -247,7 +250,7 @@ func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallTool
 	}
 	// No wrapper: ModelArtifact.ModelName (JSON `model_name`) already
 	// carries the group key.
-	return jsonResult(flattenGrouped(dataset.ModelArtifactMap, in.Filter), nil)
+	return jsonResult(flattenGrouped(dataset.ModelArtifactMap, in.Filter, in.Limit), nil)
 }
 
 func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
@@ -258,13 +261,13 @@ func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolReq
 	switch in.Kind {
 	case "limit":
 		items := collections.FilterSlice(dataset.LimitDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
-		return jsonResult(toAnySlice(items), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(items), in.Limit), nil)
 	case "console_property":
 		items := collections.FilterSlice(dataset.ConsolePropertyDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
-		return jsonResult(toAnySlice(items), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(items), in.Limit), nil)
 	case "property":
 		items := collections.FilterSlice(dataset.PropertyDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
-		return jsonResult(toAnySlice(items), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(items), in.Limit), nil)
 	default:
 		return failTool[listResult[any]](ctx, req, "list_definitions",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
@@ -279,13 +282,13 @@ func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallTo
 	switch in.Kind {
 	case "limit":
 		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.LimitTenancyOverrideMap, normFilter(in.Filter)), "tenant")
-		return jsonResult(toAnySlice(flat), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
 	case "console_property":
 		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.ConsolePropertyTenancyOverrideMap, normFilter(in.Filter)), "tenant")
-		return jsonResult(toAnySlice(flat), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
 	case "property":
 		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.PropertyTenancyOverrideMap, normFilter(in.Filter)), "tenant")
-		return jsonResult(toAnySlice(flat), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
 	default:
 		return failTool[listResult[any]](ctx, req, "list_tenancy_overrides",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
@@ -301,21 +304,21 @@ func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallT
 			return failTool[listResult[any]](ctx, req, "load limit regional overrides", err)
 		}
 		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
-		return jsonResult(toAnySlice(filtered), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
 	case "console_property":
 		items, err := s.loader.LoadConsolePropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
 			return failTool[listResult[any]](ctx, req, "load console property regional overrides", err)
 		}
 		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
-		return jsonResult(toAnySlice(filtered), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
 	case "property":
 		items, err := s.loader.LoadPropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
 			return failTool[listResult[any]](ctx, req, "load property regional overrides", err)
 		}
 		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
-		return jsonResult(toAnySlice(filtered), nil)
+		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
 	default:
 		return failTool[listResult[any]](ctx, req, "list_regional_overrides",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))

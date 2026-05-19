@@ -9,6 +9,25 @@ import (
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
+// TruncateSlice returns items[:limit] when limit > 0 and the slice has
+// more items than the limit; otherwise returns items unchanged. A
+// non-positive limit means "no limit" (matches kubectl --limit=0
+// convention) so callers can pass an unbound limit through without a
+// special branch.
+//
+// Truncation always happens AFTER filtering: with the toolkit's fuzzy
+// substring filter being client-side, "filter + limit" only makes
+// sense as "first N matching the filter". Source-side `ListOptions.Limit`
+// would silently break that contract when filter is set (the K8s API
+// returns the first N by its own ordering, only some of which match
+// the filter).
+func TruncateSlice[T any](items []T, limit int) []T {
+	if limit <= 0 || len(items) <= limit {
+		return items
+	}
+	return items[:limit]
+}
+
 /*
 IsMatch returns true if the item matches the filter string, optionally ignoring case.
 */

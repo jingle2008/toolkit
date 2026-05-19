@@ -224,6 +224,44 @@ func TestList_ModelArtifacts_FlatShape(t *testing.T) {
 		})
 }
 
+// TestList_GpuNodes_LimitCapsAcrossGroups pins the limit semantic
+// for MCP grouped tools: cap is across the whole flattened result,
+// not per group. Filter happens before limit (the only ordering
+// that makes sense — see CHANGELOG).
+func TestList_GpuNodes_LimitCapsAcrossGroups(t *testing.T) {
+	t.Parallel()
+	loader := &fakeGpuNodeLoader{
+		nodes: map[string][]models.GpuNode{
+			"pool-a": {{Name: "a1", NodePool: "pool-a"}, {Name: "a2", NodePool: "pool-a"}},
+			"pool-b": {{Name: "b1", NodePool: "pool-b"}, {Name: "b2", NodePool: "pool-b"}},
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	rec := &recorder{}
+	sess := newTestPair(ctx, t, loader, rec)
+
+	res, err := sess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "list_gpu_nodes",
+		Arguments: map[string]any{"limit": 3},
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError)
+
+	scBytes, err := json.Marshal(res.StructuredContent)
+	require.NoError(t, err)
+	var env struct {
+		Items []map[string]any `json:"items"`
+		Count int              `json:"count"`
+	}
+	require.NoError(t, json.Unmarshal(scBytes, &env))
+	assert.Equal(t, 3, env.Count, "limit=3 should yield 3 items across 4 flattened")
+	require.Len(t, env.Items, 3)
+	assert.Equal(t, "a1", env.Items[0]["name"])
+	assert.Equal(t, "a2", env.Items[1]["name"])
+	assert.Equal(t, "b1", env.Items[2]["name"], "limit should spill into next group's items, not skip the group")
+}
+
 // TestGroupedWrapper_NoDuplicateGroupKey is the sentinel guard
 // against a future model gaining a `tenant` JSON-tagged field that
 // would silently shadow (or duplicate) dacWithTenant's group-key
