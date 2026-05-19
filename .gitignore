@@ -8,6 +8,10 @@
 # GoReleaser build output
 dist/
 
+# Ad-hoc `toolkit get -o csv/tsv > foo.csv` outputs at the repo root
+/*.csv
+/*.tsv
+
 # Test binary, coverage, and debug output
 *.test
 *.out
