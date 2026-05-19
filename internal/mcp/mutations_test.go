@@ -97,6 +97,26 @@ func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
 	assert.Equal(t, "node", env.Kind)
 	assert.Equal(t, "node-a", env.Target)
 
+	// StructuredContent must carry the same mutationResult shape (no
+	// items/count wrapper). Regression bait for the MCP refactor: if
+	// a future change accidentally routes mutations back through
+	// jsonResult, TextContent above would still pass — only this
+	// assertion would catch the wrong envelope shipping in
+	// StructuredContent.
+	require.NotNil(t, res.StructuredContent)
+	scBytes, err := json.Marshal(res.StructuredContent)
+	require.NoError(t, err)
+	var sc map[string]any
+	require.NoError(t, json.Unmarshal(scBytes, &sc))
+	assert.Equal(t, "OK", sc["status"])
+	assert.Equal(t, "cordon", sc["action"])
+	assert.Equal(t, "node", sc["kind"])
+	assert.Equal(t, "node-a", sc["target"])
+	_, hasItems := sc["items"]
+	assert.False(t, hasItems, "mutation response should not carry a list-envelope items key")
+	_, hasCount := sc["count"]
+	assert.False(t, hasCount, "mutation response should not carry a list-envelope count key")
+
 	// Info notification on success.
 	msgs := waitForMsgs(t, rec)
 	body, _ := msgs[0].Data.(string)

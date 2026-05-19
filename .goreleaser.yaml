@@ -75,7 +75,7 @@ signs:
 # Apple Developer ID code-signing + notarytool submission for the
 # darwin archives. Off until the operator wires up the secrets — see
 # docs/release/macos-notarization.md for the manual setup checklist.
-# When all four env vars are present the step runs automatically;
+# When all five env vars are present the step runs automatically;
 # missing any one disables it (and the snapshot CI job stays green
 # locally and on PRs).
 notarize:

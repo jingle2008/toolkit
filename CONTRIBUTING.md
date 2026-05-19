@@ -38,6 +38,11 @@
 - **Mocks and Fakes:**  
   Use the `internal/testutil` package for shared mocks and fixtures. For Kubernetes-related code, prefer `client-go/fake` or `envtest` for high-fidelity mocks.
 
+## Release infrastructure (maintainer-only)
+
+- **macOS code-signing & notarization** depends on an active **Apple Developer Program** enrollment ($99/year). The release pipeline (`notarize.macos` in `.goreleaser.yaml`) stays inert until the five `MACOS_*` secrets are configured; if the Apple cert lapses, releases continue to publish unsigned binaries (Gatekeeper-quarantined on macOS users' first run) until the cert is renewed and the secrets refreshed. See [`docs/release/macos-notarization.md`](docs/release/macos-notarization.md) for the full setup checklist and recovery steps.
+- **Homebrew tap PAT** in `GH_TOKEN` needs `Contents: write` on both `jingle2008/toolkit` and `jingle2008/homebrew-tap`. Fine-grained PATs expire on a schedule; the release workflow will fail at the tap-push step if the token lapses. The recovery path is to refresh the PAT in repo settings, then `gh run rerun --failed` on the affected release run.
+
 ## Pull Request Checklist
 
 - [ ] All new and changed code is covered by tests.
