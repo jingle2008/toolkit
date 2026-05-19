@@ -157,6 +157,26 @@ func FlattenWithKey[T any](grouped map[string][]T, groupField string) []map[stri
 	return out
 }
 
+// Flatten concatenates a grouped map[string][]T into a flat []T with
+// deterministic key ordering. Use when the group key is already
+// preserved on each value (so injecting it again would just
+// duplicate — see GpuNode.NodePool / ModelArtifact.ModelName). The
+// returned slice preserves T's full type so the caller can keep
+// using struct tags / custom JSON marshaling without the
+// FlattenWithKey JSON round-trip.
+func Flatten[T any](grouped map[string][]T) []T {
+	keys := make([]string, 0, len(grouped))
+	for k := range grouped {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]T, 0)
+	for _, k := range keys {
+		out = append(out, grouped[k]...)
+	}
+	return out
+}
+
 // WriteDelimited emits headers + rows as delimiter-separated values
 // using encoding/csv, which handles quoting for fields containing the
 // separator, double quotes, or newlines. Pass ',' for CSV or '\t' for

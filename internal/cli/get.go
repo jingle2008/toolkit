@@ -208,7 +208,10 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load gpu nodes: %w", err)
 		}
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), opts, gpuNodeTable, "pool")
+		// No top-level `pool` injection: GpuNode.NodePool (json
+		// `poolName`) already carries the group key; the loader sets
+		// it from the same value used as the map key.
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), opts, gpuNodeTable, "")
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -284,11 +287,22 @@ func writeSlice[T any](
 	}
 }
 
-// writeMap renders a grouped slice. For json/jsonl/yaml the input is
-// flattened to []map[string]any with `groupField` carrying the original
-// map key, so consumers see a uniform array of objects (matches the
-// shape MCP tools return). The table path keeps the grouped input so
-// the per-category renderer can show a group column.
+// writeMap renders a grouped slice. For json/jsonl/yaml two flatten
+// paths exist:
+//
+//   - groupField != "" — flatten with key injection via
+//     output.FlattenWithKey. Use when the group key isn't reliably a
+//     field on T (e.g. tenant name on DAC, where Owner.Name is nested
+//     and may be nil; or tenancy overrides where TenantID/Tag comes
+//     from JSON file contents, not the directory name).
+//   - groupField == "" — plain output.Flatten that returns []T. Use
+//     when the group key is already preserved on T (GpuNode.NodePool
+//     → poolName, ModelArtifact.ModelName → model_name) so injecting
+//     it again would duplicate.
+//
+// The table/csv/tsv paths are unaffected — they always go through
+// `toTable`, which adds the group key as a column for the visual
+// organizer benefit.
 func writeMap[T any](
 	w writer,
 	grouped map[string][]T,
@@ -296,13 +310,19 @@ func writeMap[T any](
 	toTable func(map[string][]T) (headers []string, rows [][]string),
 	groupField string,
 ) error {
+	flatten := func() any {
+		if groupField == "" {
+			return output.Flatten(grouped)
+		}
+		return output.FlattenWithKey(grouped, groupField)
+	}
 	switch opts.Format {
 	case output.FormatJSON:
-		return output.WriteJSON(w, output.FlattenWithKey(grouped, groupField), opts)
+		return output.WriteJSON(w, flatten(), opts)
 	case output.FormatJSONL:
-		return output.WriteJSONL(w, output.FlattenWithKey(grouped, groupField), opts)
+		return output.WriteJSONL(w, flatten(), opts)
 	case output.FormatYAML:
-		return output.WriteYAML(w, output.FlattenWithKey(grouped, groupField), opts)
+		return output.WriteYAML(w, flatten(), opts)
 	case output.FormatTable:
 		headers, rows := toTable(grouped)
 		return output.WriteTable(w, headers, rows, opts)
@@ -370,7 +390,10 @@ func emitFromDataset(
 			collections.FilterSlice(dataset.ServiceTenancies, nil, filter, nil),
 			opts, serviceTenancyTable)
 	case domain.ModelArtifact:
-		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), opts, modelArtifactTable, "model")
+		// No top-level `model` injection: ModelArtifact.ModelName
+		// (json `model_name`) already carries the group key; the
+		// loader sets it from the same Terraform key used for the map.
+		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), opts, modelArtifactTable, "")
 	default:
 		return fmt.Errorf("category %s is not supported by `toolkit get`", cat)
 	}

@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Breaking
-- MCP `list_gpu_nodes` and `list_model_artifacts` no longer inject a `pool` / `model` top-level field — those duplicated the existing `poolName` / `model_name` fields the loader was already setting. Consumers should switch to reading `poolName` (GpuNode) or `model_name` (ModelArtifact). `list_dacs` keeps its `tenant` top-level field — the value's `Owner.Name` is nested and the pointer can be nil for unmapped tenants, so the wrapper still adds information.
+- MCP `list_gpu_nodes`/`list_model_artifacts` and CLI `toolkit get gpunode|modelartifact -o json|jsonl|yaml` no longer inject a `pool` / `model` top-level field — those duplicated the existing `poolName` / `model_name` fields the loader was already setting. Consumers should switch to reading `poolName` (GpuNode) or `model_name` (ModelArtifact). The `dac` and `*tenancyoverride` categories keep their `tenant` injection (Owner.Name is nested + nilable for DAC; tenancy overrides source TenantID/Tag from JSON content, not the directory name). Table / CSV / TSV output is unaffected — those still use the per-category `POOL`/`MODEL` column for visual grouping.
 
 ## [0.3.1] - 2026-05-19
 

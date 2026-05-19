@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -188,10 +189,12 @@ func TestWriteSlice_Formats(t *testing.T) {
 
 func TestWriteMap_Formats(t *testing.T) {
 	t.Parallel()
-	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1"}}}
+	// Match what the loader produces: NodePool is set to the same
+	// value as the map key (internal/infra/k8s/gpu_node.go:151).
+	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a"}}}
 	for _, fmt := range []output.Format{output.FormatJSON, output.FormatJSONL, output.FormatYAML, output.FormatTable} {
 		var buf bytes.Buffer
-		err := writeMap(&buf, grouped, output.Options{Format: fmt}, gpuNodeTable, "pool")
+		err := writeMap(&buf, grouped, output.Options{Format: fmt}, gpuNodeTable, "")
 		require.NoError(t, err, "format=%s", fmt)
 		got := buf.String()
 		assert.True(t, strings.Contains(got, "n1") || strings.Contains(got, "pool-a"),
@@ -199,6 +202,48 @@ func TestWriteMap_Formats(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, output.Options{Format: "toml"}, gpuNodeTable, "pool")
+	err := writeMap(&buf, grouped, output.Options{Format: "toml"}, gpuNodeTable, "")
 	require.Error(t, err)
+}
+
+// TestWriteMap_GpuNodes_NoInjectedPoolField pins the no-inject
+// contract for grouped categories whose value already carries the
+// group key: the top-level JSON object must NOT have a redundant
+// `pool` field — only the GpuNode-native `poolName` survives.
+// Regression bait against accidentally re-injecting.
+func TestWriteMap_GpuNodes_NoInjectedPoolField(t *testing.T) {
+	t.Parallel()
+	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a", IsReady: true}}}
+	var buf bytes.Buffer
+	err := writeMap(&buf, grouped, output.Options{Format: output.FormatJSON, Pretty: true}, gpuNodeTable, "")
+	require.NoError(t, err)
+
+	var arr []map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
+	require.Len(t, arr, 1)
+	item := arr[0]
+	assert.Equal(t, "pool-a", item["poolName"], "originating pool should come through as poolName")
+	assert.Equal(t, "n1", item["name"])
+	_, hasPool := item["pool"]
+	assert.False(t, hasPool, "redundant `pool` field should not be injected")
+}
+
+// TestWriteMap_DACs_InjectsTenant pins the opposite contract for
+// DACs: tenant is NOT a top-level field on the DAC struct (Owner is
+// nested + nilable), so the wrapper injection must still happen.
+func TestWriteMap_DACs_InjectsTenant(t *testing.T) {
+	t.Parallel()
+	grouped := map[string][]models.DedicatedAICluster{
+		"acme": {{Name: "dac-1", Status: "READY"}},
+	}
+	var buf bytes.Buffer
+	err := writeMap(&buf, grouped, output.Options{Format: output.FormatJSON, Pretty: true}, dacTable, "tenant")
+	require.NoError(t, err)
+
+	var arr []map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
+	require.Len(t, arr, 1)
+	item := arr[0]
+	assert.Equal(t, "acme", item["tenant"], "tenant key must be injected for DAC since Owner.Name is nested + nilable")
+	assert.Equal(t, "dac-1", item["name"])
 }
