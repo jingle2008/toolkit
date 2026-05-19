@@ -14,6 +14,60 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
+// --- Grouped item wrappers ---------------------------------------
+//
+// MCP clients (and the SDK's reflection-based OutputSchema generator)
+// see these embedded shapes as a flat object with one extra field
+// holding the group key. That preserves the typed-schema benefit
+// the refactor was meant to deliver — previously the grouped handlers
+// returned []map[string]any (via output.FlattenWithKey), which is
+// opaque to the schema generator and shows up as a generic object.
+// Wire format is unchanged.
+
+type gpuNodeWithPool struct {
+	Pool string `json:"pool"`
+	models.GpuNode
+}
+
+type dacWithTenant struct {
+	Tenant string `json:"tenant"`
+	models.DedicatedAICluster
+}
+
+type modelArtifactWithModel struct {
+	Model string `json:"model"`
+	models.ModelArtifact
+}
+
+// flattenGroupedTyped is the typed counterpart to output.FlattenWithKey.
+// It applies the shared filter to the grouped map, sorts keys for
+// deterministic output, and wraps each (key, item) pair into W via
+// mkWrap — preserving Go type info through to the SDK schema generator.
+//
+// Used by the three grouped read tools (list_gpu_nodes, list_dacs,
+// list_model_artifacts). The CLI's get path still uses
+// output.FlattenWithKey because CLI consumers don't care about
+// OutputSchema; only the MCP wire shape benefits from typing here.
+func flattenGroupedTyped[T models.NamedFilterable, W any](
+	grouped map[string][]T,
+	filter string,
+	mkWrap func(key string, item T) W,
+) []W {
+	filtered := collections.FilterMapOrAll(grouped, normFilter(filter))
+	keys := make([]string, 0, len(filtered))
+	for k := range filtered {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]W, 0)
+	for _, k := range keys {
+		for _, item := range filtered[k] {
+			out = append(out, mkWrap(k, item))
+		}
+	}
+	return out
+}
+
 // registerTools attaches the read-only category tools to s.server.
 // Tool naming convention: list_<category>, mirroring how kubectl /
 // gh expose list operations.
@@ -90,15 +144,6 @@ func listFlatResult[T models.NamedFilterable](items []T, filter string, warnings
 	return jsonResult(collections.FilterSlice(items, nil, normFilter(filter), nil), warnings)
 }
 
-// listGroupedResult applies the shared filter + flatten + JSON-envelope
-// step to an already-loaded map[string][]T. Used by tools that surface
-// a grouped resource (gpu_nodes/pool, dacs/tenant, model_artifacts/
-// model, *_tenancy_overrides/tenant).
-func listGroupedResult[T models.NamedFilterable](grouped map[string][]T, filter, groupKey string) (*sdk.CallToolResult, listResult[map[string]any], error) {
-	flat := output.FlattenWithKey(collections.FilterMapOrAll(grouped, normFilter(filter)), groupKey)
-	return jsonResult(flat, nil)
-}
-
 // toAnySlice copies items into []any. Used by the polymorphic
 // handlers (list_definitions / list_tenancy_overrides /
 // list_regional_overrides) whose switch-on-kind branches each
@@ -144,20 +189,26 @@ func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolReques
 	return listFlatResult(items, in.Filter, warnings)
 }
 
-func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[map[string]any], error) {
+func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[gpuNodeWithPool], error) {
 	grouped, err := s.loader.LoadGpuNodes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[map[string]any]](ctx, req, "load gpu nodes", err)
+		return failTool[listResult[gpuNodeWithPool]](ctx, req, "load gpu nodes", err)
 	}
-	return listGroupedResult(grouped, in.Filter, "pool")
+	flat := flattenGroupedTyped(grouped, in.Filter, func(pool string, n models.GpuNode) gpuNodeWithPool {
+		return gpuNodeWithPool{Pool: pool, GpuNode: n}
+	})
+	return jsonResult(flat, nil)
 }
 
-func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[map[string]any], error) {
+func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[dacWithTenant], error) {
 	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[map[string]any]](ctx, req, "load dedicated AI clusters", err)
+		return failTool[listResult[dacWithTenant]](ctx, req, "load dedicated AI clusters", err)
 	}
-	return listGroupedResult(grouped, in.Filter, "tenant")
+	flat := flattenGroupedTyped(grouped, in.Filter, func(tenant string, d models.DedicatedAICluster) dacWithTenant {
+		return dacWithTenant{Tenant: tenant, DedicatedAICluster: d}
+	})
+	return jsonResult(flat, nil)
 }
 
 func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Environment], error) {
@@ -176,12 +227,15 @@ func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallTo
 	return listFlatResult(dataset.ServiceTenancies, in.Filter, nil)
 }
 
-func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[map[string]any], error) {
+func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[modelArtifactWithModel], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[map[string]any]](ctx, req, "load dataset", err)
+		return failTool[listResult[modelArtifactWithModel]](ctx, req, "load dataset", err)
 	}
-	return listGroupedResult(dataset.ModelArtifactMap, in.Filter, "model")
+	flat := flattenGroupedTyped(dataset.ModelArtifactMap, in.Filter, func(model string, a models.ModelArtifact) modelArtifactWithModel {
+		return modelArtifactWithModel{Model: model, ModelArtifact: a}
+	})
+	return jsonResult(flat, nil)
 }
 
 func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
