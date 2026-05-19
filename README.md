@@ -75,10 +75,10 @@ cd toolkit && make
 brew install jingle2008/tap/toolkit
 ```
 
-> **Already on the old `jingle2008/homebrew-toolkit` tap?** It's archived as of v0.3.x and won't receive new releases. Migrate with:
+> **Already on the old `jingle2008/homebrew-toolkit` tap?** It's archived as of v0.3.x and won't receive new releases. Migrate with (order matters — `brew untap` refuses while the formula is still installed):
 > ```zsh
-> brew untap jingle2008/homebrew-toolkit
 > brew uninstall toolkit
+> brew untap jingle2008/toolkit              # canonical short name; the homebrew- prefix is implied
 > brew install jingle2008/tap/toolkit
 > ```
 

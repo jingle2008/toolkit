@@ -41,11 +41,11 @@ go install github.com/jingle2008/toolkit/cmd/toolkit@latest
 brew install jingle2008/tap/toolkit
 ```
 
-Migrating from the older `jingle2008/homebrew-toolkit` tap:
+Migrating from the older `jingle2008/homebrew-toolkit` tap (order matters — `brew untap` refuses while the formula is still installed):
 
 ```bash
-brew untap jingle2008/homebrew-toolkit
 brew uninstall toolkit
+brew untap jingle2008/toolkit              # canonical short name; the homebrew- prefix is implied
 brew install jingle2008/tap/toolkit
 ```
 
