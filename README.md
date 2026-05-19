@@ -54,6 +54,9 @@ After installation, try these quick commands:
 toolkit init
 # Scaffold an example config file at ~/.config/toolkit/config.yaml
 
+toolkit config --validate
+# Sanity-check the effective config; exits non-zero on failure
+
 toolkit completion bash   # or zsh/fish
 # Output shell completion script for your shell
 
@@ -86,12 +89,15 @@ toolkit --help                # all global flags
 | `--debug` | `false` | Enable debug logging |
 | `--log_format` | `console` | Log format: `console`, `json`, or `slog` |
 | `--log_level` | | Minimum log level: `debug`, `info`, `warn`, `error` (empty uses `--debug` flag) |
+| `--mutation_env_override_allowed` | `false` | Allow MCP mutation tools to override the startup env per call (off by default for safety) |
 
-*(See `internal/cli/root.go` for the authoritative list.)*
+*(See `internal/cli/flags.go` for the authoritative list.)*
 
 ### Headless `get` (for scripts and LLM integration)
 
-`toolkit get <category>` is the non-TUI equivalent of selecting a category in the interactive UI. It uses the same loaders and emits machine-friendly output for piping into `jq`, posting to LLM tools, or feeding scripts.
+`toolkit get <category>` is the non-TUI equivalent of selecting a category in the interactive UI. It uses the same loaders and emits machine-friendly output for piping into `jq`, posting to LLM tools, feeding spreadsheets, or driving shell pipelines.
+
+Supported formats (`-o`): `table` (default), `json`, `jsonl`, `yaml`, `csv`, `tsv`.
 
 ```bash
 # JSON array (default pretty-printed)
@@ -106,13 +112,51 @@ toolkit get dac
 # YAML
 toolkit get basemodel -f cohere -o yaml
 
-# Suppress headers for `cut` / `awk` pipelines
+# CSV for spreadsheets (proper quoting via encoding/csv)
+toolkit get tenant -o csv > tenants.csv
+
+# TSV for `cut` / `awk` pipelines
+toolkit get gpupool -o tsv | cut -f1,3
+
+# Suppress headers (table/csv/tsv)
 toolkit get tenant --no-headers
 ```
 
-Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit completion bash` for the full list. Logs are written to `--log_file` (default `toolkit.log`) so stdout stays clean for parsing.
+Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit get alias` for the full list, or enable shell completion (`toolkit completion zsh`) for tab-completion. Logs are written to `--log_file` (default `toolkit.log`) so stdout stays clean for parsing.
 
 For `gpunode`, `dac`, `modelartifact`, and the tenancy-override categories, the structured outputs (`json`, `jsonl`, `yaml`) are a flat array of objects with the originating group key injected as `pool`, `tenant`, or `model` — easier for `jq` and LLM consumers than the previous map-shaped output.
+
+### Inspect effective config (`toolkit config`)
+
+`toolkit config` prints the merged view every other subcommand sees — defaults + `TOOLKIT_*` env + config file + flags — so you can see what's actually in effect without opening the YAML by hand:
+
+```bash
+toolkit config                    # YAML (default)
+toolkit config -o json            # JSON for `jq`
+toolkit config --pretty=false     # compact JSON
+toolkit config --validate         # run config.Validate(); exit non-zero on failure
+```
+
+`--validate` mode emits a structured `{valid, config_file, error?}` payload and exits non-zero on failure — suitable for `if ! toolkit config --validate; then abort; fi` precondition checks in CI/scripts.
+
+### Cluster mutations
+
+Maintenance operations the TUI exposes via keyboard shortcuts are also available as scriptable subcommands. All mutations require `--confirm` (and support `--dry-run`); each one writes a JSON line to the audit log.
+
+| Command | Effect |
+| ------- | ------ |
+| `toolkit cordon <node>` / `toolkit uncordon <node>` | Toggle scheduling on a Kubernetes node |
+| `toolkit drain <node>` | Evict pods and cordon |
+| `toolkit reboot <node>` | Reboot the underlying instance |
+| `toolkit scale gpupool <name> --size N` | Resize an OCI GPU instance pool |
+| `toolkit delete dac <name>` | Delete a dedicated AI cluster |
+| `toolkit terminate <node>` | Terminate the underlying OCI instance |
+
+Example:
+
+```bash
+toolkit scale gpupool my-pool --size 8 --confirm
+```
 
 ### MCP server (`toolkit mcp`)
 
@@ -131,7 +175,7 @@ Configure once in your MCP client (Claude Desktop / Claude Code):
 }
 ```
 
-Tools exposed (all read-only, v1):
+**Read tools** — return a `{ "items": [...], "count": N, "warnings": [...] }` envelope:
 
 | Tool | Description |
 | ---- | ----------- |
@@ -148,7 +192,20 @@ Tools exposed (all read-only, v1):
 | `list_regional_overrides` | Same `kind` enum, region-scoped |
 | `list_aliases` | Discovery — every category alias |
 
-Every tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments. Each response is a `{ "items": [...], "count": N, "warnings": [...] }` envelope.
+Every read tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments.
+
+**Mutation tools** — gated on `confirm: true`. The same safety model as the CLI: failures surface via `notifications/message`, every call writes to the audit log:
+
+| Tool | Effect |
+| ---- | ------ |
+| `cordon_node` / `uncordon_node` | Toggle Kubernetes node scheduling |
+| `drain_node` | Evict pods and cordon |
+| `reboot_node` | Reboot the underlying instance |
+| `scale_gpu_pool` | Resize an OCI GPU instance pool |
+| `delete_dac` | Delete a dedicated AI cluster |
+| `terminate_node` | Terminate the underlying OCI instance |
+
+By default, mutation tools ignore any per-call `env_type` / `env_region` / `env_realm` and only act in the startup env — the operator's credentials decide the maximum blast radius, not the agent. Pass `--mutation_env_override_allowed` at server start to opt in to per-call env routing.
 
 ---
 
