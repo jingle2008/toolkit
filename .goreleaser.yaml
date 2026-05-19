@@ -12,8 +12,10 @@ builds:
     goarch:
       - amd64
       - arm64
+    flags:
+      - -trimpath
     ldflags:
-      - "-s -w -trimpath -X main.version={{.Version}}"
+      - "-s -w -X main.version={{.Version}}"
     env:
       - CGO_ENABLED=0
 
@@ -29,7 +31,9 @@ checksum:
 
 sboms:
   - artifacts: archive
-    format: cyclonedx-json
+    cmd: syft
+    args: ["$artifact", "--output", "cyclonedx-json=$document"]
+    documents: ["${artifact}.cyclonedx.json"]
 
 snapshot:
   name_template: "{{ .Tag }}-SNAPSHOT-{{ .ShortCommit }}"
@@ -90,5 +94,3 @@ homebrew_casks:
     homepage: "https://github.com/jingle2008/toolkit"
     description: "Toolkit CLI: cross-platform command-line tool for cloud and infrastructure automation"
     binary: toolkit
-    names:
-      - Toolkit
