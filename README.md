@@ -197,7 +197,7 @@ See [docs/recipes.md](docs/recipes.md) for end-to-end flows (MCP setup, maintena
 
 For agent integration via the [Model Context Protocol](https://modelcontextprotocol.io), `toolkit mcp` boots a stdio MCP server that exposes the same loader surface as `get` — but as typed tools an AI agent can call directly, no shell-out needed.
 
-Configure once in your MCP client (Claude Desktop / Claude Code):
+Configure once in your MCP client. Claude Desktop / Claude Code use JSON:
 
 ```jsonc
 {
@@ -209,6 +209,16 @@ Configure once in your MCP client (Claude Desktop / Claude Code):
   }
 }
 ```
+
+Codex CLI (`~/.codex/config.toml`) uses TOML:
+
+```toml
+[mcp_servers.toolkit]
+command = "toolkit"
+args = ["mcp"]
+```
+
+See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first prompts to try.
 
 **Read tools** — return a `{ "items": [...], "count": N, "warnings": [...] }` envelope:
 

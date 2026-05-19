@@ -43,6 +43,25 @@ Expose every category as a tool an AI agent can call directly. No shell-out, no 
 }
 ```
 
+**Codex CLI** — `~/.codex/config.toml`. Same pattern as Claude Code, but TOML, and the key is `mcp_servers` (snake_case) rather than `mcpServers`:
+
+```toml
+[mcp_servers.toolkit]
+command = "toolkit"
+args = ["mcp"]
+```
+
+If you need environment overrides (e.g., a different `TOOLKIT_ENV_REALM` for an agent session), add an `env` table inline:
+
+```toml
+[mcp_servers.toolkit]
+command = "toolkit"
+args = ["mcp"]
+env = { TOOLKIT_ENV_REALM = "oc1", TOOLKIT_ENV_REGION = "us-phoenix-1" }
+```
+
+(Claude Desktop / Claude Code support the same idea via `"env": { ... }` inside the server block.)
+
 Restart the client; you should see `toolkit` in the MCP servers list. The agent can now call `list_tenants`, `list_gpu_pools`, `list_dacs`, etc.
 
 ### First prompts to try
