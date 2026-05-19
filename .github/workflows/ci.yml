@@ -50,3 +50,22 @@ jobs:
         run: go test -race ./test/integration/...
       - name: Run make test-int
         run: make test-int
+
+  release-snapshot:
+    # Exercises .goreleaser.yaml on every push/PR so config drift fails
+    # here instead of on a real tag push. Skips publish/sign/sbom — those
+    # are CI-only and tested for real by .github/workflows/release.yml.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # GoReleaser needs full history for changelog
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: GoReleaser snapshot
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean --skip=publish,sign,sbom
