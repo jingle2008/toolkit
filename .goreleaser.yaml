@@ -36,7 +36,7 @@ sboms:
     documents: ["${artifact}.cyclonedx.json"]
 
 snapshot:
-  name_template: "{{ .Tag }}-SNAPSHOT-{{ .ShortCommit }}"
+  version_template: "{{ .Tag }}-SNAPSHOT-{{ .ShortCommit }}"
 
 release:
   github:
@@ -72,20 +72,6 @@ signs:
       - ${artifact}
     signature: "${artifact}.sig"
 
-# Only include if using GoReleaser v2.10 or later
-brews:
-  - name: toolkit
-    directory: Formula
-    repository:
-      owner: jingle2008
-      name: homebrew-toolkit
-    homepage: https://github.com/jingle2008/toolkit
-    description: "Toolkit CLI: cross-platform command-line tool for cloud & infra automation"
-    install: |
-      bin.install "toolkit"
-    test: |
-      system "#{bin}/toolkit", "--version"
-
 homebrew_casks:
   - name: toolkit
     repository:
@@ -93,4 +79,3 @@ homebrew_casks:
       name: homebrew-toolkit
     homepage: "https://github.com/jingle2008/toolkit"
     description: "Toolkit CLI: cross-platform command-line tool for cloud and infrastructure automation"
-    binary: toolkit
