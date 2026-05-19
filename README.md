@@ -141,22 +141,25 @@ toolkit config --validate         # run config.Validate(); exit non-zero on fail
 
 ### Cluster mutations
 
-Maintenance operations the TUI exposes via keyboard shortcuts are also available as scriptable subcommands. All mutations require `--confirm` (and support `--dry-run`); each one writes a JSON line to the audit log.
+Maintenance operations the TUI exposes via keyboard shortcuts are also available as scriptable subcommands. All mutations support `--dry-run` (preview the action) and `--yes` / `-y` (skip the interactive prompt). Each call writes a JSON line to the audit log.
 
 | Command | Effect |
 | ------- | ------ |
 | `toolkit cordon <node>` / `toolkit uncordon <node>` | Toggle scheduling on a Kubernetes node |
 | `toolkit drain <node>` | Evict pods and cordon |
 | `toolkit reboot <node>` | Reboot the underlying instance |
-| `toolkit scale gpupool <name> --size N` | Resize an OCI GPU instance pool |
-| `toolkit delete dac <name>` | Delete a dedicated AI cluster |
-| `toolkit terminate <node>` | Terminate the underlying OCI instance |
+| `toolkit scale gpupool <name>` | Sync OCI instance-pool size to the Terraform-declared `pool.Size` (no `--size` flag — Terraform is the source of truth) |
+| `toolkit delete dac <name>` | Delete a dedicated AI cluster (destructive — requires `--yes`) |
+| `toolkit terminate <node>` | Terminate the underlying OCI instance (destructive — requires `--yes`) |
 
 Example:
 
 ```bash
-toolkit scale gpupool my-pool --size 8 --confirm
+toolkit drain node-42 --dry-run     # preview
+toolkit drain node-42 -y            # run without prompt
 ```
+
+See [docs/recipes.md](docs/recipes.md) for end-to-end flows (MCP setup, maintenance windows, audit exports, Slack digests).
 
 ### MCP server (`toolkit mcp`)
 
