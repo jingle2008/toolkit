@@ -4,16 +4,22 @@ on:
   push:
     branches:
       - main
+  # Run on PR events so the autolabeler can apply labels from the title
+  # prefix as soon as the PR opens, not only after merge.
   pull_request:
-    types: [closed]
+    types: [opened, reopened, synchronize, edited]
     branches:
       - main
+
+permissions:
+  contents: write       # required to maintain the draft release
+  pull-requests: write  # required by the autolabeler
 
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v5
+      - uses: release-drafter/release-drafter@v6
         with:
           config-name: release-drafter.yml
         env:
