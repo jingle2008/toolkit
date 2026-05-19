@@ -84,8 +84,10 @@ toolkit cordon  $NODE -y
 toolkit drain   $NODE -y
 toolkit reboot  $NODE -y
 
-# 3. Wait for the node to come back. `get gpunode` reflects live status.
-until toolkit get gpunode -f "$NODE" -o json | jq -e '.[].status == "Ready"' >/dev/null; do
+# 3. Wait for the node to come back. `get gpunode` reflects live status —
+#    isReady is the bool we want; the human-readable status string (from
+#    GetStatus()) is computed in the renderer and not in the JSON envelope.
+until toolkit get gpunode -f "$NODE" -o json | jq -e '.[] | .isReady == true' >/dev/null; do
   sleep 30
 done
 
@@ -98,17 +100,21 @@ toolkit uncordon $NODE -y
 Every mutation writes a structured line to the log (configured via `--log_file` / `log_file:` — defaults to `toolkit.log`). Set `log_format: json` to make it `jq`-friendly:
 
 ```bash
-jq 'select(.msg=="mutation") | {time, action, target, status: .result, dry_run}' toolkit.log
+jq 'select(.msg=="mutation") | {ts, action, target, phase, dry_run, error}' toolkit.log
 ```
 
 Typical output (pretty-printed):
 
 ```jsonc
-{ "time": "...", "action": "cordon",  "target": "gpu-node-42", "status": "done", "dry_run": false }
-{ "time": "...", "action": "drain",   "target": "gpu-node-42", "status": "done", "dry_run": false }
-{ "time": "...", "action": "reboot",  "target": "gpu-node-42", "status": "done", "dry_run": false }
-{ "time": "...", "action": "uncordon","target": "gpu-node-42", "status": "done", "dry_run": false }
+{ "ts": "...", "action": "cordon",  "target": "gpu-node-42", "phase": "begin", "dry_run": false }
+{ "ts": "...", "action": "cordon",  "target": "gpu-node-42", "phase": "done",  "dry_run": false }
+{ "ts": "...", "action": "drain",   "target": "gpu-node-42", "phase": "begin", "dry_run": false }
+{ "ts": "...", "action": "drain",   "target": "gpu-node-42", "phase": "done",  "dry_run": false }
 ```
+
+`phase` is `begin` / `done` / `failed`; `dry_run: true` lines have no
+`phase` and are written by `--dry-run` previews. `error` is set only on
+`phase: failed`.
 
 ### Or do the same flow via MCP
 
@@ -195,7 +201,7 @@ payload=$(
     | jq -c '
       def totals:
         (map(.size) | add) as $declared
-        | (map(.actual_size // .size) | add) as $live
+        | (map(.actualSize // .size) | add) as $live
         | (length) as $pools
         | { declared: $declared, live: $live, pools: $pools };
 
@@ -216,7 +222,7 @@ payload=$(
                 type: "mrkdwn",
                 text: (
                   $pools
-                  | map("• `\(.name)` — \(.shape) — \(.size) nodes (\(.capacity_type // \"?\"))")
+                  | map("• `\(.name)` — \(.shape) — \(.size) nodes (\(.capacityType // \"?\"))")
                   | join("\n")
                 )
               } }
