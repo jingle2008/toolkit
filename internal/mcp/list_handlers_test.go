@@ -248,6 +248,42 @@ func TestList_GpuNodes_LimitCapsAcrossGroups(t *testing.T) {
 	assert.Equal(t, "b1", env.Items[2]["name"], "limit should spill into next group's items, not skip the group")
 }
 
+// TestList_GpuNodes_Limit_ZeroAndOverflow pins the same kubectl-style
+// no-cap semantics the CLI side asserts in TestWriteSlice_Limit:
+// limit=0 is unlimited; limit > len is a no-op. Doing this against a
+// real CallTool ensures the contract holds at the MCP wire layer
+// even if TruncateSlice is later reimplemented per-handler.
+func TestList_GpuNodes_Limit_ZeroAndOverflow(t *testing.T) {
+	t.Parallel()
+	loader := &fakeGpuNodeLoader{
+		nodes: map[string][]models.GpuNode{
+			"pool-a": {{Name: "a1", NodePool: "pool-a"}, {Name: "a2", NodePool: "pool-a"}},
+			"pool-b": {{Name: "b1", NodePool: "pool-b"}, {Name: "b2", NodePool: "pool-b"}},
+		},
+	}
+	count := func(t *testing.T, args map[string]any) int {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		t.Cleanup(cancel)
+		rec := &recorder{}
+		sess := newTestPair(ctx, t, loader, rec)
+
+		res, err := sess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_nodes", Arguments: args})
+		require.NoError(t, err)
+		require.False(t, res.IsError)
+		scBytes, err := json.Marshal(res.StructuredContent)
+		require.NoError(t, err)
+		var env struct {
+			Count int `json:"count"`
+		}
+		require.NoError(t, json.Unmarshal(scBytes, &env))
+		return env.Count
+	}
+	assert.Equal(t, 4, count(t, map[string]any{"limit": 0}), "limit=0 should be unlimited (all 4 items)")
+	assert.Equal(t, 4, count(t, map[string]any{"limit": 99}), "limit > len should be a no-op")
+	assert.Equal(t, 4, count(t, nil), "omitting limit should default to unlimited")
+}
+
 func TestList_DACs(t *testing.T) {
 	t.Parallel()
 	callList(t, "list_dacs", nil)

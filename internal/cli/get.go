@@ -58,7 +58,7 @@ discover them.`,
 	getCmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|jsonl|yaml|csv|tsv")
 	getCmd.Flags().BoolVar(&noHeaders, "no-headers", false, "omit header row (table/csv/tsv only)")
 	getCmd.Flags().BoolVar(&pretty, "pretty", true, "pretty-print JSON/YAML output")
-	getCmd.Flags().IntVar(&limit, "limit", 0, "max items to return after filter; 0 = unlimited. For grouped categories the cap is across the whole flattened result, not per group.")
+	getCmd.Flags().IntVar(&limit, "limit", 0, "max items to render (client-side, applied after the fuzzy --filter match); 0 = unlimited. For grouped categories the cap is across the whole flattened result, not per group.")
 	_ = getCmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"table", "json", "jsonl", "yaml", "csv", "tsv"}, cobra.ShellCompDirectiveNoFileComp
 	})
@@ -495,7 +495,11 @@ func tableFromSlice[T any](items []T, headers []string, row func(T) []string) ([
 // per item, with row called as row(parentKey, item). Captures the
 // boilerplate every grouped *Table function repeats.
 func tableFromGrouped[T any](grouped map[string][]T, headers []string, row func(key string, item T) []string) ([]string, [][]string) {
-	rows := make([][]string, 0)
+	total := 0
+	for _, v := range grouped {
+		total += len(v)
+	}
+	rows := make([][]string, 0, total)
 	for _, k := range sortedKeys(grouped) {
 		for _, item := range grouped[k] {
 			rows = append(rows, row(k, item))
