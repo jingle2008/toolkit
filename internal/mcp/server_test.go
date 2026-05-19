@@ -1,7 +1,6 @@
 package mcp
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -36,19 +35,15 @@ func TestEnvFor_DefaultsThenOverrides(t *testing.T) {
 
 func TestJsonResult_EnvelopeShape(t *testing.T) {
 	t.Parallel()
+	// We now assert directly on the typed envelope (the SDK marshals it
+	// into StructuredContent and auto-emits an equivalent TextContent
+	// block at JSON-RPC time; that path is exercised end-to-end in
+	// the integration test, not here).
 	items := []map[string]string{{"name": "a"}, {"name": "b"}}
-	res, _, err := jsonResult(items, nil)
+	res, env, err := jsonResult(items, nil)
 	require.NoError(t, err)
 	require.NotNil(t, res)
-	require.Len(t, res.Content, 1)
-
-	var env struct {
-		Items    []map[string]string `json:"items"`
-		Count    int                 `json:"count"`
-		Warnings []string            `json:"warnings"`
-	}
-	body := extractText(t, res)
-	require.NoError(t, json.Unmarshal([]byte(body), &env))
+	assert.Empty(t, res.Content, "jsonResult returns empty Content so the SDK can auto-emit it")
 	assert.Equal(t, 2, env.Count)
 	assert.Equal(t, items, env.Items)
 	assert.Empty(t, env.Warnings)
@@ -57,30 +52,33 @@ func TestJsonResult_EnvelopeShape(t *testing.T) {
 func TestJsonResult_NilEmitsEmptyArray(t *testing.T) {
 	t.Parallel()
 	var nilSlice []string
-	res, _, err := jsonResult(nilSlice, nil)
+	res, env, err := jsonResult(nilSlice, nil)
 	require.NoError(t, err)
-	body := extractText(t, res)
-	var env struct {
-		Items []string `json:"items"`
-		Count int      `json:"count"`
-	}
-	require.NoError(t, json.Unmarshal([]byte(body), &env))
+	require.NotNil(t, res)
+	// nil slice gets normalized to an empty slice so JSON-encodes
+	// as `[]` rather than `null`.
 	assert.Equal(t, 0, env.Count)
+	require.NotNil(t, env.Items)
 	assert.Empty(t, env.Items)
 }
 
 func TestJsonResult_WarningsPropagate(t *testing.T) {
 	t.Parallel()
-	res, _, err := jsonResult([]int{1, 2, 3}, []string{"partial source X failed"})
+	res, env, err := jsonResult([]int{1, 2, 3}, []string{"partial source X failed"})
 	require.NoError(t, err)
-	body := extractText(t, res)
-	var env struct {
-		Count    int      `json:"count"`
-		Warnings []string `json:"warnings"`
-	}
-	require.NoError(t, json.Unmarshal([]byte(body), &env))
+	require.NotNil(t, res)
 	assert.Equal(t, 3, env.Count)
+	assert.Equal(t, []int{1, 2, 3}, env.Items)
 	assert.Equal(t, []string{"partial source X failed"}, env.Warnings)
+}
+
+func TestMutationSuccess_Shape(t *testing.T) {
+	t.Parallel()
+	res, env, err := mutationSuccess("cordon", "node", "gpu-node-42")
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.Empty(t, res.Content, "mutationSuccess returns empty Content so the SDK can auto-emit it")
+	assert.Equal(t, mutationResult{Status: "OK", Action: "cordon", Kind: "node", Target: "gpu-node-42"}, env)
 }
 
 func TestWarningsFromPartial(t *testing.T) {
@@ -104,20 +102,4 @@ func TestNormFilter(t *testing.T) {
 	assert.Equal(t, "abc", normFilter("  AbC  "))
 	assert.Equal(t, "", normFilter(""))
 	assert.Equal(t, "", normFilter("   "))
-}
-
-// extractText pulls the first text content block out of a CallToolResult
-// for assertion-style parsing.
-func extractText(t *testing.T, res any) string {
-	t.Helper()
-	raw, err := json.Marshal(res)
-	require.NoError(t, err)
-	var unmarshaled struct {
-		Content []struct {
-			Text string `json:"text"`
-		} `json:"content"`
-	}
-	require.NoError(t, json.Unmarshal(raw, &unmarshaled))
-	require.NotEmpty(t, unmarshaled.Content)
-	return unmarshaled.Content[0].Text
 }

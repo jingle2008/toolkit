@@ -314,4 +314,22 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		assert.NotEmpty(t, it.Alias)
 		assert.NotEmpty(t, it.Category)
 	}
+
+	// Modern MCP clients prefer StructuredContent. Verify the SDK
+	// populated it with the same envelope object — this is the
+	// regression bait for the refactor that lifted list handlers from
+	// `struct{}` Out to typed `listResult[T]` Out.
+	require.NotNil(t, callRes.StructuredContent, "StructuredContent should be populated")
+	scBytes, err := json.Marshal(callRes.StructuredContent)
+	require.NoError(t, err)
+	var scEnvelope struct {
+		Items []struct {
+			Alias    string `json:"alias"`
+			Category string `json:"category"`
+		} `json:"items"`
+		Count int `json:"count"`
+	}
+	require.NoError(t, json.Unmarshal(scBytes, &scEnvelope), "structuredContent decodes as listResult envelope")
+	assert.Equal(t, envelope.Count, scEnvelope.Count, "structuredContent count matches text envelope")
+	assert.Equal(t, len(envelope.Items), len(scEnvelope.Items), "structuredContent items match text envelope")
 }

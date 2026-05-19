@@ -13,7 +13,6 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -112,43 +111,64 @@ type kindInput struct {
 	listInput
 }
 
-// listResult is the uniform envelope returned by every list tool.
+// listResult is the uniform envelope returned by every list tool. It's
+// generic over T so the SDK can derive a proper OutputSchema from the
+// item shape via reflection (replacing the previous json.RawMessage
+// items field, which was opaque to the schema generator and shipped as
+// empty `{}` to clients that read StructuredContent).
 //
 //	items     — the matching rows (array of category-shaped objects)
 //	count     — len(items), provided for quick parsing
 //	warnings  — non-fatal loader warnings (e.g. partial GpuPool sources)
-type listResult struct {
-	Items    json.RawMessage `json:"items"`
-	Count    int             `json:"count"`
-	Warnings []string        `json:"warnings,omitempty"`
+type listResult[T any] struct {
+	Items    []T      `json:"items"`
+	Count    int      `json:"count"`
+	Warnings []string `json:"warnings,omitempty"`
 }
 
-// jsonResult serializes items into the standard listResult envelope and
-// wraps it in a CallToolResult containing a single text content block.
-// The returned Output type is empty struct{} — tools don't populate the
-// structuredContent field (v1).
-func jsonResult(items any, warnings []string) (*sdk.CallToolResult, struct{}, error) {
-	raw, err := json.Marshal(items)
-	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("marshal items: %w", err)
+// mutationResult is the success envelope every mutating tool returns.
+// Distinct from listResult so the OutputSchema reflects the actual
+// payload shape (no `count: 0` / `items: []` noise).
+type mutationResult struct {
+	Status string `json:"status"`
+	Action string `json:"action"`
+	Kind   string `json:"kind"`
+	Target string `json:"target"`
+}
+
+// jsonResult wraps items in the standard listResult envelope. Callers
+// return the value directly as the typed Out of the SDK handler; the
+// SDK marshals it into CallToolResult.StructuredContent and — when
+// res.Content is empty — auto-emits a TextContent block carrying the
+// same JSON for backward-compat with older clients (see
+// go-sdk/mcp/server.go: "If the Content field isn't being used,
+// return the serialized JSON in a TextContent block").
+//
+// We pass &sdk.CallToolResult{} so the SDK fills Content; we never
+// hand-build the TextContent.
+//
+//nolint:unparam // signature pinned by ToolHandlerFor[In, Out] — error is always nil but must be in the tuple
+func jsonResult[T any](items []T, warnings []string) (*sdk.CallToolResult, listResult[T], error) {
+	if items == nil {
+		items = []T{}
 	}
-	if string(raw) == "null" {
-		raw = json.RawMessage("[]")
-	}
-	// Count without re-walking the JSON: try unmarshal-to-slice; fall back to 0.
-	var arr []json.RawMessage
-	count := 0
-	if err := json.Unmarshal(raw, &arr); err == nil {
-		count = len(arr)
-	}
-	envelope := listResult{Items: raw, Count: count, Warnings: warnings}
-	body, err := json.MarshalIndent(envelope, "", "  ")
-	if err != nil {
-		return nil, struct{}{}, fmt.Errorf("marshal envelope: %w", err)
-	}
-	return &sdk.CallToolResult{
-		Content: []sdk.Content{&sdk.TextContent{Text: string(body)}},
-	}, struct{}{}, nil
+	return &sdk.CallToolResult{}, listResult[T]{
+		Items:    items,
+		Count:    len(items),
+		Warnings: warnings,
+	}, nil
+}
+
+// mutationSuccess returns the standard "OK" envelope every mutation
+// emits on the happy path. Mirrors jsonResult's role but for the
+// mutationResult shape.
+func mutationSuccess(action, kind, target string) (*sdk.CallToolResult, mutationResult, error) {
+	return &sdk.CallToolResult{}, mutationResult{
+		Status: "OK",
+		Action: action,
+		Kind:   kind,
+		Target: target,
+	}, nil
 }
 
 // notify emits a notifications/message to the connected MCP client.
@@ -172,9 +192,16 @@ func notify(ctx context.Context, sess *sdk.ServerSession, level sdk.LoggingLevel
 // failure live (the tool error itself is also returned and surfaces as
 // a tool-call failure in the response). `what` is the human label
 // (e.g. "load gpu pools"); err is the underlying cause.
-func failTool(ctx context.Context, req *sdk.CallToolRequest, what string, err error) (*sdk.CallToolResult, struct{}, error) {
+//
+// Generic over Out so the same helper covers list and mutation handlers
+// without each caller having to spell out a typed zero. Callers supply
+// the Out type at the call site, e.g. `failTool[listResult[Tenant]](...)`.
+//
+//nolint:unparam // signature pinned by ToolHandlerFor[In, Out] — *CallToolResult is always nil on the failure path but must be in the tuple
+func failTool[Out any](ctx context.Context, req *sdk.CallToolRequest, what string, err error) (*sdk.CallToolResult, Out, error) {
 	notify(ctx, req.Session, "error", fmt.Sprintf("%s: %v", what, err))
-	return nil, struct{}{}, fmt.Errorf("%s: %w", what, err)
+	var zero Out
+	return nil, zero, fmt.Errorf("%s: %w", what, err)
 }
 
 // warningsFromPartial pulls the per-source error strings off a

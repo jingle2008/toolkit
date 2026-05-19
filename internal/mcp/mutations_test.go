@@ -81,19 +81,21 @@ func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
 	assert.Equal(t, "node-a", gotNode)
 	assert.True(t, gotWant, "cordon_node should pass want=true")
 
-	// Response body is the {status, action, kind, target} envelope.
+	// Response body is the mutationResult envelope directly — no
+	// items wrapper (mutations got their own typed shape in the
+	// MCP result refactor).
 	text := res.Content[0].(*sdk.TextContent).Text
 	var env struct {
-		Items struct {
-			Status string `json:"status"`
-			Action string `json:"action"`
-			Target string `json:"target"`
-		} `json:"items"`
+		Status string `json:"status"`
+		Action string `json:"action"`
+		Kind   string `json:"kind"`
+		Target string `json:"target"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(text), &env))
-	assert.Equal(t, "OK", env.Items.Status)
-	assert.Equal(t, "cordon", env.Items.Action)
-	assert.Equal(t, "node-a", env.Items.Target)
+	assert.Equal(t, "OK", env.Status)
+	assert.Equal(t, "cordon", env.Action)
+	assert.Equal(t, "node", env.Kind)
+	assert.Equal(t, "node-a", env.Target)
 
 	// Info notification on success.
 	msgs := waitForMsgs(t, rec)

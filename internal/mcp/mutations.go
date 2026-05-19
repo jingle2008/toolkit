@@ -79,8 +79,9 @@ func (s *Server) effectiveMutationEnv(action, kind, target string, in envOverrid
 // envelope on success.
 //
 // Mirrors cli.runMutation but adapted to the MCP response shape —
-// no stdout/prompt; success becomes a structured jsonResult.
-func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, action, kind, target string, confirm bool, perform func() error) (*sdk.CallToolResult, struct{}, error) {
+// no stdout/prompt; success becomes a mutationResult that the SDK
+// marshals into StructuredContent + auto-emits as TextContent.
+func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, action, kind, target string, confirm bool, perform func() error) (*sdk.CallToolResult, mutationResult, error) {
 	if !confirm {
 		s.logger.Infow("mutation",
 			"action", action, "kind", kind, "target", target, "surface", "mcp",
@@ -88,7 +89,7 @@ func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, 
 		)
 		notify(ctx, req.Session, "info",
 			fmt.Sprintf("%s %s/%s refused: set confirm=true to execute", action, kind, target))
-		return failTool(ctx, req, action,
+		return failTool[mutationResult](ctx, req, action,
 			fmt.Errorf("mutating tool requires confirm=true (target %s/%s)", kind, target))
 	}
 
@@ -102,7 +103,7 @@ func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, 
 			"phase", "failed",
 			"error", err,
 		)
-		return failTool(ctx, req, action+" "+kind+"/"+target, err)
+		return failTool[mutationResult](ctx, req, action+" "+kind+"/"+target, err)
 	}
 	s.logger.Infow("mutation",
 		"action", action, "kind", kind, "target", target, "surface", "mcp",
@@ -110,12 +111,7 @@ func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, 
 	)
 	notify(ctx, req.Session, "info",
 		fmt.Sprintf("%s %s/%s: OK", action, kind, target))
-	return jsonResult(map[string]string{
-		"status": "OK",
-		"action": action,
-		"kind":   kind,
-		"target": target,
-	}, nil)
+	return mutationSuccess(action, kind, target)
 }
 
 // --- Input types --------------------------------------------------
@@ -173,34 +169,34 @@ func (s *Server) handleMutation(
 	confirm bool,
 	override envOverride,
 	perform func(env models.Environment) error,
-) (*sdk.CallToolResult, struct{}, error) {
+) (*sdk.CallToolResult, mutationResult, error) {
 	env := s.effectiveMutationEnv(action, kind, target, override)
 	return s.runMutationTool(ctx, req, action, kind, target, confirm, func() error {
 		return perform(env)
 	})
 }
 
-func (s *Server) handleCordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleCordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "cordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node, true)
 		return err
 	})
 }
 
-func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "uncordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node, false)
 		return err
 	})
 }
 
-func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "drain", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		return mcpDrainNodeFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node)
 	})
 }
 
-func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest, in rebootNodeInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest, in rebootNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "reboot", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		node, err := mcpResolveGpuNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
@@ -210,7 +206,7 @@ func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest,
 	})
 }
 
-func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolRequest, in terminateNodeInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolRequest, in terminateNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "terminate", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		node, err := mcpResolveGpuNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
@@ -220,7 +216,7 @@ func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolReque
 	})
 }
 
-func (s *Server) handleScaleGpuPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGpuPoolInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleScaleGpuPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGpuPoolInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "scale", "gpu_pool", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
 		pool, err := mcpResolveGpuPoolFn(ctx, s, env, in.Name)
 		if err != nil {
@@ -230,7 +226,7 @@ func (s *Server) handleScaleGpuPool(ctx context.Context, req *sdk.CallToolReques
 	})
 }
 
-func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, in deleteDACInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, in deleteDACInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "delete", "dac", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
 		dac := &models.DedicatedAICluster{Name: in.Name}
 		return mcpDeleteDACFn(ctx, dac, env, logging.FromContext(ctx))

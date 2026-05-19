@@ -86,7 +86,7 @@ func registerTools(s *Server) {
 // listFlatResult applies the shared filter + JSON-envelope step to an
 // already-loaded slice. Captures the trailing pattern of every list_*
 // tool that returns []T directly.
-func listFlatResult[T models.NamedFilterable](items []T, filter string, warnings []string) (*sdk.CallToolResult, struct{}, error) {
+func listFlatResult[T models.NamedFilterable](items []T, filter string, warnings []string) (*sdk.CallToolResult, listResult[T], error) {
 	return jsonResult(collections.FilterSlice(items, nil, normFilter(filter), nil), warnings)
 }
 
@@ -94,32 +94,47 @@ func listFlatResult[T models.NamedFilterable](items []T, filter string, warnings
 // step to an already-loaded map[string][]T. Used by tools that surface
 // a grouped resource (gpu_nodes/pool, dacs/tenant, model_artifacts/
 // model, *_tenancy_overrides/tenant).
-func listGroupedResult[T models.NamedFilterable](grouped map[string][]T, filter, groupKey string) (*sdk.CallToolResult, struct{}, error) {
+func listGroupedResult[T models.NamedFilterable](grouped map[string][]T, filter, groupKey string) (*sdk.CallToolResult, listResult[map[string]any], error) {
 	flat := output.FlattenWithKey(collections.FilterMapOrAll(grouped, normFilter(filter)), groupKey)
 	return jsonResult(flat, nil)
 }
 
-func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+// toAnySlice copies items into []any. Used by the polymorphic
+// handlers (list_definitions / list_tenancy_overrides /
+// list_regional_overrides) whose switch-on-kind branches each
+// produce a different element type — the function's single Out
+// must therefore be `listResult[any]`. The schema for these tools
+// is necessarily generic; the StructuredContent still carries
+// the concrete typed objects.
+func toAnySlice[T any](items []T) []any {
+	out := make([]any, len(items))
+	for i, x := range items {
+		out[i] = x
+	}
+	return out
+}
+
+func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Tenant], error) {
 	grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load tenants", err)
+		return failTool[listResult[models.Tenant]](ctx, req, "load tenants", err)
 	}
 	return listFlatResult(grp.Tenants, in.Filter, nil)
 }
 
-func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.BaseModel], error) {
 	items, err := s.loader.LoadBaseModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load base models", err)
+		return failTool[listResult[models.BaseModel]](ctx, req, "load base models", err)
 	}
 	return listFlatResult(items, in.Filter, nil)
 }
 
-func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GpuPool], error) {
 	items, err := s.loader.LoadGpuPools(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	warnings := warningsFromPartial(err)
 	if err != nil && len(warnings) == 0 {
-		return failTool(ctx, req, "load gpu pools", err)
+		return failTool[listResult[models.GpuPool]](ctx, req, "load gpu pools", err)
 	}
 	if len(warnings) > 0 {
 		notify(ctx, req.Session, "warning",
@@ -129,105 +144,114 @@ func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolReques
 	return listFlatResult(items, in.Filter, warnings)
 }
 
-func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[map[string]any], error) {
 	grouped, err := s.loader.LoadGpuNodes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load gpu nodes", err)
+		return failTool[listResult[map[string]any]](ctx, req, "load gpu nodes", err)
 	}
 	return listGroupedResult(grouped, in.Filter, "pool")
 }
 
-func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[map[string]any], error) {
 	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load dedicated AI clusters", err)
+		return failTool[listResult[map[string]any]](ctx, req, "load dedicated AI clusters", err)
 	}
 	return listGroupedResult(grouped, in.Filter, "tenant")
 }
 
-func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Environment], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load dataset", err)
+		return failTool[listResult[models.Environment]](ctx, req, "load dataset", err)
 	}
 	return listFlatResult(dataset.Environments, in.Filter, nil)
 }
 
-func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ServiceTenancy], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load dataset", err)
+		return failTool[listResult[models.ServiceTenancy]](ctx, req, "load dataset", err)
 	}
 	return listFlatResult(dataset.ServiceTenancies, in.Filter, nil)
 }
 
-func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[map[string]any], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load dataset", err)
+		return failTool[listResult[map[string]any]](ctx, req, "load dataset", err)
 	}
 	return listGroupedResult(dataset.ModelArtifactMap, in.Filter, "model")
 }
 
-func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load dataset", err)
+		return failTool[listResult[any]](ctx, req, "load dataset", err)
 	}
 	switch in.Kind {
 	case "limit":
-		return listFlatResult(dataset.LimitDefinitionGroup.Values, in.Filter, nil)
+		items := collections.FilterSlice(dataset.LimitDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
+		return jsonResult(toAnySlice(items), nil)
 	case "console_property":
-		return listFlatResult(dataset.ConsolePropertyDefinitionGroup.Values, in.Filter, nil)
+		items := collections.FilterSlice(dataset.ConsolePropertyDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
+		return jsonResult(toAnySlice(items), nil)
 	case "property":
-		return listFlatResult(dataset.PropertyDefinitionGroup.Values, in.Filter, nil)
+		items := collections.FilterSlice(dataset.PropertyDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
+		return jsonResult(toAnySlice(items), nil)
 	default:
-		return failTool(ctx, req, "list_definitions",
+		return failTool[listResult[any]](ctx, req, "list_definitions",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }
 
-func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
 	grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool(ctx, req, "load tenancy override group", err)
+		return failTool[listResult[any]](ctx, req, "load tenancy override group", err)
 	}
 	switch in.Kind {
 	case "limit":
-		return listGroupedResult(grp.LimitTenancyOverrideMap, in.Filter, "tenant")
+		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.LimitTenancyOverrideMap, normFilter(in.Filter)), "tenant")
+		return jsonResult(toAnySlice(flat), nil)
 	case "console_property":
-		return listGroupedResult(grp.ConsolePropertyTenancyOverrideMap, in.Filter, "tenant")
+		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.ConsolePropertyTenancyOverrideMap, normFilter(in.Filter)), "tenant")
+		return jsonResult(toAnySlice(flat), nil)
 	case "property":
-		return listGroupedResult(grp.PropertyTenancyOverrideMap, in.Filter, "tenant")
+		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.PropertyTenancyOverrideMap, normFilter(in.Filter)), "tenant")
+		return jsonResult(toAnySlice(flat), nil)
 	default:
-		return failTool(ctx, req, "list_tenancy_overrides",
+		return failTool[listResult[any]](ctx, req, "list_tenancy_overrides",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }
 
-func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
 	env := s.envFor(in.envOverride)
 	switch in.Kind {
 	case "limit":
 		items, err := s.loader.LoadLimitRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return failTool(ctx, req, "load limit regional overrides", err)
+			return failTool[listResult[any]](ctx, req, "load limit regional overrides", err)
 		}
-		return listFlatResult(items, in.Filter, nil)
+		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
+		return jsonResult(toAnySlice(filtered), nil)
 	case "console_property":
 		items, err := s.loader.LoadConsolePropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return failTool(ctx, req, "load console property regional overrides", err)
+			return failTool[listResult[any]](ctx, req, "load console property regional overrides", err)
 		}
-		return listFlatResult(items, in.Filter, nil)
+		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
+		return jsonResult(toAnySlice(filtered), nil)
 	case "property":
 		items, err := s.loader.LoadPropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return failTool(ctx, req, "load property regional overrides", err)
+			return failTool[listResult[any]](ctx, req, "load property regional overrides", err)
 		}
-		return listFlatResult(items, in.Filter, nil)
+		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
+		return jsonResult(toAnySlice(filtered), nil)
 	default:
-		return failTool(ctx, req, "list_regional_overrides",
+		return failTool[listResult[any]](ctx, req, "list_regional_overrides",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }
@@ -243,7 +267,7 @@ type aliasItem struct {
 // a concrete type even when the schema is empty.
 type noInput struct{}
 
-func (s *Server) handleListAliases(_ context.Context, _ *sdk.CallToolRequest, _ noInput) (*sdk.CallToolResult, struct{}, error) {
+func (s *Server) handleListAliases(_ context.Context, _ *sdk.CallToolRequest, _ noInput) (*sdk.CallToolResult, listResult[aliasItem], error) {
 	items := make([]aliasItem, 0, len(domain.Aliases))
 	for _, a := range domain.Aliases {
 		cat, err := domain.ParseCategory(a)
