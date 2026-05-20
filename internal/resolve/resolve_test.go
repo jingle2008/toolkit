@@ -109,13 +109,18 @@ func TestGpuNode_LoaderError(t *testing.T) {
 
 // fakeCompartmentResolver wires the package-level seams so GpuPool's
 // compartment-ID call returns a fixed value without touching k8s.
+// Also clears the compartment cache so tests don't pollute each other
+// — the cache is package-level, so a previous test's successful
+// lookup would otherwise be returned in place of the seam's response.
 func fakeCompartmentResolver(t *testing.T, compartmentID string) {
 	t.Helper()
+	clearCompartmentCache()
 	origClient := newClientsetFromKubeFn
 	origList := listGpuNodesForCompartFn
 	t.Cleanup(func() {
 		newClientsetFromKubeFn = origClient
 		listGpuNodesForCompartFn = origList
+		clearCompartmentCache()
 	})
 	newClientsetFromKubeFn = func(string, string) (kubernetes.Interface, error) {
 		return fake.NewSimpleClientset(), nil
@@ -245,6 +250,8 @@ func TestCompartmentID_EmptyCluster(t *testing.T) {
 }
 
 func TestCompartmentID_KubeUnreachable(t *testing.T) {
+	clearCompartmentCache()
+	t.Cleanup(clearCompartmentCache)
 	orig := newClientsetFromKubeFn
 	t.Cleanup(func() { newClientsetFromKubeFn = orig })
 	newClientsetFromKubeFn = func(string, string) (kubernetes.Interface, error) {
@@ -254,6 +261,55 @@ func TestCompartmentID_KubeUnreachable(t *testing.T) {
 	_, err := CompartmentID(context.Background(), "/kube", models.Environment{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "kubeconfig parse failed")
+}
+
+// TestCompartmentID_Caches pins the new memoization: a successful
+// lookup is reused on subsequent calls with the same (kubeConfig,
+// kubeContext) so the MCP server doesn't burn a K8s lookup on every
+// list_gpu_pools / scale_gpu_pool invocation. A different env (which
+// produces a different kubeContext) bypasses the cache.
+func TestCompartmentID_Caches(t *testing.T) {
+	fakeCompartmentResolver(t, "ocid1.compartment.first")
+
+	env := models.Environment{Type: "dev", Region: "us-ashburn-1"}
+	got1, err := CompartmentID(context.Background(), "/kube", env)
+	require.NoError(t, err)
+	assert.Equal(t, "ocid1.compartment.first", got1)
+
+	// Swap the seam to a different value. Cache should win.
+	listGpuNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GpuNode, error) {
+		return []models.GpuNode{{CompartmentID: "ocid1.compartment.SHOULD_NOT_SEE"}}, nil
+	}
+	got2, err := CompartmentID(context.Background(), "/kube", env)
+	require.NoError(t, err)
+	assert.Equal(t, "ocid1.compartment.first", got2, "cache should win against the changed seam")
+
+	// Different env → different kubeContext → cache miss → seam fires.
+	got3, err := CompartmentID(context.Background(), "/kube", models.Environment{Type: "dev", Region: "us-phoenix-1"})
+	require.NoError(t, err)
+	assert.Equal(t, "ocid1.compartment.SHOULD_NOT_SEE", got3, "different env key must miss the cache and call the seam")
+}
+
+// TestCompartmentID_DoesNotCacheErrors pins that failed lookups stay
+// retry-able. An empty cluster on first call (or any K8s error) must
+// not poison subsequent calls — otherwise a transient cluster
+// hiccup at startup would brick the read path for the rest of the
+// process.
+func TestCompartmentID_DoesNotCacheErrors(t *testing.T) {
+	fakeCompartmentResolver(t, "") // empty cluster → "no GPU nodes" error
+	env := models.Environment{Type: "dev", Region: "us-ashburn-1"}
+
+	_, err := CompartmentID(context.Background(), "/kube", env)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no GPU nodes")
+
+	// Cluster recovers. Cache shouldn't have stored the prior error.
+	listGpuNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GpuNode, error) {
+		return []models.GpuNode{{CompartmentID: "ocid1.compartment.recovered"}}, nil
+	}
+	got, err := CompartmentID(context.Background(), "/kube", env)
+	require.NoError(t, err, "second call must not hit a cached error")
+	assert.Equal(t, "ocid1.compartment.recovered", got)
 }
 
 // -- EnrichGpuPools ------------------------------------------------

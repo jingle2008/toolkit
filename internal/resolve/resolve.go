@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
@@ -116,10 +117,48 @@ func EnrichGpuPools(ctx context.Context, pools []models.GpuPool, kubeConfig stri
 	return ""
 }
 
+// compartmentCacheKey identifies a unique compartment-ID lookup. Only
+// the inputs the underlying K8s call sees (kubeConfig + kube context)
+// matter; env.Realm is irrelevant because the lookup is purely K8s-side.
+type compartmentCacheKey struct {
+	kubeConfig  string
+	kubeContext string
+}
+
+// compartmentCache memoizes successful CompartmentID lookups for the
+// life of the process. The MCP server makes the call on every
+// list_gpu_pools / scale_gpu_pool tool invocation; without caching,
+// every call burns one K8s lookup before the OCI step. Compartment
+// identity for a given (kubeConfig, kubeContext) is stable for the
+// life of the cluster, so the cache has no semantic risk.
+//
+// CLI invocations are one-shot processes, so the cache neither helps
+// nor hurts them — but keeping the cache at the package level avoids
+// threading a pre-resolved compartment ID through 4 call paths.
+//
+// Errors are NOT cached: a transient cluster failure self-heals on
+// the next request. Cleared in tests via clearCompartmentCache.
+var compartmentCache sync.Map // map[compartmentCacheKey]string
+
+// clearCompartmentCache resets the package-level cache. Test-only;
+// production callers cannot reach a state that requires invalidation
+// (see comment on compartmentCache).
+func clearCompartmentCache() {
+	compartmentCache.Range(func(k, _ any) bool {
+		compartmentCache.Delete(k)
+		return true
+	})
+}
+
 // CompartmentID queries the cluster for any GPU node and returns its
 // CompartmentID. Used to scope OCI ListInstancePools calls during
-// pool enrichment.
+// pool enrichment. Successful lookups are cached per (kubeConfig,
+// kubeContext) for the life of the process.
 func CompartmentID(ctx context.Context, kubeConfig string, env models.Environment) (string, error) {
+	key := compartmentCacheKey{kubeConfig: kubeConfig, kubeContext: env.GetKubeContext()}
+	if cached, ok := compartmentCache.Load(key); ok {
+		return cached.(string), nil //nolint:forcetypeassert // only Stored values are string
+	}
 	clientset, err := newClientsetFromKubeFn(kubeConfig, env.GetKubeContext())
 	if err != nil {
 		return "", err
@@ -131,5 +170,7 @@ func CompartmentID(ctx context.Context, kubeConfig string, env models.Environmen
 	if len(nodes) == 0 {
 		return "", fmt.Errorf("no GPU nodes in cluster (cannot resolve compartment ID)")
 	}
-	return nodes[0].CompartmentID, nil
+	result := nodes[0].CompartmentID
+	compartmentCache.Store(key, result)
+	return result, nil
 }
