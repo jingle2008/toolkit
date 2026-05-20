@@ -66,6 +66,47 @@ func TestGpuPoolTable(t *testing.T) {
 	assert.Equal(t, [][]string{{"p1", "BM.GPU", "8", "7", "ondemand", "RUNNING"}}, rows)
 }
 
+// TestWriteSlice_GpuPool_JSONShape pins the v0.3.0 lowercase JSON
+// contract for `toolkit get gpupool -o json`. Enrichment fills
+// `actualSize` and `status` (previously placeholders) but must not
+// rename or drop any key. Regression bait against accidental struct-tag
+// changes or struct renames during refactor.
+func TestWriteSlice_GpuPool_JSONShape(t *testing.T) {
+	t.Parallel()
+	items := []models.GpuPool{{
+		Name:               "p1",
+		Shape:              "BM.GPU.A100-v2.8",
+		Size:               8,
+		ActualSize:         7,
+		Status:             "RUNNING",
+		CapacityType:       "on-demand",
+		AvailabilityDomain: "AD-1",
+		IsOkeManaged:       true,
+	}}
+	var buf bytes.Buffer
+	require.NoError(t, writeSlice(&buf, items, 0, output.Options{Format: output.FormatJSON}, gpuPoolTable))
+
+	var arr []map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
+	require.Len(t, arr, 1)
+	item := arr[0]
+	// Every key must use the lowercase JSON tag from pkg/models/gpu_pool.go.
+	assert.Equal(t, "p1", item["name"])
+	assert.Equal(t, "BM.GPU.A100-v2.8", item["shape"])
+	assert.Equal(t, float64(8), item["size"], "size key (not Size)")
+	assert.Equal(t, float64(7), item["actualSize"], "actualSize key (the enrichment landing site)")
+	assert.Equal(t, "RUNNING", item["status"], "status key (the enrichment landing site)")
+	assert.Equal(t, "on-demand", item["capacityType"])
+	assert.Equal(t, "AD-1", item["availabilityDomain"])
+	assert.Equal(t, true, item["isOkeManaged"])
+
+	// Capitalized keys must NOT appear — would indicate a struct-tag regression.
+	for _, k := range []string{"Name", "Shape", "Size", "ActualSize", "Status", "CapacityType"} {
+		_, present := item[k]
+		assert.False(t, present, "capitalized key %q must not appear (struct tag regression)", k)
+	}
+}
+
 func TestGpuNodeTable(t *testing.T) {
 	t.Parallel()
 	grouped := map[string][]models.GpuNode{

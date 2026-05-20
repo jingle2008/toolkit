@@ -202,7 +202,7 @@ func emitCategory(
 			// the per-source failures on stderr so scripts and LLM
 			// consumers know the result is incomplete, then proceed.
 			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
-				fmt.Fprintf(os.Stderr, "warning: %s\n", partial.Error())
+				fmt.Fprintf(os.Stderr, "warning: load gpu pools: %s\n", partial.Error())
 			} else {
 				return fmt.Errorf("load gpu pools: %w", err)
 			}

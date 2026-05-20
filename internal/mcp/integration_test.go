@@ -87,6 +87,19 @@ func (l partialGpuPoolsLoader) LoadGpuPools(context.Context, string, models.Envi
 	return nil, l.err
 }
 
+// fixedGpuPoolsLoader returns scripted pools so EnrichGpuPools's
+// fast-path (len(pools)==0) doesn't short-circuit the new
+// enrichment branch in handleListGpuPools. Everything else inherits
+// from stubLoader.
+type fixedGpuPoolsLoader struct {
+	stubLoader
+	pools []models.GpuPool
+}
+
+func (l fixedGpuPoolsLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {
+	return l.pools, nil
+}
+
 // recorder collects notifications/message frames the server emits.
 type recorder struct {
 	mu   sync.Mutex
@@ -214,6 +227,80 @@ func TestIntegration_NotifiesOnPartialLoad(t *testing.T) {
 	assert.Contains(t, body, "load gpu pools")
 	assert.True(t, strings.Contains(body, "oke nodepools dir missing"),
 		"warning body should include the per-source error: %q", body)
+}
+
+// TestIntegration_NotifiesOnGpuPoolEnrichmentFailure pins the
+// enrichment branch in handleListGpuPools (TUI parity step). With a
+// non-empty pool slice and a deliberately bad kubeconfig path,
+// resolve.EnrichGpuPools must fail at the CompartmentID step, surface
+// the warning both in the listResult.warnings envelope field AND as a
+// notifications/message frame, and still return the Terraform-derived
+// pool (no IsError). Regression bait: a future drop of the `notify`
+// call, a missed append to warnings, or a re-introduction of
+// fail-on-enrichment will all break this test.
+func TestIntegration_NotifiesOnGpuPoolEnrichmentFailure(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	rec := &recorder{}
+	ld := fixedGpuPoolsLoader{pools: []models.GpuPool{
+		{Name: "p1", Shape: "BM.GPU", Status: "...", Size: 8},
+	}}
+	clientSess := newTestPair(ctx, t, ld, rec, func(c *config.Config) {
+		// ExplicitPath kubeconfig that can't be loaded → CompartmentID
+		// fails at the clientcmd step, mirroring an offline / no-kube
+		// host. We deliberately don't swap the resolve seams because
+		// we want the real failure path (clientcmd parse) covered too.
+		c.KubeConfig = "/dev/null/no-such-kubeconfig"
+	})
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
+	require.NoError(t, err, "tools/call transport error")
+	require.NotNil(t, res)
+	assert.False(t, res.IsError, "enrichment failure must not fail the tool call")
+
+	// Decode the listResult envelope from StructuredContent.
+	scBytes, err := json.Marshal(res.StructuredContent)
+	require.NoError(t, err)
+	var env struct {
+		Items    []map[string]any `json:"items"`
+		Count    int              `json:"count"`
+		Warnings []string         `json:"warnings"`
+	}
+	require.NoError(t, json.Unmarshal(scBytes, &env))
+
+	// Terraform-derived data must still be returned.
+	assert.Equal(t, 1, env.Count, "Terraform pool should pass through despite enrichment failure")
+	require.Len(t, env.Items, 1)
+	assert.Equal(t, "p1", env.Items[0]["name"])
+	assert.Equal(t, "...", env.Items[0]["status"], "placeholder status must survive enrichment failure")
+
+	// Warning must land in BOTH the envelope and as a notification.
+	require.NotEmpty(t, env.Warnings, "warnings envelope must include enrichment-incomplete entry")
+	foundWarn := false
+	for _, w := range env.Warnings {
+		if strings.Contains(w, "enrichment incomplete") {
+			foundWarn = true
+			break
+		}
+	}
+	assert.True(t, foundWarn, "warnings should include 'enrichment incomplete' entry: %v", env.Warnings)
+
+	msgs := waitForMsgs(t, rec)
+	require.NotEmpty(t, msgs)
+	foundNotify := false
+	for _, m := range msgs {
+		if m.Level != sdk.LoggingLevel("warning") {
+			continue
+		}
+		body, ok := m.Data.(string)
+		if ok && strings.Contains(body, "gpu pool enrichment incomplete") {
+			foundNotify = true
+			break
+		}
+	}
+	assert.True(t, foundNotify, "notification with enrichment-incomplete body must be emitted: %+v", msgs)
 }
 
 // TestIntegration_ToolsListAndCall wires NewServer against a stub

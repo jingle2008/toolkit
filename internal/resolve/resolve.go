@@ -103,11 +103,14 @@ func EnrichGpuPools(ctx context.Context, pools []models.GpuPool, kubeConfig stri
 	if len(pools) == 0 {
 		return ""
 	}
+	logger := logging.FromContext(ctx)
 	compartmentID, err := CompartmentID(ctx, kubeConfig, env)
 	if err != nil {
+		logger.Infow("gpu pool enrichment failed", "step", "compartment_id", "error", err)
 		return fmt.Sprintf("compartment lookup failed: %v", err)
 	}
 	if err := populateGpuPoolsFn(ctx, pools, env, compartmentID); err != nil {
+		logger.Infow("gpu pool enrichment failed", "step", "populate", "error", err)
 		return fmt.Sprintf("OCI populate failed: %v", err)
 	}
 	return ""
