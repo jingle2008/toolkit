@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-19
+
 ### Changed
 - `toolkit get gpupool` (CLI) and MCP `list_gpu_pools` now enrich each pool with live `actualSize` and `status` from OCI's `ListInstancePools` API, matching the TUI's behavior (previously these read paths returned the Terraform-derived placeholders `actualSize: 0` and `status: "..."`). A Terraform-defined pool that hasn't been applied yet renders as `status: "NONEXIST"` (the value `PopulateGpuPools` writes when the OCI list returns 200 but doesn't include that pool). Enrichment degrades gracefully: a K8s/OCI failure surfaces as a stderr warning (CLI) or a `warnings` entry plus a notification (MCP), and Terraform-derived data is still returned. Pre-existing OCI auth requirement is now active for `get gpupool` / `list_gpu_pools` — same auth used by the TUI and the mutation commands. Hosts without kubeconfig/OCI auth will see one K8s-lookup attempt fail (a few hundred ms to a few seconds depending on the kubeconfig path) before the warning is emitted and Terraform data prints — `--no-headers --output json | jq` pipelines previously offline are now online-by-default.
 - `toolkit get gpupool -o table` adds two columns: `ACTUAL SIZE` (between `SIZE` and `CAPACITY TYPE`) and `STATUS` (at the end). JSON/JSONL/YAML shape is unchanged — those fields were already on the wire from the model definition.
