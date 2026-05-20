@@ -11,6 +11,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -55,7 +56,7 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_pools",
-		Description: "List GPU pools (self-managed instance pools, self-managed cluster networks, and OKE-managed nodepools). Returns GpuPool objects. Warnings field is populated when one or more pool sources fail to resolve. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List GPU pools (self-managed instance pools, self-managed cluster networks, and OKE-managed nodepools). Returns GpuPool objects with live `actualSize` and `status` enriched from OCI's ListInstancePools (matches the TUI). Warnings field is populated when one or more pool sources fail to resolve or enrichment is incomplete. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListGpuPools)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -148,7 +149,8 @@ func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequ
 }
 
 func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GpuPool], error) {
-	items, err := s.loader.LoadGpuPools(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
+	env := s.envFor(in.envOverride)
+	items, err := s.loader.LoadGpuPools(ctx, s.cfg.RepoPath, env)
 	warnings := warningsFromPartial(err)
 	if err != nil && len(warnings) == 0 {
 		return failTool[listResult[models.GpuPool]](ctx, req, "load gpu pools", err)
@@ -157,6 +159,13 @@ func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolReques
 		notify(ctx, req.Session, "warning",
 			fmt.Sprintf("load gpu pools: %d source(s) returned partial results: %s",
 				len(warnings), strings.Join(warnings, "; ")))
+	}
+	// Enrich ActualSize / Status from OCI's ListInstancePools (same
+	// step the TUI runs after load). Degrades to a warning if the K8s
+	// or OCI call fails so callers still get Terraform-derived data.
+	if msg := resolve.EnrichGpuPools(ctx, items, s.cfg.KubeConfig, env); msg != "" {
+		warnings = append(warnings, "enrichment incomplete: "+msg)
+		notify(ctx, req.Session, "warning", "gpu pool enrichment incomplete: "+msg)
 	}
 	return listFlatResult(items, in.Filter, in.Limit, warnings)
 }

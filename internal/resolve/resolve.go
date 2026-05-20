@@ -89,6 +89,30 @@ func GpuPool(ctx context.Context, ld loader.Loader, repoPath, kubeConfig string,
 	return &enriched[0], nil
 }
 
+// EnrichGpuPools fills ActualSize and Status on every pool by
+// resolving the compartment ID via the live cluster and then calling
+// PopulateGpuPools. Returns a non-empty warning string if enrichment
+// could not complete; pools are still safe to use (the loader's
+// Status="..." placeholder remains, ActualSize stays at zero).
+//
+// Used by `toolkit get gpupool` and MCP `list_gpu_pools` to match the
+// TUI's enriched view. Mutation paths (resolve.GpuPool) keep their
+// per-pool enrichment for the single-pool ID lookup they actually
+// need.
+func EnrichGpuPools(ctx context.Context, pools []models.GpuPool, kubeConfig string, env models.Environment) string {
+	if len(pools) == 0 {
+		return ""
+	}
+	compartmentID, err := CompartmentID(ctx, kubeConfig, env)
+	if err != nil {
+		return fmt.Sprintf("compartment lookup failed: %v", err)
+	}
+	if err := populateGpuPoolsFn(ctx, pools, env, compartmentID); err != nil {
+		return fmt.Sprintf("OCI populate failed: %v", err)
+	}
+	return ""
+}
+
 // CompartmentID queries the cluster for any GPU node and returns its
 // CompartmentID. Used to scope OCI ListInstancePools calls during
 // pool enrichment.

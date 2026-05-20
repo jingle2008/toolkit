@@ -60,10 +60,10 @@ func TestBaseModelTable(t *testing.T) {
 
 func TestGpuPoolTable(t *testing.T) {
 	t.Parallel()
-	items := []models.GpuPool{{Name: "p1", Shape: "BM.GPU", Size: 8, CapacityType: "ondemand"}}
+	items := []models.GpuPool{{Name: "p1", Shape: "BM.GPU", Size: 8, ActualSize: 7, CapacityType: "ondemand", Status: "RUNNING"}}
 	headers, rows := gpuPoolTable(items)
-	assert.Equal(t, []string{"NAME", "SHAPE", "SIZE", "CAPACITY TYPE"}, headers)
-	assert.Equal(t, [][]string{{"p1", "BM.GPU", "8", "ondemand"}}, rows)
+	assert.Equal(t, []string{"NAME", "SHAPE", "SIZE", "ACTUAL SIZE", "CAPACITY TYPE", "STATUS"}, headers)
+	assert.Equal(t, [][]string{{"p1", "BM.GPU", "8", "7", "ondemand", "RUNNING"}}, rows)
 }
 
 func TestGpuNodeTable(t *testing.T) {

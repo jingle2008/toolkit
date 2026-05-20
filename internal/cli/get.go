@@ -20,6 +20,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -205,6 +206,13 @@ func emitCategory(
 			} else {
 				return fmt.Errorf("load gpu pools: %w", err)
 			}
+		}
+		// Enrich ActualSize / Status from OCI's ListInstancePools (same
+		// step the TUI runs after load). Degrades to placeholder on
+		// failure so an offline / no-OCI-auth session still prints the
+		// Terraform-derived columns.
+		if msg := resolve.EnrichGpuPools(ctx, items, cfg.KubeConfig, env); msg != "" {
+			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", msg)
 		}
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, gpuPoolTable)
 	case domain.GpuNode:
@@ -526,9 +534,9 @@ func baseModelTable(items []models.BaseModel) ([]string, [][]string) {
 
 func gpuPoolTable(items []models.GpuPool) ([]string, [][]string) {
 	return tableFromSlice(items,
-		[]string{"NAME", "SHAPE", "SIZE", "CAPACITY TYPE"},
+		[]string{"NAME", "SHAPE", "SIZE", "ACTUAL SIZE", "CAPACITY TYPE", "STATUS"},
 		func(p models.GpuPool) []string {
-			return []string{p.Name, p.Shape, fmt.Sprintf("%d", p.Size), p.CapacityType}
+			return []string{p.Name, p.Shape, fmt.Sprintf("%d", p.Size), fmt.Sprintf("%d", p.ActualSize), p.CapacityType, p.Status}
 		})
 }
 

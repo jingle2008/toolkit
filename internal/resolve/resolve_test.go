@@ -255,3 +255,45 @@ func TestCompartmentID_KubeUnreachable(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "kubeconfig parse failed")
 }
+
+// -- EnrichGpuPools ------------------------------------------------
+
+func TestEnrichGpuPools_HappyPath(t *testing.T) {
+	fakeCompartmentResolver(t, "ocid1.compartment")
+	fakePopulate(t, "ocid1.instancepool.fake", nil)
+
+	pools := []models.GpuPool{{Name: "p1"}, {Name: "p2"}}
+	msg := EnrichGpuPools(context.Background(), pools, "/kube", models.Environment{})
+	assert.Empty(t, msg, "happy path should not return a warning")
+	assert.Equal(t, 4, pools[0].ActualSize, "fakePopulate fills ActualSize=4")
+	assert.Equal(t, 4, pools[1].ActualSize)
+}
+
+func TestEnrichGpuPools_EmptySlice_NoOp(t *testing.T) {
+	// Don't wire seams: the empty-slice early-return must avoid them.
+	msg := EnrichGpuPools(context.Background(), nil, "/kube", models.Environment{})
+	assert.Empty(t, msg, "empty input should be a no-op")
+}
+
+func TestEnrichGpuPools_CompartmentLookupFailure_Warns(t *testing.T) {
+	// listGpuNodesForCompartFn returns no nodes → CompartmentID errors;
+	// EnrichGpuPools must surface that as a warning, not a panic.
+	fakeCompartmentResolver(t, "")
+
+	pools := []models.GpuPool{{Name: "p1", Status: "..."}}
+	msg := EnrichGpuPools(context.Background(), pools, "/kube", models.Environment{})
+	require.NotEmpty(t, msg)
+	assert.Contains(t, msg, "compartment lookup failed")
+	assert.Equal(t, "...", pools[0].Status, "placeholder must survive enrichment failure")
+}
+
+func TestEnrichGpuPools_PopulateFailure_Warns(t *testing.T) {
+	fakeCompartmentResolver(t, "ocid1.compartment")
+	fakePopulate(t, "", errors.New("OCI 500"))
+
+	pools := []models.GpuPool{{Name: "p1"}}
+	msg := EnrichGpuPools(context.Background(), pools, "/kube", models.Environment{})
+	require.NotEmpty(t, msg)
+	assert.Contains(t, msg, "OCI populate failed")
+	assert.Contains(t, msg, "OCI 500")
+}
