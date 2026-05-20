@@ -117,20 +117,18 @@ func EnrichGpuPools(ctx context.Context, pools []models.GpuPool, kubeConfig stri
 	return ""
 }
 
-// compartmentCacheKey identifies a unique compartment-ID lookup. Only
-// the inputs the underlying K8s call sees (kubeConfig + kube context)
-// matter; env.Realm is irrelevant because the lookup is purely K8s-side.
-type compartmentCacheKey struct {
-	kubeConfig  string
-	kubeContext string
-}
-
 // compartmentCache memoizes successful CompartmentID lookups for the
 // life of the process. The MCP server makes the call on every
 // list_gpu_pools / scale_gpu_pool tool invocation; without caching,
 // every call burns one K8s lookup before the OCI step. Compartment
-// identity for a given (kubeConfig, kubeContext) is stable for the
-// life of the cluster, so the cache has no semantic risk.
+// identity for a given cluster is stable for the cluster's life, so
+// the cache has no semantic risk.
+//
+// Key is env.GetKubeContext() — a string like "dp-dev-iad" that
+// uniquely identifies the target cluster. kubeConfig is intentionally
+// NOT part of the key: it's set once at NewServer (MCP) or once per
+// CLI invocation and never mutated within a process, so it can't
+// vary across cache lookups.
 //
 // CLI invocations are one-shot processes, so the cache neither helps
 // nor hurts them — but keeping the cache at the package level avoids
@@ -138,7 +136,7 @@ type compartmentCacheKey struct {
 //
 // Errors are NOT cached: a transient cluster failure self-heals on
 // the next request. Cleared in tests via clearCompartmentCache.
-var compartmentCache sync.Map // map[compartmentCacheKey]string
+var compartmentCache sync.Map // map[string]string — kubeContext → compartmentID
 
 // clearCompartmentCache resets the package-level cache. Test-only;
 // production callers cannot reach a state that requires invalidation
@@ -152,14 +150,14 @@ func clearCompartmentCache() {
 
 // CompartmentID queries the cluster for any GPU node and returns its
 // CompartmentID. Used to scope OCI ListInstancePools calls during
-// pool enrichment. Successful lookups are cached per (kubeConfig,
-// kubeContext) for the life of the process.
+// pool enrichment. Successful lookups are cached per kubeContext for
+// the life of the process.
 func CompartmentID(ctx context.Context, kubeConfig string, env models.Environment) (string, error) {
-	key := compartmentCacheKey{kubeConfig: kubeConfig, kubeContext: env.GetKubeContext()}
-	if cached, ok := compartmentCache.Load(key); ok {
+	kubeContext := env.GetKubeContext()
+	if cached, ok := compartmentCache.Load(kubeContext); ok {
 		return cached.(string), nil //nolint:forcetypeassert // only Stored values are string
 	}
-	clientset, err := newClientsetFromKubeFn(kubeConfig, env.GetKubeContext())
+	clientset, err := newClientsetFromKubeFn(kubeConfig, kubeContext)
 	if err != nil {
 		return "", err
 	}
@@ -171,6 +169,6 @@ func CompartmentID(ctx context.Context, kubeConfig string, env models.Environmen
 		return "", fmt.Errorf("no GPU nodes in cluster (cannot resolve compartment ID)")
 	}
 	result := nodes[0].CompartmentID
-	compartmentCache.Store(key, result)
+	compartmentCache.Store(kubeContext, result)
 	return result, nil
 }
