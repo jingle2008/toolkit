@@ -76,6 +76,7 @@ func parseBaseModel(obj *unstructured.Unstructured) models.BaseModel {
 	maxTokens, _, _ := unstructured.NestedInt64(spec, "maxTokens")
 	state, _, _ := unstructured.NestedString(status, "state")
 	parameterSize, _, _ := unstructured.NestedString(spec, "modelParameterSize")
+	storageURI, _, _ := unstructured.NestedString(spec, "storage", "storageUri")
 
 	bm := models.BaseModel{
 		InternalName:         internalName,
@@ -99,6 +100,7 @@ func parseBaseModel(obj *unstructured.Unstructured) models.BaseModel {
 		IsImageTextToText:    metadata["image-text-to-text"] == "true",
 		ParameterSize:        parameterSize,
 		Status:               state,
+		StorageURI:           storageURI,
 	}
 
 	return bm

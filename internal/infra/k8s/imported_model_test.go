@@ -95,21 +95,18 @@ func TestLoadImportedModels_BothSources(t *testing.T) {
 
 	a, ok := byName["import-a"]
 	require.True(t, ok)
-	assert.Equal(t, "team-a", a.Namespace)
+	assert.Equal(t, "team-a", a.Namespace, "non-empty Namespace ⇒ namespaced BaseModel CR")
 	assert.Empty(t, a.TenantID, "namespaced CR without tenancy-id label should have empty TenantID")
-	assert.Equal(t, models.ImportedModelSourceNamespaced, a.Source)
 
 	b, ok := byName["import-b"]
 	require.True(t, ok)
 	assert.Equal(t, "team-b", b.Namespace)
 	assert.Equal(t, "ocid1.tenancy.b", b.TenantID, "namespaced CR with tenancy-id label propagates it")
-	assert.Equal(t, models.ImportedModelSourceNamespaced, b.Source)
 
 	c, ok := byName["cluster-tenant"]
 	require.True(t, ok)
-	assert.Empty(t, c.Namespace, "cluster-scoped CR has no namespace")
+	assert.Empty(t, c.Namespace, "empty Namespace ⇒ cluster-scoped ClusterBaseModel CR")
 	assert.Equal(t, "ocid1.tenancy.c", c.TenantID)
-	assert.Equal(t, models.ImportedModelSourceClusterScoped, c.Source)
 
 	_, sharedLeaked := byName["cluster-shared"]
 	assert.False(t, sharedLeaked, "ClusterBaseModel without tenancy-id label must not appear in imported models")

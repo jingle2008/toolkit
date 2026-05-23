@@ -52,20 +52,18 @@ func TestImportedModelTable(t *testing.T) {
 	items := []models.ImportedModel{
 		{
 			BaseModel: models.BaseModel{Name: "im-a", Vendor: "acme", Version: "v1", Status: "Ready"},
-			Namespace: "team-x",
-			Source:    models.ImportedModelSourceNamespaced,
+			Namespace: "team-x", // namespaced source — Namespace populated
 		},
 		{
 			BaseModel: models.BaseModel{Name: "im-b", Vendor: "acme", Version: "v2", Status: "Ready"},
-			TenantID:  "ocid1.tenancy.y",
-			Source:    models.ImportedModelSourceClusterScoped,
+			TenantID:  "ocid1.tenancy.y", // cluster-scoped source — Namespace empty
 		},
 	}
 	headers, rows := importedModelTable(items)
-	assert.Equal(t, []string{"NAME", "NAMESPACE", "TENANT ID", "SOURCE", "VENDOR", "VERSION", "STATUS"}, headers)
+	assert.Equal(t, []string{"NAME", "NAMESPACE", "TENANT ID", "VENDOR", "VERSION", "STATUS"}, headers)
 	assert.Equal(t, [][]string{
-		{"im-a", "team-x", "", "namespaced", "acme", "v1", "Ready"},
-		{"im-b", "", "ocid1.tenancy.y", "cluster-scoped", "acme", "v2", "Ready"},
+		{"im-a", "team-x", "", "acme", "v1", "Ready"},
+		{"im-b", "", "ocid1.tenancy.y", "acme", "v2", "Ready"},
 	}, rows)
 }
 

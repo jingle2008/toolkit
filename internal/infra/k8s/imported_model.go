@@ -48,20 +48,19 @@ func LoadImportedModels(ctx context.Context, client dynamic.Interface) ([]models
 			BaseModel: parseBaseModel(&item),
 			Namespace: item.GetNamespace(),
 			TenantID:  labels["tenancy-id"], // may be empty for namespaced CRs
-			Source:    models.ImportedModelSourceNamespaced,
 		})
 	}
 	for _, item := range cbList.Items {
 		tenantID, ok := getLabels(&item)["tenancy-id"]
 		if !ok {
 			// Shared catalog (no tenancy-id label) — surfaced by
-			// LoadBaseModels instead.
+			// LoadBaseModels instead. Cluster-scoped CBMs in this
+			// loader leave Namespace empty by construction.
 			continue
 		}
 		result = append(result, models.ImportedModel{
 			BaseModel: parseBaseModel(&item),
 			TenantID:  tenantID,
-			Source:    models.ImportedModelSourceClusterScoped,
 		})
 	}
 	return result, nil

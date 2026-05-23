@@ -30,6 +30,7 @@ type BaseModel struct {
 	Replicas             int              `json:"replicas"`
 	Status               string           `json:"status"`
 	ParameterSize        string           `json:"parameterSize"`
+	StorageURI           string           `json:"storageUri,omitempty"`
 }
 
 // DacShapeConfigs holds compatible DAC shapes.
@@ -80,7 +81,7 @@ func (m BaseModel) GetFilterableFields() []string {
 	}
 
 	return append(m.Capabilities, m.Name, m.DisplayName, m.Status,
-		m.Type, m.GetFlags(), shapeName, m.Runtime)
+		m.Type, m.GetFlags(), shapeName, m.Runtime, m.StorageURI)
 }
 
 // IsFaulty returns false by default for BaseModel.

@@ -540,9 +540,9 @@ func baseModelTable(items []models.BaseModel) ([]string, [][]string) {
 
 func importedModelTable(items []models.ImportedModel) ([]string, [][]string) {
 	return tableFromSlice(items,
-		[]string{"NAME", "NAMESPACE", "TENANT ID", "SOURCE", "VENDOR", "VERSION", "STATUS"},
+		[]string{"NAME", "NAMESPACE", "TENANT ID", "VENDOR", "VERSION", "STATUS"},
 		func(m models.ImportedModel) []string {
-			return []string{m.Name, m.Namespace, m.TenantID, m.Source, m.Vendor, m.Version, m.Status}
+			return []string{m.Name, m.Namespace, m.TenantID, m.Vendor, m.Version, m.Status}
 		})
 }
 

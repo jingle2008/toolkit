@@ -353,9 +353,11 @@ func TestList_ImportedModels_FlatShape(t *testing.T) {
 	loader := &fakeImportedModelLoader{
 		items: []models.ImportedModel{
 			{
-				BaseModel: models.BaseModel{Name: "import-a", DisplayName: "Import A", Vendor: "acme", Version: "v1", Status: "Ready"},
+				BaseModel: models.BaseModel{
+					Name: "import-a", DisplayName: "Import A", Vendor: "acme", Version: "v1", Status: "Ready",
+					StorageURI: "oci://n/tenancy/b/bucket/o/path",
+				},
 				Namespace: "team-x",
-				Source:    models.ImportedModelSourceNamespaced,
 			},
 		},
 	}
@@ -365,9 +367,12 @@ func TestList_ImportedModels_FlatShape(t *testing.T) {
 			assert.Equal(t, "import-a", item["name"])
 			assert.Equal(t, "Import A", item["displayName"])
 			assert.Equal(t, "acme", item["vendor"])
+			assert.Equal(t, "oci://n/tenancy/b/bucket/o/path", item["storageUri"], "storageUri must come through from BaseModel")
 			// ImportedModel-specific identity fields sit alongside.
 			assert.Equal(t, "team-x", item["namespace"])
-			assert.Equal(t, "namespaced", item["source"])
+			// Source field was removed — derivable from namespace.
+			_, hasSource := item["source"]
+			assert.False(t, hasSource, "source field was dropped; consumers derive from namespace (empty = cluster-scoped)")
 			// Cluster-scoped indicator absent when source is namespaced.
 			_, hasTenantID := item["tenantId"]
 			assert.False(t, hasTenantID, "tenantId should be omitempty when not set")

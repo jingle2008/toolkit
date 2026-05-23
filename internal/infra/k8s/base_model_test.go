@@ -56,6 +56,14 @@ func TestLoadBaseModels_FakeDynamic(t *testing.T) {
 			"image-text-to-text": "true",
 		},
 		"modelParameterSize": "7B",
+		"storage": map[string]any{
+			"storageUri": "oci://n/tenancy/b/customer-model-store/o/customer-imported-basemodels/aaaa/amaaaa",
+			"path":       "/mnt/data/models/customer-model-store/amaaaa",
+			"parameters": map[string]any{
+				"obo_token": "",
+				"region":    "sa-saopaulo-1",
+			},
+		},
 	}
 	status1 := map[string]any{
 		"state": "Ready",
@@ -124,6 +132,7 @@ func TestLoadBaseModels_FakeDynamic(t *testing.T) {
 	assert.True(t, bm.IsImageTextToText)
 	assert.Equal(t, "7B", bm.ParameterSize)
 	assert.Equal(t, "Ready", bm.Status)
+	assert.Equal(t, "oci://n/tenancy/b/customer-model-store/o/customer-imported-basemodels/aaaa/amaaaa", bm.StorageURI)
 	if assert.NotNil(t, bm.DacShapeConfigs) && assert.NotEmpty(t, bm.DacShapeConfigs.CompatibleDACShapes) {
 		assert.Equal(t, "SHAPE1", bm.DacShapeConfigs.CompatibleDACShapes[0].Name)
 		assert.Equal(t, 2, bm.DacShapeConfigs.CompatibleDACShapes[0].QuotaUnit)
@@ -151,6 +160,7 @@ func TestLoadBaseModels_FakeDynamic(t *testing.T) {
 	assert.False(t, bm2.IsImageTextToText)
 	assert.Equal(t, "", bm2.ParameterSize)
 	assert.Equal(t, "Creating", bm2.Status)
+	assert.Empty(t, bm2.StorageURI, "minimal CR without spec.storage should leave StorageURI empty")
 	assert.Nil(t, bm2.DacShapeConfigs)
 }
 
