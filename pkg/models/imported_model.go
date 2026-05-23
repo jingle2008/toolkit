@@ -9,9 +9,20 @@ package models
 //     label — the `Namespace` field is empty; `TenantID` carries the
 //     label value.
 //
-// The source kind is derivable from `Namespace` (empty ⇒ cluster-
-// scoped CBM; non-empty ⇒ namespaced BM), so no explicit source
-// field is carried.
+// `Namespace` and `TenantID` are orthogonal facets, not synonyms:
+//
+//   - `Namespace` is the K8s scope (empty ⇒ cluster-scoped CBM;
+//     non-empty ⇒ namespaced BM). It's the authoritative
+//     source-kind indicator.
+//   - `TenantID` is the OCI tenant identifier, populated from the
+//     `tenancy-id` label whenever present — including on namespaced
+//     CRs that happen to carry the label. Matches the pattern used
+//     by DedicatedAICluster (pkg/models/dedicated_ai_cluster.go).
+//
+// Both can be populated on the same item (namespaced CR with a
+// tenancy-id label); neither implies the other. Consumers wanting
+// "which K8s scope" should read `Namespace`; consumers wanting
+// "which OCI tenant" should read `TenantID`.
 //
 // Distinct from BaseModel (the shared / public catalog). The embedded
 // BaseModel fields are JSON-inlined at the top level so consumers can

@@ -345,9 +345,11 @@ func (f *fakeImportedModelLoader) LoadImportedModels(context.Context, string, mo
 }
 
 // TestList_ImportedModels_FlatShape pins the wire shape: BaseModel
-// fields are flattened at the top level alongside `namespace`,
-// `tenantId`, and `source`. Regression bait against an accidental
-// nesting refactor (e.g. wrapping BaseModel under a `model` key).
+// fields are flattened at the top level alongside `namespace` and
+// `tenantId`. The former `source` field was dropped; the test also
+// pins its absence so a future re-introduction wouldn't slip through.
+// Regression bait against an accidental nesting refactor (e.g.
+// wrapping BaseModel under a `model` key).
 func TestList_ImportedModels_FlatShape(t *testing.T) {
 	t.Parallel()
 	loader := &fakeImportedModelLoader{

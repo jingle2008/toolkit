@@ -56,7 +56,7 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_imported_models",
-		Description: "List tenant-imported models. Sources: (1) ome.io BaseModel CRs across all namespaces, with the originating namespace on `namespace`; (2) ClusterBaseModel CRs carrying a `tenancy-id` label, with the label value on `tenantId`. Each item also has `source` (\"namespaced\" or \"cluster-scoped\") plus all BaseModel fields flattened at the top level. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List tenant-imported models. Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label (label value on `tenantId`). `namespace` and `tenantId` are orthogonal facets: `namespace` is the K8s scope (empty ⇒ cluster-scoped CBM; non-empty ⇒ namespaced BM — this is the authoritative source-kind indicator); `tenantId` is the OCI tenant identifier from the label, which may appear on either source. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListImportedModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{

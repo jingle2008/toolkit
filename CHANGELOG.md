@@ -7,12 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- New `importedmodel` (alias `im`) category covering tenant-imported models. Two sources are merged: (1) namespaced `ome.io/v1beta1` `BaseModel` CRs across all namespaces, with the originating namespace on `namespace`; (2) cluster-scoped `ClusterBaseModel` CRs carrying a `tenancy-id` label, with the label value on `tenantId`. Source kind is derivable from `namespace` (empty ⇒ cluster-scoped CBM, non-empty ⇒ namespaced BM), so no explicit `source` field is carried. All existing `BaseModel` fields are JSON-flattened at the top level, so jq pipelines built for `toolkit get basemodel` keep working — only `namespace` and `tenantId` are new keys.
+- New `importedmodel` (alias `im`) category covering tenant-imported models. Two sources are merged: (1) namespaced `ome.io/v1beta1` `BaseModel` CRs across all namespaces, with the originating namespace on `namespace`; (2) cluster-scoped `ClusterBaseModel` CRs carrying a `tenancy-id` label, with the label value on `tenantId`. `namespace` and `tenantId` are **orthogonal facets**, not synonyms: `namespace` is the K8s scope (empty ⇒ cluster-scoped CBM; non-empty ⇒ namespaced BM — this is the authoritative source-kind indicator), while `tenantId` is the OCI tenant identifier sourced from the `tenancy-id` label and may appear on either source kind (same pattern as `DedicatedAICluster.tenantId`). Consumers wanting "which K8s scope" should read `namespace`; consumers wanting "which OCI tenant" should read `tenantId`. All existing `BaseModel` fields are JSON-flattened at the top level, so jq pipelines built for `toolkit get basemodel` keep working — only `namespace` and `tenantId` are new keys.
 - `toolkit get importedmodel` (CLI) and MCP `list_imported_models` tool, plus a TUI view (8 columns: Name, Namespace, Tenant ID, Display Name, Version, DAC Shape, Flags, Status). All three surfaces share the same loader; the TUI lazy-loads on first navigation to the category.
 - `BaseModel.storageUri` parsed from `spec.storage.storageUri`. The OCI Object Storage URI (`oci://n/<tenancy>/b/<bucket>/o/<object>`) is where the model artifact actually lives; surfaces on both `toolkit get basemodel` and `toolkit get importedmodel` JSON/YAML output. Empty (omitempty) for CRs without `spec.storage`.
 
 ### Changed
-- MCP `list_base_models` description now flags that tenant-scoped ClusterBaseModels are surfaced under `list_imported_models`, not here.
+- `toolkit get basemodel` (CLI), MCP `list_base_models`, and the TUI BaseModel view no longer include `ClusterBaseModel` CRs carrying a `tenancy-id` label — those are tenant-specific (custom or fine-tuned for a single tenancy) and are now surfaced exclusively under the new `importedmodel` category. Scripts that ran `toolkit get basemodel -o json | jq length` against a cluster with tenant-scoped CBMs will see fewer items in this release; use `importedmodel` (or query both) to recover the full set.
+- MCP `list_base_models` description updated to point at `list_imported_models` for tenant-scoped CRs.
 
 ## [0.5.0] - 2026-05-19
 

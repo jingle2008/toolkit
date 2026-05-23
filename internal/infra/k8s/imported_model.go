@@ -18,8 +18,19 @@ import (
 // shared catalog and are surfaced by LoadBaseModels instead.
 //
 // Both sources reuse parseBaseModel for the shared spec/status
-// fields, then wrap with the source-specific identity (namespace for
-// namespaced CRs; tenancy-id label value for cluster-scoped CRs).
+// fields. `Namespace` (from metadata.namespace) and `TenantID` (from
+// the `tenancy-id` label) are orthogonal — both may be populated on
+// a namespaced CR that happens to carry the label. See the
+// models.ImportedModel doc for the consumer contract.
+//
+// Atomicity: if either list call fails, the whole load fails — we
+// don't return a partial result. The two API calls hit different
+// GVRs (namespaced `basemodels` vs cluster-scoped `clusterbasemodels`)
+// that often have asymmetric RBAC; a caller with namespaced-only
+// access will see a hard failure rather than half the catalog. This
+// is a deliberate choice over the LoadGpuPools-style PartialLoadError
+// idiom because the two sources are conceptually one catalog — a
+// missing half is more confusing than an explicit error.
 func LoadImportedModels(ctx context.Context, client dynamic.Interface) ([]models.ImportedModel, error) {
 	namespacedGVR := schema.GroupVersionResource{
 		Group:    "ome.io",
