@@ -63,6 +63,9 @@ var categoryHandlers = map[domain.Category]func(*models.Dataset, *domain.Toolkit
 	domain.BaseModel: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
 		return filterRows(dataset.BaseModels, filter, faultyOnly, baseModelToRow)
 	},
+	domain.ImportedModel: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRows(dataset.ImportedModels, filter, faultyOnly, importedModelToRow)
+	},
 	domain.ModelArtifact: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
 		return filterRowsScoped(dataset.ModelArtifactMap, domain.BaseModel, context, filter, faultyOnly, modelArtifactToRow)
 	},
@@ -253,13 +256,12 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
 		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
-		domain.PropertyRegionalOverride, domain.ModelArtifact, domain.Alias, domain.BaseModel:
+		domain.PropertyRegionalOverride, domain.ModelArtifact, domain.Alias, domain.BaseModel,
+		domain.ImportedModel:
 		return row[0]
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
 		return models.ScopedItemKey{Scope: row[1], Name: row[0]}
-	case domain.ImportedModel:
-		// TUI integration deferred — CLI / MCP only for now.
 	case domain.CategoryUnknown:
 		// exhaustive
 	}
@@ -297,6 +299,8 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 		return findPropertyRegionalOverride(dataset, key)
 	case domain.BaseModel:
 		return findBaseModel(dataset, key)
+	case domain.ImportedModel:
+		return findImportedModel(dataset, key)
 	case domain.ModelArtifact:
 		return findModelArtifact(dataset, key)
 	case domain.Environment:
@@ -311,9 +315,6 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 		return findDedicatedAICluster(dataset, key)
 	case domain.Alias:
 		return key
-	case domain.ImportedModel:
-		// TUI integration deferred — CLI / MCP only for now.
-		return nil
 	case domain.CategoryUnknown:
 		// exhaustive
 	}
@@ -374,6 +375,10 @@ func findPropertyRegionalOverride(dataset *models.Dataset, key models.ItemKey) a
 
 func findBaseModel(dataset *models.Dataset, key models.ItemKey) any {
 	return collections.FindByName(dataset.BaseModels, key.(string))
+}
+
+func findImportedModel(dataset *models.Dataset, key models.ItemKey) any {
+	return collections.FindByName(dataset.ImportedModels, key.(string))
 }
 
 func findModelArtifact(dataset *models.Dataset, key models.ItemKey) any {

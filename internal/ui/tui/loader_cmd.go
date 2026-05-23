@@ -25,6 +25,16 @@ func loadBaseModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, en
 	}
 }
 
+func loadImportedModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+	return func() tea.Msg {
+		items, err := ld.LoadImportedModels(ctx, kubeCfg, env)
+		if err != nil {
+			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.ImportedModel, err))
+		}
+		return importedModelsLoadedMsg{Items: items, Gen: gen}
+	}
+}
+
 func loadGpuPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadGpuPools(ctx, repoPath, env)

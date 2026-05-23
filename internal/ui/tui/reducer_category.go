@@ -46,6 +46,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	type handlerFn func(*Model, bool, int) tea.Cmd
 	handlers := map[domain.Category]handlerFn{
 		domain.BaseModel:                       func(m *Model, _ bool, gen int) tea.Cmd { return m.handleBaseModelCategory(gen) },
+		domain.ImportedModel:                   func(m *Model, _ bool, gen int) tea.Cmd { return m.handleImportedModelCategory(gen) },
 		domain.GpuPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGpuPoolCategory(refresh, gen) },
 		domain.GpuNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGpuNodeCategory(refresh, gen) },
 		domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
@@ -119,6 +120,13 @@ func (m *Model) handlePropertyRegionalOverrideCategory(gen int) tea.Cmd {
 func (m *Model) handleBaseModelCategory(gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.BaseModels == nil {
 		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	}
+	return nil
+}
+
+func (m *Model) handleImportedModelCategory(gen int) tea.Cmd {
+	if m.dataset == nil || m.dataset.ImportedModels == nil {
+		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }

@@ -40,10 +40,13 @@ func (m *Model) routeLoadingMsg(msg tea.Msg) ([]tea.Cmd, bool) {
 	}
 }
 
+//nolint:cyclop // message router; complexity is inherent in the number of loaded-message types.
 func (m *Model) routeLoadingDataMsg(msg tea.Msg) []tea.Cmd {
 	switch msg := msg.(type) {
 	case baseModelsLoadedMsg:
 		m.handleBaseModelsLoaded(msg.Items, msg.Gen)
+	case importedModelsLoadedMsg:
+		m.handleImportedModelsLoaded(msg.Items, msg.Gen)
 	case gpuPoolsLoadedMsg:
 		return []tea.Cmd{m.handleGpuPoolsLoaded(msg.Items, msg.Gen)}
 	case gpuNodesLoadedMsg:

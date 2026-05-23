@@ -192,6 +192,8 @@ func (m *Model) refreshDisplay() {
 }
 
 // processData updates the model's dataset based on the incoming DataMsg.
+//
+//nolint:cyclop // legacy DataMsg router (see typed handlers below); complexity comes from the message type-switch.
 func (m *Model) processData(msg DataMsg) tea.Cmd {
 	var cmd tea.Cmd
 	// Drop stale responses based on generation token (allow zero-value Gen).
@@ -203,6 +205,8 @@ func (m *Model) processData(msg DataMsg) tea.Cmd {
 		m.dataset = data
 	case []models.BaseModel:
 		m.dataset.BaseModels = data
+	case []models.ImportedModel:
+		m.dataset.ImportedModels = data
 	case []models.GpuPool:
 		m.dataset.GpuPools = data
 		cmd = m.updateGpuPoolState()
@@ -252,6 +256,13 @@ func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
 		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
+}
+
+func (m *Model) handleImportedModelsLoaded(items []models.ImportedModel, gen int) {
+	if gen != m.gen {
+		return
+	}
+	m.applyDataset(func(ds *models.Dataset) { ds.ImportedModels = items }, domain.ImportedModel, len(items))
 }
 
 func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {

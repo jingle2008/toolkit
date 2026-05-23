@@ -23,6 +23,7 @@ func TestHeaderDefinitions_AllCategoriesPresent(t *testing.T) {
 		domain.ConsolePropertyRegionalOverride,
 		domain.PropertyRegionalOverride,
 		domain.BaseModel,
+		domain.ImportedModel,
 		domain.ModelArtifact,
 		domain.Environment,
 		domain.ServiceTenancy,

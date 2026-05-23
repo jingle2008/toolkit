@@ -102,6 +102,11 @@ type baseModelsLoadedMsg struct {
 	Gen   int
 }
 
+type importedModelsLoadedMsg struct {
+	Items []models.ImportedModel
+	Gen   int
+}
+
 type gpuPoolsLoadedMsg struct {
 	Items []models.GpuPool
 	Gen   int

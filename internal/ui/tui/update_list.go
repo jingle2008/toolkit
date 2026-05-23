@@ -74,6 +74,8 @@ func (m *Model) routeListDataMsg(msg tea.Msg) []tea.Cmd {
 		return []tea.Cmd{m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen})}
 	case baseModelsLoadedMsg:
 		m.handleBaseModelsLoaded(msg.Items, msg.Gen)
+	case importedModelsLoadedMsg:
+		m.handleImportedModelsLoaded(msg.Items, msg.Gen)
 	case gpuPoolsLoadedMsg:
 		return []tea.Cmd{m.handleGpuPoolsLoaded(msg.Items, msg.Gen)}
 	default:

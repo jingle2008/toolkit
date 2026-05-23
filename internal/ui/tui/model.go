@@ -49,6 +49,7 @@ func setFilter(filter string) tea.Cmd {
 // lazyLoadedCategories is a set of categories that are loaded on demand and never mutated.
 var lazyLoadedCategories = map[domain.Category]struct{}{
 	domain.BaseModel:          {},
+	domain.ImportedModel:      {},
 	domain.GpuPool:            {},
 	domain.GpuNode:            {},
 	domain.DedicatedAICluster: {},

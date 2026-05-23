@@ -15,6 +15,7 @@ type Dataset struct {
 	PropertyRegionalOverrides         []PropertyRegionalOverride
 	Tenants                           []Tenant
 	BaseModels                        []BaseModel
+	ImportedModels                    []ImportedModel
 	ModelArtifactMap                  map[string][]ModelArtifact
 	Environments                      []Environment
 	ServiceTenancies                  []ServiceTenancy
@@ -70,6 +71,7 @@ func (d *Dataset) ResetScopedData() {
 	d.ConsolePropertyRegionalOverrides = nil
 	d.PropertyRegionalOverrides = nil
 	d.BaseModels = nil
+	d.ImportedModels = nil
 	d.GpuPools = nil
 	d.GpuNodeMap = nil
 	d.DedicatedAIClusterMap = nil

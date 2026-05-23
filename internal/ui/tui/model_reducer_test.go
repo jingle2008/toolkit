@@ -22,6 +22,36 @@ func TestHandleBaseModelsLoaded(t *testing.T) {
 	}
 }
 
+func TestHandleImportedModelsLoaded(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gen = 1
+	items := []models.ImportedModel{
+		{BaseModel: models.BaseModel{Name: "im1"}, Namespace: "team-x"},
+	}
+
+	m.handleImportedModelsLoaded(items, 1)
+	if len(m.dataset.ImportedModels) != 1 || m.dataset.ImportedModels[0].Name != "im1" {
+		t.Fatalf("ImportedModels not updated: %#v", m.dataset.ImportedModels)
+	}
+}
+
+func TestHandleImportedModelsLoaded_GenMismatch(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gen = 2
+	m.dataset.ImportedModels = []models.ImportedModel{
+		{BaseModel: models.BaseModel{Name: "old"}, Namespace: "team-x"},
+	}
+
+	m.handleImportedModelsLoaded([]models.ImportedModel{
+		{BaseModel: models.BaseModel{Name: "new"}, Namespace: "team-y"},
+	}, 1)
+	if len(m.dataset.ImportedModels) != 1 || m.dataset.ImportedModels[0].Name != "old" {
+		t.Fatalf("ImportedModels updated on gen mismatch: %#v", m.dataset.ImportedModels)
+	}
+}
+
 func TestHandleBaseModelsLoaded_GenMismatch(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)

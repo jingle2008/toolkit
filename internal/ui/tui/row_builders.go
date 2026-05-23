@@ -148,6 +148,28 @@ func baseModelToRow(val models.BaseModel) table.Row {
 	}
 }
 
+// ImportedModel — namespace (for namespaced BM CRs) OR tenant ID
+// suffix (for cluster-scoped CBMs with tenancy-id label). Source
+// kind is encoded in which of those two is populated; we don't need
+// an explicit column for it.
+func importedModelToRow(val models.ImportedModel) table.Row {
+	shape := val.GetDefaultDacShape()
+	var shapeDisplay string
+	if shape != nil {
+		shapeDisplay = fmt.Sprintf("%dx %s", shape.QuotaUnit, shape.Name)
+	}
+	return table.Row{
+		val.Name,
+		val.Namespace,
+		val.TenantID,
+		val.DisplayName,
+		val.Version,
+		shapeDisplay,
+		val.GetFlags(),
+		val.Status,
+	}
+}
+
 // ModelArtifact
 func modelArtifactToRow(val models.ModelArtifact, _ string) table.Row {
 	return table.Row{

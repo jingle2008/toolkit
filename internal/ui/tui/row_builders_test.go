@@ -171,6 +171,32 @@ func Test_baseModelToRow(t *testing.T) {
 	assert.Equal(t, "1024", row[5])
 }
 
+func Test_importedModelToRow(t *testing.T) {
+	t.Parallel()
+	// Namespaced source — Namespace populated, TenantID empty.
+	imNs := models.ImportedModel{
+		BaseModel: models.BaseModel{Name: "im1", DisplayName: "Import 1", Version: "v1", Status: "Ready"},
+		Namespace: "team-x",
+	}
+	row := importedModelToRow(imNs)
+	assert.Equal(t, "im1", row[0])
+	assert.Equal(t, "team-x", row[1], "Namespace populated for namespaced source")
+	assert.Equal(t, "", row[2], "TenantID empty for namespaced source")
+	assert.Equal(t, "Import 1", row[3])
+	assert.Equal(t, "v1", row[4])
+	assert.Equal(t, "Ready", row[7])
+
+	// Cluster-scoped source — TenantID populated, Namespace empty.
+	imCs := models.ImportedModel{
+		BaseModel: models.BaseModel{Name: "im2", Version: "v2", Status: "Ready"},
+		TenantID:  "ocid1.tenancy.y",
+	}
+	row2 := importedModelToRow(imCs)
+	assert.Equal(t, "im2", row2[0])
+	assert.Equal(t, "", row2[1], "Namespace empty for cluster-scoped source")
+	assert.Equal(t, "ocid1.tenancy.y", row2[2])
+}
+
 func Test_modelArtifactToRow(t *testing.T) {
 	t.Parallel()
 	ma := models.ModelArtifact{
