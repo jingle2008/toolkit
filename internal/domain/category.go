@@ -41,6 +41,11 @@ const (
 	PropertyRegionalOverride
 	// BaseModel is a category for base models.
 	BaseModel
+	// ImportedModel is a category for tenant-imported models —
+	// either a namespaced ome.io BaseModel CR or a ClusterBaseModel
+	// CR carrying a `tenancy-id` label. Complementary to BaseModel,
+	// which is the shared / public catalog.
+	ImportedModel
 	// ModelArtifact is a category for model artifacts.
 	ModelArtifact
 	// Environment is a category for environments.
@@ -150,7 +155,7 @@ func (e Category) IsFaulty() bool {
 // rest come from the on-disk repo.
 func (e Category) NeedsKubeConfig() bool {
 	switch e { //nolint:exhaustive
-	case BaseModel, GpuNode, DedicatedAICluster:
+	case BaseModel, ImportedModel, GpuNode, DedicatedAICluster:
 		return true
 	}
 	return false

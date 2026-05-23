@@ -20,18 +20,19 @@ func _() {
 	_ = x[ConsolePropertyRegionalOverride-9]
 	_ = x[PropertyRegionalOverride-10]
 	_ = x[BaseModel-11]
-	_ = x[ModelArtifact-12]
-	_ = x[Environment-13]
-	_ = x[ServiceTenancy-14]
-	_ = x[GpuPool-15]
-	_ = x[GpuNode-16]
-	_ = x[DedicatedAICluster-17]
-	_ = x[Alias-18]
+	_ = x[ImportedModel-12]
+	_ = x[ModelArtifact-13]
+	_ = x[Environment-14]
+	_ = x[ServiceTenancy-15]
+	_ = x[GpuPool-16]
+	_ = x[GpuNode-17]
+	_ = x[DedicatedAICluster-18]
+	_ = x[Alias-19]
 }
 
-const _Category_name = "CategoryUnknownTenantLimitDefinitionConsolePropertyDefinitionPropertyDefinitionLimitTenancyOverrideConsolePropertyTenancyOverridePropertyTenancyOverrideLimitRegionalOverrideConsolePropertyRegionalOverridePropertyRegionalOverrideBaseModelModelArtifactEnvironmentServiceTenancyGpuPoolGpuNodeDedicatedAIClusterAlias"
+const _Category_name = "CategoryUnknownTenantLimitDefinitionConsolePropertyDefinitionPropertyDefinitionLimitTenancyOverrideConsolePropertyTenancyOverridePropertyTenancyOverrideLimitRegionalOverrideConsolePropertyRegionalOverridePropertyRegionalOverrideBaseModelImportedModelModelArtifactEnvironmentServiceTenancyGpuPoolGpuNodeDedicatedAIClusterAlias"
 
-var _Category_index = [...]uint16{0, 15, 21, 36, 61, 79, 99, 129, 152, 173, 204, 228, 237, 250, 261, 275, 282, 289, 307, 312}
+var _Category_index = [...]uint16{0, 15, 21, 36, 61, 79, 99, 129, 152, 173, 204, 228, 237, 250, 263, 274, 288, 295, 302, 320, 325}
 
 func (i Category) String() string {
 	if i < 0 || i >= Category(len(_Category_index)-1) {

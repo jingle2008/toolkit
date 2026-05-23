@@ -31,6 +31,10 @@ func (l stubLoader) LoadDataset(context.Context, string, models.Environment) (*m
 	return &models.Dataset{}, nil
 }
 
+func (l stubLoader) LoadImportedModels(context.Context, string, models.Environment) ([]models.ImportedModel, error) {
+	return nil, nil
+}
+
 func (l stubLoader) LoadBaseModels(context.Context, string, models.Environment) ([]models.BaseModel, error) {
 	return nil, nil
 }

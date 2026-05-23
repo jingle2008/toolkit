@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- New `importedmodel` (alias `im`) category covering tenant-imported models. Two sources are merged: (1) namespaced `ome.io/v1beta1` `BaseModel` CRs across all namespaces, with the originating namespace on `namespace`; (2) cluster-scoped `ClusterBaseModel` CRs carrying a `tenancy-id` label, with the label value on `tenantId`. Each item also carries `source` (`namespaced` or `cluster-scoped`). All existing `BaseModel` fields are JSON-flattened at the top level, so jq pipelines built for `toolkit get basemodel` keep working — only `namespace` / `tenantId` / `source` are new keys.
+- `toolkit get importedmodel` (CLI) and MCP `list_imported_models` tool. TUI is unchanged; tenant-imported view is CLI / MCP only for now.
+
+### Changed
+- MCP `list_base_models` description now flags that tenant-scoped ClusterBaseModels are surfaced under `list_imported_models`, not here.
+
 ## [0.5.0] - 2026-05-19
 
 ### Changed

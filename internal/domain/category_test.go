@@ -24,6 +24,7 @@ func TestCategory_String(t *testing.T) {
 		{ConsolePropertyRegionalOverride, "ConsolePropertyRegionalOverride"},
 		{PropertyRegionalOverride, "PropertyRegionalOverride"},
 		{BaseModel, "BaseModel"},
+		{ImportedModel, "ImportedModel"},
 		{ModelArtifact, "ModelArtifact"},
 		{Environment, "Environment"},
 		{ServiceTenancy, "ServiceTenancy"},
@@ -170,6 +171,7 @@ func TestCategory_NeedsKubeConfig(t *testing.T) {
 		want bool
 	}{
 		{BaseModel, true},
+		{ImportedModel, true},
 		{GpuNode, true},
 		{DedicatedAICluster, true},
 		{Tenant, false},

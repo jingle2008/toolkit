@@ -332,6 +332,51 @@ func TestList_Definitions_UnknownKind(t *testing.T) {
 	assert.True(t, res.IsError, "unknown kind must surface as tool error")
 }
 
+// fakeImportedModelLoader serves scripted ImportedModels through
+// LoadImportedModels; everything else inherits stubLoader's empty
+// defaults.
+type fakeImportedModelLoader struct {
+	stubLoader
+	items []models.ImportedModel
+}
+
+func (f *fakeImportedModelLoader) LoadImportedModels(context.Context, string, models.Environment) ([]models.ImportedModel, error) {
+	return f.items, nil
+}
+
+// TestList_ImportedModels_FlatShape pins the wire shape: BaseModel
+// fields are flattened at the top level alongside `namespace`,
+// `tenantId`, and `source`. Regression bait against an accidental
+// nesting refactor (e.g. wrapping BaseModel under a `model` key).
+func TestList_ImportedModels_FlatShape(t *testing.T) {
+	t.Parallel()
+	loader := &fakeImportedModelLoader{
+		items: []models.ImportedModel{
+			{
+				BaseModel: models.BaseModel{Name: "import-a", DisplayName: "Import A", Vendor: "acme", Version: "v1", Status: "Ready"},
+				Namespace: "team-x",
+				Source:    models.ImportedModelSourceNamespaced,
+			},
+		},
+	}
+	assertGroupedFlatShape(t, "list_imported_models", loader,
+		func(t *testing.T, item map[string]any) {
+			// Embedded BaseModel fields surface at the top level.
+			assert.Equal(t, "import-a", item["name"])
+			assert.Equal(t, "Import A", item["displayName"])
+			assert.Equal(t, "acme", item["vendor"])
+			// ImportedModel-specific identity fields sit alongside.
+			assert.Equal(t, "team-x", item["namespace"])
+			assert.Equal(t, "namespaced", item["source"])
+			// Cluster-scoped indicator absent when source is namespaced.
+			_, hasTenantID := item["tenantId"]
+			assert.False(t, hasTenantID, "tenantId should be omitempty when not set")
+			// Nothing wrapped under `model`.
+			_, hasModelKey := item["model"]
+			assert.False(t, hasModelKey, "BaseModel fields must be flat at the top level, not nested under `model`")
+		})
+}
+
 func TestList_Aliases(t *testing.T) {
 	t.Parallel()
 	callList(t, "list_aliases", nil)

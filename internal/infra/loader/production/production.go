@@ -63,6 +63,17 @@ func (Loader) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Env
 	return k8s.LoadBaseModels(ctx, client)
 }
 
+// LoadImportedModels loads tenant-imported models from the cluster
+// (namespaced BaseModel CRs + ClusterBaseModel CRs with a
+// `tenancy-id` label) using the provided kubeconfig and environment.
+func (Loader) LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) ([]models.ImportedModel, error) {
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.GetKubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.LoadImportedModels(ctx, client)
+}
+
 // LoadGpuPools loads GPU pools from the given repo and environment.
 func (Loader) LoadGpuPools(ctx context.Context, repo string, env models.Environment) ([]models.GpuPool, error) {
 	return terraform.LoadGpuPools(ctx, repo, env)

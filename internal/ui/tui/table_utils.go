@@ -258,6 +258,8 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
 		return models.ScopedItemKey{Scope: row[1], Name: row[0]}
+	case domain.ImportedModel:
+		// TUI integration deferred — CLI / MCP only for now.
 	case domain.CategoryUnknown:
 		// exhaustive
 	}
@@ -309,6 +311,9 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 		return findDedicatedAICluster(dataset, key)
 	case domain.Alias:
 		return key
+	case domain.ImportedModel:
+		// TUI integration deferred — CLI / MCP only for now.
+		return nil
 	case domain.CategoryUnknown:
 		// exhaustive
 	}

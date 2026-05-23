@@ -24,6 +24,16 @@ type BaseModelLoader interface {
 }
 
 /*
+ImportedModelLoader defines an interface for loading tenant-imported
+models (namespaced BaseModel CRs + ClusterBaseModel CRs with a
+`tenancy-id` label).
+*/
+type ImportedModelLoader interface {
+	// LoadImportedModels loads imported models from the given kube config and environment.
+	LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) ([]models.ImportedModel, error)
+}
+
+/*
 GpuPoolLoader defines an interface for loading GPU pools.
 */
 type GpuPoolLoader interface {
@@ -69,6 +79,7 @@ Loader is a composite interface that embeds all loader interfaces.
 type Loader interface {
 	DatasetLoader
 	BaseModelLoader
+	ImportedModelLoader
 	GpuPoolLoader
 	GpuNodeLoader
 	DedicatedAIClusterLoader

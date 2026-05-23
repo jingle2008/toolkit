@@ -37,6 +37,10 @@ func (dummyLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environm
 	return nil, errDummy
 }
 
+func (dummyLoader) LoadImportedModels(_ context.Context, _ string, _ models.Environment) ([]models.ImportedModel, error) {
+	return nil, errDummy
+}
+
 func (dummyLoader) LoadGpuPools(_ context.Context, _ string, _ models.Environment) ([]models.GpuPool, error) {
 	return nil, errDummy
 }

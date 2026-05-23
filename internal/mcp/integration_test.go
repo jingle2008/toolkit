@@ -35,6 +35,10 @@ func (stubLoader) LoadBaseModels(context.Context, string, models.Environment) ([
 	return nil, nil
 }
 
+func (stubLoader) LoadImportedModels(context.Context, string, models.Environment) ([]models.ImportedModel, error) {
+	return nil, nil
+}
+
 func (stubLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {
 	return nil, nil
 }
@@ -351,6 +355,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		// Read-only list_* tools.
 		"list_tenants",
 		"list_base_models",
+		"list_imported_models",
 		"list_gpu_pools",
 		"list_gpu_nodes",
 		"list_dacs",

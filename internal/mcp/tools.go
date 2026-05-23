@@ -51,8 +51,13 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_base_models",
-		Description: "List base models loaded from the cluster. Returns BaseModel objects {name, internalName, displayName, vendor, type, version, status, maxTokens, ...}. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List base models loaded from the cluster. Returns BaseModel objects {name, internalName, displayName, vendor, type, version, status, maxTokens, ...}. Tenant-scoped models (ClusterBaseModel CRs with a `tenancy-id` label) are excluded — use list_imported_models for those. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListBaseModels)
+
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "list_imported_models",
+		Description: "List tenant-imported models. Sources: (1) ome.io BaseModel CRs across all namespaces, with the originating namespace on `namespace`; (2) ClusterBaseModel CRs carrying a `tenancy-id` label, with the label value on `tenantId`. Each item also has `source` (\"namespaced\" or \"cluster-scoped\") plus all BaseModel fields flattened at the top level. Supports `limit` (max items after filter; 0 = unlimited).",
+	}, s.handleListImportedModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_pools",
@@ -144,6 +149,14 @@ func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequ
 	items, err := s.loader.LoadBaseModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[models.BaseModel]](ctx, req, "load base models", err)
+	}
+	return listFlatResult(items, in.Filter, in.Limit, nil)
+}
+
+func (s *Server) handleListImportedModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ImportedModel], error) {
+	items, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	if err != nil {
+		return failTool[listResult[models.ImportedModel]](ctx, req, "load imported models", err)
 	}
 	return listFlatResult(items, in.Filter, in.Limit, nil)
 }

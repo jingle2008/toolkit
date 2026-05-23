@@ -47,6 +47,28 @@ func TestTenantTable(t *testing.T) {
 	assert.Empty(t, r)
 }
 
+func TestImportedModelTable(t *testing.T) {
+	t.Parallel()
+	items := []models.ImportedModel{
+		{
+			BaseModel: models.BaseModel{Name: "im-a", Vendor: "acme", Version: "v1", Status: "Ready"},
+			Namespace: "team-x",
+			Source:    models.ImportedModelSourceNamespaced,
+		},
+		{
+			BaseModel: models.BaseModel{Name: "im-b", Vendor: "acme", Version: "v2", Status: "Ready"},
+			TenantID:  "ocid1.tenancy.y",
+			Source:    models.ImportedModelSourceClusterScoped,
+		},
+	}
+	headers, rows := importedModelTable(items)
+	assert.Equal(t, []string{"NAME", "NAMESPACE", "TENANT ID", "SOURCE", "VENDOR", "VERSION", "STATUS"}, headers)
+	assert.Equal(t, [][]string{
+		{"im-a", "team-x", "", "namespaced", "acme", "v1", "Ready"},
+		{"im-b", "", "ocid1.tenancy.y", "cluster-scoped", "acme", "v2", "Ready"},
+	}, rows)
+}
+
 func TestBaseModelTable(t *testing.T) {
 	t.Parallel()
 	items := []models.BaseModel{

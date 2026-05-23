@@ -195,6 +195,12 @@ func emitCategory(
 			return fmt.Errorf("load base models: %w", err)
 		}
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, baseModelTable)
+	case domain.ImportedModel:
+		items, err := ld.LoadImportedModels(ctx, cfg.KubeConfig, env)
+		if err != nil {
+			return fmt.Errorf("load imported models: %w", err)
+		}
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, importedModelTable)
 	case domain.GpuPool:
 		items, err := ld.LoadGpuPools(ctx, cfg.RepoPath, env)
 		if err != nil {
@@ -529,6 +535,14 @@ func baseModelTable(items []models.BaseModel) ([]string, [][]string) {
 		[]string{"NAME", "INTERNAL", "VENDOR", "TYPE", "VERSION", "STATUS", "FLAGS"},
 		func(m models.BaseModel) []string {
 			return []string{m.Name, m.InternalName, m.Vendor, m.Type, m.Version, m.Status, m.GetFlags()}
+		})
+}
+
+func importedModelTable(items []models.ImportedModel) ([]string, [][]string) {
+	return tableFromSlice(items,
+		[]string{"NAME", "NAMESPACE", "TENANT ID", "SOURCE", "VENDOR", "VERSION", "STATUS"},
+		func(m models.ImportedModel) []string {
+			return []string{m.Name, m.Namespace, m.TenantID, m.Source, m.Vendor, m.Version, m.Status}
 		})
 }
 
