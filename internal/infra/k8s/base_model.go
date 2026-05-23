@@ -13,7 +13,11 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// LoadBaseModels returns all ClusterBaseModel CRs as a slice.
+// LoadBaseModels returns all ClusterBaseModel CRs as a slice. CRs
+// carrying a `tenancy-id` label are tenant-scoped (custom or
+// fine-tuned models registered for a specific tenancy) and are
+// excluded — the toolkit's CLI / MCP / TUI surfaces are for the
+// shared / public catalog.
 func LoadBaseModels(ctx context.Context, client dynamic.Interface) ([]models.BaseModel, error) {
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.io",
@@ -26,8 +30,10 @@ func LoadBaseModels(ctx context.Context, client dynamic.Interface) ([]models.Bas
 	}
 	result := make([]models.BaseModel, 0, len(list.Items))
 	for _, item := range list.Items {
-		bm := parseBaseModel(&item)
-		result = append(result, bm)
+		if _, tenantScoped := getLabels(&item)["tenancy-id"]; tenantScoped {
+			continue
+		}
+		result = append(result, parseBaseModel(&item))
 	}
 	return result, nil
 }

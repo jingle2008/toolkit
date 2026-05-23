@@ -153,3 +153,35 @@ func TestLoadBaseModels_FakeDynamic(t *testing.T) {
 	assert.Equal(t, "Creating", bm2.Status)
 	assert.Nil(t, bm2.DacShapeConfigs)
 }
+
+// TestLoadBaseModels_SkipsTenantScopedModels pins the contract that
+// CBMs carrying a `tenancy-id` label (custom / fine-tuned models
+// registered for a specific tenant) are filtered out — only the
+// shared catalog reaches CLI / MCP / TUI consumers.
+func TestLoadBaseModels_SkipsTenantScopedModels(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	shared1 := newCBM("shared-a",
+		map[string]any{"version": "v1"}, map[string]any{"state": "Ready"},
+		nil, nil)
+	shared2 := newCBM("shared-b",
+		map[string]any{"version": "v1"}, map[string]any{"state": "Ready"},
+		map[string]string{"genai-model-deprecated-date": "2025-01-01"}, nil) // unrelated label OK
+	tenantScoped := newCBM("tenant-x",
+		map[string]any{"version": "v1"}, map[string]any{"state": "Ready"},
+		map[string]string{"tenancy-id": "ocid1.tenancy.x"}, nil)
+
+	scheme := runtime.NewScheme()
+	client := dynamicfake.NewSimpleDynamicClient(scheme, shared1, shared2, tenantScoped)
+
+	out, err := LoadBaseModels(ctx, client)
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(out))
+	for _, m := range out {
+		names = append(names, m.Name)
+	}
+	assert.ElementsMatch(t, []string{"shared-a", "shared-b"}, names,
+		"CBM with tenancy-id label must be filtered; unrelated labels must not trigger the filter")
+}
