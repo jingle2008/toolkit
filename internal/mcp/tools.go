@@ -304,8 +304,10 @@ func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallT
 	}
 }
 
-// aliasItem matches the CLI's `toolkit get alias` shape so agents can
-// trust both surfaces.
+// aliasItem is the MCP-specific shape for list_aliases: one entry per
+// alias. Distinct from `toolkit get alias -o json` which emits one
+// entry per category (canonical column set). Kept here for backward
+// compatibility with existing agent prompts.
 type aliasItem struct {
 	Alias    string `json:"alias"`
 	Category string `json:"category"`

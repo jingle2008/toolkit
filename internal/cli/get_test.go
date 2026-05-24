@@ -86,14 +86,26 @@ func TestGetCmd_AliasJSON_HappyPath(t *testing.T) {
 		t.Fatalf("get alias: %v", err)
 	}
 
-	// Alias JSON is now 1-item-per-category (domain.Category is an integer enum).
-	// The array must be non-empty; each element is a non-negative integer.
-	var items []int
+	// Alias JSON is 1-item-per-category with the rich {name, aliases} shape.
+	// The array must be non-empty; each element must have a non-empty name
+	// and at least one alias string.
+	var items []struct {
+		Name    string   `json:"name"`
+		Aliases []string `json:"aliases"`
+	}
 	if err := json.Unmarshal(stdout.Bytes(), &items); err != nil {
 		t.Fatalf("stdout is not valid JSON: %v\n%s", err, stdout.String())
 	}
 	if len(items) == 0 {
 		t.Fatal("expected at least one category in JSON output")
+	}
+	for i, item := range items {
+		if item.Name == "" {
+			t.Errorf("item[%d] has empty name", i)
+		}
+		if len(item.Aliases) == 0 {
+			t.Errorf("item[%d] %q has no aliases", i, item.Name)
+		}
 	}
 }
 

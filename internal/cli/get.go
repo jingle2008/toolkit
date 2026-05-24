@@ -447,6 +447,15 @@ func emitFromDataset(
 	}
 }
 
+// aliasView is the JSON/YAML shape for `toolkit get alias`. It matches
+// the canonical column set (Name + Aliases joined): one entry per
+// category, with the list of aliases for that category. Useful for
+// scripts and LLM agents.
+type aliasView struct {
+	Name    string   `json:"name" yaml:"name"`
+	Aliases []string `json:"aliases" yaml:"aliases"`
+}
+
 // writeAliases renders the canonical alias list — one row per category
 // (TUI shape, spec Decision #4). This is an intentional change from
 // the legacy 1-row-per-alias CLI shape.
@@ -474,5 +483,16 @@ func writeAliases(w writer, filter string, limit int, opts output.Options, selec
 		cats = append(cats, c)
 	}
 	// Categories are already in registration (enum) order.
-	return writeSlice(w, cats, limit, opts, domain.Alias, selected)
+	switch opts.Format {
+	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
+		items := make([]aliasView, 0, len(cats))
+		for _, c := range cats {
+			items = append(items, aliasView{Name: c.String(), Aliases: c.GetAliases()})
+		}
+		return writeEncoded(w, opts, collections.TruncateSlice(items, limit))
+	case output.FormatTable, output.FormatCSV, output.FormatTSV:
+		return writeSlice(w, cats, limit, opts, domain.Alias, selected)
+	default:
+		return fmt.Errorf("unsupported format %q", opts.Format)
+	}
 }
