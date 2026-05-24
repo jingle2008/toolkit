@@ -150,21 +150,16 @@ func baseModelToRow(val models.BaseModel) table.Row {
 
 // ImportedModel — grouped by tenant (the resolved tenant Name when
 // the OCID matched Dataset.Tenants, or the raw TenantID / suffix
-// otherwise). Matches the DedicatedAICluster shape.
+// otherwise). Matches the DedicatedAICluster shape, minus DAC Shape
+// and Flags (those columns aren't meaningful for tenant-imported
+// models — operators care about identity + version + status).
 func importedModelToRow(val models.ImportedModel, tenant string) table.Row {
-	shape := val.GetDefaultDacShape()
-	var shapeDisplay string
-	if shape != nil {
-		shapeDisplay = fmt.Sprintf("%dx %s", shape.QuotaUnit, shape.Name)
-	}
 	return table.Row{
 		val.Name,
 		tenant,
 		val.Namespace,
 		val.DisplayName,
 		val.Version,
-		shapeDisplay,
-		val.GetFlags(),
 		val.Status,
 	}
 }
