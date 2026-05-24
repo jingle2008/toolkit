@@ -21,6 +21,11 @@ func baseModelDacShape(m models.BaseModel) string {
 // Default==true columns match today's CLI (Name, Internal, Vendor, Type,
 // Version, Flags, Status). Display Name, DAC Shape, Size, Context are
 // Default==false (TUI-only opt-in via --columns).
+//
+// Ratios sum to 1.00. They diverge from today's TUI headerDefinitions
+// because the canonical set unions the CLI's columns (Internal, Vendor,
+// Type) with the TUI's (Display Name, DAC Shape, Size, Context); the
+// TUI's 8-column 1.00 budget was rebalanced across the 11-column union.
 var BaseModelColumns = Set[models.BaseModel]{Columns: []Column[models.BaseModel]{
 	{Title: "Name", Key: "name", Default: true, Ratio: 0.18,
 		Render: func(m models.BaseModel) string { return m.Name }},
