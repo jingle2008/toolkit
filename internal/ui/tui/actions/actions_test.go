@@ -56,13 +56,14 @@ func TestCopyItemName_NamedItem(t *testing.T) {
 	assert.Equal(t, "foo", clipboardValue)
 }
 
-func TestCopyItemName_DedicatedAICluster(_ *testing.T) {
+func TestCopyItemName_DedicatedAICluster(t *testing.T) {
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil
-	dac := &models.DedicatedAICluster{}
-	env := models.Environment{Realm: "realm", Region: "region"}
+	dac := &models.DedicatedAICluster{Name: "dac-1"}
+	env := models.Environment{Realm: "oc1", Region: "me-dubai-1"}
 	CopyItemName(dac, env, logger)
+	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.me-dubai-1.dac-1", clipboardValue)
 }
 
 func TestCopyItemName_ImportedModel(t *testing.T) {
@@ -97,13 +98,14 @@ func TestCopyTenantID_TenancyOverride(t *testing.T) {
 	assert.Equal(t, "tid", clipboardValue)
 }
 
-func TestCopyTenantID_DedicatedAICluster(_ *testing.T) {
+func TestCopyTenantID_DedicatedAICluster(t *testing.T) {
 	logger := &fakeLogger{}
 	clipboardValue = ""
 	clipboardErr = nil
-	dac := &models.DedicatedAICluster{}
-	env := models.Environment{Realm: "realm"}
+	dac := &models.DedicatedAICluster{TenantID: "aaaaaaaaexample"}
+	env := models.Environment{Realm: "oc1"}
 	CopyTenantID(dac, env, logger)
+	assert.Equal(t, "ocid1.tenancy.oc1..aaaaaaaaexample", clipboardValue)
 }
 
 func TestCopyTenantID_ImportedModel(t *testing.T) {
