@@ -4,6 +4,8 @@
 // surfaces consume them through adapters.
 package columns
 
+import "strings"
+
 // Column is a column for a flat (non-grouped) category.
 type Column[T any] struct {
 	Title   string
@@ -126,17 +128,6 @@ type UnknownColumnError struct {
 }
 
 func (e *UnknownColumnError) Error() string {
-	return "unknown column key(s): " + joinComma(e.Unknown) +
-		" (valid keys: " + joinComma(e.Valid) + ")"
-}
-
-func joinComma(s []string) string {
-	out := ""
-	for i, v := range s {
-		if i > 0 {
-			out += ", "
-		}
-		out += v
-	}
-	return out
+	return "unknown column key(s): " + strings.Join(e.Unknown, ", ") +
+		" (valid keys: " + strings.Join(e.Valid, ", ") + ")"
 }

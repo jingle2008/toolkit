@@ -32,6 +32,11 @@ func TestRegistry_EveryCategoryRegistered(t *testing.T) {
 		t.Skip("bootstrap state: no categories registered yet")
 	}
 	if len(missing) > 0 {
+		// TODO(Task 6): once all 19 categories are registered, drop the
+		// in-progress skip and let this t.Errorf any missing category.
+		// The skip loses regression protection during the migration
+		// window — a category accidentally un-registered won't fail
+		// the suite until Task 6 lands.
 		t.Skipf("in-progress: %d of %d categories registered (still missing: %v)",
 			registered, registered+len(missing), missing)
 	}
