@@ -14,7 +14,7 @@ func RegionalOverrideColumns[T models.DefinitionOverride]() Set[T] {
 		{Title: "Name", Key: "name", Default: true, Ratio: 0.40,
 			Render: func(o T) string { return o.GetName() }},
 		{Title: "Regions", Key: "regions", Default: true, Ratio: 0.40,
-			Render: func(o T) string { return strings.Join(o.GetRegions(), ",") }},
+			Render: func(o T) string { return strings.Join(o.GetRegions(), ", ") }},
 		{Title: "Value", Key: "value", Default: false, Ratio: 0.20,
 			Render: func(o T) string { return o.GetValue() }},
 	}}

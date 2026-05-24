@@ -22,12 +22,23 @@ func TestConsolePropertyRegionalOverrideColumns(t *testing.T) {
 
 	want := map[string]string{
 		"name":    "dark-mode",
-		"regions": "us-ashburn-1,us-phoenix-1",
+		"regions": "us-ashburn-1, us-phoenix-1",
 		"value":   "true",
 	}
 	for k, v := range want {
 		if got[k] != v {
 			t.Errorf("col %s: got %q, want %q", k, got[k], v)
+		}
+	}
+
+	defaults := map[string]bool{}
+	for _, c := range ConsolePropertyRegionalOverrideColumns.Columns {
+		defaults[c.Key] = c.Default
+	}
+	wantDefaults := map[string]bool{"name": true, "regions": true, "value": false}
+	for k, v := range wantDefaults {
+		if defaults[k] != v {
+			t.Errorf("col %s Default: got %v, want %v", k, defaults[k], v)
 		}
 	}
 }
@@ -48,12 +59,23 @@ func TestPropertyRegionalOverrideColumns(t *testing.T) {
 
 	want := map[string]string{
 		"name":    "timeout",
-		"regions": "us-ashburn-1,us-phoenix-1",
+		"regions": "us-ashburn-1, us-phoenix-1",
 		"value":   "30s",
 	}
 	for k, v := range want {
 		if got[k] != v {
 			t.Errorf("col %s: got %q, want %q", k, got[k], v)
+		}
+	}
+
+	defaults := map[string]bool{}
+	for _, c := range PropertyRegionalOverrideColumns.Columns {
+		defaults[c.Key] = c.Default
+	}
+	wantDefaults := map[string]bool{"name": true, "regions": true, "value": false}
+	for k, v := range wantDefaults {
+		if defaults[k] != v {
+			t.Errorf("col %s Default: got %v, want %v", k, defaults[k], v)
 		}
 	}
 }
