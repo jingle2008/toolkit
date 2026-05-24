@@ -20,7 +20,7 @@ func TestTenantColumns(t *testing.T) {
 	}
 	want := map[string]string{
 		"name":     "alpha",
-		"ids":      "ocid1.tenancy.oc1..a",
+		"ocid":     "ocid1.tenancy.oc1..a",
 		"internal": "true",
 		"note":     "n/a",
 	}

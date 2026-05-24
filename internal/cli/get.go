@@ -351,8 +351,8 @@ type writer interface {
 
 // writeSlice renders a flat slice through the canonical column registry.
 // JSON/JSONL/YAML bypass the registry and encode the typed items directly.
-// For table/csv/tsv, columns.RenderTable is called with cat and selected.
-// selected is nil until Task 9 wires --columns.
+// For table/csv/tsv, columns.RenderTable is called with cat and selected
+// (the parsed --columns list; empty means "use Default==true columns").
 func writeSlice[T any](w writer, items []T, limit int, opts output.Options, cat domain.Category, selected []string) error {
 	items = collections.TruncateSlice(items, limit)
 	switch opts.Format {

@@ -32,7 +32,7 @@ Today CLI table output and the TUI maintain independent column lists per categor
 | 5 | Column identifier is an explicit `Key` field, kebab-case (`capacity-type`, `actual-size`). | Stable across Title rewording; predictable for CLI users. |
 | 6 | `Default bool` on each Column decides whether it's in the CLI default table; TUI ignores `Default` and shows everything. | Separates schema (unified) from presentation (configurable). |
 | 7 | TUI ratios stay on the canonical `Column`. | Alternative is a parallel TUI-only map — reintroduces drift. CLI ignores `Ratio` at render time. |
-| 8 | CLI defaults preserve today's output for 12 of 19 categories byte-for-byte (7 diff intentionally — see #4 and #9). | Behavior-preserving refactor for the common case. |
+| 8 | CLI defaults preserve today's output for 7 of 19 categories byte-for-byte; 12 diff intentionally (see test plan #5 for the full breakdown). | Where CLI and TUI today disagreed on header text or column ordering, the canonical layer picks the TUI's convention — there's no neutral choice and committing to one source prevents future drift. |
 | 9 | CLI defaults are *widened* for `LimitTenancyOverride`, `ConsolePropertyTenancyOverride`, `PropertyTenancyOverride` to match the TUI. | Today's tenancy-override CLI tables (TENANT\|NAME only) are unusable; this refactor fixes them. |
 | 10 | `--columns` on `-o json\|jsonl\|yaml` is a hard error. | Silent ignore breeds confusion when users expect projection in JSON. |
 | 11 | Big-bang migration in one PR; no parallel-paths feature flag. | Categories are independent, conversions are mechanical, snapshot tests pin behavior. |
@@ -215,10 +215,12 @@ This file does not enumerate every column for every category; concrete contents 
 
 5. **Behavior-preservation snapshot** (`internal/cli/snapshot_test.go`)
    - Capture `toolkit get <cat> -o csv` for every category against a fixed test dataset.
-   - 12 of 19 categories must match byte-for-byte against a stored snapshot.
-   - 7 categories diff intentionally; their snapshots reflect the new canonical output:
-     - 3 widened tenancy overrides (Decision #9): `LimitTenancyOverride`, `ConsolePropertyTenancyOverride`, `PropertyTenancyOverride`.
-     - 4 grouped categories reordered to item-name-first (Decision #4): `ImportedModel`, `ModelArtifact`, `GpuNode`, `DedicatedAICluster`.
+   - 7 of 19 categories match byte-for-byte against a stored snapshot.
+   - 12 categories diff intentionally — the snapshots reflect the new canonical output:
+     - **Widened (3, Decision #9)** — `LimitTenancyOverride`, `ConsolePropertyTenancyOverride`, `PropertyTenancyOverride`: default columns grow from `[TENANT, NAME]` to the full TUI set.
+     - **Grouped reordered to item-name-first (4, Decision #4)** — `ImportedModel`, `ModelArtifact`, `GpuNode`, `DedicatedAICluster`: NAME column moves to position 0; group key moves to position 1.
+     - **Header label/ordering aligned with TUI (4)** — `Tenant` ("IDS" → "OCID"), `BaseModel` (FLAGS/STATUS order swap), `LimitDefinition` ("DEFAULT MIN/MAX" → "MIN/MAX"), `Environment` (TYPE/REGION/REALM → REALM/TYPE/REGION ordering). Cell content unchanged; titles/order follow the TUI's existing convention so the canonical layer doesn't pick arbitrarily.
+     - **Structural shape change (1)** — `Alias`: CLI table/CSV switches from one-row-per-alias (`ALIAS,CATEGORY`) to one-row-per-category (`NAME,ALIASES`) matching the TUI. Affects table/csv/tsv. JSON shape becomes `[{name, aliases}, ...]` (richer than the legacy `[{alias, category}, ...]`).
 
 ### Out of scope for tests
 
@@ -240,10 +242,12 @@ No feature flag, no dual paths.
 
 ## Risks
 
-- **CLI behavior changes** are limited to 7 categories:
+- **CLI behavior changes** are limited to 12 categories:
   - 3 widened tenancy overrides (Decision #9): scripts that parsed two columns now get more. CSV/TSV consumers using positional indexing should review.
   - 4 grouped categories (Decision #4) with reordered columns (key was first, now second): same risk for positional consumers.
-  - The other 12 produce byte-identical output, pinned by the snapshot test.
+  - 4 categories with header/order alignment to TUI (`Tenant`, `BaseModel`, `LimitDefinition`, `Environment`): cell content unchanged; scripts that grep header text or use positional indexing should review.
+  - 1 structural shape change (`Alias`): table/CSV row semantics flip from one-per-alias to one-per-category. JSON shape becomes the richer `[{name, aliases}, ...]`. Legacy `aliasItem` JSON shape is preserved only in MCP's `list_aliases` for backward compatibility (see `internal/mcp/tools.go`).
+  - The other 7 produce byte-identical output, pinned by the snapshot test.
 - **TUI visual changes:** none. The canonical column ordering for grouped categories matches today's TUI, and `internal/ui/tui/table_utils.go` `getItemKey`/`statsColumns`/`computeNumericStats` continue to work without changes (they reference columns by Title text, which is preserved).
 - **Generics-over-Category dispatch** in `RenderTable` is a type switch — adding a category later means editing that switch. Acceptable: same edit cost as today's `emitCategory` switch.
 - **Ratio drift in TUI** for any category where this refactor reshuffles ratios. Mitigated by the "ratios sum to ~1.0" registry test and the TUI adapter tests pinning representative outputs.

@@ -18,9 +18,11 @@ func baseModelDacShape(m models.BaseModel) string {
 }
 
 // BaseModelColumns is the canonical column set for domain.BaseModel.
-// Default==true columns match today's CLI (Name, Internal, Vendor, Type,
-// Version, Flags, Status). Display Name, DAC Shape, Size, Context are
-// Default==false (TUI-only opt-in via --columns).
+// Default==true columns are the same set today's CLI shows (Name,
+// Internal, Vendor, Type, Version, Flags, Status), but the ORDER
+// follows the TUI (Flags before Status, not Status before Flags as
+// the legacy CLI emitted). Display Name, DAC Shape, Size, Context
+// are Default==false (TUI-only opt-in via --columns).
 //
 // Ratios sum to 1.00. They diverge from today's TUI headerDefinitions
 // because the canonical set unions the CLI's columns (Internal, Vendor,
