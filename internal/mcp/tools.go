@@ -56,7 +56,7 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_imported_models",
-		Description: "List tenant-imported models. Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label (label value on `tenantId`). `namespace` and `tenantId` are orthogonal facets: `namespace` is the K8s scope (empty ⇒ cluster-scoped CBM; non-empty ⇒ namespaced BM — this is the authoritative source-kind indicator); `tenantId` is the OCI tenant identifier from the label, which may appear on either source. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List tenant-imported models, grouped by `tenantId` (same pattern as `list_dacs`). Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label. Every item carries a non-empty `tenantId` — the label value, or `\"UNKNOWN_TENANCY\"` for orphans (namespaced CRs missing the label, treated as a config error). `namespace` (K8s scope) is orthogonal: empty for cluster-scoped CRs, non-empty for namespaced CRs; a namespaced CR may still carry an arbitrary `tenancy-id` label that the label authoritatively defines. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListImportedModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -154,11 +154,13 @@ func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequ
 }
 
 func (s *Server) handleListImportedModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ImportedModel], error) {
-	items, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	grouped, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[models.ImportedModel]](ctx, req, "load imported models", err)
 	}
-	return listFlatResult(items, in.Filter, in.Limit, nil)
+	// Each item carries its own `tenantId` field, mirroring DAC's
+	// post-wrapper-drop shape — no group key needs to be injected.
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
 func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GpuPool], error) {

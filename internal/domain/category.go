@@ -95,6 +95,7 @@ func (e Category) ScopedCategories() []Category {
 			ConsolePropertyTenancyOverride,
 			PropertyTenancyOverride,
 			DedicatedAICluster,
+			ImportedModel,
 		}
 	case LimitDefinition:
 		return []Category{LimitTenancyOverride, LimitRegionalOverride}

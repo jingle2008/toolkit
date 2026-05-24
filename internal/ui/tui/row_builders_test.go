@@ -173,28 +173,29 @@ func Test_baseModelToRow(t *testing.T) {
 
 func Test_importedModelToRow(t *testing.T) {
 	t.Parallel()
-	// Namespaced source — Namespace populated, TenantID empty.
+	// Namespaced source — tenant resolved to "acme", Namespace populated.
 	imNs := models.ImportedModel{
 		BaseModel: models.BaseModel{Name: "im1", DisplayName: "Import 1", Version: "v1", Status: "Ready"},
 		Namespace: "team-x",
+		TenantID:  "ocid1.tenancy.x",
 	}
-	row := importedModelToRow(imNs)
+	row := importedModelToRow(imNs, "acme")
 	assert.Equal(t, "im1", row[0])
-	assert.Equal(t, "team-x", row[1], "Namespace populated for namespaced source")
-	assert.Equal(t, "", row[2], "TenantID empty for namespaced source")
+	assert.Equal(t, "acme", row[1], "tenant arg flows into TENANT column")
+	assert.Equal(t, "team-x", row[2], "Namespace populated for namespaced source")
 	assert.Equal(t, "Import 1", row[3])
 	assert.Equal(t, "v1", row[4])
 	assert.Equal(t, "Ready", row[7])
 
-	// Cluster-scoped source — TenantID populated, Namespace empty.
+	// Cluster-scoped source — Namespace empty.
 	imCs := models.ImportedModel{
 		BaseModel: models.BaseModel{Name: "im2", Version: "v2", Status: "Ready"},
 		TenantID:  "ocid1.tenancy.y",
 	}
-	row2 := importedModelToRow(imCs)
+	row2 := importedModelToRow(imCs, "ocid1.tenancy.y")
 	assert.Equal(t, "im2", row2[0])
-	assert.Equal(t, "", row2[1], "Namespace empty for cluster-scoped source")
-	assert.Equal(t, "ocid1.tenancy.y", row2[2])
+	assert.Equal(t, "ocid1.tenancy.y", row2[1], "raw OCID passes through when tenant unmatched")
+	assert.Equal(t, "", row2[2], "Namespace empty for cluster-scoped source")
 }
 
 func Test_modelArtifactToRow(t *testing.T) {

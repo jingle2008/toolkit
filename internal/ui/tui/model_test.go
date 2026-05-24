@@ -33,8 +33,8 @@ func (f fakeLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environ
 	return []models.BaseModel{}, nil
 }
 
-func (f fakeLoader) LoadImportedModels(_ context.Context, _ string, _ models.Environment) ([]models.ImportedModel, error) {
-	return nil, nil //nolint:nilnil // TUI tests don't exercise imported models
+func (f fakeLoader) LoadImportedModels(_ context.Context, _ string, _ models.Environment) (map[string][]models.ImportedModel, error) {
+	return map[string][]models.ImportedModel{}, nil
 }
 
 func (f fakeLoader) LoadGpuPools(_ context.Context, _ string, _ models.Environment) ([]models.GpuPool, error) {

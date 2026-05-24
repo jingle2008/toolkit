@@ -205,8 +205,8 @@ func (m *Model) processData(msg DataMsg) tea.Cmd {
 		m.dataset = data
 	case []models.BaseModel:
 		m.dataset.BaseModels = data
-	case []models.ImportedModel:
-		m.dataset.ImportedModels = data
+	case map[string][]models.ImportedModel:
+		m.dataset.SetImportedModelMap(data)
 	case []models.GpuPool:
 		m.dataset.GpuPools = data
 		cmd = m.updateGpuPoolState()
@@ -258,11 +258,15 @@ func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
 	m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
 }
 
-func (m *Model) handleImportedModelsLoaded(items []models.ImportedModel, gen int) {
+func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedModel, gen int) {
 	if gen != m.gen {
 		return
 	}
-	m.applyDataset(func(ds *models.Dataset) { ds.ImportedModels = items }, domain.ImportedModel, len(items))
+	total := 0
+	for _, v := range items {
+		total += len(v)
+	}
+	m.applyDataset(func(ds *models.Dataset) { ds.SetImportedModelMap(items) }, domain.ImportedModel, total)
 }
 
 func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {

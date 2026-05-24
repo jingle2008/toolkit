@@ -125,7 +125,7 @@ func (m *Model) handleBaseModelCategory(gen int) tea.Cmd {
 }
 
 func (m *Model) handleImportedModelCategory(gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.ImportedModels == nil {
+	if m.dataset == nil || m.dataset.ImportedModelMap == nil {
 		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil

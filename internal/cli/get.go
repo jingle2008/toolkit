@@ -196,11 +196,14 @@ func emitCategory(
 		}
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, baseModelTable)
 	case domain.ImportedModel:
-		items, err := ld.LoadImportedModels(ctx, cfg.KubeConfig, env)
+		grouped, err := ld.LoadImportedModels(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load imported models: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, importedModelTable)
+		// No top-level `tenant` injection: each item carries its
+		// own `tenantId` field already (same shape as DAC after
+		// the recent wrapper-drop refactor).
+		return writeMapFlat(w, collections.FilterMapOrAll(grouped, filter), limit, opts, importedModelTable)
 	case domain.GpuPool:
 		items, err := ld.LoadGpuPools(ctx, cfg.RepoPath, env)
 		if err != nil {
@@ -538,11 +541,11 @@ func baseModelTable(items []models.BaseModel) ([]string, [][]string) {
 		})
 }
 
-func importedModelTable(items []models.ImportedModel) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "NAMESPACE", "TENANT ID", "VENDOR", "VERSION", "STATUS"},
-		func(m models.ImportedModel) []string {
-			return []string{m.Name, m.Namespace, m.TenantID, m.Vendor, m.Version, m.Status}
+func importedModelTable(grouped map[string][]models.ImportedModel) ([]string, [][]string) {
+	return tableFromGrouped(grouped,
+		[]string{"TENANT", "NAME", "NAMESPACE", "VENDOR", "VERSION", "STATUS"},
+		func(k string, m models.ImportedModel) []string {
+			return []string{k, m.Name, m.Namespace, m.Vendor, m.Version, m.Status}
 		})
 }
 

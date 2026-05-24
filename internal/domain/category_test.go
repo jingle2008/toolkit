@@ -72,7 +72,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		want  []Category
 	}
 	cases := []want{
-		{Tenant, []Category{LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster}},
+		{Tenant, []Category{LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster, ImportedModel}},
 		{LimitDefinition, []Category{LimitTenancyOverride, LimitRegionalOverride}},
 		{ConsolePropertyDefinition, []Category{ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride}},
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},

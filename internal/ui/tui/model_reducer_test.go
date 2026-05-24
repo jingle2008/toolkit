@@ -26,13 +26,17 @@ func TestHandleImportedModelsLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 1
-	items := []models.ImportedModel{
-		{BaseModel: models.BaseModel{Name: "im1"}, Namespace: "team-x"},
+	items := map[string][]models.ImportedModel{
+		"ocid1.tenancy.x": {{BaseModel: models.BaseModel{Name: "im1"}, Namespace: "team-x", TenantID: "ocid1.tenancy.x"}},
 	}
 
 	m.handleImportedModelsLoaded(items, 1)
-	if len(m.dataset.ImportedModels) != 1 || m.dataset.ImportedModels[0].Name != "im1" {
-		t.Fatalf("ImportedModels not updated: %#v", m.dataset.ImportedModels)
+	// SetImportedModelMap re-keys to Tenant.Name when matched; the
+	// test model has no realm tenants configured, so the raw key
+	// passes through.
+	got := m.dataset.ImportedModelMap["ocid1.tenancy.x"]
+	if len(got) != 1 || got[0].Name != "im1" {
+		t.Fatalf("ImportedModelMap not updated: %#v", m.dataset.ImportedModelMap)
 	}
 }
 
@@ -40,15 +44,16 @@ func TestHandleImportedModelsLoaded_GenMismatch(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 2
-	m.dataset.ImportedModels = []models.ImportedModel{
-		{BaseModel: models.BaseModel{Name: "old"}, Namespace: "team-x"},
+	m.dataset.ImportedModelMap = map[string][]models.ImportedModel{
+		"ocid1.tenancy.x": {{BaseModel: models.BaseModel{Name: "old"}, Namespace: "team-x", TenantID: "ocid1.tenancy.x"}},
 	}
 
-	m.handleImportedModelsLoaded([]models.ImportedModel{
-		{BaseModel: models.BaseModel{Name: "new"}, Namespace: "team-y"},
+	m.handleImportedModelsLoaded(map[string][]models.ImportedModel{
+		"ocid1.tenancy.y": {{BaseModel: models.BaseModel{Name: "new"}, Namespace: "team-y", TenantID: "ocid1.tenancy.y"}},
 	}, 1)
-	if len(m.dataset.ImportedModels) != 1 || m.dataset.ImportedModels[0].Name != "old" {
-		t.Fatalf("ImportedModels updated on gen mismatch: %#v", m.dataset.ImportedModels)
+	got := m.dataset.ImportedModelMap["ocid1.tenancy.x"]
+	if len(got) != 1 || got[0].Name != "old" {
+		t.Fatalf("ImportedModelMap updated on gen mismatch: %#v", m.dataset.ImportedModelMap)
 	}
 }
 

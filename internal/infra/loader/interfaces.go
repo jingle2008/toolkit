@@ -30,7 +30,9 @@ models (namespaced BaseModel CRs + ClusterBaseModel CRs with a
 */
 type ImportedModelLoader interface {
 	// LoadImportedModels loads imported models from the given kube config and environment.
-	LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) ([]models.ImportedModel, error)
+	// Returns a tenant-keyed map (raw TenantID, or `"UNKNOWN_TENANCY"` for orphans);
+	// re-keying by Tenant.Name is handled by Dataset.SetImportedModelMap.
+	LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.ImportedModel, error)
 }
 
 /*

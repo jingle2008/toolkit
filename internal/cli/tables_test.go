@@ -49,21 +49,23 @@ func TestTenantTable(t *testing.T) {
 
 func TestImportedModelTable(t *testing.T) {
 	t.Parallel()
-	items := []models.ImportedModel{
-		{
+	grouped := map[string][]models.ImportedModel{
+		"ocid1.tenancy.x": {{
 			BaseModel: models.BaseModel{Name: "im-a", Vendor: "acme", Version: "v1", Status: "Ready"},
-			Namespace: "team-x", // namespaced source — Namespace populated
-		},
-		{
+			Namespace: "team-x", // namespaced source
+			TenantID:  "ocid1.tenancy.x",
+		}},
+		"ocid1.tenancy.y": {{
 			BaseModel: models.BaseModel{Name: "im-b", Vendor: "acme", Version: "v2", Status: "Ready"},
 			TenantID:  "ocid1.tenancy.y", // cluster-scoped source — Namespace empty
-		},
+		}},
 	}
-	headers, rows := importedModelTable(items)
-	assert.Equal(t, []string{"NAME", "NAMESPACE", "TENANT ID", "VENDOR", "VERSION", "STATUS"}, headers)
+	headers, rows := importedModelTable(grouped)
+	assert.Equal(t, []string{"TENANT", "NAME", "NAMESPACE", "VENDOR", "VERSION", "STATUS"}, headers)
+	// tableFromGrouped iterates sorted keys; both rows present.
 	assert.Equal(t, [][]string{
-		{"im-a", "team-x", "", "acme", "v1", "Ready"},
-		{"im-b", "", "ocid1.tenancy.y", "acme", "v2", "Ready"},
+		{"ocid1.tenancy.x", "im-a", "team-x", "acme", "v1", "Ready"},
+		{"ocid1.tenancy.y", "im-b", "", "acme", "v2", "Ready"},
 	}, rows)
 }
 

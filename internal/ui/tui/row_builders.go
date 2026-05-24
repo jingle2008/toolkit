@@ -148,11 +148,10 @@ func baseModelToRow(val models.BaseModel) table.Row {
 	}
 }
 
-// ImportedModel — namespace (for namespaced BM CRs) OR tenant ID
-// suffix (for cluster-scoped CBMs with tenancy-id label). Source
-// kind is encoded in which of those two is populated; we don't need
-// an explicit column for it.
-func importedModelToRow(val models.ImportedModel) table.Row {
+// ImportedModel — grouped by tenant (the resolved tenant Name when
+// the OCID matched Dataset.Tenants, or the raw TenantID / suffix
+// otherwise). Matches the DedicatedAICluster shape.
+func importedModelToRow(val models.ImportedModel, tenant string) table.Row {
 	shape := val.GetDefaultDacShape()
 	var shapeDisplay string
 	if shape != nil {
@@ -160,8 +159,8 @@ func importedModelToRow(val models.ImportedModel) table.Row {
 	}
 	return table.Row{
 		val.Name,
+		tenant,
 		val.Namespace,
-		val.TenantID,
 		val.DisplayName,
 		val.Version,
 		shapeDisplay,

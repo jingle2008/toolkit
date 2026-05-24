@@ -35,8 +35,8 @@ func (stubLoader) LoadBaseModels(context.Context, string, models.Environment) ([
 	return nil, nil
 }
 
-func (stubLoader) LoadImportedModels(context.Context, string, models.Environment) ([]models.ImportedModel, error) {
-	return nil, nil
+func (stubLoader) LoadImportedModels(context.Context, string, models.Environment) (map[string][]models.ImportedModel, error) {
+	return nil, nil //nolint:nilnil // empty-map stub; tests rarely read this
 }
 
 func (stubLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {

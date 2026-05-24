@@ -85,8 +85,8 @@ var headerDefinitions = map[domain.Category][]header{
 	},
 	domain.ImportedModel: {
 		{common.NameCol, 0.20},
+		{common.TenantCol, 0.22},
 		{"Namespace", 0.13},
-		{"Tenant ID", 0.22},
 		{"Display Name", 0.17},
 		{"Version", 0.06},
 		{"DAC Shape", 0.10},

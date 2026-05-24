@@ -15,7 +15,7 @@ type Dataset struct {
 	PropertyRegionalOverrides         []PropertyRegionalOverride
 	Tenants                           []Tenant
 	BaseModels                        []BaseModel
-	ImportedModels                    []ImportedModel
+	ImportedModelMap                  map[string][]ImportedModel
 	ModelArtifactMap                  map[string][]ModelArtifact
 	Environments                      []Environment
 	ServiceTenancies                  []ServiceTenancy
@@ -61,6 +61,34 @@ func (d *Dataset) SetDedicatedAIClusterMap(m map[string][]DedicatedAICluster) {
 	d.DedicatedAIClusterMap = dacMap
 }
 
+// SetImportedModelMap sets the imported model map using tenant
+// suffixes, mirroring SetDedicatedAIClusterMap. The input map is
+// keyed by raw TenantID (label value or `"UNKNOWN_TENANCY"`);
+// the resulting map is re-keyed by resolved Tenant.Name when a match
+// is found in Dataset.Tenants, otherwise the raw key is preserved.
+// Each item's Owner pointer is set to the matching tenant (nil when
+// unmatched).
+func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
+	imMap := make(map[string][]ImportedModel)
+	suffixMap := d.buildTenantIDSuffixMap()
+
+	for k, v := range m {
+		name := k
+		var tenant *Tenant
+		if idx, ok := suffixMap[k]; ok {
+			tenant = &d.Tenants[idx]
+			name = tenant.Name
+		}
+
+		imMap[name] = v
+		for i := range v {
+			v[i].Owner = tenant
+		}
+	}
+
+	d.ImportedModelMap = imMap
+}
+
 // ResetScopedData resets all realm-scoped fields to nil.
 func (d *Dataset) ResetScopedData() {
 	d.LimitTenancyOverrideMap = nil
@@ -71,7 +99,7 @@ func (d *Dataset) ResetScopedData() {
 	d.ConsolePropertyRegionalOverrides = nil
 	d.PropertyRegionalOverrides = nil
 	d.BaseModels = nil
-	d.ImportedModels = nil
+	d.ImportedModelMap = nil
 	d.GpuPools = nil
 	d.GpuNodeMap = nil
 	d.DedicatedAIClusterMap = nil

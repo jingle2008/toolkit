@@ -337,30 +337,32 @@ func TestList_Definitions_UnknownKind(t *testing.T) {
 // defaults.
 type fakeImportedModelLoader struct {
 	stubLoader
-	items []models.ImportedModel
+	grouped map[string][]models.ImportedModel
 }
 
-func (f *fakeImportedModelLoader) LoadImportedModels(context.Context, string, models.Environment) ([]models.ImportedModel, error) {
-	return f.items, nil
+func (f *fakeImportedModelLoader) LoadImportedModels(context.Context, string, models.Environment) (map[string][]models.ImportedModel, error) {
+	return f.grouped, nil
 }
 
-// TestList_ImportedModels_FlatShape pins the wire shape: BaseModel
-// fields are flattened at the top level alongside `namespace` and
-// `tenantId`. The former `source` field was dropped; the test also
-// pins its absence so a future re-introduction wouldn't slip through.
-// Regression bait against an accidental nesting refactor (e.g.
-// wrapping BaseModel under a `model` key).
+// TestList_ImportedModels_FlatShape pins the wire shape: items are
+// returned as a flat array (the grouped loader output is flattened
+// at the handler), with BaseModel fields at the top level alongside
+// `namespace` and `tenantId`. `tenantId` is always present now
+// (mirroring DAC's post-wrapper-drop contract). Regression bait
+// against an accidental nesting refactor or a reintroduction of the
+// dropped `source` field.
 func TestList_ImportedModels_FlatShape(t *testing.T) {
 	t.Parallel()
 	loader := &fakeImportedModelLoader{
-		items: []models.ImportedModel{
-			{
+		grouped: map[string][]models.ImportedModel{
+			"ocid1.tenancy.x": {{
 				BaseModel: models.BaseModel{
 					Name: "import-a", DisplayName: "Import A", Vendor: "acme", Version: "v1", Status: "Ready",
 					StorageURI: "oci://n/tenancy/b/bucket/o/path",
 				},
 				Namespace: "team-x",
-			},
+				TenantID:  "ocid1.tenancy.x",
+			}},
 		},
 	}
 	assertGroupedFlatShape(t, "list_imported_models", loader,
@@ -372,12 +374,10 @@ func TestList_ImportedModels_FlatShape(t *testing.T) {
 			assert.Equal(t, "oci://n/tenancy/b/bucket/o/path", item["storageUri"], "storageUri must come through from BaseModel")
 			// ImportedModel-specific identity fields sit alongside.
 			assert.Equal(t, "team-x", item["namespace"])
+			assert.Equal(t, "ocid1.tenancy.x", item["tenantId"], "tenantId is now authoritative — always present, mirrors DAC")
 			// Source field was removed — derivable from namespace.
 			_, hasSource := item["source"]
 			assert.False(t, hasSource, "source field was dropped; consumers derive from namespace (empty = cluster-scoped)")
-			// Cluster-scoped indicator absent when source is namespaced.
-			_, hasTenantID := item["tenantId"]
-			assert.False(t, hasTenantID, "tenantId should be omitempty when not set")
 			// Nothing wrapped under `model`.
 			_, hasModelKey := item["model"]
 			assert.False(t, hasModelKey, "BaseModel fields must be flat at the top level, not nested under `model`")

@@ -65,8 +65,9 @@ func (Loader) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Env
 
 // LoadImportedModels loads tenant-imported models from the cluster
 // (namespaced BaseModel CRs + ClusterBaseModel CRs with a
-// `tenancy-id` label) using the provided kubeconfig and environment.
-func (Loader) LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) ([]models.ImportedModel, error) {
+// `tenancy-id` label) grouped by raw TenantID, using the provided
+// kubeconfig and environment.
+func (Loader) LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.ImportedModel, error) {
 	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.GetKubeContext())
 	if err != nil {
 		return nil, err

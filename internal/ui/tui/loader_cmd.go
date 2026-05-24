@@ -27,11 +27,11 @@ func loadBaseModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, en
 
 func loadImportedModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
-		items, err := ld.LoadImportedModels(ctx, kubeCfg, env)
+		grouped, err := ld.LoadImportedModels(ctx, kubeCfg, env)
 		if err != nil {
 			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.ImportedModel, err))
 		}
-		return importedModelsLoadedMsg{Items: items, Gen: gen}
+		return importedModelsLoadedMsg{Items: grouped, Gen: gen}
 	}
 }
 

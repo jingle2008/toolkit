@@ -63,8 +63,8 @@ var categoryHandlers = map[domain.Category]func(*models.Dataset, *domain.Toolkit
 	domain.BaseModel: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
 		return filterRows(dataset.BaseModels, filter, faultyOnly, baseModelToRow)
 	},
-	domain.ImportedModel: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.ImportedModels, filter, faultyOnly, importedModelToRow)
+	domain.ImportedModel: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
+		return filterRowsScoped(dataset.ImportedModelMap, domain.Tenant, context, filter, faultyOnly, importedModelToRow)
 	},
 	domain.ModelArtifact: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
 		return filterRowsScoped(dataset.ModelArtifactMap, domain.BaseModel, context, filter, faultyOnly, modelArtifactToRow)
@@ -256,11 +256,11 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
 		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
-		domain.PropertyRegionalOverride, domain.ModelArtifact, domain.Alias, domain.BaseModel,
-		domain.ImportedModel:
+		domain.PropertyRegionalOverride, domain.ModelArtifact, domain.Alias, domain.BaseModel:
 		return row[0]
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
-		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster:
+		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster,
+		domain.ImportedModel:
 		return models.ScopedItemKey{Scope: row[1], Name: row[0]}
 	case domain.CategoryUnknown:
 		// exhaustive
@@ -378,7 +378,11 @@ func findBaseModel(dataset *models.Dataset, key models.ItemKey) any {
 }
 
 func findImportedModel(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.ImportedModels, key.(string))
+	k := key.(models.ScopedItemKey)
+	if items, ok := dataset.ImportedModelMap[k.Scope]; ok {
+		return collections.FindByName(items, k.Name)
+	}
+	return nil
 }
 
 func findModelArtifact(dataset *models.Dataset, key models.ItemKey) any {

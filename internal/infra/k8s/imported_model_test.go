@@ -43,40 +43,40 @@ func newNamespacedBM(namespace, name string, spec, status map[string]any, labels
 }
 
 // TestLoadImportedModels_BothSources verifies the loader merges the
-// two scripted sources correctly:
-//  1. namespaced BaseModel CRs across all namespaces
-//  2. cluster-scoped ClusterBaseModel CRs WITH `tenancy-id` label
+// two sources correctly, grouped by TenantID:
 //
-// CBMs WITHOUT a tenancy-id label must be skipped (they're the shared
-// catalog, surfaced by LoadBaseModels).
+//  1. Namespaced BaseModel CRs across all namespaces (key from label
+//     if present, else "UNKNOWN_TENANCY" for orphans).
+//  2. Cluster-scoped ClusterBaseModel CRs WITH `tenancy-id` label
+//     (key from label). CBMs WITHOUT a tenancy-id label are the
+//     shared catalog (surfaced by LoadBaseModels) and must be
+//     filtered out here.
 func TestLoadImportedModels_BothSources(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	// Source 1: two namespaced BaseModels in different namespaces.
+	// Source 1a: namespaced BM WITHOUT a label — orphan bucket.
 	ns1 := newNamespacedBM("team-a", "import-a",
 		map[string]any{"vendor": "acme", "version": "v1"},
 		map[string]any{"state": "Ready"},
 		nil, nil)
-	// Namespaced CR with tenancy-id label (allowed; tenantId comes through).
+	// Source 1b: namespaced BM WITH a label — tenant bucket.
 	ns2 := newNamespacedBM("team-b", "import-b",
 		map[string]any{"vendor": "acme", "version": "v2"},
 		map[string]any{"state": "Ready"},
 		map[string]string{"tenancy-id": "ocid1.tenancy.b"}, nil)
 
-	// Source 2: one ClusterBaseModel WITH tenancy-id (imported), one
-	// WITHOUT (shared catalog — must be skipped here).
+	// Source 2a: cluster-scoped CBM WITH label — tenant bucket.
 	cbTenantScoped := newCBM("cluster-tenant",
 		map[string]any{"vendor": "acme", "version": "v1"},
 		map[string]any{"state": "Ready"},
 		map[string]string{"tenancy-id": "ocid1.tenancy.c"}, nil)
+	// Source 2b: cluster-scoped CBM WITHOUT label — shared catalog, must be filtered.
 	cbShared := newCBM("cluster-shared",
 		map[string]any{"vendor": "acme", "version": "v1"},
 		map[string]any{"state": "Ready"},
 		nil, nil)
 
-	// dynamicfake needs the GVR-kind map registered for the namespaced
-	// resource (which is a different Kind than ClusterBaseModel).
 	scheme := runtime.NewScheme()
 	gvrToKind := map[schema.GroupVersionResource]string{
 		{Group: "ome.io", Version: "v1beta1", Resource: "basemodels"}:        "BaseModelList",
@@ -86,28 +86,35 @@ func TestLoadImportedModels_BothSources(t *testing.T) {
 
 	out, err := LoadImportedModels(ctx, client)
 	require.NoError(t, err)
-	require.Len(t, out, 3, "expected ns1 + ns2 + cbTenantScoped; cbShared must be filtered")
+	require.Len(t, out, 3, "expected three tenant buckets: UNKNOWN_TENANCY + ocid1.tenancy.b + ocid1.tenancy.c")
 
-	byName := map[string]models.ImportedModel{}
-	for _, m := range out {
-		byName[m.Name] = m
+	// Bucket 1: orphan namespaced CR
+	orphan := out["UNKNOWN_TENANCY"]
+	require.Len(t, orphan, 1)
+	assert.Equal(t, "import-a", orphan[0].Name)
+	assert.Equal(t, "team-a", orphan[0].Namespace, "namespace preserved even when TenantID is the orphan sentinel")
+	assert.Equal(t, "UNKNOWN_TENANCY", orphan[0].TenantID, "TenantID on the value matches the bucket key")
+
+	// Bucket 2: namespaced CR with tenancy-id label
+	b := out["ocid1.tenancy.b"]
+	require.Len(t, b, 1)
+	assert.Equal(t, "import-b", b[0].Name)
+	assert.Equal(t, "team-b", b[0].Namespace)
+	assert.Equal(t, "ocid1.tenancy.b", b[0].TenantID)
+
+	// Bucket 3: cluster-scoped CBM with label
+	c := out["ocid1.tenancy.c"]
+	require.Len(t, c, 1)
+	assert.Equal(t, "cluster-tenant", c[0].Name)
+	assert.Empty(t, c[0].Namespace, "cluster-scoped CR has no namespace")
+	assert.Equal(t, "ocid1.tenancy.c", c[0].TenantID)
+
+	// Shared CBM must be absent from every bucket.
+	for k, bucket := range out {
+		for _, item := range bucket {
+			assert.NotEqual(t, "cluster-shared", item.Name,
+				"shared CBM leaked into bucket %q", k)
+		}
 	}
-
-	a, ok := byName["import-a"]
-	require.True(t, ok)
-	assert.Equal(t, "team-a", a.Namespace, "non-empty Namespace ⇒ namespaced BaseModel CR")
-	assert.Empty(t, a.TenantID, "namespaced CR without tenancy-id label should have empty TenantID")
-
-	b, ok := byName["import-b"]
-	require.True(t, ok)
-	assert.Equal(t, "team-b", b.Namespace)
-	assert.Equal(t, "ocid1.tenancy.b", b.TenantID, "namespaced CR with tenancy-id label propagates it")
-
-	c, ok := byName["cluster-tenant"]
-	require.True(t, ok)
-	assert.Empty(t, c.Namespace, "empty Namespace ⇒ cluster-scoped ClusterBaseModel CR")
-	assert.Equal(t, "ocid1.tenancy.c", c.TenantID)
-
-	_, sharedLeaked := byName["cluster-shared"]
-	assert.False(t, sharedLeaked, "ClusterBaseModel without tenancy-id label must not appear in imported models")
+	_ = models.ImportedModel{} // model package referenced for clarity
 }

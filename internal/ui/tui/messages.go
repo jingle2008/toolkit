@@ -103,7 +103,7 @@ type baseModelsLoadedMsg struct {
 }
 
 type importedModelsLoadedMsg struct {
-	Items []models.ImportedModel
+	Items map[string][]models.ImportedModel
 	Gen   int
 }
 
