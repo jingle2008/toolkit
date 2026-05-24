@@ -21,24 +21,30 @@ func dacUnitShapeOrProfile(d models.DedicatedAICluster) string {
 // there too.
 //
 // Ordering is name-first, tenant-key-second (matches TUI; Decision #4).
+//
+// Name was rebalanced from 0.35 to 0.20 to match ImportedModel and free
+// width for the narrow sortable columns (Internal/Usage/Size/Age); they
+// previously had no headroom for the ↕ sortable indicator (or even the
+// full title in Internal's case). The freed 0.15 is redistributed to
+// the columns that needed breathing room.
 var DacColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[models.DedicatedAICluster]{
-	{Title: "Name", Key: "name", Ratio: 0.35,
+	{Title: "Name", Key: "name", Ratio: 0.20,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Name }},
-	{Title: "Tenant", Key: "tenant", Ratio: 0.16,
+	{Title: "Tenant", Key: "tenant", Ratio: 0.18,
 		Render: func(k string, _ models.DedicatedAICluster) string { return k }},
-	{Title: "Internal", Key: "internal", Ratio: 0.05,
+	{Title: "Internal", Key: "internal", Ratio: 0.09,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.GetOwnerState() }},
-	{Title: "Usage", Key: "usage", Ratio: 0.05,
+	{Title: "Usage", Key: "usage", Ratio: 0.07,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.GetUsage() }},
-	{Title: "Type", Key: "type", Ratio: 0.06,
+	{Title: "Type", Key: "type", Ratio: 0.07,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Type }},
-	{Title: "Model", Key: "model", Ratio: 0.09,
+	{Title: "Model", Key: "model", Ratio: 0.10,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.ModelName }},
-	{Title: "Shape/Profile", Key: "shape-profile", Ratio: 0.12,
+	{Title: "Shape/Profile", Key: "shape-profile", Ratio: 0.13,
 		Render: func(_ string, d models.DedicatedAICluster) string { return dacUnitShapeOrProfile(d) }},
-	{Title: "Size", Key: "size", Ratio: 0.04,
+	{Title: "Size", Key: "size", Ratio: 0.06,
 		Render: func(_ string, d models.DedicatedAICluster) string { return strconv.Itoa(d.Size) }},
-	{Title: "Age", Key: "age", Ratio: 0.04,
+	{Title: "Age", Key: "age", Ratio: 0.06,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Age }},
 	{Title: "Status", Key: "status", Ratio: 0.04,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Status }},
