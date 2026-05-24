@@ -28,10 +28,11 @@ import (
 // addGetCommand wires the `toolkit get <category>` subcommand.
 func addGetCommand(rootCmd *cobra.Command, cfgFile *string) {
 	var (
-		format    string
-		noHeaders bool
-		pretty    bool
-		limit     int
+		format     string
+		noHeaders  bool
+		pretty     bool
+		limit      int
+		columnsArg string
 	)
 	getCmd := &cobra.Command{
 		Use:   "get <category>",
@@ -46,6 +47,8 @@ Examples:
   toolkit get tenant -o csv > tenants.csv
   toolkit get gpupool -o tsv | cut -f1,3
   toolkit get tenant --limit 10
+  toolkit get gpunode --columns name,status,total,free
+  toolkit get basemodel --columns help
 
 Category aliases match the TUI (e.g. "tenant"/"t", "gpunode"/"gn",
 "dac", "basemodel"/"bm"). Run with shell completion enabled to
@@ -54,27 +57,54 @@ discover them.`,
 		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 			return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
 		},
-		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit),
+		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit, &columnsArg),
 	}
 	getCmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|jsonl|yaml|csv|tsv")
 	getCmd.Flags().BoolVar(&noHeaders, "no-headers", false, "omit header row (table/csv/tsv only)")
 	getCmd.Flags().BoolVar(&pretty, "pretty", true, "pretty-print JSON/YAML output")
 	getCmd.Flags().IntVar(&limit, "limit", 0, "max items to render (client-side, applied after the fuzzy --filter match); 0 = unlimited. For grouped categories the cap is across the whole flattened result, not per group.")
+	getCmd.Flags().StringVar(&columnsArg, "columns", "",
+		"comma-separated column keys (default: category's Default columns). Use --columns help to list valid keys.")
 	_ = getCmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"table", "json", "jsonl", "yaml", "csv", "tsv"}, cobra.ShellCompDirectiveNoFileComp
+	})
+	_ = getCmd.RegisterFlagCompletionFunc("columns", func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+		if len(args) < 1 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		cat, err := domain.ParseCategory(args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		return columns.KeysFor(cat), cobra.ShellCompDirectiveNoFileComp
 	})
 	rootCmd.AddCommand(getCmd)
 }
 
-func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int) func(cmd *cobra.Command, args []string) error {
+func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int, columnsArg *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		cat, err := domain.ParseCategory(args[0])
 		if err != nil {
 			return fmt.Errorf("unknown category %q (run `toolkit get -h` for examples)", args[0])
 		}
+
+		// --columns help short-circuit: print key/title/default table, exit 0.
+		if *columnsArg == "help" {
+			headers, rows := columns.HelpTable(cat)
+			return output.WriteTable(cmd.OutOrStdout(), headers, rows, output.Options{})
+		}
+
 		fmtChoice, err := output.ParseFormat(*format)
 		if err != nil {
 			return err
+		}
+
+		selected, err := parseColumnsFlag(*columnsArg)
+		if err != nil {
+			return err
+		}
+		if len(selected) > 0 && !isTableLike(fmtChoice) {
+			return fmt.Errorf("--columns has no effect with -o %s; remove the flag or switch to -o table/csv/tsv", fmtChoice)
 		}
 
 		// Read the YAML config file (if present) so values like repo_path
@@ -113,8 +143,35 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		filter := strings.ToLower(strings.TrimSpace(cfg.Filter))
 		opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty}
 
-		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, *limit, opts, nil /* selected, wired in Task 9 */)
+		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, *limit, opts, selected)
 	}
+}
+
+// parseColumnsFlag splits "name, status" → ["name","status"], trimming
+// whitespace. Empty tokens (e.g. "name,,status") are an error. An empty
+// input returns nil, meaning "use Default columns".
+func parseColumnsFlag(s string) ([]string, error) {
+	if s == "" {
+		return nil, nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		t := strings.TrimSpace(p)
+		if t == "" {
+			return nil, fmt.Errorf("--columns: empty token in %q", s)
+		}
+		out = append(out, t)
+	}
+	return out, nil
+}
+
+func isTableLike(f output.Format) bool {
+	switch f {
+	case output.FormatTable, output.FormatCSV, output.FormatTSV:
+		return true
+	}
+	return false
 }
 
 // validateLoaderConfig returns the names of missing required flags
