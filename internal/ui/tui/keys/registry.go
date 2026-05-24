@@ -208,6 +208,15 @@ var (
 		key.WithKeys("T"),
 		key.WithHelp("<shift+t>", SortPrefix+common.TypeCol),
 	)
+	// SortVendor is a key binding for sorting by the "Vendor" column.
+	// Shares the V key with SortValue; the two never coexist in a single
+	// category's binding set (SortValue lives on definition/override
+	// categories, SortVendor is currently only on ImportedModel — the
+	// one category still rendering a Vendor column).
+	SortVendor = key.NewBinding(
+		key.WithKeys("V"),
+		key.WithHelp("<shift+v>", SortPrefix+common.VendorCol),
+	)
 	// ToggleFaulty is a key binding for toggling the faulty state.
 	ToggleFaulty = key.NewBinding(
 		key.WithKeys("ctrl+z"),
@@ -239,7 +248,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty, Delete},
 	},
 	domain.ImportedModel: {
-		common.ListView: {SortTenant, CopyTenant, Refresh},
+		common.ListView: {SortTenant, SortVendor, CopyTenant, Refresh},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {SortTenant, SortRegions, CopyTenant},

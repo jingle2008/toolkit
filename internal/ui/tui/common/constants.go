@@ -23,4 +23,6 @@ const (
 	UsageCol = "Usage"
 	// TypeCol is the column name for "Type".
 	TypeCol = "Type"
+	// VendorCol is the column name for "Vendor".
+	VendorCol = "Vendor"
 )
