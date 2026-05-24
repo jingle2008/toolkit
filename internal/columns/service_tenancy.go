@@ -7,14 +7,15 @@ import (
 )
 
 // ServiceTenancyColumns is the canonical column set for domain.ServiceTenancy.
-// Note: the TUI today labels the Environment field as "Type"; canonical
-// uses the accurate "Environment" title (intentional header fix).
+// The Environment field is displayed as "Type" — the title kept from the
+// pre-canonical TUI because the SortType binding (registry.go) and operator
+// mental model both expect "Type". The struct field stays Environment.
 var ServiceTenancyColumns = Set[models.ServiceTenancy]{Columns: []Column[models.ServiceTenancy]{
 	{Title: "Name", Key: "name", Ratio: 0.15,
 		Render: func(s models.ServiceTenancy) string { return s.Name }},
 	{Title: "Realm", Key: "realm", Ratio: 0.10,
 		Render: func(s models.ServiceTenancy) string { return s.Realm }},
-	{Title: "Environment", Key: "environment", Ratio: 0.10,
+	{Title: "Type", Key: "environment", Ratio: 0.10,
 		Render: func(s models.ServiceTenancy) string { return s.Environment }},
 	{Title: "Home Region", Key: "home-region", Ratio: 0.15,
 		Render: func(s models.ServiceTenancy) string { return s.HomeRegion }},

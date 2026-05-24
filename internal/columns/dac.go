@@ -26,11 +26,12 @@ func dacUnitShapeOrProfile(d models.DedicatedAICluster) string {
 // width for the narrow sortable columns (Internal/Usage/Size/Age); they
 // previously had no headroom for the ↕ sortable indicator (or even the
 // full title in Internal's case). The freed 0.15 is redistributed to
-// the columns that needed breathing room.
+// the columns that needed breathing room, including Status — its 6-char
+// title and ACTIVE/FAILED/READY values would truncate at ratio 0.04.
 var DacColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[models.DedicatedAICluster]{
 	{Title: "Name", Key: "name", Ratio: 0.20,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Name }},
-	{Title: "Tenant", Key: "tenant", Ratio: 0.18,
+	{Title: "Tenant", Key: "tenant", Ratio: 0.17,
 		Render: func(k string, _ models.DedicatedAICluster) string { return k }},
 	{Title: "Internal", Key: "internal", Ratio: 0.09,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.GetOwnerState() }},
@@ -40,12 +41,12 @@ var DacColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Type }},
 	{Title: "Model", Key: "model", Ratio: 0.10,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.ModelName }},
-	{Title: "Shape/Profile", Key: "shape-profile", Ratio: 0.13,
+	{Title: "Shape/Profile", Key: "shape-profile", Ratio: 0.12,
 		Render: func(_ string, d models.DedicatedAICluster) string { return dacUnitShapeOrProfile(d) }},
 	{Title: "Size", Key: "size", Ratio: 0.06,
 		Render: func(_ string, d models.DedicatedAICluster) string { return strconv.Itoa(d.Size) }},
 	{Title: "Age", Key: "age", Ratio: 0.06,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Age }},
-	{Title: "Status", Key: "status", Ratio: 0.04,
+	{Title: "Status", Key: "status", Ratio: 0.06,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Status }},
 }}

@@ -23,12 +23,18 @@ func (k KeyMap) ShortHelp() []key.Binding {
 // SortableColumns returns the set of column titles reachable via a
 // Sort* binding in this KeyMap. The header renderer uses it to mark
 // sortable-but-not-currently-active columns with a ↕ glyph.
+//
+// Keys are lowercased so callers can do case-insensitive lookups
+// (`sortable[strings.ToLower(title)]`), matching the EqualFold
+// comparison the active-sort arrow renderer uses against m.sortColumn.
+// Global is excluded by design — no Sort* binding is expected to live
+// there.
 func (k KeyMap) SortableColumns() map[string]bool {
 	out := map[string]bool{}
 	for _, group := range [][]key.Binding{k.Mode, k.Context} {
 		for _, b := range group {
 			if col, ok := strings.CutPrefix(b.Help().Desc, SortPrefix); ok {
-				out[col] = true
+				out[strings.ToLower(col)] = true
 			}
 		}
 	}

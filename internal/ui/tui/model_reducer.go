@@ -128,7 +128,7 @@ func (m *Model) updateColumns() {
 			} else {
 				title += " ↓"
 			}
-		case sortable[header.text]:
+		case sortable[strings.ToLower(header.text)]:
 			title += " ↕"
 		}
 		columns[i] = table.Column{Title: title, Width: width}

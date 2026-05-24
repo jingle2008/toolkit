@@ -141,8 +141,8 @@ func TestRenderTable_ServiceTenancy(t *testing.T) {
 	}}
 	headers, rows, err := columns.RenderTable(domain.ServiceTenancy, items, nil)
 	require.NoError(t, err)
-	// Canonical uses "ENVIRONMENT" not "ENVIRONMENT"; separator is ", " not ","
-	assert.Equal(t, []string{"NAME", "REALM", "ENVIRONMENT", "HOME REGION", "REGIONS"}, headers)
+	// Type column renders the Environment field; separator is ", " not ","
+	assert.Equal(t, []string{"NAME", "REALM", "TYPE", "HOME REGION", "REGIONS"}, headers)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, "svc-a", rows[0][0])
 	assert.Equal(t, "us-ashburn-1, us-phoenix-1", rows[0][4])

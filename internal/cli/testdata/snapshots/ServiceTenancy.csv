@@ -1,2 +1,2 @@
-NAME,REALM,ENVIRONMENT,HOME REGION,REGIONS
+NAME,REALM,TYPE,HOME REGION,REGIONS
 svc-prod,oc1,prod,us-ashburn-1,"us-ashburn-1, us-phoenix-1"

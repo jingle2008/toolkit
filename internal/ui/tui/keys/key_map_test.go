@@ -43,8 +43,8 @@ func TestSortableColumns(t *testing.T) {
 		},
 	}
 	got := km.SortableColumns()
-	if !got["Name"] || !got["Vendor"] {
-		t.Errorf("expected Name and Vendor in sortable set, got %v", got)
+	if !got["name"] || !got["vendor"] {
+		t.Errorf("expected name and vendor (lowercased) in sortable set, got %v", got)
 	}
 	if len(got) != 2 {
 		t.Errorf("expected exactly 2 sortable columns, got %v", got)
