@@ -9,11 +9,8 @@ import (
 
 // Every concrete Category must have a registered column set.
 //
-// Skipped during the bootstrap/in-progress states (registered ==
-// 0 or partial). Becomes a live invariant once every category
-// has been ported — i.e. after Task 6 of the canonical-column-set
-// refactor. Until then, partial states are valid intermediate
-// commit boundaries.
+// Skipped only during the bootstrap state (registered == 0).
+// All 19 categories are now registered — this is a live invariant.
 func TestRegistry_EveryCategoryRegistered(t *testing.T) {
 	t.Parallel()
 	var missing []domain.Category
@@ -32,13 +29,8 @@ func TestRegistry_EveryCategoryRegistered(t *testing.T) {
 		t.Skip("bootstrap state: no categories registered yet")
 	}
 	if len(missing) > 0 {
-		// TODO(Task 6): once all 19 categories are registered, drop the
-		// in-progress skip and let this t.Errorf any missing category.
-		// The skip loses regression protection during the migration
-		// window — a category accidentally un-registered won't fail
-		// the suite until Task 6 lands.
-		t.Skipf("in-progress: %d of %d categories registered (still missing: %v)",
-			registered, registered+len(missing), missing)
+		t.Errorf("missing %d of %d categories: %v",
+			len(missing), registered+len(missing), missing)
 	}
 }
 

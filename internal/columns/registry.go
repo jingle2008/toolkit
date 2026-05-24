@@ -45,6 +45,12 @@ func IsRegistered(cat domain.Category) bool {
 		return true
 	case domain.ModelArtifact:
 		return true
+	case domain.LimitTenancyOverride:
+		return true
+	case domain.ConsolePropertyTenancyOverride:
+		return true
+	case domain.PropertyTenancyOverride:
+		return true
 	}
 	return false
 }
@@ -85,6 +91,12 @@ func KeysFor(cat domain.Category) []string {
 		return ImportedModelColumns.Keys()
 	case domain.ModelArtifact:
 		return ModelArtifactColumns.Keys()
+	case domain.LimitTenancyOverride:
+		return LimitTenancyOverrideColumns.Keys()
+	case domain.ConsolePropertyTenancyOverride:
+		return ConsolePropertyTenancyOverrideColumns.Keys()
+	case domain.PropertyTenancyOverride:
+		return PropertyTenancyOverrideColumns.Keys()
 	}
 	return nil
 }
@@ -127,6 +139,12 @@ func DefaultsFor(cat domain.Category) []bool {
 		return ImportedModelColumns.Defaults()
 	case domain.ModelArtifact:
 		return ModelArtifactColumns.Defaults()
+	case domain.LimitTenancyOverride:
+		return LimitTenancyOverrideColumns.Defaults()
+	case domain.ConsolePropertyTenancyOverride:
+		return ConsolePropertyTenancyOverrideColumns.Defaults()
+	case domain.PropertyTenancyOverride:
+		return PropertyTenancyOverrideColumns.Defaults()
 	}
 	return nil
 }
@@ -167,6 +185,12 @@ func RatioSum(cat domain.Category) float64 {
 		return ImportedModelColumns.RatioSum()
 	case domain.ModelArtifact:
 		return ModelArtifactColumns.RatioSum()
+	case domain.LimitTenancyOverride:
+		return LimitTenancyOverrideColumns.RatioSum()
+	case domain.ConsolePropertyTenancyOverride:
+		return ConsolePropertyTenancyOverrideColumns.RatioSum()
+	case domain.PropertyTenancyOverride:
+		return PropertyTenancyOverrideColumns.RatioSum()
 	}
 	return 0
 }
@@ -215,6 +239,12 @@ func RenderTable(cat domain.Category, items any, selected []string) ([]string, [
 		return renderGrouped(ImportedModelColumns, items, selected)
 	case domain.ModelArtifact:
 		return renderGrouped(ModelArtifactColumns, items, selected)
+	case domain.LimitTenancyOverride:
+		return renderGrouped(LimitTenancyOverrideColumns, items, selected)
+	case domain.ConsolePropertyTenancyOverride:
+		return renderGrouped(ConsolePropertyTenancyOverrideColumns, items, selected)
+	case domain.PropertyTenancyOverride:
+		return renderGrouped(PropertyTenancyOverrideColumns, items, selected)
 	}
 	return nil, nil, fmt.Errorf("category %s is not registered with the columns package", cat)
 }
@@ -275,6 +305,12 @@ func TitlesFor(cat domain.Category) []string {
 		return ImportedModelColumns.Titles()
 	case domain.ModelArtifact:
 		return ModelArtifactColumns.Titles()
+	case domain.LimitTenancyOverride:
+		return LimitTenancyOverrideColumns.Titles()
+	case domain.ConsolePropertyTenancyOverride:
+		return ConsolePropertyTenancyOverrideColumns.Titles()
+	case domain.PropertyTenancyOverride:
+		return PropertyTenancyOverrideColumns.Titles()
 	}
 	return nil
 }
