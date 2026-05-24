@@ -28,11 +28,11 @@ Today CLI table output and the TUI maintain independent column lists per categor
 | 1 | One canonical set per category (option C of the brainstorm: single set + CLI `--columns`). | Avoids the per-column "is this essential?" debate that institutionalizes drift in a tier-based design. |
 | 2 | New top-level package `internal/columns/`. | Consumed by both `internal/cli/` and `internal/ui/tui/`; doesn't belong in either. |
 | 3 | Generic `Column[T]`, typed `Set[T]` / `GroupedSet[T]` per category. | Matches existing house style (`definitionTable[T models.Definition]`, `tenancyOverrideTable[T models.NamedItem]`). |
-| 4 | Group key is a first-class `KeyColumn Column[string]` on `GroupedSet[T]`. | Mirrors today's `tableFromGrouped` shape; avoids a synthetic-column hack. |
+| 4 | Grouped categories use `GroupedColumn[T]` with `Render(key string, item T) string`; no separate `KeyColumn` field. Author orders the columns explicitly — the key column lives wherever it belongs (today's TUI puts it second; canonical follows TUI). | Today's CLI and TUI disagree on grouped column ordering (CLI: key-first; TUI: name-first). A separate `KeyColumn` would force one ordering for both. A unified `GroupedColumn[T]` lets the author pick — and we pick TUI's name-first ordering, preserving TUI visuals and changing CLI for 4 grouped categories instead. |
 | 5 | Column identifier is an explicit `Key` field, kebab-case (`capacity-type`, `actual-size`). | Stable across Title rewording; predictable for CLI users. |
 | 6 | `Default bool` on each Column decides whether it's in the CLI default table; TUI ignores `Default` and shows everything. | Separates schema (unified) from presentation (configurable). |
 | 7 | TUI ratios stay on the canonical `Column`. | Alternative is a parallel TUI-only map — reintroduces drift. CLI ignores `Ratio` at render time. |
-| 8 | CLI defaults preserve today's output for 16 of 19 categories. | Behavior-preserving refactor for the common case. |
+| 8 | CLI defaults preserve today's output for 12 of 19 categories byte-for-byte (7 diff intentionally — see #4 and #9). | Behavior-preserving refactor for the common case. |
 | 9 | CLI defaults are *widened* for `LimitTenancyOverride`, `ConsolePropertyTenancyOverride`, `PropertyTenancyOverride` to match the TUI. | Today's tenancy-override CLI tables (TENANT\|NAME only) are unusable; this refactor fixes them. |
 | 10 | `--columns` on `-o json\|jsonl\|yaml` is a hard error. | Silent ignore breeds confusion when users expect projection in JSON. |
 | 11 | Big-bang migration in one PR; no parallel-paths feature flag. | Categories are independent, conversions are mechanical, snapshot tests pin behavior. |
@@ -68,6 +68,7 @@ internal/columns/
 ```go
 package columns
 
+// Column is a column for a flat (non-grouped) category.
 type Column[T any] struct {
     Title   string         // header text shown to humans ("Capacity Type")
     Key     string         // identifier for --columns ("capacity-type")
@@ -76,17 +77,30 @@ type Column[T any] struct {
     Render  func(T) string // cell extractor
 }
 
-// Set is the canonical column list for a flat (non-grouped) category.
+// GroupedColumn is a column for a grouped category. Render receives
+// both the group key (e.g. tenant id, pool name) and the item, so
+// any column can use either. A "group key column" is just a
+// GroupedColumn whose Render ignores `item` and returns `key`.
+type GroupedColumn[T any] struct {
+    Title   string
+    Key     string
+    Default bool
+    Ratio   float64
+    Render  func(key string, item T) string
+}
+
+// Set is the canonical column list for a flat category.
 type Set[T any] struct {
     Columns []Column[T]
 }
 
-// GroupedSet is for categories whose loader returns map[string][]T
-// (ImportedModel, ModelArtifact, GpuNode, DAC, tenancy overrides).
-// KeyColumn renders the group key (always emitted first when included).
+// GroupedSet is the canonical column list for a grouped category
+// (loader returns map[string][]T). The author orders Columns
+// explicitly; the canonical ordering for the toolkit follows the
+// current TUI (item name first, group key second) so TUI visual
+// output is preserved.
 type GroupedSet[T any] struct {
-    KeyColumn Column[string]
-    Columns   []Column[T]
+    Columns []GroupedColumn[T]
 }
 ```
 
@@ -107,7 +121,7 @@ type GroupedSet[T any] struct {
 func RenderTable(cat domain.Category, items any, selected []string) (headers []string, rows [][]string, err error)
 ```
 
-The TUI consumes the typed `Set[T]` / `GroupedSet[T]` directly through small adapters (`tuiColumns`, `tuiRows`) — it doesn't go through `RenderTable` because it needs `table.Column{Title, Width}` shape, not `([]string, [][]string)`.
+The TUI consumes the typed `Set[T]` / `GroupedSet[T]` directly through small adapters (`tuiColumns`, `tuiRows`) — it doesn't go through `RenderTable` because it needs `table.Column{Title, Width}` shape, not `([]string, [][]string)`. For grouped categories the TUI adapter iterates sorted keys (same as `tableFromGrouped` today) and renders each `GroupedColumn` via `c.Render(key, item)`.
 
 ## CLI integration
 
@@ -171,8 +185,10 @@ Each category gets `Default==true` for every column the current CLI table render
 This file does not enumerate every column for every category; concrete contents are in the implementation plan. The contract is:
 
 1. For each category, union(today's CLI columns ∪ today's TUI columns) becomes the canonical set.
-2. CLI defaults preserve today's CLI table, except the three tenancy overrides which widen to today's TUI columns.
-3. TUI shows all canonical columns (= today's TUI behavior).
+2. CLI defaults preserve today's CLI table content, except:
+   - The three tenancy overrides widen to today's TUI columns (Decision #9).
+   - For grouped categories, the canonical column **ordering** follows today's TUI (item name first, group key second) — so CLI grouped tables (`gpunode`, `dac`, `importedmodel`, `modelartifact`) get reordered. TUI ordering is unchanged.
+3. TUI shows all canonical columns at their canonical ordering (= today's TUI behavior).
 4. Ratios for shared columns carry over from `headerDefinitions`; ratios for new-to-canonical-but-old-to-CLI columns are assigned to keep per-set sums ≈ 1.0.
 
 ## Test plan
@@ -199,8 +215,10 @@ This file does not enumerate every column for every category; concrete contents 
 
 5. **Behavior-preservation snapshot** (`internal/cli/snapshot_test.go`)
    - Capture `toolkit get <cat> -o csv` for every category against a fixed test dataset.
-   - 16 of 19 categories must match byte-for-byte against a stored snapshot.
-   - The 3 tenancy-override categories diff intentionally; their snapshots reflect the widened defaults (Decision #9).
+   - 12 of 19 categories must match byte-for-byte against a stored snapshot.
+   - 7 categories diff intentionally; their snapshots reflect the new canonical output:
+     - 3 widened tenancy overrides (Decision #9): `LimitTenancyOverride`, `ConsolePropertyTenancyOverride`, `PropertyTenancyOverride`.
+     - 4 grouped categories reordered to item-name-first (Decision #4): `ImportedModel`, `ModelArtifact`, `GpuNode`, `DedicatedAICluster`.
 
 ### Out of scope for tests
 
@@ -222,6 +240,10 @@ No feature flag, no dual paths.
 
 ## Risks
 
-- **Table width regression** is limited to the 3 tenancy-override categories — those are the only places CLI defaults change. Other 16 categories produce byte-identical output, pinned by the snapshot test.
+- **CLI behavior changes** are limited to 7 categories:
+  - 3 widened tenancy overrides (Decision #9): scripts that parsed two columns now get more. CSV/TSV consumers using positional indexing should review.
+  - 4 grouped categories (Decision #4) with reordered columns (key was first, now second): same risk for positional consumers.
+  - The other 12 produce byte-identical output, pinned by the snapshot test.
+- **TUI visual changes:** none. The canonical column ordering for grouped categories matches today's TUI, and `internal/ui/tui/table_utils.go` `getItemKey`/`statsColumns`/`computeNumericStats` continue to work without changes (they reference columns by Title text, which is preserved).
 - **Generics-over-Category dispatch** in `RenderTable` is a type switch — adding a category later means editing that switch. Acceptable: same edit cost as today's `emitCategory` switch.
 - **Ratio drift in TUI** for any category where this refactor reshuffles ratios. Mitigated by the "ratios sum to ~1.0" registry test and the TUI adapter tests pinning representative outputs.
