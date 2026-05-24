@@ -218,7 +218,7 @@ var (
 // Category+mode-specific key bindings
 var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.BaseModel: {
-		common.ListView: {SortSize, SortContext, ToggleFaulty},
+		common.ListView: {SortSize, SortContext, ToggleFaulty, Refresh},
 	},
 	domain.Tenant: {
 		common.ListView: {SortInternal, CopyTenant, ToggleFaulty},
@@ -239,7 +239,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty, Delete},
 	},
 	domain.ImportedModel: {
-		common.ListView: {SortTenant, CopyTenant},
+		common.ListView: {SortTenant, CopyTenant, Refresh},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {SortTenant, SortRegions, CopyTenant},

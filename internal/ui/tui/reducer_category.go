@@ -45,8 +45,8 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	// Dispatch table for category handlers
 	type handlerFn func(*Model, bool, int) tea.Cmd
 	handlers := map[domain.Category]handlerFn{
-		domain.BaseModel:                       func(m *Model, _ bool, gen int) tea.Cmd { return m.handleBaseModelCategory(gen) },
-		domain.ImportedModel:                   func(m *Model, _ bool, gen int) tea.Cmd { return m.handleImportedModelCategory(gen) },
+		domain.BaseModel:                       func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleBaseModelCategory(refresh, gen) },
+		domain.ImportedModel:                   func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleImportedModelCategory(refresh, gen) },
 		domain.GpuPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGpuPoolCategory(refresh, gen) },
 		domain.GpuNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGpuNodeCategory(refresh, gen) },
 		domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
@@ -117,15 +117,15 @@ func (m *Model) handlePropertyRegionalOverrideCategory(gen int) tea.Cmd {
 	return nil
 }
 
-func (m *Model) handleBaseModelCategory(gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.BaseModels == nil {
+func (m *Model) handleBaseModelCategory(refresh bool, gen int) tea.Cmd {
+	if m.dataset == nil || m.dataset.BaseModels == nil || refresh {
 		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handleImportedModelCategory(gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.ImportedModelMap == nil {
+func (m *Model) handleImportedModelCategory(refresh bool, gen int) tea.Cmd {
+	if m.dataset == nil || m.dataset.ImportedModelMap == nil || refresh {
 		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
