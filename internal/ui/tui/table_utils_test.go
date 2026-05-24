@@ -270,8 +270,8 @@ func buildFullTestDataset() *models.Dataset {
 func TestAllCategories_HeadersAndRows(t *testing.T) {
 	t.Parallel()
 	ds := buildFullTestDataset()
-	// Iterate from Tenant to DedicatedAICluster (skip CategoryUnknown)
-	for cat := domain.Tenant; cat <= domain.DedicatedAICluster; cat++ {
+	// Iterate from Tenant to Alias (skip CategoryUnknown)
+	for cat := domain.Tenant; cat <= domain.Alias; cat++ {
 		headers := getHeaders(cat)
 		if len(headers) > 0 {
 			sum := 0.0

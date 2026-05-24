@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/columns"
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -24,7 +25,7 @@ func TestTuiRowsGrouped_GpuNode(t *testing.T) {
 	m := map[string][]models.GpuNode{
 		"pool-A": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, Age: "1d"}},
 	}
-	rows := tuiRowsGrouped(columns.GpuNodeColumns, m, 0, nil, "", false)
+	rows := tuiRowsGrouped(columns.GpuNodeColumns, m, domain.GpuPool, nil, "", false)
 	if len(rows) != 1 {
 		t.Fatalf("rows: got %d, want 1", len(rows))
 	}
