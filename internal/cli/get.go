@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sort"
 	"strings"
 	"syscall"
 
@@ -15,6 +14,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/collections"
+	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
@@ -113,7 +113,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		filter := strings.ToLower(strings.TrimSpace(cfg.Filter))
 		opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty}
 
-		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, *limit, opts)
+		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, *limit, opts, nil /* selected, wired in Task 9 */)
 	}
 }
 
@@ -183,18 +183,19 @@ func emitCategory(
 	filter string,
 	limit int,
 	opts output.Options,
+	selected []string,
 ) error {
 	switch cat {
 	case domain.Alias:
 		// Static enum dump — no loader call. Handled before the default
 		// branch so it can run without repo_path or env_* set.
-		return writeAliases(w, filter, limit, opts)
+		return writeAliases(w, filter, limit, opts, selected)
 	case domain.BaseModel:
 		items, err := ld.LoadBaseModels(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load base models: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, baseModelTable)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.BaseModel, selected)
 	case domain.ImportedModel:
 		grouped, err := ld.LoadImportedModels(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -203,7 +204,7 @@ func emitCategory(
 		// No top-level `tenant` injection: each item carries its
 		// own `tenantId` field already (same shape as DAC after
 		// the recent wrapper-drop refactor).
-		return writeMapFlat(w, collections.FilterMapOrAll(grouped, filter), limit, opts, importedModelTable)
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.ImportedModel, selected)
 	case domain.GpuPool:
 		items, err := ld.LoadGpuPools(ctx, cfg.RepoPath, env)
 		if err != nil {
@@ -223,7 +224,7 @@ func emitCategory(
 		if msg := resolve.EnrichGpuPools(ctx, items, cfg.KubeConfig, env); msg != "" {
 			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", msg)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, gpuPoolTable)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GpuPool, selected)
 	case domain.GpuNode:
 		grouped, err := ld.LoadGpuNodes(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -232,7 +233,7 @@ func emitCategory(
 		// No top-level `pool` injection: GpuNode.NodePool (json
 		// `poolName`) already carries the group key; the loader sets
 		// it from the same value used as the map key.
-		return writeMapFlat(w, collections.FilterMapOrAll(grouped, filter), limit, opts, gpuNodeTable)
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.GpuNode, selected)
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -241,7 +242,7 @@ func emitCategory(
 		// No top-level `tenant` injection: the loader keys this map
 		// by dac.TenantID (internal/infra/k8s/dac.go:157), which is
 		// already the flat `tenantId` field on each value.
-		return writeMapFlat(w, collections.FilterMapOrAll(grouped, filter), limit, opts, dacTable)
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.DedicatedAICluster, selected)
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
 		domain.ConsolePropertyTenancyOverride,
@@ -250,31 +251,31 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load tenancy override group: %w", err)
 		}
-		return emitTenancyGroup(w, cat, group, filter, limit, opts)
+		return emitTenancyGroup(w, cat, group, filter, limit, opts, selected)
 	case domain.LimitRegionalOverride:
 		items, err := ld.LoadLimitRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load limit regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, limitRegionalOverrideTable)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.LimitRegionalOverride, selected)
 	case domain.ConsolePropertyRegionalOverride:
 		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load console property regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, definitionOverrideTable[models.ConsolePropertyRegionalOverride])
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.ConsolePropertyRegionalOverride, selected)
 	case domain.PropertyRegionalOverride:
 		items, err := ld.LoadPropertyRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load property regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, definitionOverrideTable[models.PropertyRegionalOverride])
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.PropertyRegionalOverride, selected)
 	default:
 		dataset, err := ld.LoadDataset(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load dataset: %w", err)
 		}
-		return emitFromDataset(w, cat, dataset, filter, limit, opts)
+		return emitFromDataset(w, cat, dataset, filter, limit, opts, selected)
 	}
 }
 
@@ -284,13 +285,11 @@ type writer interface {
 	Write(p []byte) (int, error)
 }
 
-func writeSlice[T any](
-	w writer,
-	items []T,
-	limit int,
-	opts output.Options,
-	toTable func([]T) (headers []string, rows [][]string),
-) error {
+// writeSlice renders a flat slice through the canonical column registry.
+// JSON/JSONL/YAML bypass the registry and encode the typed items directly.
+// For table/csv/tsv, columns.RenderTable is called with cat and selected.
+// selected is nil until Task 9 wires --columns.
+func writeSlice[T any](w writer, items []T, limit int, opts output.Options, cat domain.Category, selected []string) error {
 	items = collections.TruncateSlice(items, limit)
 	switch opts.Format {
 	case output.FormatJSON:
@@ -299,72 +298,76 @@ func writeSlice[T any](
 		return output.WriteJSONL(w, items, opts)
 	case output.FormatYAML:
 		return output.WriteYAML(w, items, opts)
-	case output.FormatTable:
-		headers, rows := toTable(items)
-		return output.WriteTable(w, headers, rows, opts)
-	case output.FormatCSV:
-		headers, rows := toTable(items)
-		return output.WriteDelimited(w, headers, rows, opts, ',')
-	case output.FormatTSV:
-		headers, rows := toTable(items)
-		return output.WriteDelimited(w, headers, rows, opts, '\t')
+	case output.FormatTable, output.FormatCSV, output.FormatTSV:
+		headers, rows, err := columns.RenderTable(cat, items, selected)
+		if err != nil {
+			return err
+		}
+		return writeTableLike(w, headers, rows, opts)
 	default:
 		return fmt.Errorf("unsupported format %q", opts.Format)
 	}
 }
 
-// writeMapFlat renders a grouped slice without injecting the map key
-// into each value. Use when the group key is already preserved on T
-// (GpuNode.NodePool → poolName, DedicatedAICluster.TenantID →
-// tenantId, ModelArtifact.ModelName → model_name) so injecting it
-// again would duplicate.
-//
-// The table/csv/tsv paths go through `toTable`, which still adds the
-// group key as a column for visual grouping.
-func writeMapFlat[T any](
-	w writer,
-	grouped map[string][]T,
-	limit int,
-	opts output.Options,
-	toTable func(map[string][]T) (headers []string, rows [][]string),
-) error {
+// writeTableLike dispatches the table/csv/tsv branches given pre-built
+// headers and rows. Shared between writeSlice and the map helpers.
+func writeTableLike(w writer, headers []string, rows [][]string, opts output.Options) error {
+	switch opts.Format {
+	case output.FormatTable:
+		return output.WriteTable(w, headers, rows, opts)
+	case output.FormatCSV:
+		return output.WriteDelimited(w, headers, rows, opts, ',')
+	case output.FormatTSV:
+		return output.WriteDelimited(w, headers, rows, opts, '\t')
+	}
+	return fmt.Errorf("writeTableLike: unsupported %q", opts.Format)
+}
+
+// writeMap renders a grouped map whose values already carry the group key
+// as a struct field (GpuNode.NodePool, DedicatedAICluster.TenantID,
+// ImportedModel.TenantID, ModelArtifact.ModelName). JSON/JSONL/YAML use
+// output.Flatten so the emitted objects look flat. Table/CSV/TSV go
+// through columns.RenderTable.
+func writeMap[T any](w writer, grouped map[string][]T, limit int, opts output.Options, cat domain.Category, selected []string) error {
 	switch opts.Format {
 	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
 		return writeEncoded(w, opts, collections.TruncateSlice(output.Flatten(grouped), limit))
 	case output.FormatTable, output.FormatCSV, output.FormatTSV:
-		return writeGroupedTable(w, grouped, limit, opts, toTable)
+		headers, rows, err := columns.RenderTable(cat, grouped, selected)
+		if err != nil {
+			return err
+		}
+		rows = collections.TruncateSlice(rows, limit)
+		return writeTableLike(w, headers, rows, opts)
 	default:
 		return fmt.Errorf("unsupported format %q", opts.Format)
 	}
 }
 
-// writeMapWithKey renders a grouped slice and injects the map key as
-// groupField on each emitted object. Use when the group key isn't a
-// field on T (e.g. tenancy overrides, where TenantID/Tag comes from
-// JSON file contents, not the directory name used as the map key).
-//
-// The table/csv/tsv paths go through `toTable`, same as writeMapFlat.
-func writeMapWithKey[T any](
-	w writer,
-	grouped map[string][]T,
-	limit int,
-	opts output.Options,
-	toTable func(map[string][]T) (headers []string, rows [][]string),
-	groupField string,
-) error {
+// writeMapWithGroupKey renders a grouped map and injects the map key as
+// groupField into each emitted object for JSON/JSONL/YAML output (via
+// output.FlattenWithKey). Use for the three tenancy override categories
+// where the group key (tenant directory name) is not a struct field on T.
+// Table/CSV/TSV go through columns.RenderTable.
+func writeMapWithGroupKey[T any](w writer, grouped map[string][]T, limit int, opts output.Options, cat domain.Category, selected []string, groupField string) error {
 	switch opts.Format {
 	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
 		return writeEncoded(w, opts, collections.TruncateSlice(output.FlattenWithKey(grouped, groupField), limit))
 	case output.FormatTable, output.FormatCSV, output.FormatTSV:
-		return writeGroupedTable(w, grouped, limit, opts, toTable)
+		headers, rows, err := columns.RenderTable(cat, grouped, selected)
+		if err != nil {
+			return err
+		}
+		rows = collections.TruncateSlice(rows, limit)
+		return writeTableLike(w, headers, rows, opts)
 	default:
 		return fmt.Errorf("unsupported format %q", opts.Format)
 	}
 }
 
 // writeEncoded dispatches the json/jsonl/yaml branches for an
-// already-flattened items slice. Shared between writeMapFlat and
-// writeMapWithKey so the two only differ in the flatten step.
+// already-flattened items slice. Shared between writeMap and
+// writeMapWithGroupKey so the two only differ in the flatten step.
 func writeEncoded(w writer, opts output.Options, items any) error {
 	switch opts.Format {
 	case output.FormatJSON:
@@ -378,29 +381,6 @@ func writeEncoded(w writer, opts output.Options, items any) error {
 	}
 }
 
-// writeGroupedTable dispatches the table/csv/tsv branches for grouped
-// data; the toTable renderer adds the group key as a column.
-func writeGroupedTable[T any](
-	w writer,
-	grouped map[string][]T,
-	limit int,
-	opts output.Options,
-	toTable func(map[string][]T) (headers []string, rows [][]string),
-) error {
-	headers, rows := toTable(grouped)
-	rows = collections.TruncateSlice(rows, limit)
-	switch opts.Format {
-	case output.FormatTable:
-		return output.WriteTable(w, headers, rows, opts)
-	case output.FormatCSV:
-		return output.WriteDelimited(w, headers, rows, opts, ',')
-	case output.FormatTSV:
-		return output.WriteDelimited(w, headers, rows, opts, '\t')
-	default:
-		return fmt.Errorf("unsupported grouped-table format %q", opts.Format)
-	}
-}
-
 func emitTenancyGroup(
 	w writer,
 	cat domain.Category,
@@ -408,19 +388,20 @@ func emitTenancyGroup(
 	filter string,
 	limit int,
 	opts output.Options,
+	selected []string,
 ) error {
 	switch cat { //nolint:exhaustive
 	case domain.Tenant:
-		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, tenantTable)
+		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, domain.Tenant, selected)
 	case domain.LimitTenancyOverride:
-		return writeMapWithKey(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), limit, opts,
-			tenancyOverrideTable[models.LimitTenancyOverride], "tenant")
+		return writeMapWithGroupKey(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), limit, opts,
+			domain.LimitTenancyOverride, selected, "tenant")
 	case domain.ConsolePropertyTenancyOverride:
-		return writeMapWithKey(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), limit, opts,
-			tenancyOverrideTable[models.ConsolePropertyTenancyOverride], "tenant")
+		return writeMapWithGroupKey(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), limit, opts,
+			domain.ConsolePropertyTenancyOverride, selected, "tenant")
 	case domain.PropertyTenancyOverride:
-		return writeMapWithKey(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), limit, opts,
-			tenancyOverrideTable[models.PropertyTenancyOverride], "tenant")
+		return writeMapWithGroupKey(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), limit, opts,
+			domain.PropertyTenancyOverride, selected, "tenant")
 	default:
 		return fmt.Errorf("category %s not in tenancy group", cat)
 	}
@@ -433,216 +414,65 @@ func emitFromDataset(
 	filter string,
 	limit int,
 	opts output.Options,
+	selected []string,
 ) error {
 	switch cat { //nolint:exhaustive
 	case domain.LimitDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.LimitDefinitionGroup.Values, nil, filter, nil),
-			limit, opts, limitDefinitionTable)
+			limit, opts, domain.LimitDefinition, selected)
 	case domain.ConsolePropertyDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.ConsolePropertyDefinitionGroup.Values, nil, filter, nil),
-			limit, opts, definitionTable[models.ConsolePropertyDefinition])
+			limit, opts, domain.ConsolePropertyDefinition, selected)
 	case domain.PropertyDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.PropertyDefinitionGroup.Values, nil, filter, nil),
-			limit, opts, definitionTable[models.PropertyDefinition])
+			limit, opts, domain.PropertyDefinition, selected)
 	case domain.Environment:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.Environments, nil, filter, nil),
-			limit, opts, environmentTable)
+			limit, opts, domain.Environment, selected)
 	case domain.ServiceTenancy:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.ServiceTenancies, nil, filter, nil),
-			limit, opts, serviceTenancyTable)
+			limit, opts, domain.ServiceTenancy, selected)
 	case domain.ModelArtifact:
 		// No top-level `model` injection: ModelArtifact.ModelName
 		// (json `model_name`) already carries the group key; the
 		// loader sets it from the same Terraform key used for the map.
-		return writeMapFlat(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), limit, opts, modelArtifactTable)
+		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), limit, opts, domain.ModelArtifact, selected)
 	default:
 		return fmt.Errorf("category %s is not supported by `toolkit get`", cat)
 	}
 }
 
-type aliasItem struct {
-	Alias    string `json:"alias" yaml:"alias"`
-	Category string `json:"category" yaml:"category"`
-}
-
-func writeAliases(w writer, filter string, limit int, opts output.Options) error {
-	items := make([]aliasItem, 0, len(domain.Aliases))
-	for _, a := range domain.Aliases {
-		cat, err := domain.ParseCategory(a)
-		if err != nil {
+// writeAliases renders the canonical alias list — one row per category
+// (TUI shape, spec Decision #4). This is an intentional change from
+// the legacy 1-row-per-alias CLI shape.
+func writeAliases(w writer, filter string, limit int, opts output.Options, selected []string) error {
+	cats := make([]domain.Category, 0, len(domain.Categories))
+	for _, c := range domain.Categories {
+		if c == domain.CategoryUnknown {
 			continue
 		}
-		catName := cat.String()
-		if filter != "" &&
-			!strings.Contains(strings.ToLower(a), filter) &&
-			!strings.Contains(strings.ToLower(catName), filter) {
-			continue
+		if filter != "" {
+			catName := strings.ToLower(c.String())
+			if !strings.Contains(catName, filter) {
+				matched := false
+				for _, a := range c.GetAliases() {
+					if strings.Contains(strings.ToLower(a), filter) {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					continue
+				}
+			}
 		}
-		items = append(items, aliasItem{Alias: a, Category: catName})
+		cats = append(cats, c)
 	}
-	sort.Slice(items, func(i, j int) bool { return items[i].Alias < items[j].Alias })
-	return writeSlice(w, items, limit, opts, func(items []aliasItem) ([]string, [][]string) {
-		rows := make([][]string, 0, len(items))
-		for _, it := range items {
-			rows = append(rows, []string{it.Alias, it.Category})
-		}
-		return []string{"ALIAS", "CATEGORY"}, rows
-	})
-}
-
-// --- Per-category table renderers ---------------------------------
-
-// tableFromSlice builds a (headers, rows) result by mapping each item
-// through row. Captures the boilerplate every flat *Table function
-// repeats: pre-size the rows slice, loop, append.
-func tableFromSlice[T any](items []T, headers []string, row func(T) []string) ([]string, [][]string) {
-	rows := make([][]string, 0, len(items))
-	for _, item := range items {
-		rows = append(rows, row(item))
-	}
-	return headers, rows
-}
-
-// tableFromGrouped iterates grouped's sorted keys and emits one row
-// per item, with row called as row(parentKey, item). Captures the
-// boilerplate every grouped *Table function repeats.
-func tableFromGrouped[T any](grouped map[string][]T, headers []string, row func(key string, item T) []string) ([]string, [][]string) {
-	total := 0
-	for _, v := range grouped {
-		total += len(v)
-	}
-	rows := make([][]string, 0, total)
-	for _, k := range sortedKeys(grouped) {
-		for _, item := range grouped[k] {
-			rows = append(rows, row(k, item))
-		}
-	}
-	return headers, rows
-}
-
-func tenantTable(items []models.Tenant) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "IDS", "INTERNAL", "NOTE"},
-		func(t models.Tenant) []string {
-			return []string{t.Name, strings.Join(t.IDs, ","), boolStr(t.IsInternal), t.Note}
-		})
-}
-
-func baseModelTable(items []models.BaseModel) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "INTERNAL", "VENDOR", "TYPE", "VERSION", "STATUS", "FLAGS"},
-		func(m models.BaseModel) []string {
-			return []string{m.Name, m.InternalName, m.Vendor, m.Type, m.Version, m.Status, m.GetFlags()}
-		})
-}
-
-func importedModelTable(grouped map[string][]models.ImportedModel) ([]string, [][]string) {
-	return tableFromGrouped(grouped,
-		[]string{"TENANT", "NAME", "NAMESPACE", "VENDOR", "VERSION", "STATUS"},
-		func(k string, m models.ImportedModel) []string {
-			return []string{k, m.Name, m.Namespace, m.Vendor, m.Version, m.Status}
-		})
-}
-
-func gpuPoolTable(items []models.GpuPool) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "SHAPE", "SIZE", "ACTUAL SIZE", "CAPACITY TYPE", "STATUS"},
-		func(p models.GpuPool) []string {
-			return []string{p.Name, p.Shape, fmt.Sprintf("%d", p.Size), fmt.Sprintf("%d", p.ActualSize), p.CapacityType, p.Status}
-		})
-}
-
-func gpuNodeTable(grouped map[string][]models.GpuNode) ([]string, [][]string) {
-	return tableFromGrouped(grouped,
-		[]string{"POOL", "NAME", "STATUS", "INSTANCE TYPE", "AGE"},
-		func(k string, n models.GpuNode) []string {
-			return []string{k, n.Name, n.GetStatus(), n.InstanceType, n.Age}
-		})
-}
-
-func dacTable(grouped map[string][]models.DedicatedAICluster) ([]string, [][]string) {
-	return tableFromGrouped(grouped,
-		[]string{"TENANT", "NAME", "STATUS", "TYPE", "UNIT SHAPE", "SIZE", "MODEL"},
-		func(k string, d models.DedicatedAICluster) []string {
-			return []string{k, d.Name, d.Status, d.Type, d.UnitShape, fmt.Sprintf("%d", d.Size), d.ModelName}
-		})
-}
-
-func tenancyOverrideTable[T models.NamedItem](grouped map[string][]T) ([]string, [][]string) {
-	return tableFromGrouped(grouped,
-		[]string{"TENANT", "NAME"},
-		func(k string, v T) []string { return []string{k, v.GetName()} })
-}
-
-func limitDefinitionTable(items []models.LimitDefinition) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "DESCRIPTION", "SCOPE", "DEFAULT MIN", "DEFAULT MAX"},
-		func(d models.LimitDefinition) []string {
-			return []string{d.Name, d.Description, d.Scope, d.DefaultMin, d.DefaultMax}
-		})
-}
-
-func definitionTable[T models.Definition](items []T) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "DESCRIPTION"},
-		func(d T) []string { return []string{d.GetName(), d.GetDescription()} })
-}
-
-func definitionOverrideTable[T models.DefinitionOverride](items []T) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "REGIONS"},
-		func(d T) []string { return []string{d.GetName(), strings.Join(d.GetRegions(), ",")} })
-}
-
-func environmentTable(items []models.Environment) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "TYPE", "REGION", "REALM"},
-		func(e models.Environment) []string {
-			return []string{e.GetName(), e.Type, e.Region, e.Realm}
-		})
-}
-
-func serviceTenancyTable(items []models.ServiceTenancy) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "REALM", "ENVIRONMENT", "HOME REGION", "REGIONS"},
-		func(s models.ServiceTenancy) []string {
-			return []string{s.Name, s.Realm, s.Environment, s.HomeRegion, strings.Join(s.Regions, ",")}
-		})
-}
-
-func limitRegionalOverrideTable(items []models.LimitRegionalOverride) ([]string, [][]string) {
-	return tableFromSlice(items,
-		[]string{"NAME", "REGIONS"},
-		func(o models.LimitRegionalOverride) []string {
-			return []string{o.Name, strings.Join(o.Regions, ",")}
-		})
-}
-
-func modelArtifactTable(grouped map[string][]models.ModelArtifact) ([]string, [][]string) {
-	return tableFromGrouped(grouped,
-		[]string{"MODEL", "NAME", "GPU CONFIG", "TENSORRT"},
-		func(k string, a models.ModelArtifact) []string {
-			return []string{k, a.Name, a.GetGpuConfig(), a.TensorRTVersion}
-		})
-}
-
-func sortedKeys[T any](m map[string][]T) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func boolStr(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
+	// Categories are already in registration (enum) order.
+	return writeSlice(w, cats, limit, opts, domain.Alias, selected)
 }

@@ -86,20 +86,14 @@ func TestGetCmd_AliasJSON_HappyPath(t *testing.T) {
 		t.Fatalf("get alias: %v", err)
 	}
 
-	var items []struct {
-		Alias    string `json:"alias"`
-		Category string `json:"category"`
-	}
+	// Alias JSON is now 1-item-per-category (domain.Category is an integer enum).
+	// The array must be non-empty; each element is a non-negative integer.
+	var items []int
 	if err := json.Unmarshal(stdout.Bytes(), &items); err != nil {
 		t.Fatalf("stdout is not valid JSON: %v\n%s", err, stdout.String())
 	}
 	if len(items) == 0 {
-		t.Fatal("expected at least one alias in JSON output")
-	}
-	for _, it := range items {
-		if it.Alias == "" || it.Category == "" {
-			t.Errorf("entry missing alias or category: %+v", it)
-		}
+		t.Fatal("expected at least one category in JSON output")
 	}
 }
 
@@ -141,7 +135,8 @@ func TestGetCmd_AliasCSV_HappyPath(t *testing.T) {
 	if len(records) < 2 {
 		t.Fatalf("expected header + at least one alias row, got %d records", len(records))
 	}
-	if records[0][0] != "ALIAS" || records[0][1] != "CATEGORY" {
+	// Canonical alias headers: NAME (category name) and ALIASES (all aliases joined).
+	if records[0][0] != "NAME" || records[0][1] != "ALIASES" {
 		t.Errorf("unexpected header row: %+v", records[0])
 	}
 }
@@ -164,7 +159,8 @@ func TestGetCmd_AliasTSV_HappyPath(t *testing.T) {
 	if len(lines) < 2 {
 		t.Fatalf("expected header + at least one alias row, got %d lines", len(lines))
 	}
-	if lines[0] != "ALIAS\tCATEGORY" {
+	// Canonical alias headers: NAME (category name) and ALIASES (all aliases joined).
+	if lines[0] != "NAME\tALIASES" {
 		t.Errorf("unexpected header line: %q", lines[0])
 	}
 	// Every data row must have exactly one tab (two columns).
