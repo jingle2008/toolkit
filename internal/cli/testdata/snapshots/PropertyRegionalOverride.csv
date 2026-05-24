@@ -1,2 +1,2 @@
-NAME,REGIONS
-timeout,us-ashburn-1
+NAME,REGIONS,VALUE
+timeout,us-ashburn-1,60s

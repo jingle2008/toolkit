@@ -55,16 +55,9 @@ func TestBaseModelColumns(t *testing.T) {
 	for _, c := range BaseModelColumns.Columns {
 		defaults[c.Key] = c.Default
 	}
-	defaultTrue := []string{"name", "internal", "vendor", "type", "version", "flags", "status"}
-	for _, k := range defaultTrue {
+	for _, k := range []string{"name", "display-name", "internal", "vendor", "type", "version", "dac-shape", "size", "context", "flags", "status"} {
 		if !defaults[k] {
 			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-	defaultFalse := []string{"display-name", "dac-shape", "size", "context"}
-	for _, k := range defaultFalse {
-		if defaults[k] {
-			t.Errorf("col %s: expected Default=false", k)
 		}
 	}
 

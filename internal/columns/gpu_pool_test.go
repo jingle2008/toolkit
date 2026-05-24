@@ -47,16 +47,9 @@ func TestGpuPoolColumns(t *testing.T) {
 	for _, c := range GpuPoolColumns.Columns {
 		defaults[c.Key] = c.Default
 	}
-	defaultTrue := []string{"name", "shape", "size", "actual-size", "capacity-type", "status"}
-	for _, k := range defaultTrue {
+	for _, k := range []string{"name", "shape", "ad", "size", "actual-size", "gpus", "oke-managed", "capacity-type", "status"} {
 		if !defaults[k] {
 			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-	defaultFalse := []string{"ad", "gpus", "oke-managed"}
-	for _, k := range defaultFalse {
-		if defaults[k] {
-			t.Errorf("col %s: expected Default=false", k)
 		}
 	}
 

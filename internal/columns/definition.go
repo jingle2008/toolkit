@@ -11,7 +11,7 @@ func DefinitionColumns[T models.Definition]() Set[T] {
 			Render: func(d T) string { return d.GetName() }},
 		{Title: "Description", Key: "description", Default: true, Ratio: 0.50,
 			Render: func(d T) string { return d.GetDescription() }},
-		{Title: "Value", Key: "value", Default: false, Ratio: 0.12,
+		{Title: "Value", Key: "value", Default: true, Ratio: 0.12,
 			Render: func(d T) string { return d.GetValue() }},
 	}}
 }

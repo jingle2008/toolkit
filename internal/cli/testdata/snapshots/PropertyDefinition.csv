@@ -1,2 +1,2 @@
-NAME,DESCRIPTION
-timeout,Request timeout
+NAME,DESCRIPTION,VALUE
+timeout,Request timeout,30s

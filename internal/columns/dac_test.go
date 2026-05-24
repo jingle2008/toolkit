@@ -55,16 +55,9 @@ func TestDacColumns(t *testing.T) {
 	for _, c := range DacColumns.Columns {
 		defaults[c.Key] = c.Default
 	}
-	defaultTrue := []string{"name", "tenant", "type", "model", "shape-profile", "size", "status"}
-	for _, k := range defaultTrue {
+	for _, k := range []string{"name", "tenant", "internal", "usage", "type", "model", "shape-profile", "size", "age", "status"} {
 		if !defaults[k] {
 			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-	defaultFalse := []string{"internal", "usage", "age"}
-	for _, k := range defaultFalse {
-		if defaults[k] {
-			t.Errorf("col %s: expected Default=false", k)
 		}
 	}
 

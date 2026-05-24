@@ -15,8 +15,8 @@ var LimitRegionalOverrideColumns = Set[models.LimitRegionalOverride]{Columns: []
 		Render: func(o models.LimitRegionalOverride) string { return o.Name }},
 	{Title: "Regions", Key: "regions", Default: true, Ratio: 0.30,
 		Render: func(o models.LimitRegionalOverride) string { return strings.Join(o.Regions, ", ") }},
-	{Title: "Min", Key: "min", Default: false, Ratio: 0.15,
+	{Title: "Min", Key: "min", Default: true, Ratio: 0.15,
 		Render: func(o models.LimitRegionalOverride) string { return limitOverrideMin(o.Values) }},
-	{Title: "Max", Key: "max", Default: false, Ratio: 0.15,
+	{Title: "Max", Key: "max", Default: true, Ratio: 0.15,
 		Render: func(o models.LimitRegionalOverride) string { return limitOverrideMax(o.Values) }},
 }}

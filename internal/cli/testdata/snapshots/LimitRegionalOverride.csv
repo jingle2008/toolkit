@@ -1,2 +1,2 @@
-NAME,REGIONS
-compute-cores,"us-ashburn-1, us-phoenix-1"
+NAME,REGIONS,MIN,MAX
+compute-cores,"us-ashburn-1, us-phoenix-1",0,50

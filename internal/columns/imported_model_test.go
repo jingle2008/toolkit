@@ -44,16 +44,9 @@ func TestImportedModelColumns(t *testing.T) {
 	for _, c := range ImportedModelColumns.Columns {
 		defaults[c.Key] = c.Default
 	}
-	defaultTrue := []string{"name", "tenant", "namespace", "display-name", "status"}
-	for _, k := range defaultTrue {
+	for _, k := range []string{"name", "tenant", "namespace", "display-name", "vendor", "version", "status"} {
 		if !defaults[k] {
 			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-	defaultFalse := []string{"vendor", "version"}
-	for _, k := range defaultFalse {
-		if defaults[k] {
-			t.Errorf("col %s: expected Default=false", k)
 		}
 	}
 

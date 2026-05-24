@@ -1,2 +1,2 @@
-NAME,DESCRIPTION
-dark-mode,Enable dark mode
+NAME,DESCRIPTION,VALUE
+dark-mode,Enable dark mode,false

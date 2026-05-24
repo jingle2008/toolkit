@@ -35,17 +35,10 @@ func TestLimitRegionalOverrideColumns(t *testing.T) {
 	for _, c := range LimitRegionalOverrideColumns.Columns {
 		defaults[c.Key] = c.Default
 	}
-	if !defaults["name"] {
-		t.Error("col name: expected Default=true")
-	}
-	if !defaults["regions"] {
-		t.Error("col regions: expected Default=true")
-	}
-	if defaults["min"] {
-		t.Error("col min: expected Default=false")
-	}
-	if defaults["max"] {
-		t.Error("col max: expected Default=false")
+	for _, k := range []string{"name", "regions", "min", "max"} {
+		if !defaults[k] {
+			t.Errorf("col %s: expected Default=true", k)
+		}
 	}
 
 	// Verify empty Values doesn't panic.

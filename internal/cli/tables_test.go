@@ -46,21 +46,21 @@ func TestRenderTable_BaseModel(t *testing.T) {
 	}
 	headers, rows, err := columns.RenderTable(domain.BaseModel, items, nil)
 	require.NoError(t, err)
-	// Default columns: Name, Internal, Vendor, Type, Version, Flags, Status
-	assert.Equal(t, []string{"NAME", "INTERNAL", "VENDOR", "TYPE", "VERSION", "FLAGS", "STATUS"}, headers)
+	// All 11 columns are Default==true now.
+	assert.Equal(t, []string{"NAME", "DISPLAY NAME", "INTERNAL", "VENDOR", "TYPE", "VERSION", "DAC SHAPE", "SIZE", "CONTEXT", "FLAGS", "STATUS"}, headers)
 	require.Len(t, rows, 1)
 	assert.Equal(t, "m1", rows[0][0])
-	assert.Equal(t, "i", rows[0][1])
+	assert.Equal(t, "i", rows[0][2])
 }
 
 func TestRenderTable_GpuPool(t *testing.T) {
 	t.Parallel()
-	items := []models.GpuPool{{Name: "p1", Shape: "BM.GPU", Size: 8, ActualSize: 7, CapacityType: "ondemand", Status: "RUNNING"}}
+	items := []models.GpuPool{{Name: "p1", Shape: "BM.GPU", AvailabilityDomain: "AD-1", Size: 8, ActualSize: 7, IsOkeManaged: true, CapacityType: "ondemand", Status: "RUNNING"}}
 	headers, rows, err := columns.RenderTable(domain.GpuPool, items, nil)
 	require.NoError(t, err)
-	// Default columns: Name, Shape, Size, Actual Size, Capacity Type, Status
-	assert.Equal(t, []string{"NAME", "SHAPE", "SIZE", "ACTUAL SIZE", "CAPACITY TYPE", "STATUS"}, headers)
-	assert.Equal(t, [][]string{{"p1", "BM.GPU", "8", "7", "ondemand", "RUNNING"}}, rows)
+	// All 9 columns are Default==true now.
+	assert.Equal(t, []string{"NAME", "SHAPE", "AD", "SIZE", "ACTUAL SIZE", "GPUS", "OKE MANAGED", "CAPACITY TYPE", "STATUS"}, headers)
+	assert.Equal(t, [][]string{{"p1", "BM.GPU", "AD-1", "8", "7", "0", "true", "ondemand", "RUNNING"}}, rows)
 }
 
 func TestRenderTable_LimitDefinition(t *testing.T) {
@@ -75,41 +75,48 @@ func TestRenderTable_LimitDefinition(t *testing.T) {
 
 func TestRenderTable_PropertyDefinition(t *testing.T) {
 	t.Parallel()
-	items := []models.PropertyDefinition{{Name: "p1", Description: "d"}}
+	items := []models.PropertyDefinition{{Name: "p1", Description: "d", DefaultValue: "v"}}
 	headers, rows, err := columns.RenderTable(domain.PropertyDefinition, items, nil)
 	require.NoError(t, err)
-	// Default columns: Name, Description (Value is Default==false)
-	assert.Equal(t, []string{"NAME", "DESCRIPTION"}, headers)
-	assert.Equal(t, [][]string{{"p1", "d"}}, rows)
+	// All 3 columns Default==true now.
+	assert.Equal(t, []string{"NAME", "DESCRIPTION", "VALUE"}, headers)
+	assert.Equal(t, [][]string{{"p1", "d", "v"}}, rows)
 }
 
 func TestRenderTable_ConsolePropertyDefinition(t *testing.T) {
 	t.Parallel()
-	items := []models.ConsolePropertyDefinition{{Name: "cp1", Description: "desc"}}
+	items := []models.ConsolePropertyDefinition{{Name: "cp1", Description: "desc", Value: "v"}}
 	headers, rows, err := columns.RenderTable(domain.ConsolePropertyDefinition, items, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"NAME", "DESCRIPTION"}, headers)
-	assert.Equal(t, [][]string{{"cp1", "desc"}}, rows)
+	assert.Equal(t, []string{"NAME", "DESCRIPTION", "VALUE"}, headers)
+	assert.Equal(t, [][]string{{"cp1", "desc", "v"}}, rows)
 }
 
 func TestRenderTable_PropertyRegionalOverride(t *testing.T) {
 	t.Parallel()
-	items := []models.PropertyRegionalOverride{{Name: "p1", Regions: []string{"us-ashburn-1", "us-phoenix-1"}}}
+	items := []models.PropertyRegionalOverride{{
+		Name:    "p1",
+		Regions: []string{"us-ashburn-1", "us-phoenix-1"},
+		Values:  []struct{ Value string `json:"value"` }{{Value: "v"}},
+	}}
 	headers, rows, err := columns.RenderTable(domain.PropertyRegionalOverride, items, nil)
 	require.NoError(t, err)
-	// Default columns: Name, Regions (Value is Default==false)
-	assert.Equal(t, []string{"NAME", "REGIONS"}, headers)
-	// Canonical uses ", " separator (not ",")
-	assert.Equal(t, [][]string{{"p1", "us-ashburn-1, us-phoenix-1"}}, rows)
+	// All 3 columns Default==true now.
+	assert.Equal(t, []string{"NAME", "REGIONS", "VALUE"}, headers)
+	assert.Equal(t, [][]string{{"p1", "us-ashburn-1, us-phoenix-1", "v"}}, rows)
 }
 
 func TestRenderTable_LimitRegionalOverride(t *testing.T) {
 	t.Parallel()
-	items := []models.LimitRegionalOverride{{Name: "l1", Regions: []string{"us-ashburn-1"}}}
+	items := []models.LimitRegionalOverride{{
+		Name: "l1", Regions: []string{"us-ashburn-1"},
+		Values: []models.LimitRange{{Min: 0, Max: 50}},
+	}}
 	headers, rows, err := columns.RenderTable(domain.LimitRegionalOverride, items, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"NAME", "REGIONS"}, headers)
-	assert.Equal(t, [][]string{{"l1", "us-ashburn-1"}}, rows)
+	// All 4 columns Default==true now.
+	assert.Equal(t, []string{"NAME", "REGIONS", "MIN", "MAX"}, headers)
+	assert.Equal(t, [][]string{{"l1", "us-ashburn-1", "0", "50"}}, rows)
 }
 
 func TestRenderTable_Environment(t *testing.T) {
@@ -170,9 +177,8 @@ func TestRenderTable_ImportedModel(t *testing.T) {
 	}
 	headers, rows, err := columns.RenderTable(domain.ImportedModel, grouped, nil)
 	require.NoError(t, err)
-	// Canonical default columns: Name, Tenant, Namespace, Display Name, Status
-	// (Vendor and Version are Default==false)
-	assert.Equal(t, []string{"NAME", "TENANT", "NAMESPACE", "DISPLAY NAME", "STATUS"}, headers)
+	// All 7 columns Default==true now.
+	assert.Equal(t, []string{"NAME", "TENANT", "NAMESPACE", "DISPLAY NAME", "VENDOR", "VERSION", "STATUS"}, headers)
 	// renderGrouped iterates sorted keys; both rows present.
 	require.Len(t, rows, 2)
 	assert.Equal(t, "im-a", rows[0][0])
@@ -188,8 +194,8 @@ func TestRenderTable_GpuNode(t *testing.T) {
 	}
 	headers, rows, err := columns.RenderTable(domain.GpuNode, grouped, nil)
 	require.NoError(t, err)
-	// Canonical default columns: Name, Pool, Type, Age, Status (name-first, Decision #4)
-	assert.Equal(t, []string{"NAME", "POOL", "TYPE", "AGE", "STATUS"}, headers)
+	// All 9 columns Default==true now; name-first (Decision #4).
+	assert.Equal(t, []string{"NAME", "POOL", "TYPE", "TOTAL", "FREE", "HEALTHY", "READY", "AGE", "STATUS"}, headers)
 	require.Len(t, rows, 2)
 	// Sorted keys → pool-a first; name-first column ordering
 	assert.Equal(t, "n1", rows[0][0])
@@ -205,9 +211,8 @@ func TestRenderTable_DAC(t *testing.T) {
 	}
 	headers, rows, err := columns.RenderTable(domain.DedicatedAICluster, grouped, nil)
 	require.NoError(t, err)
-	// Canonical default columns: Name, Tenant, Type, Model, Shape/Profile, Size, Status
-	// (name-first, tenant-second; Decision #4)
-	assert.Equal(t, []string{"NAME", "TENANT", "TYPE", "MODEL", "SHAPE/PROFILE", "SIZE", "STATUS"}, headers)
+	// All 10 columns Default==true now; name-first (Decision #4).
+	assert.Equal(t, []string{"NAME", "TENANT", "INTERNAL", "USAGE", "TYPE", "MODEL", "SHAPE/PROFILE", "SIZE", "AGE", "STATUS"}, headers)
 	require.Len(t, rows, 1)
 	assert.Equal(t, "d1", rows[0][0])
 	assert.Equal(t, "tenant-a", rows[0][1])

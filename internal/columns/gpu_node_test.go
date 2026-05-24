@@ -45,16 +45,9 @@ func TestGpuNodeColumns(t *testing.T) {
 	for _, c := range GpuNodeColumns.Columns {
 		defaults[c.Key] = c.Default
 	}
-	defaultTrue := []string{"name", "pool", "type", "age", "status"}
-	for _, k := range defaultTrue {
+	for _, k := range []string{"name", "pool", "type", "total", "free", "healthy", "ready", "age", "status"} {
 		if !defaults[k] {
 			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-	defaultFalse := []string{"total", "free", "healthy", "ready"}
-	for _, k := range defaultFalse {
-		if defaults[k] {
-			t.Errorf("col %s: expected Default=false", k)
 		}
 	}
 

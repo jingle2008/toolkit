@@ -35,7 +35,7 @@ func TestConsolePropertyRegionalOverrideColumns(t *testing.T) {
 	for _, c := range ConsolePropertyRegionalOverrideColumns.Columns {
 		defaults[c.Key] = c.Default
 	}
-	wantDefaults := map[string]bool{"name": true, "regions": true, "value": false}
+	wantDefaults := map[string]bool{"name": true, "regions": true, "value": true}
 	for k, v := range wantDefaults {
 		if defaults[k] != v {
 			t.Errorf("col %s Default: got %v, want %v", k, defaults[k], v)
@@ -72,7 +72,7 @@ func TestPropertyRegionalOverrideColumns(t *testing.T) {
 	for _, c := range PropertyRegionalOverrideColumns.Columns {
 		defaults[c.Key] = c.Default
 	}
-	wantDefaults := map[string]bool{"name": true, "regions": true, "value": false}
+	wantDefaults := map[string]bool{"name": true, "regions": true, "value": true}
 	for k, v := range wantDefaults {
 		if defaults[k] != v {
 			t.Errorf("col %s Default: got %v, want %v", k, defaults[k], v)
