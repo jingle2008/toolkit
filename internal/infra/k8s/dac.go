@@ -69,10 +69,13 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, ca
 		unitShape, _ := spec["unitShape"].(string)
 		size, _ := spec["size"].(int64)
 
-		tenantID := "missing"
-		if hasLabels {
-			tenantID = tenantIDFromLabels(labels)
-		}
+		// hasLabels==false ⇒ labels==nil; tenantIDFromLabels handles
+		// that path and returns UNKNOWN_TENANCY, same as the
+		// labels-present-but-no-tenancy-id case. Keeps the orphan
+		// bucket key consistent across all "missing tenant" scenarios
+		// (and across DAC + ImportedModel).
+		_ = hasLabels
+		tenantID := tenantIDFromLabels(labels)
 
 		statusStr, _ := status["status"].(string)
 		if statusStr == "" {
@@ -116,10 +119,13 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 		profile, _ := spec["profile"].(string)
 		count, _ := spec["count"].(int64)
 
-		tenantID := "missing"
-		if hasLabels {
-			tenantID = tenantIDFromLabels(labels)
-		}
+		// hasLabels==false ⇒ labels==nil; tenantIDFromLabels handles
+		// that path and returns UNKNOWN_TENANCY, same as the
+		// labels-present-but-no-tenancy-id case. Keeps the orphan
+		// bucket key consistent across all "missing tenant" scenarios
+		// (and across DAC + ImportedModel).
+		_ = hasLabels
+		tenantID := tenantIDFromLabels(labels)
 
 		dacLifecycleState, _ := status["dacLifecycleState"].(string)
 		statusStr := dacLifecycleState

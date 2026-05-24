@@ -60,7 +60,8 @@ func LoadImportedModels(ctx context.Context, client dynamic.Interface) (map[stri
 
 	result := make(map[string][]models.ImportedModel)
 	for _, item := range nsList.Items {
-		tenantID := tenantIDFromUnstructured(&item)
+		labels, _, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
+		tenantID := tenantIDFromLabels(labels) // nil labels → UNKNOWN_TENANCY (orphan bucket)
 		result[tenantID] = append(result[tenantID], models.ImportedModel{
 			BaseModel: parseBaseModel(&item),
 			Namespace: item.GetNamespace(),
@@ -85,16 +86,4 @@ func LoadImportedModels(ctx context.Context, client dynamic.Interface) (map[stri
 		})
 	}
 	return result, nil
-}
-
-// tenantIDFromUnstructured pulls metadata.labels off the
-// unstructured object as map[string]any (the shape
-// tenantIDFromLabels expects) and returns the resolved tenant ID.
-// Falls back to UNKNOWN_TENANCY when the labels block is absent.
-func tenantIDFromUnstructured(item *unstructured.Unstructured) string {
-	labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
-	if !hasLabels {
-		return "UNKNOWN_TENANCY"
-	}
-	return tenantIDFromLabels(labels)
 }

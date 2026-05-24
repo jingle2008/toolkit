@@ -62,6 +62,55 @@ func TestSetDedicatedAIClusterMap(t *testing.T) {
 	}
 }
 
+// TestSetImportedModelMap mirrors TestSetDedicatedAIClusterMap. Verifies
+// the matched-by-suffix path re-keys by Tenant.Name and sets Owner;
+// the unmatched key is preserved and Owner stays nil.
+func TestSetImportedModelMap(t *testing.T) {
+	t.Parallel()
+	tenantA := Tenant{Name: "TenantA", IDs: []string{"ocid1.tenancy.oc1..aaaa"}}
+	tenantB := Tenant{Name: "TenantB", IDs: []string{"ocid1.tenancy.oc1..bbbb"}}
+	d := &Dataset{
+		Tenants: []Tenant{tenantA, tenantB},
+	}
+	input := map[string][]ImportedModel{
+		"aaaa": {
+			{BaseModel: BaseModel{Name: "im1"}, Namespace: "team-a", TenantID: "aaaa"},
+		},
+		"other": {
+			{BaseModel: BaseModel{Name: "im2"}, TenantID: "other"},
+		},
+	}
+	d.SetImportedModelMap(input)
+
+	// Matched key "aaaa" rewrites to Tenant.Name; Owner pointer set.
+	if _, ok := d.ImportedModelMap["TenantA"]; !ok {
+		t.Errorf("expected key 'TenantA' in ImportedModelMap, got keys: %v", keys(d.ImportedModelMap))
+	}
+	for _, im := range d.ImportedModelMap["TenantA"] {
+		if im.Owner == nil || im.Owner.Name != "TenantA" {
+			t.Errorf("Owner not set correctly for TenantA: got %+v", im.Owner)
+		}
+	}
+
+	// Unmatched key passes through with Owner nil.
+	if _, ok := d.ImportedModelMap["other"]; !ok {
+		t.Errorf("expected key 'other' in ImportedModelMap")
+	}
+	for _, im := range d.ImportedModelMap["other"] {
+		if im.Owner != nil {
+			t.Errorf("Owner should be nil for 'other', got %+v", im.Owner)
+		}
+	}
+}
+
+func keys[V any](m map[string]V) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}
+
 /*
 TestResetScopedData checks that ResetScopedData nils all relevant fields.
 */
@@ -77,6 +126,7 @@ func TestResetScopedData(t *testing.T) {
 		ConsolePropertyRegionalOverrides:  []ConsolePropertyRegionalOverride{{}},
 		PropertyRegionalOverrides:         []PropertyRegionalOverride{{}},
 		BaseModels:                        []BaseModel{},
+		ImportedModelMap:                  map[string][]ImportedModel{"x": nil},
 		GpuPools:                          []GpuPool{{}},
 		GpuNodeMap:                        map[string][]GpuNode{"x": nil},
 		DedicatedAIClusterMap:             map[string][]DedicatedAICluster{"x": nil},
@@ -90,6 +140,7 @@ func TestResetScopedData(t *testing.T) {
 		d.ConsolePropertyRegionalOverrides != nil ||
 		d.PropertyRegionalOverrides != nil ||
 		d.BaseModels != nil ||
+		d.ImportedModelMap != nil ||
 		d.GpuPools != nil ||
 		d.GpuNodeMap != nil ||
 		d.DedicatedAIClusterMap != nil {
