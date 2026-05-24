@@ -53,3 +53,12 @@ func (m ImportedModel) GetFilterableFields() []string {
 func (m ImportedModel) GetTenantID(realm string) string {
 	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, m.TenantID)
 }
+
+// GetID returns the full OCID for the ImportedModel by combining the
+// realm and region with the Name suffix. Mirrors
+// DedicatedAICluster.GetID; PHX/IAD regions are normalized to their
+// short codes the same way.
+func (m ImportedModel) GetID(realm, region string) string {
+	region = normalizeRegion(region)
+	return fmt.Sprintf("ocid1.generativeaiimportedmodel.%s.%s.%s", realm, region, m.Name)
+}

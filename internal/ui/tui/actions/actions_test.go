@@ -65,6 +65,19 @@ func TestCopyItemName_DedicatedAICluster(_ *testing.T) {
 	CopyItemName(dac, env, logger)
 }
 
+func TestCopyItemName_ImportedModel(t *testing.T) {
+	logger := &fakeLogger{}
+	clipboardValue = ""
+	clipboardErr = nil
+	im := &models.ImportedModel{}
+	im.Name = "amaaaaaasxj5imyasw65kzgst7qhopkqbh4hiahgcdpx7gfxesuj7mndycca"
+	env := models.Environment{Realm: "oc1", Region: "me-dubai-1"}
+	CopyItemName(im, env, logger)
+	assert.Equal(t,
+		"ocid1.generativeaiimportedmodel.oc1.me-dubai-1.amaaaaaasxj5imyasw65kzgst7qhopkqbh4hiahgcdpx7gfxesuj7mndycca",
+		clipboardValue)
+}
+
 func TestCopyItemName_Unsupported(t *testing.T) {
 	logger := &fakeLogger{}
 	CopyItemName(123, models.Environment{}, logger)

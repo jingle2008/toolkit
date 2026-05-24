@@ -23,6 +23,11 @@ func CopyItemName(item any, env models.Environment, logger logging.Logger) {
 		if err := clipboardWriteAll(id); err != nil {
 			logger.Errorw("failed to copy id to clipboard", "error", err)
 		}
+	} else if im, ok := item.(*models.ImportedModel); ok {
+		id := im.GetID(env.Realm, env.Region)
+		if err := clipboardWriteAll(id); err != nil {
+			logger.Errorw("failed to copy id to clipboard", "error", err)
+		}
 	} else if to, ok := item.(models.NamedItem); ok {
 		if err := clipboardWriteAll(to.GetName()); err != nil {
 			logger.Errorw("failed to copy name to clipboard", "error", err)
