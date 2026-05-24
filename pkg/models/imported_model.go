@@ -1,5 +1,7 @@
 package models
 
+import "fmt"
+
 // ImportedModel is a tenant-owned base model. Two sources feed this
 // category:
 //
@@ -11,10 +13,12 @@ package models
 // Every item is grouped by tenant, matching the DedicatedAICluster
 // pattern. Identity fields:
 //
-//   - `TenantID` is the OCI tenant identifier — the `tenancy-id`
-//     label value, or `"UNKNOWN_TENANCY"` for orphans (namespaced
-//     CRs missing the label, which is a config error). This is the
-//     authoritative tenant key for grouping and lookups.
+//   - `TenantID` is the `tenancy-id` label value (the OCID
+//     short-name suffix, not the full OCID), or `"UNKNOWN_TENANCY"`
+//     for orphans (namespaced CRs missing the label, which is a
+//     config error). Same shape as DedicatedAICluster.TenantID. This
+//     is the authoritative tenant key for grouping and lookups; use
+//     GetTenantID(realm) to render the full OCID.
 //   - `Owner` is a resolved pointer into Dataset.Tenants, set by
 //     SetImportedModelMap when the OCID suffix matches a known
 //     tenant. Nil for orphans or when the tenant isn't in the
@@ -41,4 +45,11 @@ type ImportedModel struct {
 // `--filter ocid1.tenancy.…` work without users knowing the source.
 func (m ImportedModel) GetFilterableFields() []string {
 	return append(m.BaseModel.GetFilterableFields(), m.Namespace, m.TenantID)
+}
+
+// GetTenantID returns the full tenancy OCID for the ImportedModel by
+// combining the realm with the `tenancy-id` label suffix stored in
+// TenantID. Mirrors DedicatedAICluster.GetTenantID.
+func (m ImportedModel) GetTenantID(realm string) string {
+	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, m.TenantID)
 }

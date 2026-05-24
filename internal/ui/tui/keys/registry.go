@@ -238,6 +238,9 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.DedicatedAICluster: {
 		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty, Delete},
 	},
+	domain.ImportedModel: {
+		common.ListView: {SortTenant, CopyTenant},
+	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {SortTenant, SortRegions, CopyTenant},
 	},

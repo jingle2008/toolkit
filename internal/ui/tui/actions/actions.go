@@ -44,6 +44,11 @@ func CopyTenantID(item any, env models.Environment, logger logging.Logger) {
 		if err := clipboardWriteAll(tenantID); err != nil {
 			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
 		}
+	} else if im, ok := item.(*models.ImportedModel); ok {
+		tenantID := im.GetTenantID(env.Realm)
+		if err := clipboardWriteAll(tenantID); err != nil {
+			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
+		}
 	} else if to, ok := item.(models.TenancyOverride); ok {
 		if err := clipboardWriteAll(to.GetTenantID()); err != nil {
 			logger.Errorw("failed to copy tenantID to clipboard", "error", err)

@@ -93,6 +93,17 @@ func TestCopyTenantID_DedicatedAICluster(_ *testing.T) {
 	CopyTenantID(dac, env, logger)
 }
 
+func TestCopyTenantID_ImportedModel(t *testing.T) {
+	logger := &fakeLogger{}
+	clipboardValue = ""
+	clipboardErr = nil
+	im := &models.ImportedModel{}
+	im.TenantID = "aaaaaaaaexample"
+	env := models.Environment{Realm: "oc1"}
+	CopyTenantID(im, env, logger)
+	assert.Equal(t, "ocid1.tenancy.oc1..aaaaaaaaexample", clipboardValue)
+}
+
 func TestCopyTenantID_Nil(t *testing.T) {
 	logger := &fakeLogger{}
 	CopyTenantID(nil, models.Environment{}, logger)
