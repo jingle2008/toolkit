@@ -29,6 +29,14 @@ func IsRegistered(cat domain.Category) bool {
 		return true
 	case domain.GpuPool:
 		return true
+	case domain.ConsolePropertyDefinition:
+		return true
+	case domain.PropertyDefinition:
+		return true
+	case domain.ConsolePropertyRegionalOverride:
+		return true
+	case domain.PropertyRegionalOverride:
+		return true
 	}
 	return false
 }
@@ -53,6 +61,14 @@ func KeysFor(cat domain.Category) []string {
 		return BaseModelColumns.Keys()
 	case domain.GpuPool:
 		return GpuPoolColumns.Keys()
+	case domain.ConsolePropertyDefinition:
+		return ConsolePropertyDefinitionColumns.Keys()
+	case domain.PropertyDefinition:
+		return PropertyDefinitionColumns.Keys()
+	case domain.ConsolePropertyRegionalOverride:
+		return ConsolePropertyRegionalOverrideColumns.Keys()
+	case domain.PropertyRegionalOverride:
+		return PropertyRegionalOverrideColumns.Keys()
 	}
 	return nil
 }
@@ -79,6 +95,14 @@ func DefaultsFor(cat domain.Category) []bool {
 		return BaseModelColumns.Defaults()
 	case domain.GpuPool:
 		return GpuPoolColumns.Defaults()
+	case domain.ConsolePropertyDefinition:
+		return ConsolePropertyDefinitionColumns.Defaults()
+	case domain.PropertyDefinition:
+		return PropertyDefinitionColumns.Defaults()
+	case domain.ConsolePropertyRegionalOverride:
+		return ConsolePropertyRegionalOverrideColumns.Defaults()
+	case domain.PropertyRegionalOverride:
+		return PropertyRegionalOverrideColumns.Defaults()
 	}
 	return nil
 }
@@ -103,6 +127,14 @@ func RatioSum(cat domain.Category) float64 {
 		return BaseModelColumns.RatioSum()
 	case domain.GpuPool:
 		return GpuPoolColumns.RatioSum()
+	case domain.ConsolePropertyDefinition:
+		return ConsolePropertyDefinitionColumns.RatioSum()
+	case domain.PropertyDefinition:
+		return PropertyDefinitionColumns.RatioSum()
+	case domain.ConsolePropertyRegionalOverride:
+		return ConsolePropertyRegionalOverrideColumns.RatioSum()
+	case domain.PropertyRegionalOverride:
+		return PropertyRegionalOverrideColumns.RatioSum()
 	}
 	return 0
 }
@@ -135,6 +167,14 @@ func RenderTable(cat domain.Category, items any, selected []string) ([]string, [
 		return renderFlat(BaseModelColumns, items, selected)
 	case domain.GpuPool:
 		return renderFlat(GpuPoolColumns, items, selected)
+	case domain.ConsolePropertyDefinition:
+		return renderFlat(ConsolePropertyDefinitionColumns, items, selected)
+	case domain.PropertyDefinition:
+		return renderFlat(PropertyDefinitionColumns, items, selected)
+	case domain.ConsolePropertyRegionalOverride:
+		return renderFlat(ConsolePropertyRegionalOverrideColumns, items, selected)
+	case domain.PropertyRegionalOverride:
+		return renderFlat(PropertyRegionalOverrideColumns, items, selected)
 	}
 	return nil, nil, fmt.Errorf("category %s is not registered with the columns package", cat)
 }
@@ -179,6 +219,14 @@ func TitlesFor(cat domain.Category) []string {
 		return BaseModelColumns.Titles()
 	case domain.GpuPool:
 		return GpuPoolColumns.Titles()
+	case domain.ConsolePropertyDefinition:
+		return ConsolePropertyDefinitionColumns.Titles()
+	case domain.PropertyDefinition:
+		return PropertyDefinitionColumns.Titles()
+	case domain.ConsolePropertyRegionalOverride:
+		return ConsolePropertyRegionalOverrideColumns.Titles()
+	case domain.PropertyRegionalOverride:
+		return PropertyRegionalOverrideColumns.Titles()
 	}
 	return nil
 }
