@@ -110,6 +110,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 // updateColumns updates the table columns based on the current category.
 func (m *Model) updateColumns() {
 	m.headers = getHeaders(m.category)
+	sortable := m.keys.SortableColumns()
 	columns := make([]table.Column, len(m.headers))
 	remaining := m.table.Width()
 	for i, header := range m.headers {
@@ -120,12 +121,15 @@ func (m *Model) updateColumns() {
 		}
 		width -= m.styles.Header.GetHorizontalFrameSize()
 		title := header.text
-		if m.sortColumn != "" && strings.EqualFold(header.text, m.sortColumn) {
+		switch {
+		case m.sortColumn != "" && strings.EqualFold(header.text, m.sortColumn):
 			if m.sortAsc {
 				title += " ↑"
 			} else {
 				title += " ↓"
 			}
+		case sortable[header.text]:
+			title += " ↕"
 		}
 		columns[i] = table.Column{Title: title, Width: width}
 	}

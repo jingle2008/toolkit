@@ -30,6 +30,27 @@ func TestShortHelpAndFullHelp(t *testing.T) {
 	}
 }
 
+func TestSortableColumns(t *testing.T) {
+	t.Parallel()
+	km := KeyMap{
+		Mode: []key.Binding{
+			key.NewBinding(key.WithKeys("N"), key.WithHelp("<shift+n>", SortPrefix+"Name")),
+			key.NewBinding(key.WithKeys("c"), key.WithHelp("<c>", "Copy")),
+		},
+		Context: []key.Binding{
+			key.NewBinding(key.WithKeys("V"), key.WithHelp("<shift+v>", SortPrefix+"Vendor")),
+			key.NewBinding(key.WithKeys("r"), key.WithHelp("<r>", "Refresh")),
+		},
+	}
+	got := km.SortableColumns()
+	if !got["Name"] || !got["Vendor"] {
+		t.Errorf("expected Name and Vendor in sortable set, got %v", got)
+	}
+	if len(got) != 2 {
+		t.Errorf("expected exactly 2 sortable columns, got %v", got)
+	}
+}
+
 func TestHelpAndQuit(t *testing.T) {
 	t.Parallel()
 	km := KeyMap{

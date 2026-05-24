@@ -20,6 +20,21 @@ func (k KeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Help(), k.Quit()}
 }
 
+// SortableColumns returns the set of column titles reachable via a
+// Sort* binding in this KeyMap. The header renderer uses it to mark
+// sortable-but-not-currently-active columns with a ↕ glyph.
+func (k KeyMap) SortableColumns() map[string]bool {
+	out := map[string]bool{}
+	for _, group := range [][]key.Binding{k.Mode, k.Context} {
+		for _, b := range group {
+			if col, ok := strings.CutPrefix(b.Help().Desc, SortPrefix); ok {
+				out[col] = true
+			}
+		}
+	}
+	return out
+}
+
 // FullHelp returns a full list of key bindings for help display, chunked per category.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	cat := slices.Concat(k.Global, k.Mode, k.Context)
