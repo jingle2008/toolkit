@@ -42,10 +42,10 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 	}
 	rows := tuiRowsFlat(columns.BaseModelColumns, baseModels, "", false)
 	assert.Len(t, rows, 1)
-	// BaseModelColumns has 11 columns: Name, Display Name, Internal, Vendor, Type,
-	// Version, DAC Shape, Size, Context, Flags, Status.
+	// BaseModelColumns: Name, Display Name, Version, DAC Shape, Size,
+	// Context, Flags, Status. Internal/Vendor/Type were dropped.
 	assert.Equal(t, table.Row{
-		"BM1", "", "bm1", "", "typeA", "v1", "", "", "1024", "EXP/INT/RTD", "",
+		"BM1", "", "v1", "", "", "1024", "EXP/INT/RTD", "",
 	}, rows[0])
 }
 

@@ -42,15 +42,16 @@ func TestRenderTable_Tenant(t *testing.T) {
 func TestRenderTable_BaseModel(t *testing.T) {
 	t.Parallel()
 	items := []models.BaseModel{
-		{Name: "m1", InternalName: "i", Vendor: "v", Type: "t", Version: "1", Status: "READY"},
+		{Name: "m1", DisplayName: "Model 1", Version: "1", Status: "READY"},
 	}
 	headers, rows, err := columns.RenderTable(domain.BaseModel, items, nil)
 	require.NoError(t, err)
-	// All 11 columns are Default==true now.
-	assert.Equal(t, []string{"NAME", "DISPLAY NAME", "INTERNAL", "VENDOR", "TYPE", "VERSION", "DAC SHAPE", "SIZE", "CONTEXT", "FLAGS", "STATUS"}, headers)
+	// Internal/Vendor/Type dropped from the canonical set; 8 columns remain.
+	assert.Equal(t, []string{"NAME", "DISPLAY NAME", "VERSION", "DAC SHAPE", "SIZE", "CONTEXT", "FLAGS", "STATUS"}, headers)
 	require.Len(t, rows, 1)
 	assert.Equal(t, "m1", rows[0][0])
-	assert.Equal(t, "i", rows[0][2])
+	assert.Equal(t, "Model 1", rows[0][1])
+	assert.Equal(t, "1", rows[0][2])
 }
 
 func TestRenderTable_GpuPool(t *testing.T) {

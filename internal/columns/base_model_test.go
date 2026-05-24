@@ -34,9 +34,6 @@ func TestBaseModelColumns(t *testing.T) {
 	want := map[string]string{
 		"name":         "cohere.command",
 		"display-name": "Command",
-		"internal":     "cohere-command-internal",
-		"vendor":       "Cohere",
-		"type":         "CHAT",
 		"version":      "v1",
 		"dac-shape":    "2x BM.GPU.A10.4",
 		"size":         "7B",
