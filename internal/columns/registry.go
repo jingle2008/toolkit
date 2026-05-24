@@ -37,6 +37,14 @@ func IsRegistered(cat domain.Category) bool {
 		return true
 	case domain.PropertyRegionalOverride:
 		return true
+	case domain.GpuNode:
+		return true
+	case domain.DedicatedAICluster:
+		return true
+	case domain.ImportedModel:
+		return true
+	case domain.ModelArtifact:
+		return true
 	}
 	return false
 }
@@ -69,6 +77,14 @@ func KeysFor(cat domain.Category) []string {
 		return ConsolePropertyRegionalOverrideColumns.Keys()
 	case domain.PropertyRegionalOverride:
 		return PropertyRegionalOverrideColumns.Keys()
+	case domain.GpuNode:
+		return GpuNodeColumns.Keys()
+	case domain.DedicatedAICluster:
+		return DacColumns.Keys()
+	case domain.ImportedModel:
+		return ImportedModelColumns.Keys()
+	case domain.ModelArtifact:
+		return ModelArtifactColumns.Keys()
 	}
 	return nil
 }
@@ -103,6 +119,14 @@ func DefaultsFor(cat domain.Category) []bool {
 		return ConsolePropertyRegionalOverrideColumns.Defaults()
 	case domain.PropertyRegionalOverride:
 		return PropertyRegionalOverrideColumns.Defaults()
+	case domain.GpuNode:
+		return GpuNodeColumns.Defaults()
+	case domain.DedicatedAICluster:
+		return DacColumns.Defaults()
+	case domain.ImportedModel:
+		return ImportedModelColumns.Defaults()
+	case domain.ModelArtifact:
+		return ModelArtifactColumns.Defaults()
 	}
 	return nil
 }
@@ -135,6 +159,14 @@ func RatioSum(cat domain.Category) float64 {
 		return ConsolePropertyRegionalOverrideColumns.RatioSum()
 	case domain.PropertyRegionalOverride:
 		return PropertyRegionalOverrideColumns.RatioSum()
+	case domain.GpuNode:
+		return GpuNodeColumns.RatioSum()
+	case domain.DedicatedAICluster:
+		return DacColumns.RatioSum()
+	case domain.ImportedModel:
+		return ImportedModelColumns.RatioSum()
+	case domain.ModelArtifact:
+		return ModelArtifactColumns.RatioSum()
 	}
 	return 0
 }
@@ -175,6 +207,14 @@ func RenderTable(cat domain.Category, items any, selected []string) ([]string, [
 		return renderFlat(ConsolePropertyRegionalOverrideColumns, items, selected)
 	case domain.PropertyRegionalOverride:
 		return renderFlat(PropertyRegionalOverrideColumns, items, selected)
+	case domain.GpuNode:
+		return renderGrouped(GpuNodeColumns, items, selected)
+	case domain.DedicatedAICluster:
+		return renderGrouped(DacColumns, items, selected)
+	case domain.ImportedModel:
+		return renderGrouped(ImportedModelColumns, items, selected)
+	case domain.ModelArtifact:
+		return renderGrouped(ModelArtifactColumns, items, selected)
 	}
 	return nil, nil, fmt.Errorf("category %s is not registered with the columns package", cat)
 }
@@ -227,6 +267,14 @@ func TitlesFor(cat domain.Category) []string {
 		return ConsolePropertyRegionalOverrideColumns.Titles()
 	case domain.PropertyRegionalOverride:
 		return PropertyRegionalOverrideColumns.Titles()
+	case domain.GpuNode:
+		return GpuNodeColumns.Titles()
+	case domain.DedicatedAICluster:
+		return DacColumns.Titles()
+	case domain.ImportedModel:
+		return ImportedModelColumns.Titles()
+	case domain.ModelArtifact:
+		return ModelArtifactColumns.Titles()
 	}
 	return nil
 }
