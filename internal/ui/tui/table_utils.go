@@ -9,10 +9,16 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 
 	"github.com/jingle2008/toolkit/internal/collections"
+	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
+
+type header struct {
+	text  string
+	ratio float64
+}
 
 type tableStats map[string]int
 
@@ -28,62 +34,78 @@ func faultyPred[T models.Faulty](t T) bool {
 
 var categoryHandlers = map[domain.Category]func(*models.Dataset, *domain.ToolkitContext, string, bool) []table.Row{
 	domain.Alias: func(_ *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(domain.Categories, filter, faultyOnly, aliasToRow)
+		return tuiRowsFlat(columns.AliasColumns, domain.Categories, filter, faultyOnly)
 	},
 	domain.Tenant: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.Tenants, filter, faultyOnly, tenantToRow)
+		return tuiRowsFlat(columns.TenantColumns, dataset.Tenants, filter, faultyOnly)
 	},
 	domain.LimitDefinition: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.LimitDefinitionGroup.Values, filter, faultyOnly, limitDefinitionToRow)
+		return tuiRowsFlat(columns.LimitDefinitionColumns, dataset.LimitDefinitionGroup.Values, filter, faultyOnly)
 	},
 	domain.ConsolePropertyDefinition: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.ConsolePropertyDefinitionGroup.Values, filter, faultyOnly, definitionToRow)
+		return tuiRowsFlat(columns.ConsolePropertyDefinitionColumns, dataset.ConsolePropertyDefinitionGroup.Values, filter, faultyOnly)
 	},
 	domain.PropertyDefinition: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.PropertyDefinitionGroup.Values, filter, faultyOnly, definitionToRow)
+		return tuiRowsFlat(columns.PropertyDefinitionColumns, dataset.PropertyDefinitionGroup.Values, filter, faultyOnly)
 	},
 	domain.LimitTenancyOverride: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRowsScoped(dataset.LimitTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly, limitTenancyOverrideToRow)
+		return tuiRowsGrouped(columns.LimitTenancyOverrideColumns, dataset.LimitTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly)
 	},
 	domain.ConsolePropertyTenancyOverride: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRowsScoped(dataset.ConsolePropertyTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly, propertyTenancyOverrideToRow)
+		return tuiRowsGrouped(columns.ConsolePropertyTenancyOverrideColumns, dataset.ConsolePropertyTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly)
 	},
 	domain.PropertyTenancyOverride: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRowsScoped(dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly, propertyTenancyOverrideToRow)
+		return tuiRowsGrouped(columns.PropertyTenancyOverrideColumns, dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly)
 	},
 	domain.LimitRegionalOverride: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.LimitRegionalOverrides, filter, faultyOnly, limitRegionalOverrideToRow)
+		return tuiRowsFlat(columns.LimitRegionalOverrideColumns, dataset.LimitRegionalOverrides, filter, faultyOnly)
 	},
 	domain.ConsolePropertyRegionalOverride: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.ConsolePropertyRegionalOverrides, filter, faultyOnly, propertyRegionalOverrideToRow)
+		return tuiRowsFlat(columns.ConsolePropertyRegionalOverrideColumns, dataset.ConsolePropertyRegionalOverrides, filter, faultyOnly)
 	},
 	domain.PropertyRegionalOverride: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.PropertyRegionalOverrides, filter, faultyOnly, propertyRegionalOverrideToRow)
+		return tuiRowsFlat(columns.PropertyRegionalOverrideColumns, dataset.PropertyRegionalOverrides, filter, faultyOnly)
 	},
 	domain.BaseModel: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.BaseModels, filter, faultyOnly, baseModelToRow)
+		return tuiRowsFlat(columns.BaseModelColumns, dataset.BaseModels, filter, faultyOnly)
 	},
 	domain.ImportedModel: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRowsScoped(dataset.ImportedModelMap, domain.Tenant, context, filter, faultyOnly, importedModelToRow)
+		return tuiRowsGrouped(columns.ImportedModelColumns, dataset.ImportedModelMap, domain.Tenant, context, filter, faultyOnly)
 	},
 	domain.ModelArtifact: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRowsScoped(dataset.ModelArtifactMap, domain.BaseModel, context, filter, faultyOnly, modelArtifactToRow)
+		return tuiRowsGrouped(columns.ModelArtifactColumns, dataset.ModelArtifactMap, domain.BaseModel, context, filter, faultyOnly)
 	},
 	domain.Environment: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.Environments, filter, faultyOnly, environmentToRow)
+		return tuiRowsFlat(columns.EnvironmentColumns, dataset.Environments, filter, faultyOnly)
 	},
 	domain.ServiceTenancy: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.ServiceTenancies, filter, faultyOnly, serviceTenancyToRow)
+		return tuiRowsFlat(columns.ServiceTenancyColumns, dataset.ServiceTenancies, filter, faultyOnly)
 	},
 	domain.GpuPool: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRows(dataset.GpuPools, filter, faultyOnly, gpuPoolToRow)
+		return tuiRowsFlat(columns.GpuPoolColumns, dataset.GpuPools, filter, faultyOnly)
 	},
 	domain.GpuNode: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRowsScoped(dataset.GpuNodeMap, domain.GpuPool, context, filter, faultyOnly, gpuNodeToRow)
+		return tuiRowsGrouped(columns.GpuNodeColumns, dataset.GpuNodeMap, domain.GpuPool, context, filter, faultyOnly)
 	},
 	domain.DedicatedAICluster: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return filterRowsScoped(dataset.DedicatedAIClusterMap, domain.Tenant, context, filter, faultyOnly, dedicatedAIClusterToRow)
+		return tuiRowsGrouped(columns.DacColumns, dataset.DedicatedAIClusterMap, domain.Tenant, context, filter, faultyOnly)
 	},
+}
+
+func headersFromSet[T any](cols []columns.Column[T]) []header {
+	out := make([]header, len(cols))
+	for i, c := range cols {
+		out[i] = header{text: c.Title, ratio: c.Ratio}
+	}
+	return out
+}
+
+func headersFromGroupedSet[T any](cols []columns.GroupedColumn[T]) []header {
+	out := make([]header, len(cols))
+	for i, c := range cols {
+		out[i] = header{text: c.Title, ratio: c.Ratio}
+	}
+	return out
 }
 
 /*
@@ -91,8 +113,45 @@ getHeaders returns the header definitions for a given category.
 If no headers are defined for the category, it returns nil.
 */
 func getHeaders(category domain.Category) []header {
-	if headers, exists := headerDefinitions[category]; exists {
-		return headers
+	switch category { //nolint:exhaustive
+	case domain.Tenant:
+		return headersFromSet(columns.TenantColumns.Columns)
+	case domain.LimitDefinition:
+		return headersFromSet(columns.LimitDefinitionColumns.Columns)
+	case domain.ConsolePropertyDefinition:
+		return headersFromSet(columns.ConsolePropertyDefinitionColumns.Columns)
+	case domain.PropertyDefinition:
+		return headersFromSet(columns.PropertyDefinitionColumns.Columns)
+	case domain.LimitRegionalOverride:
+		return headersFromSet(columns.LimitRegionalOverrideColumns.Columns)
+	case domain.ConsolePropertyRegionalOverride:
+		return headersFromSet(columns.ConsolePropertyRegionalOverrideColumns.Columns)
+	case domain.PropertyRegionalOverride:
+		return headersFromSet(columns.PropertyRegionalOverrideColumns.Columns)
+	case domain.BaseModel:
+		return headersFromSet(columns.BaseModelColumns.Columns)
+	case domain.Environment:
+		return headersFromSet(columns.EnvironmentColumns.Columns)
+	case domain.ServiceTenancy:
+		return headersFromSet(columns.ServiceTenancyColumns.Columns)
+	case domain.GpuPool:
+		return headersFromSet(columns.GpuPoolColumns.Columns)
+	case domain.Alias:
+		return headersFromSet(columns.AliasColumns.Columns)
+	case domain.GpuNode:
+		return headersFromGroupedSet(columns.GpuNodeColumns.Columns)
+	case domain.DedicatedAICluster:
+		return headersFromGroupedSet(columns.DacColumns.Columns)
+	case domain.ImportedModel:
+		return headersFromGroupedSet(columns.ImportedModelColumns.Columns)
+	case domain.ModelArtifact:
+		return headersFromGroupedSet(columns.ModelArtifactColumns.Columns)
+	case domain.LimitTenancyOverride:
+		return headersFromGroupedSet(columns.LimitTenancyOverrideColumns.Columns)
+	case domain.ConsolePropertyTenancyOverride:
+		return headersFromGroupedSet(columns.ConsolePropertyTenancyOverrideColumns.Columns)
+	case domain.PropertyTenancyOverride:
+		return headersFromGroupedSet(columns.PropertyTenancyOverrideColumns.Columns)
 	}
 	return nil
 }
@@ -188,24 +247,6 @@ func appendDedicatedAIClusterStats(rows []table.Row, stats tableStats) tableStat
 	stats["Active"] = active
 	stats["Failed"] = failed
 	return stats
-}
-
-/*
-filterRows filters a slice of items using the provided filter and row function.
-It returns a slice of table.Row for items that match the filter.
-*/
-func filterRows[T models.NamedFilterable](items []T, filter string, faultyOnly bool, rowFn func(T) table.Row) []table.Row {
-	var pred func(T) bool
-	if faultyOnly {
-		pred = faultyPred
-	}
-
-	matches := collections.FilterSlice(items, nil, filter, pred)
-	results := make([]table.Row, 0, len(matches))
-	for _, m := range matches {
-		results = append(results, rowFn(m))
-	}
-	return results
 }
 
 // filterRowsScoped is used for tenancy and other scoped overrides.

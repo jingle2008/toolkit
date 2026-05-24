@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -39,10 +40,12 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 			LifeCyclePhase: "DEPRECATED",
 		},
 	}
-	rows := filterRows(baseModels, "", false, baseModelToRow)
+	rows := tuiRowsFlat(columns.BaseModelColumns, baseModels, "", false)
 	assert.Len(t, rows, 1)
+	// BaseModelColumns has 11 columns: Name, Display Name, Internal, Vendor, Type,
+	// Version, DAC Shape, Size, Context, Flags, Status.
 	assert.Equal(t, table.Row{
-		"BM1", "", "v1", "", "", "1024", "EXP/INT/RTD", "",
+		"BM1", "", "bm1", "", "typeA", "v1", "", "", "1024", "EXP/INT/RTD", "",
 	}, rows[0])
 }
 
@@ -366,11 +369,9 @@ func TestFilterRows(t *testing.T) {
 		{Type: "foo", Region: "us-phx-1"},
 		{Type: "bar", Region: "us-ashburn-1"},
 	}
-	rows := filterRows(items, "foo", false, func(e models.Environment) table.Row {
-		return table.Row{e.Type, e.Region}
-	})
+	rows := tuiRowsFlat(columns.EnvironmentColumns, items, "foo", false)
 	assert.Len(t, rows, 1)
-	assert.Equal(t, "foo", rows[0][0])
+	assert.Equal(t, "foo-phx", rows[0][0])
 }
 
 func TestGetTableRows_UnknownCategory(t *testing.T) {
@@ -395,7 +396,7 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 		{InternalName: "a", Name: "A"},
 		{InternalName: "b", Name: "B"},
 	}
-	rows := filterRows(m, "a", false, baseModelToRow)
+	rows := tuiRowsFlat(columns.BaseModelColumns, m, "a", false)
 	assert.Len(t, rows, 1)
 	assert.Contains(t, rows[0][0], "A")
 }

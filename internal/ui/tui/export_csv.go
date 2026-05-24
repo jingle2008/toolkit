@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 
+	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -60,10 +61,18 @@ func (m *Model) writeCSV(w io.Writer) error {
 		rows = filterRowsScoped(
 			m.dataset.DedicatedAIClusterMap, domain.Tenant,
 			m.context, m.curFilter, m.showFaulty,
-			func(val models.DedicatedAICluster, _ string) table.Row {
-				id := val.GetID(realm, region)
-				return dedicatedAIClusterToRowInternal(
-					val, val.GetTenantID(realm), &id)
+			func(val models.DedicatedAICluster, tenant string) table.Row {
+				row := make(table.Row, len(columns.DacColumns.Columns))
+				for i, c := range columns.DacColumns.Columns {
+					row[i] = c.Render(tenant, val)
+				}
+				// DAC ordering invariant: row[0]=Name, row[1]=Tenant
+				// (documented in internal/columns/dac.go). Substitute the
+				// realm/region-qualified ID for the Name column and the
+				// realm-resolved tenant ID for the Tenant column.
+				row[0] = val.GetID(realm, region)
+				row[1] = val.GetTenantID(realm)
+				return row
 			})
 	}
 
