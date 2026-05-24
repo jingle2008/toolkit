@@ -178,8 +178,7 @@ func TestRenderTable_ImportedModel(t *testing.T) {
 	}
 	headers, rows, err := columns.RenderTable(domain.ImportedModel, grouped, nil)
 	require.NoError(t, err)
-	// All 7 columns Default==true now.
-	assert.Equal(t, []string{"NAME", "TENANT", "NAMESPACE", "DISPLAY NAME", "VENDOR", "VERSION", "STATUS"}, headers)
+	assert.Equal(t, []string{"NAME", "TENANT", "NAMESPACE", "DISPLAY NAME", "VENDOR", "STATUS"}, headers)
 	// renderGrouped iterates sorted keys; both rows present.
 	require.Len(t, rows, 2)
 	assert.Equal(t, "im-a", rows[0][0])

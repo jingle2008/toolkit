@@ -13,7 +13,6 @@ func TestImportedModelColumns(t *testing.T) {
 			Name:        "llama3-8b",
 			DisplayName: "Llama 3 8B",
 			Vendor:      "Meta",
-			Version:     "1.0",
 			Status:      "Ready",
 		},
 		Namespace: "ns-prod",
@@ -30,7 +29,6 @@ func TestImportedModelColumns(t *testing.T) {
 		"namespace":    "ns-prod",
 		"display-name": "Llama 3 8B",
 		"vendor":       "Meta",
-		"version":      "1.0",
 		"status":       "Ready",
 	}
 	for k, v := range want {
