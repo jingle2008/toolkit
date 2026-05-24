@@ -64,10 +64,17 @@ discover them.`,
 	getCmd.Flags().BoolVar(&pretty, "pretty", true, "pretty-print JSON/YAML output")
 	getCmd.Flags().IntVar(&limit, "limit", 0, "max items to render (client-side, applied after the fuzzy --filter match); 0 = unlimited. For grouped categories the cap is across the whole flattened result, not per group.")
 	getCmd.Flags().StringVar(&columnsArg, "columns", "",
-		"comma-separated column keys (default: category's Default columns). Use --columns help to list valid keys.")
+		"comma-separated column keys (table/csv/tsv only; default: category's Default columns). Use --columns help to list valid keys.")
 	_ = getCmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"table", "json", "jsonl", "yaml", "csv", "tsv"}, cobra.ShellCompDirectiveNoFileComp
 	})
+	// Known limitation: this completion func returns the full key list without
+	// filtering by the in-progress token (toComplete) or handling the
+	// comma-separated value case. In zsh, `--columns name,<TAB>` will offer
+	// `name` again (replacing the whole flag value with `name`) rather than
+	// completing the suffix after the comma. Proper fix requires splitting on
+	// the last comma and filtering by the trailing prefix — left as a future
+	// follow-up; bash users get reasonable behavior via shell-side filtering.
 	_ = getCmd.RegisterFlagCompletionFunc("columns", func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 		if len(args) < 1 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
