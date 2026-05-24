@@ -50,17 +50,6 @@ func TestDacColumns(t *testing.T) {
 		t.Errorf("dacUnitShapeOrProfile: expected %q, got %q", "standard", dacUnitShapeOrProfile(dProfile))
 	}
 
-	// Verify Default flags.
-	defaults := map[string]bool{}
-	for _, c := range DacColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	for _, k := range []string{"name", "tenant", "internal", "usage", "type", "model", "shape-profile", "size", "age", "status"} {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-
 	// Verify ratio sum is ~1.0.
 	sum := DacColumns.RatioSum()
 	if sum < 0.98 || sum > 1.02 {

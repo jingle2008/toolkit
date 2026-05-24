@@ -35,17 +35,6 @@ func TestConsolePropertyTenancyOverrideColumns(t *testing.T) {
 			t.Errorf("col %s: got %q, want %q", k, got[k], wv)
 		}
 	}
-
-	// Verify Default flags: all columns are Default=true.
-	defaults := map[string]bool{}
-	for _, c := range ConsolePropertyTenancyOverrideColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	for _, k := range []string{"name", "tenant", "regions", "value"} {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
 }
 
 func TestPropertyTenancyOverrideColumns(t *testing.T) {
@@ -75,17 +64,6 @@ func TestPropertyTenancyOverrideColumns(t *testing.T) {
 	for k, wv := range want {
 		if got[k] != wv {
 			t.Errorf("col %s: got %q, want %q", k, got[k], wv)
-		}
-	}
-
-	// Verify Default flags: all columns are Default=true.
-	defaults := map[string]bool{}
-	for _, c := range PropertyTenancyOverrideColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	for _, k := range []string{"name", "tenant", "regions", "value"} {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
 		}
 	}
 }

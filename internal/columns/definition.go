@@ -7,11 +7,11 @@ import "github.com/jingle2008/toolkit/pkg/models"
 // satisfy models.Definition.
 func DefinitionColumns[T models.Definition]() Set[T] {
 	return Set[T]{Columns: []Column[T]{
-		{Title: "Name", Key: "name", Default: true, Ratio: 0.38,
+		{Title: "Name", Key: "name", Ratio: 0.38,
 			Render: func(d T) string { return d.GetName() }},
-		{Title: "Description", Key: "description", Default: true, Ratio: 0.50,
+		{Title: "Description", Key: "description", Ratio: 0.50,
 			Render: func(d T) string { return d.GetDescription() }},
-		{Title: "Value", Key: "value", Default: true, Ratio: 0.12,
+		{Title: "Value", Key: "value", Ratio: 0.12,
 			Render: func(d T) string { return d.GetValue() }},
 	}}
 }

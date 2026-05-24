@@ -38,18 +38,6 @@ func TestModelArtifactColumns(t *testing.T) {
 		}
 	}
 
-	// Verify Default flags — all four are Default=true.
-	defaults := map[string]bool{}
-	for _, c := range ModelArtifactColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	defaultTrue := []string{"name", "model-internal-name", "gpu-config", "tensorrt"}
-	for _, k := range defaultTrue {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-
 	// Verify ratio sum is ~1.0.
 	sum := ModelArtifactColumns.RatioSum()
 	if sum < 0.98 || sum > 1.02 {

@@ -8,11 +8,10 @@ import "strings"
 
 // Column is a column for a flat (non-grouped) category.
 type Column[T any] struct {
-	Title   string
-	Key     string
-	Default bool
-	Ratio   float64
-	Render  func(T) string
+	Title  string
+	Key    string
+	Ratio  float64
+	Render func(T) string
 }
 
 // GroupedColumn is a column for a grouped category (loader returns
@@ -20,11 +19,10 @@ type Column[T any] struct {
 // any column can use either. A "group key column" is just a
 // GroupedColumn whose Render ignores `item` and returns `key`.
 type GroupedColumn[T any] struct {
-	Title   string
-	Key     string
-	Default bool
-	Ratio   float64
-	Render  func(key string, item T) string
+	Title  string
+	Key    string
+	Ratio  float64
+	Render func(key string, item T) string
 }
 
 // Set is the canonical column list for a flat category.
@@ -35,18 +33,6 @@ type Set[T any] struct {
 // GroupedSet is the canonical column list for a grouped category.
 type GroupedSet[T any] struct {
 	Columns []GroupedColumn[T]
-}
-
-// DefaultColumns returns the columns of s where Default==true,
-// in declared order.
-func (s Set[T]) DefaultColumns() []Column[T] {
-	out := make([]Column[T], 0, len(s.Columns))
-	for _, c := range s.Columns {
-		if c.Default {
-			out = append(out, c)
-		}
-	}
-	return out
 }
 
 // SelectColumns returns the columns of s whose Key is in keys,
@@ -90,15 +76,6 @@ func (s Set[T]) Titles() []string {
 	return out
 }
 
-// Defaults returns the Default flag for each column of s in declared order.
-func (s Set[T]) Defaults() []bool {
-	out := make([]bool, len(s.Columns))
-	for i, c := range s.Columns {
-		out[i] = c.Default
-	}
-	return out
-}
-
 // RatioSum returns the sum of Ratio across all columns of s.
 func (s Set[T]) RatioSum() float64 {
 	var sum float64
@@ -108,17 +85,7 @@ func (s Set[T]) RatioSum() float64 {
 	return sum
 }
 
-// DefaultColumns / SelectColumns / Keys mirrors for GroupedSet.
-func (g GroupedSet[T]) DefaultColumns() []GroupedColumn[T] {
-	out := make([]GroupedColumn[T], 0, len(g.Columns))
-	for _, c := range g.Columns {
-		if c.Default {
-			out = append(out, c)
-		}
-	}
-	return out
-}
-
+// SelectColumns / Keys / Titles / RatioSum mirrors for GroupedSet.
 func (g GroupedSet[T]) SelectColumns(keys []string) ([]GroupedColumn[T], error) {
 	byKey := make(map[string]GroupedColumn[T], len(g.Columns))
 	for _, c := range g.Columns {
@@ -147,7 +114,6 @@ func (g GroupedSet[T]) Keys() []string {
 	return out
 }
 
-// Titles returns the Title for each column of g in declared order.
 func (g GroupedSet[T]) Titles() []string {
 	out := make([]string, len(g.Columns))
 	for i, c := range g.Columns {
@@ -156,16 +122,6 @@ func (g GroupedSet[T]) Titles() []string {
 	return out
 }
 
-// Defaults returns the Default flag for each column of g in declared order.
-func (g GroupedSet[T]) Defaults() []bool {
-	out := make([]bool, len(g.Columns))
-	for i, c := range g.Columns {
-		out[i] = c.Default
-	}
-	return out
-}
-
-// RatioSum returns the sum of Ratio across all columns of g.
 func (g GroupedSet[T]) RatioSum() float64 {
 	var sum float64
 	for _, c := range g.Columns {

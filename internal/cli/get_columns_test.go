@@ -61,7 +61,7 @@ func TestGet_ColumnsFlag_Help_Alias(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "KEY") || !strings.Contains(out, "TITLE") || !strings.Contains(out, "DEFAULT") {
+	if !strings.Contains(out, "KEY") || !strings.Contains(out, "TITLE") {
 		t.Errorf("help output missing expected headers: %s", out)
 	}
 	if !strings.Contains(out, "name") || !strings.Contains(out, "aliases") {

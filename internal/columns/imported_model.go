@@ -10,18 +10,18 @@ import (
 // Vendor and Version are Default==false so they remain reachable via --columns.
 // Ordering is name-first, tenant-key-second (matches TUI; Decision #4).
 var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedColumn[models.ImportedModel]{
-	{Title: "Name", Key: "name", Default: true, Ratio: 0.20,
+	{Title: "Name", Key: "name", Ratio: 0.20,
 		Render: func(_ string, m models.ImportedModel) string { return m.Name }},
-	{Title: "Tenant", Key: "tenant", Default: true, Ratio: 0.22,
+	{Title: "Tenant", Key: "tenant", Ratio: 0.22,
 		Render: func(k string, _ models.ImportedModel) string { return k }},
-	{Title: "Namespace", Key: "namespace", Default: true, Ratio: 0.15,
+	{Title: "Namespace", Key: "namespace", Ratio: 0.15,
 		Render: func(_ string, m models.ImportedModel) string { return m.Namespace }},
-	{Title: "Display Name", Key: "display-name", Default: true, Ratio: 0.27,
+	{Title: "Display Name", Key: "display-name", Ratio: 0.27,
 		Render: func(_ string, m models.ImportedModel) string { return m.DisplayName }},
-	{Title: "Vendor", Key: "vendor", Default: true, Ratio: 0.05,
+	{Title: "Vendor", Key: "vendor", Ratio: 0.05,
 		Render: func(_ string, m models.ImportedModel) string { return m.Vendor }},
-	{Title: "Version", Key: "version", Default: true, Ratio: 0.05,
+	{Title: "Version", Key: "version", Ratio: 0.05,
 		Render: func(_ string, m models.ImportedModel) string { return m.Version }},
-	{Title: "Status", Key: "status", Default: true, Ratio: 0.06,
+	{Title: "Status", Key: "status", Ratio: 0.06,
 		Render: func(_ string, m models.ImportedModel) string { return m.Status }},
 }}

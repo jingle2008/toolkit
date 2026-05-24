@@ -34,15 +34,4 @@ func TestLimitTenancyOverrideColumns(t *testing.T) {
 			t.Errorf("col %s: got %q, want %q", k, got[k], wv)
 		}
 	}
-
-	// Verify Default flags: all columns are Default=true.
-	defaults := map[string]bool{}
-	for _, c := range LimitTenancyOverrideColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	for _, k := range []string{"name", "tenant", "regions", "min", "max"} {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
 }

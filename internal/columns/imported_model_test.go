@@ -39,17 +39,6 @@ func TestImportedModelColumns(t *testing.T) {
 		}
 	}
 
-	// Verify Default flags.
-	defaults := map[string]bool{}
-	for _, c := range ImportedModelColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	for _, k := range []string{"name", "tenant", "namespace", "display-name", "vendor", "version", "status"} {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-
 	// Verify ratio sum is ~1.0.
 	sum := ImportedModelColumns.RatioSum()
 	if sum < 0.98 || sum > 1.02 {

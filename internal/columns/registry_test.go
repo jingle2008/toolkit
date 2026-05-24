@@ -42,8 +42,11 @@ func TestRegistry_KeysValid(t *testing.T) {
 			continue
 		}
 		keys := KeysFor(cat)
+		if len(keys) == 0 {
+			t.Errorf("%s: no columns registered", cat)
+			continue
+		}
 		seen := make(map[string]bool, len(keys))
-		var hasDefault bool
 		for _, k := range keys {
 			if k == "" {
 				t.Errorf("%s: empty key", cat)
@@ -55,15 +58,6 @@ func TestRegistry_KeysValid(t *testing.T) {
 				t.Errorf("%s: duplicate key %q", cat, k)
 			}
 			seen[k] = true
-		}
-		for _, isDefault := range DefaultsFor(cat) {
-			if isDefault {
-				hasDefault = true
-				break
-			}
-		}
-		if !hasDefault {
-			t.Errorf("%s: no column has Default=true", cat)
 		}
 	}
 }

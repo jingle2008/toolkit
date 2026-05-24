@@ -14,9 +14,9 @@ func TestRenderFlat(t *testing.T) {
 		Name, Status string
 	}
 	s := Set[item]{Columns: []Column[item]{
-		{Title: "Name", Key: "name", Default: true, Ratio: 0.5,
+		{Title: "Name", Key: "name", Ratio: 0.5,
 			Render: func(i item) string { return i.Name }},
-		{Title: "Status", Key: "status", Default: true, Ratio: 0.5,
+		{Title: "Status", Key: "status", Ratio: 0.5,
 			Render: func(i item) string { return i.Status }},
 	}}
 	items := []item{{"a", "ok"}, {"b", "fail"}}
@@ -61,9 +61,9 @@ func TestRenderGrouped(t *testing.T) {
 		V string
 	}
 	g := GroupedSet[item]{Columns: []GroupedColumn[item]{
-		{Title: "Key", Key: "key", Default: true, Ratio: 0.5,
+		{Title: "Key", Key: "key", Ratio: 0.5,
 			Render: func(k string, _ item) string { return k }},
-		{Title: "Val", Key: "val", Default: true, Ratio: 0.5,
+		{Title: "Val", Key: "val", Ratio: 0.5,
 			Render: func(_ string, i item) string { return i.V }},
 	}}
 	items := map[string][]item{

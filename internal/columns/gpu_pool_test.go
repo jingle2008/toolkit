@@ -42,17 +42,6 @@ func TestGpuPoolColumns(t *testing.T) {
 		}
 	}
 
-	// Verify Default flags.
-	defaults := map[string]bool{}
-	for _, c := range GpuPoolColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	for _, k := range []string{"name", "shape", "ad", "size", "actual-size", "gpus", "oke-managed", "capacity-type", "status"} {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-
 	// Verify ratio sum is ~1.0.
 	sum := GpuPoolColumns.RatioSum()
 	if sum < 0.98 || sum > 1.02 {

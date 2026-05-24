@@ -28,17 +28,6 @@ func TestConsolePropertyDefinitionColumns(t *testing.T) {
 			t.Errorf("col %s: got %q, want %q", k, got[k], v)
 		}
 	}
-
-	defaults := map[string]bool{}
-	for _, c := range ConsolePropertyDefinitionColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	wantDefaults := map[string]bool{"name": true, "description": true, "value": true}
-	for k, v := range wantDefaults {
-		if defaults[k] != v {
-			t.Errorf("col %s Default: got %v, want %v", k, defaults[k], v)
-		}
-	}
 }
 
 func TestPropertyDefinitionColumns(t *testing.T) {
@@ -61,17 +50,6 @@ func TestPropertyDefinitionColumns(t *testing.T) {
 	for k, v := range want {
 		if got[k] != v {
 			t.Errorf("col %s: got %q, want %q", k, got[k], v)
-		}
-	}
-
-	defaults := map[string]bool{}
-	for _, c := range PropertyDefinitionColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	wantDefaults := map[string]bool{"name": true, "description": true, "value": true}
-	for k, v := range wantDefaults {
-		if defaults[k] != v {
-			t.Errorf("col %s Default: got %v, want %v", k, defaults[k], v)
 		}
 	}
 }

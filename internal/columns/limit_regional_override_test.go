@@ -30,17 +30,6 @@ func TestLimitRegionalOverrideColumns(t *testing.T) {
 		}
 	}
 
-	// Verify Default flags: name and regions are true; min and max are false.
-	defaults := map[string]bool{}
-	for _, c := range LimitRegionalOverrideColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	for _, k := range []string{"name", "regions", "min", "max"} {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-
 	// Verify empty Values doesn't panic.
 	empty := models.LimitRegionalOverride{Name: "x", Regions: []string{}}
 	if limitOverrideMin(empty.Values) != "" {

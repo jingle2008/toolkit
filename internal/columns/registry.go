@@ -101,54 +101,6 @@ func KeysFor(cat domain.Category) []string {
 	return nil
 }
 
-// DefaultsFor returns the Default flag for each column of cat in
-// declared order. The two slices KeysFor / DefaultsFor share the
-// same indices; together they're enough to drive shell completion
-// and the `--columns help` table.
-func DefaultsFor(cat domain.Category) []bool {
-	switch cat { //nolint:exhaustive
-	case domain.Tenant:
-		return TenantColumns.Defaults()
-	case domain.Alias:
-		return AliasColumns.Defaults()
-	case domain.Environment:
-		return EnvironmentColumns.Defaults()
-	case domain.ServiceTenancy:
-		return ServiceTenancyColumns.Defaults()
-	case domain.LimitDefinition:
-		return LimitDefinitionColumns.Defaults()
-	case domain.LimitRegionalOverride:
-		return LimitRegionalOverrideColumns.Defaults()
-	case domain.BaseModel:
-		return BaseModelColumns.Defaults()
-	case domain.GpuPool:
-		return GpuPoolColumns.Defaults()
-	case domain.ConsolePropertyDefinition:
-		return ConsolePropertyDefinitionColumns.Defaults()
-	case domain.PropertyDefinition:
-		return PropertyDefinitionColumns.Defaults()
-	case domain.ConsolePropertyRegionalOverride:
-		return ConsolePropertyRegionalOverrideColumns.Defaults()
-	case domain.PropertyRegionalOverride:
-		return PropertyRegionalOverrideColumns.Defaults()
-	case domain.GpuNode:
-		return GpuNodeColumns.Defaults()
-	case domain.DedicatedAICluster:
-		return DacColumns.Defaults()
-	case domain.ImportedModel:
-		return ImportedModelColumns.Defaults()
-	case domain.ModelArtifact:
-		return ModelArtifactColumns.Defaults()
-	case domain.LimitTenancyOverride:
-		return LimitTenancyOverrideColumns.Defaults()
-	case domain.ConsolePropertyTenancyOverride:
-		return ConsolePropertyTenancyOverrideColumns.Defaults()
-	case domain.PropertyTenancyOverride:
-		return PropertyTenancyOverrideColumns.Defaults()
-	}
-	return nil
-}
-
 // RatioSum returns the sum of Ratio across all columns of cat
 // (for the ratios-sum-to-1 registry test).
 func RatioSum(cat domain.Category) float64 {
@@ -202,7 +154,7 @@ func RatioSum(cat domain.Category) float64 {
 // adapter (in internal/ui/tui) uses Titles as-is.
 //
 // `items` must be the concrete payload for cat. `selected` is the
-// parsed --columns list (empty means "use Default columns").
+// parsed --columns list (empty means "render every column").
 //
 //nolint:cyclop // a per-category switch is the contract here
 func RenderTable(cat domain.Category, items any, selected []string) ([]string, [][]string, error) {
@@ -249,7 +201,7 @@ func RenderTable(cat domain.Category, items any, selected []string) ([]string, [
 	return nil, nil, fmt.Errorf("category %s is not registered with the columns package", cat)
 }
 
-// HelpTable returns a (Key, Title, Default) row per column of cat,
+// HelpTable returns a (Key, Title) row per column of cat,
 // for the `--columns help` output. Empty if cat is unregistered.
 func HelpTable(cat domain.Category) (headers []string, rows [][]string) {
 	keys := KeysFor(cat)
@@ -257,15 +209,10 @@ func HelpTable(cat domain.Category) (headers []string, rows [][]string) {
 		return nil, nil
 	}
 	titles := TitlesFor(cat)
-	defaults := DefaultsFor(cat)
-	headers = []string{"KEY", "TITLE", "DEFAULT"}
+	headers = []string{"KEY", "TITLE"}
 	rows = make([][]string, len(keys))
 	for i, k := range keys {
-		def := "no"
-		if defaults[i] {
-			def = "yes"
-		}
-		rows[i] = []string{k, titles[i], def}
+		rows[i] = []string{k, titles[i]}
 	}
 	return headers, rows
 }
@@ -355,7 +302,7 @@ func renderFlat[T any](s Set[T], items any, selected []string) ([]string, [][]st
 
 func pickFlat[T any](s Set[T], selected []string) ([]Column[T], error) {
 	if len(selected) == 0 {
-		return s.DefaultColumns(), nil
+		return s.Columns, nil
 	}
 	return s.SelectColumns(selected)
 }
@@ -393,7 +340,7 @@ func renderGrouped[T any](g GroupedSet[T], items any, selected []string) ([]stri
 
 func pickGrouped[T any](g GroupedSet[T], selected []string) ([]GroupedColumn[T], error) {
 	if len(selected) == 0 {
-		return g.DefaultColumns(), nil
+		return g.Columns, nil
 	}
 	return g.SelectColumns(selected)
 }

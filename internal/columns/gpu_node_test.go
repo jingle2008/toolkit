@@ -40,17 +40,6 @@ func TestGpuNodeColumns(t *testing.T) {
 		}
 	}
 
-	// Verify Default flags.
-	defaults := map[string]bool{}
-	for _, c := range GpuNodeColumns.Columns {
-		defaults[c.Key] = c.Default
-	}
-	for _, k := range []string{"name", "pool", "type", "total", "free", "healthy", "ready", "age", "status"} {
-		if !defaults[k] {
-			t.Errorf("col %s: expected Default=true", k)
-		}
-	}
-
 	// Verify ratio sum is ~1.0.
 	sum := GpuNodeColumns.RatioSum()
 	if sum < 0.98 || sum > 1.02 {
