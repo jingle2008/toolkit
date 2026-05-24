@@ -56,41 +56,17 @@ func KeysFor(cat domain.Category) []string {
 func DefaultsFor(cat domain.Category) []bool {
 	switch cat { //nolint:exhaustive
 	case domain.Tenant:
-		out := make([]bool, len(TenantColumns.Columns))
-		for i, c := range TenantColumns.Columns {
-			out[i] = c.Default
-		}
-		return out
+		return TenantColumns.Defaults()
 	case domain.Alias:
-		out := make([]bool, len(AliasColumns.Columns))
-		for i, c := range AliasColumns.Columns {
-			out[i] = c.Default
-		}
-		return out
+		return AliasColumns.Defaults()
 	case domain.Environment:
-		out := make([]bool, len(EnvironmentColumns.Columns))
-		for i, c := range EnvironmentColumns.Columns {
-			out[i] = c.Default
-		}
-		return out
+		return EnvironmentColumns.Defaults()
 	case domain.ServiceTenancy:
-		out := make([]bool, len(ServiceTenancyColumns.Columns))
-		for i, c := range ServiceTenancyColumns.Columns {
-			out[i] = c.Default
-		}
-		return out
+		return ServiceTenancyColumns.Defaults()
 	case domain.LimitDefinition:
-		out := make([]bool, len(LimitDefinitionColumns.Columns))
-		for i, c := range LimitDefinitionColumns.Columns {
-			out[i] = c.Default
-		}
-		return out
+		return LimitDefinitionColumns.Defaults()
 	case domain.LimitRegionalOverride:
-		out := make([]bool, len(LimitRegionalOverrideColumns.Columns))
-		for i, c := range LimitRegionalOverrideColumns.Columns {
-			out[i] = c.Default
-		}
-		return out
+		return LimitRegionalOverrideColumns.Defaults()
 	}
 	return nil
 }
@@ -100,41 +76,17 @@ func DefaultsFor(cat domain.Category) []bool {
 func RatioSum(cat domain.Category) float64 {
 	switch cat { //nolint:exhaustive
 	case domain.Tenant:
-		var sum float64
-		for _, c := range TenantColumns.Columns {
-			sum += c.Ratio
-		}
-		return sum
+		return TenantColumns.RatioSum()
 	case domain.Alias:
-		var sum float64
-		for _, c := range AliasColumns.Columns {
-			sum += c.Ratio
-		}
-		return sum
+		return AliasColumns.RatioSum()
 	case domain.Environment:
-		var sum float64
-		for _, c := range EnvironmentColumns.Columns {
-			sum += c.Ratio
-		}
-		return sum
+		return EnvironmentColumns.RatioSum()
 	case domain.ServiceTenancy:
-		var sum float64
-		for _, c := range ServiceTenancyColumns.Columns {
-			sum += c.Ratio
-		}
-		return sum
+		return ServiceTenancyColumns.RatioSum()
 	case domain.LimitDefinition:
-		var sum float64
-		for _, c := range LimitDefinitionColumns.Columns {
-			sum += c.Ratio
-		}
-		return sum
+		return LimitDefinitionColumns.RatioSum()
 	case domain.LimitRegionalOverride:
-		var sum float64
-		for _, c := range LimitRegionalOverrideColumns.Columns {
-			sum += c.Ratio
-		}
-		return sum
+		return LimitRegionalOverrideColumns.RatioSum()
 	}
 	return 0
 }
@@ -192,41 +144,17 @@ func HelpTable(cat domain.Category) (headers []string, rows [][]string) {
 func TitlesFor(cat domain.Category) []string {
 	switch cat { //nolint:exhaustive
 	case domain.Tenant:
-		out := make([]string, len(TenantColumns.Columns))
-		for i, c := range TenantColumns.Columns {
-			out[i] = c.Title
-		}
-		return out
+		return TenantColumns.Titles()
 	case domain.Alias:
-		out := make([]string, len(AliasColumns.Columns))
-		for i, c := range AliasColumns.Columns {
-			out[i] = c.Title
-		}
-		return out
+		return AliasColumns.Titles()
 	case domain.Environment:
-		out := make([]string, len(EnvironmentColumns.Columns))
-		for i, c := range EnvironmentColumns.Columns {
-			out[i] = c.Title
-		}
-		return out
+		return EnvironmentColumns.Titles()
 	case domain.ServiceTenancy:
-		out := make([]string, len(ServiceTenancyColumns.Columns))
-		for i, c := range ServiceTenancyColumns.Columns {
-			out[i] = c.Title
-		}
-		return out
+		return ServiceTenancyColumns.Titles()
 	case domain.LimitDefinition:
-		out := make([]string, len(LimitDefinitionColumns.Columns))
-		for i, c := range LimitDefinitionColumns.Columns {
-			out[i] = c.Title
-		}
-		return out
+		return LimitDefinitionColumns.Titles()
 	case domain.LimitRegionalOverride:
-		out := make([]string, len(LimitRegionalOverrideColumns.Columns))
-		for i, c := range LimitRegionalOverrideColumns.Columns {
-			out[i] = c.Title
-		}
-		return out
+		return LimitRegionalOverrideColumns.Titles()
 	}
 	return nil
 }
