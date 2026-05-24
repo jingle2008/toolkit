@@ -25,6 +25,10 @@ func IsRegistered(cat domain.Category) bool {
 		return true
 	case domain.LimitRegionalOverride:
 		return true
+	case domain.BaseModel:
+		return true
+	case domain.GpuPool:
+		return true
 	}
 	return false
 }
@@ -45,6 +49,10 @@ func KeysFor(cat domain.Category) []string {
 		return LimitDefinitionColumns.Keys()
 	case domain.LimitRegionalOverride:
 		return LimitRegionalOverrideColumns.Keys()
+	case domain.BaseModel:
+		return BaseModelColumns.Keys()
+	case domain.GpuPool:
+		return GpuPoolColumns.Keys()
 	}
 	return nil
 }
@@ -67,6 +75,10 @@ func DefaultsFor(cat domain.Category) []bool {
 		return LimitDefinitionColumns.Defaults()
 	case domain.LimitRegionalOverride:
 		return LimitRegionalOverrideColumns.Defaults()
+	case domain.BaseModel:
+		return BaseModelColumns.Defaults()
+	case domain.GpuPool:
+		return GpuPoolColumns.Defaults()
 	}
 	return nil
 }
@@ -87,6 +99,10 @@ func RatioSum(cat domain.Category) float64 {
 		return LimitDefinitionColumns.RatioSum()
 	case domain.LimitRegionalOverride:
 		return LimitRegionalOverrideColumns.RatioSum()
+	case domain.BaseModel:
+		return BaseModelColumns.RatioSum()
+	case domain.GpuPool:
+		return GpuPoolColumns.RatioSum()
 	}
 	return 0
 }
@@ -115,6 +131,10 @@ func RenderTable(cat domain.Category, items any, selected []string) ([]string, [
 		return renderFlat(LimitDefinitionColumns, items, selected)
 	case domain.LimitRegionalOverride:
 		return renderFlat(LimitRegionalOverrideColumns, items, selected)
+	case domain.BaseModel:
+		return renderFlat(BaseModelColumns, items, selected)
+	case domain.GpuPool:
+		return renderFlat(GpuPoolColumns, items, selected)
 	}
 	return nil, nil, fmt.Errorf("category %s is not registered with the columns package", cat)
 }
@@ -155,6 +175,10 @@ func TitlesFor(cat domain.Category) []string {
 		return LimitDefinitionColumns.Titles()
 	case domain.LimitRegionalOverride:
 		return LimitRegionalOverrideColumns.Titles()
+	case domain.BaseModel:
+		return BaseModelColumns.Titles()
+	case domain.GpuPool:
+		return GpuPoolColumns.Titles()
 	}
 	return nil
 }
