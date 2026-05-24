@@ -180,8 +180,8 @@ func Test_importedModelToRow(t *testing.T) {
 		TenantID:  "ocid1.tenancy.x",
 	}
 	row := importedModelToRow(imNs, "acme")
-	assert.Equal(t, table.Row{"im1", "acme", "team-x", "Import 1", "v1", "Ready"}, row,
-		"Name | Tenant | Namespace | Display Name | Version | Status (no DAC Shape / Flags)")
+	assert.Equal(t, table.Row{"im1", "acme", "team-x", "Import 1", "Ready"}, row,
+		"Name | Tenant | Namespace | Display Name | Status (Version dropped, DAC Shape + Flags dropped)")
 
 	// Cluster-scoped source — Namespace empty.
 	imCs := models.ImportedModel{
@@ -189,7 +189,7 @@ func Test_importedModelToRow(t *testing.T) {
 		TenantID:  "ocid1.tenancy.y",
 	}
 	row2 := importedModelToRow(imCs, "ocid1.tenancy.y")
-	assert.Equal(t, table.Row{"im2", "ocid1.tenancy.y", "", "", "v2", "Ready"}, row2,
+	assert.Equal(t, table.Row{"im2", "ocid1.tenancy.y", "", "", "Ready"}, row2,
 		"raw OCID passes through when tenant unmatched; Namespace empty for cluster-scoped")
 }
 

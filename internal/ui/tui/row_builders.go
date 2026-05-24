@@ -150,16 +150,16 @@ func baseModelToRow(val models.BaseModel) table.Row {
 
 // ImportedModel — grouped by tenant (the resolved tenant Name when
 // the OCID matched Dataset.Tenants, or the raw TenantID / suffix
-// otherwise). Matches the DedicatedAICluster shape, minus DAC Shape
-// and Flags (those columns aren't meaningful for tenant-imported
-// models — operators care about identity + version + status).
+// otherwise). Five columns: Name | Tenant | Namespace | Display
+// Name | Status. Version is dropped because imported model names
+// are long OCID suffixes that need horizontal space; Status is
+// usually all that operators check.
 func importedModelToRow(val models.ImportedModel, tenant string) table.Row {
 	return table.Row{
 		val.Name,
 		tenant,
 		val.Namespace,
 		val.DisplayName,
-		val.Version,
 		val.Status,
 	}
 }
