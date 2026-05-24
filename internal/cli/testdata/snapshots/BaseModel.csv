@@ -1,0 +1,2 @@
+NAME,INTERNAL,VENDOR,TYPE,VERSION,FLAGS,STATUS
+cohere.command,command-r,cohere,TEXT,1.0,,ACTIVE

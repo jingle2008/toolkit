@@ -1,0 +1,2 @@
+NAME,TENANT,REGIONS,MIN,MAX
+compute-cores,tenant-1,us-ashburn-1,5,100
