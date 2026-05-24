@@ -16,9 +16,14 @@ func TestModelArtifactColumns(t *testing.T) {
 		TensorRTVersion: "8.6.1",
 	}
 
+	// Use a key distinct from a.ModelName so the test can distinguish
+	// the Render closure using `k` vs `a.ModelName`. By loader invariant
+	// they are equal at runtime, but the canonical spec specifies the
+	// item field; this assertion catches a future regression that
+	// silently swaps to `k`.
 	got := map[string]string{}
 	for _, c := range ModelArtifactColumns.Columns {
-		got[c.Key] = c.Render("llama3", a)
+		got[c.Key] = c.Render("key-differs-from-modelname", a)
 	}
 
 	want := map[string]string{
