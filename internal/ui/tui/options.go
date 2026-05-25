@@ -61,7 +61,9 @@ func WithTable(tbl *table.Model) ModelOption {
 }
 
 // WithLoader sets the Loader implementation for the Model.
-// The Loader interface must implement all loader interfaces (DatasetLoader, BaseModelLoader, GpuPoolLoader, GpuNodeLoader, DedicatedAIClusterLoader).
+// The provided value must satisfy loader.Loader (see
+// internal/infra/loader/interfaces.go for the canonical list of
+// embedded loader interfaces).
 func WithLoader(l loader.Loader) ModelOption {
 	return func(m *Model) {
 		m.loader = l

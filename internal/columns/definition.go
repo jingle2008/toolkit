@@ -22,8 +22,8 @@ func DefinitionColumns[T models.Definition]() Set[T] {
 	}}
 }
 
-// Pre-instantiated typed sets — the registry switch uses these directly
-// so each call doesn't reconstruct the closures.
+// Pre-instantiated typed sets — the registry uses these directly so
+// each call doesn't reconstruct the closures.
 var (
 	ConsolePropertyDefinitionColumns = DefinitionColumns[models.ConsolePropertyDefinition]()
 	PropertyDefinitionColumns        = DefinitionColumns[models.PropertyDefinition]()

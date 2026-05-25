@@ -64,7 +64,7 @@ discover them.`,
 	getCmd.Flags().BoolVar(&pretty, "pretty", true, "pretty-print JSON/YAML output")
 	getCmd.Flags().IntVar(&limit, "limit", 0, "max items to render (client-side, applied after the fuzzy --filter match); 0 = unlimited. For grouped categories the cap is across the whole flattened result, not per group.")
 	getCmd.Flags().StringVar(&columnsArg, "columns", "",
-		"comma-separated column keys (table/csv/tsv only; default: category's Default columns). Use --columns help to list valid keys.")
+		"comma-separated column keys (table/csv/tsv only; default: all columns). Use --columns help to list valid keys.")
 	_ = getCmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"table", "json", "jsonl", "yaml", "csv", "tsv"}, cobra.ShellCompDirectiveNoFileComp
 	})
@@ -162,7 +162,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 
 // parseColumnsFlag splits "name, status" → ["name","status"], trimming
 // whitespace. Empty tokens (e.g. "name,,status") are an error. An empty
-// input returns nil, meaning "use Default columns".
+// input returns nil, meaning "render every column".
 func parseColumnsFlag(s string) ([]string, error) {
 	if s == "" {
 		return nil, nil
@@ -358,7 +358,7 @@ type writer interface {
 // writeSlice renders a flat slice through the canonical column registry.
 // JSON/JSONL/YAML bypass the registry and encode the typed items directly.
 // For table/csv/tsv, columns.RenderTable is called with cat and selected
-// (the parsed --columns list; empty means "use Default==true columns").
+// (the parsed --columns list; empty means "render every column").
 // CSV/TSV additionally route through columns.RenderTableForExport with
 // the caller's env so columns marked with ExportRender (DAC and
 // ImportedModel Name/Tenant today) emit fully-qualified OCIDs instead

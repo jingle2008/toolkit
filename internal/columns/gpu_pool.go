@@ -7,8 +7,7 @@ import (
 )
 
 // GpuPoolColumns is the canonical column set for domain.GpuPool.
-// Default==true columns match today's CLI (Name, Shape, Size, Actual Size,
-// Capacity Type, Status). AD, GPUs, OKE Managed are Default==false (opt-in).
+// Matches today's CLI and TUI tables.
 var GpuPoolColumns = Set[models.GpuPool]{Columns: []Column[models.GpuPool]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.22,

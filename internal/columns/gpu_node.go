@@ -7,8 +7,6 @@ import (
 )
 
 // GpuNodeColumns is the canonical column set for domain.GpuNode.
-// Default==true columns: Name, Pool, Type, Age, Status.
-// Default==false columns: Total, Free, Healthy, Ready (opt-in).
 // Ordering is name-first, pool-key-second (matches TUI; Decision #4).
 var GpuNodeColumns = GroupedSet[models.GpuNode]{Columns: []GroupedColumn[models.GpuNode]{
 	{

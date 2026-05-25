@@ -7,9 +7,8 @@ import (
 )
 
 // LimitTenancyOverrideColumns is the canonical column set for
-// domain.LimitTenancyOverride. CLI defaults widen vs today (was
-// TENANT|NAME only) to match the TUI — Name, Tenant, Regions,
-// Min, Max all Default==true. Per spec Decision #9.
+// domain.LimitTenancyOverride: Name, Tenant, Regions, Min, Max
+// (CLI matches TUI per spec Decision #9).
 var LimitTenancyOverrideColumns = GroupedSet[models.LimitTenancyOverride]{Columns: []GroupedColumn[models.LimitTenancyOverride]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.40,

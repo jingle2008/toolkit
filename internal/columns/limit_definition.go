@@ -5,7 +5,7 @@ import (
 )
 
 // LimitDefinitionColumns is the canonical column set for domain.LimitDefinition.
-// All Default==true, matching today's CLI and TUI tables.
+// Matches today's CLI and TUI tables.
 var LimitDefinitionColumns = Set[models.LimitDefinition]{Columns: []Column[models.LimitDefinition]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.32,

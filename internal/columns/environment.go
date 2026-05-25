@@ -5,7 +5,7 @@ import (
 )
 
 // EnvironmentColumns is the canonical column set for domain.Environment.
-// All Default==true, matching today's TUI column order.
+// Matches today's TUI column order.
 var EnvironmentColumns = Set[models.Environment]{Columns: []Column[models.Environment]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.20,

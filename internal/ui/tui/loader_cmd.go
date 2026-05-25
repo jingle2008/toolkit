@@ -14,7 +14,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Pure command constructors (preferred over loadRequest)
+// Pure command constructors. Each builds a tea.Cmd that loads one
+// category and returns a typed *LoadedMsg on success or ErrMsg on
+// failure; the gen counter lets the reducer drop stale responses.
 func loadBaseModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadBaseModels(ctx, kubeCfg, env)

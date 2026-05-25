@@ -7,9 +7,8 @@ import (
 )
 
 // LimitRegionalOverrideColumns is the canonical column set for
-// domain.LimitRegionalOverride. Default columns match today's CLI
-// (NAME, REGIONS only). Min/Max have Default==false so they are
-// opt-in via --columns, matching the TUI-only extra columns.
+// domain.LimitRegionalOverride: Name, Regions, Min, Max (CLI
+// matches TUI).
 var LimitRegionalOverrideColumns = Set[models.LimitRegionalOverride]{Columns: []Column[models.LimitRegionalOverride]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.40,

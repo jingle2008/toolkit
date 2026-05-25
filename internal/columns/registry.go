@@ -56,8 +56,7 @@ func groupedEntry[T any](g GroupedSet[T]) registryEntry {
 // registry is the single per-category dispatch table the public
 // functions in this file consume. Adding a new list-view category
 // requires exactly one entry here; missing entries surface as
-// "not registered" errors from RenderTable, matching the prior
-// per-category-switch behaviour.
+// "not registered" errors from RenderTable.
 var registry = map[domain.Category]registryEntry{
 	domain.Tenant:                          flatEntry(TenantColumns),
 	domain.Alias:                           flatEntry(AliasColumns),
@@ -179,9 +178,9 @@ func sortedKeys[T any](m map[string][]T) []string {
 	return keys
 }
 
-// renderFlat is the per-category branch body in RenderTable for
-// flat categories. It picks defaults vs. selected, then runs each
-// column's Render against each item.
+// renderFlat renders a flat category for RenderTable. It picks
+// defaults vs. selected, then runs each column's Render against
+// each item.
 func renderFlat[T any](s Set[T], items any, selected []string) ([]string, [][]string, error) {
 	typed, ok := items.([]T)
 	if !ok {
@@ -213,7 +212,7 @@ func pickFlat[T any](s Set[T], selected []string) ([]Column[T], error) {
 	return s.SelectColumns(selected)
 }
 
-// renderGrouped is the per-category branch body for grouped categories.
+// renderGrouped renders a grouped category for RenderTable.
 func renderGrouped[T any](g GroupedSet[T], items any, selected []string) ([]string, [][]string, error) {
 	typed, ok := items.(map[string][]T)
 	if !ok {

@@ -125,8 +125,7 @@ func WriteYAML(w io.Writer, items any, _ Options) error {
 // preserved on each value (so injecting it again would just
 // duplicate — see GpuNode.NodePool / ModelArtifact.ModelName). The
 // returned slice preserves T's full type so the caller can keep
-// using struct tags / custom JSON marshaling without the
-// FlattenWithKey JSON round-trip.
+// using struct tags / custom JSON marshaling.
 func Flatten[T any](grouped map[string][]T) []T {
 	keys := make([]string, 0, len(grouped))
 	for k := range grouped {

@@ -7,8 +7,7 @@ import (
 )
 
 // limitOverrideMin returns Values[0].Min as a string, or "" when
-// Values is empty (avoids the index-out-of-range that the current
-// limitTenancyOverrideToRow assumes-away).
+// Values is empty.
 func limitOverrideMin(values []models.LimitRange) string {
 	if len(values) == 0 {
 		return ""

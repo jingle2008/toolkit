@@ -10,9 +10,8 @@ import (
 // DefinitionOverride type (ConsolePropertyTenancyOverride or
 // PropertyTenancyOverride); both satisfy models.DefinitionOverride.
 //
-// CLI defaults widen vs today (was TENANT|NAME only) to match the
-// TUI — Name, Tenant, Regions, Value all Default==true. Per spec
-// Decision #9.
+// Columns: Name, Tenant, Regions, Value (CLI matches TUI per spec
+// Decision #9).
 func TenancyOverrideColumns[T models.DefinitionOverride]() GroupedSet[T] {
 	return GroupedSet[T]{Columns: []GroupedColumn[T]{
 		{
