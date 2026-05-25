@@ -266,6 +266,17 @@ var shortNameRegion = map[string]Region{
 	"pgc": RegionUSNewark1,
 }
 
+// regionShortName is the inverse of shortNameRegion, populated at init
+// so GetCode is O(1) instead of scanning shortNameRegion linearly on
+// every per-row call from Environment.GetName / GetKubeContext.
+var regionShortName = func() map[Region]string {
+	m := make(map[Region]string, len(shortNameRegion))
+	for k, v := range shortNameRegion {
+		m[v] = k
+	}
+	return m
+}()
+
 /*
 GetCode returns the short code for the Region.
 
@@ -284,10 +295,8 @@ region key should add the mapping explicitly. Returns the literal
 */
 // Code not part of SDK
 func (r Region) GetCode() string {
-	for k, v := range shortNameRegion {
-		if v == r {
-			return k
-		}
+	if k, ok := regionShortName[r]; ok {
+		return k
 	}
 	// Fallback: derive a slug from the region name so the table shows
 	// something identifiable rather than literal "UNKNOWN" for regions
