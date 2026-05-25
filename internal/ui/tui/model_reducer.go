@@ -289,7 +289,12 @@ func (m *Model) refreshDisplay() {
 func (m *Model) processData(msg DataMsg) tea.Cmd {
 	var cmd tea.Cmd
 	// Drop stale responses based on generation token (allow zero-value Gen).
+	// Still endTask: the matching beginTask was already issued when the
+	// load started, so the task must end to keep pendingTasks balanced.
+	// Without this, a stale drop leaves the model permanently in
+	// LoadingView — startup hang regression on `toolkit -c <lazy-cat>`.
 	if msg.Gen != 0 && msg.Gen != m.gen {
+		m.endTask(true)
 		return nil
 	}
 	switch data := msg.Data.(type) {
@@ -343,8 +348,17 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 // Typed lazy-load handlers (replace DataMsg type-switch path)
 // Each handler updates the dataset, ends the task, logs, refreshes display,
 // and returns any follow-up command (e.g., GPU pool state enrichment).
+// Each typed loaded-handler gates on gen to drop stale responses
+// from superseded loads. Every drop path still calls endTask: the
+// matching beginTask was issued when the load started, so the task
+// must end to keep pendingTasks balanced — otherwise a stale drop
+// strands the model in LoadingView (startup hang on
+// `toolkit -c <lazy-cat>`, regression locked by
+// TestStartupHang_LazyCategory).
+
 func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
 	if gen != m.gen {
+		m.endTask(true)
 		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
@@ -352,6 +366,7 @@ func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
 
 func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedModel, gen int) {
 	if gen != m.gen {
+		m.endTask(true)
 		return
 	}
 	total := 0
@@ -363,6 +378,7 @@ func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedMod
 
 func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {
 	if gen != m.gen {
+		m.endTask(true)
 		return nil
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.GpuPools = items }, domain.GpuPool, len(items))
@@ -371,6 +387,7 @@ func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {
 
 func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode, gen int) {
 	if gen != m.gen {
+		m.endTask(true)
 		return
 	}
 	total := 0
@@ -382,6 +399,7 @@ func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode, gen int)
 
 func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {
 	if gen != m.gen {
+		m.endTask(true)
 		return
 	}
 	total := 0
@@ -393,6 +411,7 @@ func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.Dedica
 
 func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) {
 	if gen != m.gen {
+		m.endTask(true)
 		return
 	}
 	m.applyDataset(func(ds *models.Dataset) {
@@ -405,6 +424,7 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 
 func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) {
 	if gen != m.gen {
+		m.endTask(true)
 		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.LimitRegionalOverrides = items }, domain.LimitRegionalOverride, len(items))
@@ -412,6 +432,7 @@ func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalO
 
 func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride, gen int) {
 	if gen != m.gen {
+		m.endTask(true)
 		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.ConsolePropertyRegionalOverrides = items }, domain.ConsolePropertyRegionalOverride, len(items))
@@ -419,6 +440,7 @@ func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.Cons
 
 func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride, gen int) {
 	if gen != m.gen {
+		m.endTask(true)
 		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.PropertyRegionalOverrides = items }, domain.PropertyRegionalOverride, len(items))
