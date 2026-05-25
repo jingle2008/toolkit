@@ -163,7 +163,7 @@ func TestGetItemKeyAndString(t *testing.T) {
 		{domain.ConsolePropertyRegionalOverride, table.Row{"cpdef"}, "cpdef"},
 		{domain.PropertyRegionalOverride, table.Row{"pdef"}, "pdef"},
 		{domain.BaseModel, table.Row{"BM1", "", "v1", "", "C,C*2", "1024", "EXP/INT/RTD", ""}, "BM1"},
-		{domain.ModelArtifact, table.Row{"artifact", "gpu", "model"}, "artifact"},
+		{domain.ModelArtifact, table.Row{"artifact", "bm1", "gpu", "trt"}, "bm1/artifact"},
 		{domain.Environment, table.Row{"env"}, "env"},
 		{domain.ServiceTenancy, table.Row{"svc"}, "svc"},
 		{domain.GpuPool, table.Row{"pool"}, "pool"},
@@ -207,7 +207,9 @@ func buildFullTestDataset() *models.Dataset {
 		ServiceTenancies: []models.ServiceTenancy{{Name: "svc1"}},
 		BaseModels:       []models.BaseModel{{InternalName: "v1", Name: "bm1", Version: "v1", Type: "typeA"}},
 		ModelArtifactMap: map[string][]models.ModelArtifact{
-			"artifact1": {{ModelName: "bm1", Name: "artifact1"}},
+			// Key by parent BaseModel name to match the production
+			// loader (terraform.LoadModelArtifacts keys by ModelName).
+			"bm1": {{ModelName: "bm1", Name: "artifact1"}},
 		},
 		LimitDefinitionGroup: models.LimitDefinitionGroup{
 			Values: []models.LimitDefinition{{Name: "limdef"}},
@@ -309,7 +311,7 @@ func TestFindItem_AllCategories(t *testing.T) {
 		{domain.ConsolePropertyRegionalOverride, "cpdef", &ds.ConsolePropertyRegionalOverrides[0]},
 		{domain.PropertyRegionalOverride, "pdef", &ds.PropertyRegionalOverrides[0]},
 		{domain.BaseModel, "bm1", &ds.BaseModels[0]},
-		{domain.ModelArtifact, "artifact1", &ds.ModelArtifactMap["artifact1"][0]},
+		{domain.ModelArtifact, models.ScopedItemKey{Scope: "bm1", Name: "artifact1"}, &ds.ModelArtifactMap["bm1"][0]},
 		{domain.Environment, "type1-UNKNOWN", &ds.Environments[0]},
 		{domain.ServiceTenancy, "svc1", &ds.ServiceTenancies[0]},
 		{domain.GpuPool, "pool1", &ds.GpuPools[0]},

@@ -169,11 +169,15 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
 		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
-		domain.PropertyRegionalOverride, domain.ModelArtifact, domain.Alias, domain.BaseModel:
+		domain.PropertyRegionalOverride, domain.Alias, domain.BaseModel:
 		return row[0]
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster,
-		domain.ImportedModel:
+		domain.ImportedModel, domain.ModelArtifact:
+		// ModelArtifact row[1] is "Model Internal Name" which equals
+		// the ModelArtifactMap's parent BaseModel key — see
+		// columns/model_artifact.go. Treating it as a scoped key
+		// disambiguates artifacts that share a Name across BaseModels.
 		return models.ScopedItemKey{Scope: row[1], Name: row[0]}
 	case domain.CategoryUnknown:
 		// exhaustive
@@ -226,9 +230,7 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 		return findGpuNode(dataset, key)
 	case domain.DedicatedAICluster:
 		return findDedicatedAICluster(dataset, key)
-	case domain.Alias:
-		return key
-	case domain.CategoryUnknown:
+	case domain.Alias, domain.CategoryUnknown:
 		// exhaustive
 	}
 	return nil
@@ -299,11 +301,9 @@ func findImportedModel(dataset *models.Dataset, key models.ItemKey) any {
 }
 
 func findModelArtifact(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(string)
-	for _, value := range dataset.ModelArtifactMap {
-		if item := collections.FindByName(value, k); item != nil {
-			return item
-		}
+	k := key.(models.ScopedItemKey)
+	if items, ok := dataset.ModelArtifactMap[k.Scope]; ok {
+		return collections.FindByName(items, k.Name)
 	}
 	return nil
 }
