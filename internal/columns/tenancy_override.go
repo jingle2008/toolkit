@@ -15,14 +15,22 @@ import (
 // Decision #9.
 func TenancyOverrideColumns[T models.DefinitionOverride]() GroupedSet[T] {
 	return GroupedSet[T]{Columns: []GroupedColumn[T]{
-		{Title: "Name", Key: "name", Ratio: 0.40,
-			Render: func(_ string, v T) string { return v.GetName() }},
-		{Title: "Tenant", Key: "tenant", Ratio: 0.25, TruncateMiddle: true,
-			Render: func(k string, _ T) string { return k }},
-		{Title: "Regions", Key: "regions", Ratio: 0.25,
-			Render: func(_ string, v T) string { return strings.Join(v.GetRegions(), ", ") }},
-		{Title: "Value", Key: "value", Ratio: 0.10,
-			Render: func(_ string, v T) string { return v.GetValue() }},
+		{
+			Title: "Name", Key: "name", Ratio: 0.40,
+			Render: func(_ string, v T) string { return v.GetName() },
+		},
+		{
+			Title: "Tenant", Key: "tenant", Ratio: 0.25, TruncateMiddle: true,
+			Render: func(k string, _ T) string { return k },
+		},
+		{
+			Title: "Regions", Key: "regions", Ratio: 0.25,
+			Render: func(_ string, v T) string { return strings.Join(v.GetRegions(), ", ") },
+		},
+		{
+			Title: "Value", Key: "value", Ratio: 0.10,
+			Render: func(_ string, v T) string { return v.GetValue() },
+		},
 	}}
 }
 

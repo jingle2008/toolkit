@@ -86,9 +86,16 @@ func TestExportTableCSV_DACUsesFullOCIDs(t *testing.T) {
 	}
 	tbl := table.New()
 	tbl.SetColumns([]table.Column{
-		{Title: "Name"}, {Title: "Tenant"}, {Title: "Internal"}, {Title: "Usage"},
-		{Title: "Type"}, {Title: "Model"}, {Title: "Shape/Profile"},
-		{Title: "Size"}, {Title: "Age"}, {Title: "Status"},
+		{Title: "Name"},
+		{Title: "Tenant"},
+		{Title: "Internal"},
+		{Title: "Usage"},
+		{Title: "Type"},
+		{Title: "Model"},
+		{Title: "Shape/Profile"},
+		{Title: "Size"},
+		{Title: "Age"},
+		{Title: "Status"},
 	})
 
 	m := &Model{
