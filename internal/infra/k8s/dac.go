@@ -47,47 +47,44 @@ func listDedicatedAIClustersGeneric(
 	return dacs, nil
 }
 
-// listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
-func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, cache PodCache) ([]models.DedicatedAICluster, error) {
-	gvr := schema.GroupVersionResource{
-		Group:    "ome.oracle.com",
-		Version:  "v1alpha1",
-		Resource: "dedicatedaiclusters",
-	}
-	return listDedicatedAIClustersGeneric(ctx, client, gvr, func(item unstructured.Unstructured) models.DedicatedAICluster {
+// dacOverlay applies version-specific spec fields on top of the
+// shared DedicatedAICluster shell produced by extractDAC. stats is
+// passed in so v1beta1 can populate Type from pod-derived metadata.
+type dacOverlay func(spec map[string]any, stats PodStats, dac *models.DedicatedAICluster)
+
+// extractDAC builds the per-item closure listDedicatedAIClustersGeneric
+// expects. statusField names the version-specific status string
+// (v1alpha1: "status"; v1beta1: "dacLifecycleState"); overlay applies
+// the remaining version-specific spec/stats overlays.
+func extractDAC(ctx context.Context, cache PodCache, statusField string, overlay dacOverlay) func(unstructured.Unstructured) models.DedicatedAICluster {
+	return func(item unstructured.Unstructured) models.DedicatedAICluster {
 		name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
 		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
 		status, _, _ := unstructured.NestedMap(item.Object, "status")
-		labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
+		labels, _, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
 		creationTimestampStr, _, _ := unstructured.NestedString(item.Object, "metadata", "creationTimestamp")
+
 		var age string
 		if t, err := time.Parse(time.RFC3339, creationTimestampStr); err == nil {
 			age = FormatAge(time.Since(t))
 		}
 
-		dacType, _ := spec["type"].(string)
-		unitShape, _ := spec["unitShape"].(string)
-		size, _ := spec["size"].(int64)
-
-		// hasLabels==false ⇒ labels==nil; tenantIDFromLabels handles
-		// that path and returns UNKNOWN_TENANCY, same as the
-		// labels-present-but-no-tenancy-id case. Keeps the orphan
-		// bucket key consistent across all "missing tenant" scenarios
-		// (and across DAC + ImportedModel).
-		_ = hasLabels
+		// labels==nil (NestedMap returns nil when the field is absent
+		// or non-map) is handled by tenantIDFromLabels: it returns
+		// UNKNOWN_TENANCY, the same bucket used when labels are
+		// present but lack `tenancy-id`. Keeps the orphan key
+		// consistent across all "missing tenant" scenarios (and
+		// across DAC + ImportedModel).
 		tenantID := tenantIDFromLabels(labels)
 
-		statusStr, _ := status["status"].(string)
+		statusStr, _ := status[statusField].(string)
 		if statusStr == "" {
 			statusStr = "pending"
 		}
 
 		stats := cache.getPodStats(ctx, name)
-		return models.DedicatedAICluster{
+		dac := models.DedicatedAICluster{
 			Name:          name,
-			Type:          dacType,
-			UnitShape:     unitShape,
-			Size:          int(size),
 			Status:        statusStr,
 			TenantID:      tenantID,
 			ModelName:     stats.ModelName,
@@ -95,7 +92,25 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, ca
 			TotalReplicas: stats.TotalPods,
 			Age:           age,
 		}
-	})
+		overlay(spec, stats, &dac)
+		return dac
+	}
+}
+
+// listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
+func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, cache PodCache) ([]models.DedicatedAICluster, error) {
+	gvr := schema.GroupVersionResource{
+		Group:    "ome.oracle.com",
+		Version:  "v1alpha1",
+		Resource: "dedicatedaiclusters",
+	}
+	return listDedicatedAIClustersGeneric(ctx, client, gvr, extractDAC(ctx, cache, "status",
+		func(spec map[string]any, _ PodStats, dac *models.DedicatedAICluster) {
+			dac.Type, _ = spec["type"].(string)
+			dac.UnitShape, _ = spec["unitShape"].(string)
+			size, _ := spec["size"].(int64)
+			dac.Size = int(size)
+		}))
 }
 
 // listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
@@ -105,48 +120,13 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 		Version:  "v1beta1",
 		Resource: "dedicatedaiclusters",
 	}
-	return listDedicatedAIClustersGeneric(ctx, client, gvr, func(item unstructured.Unstructured) models.DedicatedAICluster {
-		name, _, _ := unstructured.NestedString(item.Object, "metadata", "name")
-		spec, _, _ := unstructured.NestedMap(item.Object, "spec")
-		status, _, _ := unstructured.NestedMap(item.Object, "status")
-		labels, hasLabels, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
-		creationTimestampStr, _, _ := unstructured.NestedString(item.Object, "metadata", "creationTimestamp")
-		var age string
-		if t, err := time.Parse(time.RFC3339, creationTimestampStr); err == nil {
-			age = FormatAge(time.Since(t))
-		}
-
-		profile, _ := spec["profile"].(string)
-		count, _ := spec["count"].(int64)
-
-		// hasLabels==false ⇒ labels==nil; tenantIDFromLabels handles
-		// that path and returns UNKNOWN_TENANCY, same as the
-		// labels-present-but-no-tenancy-id case. Keeps the orphan
-		// bucket key consistent across all "missing tenant" scenarios
-		// (and across DAC + ImportedModel).
-		_ = hasLabels
-		tenantID := tenantIDFromLabels(labels)
-
-		dacLifecycleState, _ := status["dacLifecycleState"].(string)
-		statusStr := dacLifecycleState
-		if statusStr == "" {
-			statusStr = "pending"
-		}
-
-		stats := cache.getPodStats(ctx, name)
-		return models.DedicatedAICluster{
-			Name:          name,
-			Profile:       profile,
-			Size:          int(count),
-			Status:        statusStr,
-			TenantID:      tenantID,
-			ModelName:     stats.ModelName,
-			IdleReplicas:  stats.IdlePods,
-			TotalReplicas: stats.TotalPods,
-			Type:          stats.Type,
-			Age:           age,
-		}
-	})
+	return listDedicatedAIClustersGeneric(ctx, client, gvr, extractDAC(ctx, cache, "dacLifecycleState",
+		func(spec map[string]any, stats PodStats, dac *models.DedicatedAICluster) {
+			dac.Profile, _ = spec["profile"].(string)
+			count, _ := spec["count"].(int64)
+			dac.Size = int(count)
+			dac.Type = stats.Type
+		}))
 }
 
 /*
