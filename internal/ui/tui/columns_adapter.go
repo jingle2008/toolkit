@@ -9,10 +9,11 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// tuiRowsFlat renders a slice through a flat Set, applying the
-// TUI's filter + faulty gates. Mirrors the existing filterRows
-// helper but uses the canonical Render closures.
-func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, filter string, faultyOnly bool) []table.Row {
+// tuiRowsFlatWith is the shared core of tuiRowsFlat and
+// tuiRowsFlatForExport. The cell argument decides whether each cell
+// uses the display-mode Render or the export-mode ExportRender (with
+// fallback). The filter + faulty pipeline is identical for both.
+func tuiRowsFlatWith[T models.NamedFilterable](s columns.Set[T], items []T, filter string, faultyOnly bool, cell func(columns.Column[T], T) string) []table.Row {
 	var pred func(T) bool
 	if faultyOnly {
 		pred = faultyPred
@@ -22,46 +23,47 @@ func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, filter s
 	for i, m := range matches {
 		row := make(table.Row, len(s.Columns))
 		for j, c := range s.Columns {
-			row[j] = c.Render(m)
+			row[j] = cell(c, m)
 		}
 		rows[i] = row
 	}
 	return rows
+}
+
+// tuiRowsFlat renders a slice through a flat Set, applying the
+// TUI's filter + faulty gates. Display-mode: every cell uses the
+// column's Render closure.
+func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, filter string, faultyOnly bool) []table.Row {
+	return tuiRowsFlatWith(s, items, filter, faultyOnly, func(c columns.Column[T], m T) string {
+		return c.Render(m)
+	})
 }
 
 // tuiRowsFlatForExport mirrors tuiRowsFlat but consults each column's
-// ExportRender when present. Used by the CSV export path so OCID-shaped
-// columns emit fully-qualified IDs rather than raw suffixes.
+// ExportRender when present. Used by the CSV export path so
+// OCID-shaped columns emit fully-qualified IDs rather than raw
+// suffixes.
 func tuiRowsFlatForExport[T models.NamedFilterable](s columns.Set[T], items []T, realm, region, filter string, faultyOnly bool) []table.Row {
-	var pred func(T) bool
-	if faultyOnly {
-		pred = faultyPred
-	}
-	matches := collections.FilterSlice(items, nil, filter, pred)
-	rows := make([]table.Row, len(matches))
-	for i, m := range matches {
-		row := make(table.Row, len(s.Columns))
-		for j, c := range s.Columns {
-			if c.ExportRender != nil {
-				row[j] = c.ExportRender(realm, region, m)
-			} else {
-				row[j] = c.Render(m)
-			}
+	return tuiRowsFlatWith(s, items, filter, faultyOnly, func(c columns.Column[T], m T) string {
+		if c.ExportRender != nil {
+			return c.ExportRender(realm, region, m)
 		}
-		rows[i] = row
-	}
-	return rows
+		return c.Render(m)
+	})
 }
 
-// tuiRowsGrouped renders a grouped map, preserving the scope logic
-// from filterRowsScoped.
-func tuiRowsGrouped[T models.NamedFilterable](
+// tuiRowsGroupedWith is the shared core of tuiRowsGrouped and
+// tuiRowsGroupedForExport. The cell argument selects display vs
+// export rendering; the scope-context + filter + faulty pipeline is
+// identical for both.
+func tuiRowsGroupedWith[T models.NamedFilterable](
 	g columns.GroupedSet[T],
 	m map[string][]T,
 	scopeCategory domain.Category,
 	ctx *domain.ToolkitContext,
 	filter string,
 	faultyOnly bool,
+	cell func(columns.GroupedColumn[T], string, T) string,
 ) []table.Row {
 	var (
 		key  *string
@@ -84,12 +86,28 @@ func tuiRowsGrouped[T models.NamedFilterable](
 		for _, it := range items {
 			row := make(table.Row, len(g.Columns))
 			for j, c := range g.Columns {
-				row[j] = c.Render(k, it)
+				row[j] = cell(c, k, it)
 			}
 			rows = append(rows, row)
 		}
 	}
 	return rows
+}
+
+// tuiRowsGrouped renders a grouped map, preserving the scope logic
+// from filterRowsScoped. Display-mode: every cell uses the column's
+// Render closure with the (group key, item) pair.
+func tuiRowsGrouped[T models.NamedFilterable](
+	g columns.GroupedSet[T],
+	m map[string][]T,
+	scopeCategory domain.Category,
+	ctx *domain.ToolkitContext,
+	filter string,
+	faultyOnly bool,
+) []table.Row {
+	return tuiRowsGroupedWith(g, m, scopeCategory, ctx, filter, faultyOnly, func(c columns.GroupedColumn[T], k string, it T) string {
+		return c.Render(k, it)
+	})
 }
 
 // tuiRowsGroupedForExport mirrors tuiRowsGrouped but consults each
@@ -103,35 +121,10 @@ func tuiRowsGroupedForExport[T models.NamedFilterable](
 	realm, region, filter string,
 	faultyOnly bool,
 ) []table.Row {
-	var (
-		key  *string
-		name *string
-	)
-	if ctx != nil {
-		if ctx.Category == scopeCategory {
-			key = &ctx.Name
-		} else {
-			name = &ctx.Name
+	return tuiRowsGroupedWith(g, m, scopeCategory, ctx, filter, faultyOnly, func(c columns.GroupedColumn[T], k string, it T) string {
+		if c.ExportRender != nil {
+			return c.ExportRender(realm, region, k, it)
 		}
-	}
-	var pred func(T) bool
-	if faultyOnly {
-		pred = faultyPred
-	}
-	matches := collections.FilterMap(m, key, name, filter, pred)
-	rows := make([]table.Row, 0)
-	for k, items := range matches {
-		for _, it := range items {
-			row := make(table.Row, len(g.Columns))
-			for j, c := range g.Columns {
-				if c.ExportRender != nil {
-					row[j] = c.ExportRender(realm, region, k, it)
-				} else {
-					row[j] = c.Render(k, it)
-				}
-			}
-			rows = append(rows, row)
-		}
-	}
-	return rows
+		return c.Render(k, it)
+	})
 }
