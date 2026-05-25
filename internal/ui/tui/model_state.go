@@ -284,7 +284,14 @@ func (m *Model) cancelInFlight() {
 	}
 }
 
-// opContext returns a background-derived context with a default timeout for one-shot operations.
+// opContext returns a 30s-timeout context for a one-shot action (cordon,
+// drain, scale, mutate). It derives from m.parentCtx so the action cancels
+// when the TUI shuts down, but unlike m.loadCtx it survives navigation /
+// refresh so a user pressing 'r' mid-cordon doesn't abort the cordon.
 func (m *Model) opContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 30*time.Second)
+	parent := m.parentCtx
+	if parent == nil {
+		parent = context.Background()
+	}
+	return context.WithTimeout(parent, 30*time.Second)
 }
