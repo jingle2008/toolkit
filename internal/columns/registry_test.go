@@ -2,9 +2,11 @@ package columns
 
 import (
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // Every concrete Category must have a registered column set.
@@ -73,5 +75,226 @@ func TestRegistry_RatiosSumToOne(t *testing.T) {
 		if math.Abs(sum-1.0) > 0.02 {
 			t.Errorf("%s: ratio sum %.3f outside ±0.02 of 1.0", cat, sum)
 		}
+	}
+}
+
+// TestTitlesFor covers the registry lookup that exposes per-column
+// titles to the CLI's --columns help output. Verifies both a
+// registered category (titles non-empty, length matches keys) and
+// an unregistered one (nil).
+func TestTitlesFor(t *testing.T) {
+	t.Parallel()
+	titles := TitlesFor(domain.Tenant)
+	if len(titles) == 0 {
+		t.Fatalf("TitlesFor(Tenant): empty")
+	}
+	if len(titles) != len(KeysFor(domain.Tenant)) {
+		t.Errorf("Titles length %d != Keys length %d", len(titles), len(KeysFor(domain.Tenant)))
+	}
+	if TitlesFor(domain.CategoryUnknown) != nil {
+		t.Error("TitlesFor(CategoryUnknown): want nil")
+	}
+}
+
+// TestRenderTable_Flat drives RenderTable end-to-end for a flat
+// category. Pins the registry dispatch path: registry[Tenant] →
+// flatEntry's render closure → renderFlat.
+func TestRenderTable_Flat(t *testing.T) {
+	t.Parallel()
+	items := []models.Tenant{
+		{Name: "alpha", IDs: []string{"ocid1.tenancy.oc1..a"}, IsInternal: true, Note: "x"},
+	}
+	headers, rows, err := RenderTable(domain.Tenant, items, nil)
+	if err != nil {
+		t.Fatalf("RenderTable: %v", err)
+	}
+	if len(headers) == 0 || len(rows) != 1 {
+		t.Fatalf("headers=%d rows=%d", len(headers), len(rows))
+	}
+	if rows[0][0] != "alpha" {
+		t.Errorf("row[0][0] = %q, want alpha", rows[0][0])
+	}
+}
+
+// TestRenderTable_Grouped drives RenderTable for a grouped category.
+// Pins registry[GpuNode] → groupedEntry's render closure →
+// renderGrouped, including the sorted-key iteration.
+func TestRenderTable_Grouped(t *testing.T) {
+	t.Parallel()
+	items := map[string][]models.GpuNode{
+		"pool-a": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, Age: "1d"}},
+	}
+	headers, rows, err := RenderTable(domain.GpuNode, items, nil)
+	if err != nil {
+		t.Fatalf("RenderTable: %v", err)
+	}
+	if len(headers) == 0 || len(rows) != 1 {
+		t.Fatalf("headers=%d rows=%d", len(headers), len(rows))
+	}
+}
+
+// TestRenderTable_Unregistered ensures unknown categories surface
+// as an error (not a panic) from the registry-miss path.
+func TestRenderTable_Unregistered(t *testing.T) {
+	t.Parallel()
+	if _, _, err := RenderTable(domain.CategoryUnknown, nil, nil); err == nil {
+		t.Error("RenderTable(CategoryUnknown): want error")
+	}
+}
+
+// TestRenderTableForExport_ShortCircuit exercises the empty-env
+// branch: with realm or region missing, the export path falls
+// through to RenderTable (raw display output, no malformed OCIDs).
+func TestRenderTableForExport_ShortCircuit(t *testing.T) {
+	t.Parallel()
+	items := []models.Tenant{
+		{Name: "alpha", IDs: []string{"ocid1.tenancy.oc1..a"}},
+	}
+	_, exportRows, err := RenderTableForExport(domain.Tenant, items, "", "", nil)
+	if err != nil {
+		t.Fatalf("RenderTableForExport with empty env: %v", err)
+	}
+	_, plainRows, err := RenderTable(domain.Tenant, items, nil)
+	if err != nil {
+		t.Fatalf("RenderTable baseline: %v", err)
+	}
+	if !reflect.DeepEqual(exportRows, plainRows) {
+		t.Errorf("short-circuit path should equal RenderTable; got %v vs %v", exportRows, plainRows)
+	}
+}
+
+// TestRenderTableForExport_Grouped covers the grouped ExportRender
+// path for DAC, which is the canonical ExportRender-bearing
+// category (Name → full DAC OCID; Tenant → full tenancy OCID).
+func TestRenderTableForExport_Grouped(t *testing.T) {
+	t.Parallel()
+	items := map[string][]models.DedicatedAICluster{
+		"aaaaaaaatenant": {{Name: "amaaaaaadac", Status: "ACTIVE", TenantID: "aaaaaaaatenant"}},
+	}
+	_, rows, err := RenderTableForExport(domain.DedicatedAICluster, items, "oc1", "me-dubai-1", nil)
+	if err != nil {
+		t.Fatalf("RenderTableForExport: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows=%d", len(rows))
+	}
+	// Name column (row[0]) should be the fully-qualified DAC OCID.
+	if rows[0][0] != "ocid1.generativeaidedicatedaicluster.oc1.me-dubai-1.amaaaaaadac" {
+		t.Errorf("row[0][0] = %q, want full DAC OCID", rows[0][0])
+	}
+}
+
+// TestRenderTableForExport_Unregistered covers the registry-miss
+// error path on the export branch (separate code from RenderTable's
+// equivalent, hence its own assertion).
+func TestRenderTableForExport_Unregistered(t *testing.T) {
+	t.Parallel()
+	if _, _, err := RenderTableForExport(domain.CategoryUnknown, nil, "oc1", "iad", nil); err == nil {
+		t.Error("RenderTableForExport(CategoryUnknown): want error")
+	}
+}
+
+// TestHelpTable covers the (Key, Title) help output for both a
+// registered and an unregistered category. Help is what `--columns
+// help` shows in the CLI.
+func TestHelpTable(t *testing.T) {
+	t.Parallel()
+	headers, rows := HelpTable(domain.Tenant)
+	if !reflect.DeepEqual(headers, []string{"KEY", "TITLE"}) {
+		t.Errorf("headers = %v, want [KEY TITLE]", headers)
+	}
+	if len(rows) == 0 {
+		t.Error("HelpTable(Tenant): empty rows")
+	}
+	headers, rows = HelpTable(domain.CategoryUnknown)
+	if headers != nil || rows != nil {
+		t.Errorf("HelpTable(CategoryUnknown): want nil/nil, got %v/%v", headers, rows)
+	}
+}
+
+// TestGroupedSet_SelectColumns covers the grouped variant of
+// SelectColumns including the unknown-key error path. Mirrors the
+// flat-Set equivalent that already had coverage.
+func TestGroupedSet_SelectColumns(t *testing.T) {
+	t.Parallel()
+	type item struct {
+		V string
+	}
+	g := GroupedSet[item]{Columns: []GroupedColumn[item]{
+		{Title: "Key", Key: "key", Ratio: 0.5, Render: func(k string, _ item) string { return k }},
+		{Title: "Val", Key: "val", Ratio: 0.5, Render: func(_ string, i item) string { return i.V }},
+	}}
+	got, err := g.SelectColumns([]string{"val"})
+	if err != nil {
+		t.Fatalf("SelectColumns: %v", err)
+	}
+	if len(got) != 1 || got[0].Key != "val" {
+		t.Errorf("SelectColumns([val]): got %v", got)
+	}
+	// Unknown key surfaces via UnknownColumnError.Error.
+	_, err = g.SelectColumns([]string{"bogus"})
+	if err == nil {
+		t.Fatal("SelectColumns([bogus]): want error")
+	}
+	if err.Error() == "" {
+		t.Error("UnknownColumnError.Error: empty message")
+	}
+}
+
+// TestRenderFlatExport mirrors TestRenderFlat for the export path:
+// ExportRender takes precedence over Render when set; columns
+// without ExportRender fall back to Render.
+func TestRenderFlatExport(t *testing.T) {
+	t.Parallel()
+	type item struct {
+		Name string
+	}
+	s := Set[item]{Columns: []Column[item]{
+		{Title: "Plain", Key: "plain", Ratio: 0.5, Render: func(i item) string { return i.Name }},
+		{
+			Title: "Exported", Key: "exported", Ratio: 0.5,
+			Render:       func(i item) string { return i.Name },
+			ExportRender: func(realm, region string, i item) string { return realm + "/" + region + "/" + i.Name },
+		},
+	}}
+	items := []item{{"foo"}}
+	_, rows, err := renderFlatExport(s, items, "oc1", "iad", nil)
+	if err != nil {
+		t.Fatalf("renderFlatExport: %v", err)
+	}
+	if rows[0][0] != "foo" || rows[0][1] != "oc1/iad/foo" {
+		t.Errorf("rows[0] = %v, want [foo oc1/iad/foo]", rows[0])
+	}
+	// Wrong type surfaces as error, not panic.
+	if _, _, err := renderFlatExport(s, "not a slice", "oc1", "iad", nil); err == nil {
+		t.Error("renderFlatExport with wrong type: expected error")
+	}
+}
+
+// TestRenderGroupedExport mirrors TestRenderGrouped for the export
+// path: ExportRender (with key + item) takes precedence over Render.
+func TestRenderGroupedExport(t *testing.T) {
+	t.Parallel()
+	type item struct {
+		V string
+	}
+	g := GroupedSet[item]{Columns: []GroupedColumn[item]{
+		{Title: "Key", Key: "key", Ratio: 0.5, Render: func(k string, _ item) string { return k }},
+		{
+			Title: "Val", Key: "val", Ratio: 0.5,
+			Render:       func(_ string, i item) string { return i.V },
+			ExportRender: func(realm, region, k string, i item) string { return realm + "/" + region + "/" + k + "/" + i.V },
+		},
+	}}
+	items := map[string][]item{"g": {{V: "x"}}}
+	_, rows, err := renderGroupedExport(g, items, "oc1", "iad", nil)
+	if err != nil {
+		t.Fatalf("renderGroupedExport: %v", err)
+	}
+	if rows[0][0] != "g" || rows[0][1] != "oc1/iad/g/x" {
+		t.Errorf("rows[0] = %v", rows[0])
+	}
+	if _, _, err := renderGroupedExport(g, []item{}, "oc1", "iad", nil); err == nil {
+		t.Error("renderGroupedExport with wrong type: expected error")
 	}
 }
