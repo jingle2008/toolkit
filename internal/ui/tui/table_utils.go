@@ -8,7 +8,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 
-	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -185,155 +184,20 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	return nil
 }
 
-/*
-findItem returns the item from the dataset for a given category and key.
-*/
-//nolint:cyclop
+// findItem looks up the item identified by (category, key) in the
+// dataset. Returns nil for keys that have no matching item, for
+// categories that have no rowSource entry, and for categories whose
+// rowSource has no find (currently only Alias). Per-category lookup
+// logic lives on the rowSource itself — see row_sources.go.
 func findItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) any {
 	if key == nil {
 		return nil
 	}
-	switch category {
-	case domain.Tenant:
-		return findTenant(dataset, key)
-	case domain.LimitDefinition:
-		return findLimitDefinition(dataset, key)
-	case domain.ConsolePropertyDefinition:
-		return findConsolePropertyDefinition(dataset, key)
-	case domain.PropertyDefinition:
-		return findPropertyDefinition(dataset, key)
-	case domain.LimitTenancyOverride:
-		return findLimitTenancyOverride(dataset, key)
-	case domain.ConsolePropertyTenancyOverride:
-		return findConsolePropertyTenancyOverride(dataset, key)
-	case domain.PropertyTenancyOverride:
-		return findPropertyTenancyOverride(dataset, key)
-	case domain.LimitRegionalOverride:
-		return findLimitRegionalOverride(dataset, key)
-	case domain.ConsolePropertyRegionalOverride:
-		return findConsolePropertyRegionalOverride(dataset, key)
-	case domain.PropertyRegionalOverride:
-		return findPropertyRegionalOverride(dataset, key)
-	case domain.BaseModel:
-		return findBaseModel(dataset, key)
-	case domain.ImportedModel:
-		return findImportedModel(dataset, key)
-	case domain.ModelArtifact:
-		return findModelArtifact(dataset, key)
-	case domain.Environment:
-		return findEnvironment(dataset, key)
-	case domain.ServiceTenancy:
-		return findServiceTenancy(dataset, key)
-	case domain.GpuPool:
-		return findGpuPool(dataset, key)
-	case domain.GpuNode:
-		return findGpuNode(dataset, key)
-	case domain.DedicatedAICluster:
-		return findDedicatedAICluster(dataset, key)
-	case domain.Alias, domain.CategoryUnknown:
-		// exhaustive
+	src, ok := rowSources[category]
+	if !ok || src.find == nil {
+		return nil
 	}
-	return nil
-}
-
-func findTenant(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.Tenants, key.(string))
-}
-
-func findLimitDefinition(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.LimitDefinitionGroup.Values, key.(string))
-}
-
-func findConsolePropertyDefinition(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.ConsolePropertyDefinitionGroup.Values, key.(string))
-}
-
-func findPropertyDefinition(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.PropertyDefinitionGroup.Values, key.(string))
-}
-
-func findLimitTenancyOverride(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(models.ScopedItemKey)
-	if items, ok := dataset.LimitTenancyOverrideMap[k.Scope]; ok {
-		return collections.FindByName(items, k.Name)
-	}
-	return nil
-}
-
-func findConsolePropertyTenancyOverride(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(models.ScopedItemKey)
-	if items, ok := dataset.ConsolePropertyTenancyOverrideMap[k.Scope]; ok {
-		return collections.FindByName(items, k.Name)
-	}
-	return nil
-}
-
-func findPropertyTenancyOverride(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(models.ScopedItemKey)
-	if items, ok := dataset.PropertyTenancyOverrideMap[k.Scope]; ok {
-		return collections.FindByName(items, k.Name)
-	}
-	return nil
-}
-
-func findLimitRegionalOverride(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.LimitRegionalOverrides, key.(string))
-}
-
-func findConsolePropertyRegionalOverride(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.ConsolePropertyRegionalOverrides, key.(string))
-}
-
-func findPropertyRegionalOverride(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.PropertyRegionalOverrides, key.(string))
-}
-
-func findBaseModel(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.BaseModels, key.(string))
-}
-
-func findImportedModel(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(models.ScopedItemKey)
-	if items, ok := dataset.ImportedModelMap[k.Scope]; ok {
-		return collections.FindByName(items, k.Name)
-	}
-	return nil
-}
-
-func findModelArtifact(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(models.ScopedItemKey)
-	if items, ok := dataset.ModelArtifactMap[k.Scope]; ok {
-		return collections.FindByName(items, k.Name)
-	}
-	return nil
-}
-
-func findEnvironment(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.Environments, key.(string))
-}
-
-func findServiceTenancy(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.ServiceTenancies, key.(string))
-}
-
-func findGpuPool(dataset *models.Dataset, key models.ItemKey) any {
-	return collections.FindByName(dataset.GpuPools, key.(string))
-}
-
-func findGpuNode(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(models.ScopedItemKey)
-	if items, ok := dataset.GpuNodeMap[k.Scope]; ok {
-		return collections.FindByName(items, k.Name)
-	}
-	return nil
-}
-
-func findDedicatedAICluster(dataset *models.Dataset, key models.ItemKey) any {
-	k := key.(models.ScopedItemKey)
-	if items, ok := dataset.DedicatedAIClusterMap[k.Scope]; ok {
-		return collections.FindByName(items, k.Name)
-	}
-	return nil
+	return src.find(dataset, key)
 }
 
 func deleteItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) {

@@ -3,6 +3,7 @@ package tui
 import (
 	"github.com/charmbracelet/bubbles/table"
 
+	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -22,16 +23,19 @@ type rowCtx struct {
 	export  bool
 }
 
-// rowSource bundles a category's per-cell row builder and its
-// precomputed headers. Each entry in rowSources is constructed by
-// flatSource or groupedSource, which capture the typed column set
-// and dataset accessor in a closure so the dispatch map can stay
-// non-generic. headers is derived from the same column set at
-// construction time, so the live table, the export, and the header
-// strip can never drift.
+// rowSource bundles a category's per-cell row builder, its
+// precomputed headers, and a by-key item lookup. Each entry in
+// rowSources is constructed by flatSource or groupedSource, which
+// capture the typed column set and dataset accessor in a closure so
+// the dispatch map can stay non-generic. All three fields are
+// derived from the same pick accessor at construction time, so the
+// live table, the export, the header strip, and findItem can never
+// drift. find may be nil for categories that don't represent
+// addressable entities (e.g. Alias, which is a categories index).
 type rowSource struct {
 	rows    func(rowCtx) []table.Row
 	headers []header
+	find    func(*models.Dataset, models.ItemKey) any
 }
 
 // flatSource builds a rowSource for a category backed by a flat
@@ -51,6 +55,9 @@ func flatSource[T models.NamedFilterable](
 			return tuiRowsFlat(cols, items, rc.filter, rc.faulty)
 		},
 		headers: headersFromSet(cols.Columns),
+		find: func(d *models.Dataset, key models.ItemKey) any {
+			return collections.FindByName(pick(d), key.(string))
+		},
 	}
 }
 
@@ -73,7 +80,24 @@ func groupedSource[T models.NamedFilterable](
 			return tuiRowsGrouped(cols, data, scope, rc.context, rc.filter, rc.faulty)
 		},
 		headers: headersFromGroupedSet(cols.Columns),
+		find: func(d *models.Dataset, key models.ItemKey) any {
+			k := key.(models.ScopedItemKey)
+			if items, ok := pick(d)[k.Scope]; ok {
+				return collections.FindByName(items, k.Name)
+			}
+			return nil
+		},
 	}
+}
+
+// aliasSource builds the rowSource for the Alias category and clears
+// the auto-generated find — see the Alias entry's comment in
+// rowSources for the rationale.
+func aliasSource() rowSource {
+	s := flatSource(columns.AliasColumns,
+		func(*models.Dataset) []domain.Category { return domain.Categories })
+	s.find = nil
+	return s
 }
 
 // rowSources is the single per-category dispatch shared by the live
@@ -82,8 +106,10 @@ func groupedSource[T models.NamedFilterable](
 // every domain.Category has one — a missing entry would otherwise
 // silently emit a header-only CSV on <e>.
 var rowSources = map[domain.Category]rowSource{
-	domain.Alias: flatSource(columns.AliasColumns,
-		func(*models.Dataset) []domain.Category { return domain.Categories }),
+	// Alias rows are an index of category names rather than addressable
+	// entities — no find. findItem returns nil for Alias and the TUI
+	// copy/detail actions degrade gracefully to "no item selected".
+	domain.Alias: aliasSource(),
 	domain.Tenant: flatSource(columns.TenantColumns,
 		func(d *models.Dataset) []models.Tenant { return d.Tenants }),
 	domain.LimitDefinition: flatSource(columns.LimitDefinitionColumns,

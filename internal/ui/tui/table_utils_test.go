@@ -98,14 +98,14 @@ func TestFaultyPred(t *testing.T) {
 	assert.False(t, faultyPred(testFaulty{faulty: false}))
 }
 
-func TestFindLimitRegionalOverride(t *testing.T) {
+func TestFindItem_LimitRegionalOverride(t *testing.T) {
 	t.Parallel()
 	dataset := &models.Dataset{
 		LimitRegionalOverrides: []models.LimitRegionalOverride{
 			{Name: "limit-1"},
 		},
 	}
-	item := findLimitRegionalOverride(dataset, "limit-1")
+	item := findItem(dataset, domain.LimitRegionalOverride, "limit-1")
 	require.NotNil(t, item)
 	got, ok := item.(*models.LimitRegionalOverride)
 	assert.True(t, ok)
