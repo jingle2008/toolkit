@@ -88,6 +88,12 @@ discover them.`,
 	rootCmd.AddCommand(getCmd)
 }
 
+// runGet is the get-command handler. Its branches are orchestration
+// (parse category → parse format → parse columns → read config →
+// init logger → dispatch), each producing distinct CLI error
+// messages; splitting them into helpers would just shuffle state.
+//
+//nolint:cyclop // sequential CLI orchestration with one branch per failure mode
 func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int, columnsArg *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		cat, err := domain.ParseCategory(args[0])
@@ -522,6 +528,8 @@ type aliasView struct {
 // writeAliases renders the canonical alias list — one row per category
 // (TUI shape, spec Decision #4). This is an intentional change from
 // the legacy 1-row-per-alias CLI shape.
+//
+//nolint:cyclop // filter loop + per-format dispatch are intrinsic to the contract
 func writeAliases(w writer, filter string, limit int, opts output.Options, selected []string) error {
 	cats := make([]domain.Category, 0, len(domain.Categories))
 	for _, c := range domain.Categories {
