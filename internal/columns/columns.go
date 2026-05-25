@@ -15,10 +15,10 @@ import "strings"
 // shape and the tail is the distinguishing portion. CLI surfaces
 // ignore this hint — they emit the full value.
 type Column[T any] struct {
-	Title        string
-	Key          string
-	Ratio        float64
-	Render       func(T) string
+	Title          string
+	Key            string
+	Ratio          float64
+	Render         func(T) string
 	TruncateMiddle bool
 }
 
@@ -29,10 +29,10 @@ type Column[T any] struct {
 //
 // TruncateMiddle has the same semantics as Column.TruncateMiddle.
 type GroupedColumn[T any] struct {
-	Title        string
-	Key          string
-	Ratio        float64
-	Render       func(key string, item T) string
+	Title          string
+	Key            string
+	Ratio          float64
+	Render         func(key string, item T) string
 	TruncateMiddle bool
 }
 

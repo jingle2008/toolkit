@@ -16,8 +16,8 @@ import (
 )
 
 type header struct {
-	text         string
-	ratio        float64
+	text           string
+	ratio          float64
 	truncateMiddle bool
 }
 

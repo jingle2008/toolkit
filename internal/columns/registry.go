@@ -344,4 +344,3 @@ func pickGrouped[T any](g GroupedSet[T], selected []string) ([]GroupedColumn[T],
 	}
 	return g.SelectColumns(selected)
 }
-

@@ -82,6 +82,12 @@ func (o ConsolePropertyTenancyOverride) GetTenantID() string {
 	return o.TenantID
 }
 
+// SetTenantName stamps the tenant short name onto the override.
+// See LimitTenancyOverride.SetTenantName.
+func (o *ConsolePropertyTenancyOverride) SetTenantName(name string) {
+	o.TenantName = name
+}
+
 // GetFilterableFields returns filterable fields for the console property tenancy override.
 func (o ConsolePropertyTenancyOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name, o.TenantName, o.TenantID)

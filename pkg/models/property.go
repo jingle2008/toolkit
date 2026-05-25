@@ -88,6 +88,12 @@ func (o PropertyTenancyOverride) GetTenantID() string {
 	return o.Tag
 }
 
+// SetTenantName stamps the tenant short name onto the override.
+// See LimitTenancyOverride.SetTenantName.
+func (o *PropertyTenancyOverride) SetTenantName(name string) {
+	o.TenantName = name
+}
+
 // GetFilterableFields returns filterable fields for the property tenancy override.
 func (o PropertyTenancyOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name, o.TenantName, o.Tag)

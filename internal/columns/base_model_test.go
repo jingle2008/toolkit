@@ -9,15 +9,15 @@ import (
 func TestBaseModelColumns(t *testing.T) {
 	t.Parallel()
 	m := models.BaseModel{
-		Name:          "cohere.command",
-		DisplayName:   "Command",
-		InternalName:  "cohere-command-internal",
-		Vendor:        "Cohere",
-		Type:          "CHAT",
-		Version:       "v1",
-		MaxTokens:     4096,
-		ParameterSize: "7B",
-		Status:        "Ready",
+		Name:           "cohere.command",
+		DisplayName:    "Command",
+		InternalName:   "cohere-command-internal",
+		Vendor:         "Cohere",
+		Type:           "CHAT",
+		Version:        "v1",
+		MaxTokens:      4096,
+		ParameterSize:  "7B",
+		Status:         "Ready",
 		IsExperimental: true,
 		DacShapeConfigs: &models.DacShapeConfigs{
 			CompatibleDACShapes: []models.DACShape{

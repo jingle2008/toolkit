@@ -141,4 +141,3 @@ func TestWriteDelimited_NoHeaders(t *testing.T) {
 	require.NoError(t, WriteDelimited(&buf, []string{"NAME"}, [][]string{{"alice"}}, Options{NoHeaders: true}, ','))
 	assert.Equal(t, "alice\n", buf.String())
 }
-

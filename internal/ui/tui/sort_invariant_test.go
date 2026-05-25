@@ -23,6 +23,13 @@ import (
 // column whose Sort* binding still uses the old title — would
 // silently disable sorting for that column, with no compile-time or
 // runtime error.
+//
+// One-directional by design: this test asserts every Sort* binding
+// has a matching column, but NOT that every column has a Sort*
+// binding. Many columns (Status, Display Name, Vendor in non-DAC
+// categories, etc.) intentionally don't expose a shift+letter
+// sort, and adding the reverse assertion would force a binding
+// for every column or maintain an opt-out list.
 func TestSortBindings_MatchColumnTitles(t *testing.T) {
 	t.Parallel()
 	for _, cat := range domain.Categories {
@@ -120,7 +127,7 @@ func TestTruncateMiddle(t *testing.T) {
 		{"abcdefgh", 7, "abc…fgh"}, // 7 = 3 head + 1 ellipsis + 3 tail
 		{"abcdefgh", 1, "…"},       // width fits exactly one ellipsis cell
 		{"abcdefgh", 0, ""},        // zero width → empty (output never exceeds w)
-		// Realistic OCID-style name: head reveals the "amaa…" shape, tail reveals the distinct end.
+		// Realistic OCID name portion: head reveals the "amaa…" shape, tail reveals the distinguishing characters.
 		{"amaaaaaasxj5imyasw65kzgst7qhopkqbh4hiahgcdpx7gfxesuj7mndycca", 12, "amaaa…ndycca"},
 	}
 	for _, tc := range cases {
@@ -158,15 +165,15 @@ func TestApplyMiddleTruncation_DACNameAndTenant(t *testing.T) {
 
 	rows := []table.Row{{
 		"amaaaaaasxj5imya...mndycca", // Name col 0 — must truncate left
-		"amaaaaaatenancysuffix",       // Tenant col 1 — must truncate left
-		"true",                        // Internal col 2 — short, unchanged
-		"50%",                         // Usage col 3 — short, unchanged
-		"LARGE",                       // Type col 4 — short, unchanged
-		"llama3",                      // Model col 5
-		"BM.GPU.H100.8",               // Shape/Profile col 6
-		"4",                           // Size col 7
-		"2d",                          // Age col 8
-		"ACTIVE",                      // Status col 9 — not left-truncate
+		"amaaaaaatenancysuffix",      // Tenant col 1 — must truncate left
+		"true",                       // Internal col 2 — short, unchanged
+		"50%",                        // Usage col 3 — short, unchanged
+		"LARGE",                      // Type col 4 — short, unchanged
+		"llama3",                     // Model col 5
+		"BM.GPU.H100.8",              // Shape/Profile col 6
+		"4",                          // Size col 7
+		"2d",                         // Age col 8
+		"ACTIVE",                     // Status col 9 — not left-truncate
 	}}
 	m.applyMiddleTruncation(rows)
 

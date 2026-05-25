@@ -98,7 +98,9 @@ func TestRenderTable_PropertyRegionalOverride(t *testing.T) {
 	items := []models.PropertyRegionalOverride{{
 		Name:    "p1",
 		Regions: []string{"us-ashburn-1", "us-phoenix-1"},
-		Values:  []struct{ Value string `json:"value"` }{{Value: "v"}},
+		Values: []struct {
+			Value string `json:"value"`
+		}{{Value: "v"}},
 	}}
 	headers, rows, err := columns.RenderTable(domain.PropertyRegionalOverride, items, nil)
 	require.NoError(t, err)

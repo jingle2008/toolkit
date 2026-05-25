@@ -408,7 +408,6 @@ func writeMap[T any](w writer, grouped map[string][]T, limit int, opts output.Op
 	}
 }
 
-
 // writeEncoded dispatches the json/jsonl/yaml branches for an
 // already-flattened items slice.
 func writeEncoded(w writer, opts output.Options, items any) error {

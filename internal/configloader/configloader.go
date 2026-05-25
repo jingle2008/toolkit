@@ -183,6 +183,25 @@ func getTenants(tenantMap map[string]idMap, tenantMeta []models.TenantMetadata) 
 	return tenants
 }
 
+// tenantNameSetter is satisfied by *T where T's pointer receiver
+// has a SetTenantName(string) method — the three tenancy-override
+// types in pkg/models. Used by populateTenantName to stamp the map
+// key (tenant directory name) onto each loaded record so consumers
+// can read it from the struct instead of carrying the map key
+// alongside.
+type tenantNameSetter[T any] interface {
+	*T
+	SetTenantName(string)
+}
+
+func populateTenantName[T any, PT tenantNameSetter[T]](overrideMap map[string][]T) {
+	for name, ovs := range overrideMap {
+		for i := range ovs {
+			PT(&ovs[i]).SetTenantName(name)
+		}
+	}
+}
+
 func updateTenants[T models.TenancyOverride](
 	tenantMap map[string]idMap, overrideMap map[string][]T,
 ) {
@@ -333,11 +352,7 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metad
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	for name, ovs := range limitTenancyOverrideMap {
-		for i := range ovs {
-			ovs[i].TenantName = name
-		}
-	}
+	populateTenantName(limitTenancyOverrideMap)
 	updateTenants(tenantMap, limitTenancyOverrideMap)
 
 	consolePropertyTenancyOverrideMap, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](
@@ -345,11 +360,7 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metad
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	for name, ovs := range consolePropertyTenancyOverrideMap {
-		for i := range ovs {
-			ovs[i].TenantName = name
-		}
-	}
+	populateTenantName(consolePropertyTenancyOverrideMap)
 	updateTenants(tenantMap, consolePropertyTenancyOverrideMap)
 
 	propertyTenancyOverrideMap, err := loadTenancyOverrides[models.PropertyTenancyOverride](
@@ -357,11 +368,7 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metad
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	for name, ovs := range propertyTenancyOverrideMap {
-		for i := range ovs {
-			ovs[i].TenantName = name
-		}
-	}
+	populateTenantName(propertyTenancyOverrideMap)
 	updateTenants(tenantMap, propertyTenancyOverrideMap)
 
 	tenants := getTenants(tenantMap, metadata.GetTenants(realm))

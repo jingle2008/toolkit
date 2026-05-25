@@ -87,6 +87,14 @@ func (o LimitTenancyOverride) GetTenantID() string {
 	return o.TenantID
 }
 
+// SetTenantName stamps the tenant short name onto the override.
+// Called by the configloader after unmarshal so consumers can read
+// the grouping identifier from the struct instead of carrying the
+// map key alongside.
+func (o *LimitTenancyOverride) SetTenantName(name string) {
+	o.TenantName = name
+}
+
 // GetFilterableFields returns filterable fields for the limit tenancy override.
 func (o LimitTenancyOverride) GetFilterableFields() []string {
 	return append(o.Regions, o.Name, o.TenantName, o.TenantID)

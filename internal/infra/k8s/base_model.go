@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"sigs.k8s.io/yaml"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"sigs.k8s.io/yaml"
 
 	"github.com/jingle2008/toolkit/pkg/models"
 )
