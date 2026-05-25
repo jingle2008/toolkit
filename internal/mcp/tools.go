@@ -260,13 +260,13 @@ func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallTo
 	}
 	switch in.Kind {
 	case "limit":
-		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.LimitTenancyOverrideMap, normFilter(in.Filter)), "tenant")
+		flat := output.Flatten(collections.FilterMapOrAll(grp.LimitTenancyOverrideMap, normFilter(in.Filter)))
 		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
 	case "console_property":
-		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.ConsolePropertyTenancyOverrideMap, normFilter(in.Filter)), "tenant")
+		flat := output.Flatten(collections.FilterMapOrAll(grp.ConsolePropertyTenancyOverrideMap, normFilter(in.Filter)))
 		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
 	case "property":
-		flat := output.FlattenWithKey(collections.FilterMapOrAll(grp.PropertyTenancyOverrideMap, normFilter(in.Filter)), "tenant")
+		flat := output.Flatten(collections.FilterMapOrAll(grp.PropertyTenancyOverrideMap, normFilter(in.Filter)))
 		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
 	default:
 		return failTool[listResult[any]](ctx, req, "list_tenancy_overrides",

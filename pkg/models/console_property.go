@@ -68,9 +68,12 @@ func (o ConsolePropertyRegionalOverride) IsFaulty() bool {
 	return false
 }
 
-// ConsolePropertyTenancyOverride represents a tenancy override for a console property.
+// ConsolePropertyTenancyOverride represents a tenancy override for a
+// console property. See LimitTenancyOverride for the TenantName /
+// TenantID convention.
 type ConsolePropertyTenancyOverride struct {
-	TenantID string `json:"tenant_id"`
+	TenantName string `json:"tenant"`
+	TenantID   string `json:"tenant_id"`
 	ConsolePropertyRegionalOverride
 }
 
@@ -81,7 +84,7 @@ func (o ConsolePropertyTenancyOverride) GetTenantID() string {
 
 // GetFilterableFields returns filterable fields for the console property tenancy override.
 func (o ConsolePropertyTenancyOverride) GetFilterableFields() []string {
-	return append(o.Regions, o.Name, o.TenantID)
+	return append(o.Regions, o.Name, o.TenantName, o.TenantID)
 }
 
 // IsFaulty returns false by default for ConsolePropertyTenancyOverride.

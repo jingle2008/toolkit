@@ -71,8 +71,15 @@ func (o PropertyRegionalOverride) IsFaulty() bool {
 }
 
 // PropertyTenancyOverride represents a tenancy override for a property.
+//
+// TenantName is the originating tenant directory name (populated by
+// the configloader, same convention as LimitTenancyOverride). Tag is
+// the yaml-declared per-record tenant identifier; PropertyTenancyOverride
+// uses "tag" as the field name historically, so GetTenantID returns
+// it for symmetry with the other override types.
 type PropertyTenancyOverride struct {
-	Tag string `json:"tag"`
+	TenantName string `json:"tenant"`
+	Tag        string `json:"tag"`
 	PropertyRegionalOverride
 }
 
@@ -83,5 +90,5 @@ func (o PropertyTenancyOverride) GetTenantID() string {
 
 // GetFilterableFields returns filterable fields for the property tenancy override.
 func (o PropertyTenancyOverride) GetFilterableFields() []string {
-	return append(o.Regions, o.Name, o.Tag)
+	return append(o.Regions, o.Name, o.TenantName, o.Tag)
 }

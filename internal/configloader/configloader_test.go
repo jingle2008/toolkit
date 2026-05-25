@@ -463,6 +463,42 @@ func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TestLoadTenancyOverrideGroup_PopulatesTenantName pins the
+// post-load step in LoadTenancyOverrideGroup that copies the tenant
+// directory name onto each override's TenantName field. This is the
+// invariant that lets MCP and CLI flatten the maps through plain
+// output.Flatten (instead of the old FlattenWithKey injection path)
+// while preserving the "tenant" JSON field shape.
+func TestLoadTenancyOverrideGroup_PopulatesTenantName(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	realm := "testrealm"
+	writeOverride := func(category, tenant, filename, body string) {
+		t.Helper()
+		dir := filepath.Join(root, "shared_modules/limits", category+"_tenancy_overrides", "regional_values", realm, tenant)
+		require.NoError(t, os.MkdirAll(dir, 0o750)) // #nosec G301
+		require.NoError(t, os.WriteFile(filepath.Join(dir, filename), []byte(body), 0o600))
+	}
+	// Two limit overrides under one tenant, plus one each for console_property
+	// and property categories.
+	writeOverride("limits", "tenant-a", "lim.json", `{"name":"l1","tenant_id":"ocid1.tenancy.aaa"}`)
+	writeOverride("console_properties", "tenant-a", "cp.json", `{"name":"c1","tenant_id":"ocid1.tenancy.aaa"}`)
+	writeOverride("properties", "tenant-b", "p.json", `{"name":"p1","tag":"ocid1.tenancy.bbb"}`)
+
+	group, err := LoadTenancyOverrideGroup(context.Background(), root, realm, &models.Metadata{})
+	require.NoError(t, err)
+
+	for _, ov := range group.LimitTenancyOverrideMap["tenant-a"] {
+		assert.Equal(t, "tenant-a", ov.TenantName, "Limit override TenantName must equal the directory name")
+	}
+	for _, ov := range group.ConsolePropertyTenancyOverrideMap["tenant-a"] {
+		assert.Equal(t, "tenant-a", ov.TenantName, "ConsoleProperty override TenantName must equal the directory name")
+	}
+	for _, ov := range group.PropertyTenancyOverrideMap["tenant-b"] {
+		assert.Equal(t, "tenant-b", ov.TenantName, "Property override TenantName must equal the directory name")
+	}
+}
+
 func TestLoadRegionalOverrides_MissingDir(t *testing.T) {
 	t.Parallel()
 	out, err := LoadLimitRegionalOverrides(context.Background(), "/no/such/path", "realm")

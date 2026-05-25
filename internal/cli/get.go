@@ -408,30 +408,9 @@ func writeMap[T any](w writer, grouped map[string][]T, limit int, opts output.Op
 	}
 }
 
-// writeMapWithGroupKey renders a grouped map and injects the map key as
-// groupField into each emitted object for JSON/JSONL/YAML output (via
-// output.FlattenWithKey). Use for the three tenancy override categories
-// where the group key (tenant directory name) is not a struct field on T.
-// Table/CSV/TSV go through columns.RenderTable.
-func writeMapWithGroupKey[T any](w writer, grouped map[string][]T, limit int, opts output.Options, cat domain.Category, selected []string, groupField string) error {
-	switch opts.Format {
-	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
-		return writeEncoded(w, opts, collections.TruncateSlice(output.FlattenWithKey(grouped, groupField), limit))
-	case output.FormatTable, output.FormatCSV, output.FormatTSV:
-		headers, rows, err := columns.RenderTable(cat, grouped, selected)
-		if err != nil {
-			return err
-		}
-		rows = collections.TruncateSlice(rows, limit)
-		return writeTableLike(w, headers, rows, opts)
-	default:
-		return fmt.Errorf("unsupported format %q", opts.Format)
-	}
-}
 
 // writeEncoded dispatches the json/jsonl/yaml branches for an
-// already-flattened items slice. Shared between writeMap and
-// writeMapWithGroupKey so the two only differ in the flatten step.
+// already-flattened items slice.
 func writeEncoded(w writer, opts output.Options, items any) error {
 	switch opts.Format {
 	case output.FormatJSON:
@@ -458,14 +437,14 @@ func emitTenancyGroup(
 	case domain.Tenant:
 		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, domain.Tenant, selected)
 	case domain.LimitTenancyOverride:
-		return writeMapWithGroupKey(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), limit, opts,
-			domain.LimitTenancyOverride, selected, "tenant")
+		return writeMap(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), limit, opts,
+			domain.LimitTenancyOverride, selected)
 	case domain.ConsolePropertyTenancyOverride:
-		return writeMapWithGroupKey(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), limit, opts,
-			domain.ConsolePropertyTenancyOverride, selected, "tenant")
+		return writeMap(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), limit, opts,
+			domain.ConsolePropertyTenancyOverride, selected)
 	case domain.PropertyTenancyOverride:
-		return writeMapWithGroupKey(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), limit, opts,
-			domain.PropertyTenancyOverride, selected, "tenant")
+		return writeMap(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), limit, opts,
+			domain.PropertyTenancyOverride, selected)
 	default:
 		return fmt.Errorf("category %s not in tenancy group", cat)
 	}

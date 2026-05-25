@@ -333,6 +333,11 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metad
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
+	for name, ovs := range limitTenancyOverrideMap {
+		for i := range ovs {
+			ovs[i].TenantName = name
+		}
+	}
 	updateTenants(tenantMap, limitTenancyOverrideMap)
 
 	consolePropertyTenancyOverrideMap, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](
@@ -340,12 +345,22 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metad
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
+	for name, ovs := range consolePropertyTenancyOverrideMap {
+		for i := range ovs {
+			ovs[i].TenantName = name
+		}
+	}
 	updateTenants(tenantMap, consolePropertyTenancyOverrideMap)
 
 	propertyTenancyOverrideMap, err := loadTenancyOverrides[models.PropertyTenancyOverride](
 		ctx, limitsRoot, realm, propertiesKey+tenancyOverridesKey)
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
+	}
+	for name, ovs := range propertyTenancyOverrideMap {
+		for i := range ovs {
+			ovs[i].TenantName = name
+		}
 	}
 	updateTenants(tenantMap, propertyTenancyOverrideMap)
 

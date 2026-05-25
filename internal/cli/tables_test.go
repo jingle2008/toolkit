@@ -415,25 +415,30 @@ func TestWriteMap_DACs_NoInjectedTenantField(t *testing.T) {
 	assert.False(t, hasTenant, "redundant `tenant` field should not be injected")
 }
 
-// TestWriteMapWithGroupKey_TenancyOverride_JSONInjectsTenant pins that
-// writeMapWithGroupKey injects the "tenant" field in JSON output for
-// tenancy override categories. This is the JSON contract that the CLI
-// has always provided (the group key is not a struct field on the value).
-func TestWriteMapWithGroupKey_TenancyOverride_JSONInjectsTenant(t *testing.T) {
+// TestWriteMap_TenancyOverride_EmitsTenantName pins that the JSON
+// output for tenancy override categories carries the tenant short
+// name under "tenant". This used to come from FlattenWithKey
+// injecting the map key; now the struct itself carries TenantName
+// (populated by the configloader from the directory name) and
+// writeMap is sufficient. The on-wire JSON shape is unchanged.
+func TestWriteMap_TenancyOverride_EmitsTenantName(t *testing.T) {
 	t.Parallel()
 	grouped := map[string][]models.LimitTenancyOverride{
-		"tenant-a": {{LimitRegionalOverride: models.LimitRegionalOverride{Name: "limit-1"}}},
+		"tenant-a": {{
+			LimitRegionalOverride: models.LimitRegionalOverride{Name: "limit-1"},
+			TenantName:            "tenant-a",
+		}},
 	}
 	var buf bytes.Buffer
-	err := writeMapWithGroupKey(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true},
-		domain.LimitTenancyOverride, nil, "tenant")
+	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true},
+		domain.LimitTenancyOverride, nil)
 	require.NoError(t, err)
 
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
 	require.Len(t, arr, 1)
 	item := arr[0]
-	assert.Equal(t, "tenant-a", item["tenant"], "tenant field must be injected by FlattenWithKey")
+	assert.Equal(t, "tenant-a", item["tenant"], "tenant field must come through from struct's TenantName")
 }
 
 // TestWriteAliases_CanonicalShape verifies the new writeAliases emits

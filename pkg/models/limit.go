@@ -67,9 +67,19 @@ func (o LimitRegionalOverride) IsFaulty() bool {
 }
 
 // LimitTenancyOverride represents a tenancy override for a limit.
+//
+// TenantName carries the originating tenant directory name (the short
+// human-readable identifier used as the map key in
+// Dataset.LimitTenancyOverrideMap) and is populated by the
+// configloader after yaml unmarshal — yaml files don't usually
+// declare it because the path-grouping is conventional. TenantID is
+// the per-record OCID from yaml. The two are distinct identifiers
+// for the same tenant: name groups records together; id is the OCI
+// identifier on this specific record.
 type LimitTenancyOverride struct {
 	LimitRegionalOverride
-	TenantID string `json:"tenant_id"`
+	TenantName string `json:"tenant"`
+	TenantID   string `json:"tenant_id"`
 }
 
 // GetTenantID returns the tenant ID of the limit tenancy override.
@@ -79,5 +89,5 @@ func (o LimitTenancyOverride) GetTenantID() string {
 
 // GetFilterableFields returns filterable fields for the limit tenancy override.
 func (o LimitTenancyOverride) GetFilterableFields() []string {
-	return append(o.Regions, o.Name, o.TenantID)
+	return append(o.Regions, o.Name, o.TenantName, o.TenantID)
 }

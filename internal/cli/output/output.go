@@ -81,9 +81,9 @@ func WriteJSON(w io.Writer, items any, opts Options) error {
 // (each element becomes a line) or any single JSON-encodable value
 // (emitted as one line).
 //
-// Grouped/map data should be flattened with Flatten (when the group
-// key is already a field on the value) or FlattenWithKey (when the
-// caller needs to inject the map key) before reaching this function.
+// Grouped/map data should be flattened with Flatten (the group key
+// is expected to be a struct field on the value) before reaching
+// this function.
 func WriteJSONL(w io.Writer, items any, _ Options) error {
 	if items == nil {
 		return nil
@@ -113,47 +113,6 @@ func WriteYAML(w io.Writer, items any, opts Options) error {
 		enc.SetIndent(2)
 	}
 	return enc.Encode(items)
-}
-
-// FlattenWithKey turns a map[string][]T into []map[string]any, injecting
-// the map key into each element under groupField. Used to expose grouped
-// loader data (e.g. GpuNodeMap, DedicatedAIClusterMap) as a uniform
-// array of objects without leaking the underlying map shape to MCP /
-// JSON consumers.
-//
-// The output is stable: map keys are sorted before iteration. The
-// implementation round-trips through JSON so the caller's struct tags
-// (omitempty, custom names, etc.) are honored.
-//
-// Collision rule: if T's JSON encoding already contains a field whose
-// name equals groupField, the map key wins — the existing value is
-// silently overwritten. Callers should choose a groupField that doesn't
-// collide with any of T's tagged fields. The current production callers
-// pick "pool" / "tenant" / "model", none of which clash with the
-// underlying pkg/models types. Test coverage pins this behavior
-// (TestFlattenWithKey_CollisionOverwrites).
-func FlattenWithKey[T any](grouped map[string][]T, groupField string) []map[string]any {
-	keys := make([]string, 0, len(grouped))
-	for k := range grouped {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	out := make([]map[string]any, 0)
-	for _, k := range keys {
-		for _, v := range grouped[k] {
-			raw, err := json.Marshal(v)
-			if err != nil {
-				continue
-			}
-			var m map[string]any
-			if err := json.Unmarshal(raw, &m); err != nil {
-				continue
-			}
-			m[groupField] = k
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 // Flatten concatenates a grouped map[string][]T into a flat []T with
