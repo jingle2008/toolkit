@@ -144,9 +144,10 @@ func (e Category) GetFilterableFields() []string {
 	return e.GetAliases()
 }
 
-/*
-IsFaulty returns whether the Category is considered faulty.
-*/
+// IsFaulty always returns false. Category exists in the Filterable
+// interface set but has no faulty notion of its own; the method is
+// here only so Category satisfies models.Filterable alongside the
+// real domain types.
 func (e Category) IsFaulty() bool {
 	return false
 }
