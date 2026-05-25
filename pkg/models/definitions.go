@@ -29,6 +29,25 @@ type TenancyOverride interface {
 	GetTenantID() string
 }
 
+// RealmedID is implemented by OCI resources whose full OCID is
+// constructed from a realm and a region plus a stored name suffix
+// — DedicatedAICluster and ImportedModel today. Distinct from
+// NamedItem.GetName (which returns just the suffix) and used by the
+// TUI's CopyItemName action to produce the full OCID.
+type RealmedID interface {
+	GetID(realm, region string) string
+}
+
+// RealmedTenancyID is implemented by OCI resources whose owning
+// tenancy OCID is constructed from a realm plus a stored tenancy-id
+// suffix — DedicatedAICluster and ImportedModel today. Distinct
+// from TenancyOverride.GetTenantID (which takes no realm and is
+// implemented by file-backed override types whose stored TenantID
+// is already the full identifier).
+type RealmedTenancyID interface {
+	GetTenantID(realm string) string
+}
+
 // DefinitionOverride represents a definition override with regions and value.
 type DefinitionOverride interface {
 	NamedFilterable

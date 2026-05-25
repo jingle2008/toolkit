@@ -12,20 +12,16 @@ import (
 var clipboardWriteAll = clipboard.WriteAll
 
 // CopyItemName copies the name or ID of an item to the clipboard.
+// RealmedID implementers (DAC, ImportedModel) get their full OCID;
+// other NamedItem implementers get their raw name.
 func CopyItemName(item any, env models.Environment, logger logging.Logger) {
 	if item == nil {
 		logger.Errorw("no item selected for copying name")
 		return
 	}
 
-	if dac, ok := item.(*models.DedicatedAICluster); ok {
-		id := dac.GetID(env.Realm, env.Region)
-		if err := clipboardWriteAll(id); err != nil {
-			logger.Errorw("failed to copy id to clipboard", "error", err)
-		}
-	} else if im, ok := item.(*models.ImportedModel); ok {
-		id := im.GetID(env.Realm, env.Region)
-		if err := clipboardWriteAll(id); err != nil {
+	if r, ok := item.(models.RealmedID); ok {
+		if err := clipboardWriteAll(r.GetID(env.Realm, env.Region)); err != nil {
 			logger.Errorw("failed to copy id to clipboard", "error", err)
 		}
 	} else if to, ok := item.(models.NamedItem); ok {
@@ -37,21 +33,18 @@ func CopyItemName(item any, env models.Environment, logger logging.Logger) {
 	}
 }
 
-// CopyTenantID copies the tenant ID from the current row to the clipboard if available.
+// CopyTenantID copies the tenant ID from the current row to the
+// clipboard. RealmedTenancyID implementers (DAC, ImportedModel) get
+// their full tenancy OCID; TenancyOverride implementers (file-backed
+// override types) get whatever's stored in their TenantID field.
 func CopyTenantID(item any, env models.Environment, logger logging.Logger) {
 	if item == nil {
 		logger.Errorw("no item selected for copying tenant ID")
 		return
 	}
 
-	if dac, ok := item.(*models.DedicatedAICluster); ok {
-		tenantID := dac.GetTenantID(env.Realm)
-		if err := clipboardWriteAll(tenantID); err != nil {
-			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
-		}
-	} else if im, ok := item.(*models.ImportedModel); ok {
-		tenantID := im.GetTenantID(env.Realm)
-		if err := clipboardWriteAll(tenantID); err != nil {
+	if r, ok := item.(models.RealmedTenancyID); ok {
+		if err := clipboardWriteAll(r.GetTenantID(env.Realm)); err != nil {
 			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
 		}
 	} else if to, ok := item.(models.TenancyOverride); ok {

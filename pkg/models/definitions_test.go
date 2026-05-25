@@ -27,6 +27,20 @@ func TestDefinitionInterfaces(t *testing.T) {
 	var _ DefinitionOverride = testImpl{}
 }
 
+// TestRealmedInterfaces pins the (DAC, ImportedModel) ↔
+// (RealmedID, RealmedTenancyID) implementation contract that the
+// TUI's CopyItemName and CopyTenantID actions dispatch on. A
+// signature drift on either model would break this assertion at
+// compile time, ahead of the action-level type switch silently
+// missing the type.
+func TestRealmedInterfaces(t *testing.T) {
+	t.Parallel()
+	var _ RealmedID = (*DedicatedAICluster)(nil)
+	var _ RealmedID = (*ImportedModel)(nil)
+	var _ RealmedTenancyID = (*DedicatedAICluster)(nil)
+	var _ RealmedTenancyID = (*ImportedModel)(nil)
+}
+
 func TestLimitDefinitionGroup_AndOthers(t *testing.T) {
 	t.Parallel()
 	ldg := LimitDefinitionGroup{}
