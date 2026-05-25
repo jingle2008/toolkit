@@ -84,7 +84,7 @@ func (m BaseModel) GetFilterableFields() []string {
 		m.Type, m.GetFlags(), shapeName, m.Runtime, m.StorageURI)
 }
 
-// IsFaulty returns false by default for BaseModel.
+// IsFaulty reports whether the model's Status is anything other than "Ready".
 func (m BaseModel) IsFaulty() bool {
 	return m.Status != "Ready"
 }

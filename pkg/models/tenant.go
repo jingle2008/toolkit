@@ -28,7 +28,10 @@ func (t Tenant) GetTenantID() string {
 
 // GetFilterableFields returns filterable fields for the tenant.
 func (t Tenant) GetFilterableFields() []string {
-	fields := t.IDs[1:]
+	var fields []string
+	if len(t.IDs) > 1 {
+		fields = t.IDs[1:]
+	}
 	return append(fields, t.GetTenantID(), t.Name, fmt.Sprint(t.IsInternal), t.Note)
 }
 

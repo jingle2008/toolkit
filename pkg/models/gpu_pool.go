@@ -28,7 +28,7 @@ func (p GpuPool) GetFilterableFields() []string {
 	return []string{p.Name, p.Shape, p.CapacityType}
 }
 
-// IsFaulty returns false if actual size is different from desired size.
+// IsFaulty reports whether the pool's actual size differs from its desired size.
 func (p GpuPool) IsFaulty() bool {
 	return p.ActualSize != p.Size
 }

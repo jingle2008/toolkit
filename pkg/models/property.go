@@ -57,6 +57,9 @@ func (o PropertyRegionalOverride) GetRegions() []string {
 
 // GetValue returns the value of the property regional override.
 func (o PropertyRegionalOverride) GetValue() string {
+	if len(o.Values) == 0 {
+		return ""
+	}
 	return o.Values[0].Value
 }
 

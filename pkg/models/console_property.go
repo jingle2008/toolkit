@@ -55,6 +55,9 @@ func (o ConsolePropertyRegionalOverride) GetRegions() []string {
 
 // GetValue returns the value of the console property regional override.
 func (o ConsolePropertyRegionalOverride) GetValue() string {
+	if len(o.Values) == 0 {
+		return ""
+	}
 	return o.Values[0].Value
 }
 
