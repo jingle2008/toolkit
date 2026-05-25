@@ -33,66 +33,6 @@ func faultyPred[T models.Faulty](t T) bool {
 	return t.IsFaulty()
 }
 
-var categoryHandlers = map[domain.Category]func(*models.Dataset, *domain.ToolkitContext, string, bool) []table.Row{
-	domain.Alias: func(_ *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.AliasColumns, domain.Categories, filter, faultyOnly)
-	},
-	domain.Tenant: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.TenantColumns, dataset.Tenants, filter, faultyOnly)
-	},
-	domain.LimitDefinition: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.LimitDefinitionColumns, dataset.LimitDefinitionGroup.Values, filter, faultyOnly)
-	},
-	domain.ConsolePropertyDefinition: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.ConsolePropertyDefinitionColumns, dataset.ConsolePropertyDefinitionGroup.Values, filter, faultyOnly)
-	},
-	domain.PropertyDefinition: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.PropertyDefinitionColumns, dataset.PropertyDefinitionGroup.Values, filter, faultyOnly)
-	},
-	domain.LimitTenancyOverride: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsGrouped(columns.LimitTenancyOverrideColumns, dataset.LimitTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly)
-	},
-	domain.ConsolePropertyTenancyOverride: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsGrouped(columns.ConsolePropertyTenancyOverrideColumns, dataset.ConsolePropertyTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly)
-	},
-	domain.PropertyTenancyOverride: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsGrouped(columns.PropertyTenancyOverrideColumns, dataset.PropertyTenancyOverrideMap, domain.Tenant, context, filter, faultyOnly)
-	},
-	domain.LimitRegionalOverride: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.LimitRegionalOverrideColumns, dataset.LimitRegionalOverrides, filter, faultyOnly)
-	},
-	domain.ConsolePropertyRegionalOverride: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.ConsolePropertyRegionalOverrideColumns, dataset.ConsolePropertyRegionalOverrides, filter, faultyOnly)
-	},
-	domain.PropertyRegionalOverride: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.PropertyRegionalOverrideColumns, dataset.PropertyRegionalOverrides, filter, faultyOnly)
-	},
-	domain.BaseModel: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.BaseModelColumns, dataset.BaseModels, filter, faultyOnly)
-	},
-	domain.ImportedModel: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsGrouped(columns.ImportedModelColumns, dataset.ImportedModelMap, domain.Tenant, context, filter, faultyOnly)
-	},
-	domain.ModelArtifact: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsGrouped(columns.ModelArtifactColumns, dataset.ModelArtifactMap, domain.BaseModel, context, filter, faultyOnly)
-	},
-	domain.Environment: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.EnvironmentColumns, dataset.Environments, filter, faultyOnly)
-	},
-	domain.ServiceTenancy: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.ServiceTenancyColumns, dataset.ServiceTenancies, filter, faultyOnly)
-	},
-	domain.GpuPool: func(dataset *models.Dataset, _ *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsFlat(columns.GpuPoolColumns, dataset.GpuPools, filter, faultyOnly)
-	},
-	domain.GpuNode: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsGrouped(columns.GpuNodeColumns, dataset.GpuNodeMap, domain.GpuPool, context, filter, faultyOnly)
-	},
-	domain.DedicatedAICluster: func(dataset *models.Dataset, context *domain.ToolkitContext, filter string, faultyOnly bool) []table.Row {
-		return tuiRowsGrouped(columns.DacColumns, dataset.DedicatedAIClusterMap, domain.Tenant, context, filter, faultyOnly)
-	},
-}
-
 func headersFromSet[T any](cols []columns.Column[T]) []header {
 	out := make([]header, len(cols))
 	for i, c := range cols {
@@ -167,16 +107,21 @@ func getTableRows(dataset *models.Dataset, category domain.Category, context *do
 		context = nil
 	}
 
-	if handler, exists := categoryHandlers[category]; exists {
-		rows := handler(dataset, context, filter, faultyOnly)
-		if sortColumn != "" && len(rows) > 0 {
-			headers := getHeaders(category)
-			sortRows(rows, headers, sortColumn, sortAsc)
-		}
-		return rows, computeStats(category, rows)
+	src, exists := rowSources[category]
+	if !exists {
+		return nil, nil
 	}
-
-	return nil, nil
+	rows := src(rowCtx{
+		dataset: dataset,
+		context: context,
+		filter:  filter,
+		faulty:  faultyOnly,
+	})
+	if sortColumn != "" && len(rows) > 0 {
+		headers := getHeaders(category)
+		sortRows(rows, headers, sortColumn, sortAsc)
+	}
+	return rows, computeStats(category, rows)
 }
 
 // computeStats calculates stats for the given category and rows.

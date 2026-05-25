@@ -222,19 +222,18 @@ func TestExportTableCSV_IgnoresInteractiveSort(t *testing.T) {
 	assert.Equal(t, "bob", records[3][0])
 }
 
-// TestExportRowBuilders_CoversCategoryHandlers guards the parity
-// between the live row-rendering dispatch (categoryHandlers in
-// table_utils.go) and the export-mode dispatch (exportRowBuilders
-// in export_csv.go). Any list-view category the user can reach
-// via <e> must have an export builder, or the CSV export silently
-// emits a header-only file. Before this invariant existed, Alias
-// was missing from exportRowBuilders despite categoryHandlers
-// registering it.
-func TestExportRowBuilders_CoversCategoryHandlers(t *testing.T) {
+// TestRowSources_CoversAllCategories guards the structural fence
+// for rowSources, the single per-category dispatch shared by the
+// live table and the CSV export. Adding a new domain.Category
+// without a rowSources entry would silently emit empty TUI rows
+// AND a header-only CSV on <e>; this test fails the build first.
+// Stronger than the previous paired-map parity check, which only
+// caught drift between two maps and not "forgot both".
+func TestRowSources_CoversAllCategories(t *testing.T) {
 	t.Parallel()
-	for cat := range categoryHandlers {
-		if _, ok := exportRowBuilders[cat]; !ok {
-			t.Errorf("category %s has a live row builder but no exportRowBuilders entry — pressing <e> would emit a header-only CSV", cat)
+	for _, cat := range domain.Categories {
+		if _, ok := rowSources[cat]; !ok {
+			t.Errorf("category %s has no rowSources entry — TUI table and CSV export would both be empty", cat)
 		}
 	}
 }
