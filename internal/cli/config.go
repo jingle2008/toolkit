@@ -73,9 +73,9 @@ Examples:
 // Keeping it a typed struct (rather than a free-form map) means
 // consumers can rely on a stable schema.
 type configView struct {
-	ConfigFile string         `json:"config_file" yaml:"config_file"`
-	Exists     bool           `json:"exists" yaml:"exists"`
-	Settings   map[string]any `json:"settings" yaml:"settings"`
+	ConfigFile string         `json:"config_file"`
+	Exists     bool           `json:"exists"`
+	Settings   map[string]any `json:"settings"`
 }
 
 func writeConfigView(w io.Writer, cfgFile, format string, pretty bool) error {
@@ -113,9 +113,9 @@ func writeConfigView(w io.Writer, cfgFile, format string, pretty bool) error {
 // distinct from configView so consumers can rely on a stable schema
 // regardless of which mode the command ran in.
 type configValidationView struct {
-	Valid      bool   `json:"valid" yaml:"valid"`
-	ConfigFile string `json:"config_file" yaml:"config_file"`
-	Error      string `json:"error,omitempty" yaml:"error,omitempty"`
+	Valid      bool   `json:"valid"`
+	ConfigFile string `json:"config_file"`
+	Error      string `json:"error,omitempty"`
 }
 
 func writeConfigValidation(w io.Writer, cfgFile, format string, pretty bool) error {

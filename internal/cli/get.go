@@ -521,8 +521,8 @@ func emitFromDataset(
 // category, with the list of aliases for that category. Useful for
 // scripts and LLM agents.
 type aliasView struct {
-	Name    string   `json:"name" yaml:"name"`
-	Aliases []string `json:"aliases" yaml:"aliases"`
+	Name    string   `json:"name"`
+	Aliases []string `json:"aliases"`
 }
 
 // writeAliases renders the canonical alias list — one row per category

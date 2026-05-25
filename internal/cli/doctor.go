@@ -73,10 +73,10 @@ const (
 // human-readable observation; Hint is the actionable next step
 // (empty when the check passed).
 type checkResult struct {
-	Name   string      `json:"name" yaml:"name"`
-	Status checkStatus `json:"status" yaml:"status"`
-	Detail string      `json:"detail,omitempty" yaml:"detail,omitempty"`
-	Hint   string      `json:"hint,omitempty" yaml:"hint,omitempty"`
+	Name   string      `json:"name"`
+	Status checkStatus `json:"status"`
+	Detail string      `json:"detail,omitempty"`
+	Hint   string      `json:"hint,omitempty"`
 }
 
 func runDoctor(w io.Writer, cfgFile, format string) error {
