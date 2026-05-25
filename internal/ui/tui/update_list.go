@@ -69,39 +69,10 @@ func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
 }
 
 func (m *Model) routeListDataMsg(msg tea.Msg) []tea.Cmd {
-	switch msg := msg.(type) {
-	case datasetLoadedMsg:
-		return []tea.Cmd{m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen})}
-	case baseModelsLoadedMsg:
-		m.handleBaseModelsLoaded(msg.Items, msg.Gen)
-	case importedModelsLoadedMsg:
-		m.handleImportedModelsLoaded(msg.Items, msg.Gen)
-	case gpuPoolsLoadedMsg:
-		return []tea.Cmd{m.handleGpuPoolsLoaded(msg.Items, msg.Gen)}
-	default:
-		return m.routeListMoreDataMsg(msg)
+	if dm, ok := msg.(datasetLoadedMsg); ok {
+		return []tea.Cmd{m.handleDataMsg(DataMsg{Data: dm.Dataset, Gen: dm.Gen})}
 	}
-	return nil
-}
-
-func (m *Model) routeListMoreDataMsg(msg tea.Msg) []tea.Cmd {
-	switch msg := msg.(type) {
-	case gpuNodesLoadedMsg:
-		m.handleGpuNodesLoaded(msg.Items, msg.Gen)
-	case dedicatedAIClustersLoadedMsg:
-		m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen)
-	case tenancyOverridesLoadedMsg:
-		m.handleTenancyOverridesLoaded(msg.Group, msg.Gen)
-	case limitRegionalOverridesLoadedMsg:
-		m.handleLimitRegionalOverridesLoaded(msg.Items, msg.Gen)
-	case consolePropertyRegionalOverridesLoadedMsg:
-		m.handleConsolePropertyRegionalOverridesLoaded(msg.Items, msg.Gen)
-	case propertyRegionalOverridesLoadedMsg:
-		m.handlePropertyRegionalOverridesLoaded(msg.Items, msg.Gen)
-	default:
-		// Future-proof: ignore unknown message types
-	}
-	return nil
+	return m.routeLoadedDataMsg(msg)
 }
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {

@@ -36,35 +36,8 @@ func (m *Model) routeLoadingMsg(msg tea.Msg) ([]tea.Cmd, bool) {
 	case spinner.TickMsg:
 		return []tea.Cmd{m.handleSpinnerTickMsg(msg)}, false
 	default:
-		return m.routeLoadingDataMsg(msg), false
+		return m.routeLoadedDataMsg(msg), false
 	}
-}
-
-//nolint:cyclop // message router; complexity is inherent in the number of loaded-message types.
-func (m *Model) routeLoadingDataMsg(msg tea.Msg) []tea.Cmd {
-	switch msg := msg.(type) {
-	case baseModelsLoadedMsg:
-		m.handleBaseModelsLoaded(msg.Items, msg.Gen)
-	case importedModelsLoadedMsg:
-		m.handleImportedModelsLoaded(msg.Items, msg.Gen)
-	case gpuPoolsLoadedMsg:
-		return []tea.Cmd{m.handleGpuPoolsLoaded(msg.Items, msg.Gen)}
-	case gpuNodesLoadedMsg:
-		m.handleGpuNodesLoaded(msg.Items, msg.Gen)
-	case dedicatedAIClustersLoadedMsg:
-		m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen)
-	case tenancyOverridesLoadedMsg:
-		m.handleTenancyOverridesLoaded(msg.Group, msg.Gen)
-	case limitRegionalOverridesLoadedMsg:
-		m.handleLimitRegionalOverridesLoaded(msg.Items, msg.Gen)
-	case consolePropertyRegionalOverridesLoadedMsg:
-		m.handleConsolePropertyRegionalOverridesLoaded(msg.Items, msg.Gen)
-	case propertyRegionalOverridesLoadedMsg:
-		m.handlePropertyRegionalOverridesLoaded(msg.Items, msg.Gen)
-	default:
-		// Future-proof: ignore unknown message types
-	}
-	return nil
 }
 
 func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
