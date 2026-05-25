@@ -18,7 +18,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 // Format is the on-the-wire encoding for `toolkit get`.
@@ -105,14 +105,19 @@ func WriteJSONL(w io.Writer, items any, _ Options) error {
 	return enc.Encode(json.RawMessage(raw))
 }
 
-// WriteYAML emits items as a YAML document.
-func WriteYAML(w io.Writer, items any, opts Options) error {
-	enc := yaml.NewEncoder(w)
-	defer func() { _ = enc.Close() }()
-	if opts.Pretty {
-		enc.SetIndent(2)
+// WriteYAML emits items as a YAML document. Uses sigs.k8s.io/yaml,
+// which marshals via JSON internally and therefore honors the same
+// `json:` tags as WriteJSON — keeping -o json and -o yaml field
+// names consistent without per-struct yaml tags. opts.Pretty has no
+// effect (sigs.k8s.io/yaml has no indent knob; its default
+// formatting is already human-readable).
+func WriteYAML(w io.Writer, items any, _ Options) error {
+	out, err := yaml.Marshal(items)
+	if err != nil {
+		return err
 	}
-	return enc.Encode(items)
+	_, err = w.Write(out)
+	return err
 }
 
 // Flatten concatenates a grouped map[string][]T into a flat []T with

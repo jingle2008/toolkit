@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 func TestConfigCmd_YAML_DefaultPath(t *testing.T) {
@@ -332,9 +332,9 @@ func TestConfigCmd_YAMLDecodes(t *testing.T) {
 	}
 
 	var view struct {
-		ConfigFile string         `yaml:"config_file"`
-		Exists     bool           `yaml:"exists"`
-		Settings   map[string]any `yaml:"settings"`
+		ConfigFile string         `json:"config_file"`
+		Exists     bool           `json:"exists"`
+		Settings   map[string]any `json:"settings"`
 	}
 	if err := yaml.Unmarshal(stdout.Bytes(), &view); err != nil {
 		t.Fatalf("stdout is not valid YAML: %v\n%s", err, stdout.String())

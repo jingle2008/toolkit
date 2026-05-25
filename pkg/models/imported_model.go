@@ -34,10 +34,10 @@ import "fmt"
 // they use for BaseModel; `namespace`, `tenantId`, and `owner` sit
 // alongside.
 type ImportedModel struct {
-	BaseModel `yaml:",inline"`
-	Namespace string  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	TenantID  string  `json:"tenantId"            yaml:"tenantId"`
-	Owner     *Tenant `json:"owner,omitempty"     yaml:"owner,omitempty"`
+	BaseModel
+	Namespace string  `json:"namespace,omitempty"`
+	TenantID  string  `json:"tenantId"`
+	Owner     *Tenant `json:"owner,omitempty"`
 }
 
 // GetFilterableFields extends BaseModel's filterable set with the

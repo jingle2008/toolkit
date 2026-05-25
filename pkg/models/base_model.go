@@ -35,14 +35,14 @@ type BaseModel struct {
 
 // DacShapeConfigs holds compatible DAC shapes.
 type DacShapeConfigs struct {
-	CompatibleDACShapes []DACShape `yaml:"compatibleDACShapes" json:"compatibleDACShapes"`
+	CompatibleDACShapes []DACShape `json:"compatibleDACShapes"`
 }
 
 // DACShape represents a DAC shape.
 type DACShape struct {
-	Name      string `yaml:"name" json:"name"`
-	QuotaUnit int    `yaml:"quotaUnit" json:"quotaUnit"`
-	Default   bool   `yaml:"default" json:"default"`
+	Name      string `json:"name"`
+	QuotaUnit int    `json:"quotaUnit"`
+	Default   bool   `json:"default"`
 }
 
 // GetName returns the name of the base model.

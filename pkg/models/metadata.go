@@ -6,15 +6,15 @@ import (
 
 // TenantMetadata represents a single tenant entry in the external metadata file.
 type TenantMetadata struct {
-	Name       *string `json:"name,omitempty" yaml:"name,omitempty"`
-	ID         string  `json:"id" yaml:"id"`
-	IsInternal *bool   `json:"is_internal,omitempty" yaml:"is_internal,omitempty"`
-	Note       *string `json:"note,omitempty" yaml:"note,omitempty"`
+	Name       *string `json:"name,omitempty"`
+	ID         string  `json:"id"`
+	IsInternal *bool   `json:"is_internal,omitempty"`
+	Note       *string `json:"note,omitempty"`
 }
 
 // Metadata is the top-level structure for metadata.json/yaml.
 type Metadata struct {
-	Tenants []TenantMetadata `json:"tenants" yaml:"tenants"`
+	Tenants []TenantMetadata `json:"tenants"`
 }
 
 // GetTenants returns all tenants for a given realm.

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	fs "github.com/jingle2008/toolkit/internal/fileutil"
