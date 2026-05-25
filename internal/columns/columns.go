@@ -136,6 +136,7 @@ func (g GroupedSet[T]) SelectColumns(keys []string) ([]GroupedColumn[T], error) 
 	return out, nil
 }
 
+// Keys returns the keys declared on g in order.
 func (g GroupedSet[T]) Keys() []string {
 	out := make([]string, len(g.Columns))
 	for i, c := range g.Columns {
@@ -144,6 +145,7 @@ func (g GroupedSet[T]) Keys() []string {
 	return out
 }
 
+// Titles returns the column titles declared on g in order.
 func (g GroupedSet[T]) Titles() []string {
 	out := make([]string, len(g.Columns))
 	for i, c := range g.Columns {
@@ -152,6 +154,7 @@ func (g GroupedSet[T]) Titles() []string {
 	return out
 }
 
+// RatioSum returns the sum of column Ratio values on g.
 func (g GroupedSet[T]) RatioSum() float64 {
 	var sum float64
 	for _, c := range g.Columns {

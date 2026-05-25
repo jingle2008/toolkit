@@ -26,6 +26,8 @@ func RegionalOverrideColumns[T models.DefinitionOverride]() Set[T] {
 	}}
 }
 
+// Canonical column sets for the regional-override categories,
+// instantiated from the shared RegionalOverrideColumns generic.
 var (
 	ConsolePropertyRegionalOverrideColumns = RegionalOverrideColumns[models.ConsolePropertyRegionalOverride]()
 	PropertyRegionalOverrideColumns        = RegionalOverrideColumns[models.PropertyRegionalOverride]()

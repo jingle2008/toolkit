@@ -34,6 +34,8 @@ func TenancyOverrideColumns[T models.DefinitionOverride]() GroupedSet[T] {
 	}}
 }
 
+// Canonical column sets for the tenancy-override categories,
+// instantiated from the shared TenancyOverrideColumns generic.
 var (
 	ConsolePropertyTenancyOverrideColumns = TenancyOverrideColumns[models.ConsolePropertyTenancyOverride]()
 	PropertyTenancyOverrideColumns        = TenancyOverrideColumns[models.PropertyTenancyOverride]()

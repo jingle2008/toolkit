@@ -27,18 +27,19 @@ func TestCSVSnapshots(t *testing.T) {
 			continue
 		}
 		t.Run(cat.String(), func(t *testing.T) {
+			t.Parallel()
 			got := renderCanonicalCSV(t, cat)
 			path := filepath.Join("testdata", "snapshots", cat.String()+".csv")
 			if os.Getenv("UPDATE_SNAPSHOTS") == "1" {
-				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+				if err := os.WriteFile(path, []byte(got), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return
 			}
-			want, err := os.ReadFile(path)
+			want, err := os.ReadFile(path) //nolint:gosec // testdata path; not user-controlled
 			if err != nil {
 				t.Fatalf("read snapshot %s: %v (run with UPDATE_SNAPSHOTS=1 to seed)", path, err)
 			}
@@ -69,6 +70,7 @@ func TestCSVSnapshotsExport(t *testing.T) {
 		domain.ImportedModel,
 	} {
 		t.Run(cat.String(), func(t *testing.T) {
+			t.Parallel()
 			items := fixtureFor(t, cat)
 			headers, rows, err := columns.RenderTableForExport(cat, items, realm, region, nil)
 			if err != nil {
@@ -82,15 +84,15 @@ func TestCSVSnapshotsExport(t *testing.T) {
 
 			path := filepath.Join("testdata", "snapshots", cat.String()+".export.csv")
 			if os.Getenv("UPDATE_SNAPSHOTS") == "1" {
-				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+				if err := os.WriteFile(path, []byte(got), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				return
 			}
-			want, err := os.ReadFile(path)
+			want, err := os.ReadFile(path) //nolint:gosec // testdata path; not user-controlled
 			if err != nil {
 				t.Fatalf("read snapshot %s: %v (run with UPDATE_SNAPSHOTS=1 to seed)", path, err)
 			}

@@ -37,7 +37,7 @@ var BaseModelColumns = Set[models.BaseModel]{Columns: []Column[models.BaseModel]
 	},
 	{
 		Title: "DAC Shape", Key: "dac-shape", Ratio: 0.14,
-		Render: func(m models.BaseModel) string { return baseModelDacShape(m) },
+		Render: baseModelDacShape,
 	},
 	{
 		Title: "Size", Key: "size", Ratio: 0.07,

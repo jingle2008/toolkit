@@ -9,6 +9,10 @@ import (
 )
 
 // Pattern mirrors TestGetCmd_UnknownCategory etc in get_test.go.
+// Tests in this file mutate process-global state (viper.Reset, t.Setenv("HOME"))
+// via runGetForColumnsTest and are intentionally serial.
+
+//nolint:paralleltest // mutates viper global + t.Setenv
 func TestGet_ColumnsFlag_Defaults_Alias(t *testing.T) {
 	out, err := runGetForColumnsTest(t, "alias", "-o", "csv")
 	if err != nil {
@@ -21,6 +25,7 @@ func TestGet_ColumnsFlag_Defaults_Alias(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates viper global + t.Setenv
 func TestGet_ColumnsFlag_Explicit_Alias(t *testing.T) {
 	out, err := runGetForColumnsTest(t, "alias", "-o", "csv", "--columns", "aliases,name")
 	if err != nil {
@@ -33,6 +38,7 @@ func TestGet_ColumnsFlag_Explicit_Alias(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates viper global + t.Setenv
 func TestGet_ColumnsFlag_Unknown_Alias(t *testing.T) {
 	_, err := runGetForColumnsTest(t, "alias", "-o", "csv", "--columns", "name,bogus")
 	if err == nil {
@@ -46,6 +52,7 @@ func TestGet_ColumnsFlag_Unknown_Alias(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates viper global + t.Setenv
 func TestGet_ColumnsFlag_EmptyToken_Alias(t *testing.T) {
 	_, err := runGetForColumnsTest(t, "alias", "-o", "csv", "--columns", "name,,aliases")
 	if err == nil {
@@ -56,6 +63,7 @@ func TestGet_ColumnsFlag_EmptyToken_Alias(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates viper global + t.Setenv
 func TestGet_ColumnsFlag_Help_Alias(t *testing.T) {
 	out, err := runGetForColumnsTest(t, "alias", "--columns", "help")
 	if err != nil {
@@ -69,6 +77,7 @@ func TestGet_ColumnsFlag_Help_Alias(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates viper global + t.Setenv
 func TestGet_ColumnsFlag_MutexWithJSON(t *testing.T) {
 	_, err := runGetForColumnsTest(t, "alias", "-o", "json", "--columns", "name")
 	if err == nil {
