@@ -183,23 +183,37 @@ func getTenants(tenantMap map[string]idMap, tenantMeta []models.TenantMetadata) 
 	return tenants
 }
 
-// tenantNameSetter is satisfied by *T where T's pointer receiver
-// has a SetTenantName(string) method — the three tenancy-override
-// types in pkg/models. Used by populateTenantName to stamp the map
-// key (tenant directory name) onto each loaded record so consumers
-// can read it from the struct instead of carrying the map key
-// alongside.
-type tenantNameSetter[T any] interface {
-	*T
-	SetTenantName(string)
+// tenancyOverrideRecord is the constraint satisfied by every
+// tenancy-override type loaded by loadAndStamp: NamedItem (for the
+// loader path) and TenancyOverride (for the tenantMap update).
+type tenancyOverrideRecord interface {
+	models.NamedItem
+	models.TenancyOverride
 }
 
-func populateTenantName[T any, PT tenantNameSetter[T]](overrideMap map[string][]T) {
-	for name, ovs := range overrideMap {
+// loadAndStamp loads the tenancy override file set under key for the
+// given realm, stamps each record with its source-directory name as
+// TenantName (via setTenantName, since SetTenantName lives on the
+// value pointer), and updates the running tenantMap with this
+// batch's tenant IDs. The three concrete override types call this
+// from LoadTenancyOverrideGroup.
+func loadAndStamp[T tenancyOverrideRecord](
+	ctx context.Context,
+	limitsRoot, realm, key string,
+	tenantMap map[string]idMap,
+	setTenantName func(*T, string),
+) (map[string][]T, error) {
+	m, err := loadTenancyOverrides[T](ctx, limitsRoot, realm, key)
+	if err != nil {
+		return nil, err
+	}
+	for name, ovs := range m {
 		for i := range ovs {
-			PT(&ovs[i]).SetTenantName(name)
+			setTenantName(&ovs[i], name)
 		}
 	}
+	updateTenants(tenantMap, m)
+	return m, nil
 }
 
 func updateTenants[T models.TenancyOverride](
@@ -346,29 +360,29 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metad
 	tenantMap := make(map[string]idMap)
 	limitsRoot := getLimitsRoot(repoPath)
 
-	limitTenancyOverrideMap, err := loadTenancyOverrides[models.LimitTenancyOverride](
-		ctx, limitsRoot, realm, limitsKey+tenancyOverridesKey)
+	limitTenancyOverrideMap, err := loadAndStamp(
+		ctx, limitsRoot, realm, limitsKey+tenancyOverridesKey, tenantMap,
+		func(v *models.LimitTenancyOverride, name string) { v.SetTenantName(name) },
+	)
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	populateTenantName(limitTenancyOverrideMap)
-	updateTenants(tenantMap, limitTenancyOverrideMap)
 
-	consolePropertyTenancyOverrideMap, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](
-		ctx, limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey)
+	consolePropertyTenancyOverrideMap, err := loadAndStamp(
+		ctx, limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey, tenantMap,
+		func(v *models.ConsolePropertyTenancyOverride, name string) { v.SetTenantName(name) },
+	)
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	populateTenantName(consolePropertyTenancyOverrideMap)
-	updateTenants(tenantMap, consolePropertyTenancyOverrideMap)
 
-	propertyTenancyOverrideMap, err := loadTenancyOverrides[models.PropertyTenancyOverride](
-		ctx, limitsRoot, realm, propertiesKey+tenancyOverridesKey)
+	propertyTenancyOverrideMap, err := loadAndStamp(
+		ctx, limitsRoot, realm, propertiesKey+tenancyOverridesKey, tenantMap,
+		func(v *models.PropertyTenancyOverride, name string) { v.SetTenantName(name) },
+	)
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
-	populateTenantName(propertyTenancyOverrideMap)
-	updateTenants(tenantMap, propertyTenancyOverrideMap)
 
 	tenants := getTenants(tenantMap, metadata.GetTenants(realm))
 	return models.TenancyOverrideGroup{
