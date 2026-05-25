@@ -1,8 +1,6 @@
-/*
-Package fs provides utility functions for directory operations,
-such as listing files with a specific extension.
-*/
-package fs
+// Package fileutil also covers directory operations such as listing
+// files with a specific extension. (Shares the file-doc on file.go.)
+package fileutil
 
 import (
 	"context"

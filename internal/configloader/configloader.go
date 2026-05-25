@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
-	fs "github.com/jingle2008/toolkit/internal/fileutil"
+	"github.com/jingle2008/toolkit/internal/fileutil"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
@@ -73,7 +73,7 @@ func loadOverridesDI[T models.NamedItem](
 }
 
 func loadOverrides[T models.NamedItem](ctx context.Context, dirPath string) ([]T, error) {
-	return loadOverridesDI(ctx, dirPath, fs.ListFiles, jsonutil.LoadFile[T])
+	return loadOverridesDI(ctx, dirPath, fileutil.ListFiles, jsonutil.LoadFile[T])
 }
 
 func loadTenancyOverridesDI[T models.NamedItem](

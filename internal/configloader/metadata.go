@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
-	fs "github.com/jingle2008/toolkit/internal/fileutil"
+	"github.com/jingle2008/toolkit/internal/fileutil"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -28,7 +28,7 @@ func LoadMetadata(path string) (*models.Metadata, error) {
 func loadYAML(path, ext string) (*models.Metadata, error) {
 	allowedExt := map[string]struct{}{ext: {}}
 	baseDir := filepath.Dir(path)
-	data, err := fs.SafeReadFile(path, baseDir, allowedExt)
+	data, err := fileutil.SafeReadFile(path, baseDir, allowedExt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read YAML file: %w", err)
 	}

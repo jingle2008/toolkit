@@ -22,7 +22,7 @@ import (
 	"github.com/zclconf/go-cty/cty/function"
 	"github.com/zclconf/go-cty/cty/function/stdlib"
 
-	fs "github.com/jingle2008/toolkit/internal/fileutil"
+	"github.com/jingle2008/toolkit/internal/fileutil"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
@@ -78,7 +78,7 @@ func getLocalAttributesDI(
 GetLocalAttributes loads and returns all local attributes from Terraform files in the specified directory.
 */
 func GetLocalAttributes(ctx context.Context, dirPath string) (hclsyntax.Attributes, error) {
-	return getLocalAttributesDI(ctx, dirPath, fs.ListFiles, updateLocalAttributes)
+	return getLocalAttributesDI(ctx, dirPath, fileutil.ListFiles, updateLocalAttributes)
 }
 
 func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) error {
@@ -109,7 +109,7 @@ func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) err
 // remain unresolved, matching how terraform behaves without -var input.
 func getVariableDefaults(ctx context.Context, dirPath string) (map[string]cty.Value, error) {
 	logger := logging.FromContext(ctx)
-	tfFiles, err := fs.ListFiles(ctx, dirPath, ".tf")
+	tfFiles, err := fileutil.ListFiles(ctx, dirPath, ".tf")
 	if err != nil {
 		return nil, err
 	}

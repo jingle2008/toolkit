@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	fs "github.com/jingle2008/toolkit/internal/fileutil"
+	"github.com/jingle2008/toolkit/internal/fileutil"
 )
 
 /*
@@ -25,7 +25,7 @@ Returns:
 func LoadFile[T any](path string) (*T, error) {
 	allowedExt := map[string]struct{}{".json": {}}
 	baseDir := filepath.Dir(path)
-	jsonData, err := fs.SafeReadFile(path, baseDir, allowedExt)
+	jsonData, err := fileutil.SafeReadFile(path, baseDir, allowedExt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}

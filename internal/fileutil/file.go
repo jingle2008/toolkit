@@ -1,8 +1,8 @@
 /*
-Package fs provides utility functions for secure file operations,
+Package fileutil provides utility functions for secure file operations,
 including path validation and extension whitelisting.
 */
-package fs
+package fileutil
 
 import (
 	"fmt"
