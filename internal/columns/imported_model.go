@@ -12,9 +12,15 @@ import (
 // Ordering is name-first, tenant-key-second (matches TUI; Decision #4).
 var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedColumn[models.ImportedModel]{
 	{Title: "Name", Key: "name", Ratio: 0.20, TruncateMiddle: true,
-		Render: func(_ string, m models.ImportedModel) string { return m.Name }},
+		Render: func(_ string, m models.ImportedModel) string { return m.Name },
+		ExportRender: func(realm, region string, _ string, m models.ImportedModel) string {
+			return m.GetID(realm, region)
+		}},
 	{Title: "Tenant", Key: "tenant", Ratio: 0.22, TruncateMiddle: true,
-		Render: func(k string, _ models.ImportedModel) string { return k }},
+		Render: func(k string, _ models.ImportedModel) string { return k },
+		ExportRender: func(realm, _ string, _ string, m models.ImportedModel) string {
+			return m.GetTenantID(realm)
+		}},
 	{Title: "Namespace", Key: "namespace", Ratio: 0.15, TruncateMiddle: true,
 		Render: func(_ string, m models.ImportedModel) string { return m.Namespace }},
 	{Title: "Display Name", Key: "display-name", Ratio: 0.27,

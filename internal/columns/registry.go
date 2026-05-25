@@ -201,6 +201,70 @@ func RenderTable(cat domain.Category, items any, selected []string) ([]string, [
 	return nil, nil, fmt.Errorf("category %s is not registered with the columns package", cat)
 }
 
+// RenderTableForExport mirrors RenderTable but consults each
+// column's ExportRender when present, producing the values
+// downstream OCI tooling expects (e.g. fully-qualified OCIDs in
+// place of raw Name suffixes for DAC and ImportedModel rows).
+// Columns without ExportRender fall back to Render, so categories
+// that have nothing export-specific to say behave identically to
+// RenderTable.
+//
+// When both realm and region are empty the function short-circuits
+// to RenderTable — ExportRender closures typically format `realm`
+// and `region` into the output, and an empty env would produce
+// well-formed-but-meaningless strings like `ocid1.foo...bar`.
+// Callers without an environment (e.g. unit tests that exercise
+// the column registry directly) should pass empty strings and get
+// raw output.
+//
+//nolint:cyclop // a per-category switch is the contract here
+func RenderTableForExport(cat domain.Category, items any, realm, region string, selected []string) ([]string, [][]string, error) {
+	if realm == "" && region == "" {
+		return RenderTable(cat, items, selected)
+	}
+	switch cat { //nolint:exhaustive
+	case domain.Tenant:
+		return renderFlatExport(TenantColumns, items, realm, region, selected)
+	case domain.Alias:
+		return renderFlatExport(AliasColumns, items, realm, region, selected)
+	case domain.Environment:
+		return renderFlatExport(EnvironmentColumns, items, realm, region, selected)
+	case domain.ServiceTenancy:
+		return renderFlatExport(ServiceTenancyColumns, items, realm, region, selected)
+	case domain.LimitDefinition:
+		return renderFlatExport(LimitDefinitionColumns, items, realm, region, selected)
+	case domain.LimitRegionalOverride:
+		return renderFlatExport(LimitRegionalOverrideColumns, items, realm, region, selected)
+	case domain.BaseModel:
+		return renderFlatExport(BaseModelColumns, items, realm, region, selected)
+	case domain.GpuPool:
+		return renderFlatExport(GpuPoolColumns, items, realm, region, selected)
+	case domain.ConsolePropertyDefinition:
+		return renderFlatExport(ConsolePropertyDefinitionColumns, items, realm, region, selected)
+	case domain.PropertyDefinition:
+		return renderFlatExport(PropertyDefinitionColumns, items, realm, region, selected)
+	case domain.ConsolePropertyRegionalOverride:
+		return renderFlatExport(ConsolePropertyRegionalOverrideColumns, items, realm, region, selected)
+	case domain.PropertyRegionalOverride:
+		return renderFlatExport(PropertyRegionalOverrideColumns, items, realm, region, selected)
+	case domain.GpuNode:
+		return renderGroupedExport(GpuNodeColumns, items, realm, region, selected)
+	case domain.DedicatedAICluster:
+		return renderGroupedExport(DacColumns, items, realm, region, selected)
+	case domain.ImportedModel:
+		return renderGroupedExport(ImportedModelColumns, items, realm, region, selected)
+	case domain.ModelArtifact:
+		return renderGroupedExport(ModelArtifactColumns, items, realm, region, selected)
+	case domain.LimitTenancyOverride:
+		return renderGroupedExport(LimitTenancyOverrideColumns, items, realm, region, selected)
+	case domain.ConsolePropertyTenancyOverride:
+		return renderGroupedExport(ConsolePropertyTenancyOverrideColumns, items, realm, region, selected)
+	case domain.PropertyTenancyOverride:
+		return renderGroupedExport(PropertyTenancyOverrideColumns, items, realm, region, selected)
+	}
+	return nil, nil, fmt.Errorf("category %s is not registered with the columns package", cat)
+}
+
 // HelpTable returns a (Key, Title) row per column of cat,
 // for the `--columns help` output. Empty if cat is unregistered.
 func HelpTable(cat domain.Category) (headers []string, rows [][]string) {
@@ -343,4 +407,70 @@ func pickGrouped[T any](g GroupedSet[T], selected []string) ([]GroupedColumn[T],
 		return g.Columns, nil
 	}
 	return g.SelectColumns(selected)
+}
+
+// renderFlatExport mirrors renderFlat but uses Column.ExportRender
+// when set, falling back to Column.Render otherwise.
+func renderFlatExport[T any](s Set[T], items any, realm, region string, selected []string) ([]string, [][]string, error) {
+	typed, ok := items.([]T)
+	if !ok {
+		return nil, nil, fmt.Errorf("renderFlatExport: items has wrong type %T", items)
+	}
+	cols, err := pickFlat(s, selected)
+	if err != nil {
+		return nil, nil, err
+	}
+	headers := make([]string, len(cols))
+	for i, c := range cols {
+		headers[i] = strings.ToUpper(c.Title)
+	}
+	rows := make([][]string, len(typed))
+	for i, it := range typed {
+		row := make([]string, len(cols))
+		for j, c := range cols {
+			if c.ExportRender != nil {
+				row[j] = c.ExportRender(realm, region, it)
+			} else {
+				row[j] = c.Render(it)
+			}
+		}
+		rows[i] = row
+	}
+	return headers, rows, nil
+}
+
+// renderGroupedExport mirrors renderGrouped but uses
+// GroupedColumn.ExportRender when set.
+func renderGroupedExport[T any](g GroupedSet[T], items any, realm, region string, selected []string) ([]string, [][]string, error) {
+	typed, ok := items.(map[string][]T)
+	if !ok {
+		return nil, nil, fmt.Errorf("renderGroupedExport: items has wrong type %T", items)
+	}
+	cols, err := pickGrouped(g, selected)
+	if err != nil {
+		return nil, nil, err
+	}
+	headers := make([]string, len(cols))
+	for i, c := range cols {
+		headers[i] = strings.ToUpper(c.Title)
+	}
+	total := 0
+	for _, v := range typed {
+		total += len(v)
+	}
+	rows := make([][]string, 0, total)
+	for _, k := range sortedKeys(typed) {
+		for _, it := range typed[k] {
+			row := make([]string, len(cols))
+			for j, c := range cols {
+				if c.ExportRender != nil {
+					row[j] = c.ExportRender(realm, region, k, it)
+				} else {
+					row[j] = c.Render(k, it)
+				}
+			}
+			rows = append(rows, row)
+		}
+	}
+	return headers, rows, nil
 }

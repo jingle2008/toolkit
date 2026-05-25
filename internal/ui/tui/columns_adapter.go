@@ -29,6 +29,30 @@ func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, filter s
 	return rows
 }
 
+// tuiRowsFlatForExport mirrors tuiRowsFlat but consults each column's
+// ExportRender when present. Used by the CSV export path so OCID-shaped
+// columns emit fully-qualified IDs rather than raw suffixes.
+func tuiRowsFlatForExport[T models.NamedFilterable](s columns.Set[T], items []T, realm, region, filter string, faultyOnly bool) []table.Row {
+	var pred func(T) bool
+	if faultyOnly {
+		pred = faultyPred
+	}
+	matches := collections.FilterSlice(items, nil, filter, pred)
+	rows := make([]table.Row, len(matches))
+	for i, m := range matches {
+		row := make(table.Row, len(s.Columns))
+		for j, c := range s.Columns {
+			if c.ExportRender != nil {
+				row[j] = c.ExportRender(realm, region, m)
+			} else {
+				row[j] = c.Render(m)
+			}
+		}
+		rows[i] = row
+	}
+	return rows
+}
+
 // tuiRowsGrouped renders a grouped map, preserving the scope logic
 // from filterRowsScoped.
 func tuiRowsGrouped[T models.NamedFilterable](
@@ -61,6 +85,50 @@ func tuiRowsGrouped[T models.NamedFilterable](
 			row := make(table.Row, len(g.Columns))
 			for j, c := range g.Columns {
 				row[j] = c.Render(k, it)
+			}
+			rows = append(rows, row)
+		}
+	}
+	return rows
+}
+
+// tuiRowsGroupedForExport mirrors tuiRowsGrouped but consults each
+// column's ExportRender when present. Used by the CSV export path so
+// OCID-shaped columns emit fully-qualified IDs.
+func tuiRowsGroupedForExport[T models.NamedFilterable](
+	g columns.GroupedSet[T],
+	m map[string][]T,
+	scopeCategory domain.Category,
+	ctx *domain.ToolkitContext,
+	realm, region, filter string,
+	faultyOnly bool,
+) []table.Row {
+	var (
+		key  *string
+		name *string
+	)
+	if ctx != nil {
+		if ctx.Category == scopeCategory {
+			key = &ctx.Name
+		} else {
+			name = &ctx.Name
+		}
+	}
+	var pred func(T) bool
+	if faultyOnly {
+		pred = faultyPred
+	}
+	matches := collections.FilterMap(m, key, name, filter, pred)
+	rows := make([]table.Row, 0)
+	for k, items := range matches {
+		for _, it := range items {
+			row := make(table.Row, len(g.Columns))
+			for j, c := range g.Columns {
+				if c.ExportRender != nil {
+					row[j] = c.ExportRender(realm, region, k, it)
+				} else {
+					row[j] = c.Render(k, it)
+				}
 			}
 			rows = append(rows, row)
 		}

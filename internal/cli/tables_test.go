@@ -268,7 +268,7 @@ func TestWriteSlice_GpuPool_JSONShape(t *testing.T) {
 		IsOkeManaged:       true,
 	}}
 	var buf bytes.Buffer
-	require.NoError(t, writeSlice(&buf, items, 0, output.Options{Format: output.FormatJSON}, domain.GpuPool, nil))
+	require.NoError(t, writeSlice(&buf, items, 0, output.Options{Format: output.FormatJSON}, domain.GpuPool, models.Environment{}, nil))
 
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
@@ -296,14 +296,14 @@ func TestWriteSlice_Formats(t *testing.T) {
 	items := []models.Tenant{{Name: "t1"}}
 	for _, fmt := range []output.Format{output.FormatJSON, output.FormatJSONL, output.FormatYAML, output.FormatTable} {
 		var buf bytes.Buffer
-		err := writeSlice(&buf, items, 0, output.Options{Format: fmt}, domain.Tenant, nil)
+		err := writeSlice(&buf, items, 0, output.Options{Format: fmt}, domain.Tenant, models.Environment{}, nil)
 		require.NoError(t, err, "format=%s", fmt)
 		assert.Contains(t, buf.String(), "t1", "format=%s output: %q", fmt, buf.String())
 	}
 
 	// Unsupported format must surface a clear error.
 	var buf bytes.Buffer
-	err := writeSlice(&buf, items, 0, output.Options{Format: "toml"}, domain.Tenant, nil)
+	err := writeSlice(&buf, items, 0, output.Options{Format: "toml"}, domain.Tenant, models.Environment{}, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported format")
 }
@@ -315,7 +315,7 @@ func TestWriteMap_Formats(t *testing.T) {
 	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a"}}}
 	for _, fmt := range []output.Format{output.FormatJSON, output.FormatJSONL, output.FormatYAML, output.FormatTable} {
 		var buf bytes.Buffer
-		err := writeMap(&buf, grouped, 0, output.Options{Format: fmt}, domain.GpuNode, nil)
+		err := writeMap(&buf, grouped, 0, output.Options{Format: fmt}, domain.GpuNode, models.Environment{}, nil)
 		require.NoError(t, err, "format=%s", fmt)
 		got := buf.String()
 		assert.True(t, strings.Contains(got, "n1") || strings.Contains(got, "pool-a"),
@@ -323,7 +323,7 @@ func TestWriteMap_Formats(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, 0, output.Options{Format: "toml"}, domain.GpuNode, nil)
+	err := writeMap(&buf, grouped, 0, output.Options{Format: "toml"}, domain.GpuNode, models.Environment{}, nil)
 	require.Error(t, err)
 }
 
@@ -336,7 +336,7 @@ func TestWriteMap_GpuNodes_NoInjectedPoolField(t *testing.T) {
 	t.Parallel()
 	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a", IsReady: true}}}
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, domain.GpuNode, nil)
+	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, domain.GpuNode, models.Environment{}, nil)
 	require.NoError(t, err)
 
 	var arr []map[string]any
@@ -356,7 +356,7 @@ func TestWriteSlice_Limit(t *testing.T) {
 	items := []models.Tenant{{Name: "t1"}, {Name: "t2"}, {Name: "t3"}}
 
 	var buf bytes.Buffer
-	require.NoError(t, writeSlice(&buf, items, 2, output.Options{Format: output.FormatJSON, Pretty: true}, domain.Tenant, nil))
+	require.NoError(t, writeSlice(&buf, items, 2, output.Options{Format: output.FormatJSON, Pretty: true}, domain.Tenant, models.Environment{}, nil))
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
 	assert.Len(t, arr, 2, "limit=2 should keep 2 of 3 items")
@@ -364,12 +364,12 @@ func TestWriteSlice_Limit(t *testing.T) {
 	assert.Equal(t, "t2", arr[1]["name"])
 
 	buf.Reset()
-	require.NoError(t, writeSlice(&buf, items, 0, output.Options{Format: output.FormatJSON, Pretty: true}, domain.Tenant, nil))
+	require.NoError(t, writeSlice(&buf, items, 0, output.Options{Format: output.FormatJSON, Pretty: true}, domain.Tenant, models.Environment{}, nil))
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
 	assert.Len(t, arr, 3, "limit=0 should keep all 3 items")
 
 	buf.Reset()
-	require.NoError(t, writeSlice(&buf, items, 99, output.Options{Format: output.FormatJSON, Pretty: true}, domain.Tenant, nil))
+	require.NoError(t, writeSlice(&buf, items, 99, output.Options{Format: output.FormatJSON, Pretty: true}, domain.Tenant, models.Environment{}, nil))
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
 	assert.Len(t, arr, 3, "limit > len(items) should be a no-op")
 }
@@ -384,7 +384,7 @@ func TestWriteMap_Limit_CapsAcrossGroups(t *testing.T) {
 		"pool-b": {{Name: "b1", NodePool: "pool-b"}, {Name: "b2", NodePool: "pool-b"}},
 	}
 	var buf bytes.Buffer
-	require.NoError(t, writeMap(&buf, grouped, 3, output.Options{Format: output.FormatJSON, Pretty: true}, domain.GpuNode, nil))
+	require.NoError(t, writeMap(&buf, grouped, 3, output.Options{Format: output.FormatJSON, Pretty: true}, domain.GpuNode, models.Environment{}, nil))
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
 	assert.Len(t, arr, 3, "limit=3 across 4 flattened items should yield 3")
@@ -404,7 +404,7 @@ func TestWriteMap_DACs_NoInjectedTenantField(t *testing.T) {
 		"acme": {{Name: "dac-1", Status: "READY", TenantID: "acme"}},
 	}
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, domain.DedicatedAICluster, nil)
+	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, domain.DedicatedAICluster, models.Environment{}, nil)
 	require.NoError(t, err)
 
 	var arr []map[string]any
@@ -433,7 +433,7 @@ func TestWriteMap_TenancyOverride_EmitsTenantName(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true},
-		domain.LimitTenancyOverride, nil)
+		domain.LimitTenancyOverride, models.Environment{}, nil)
 	require.NoError(t, err)
 
 	var arr []map[string]any

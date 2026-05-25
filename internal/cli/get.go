@@ -259,7 +259,7 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load base models: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.BaseModel, selected)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.BaseModel, env, selected)
 	case domain.ImportedModel:
 		grouped, err := ld.LoadImportedModels(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -268,7 +268,7 @@ func emitCategory(
 		// No top-level `tenant` injection: each item carries its
 		// own `tenantId` field already (same shape as DAC after
 		// the recent wrapper-drop refactor).
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.ImportedModel, selected)
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.ImportedModel, env, selected)
 	case domain.GpuPool:
 		items, err := ld.LoadGpuPools(ctx, cfg.RepoPath, env)
 		if err != nil {
@@ -288,7 +288,7 @@ func emitCategory(
 		if msg := resolve.EnrichGpuPools(ctx, items, cfg.KubeConfig, env); msg != "" {
 			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", msg)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GpuPool, selected)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GpuPool, env, selected)
 	case domain.GpuNode:
 		grouped, err := ld.LoadGpuNodes(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -297,7 +297,7 @@ func emitCategory(
 		// No top-level `pool` injection: GpuNode.NodePool (json
 		// `poolName`) already carries the group key; the loader sets
 		// it from the same value used as the map key.
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.GpuNode, selected)
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.GpuNode, env, selected)
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -306,7 +306,7 @@ func emitCategory(
 		// No top-level `tenant` injection: the loader keys this map
 		// by dac.TenantID (internal/infra/k8s/dac.go:157), which is
 		// already the flat `tenantId` field on each value.
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.DedicatedAICluster, selected)
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.DedicatedAICluster, env, selected)
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
 		domain.ConsolePropertyTenancyOverride,
@@ -315,31 +315,31 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load tenancy override group: %w", err)
 		}
-		return emitTenancyGroup(w, cat, group, filter, limit, opts, selected)
+		return emitTenancyGroup(w, cat, group, filter, limit, opts, env, selected)
 	case domain.LimitRegionalOverride:
 		items, err := ld.LoadLimitRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load limit regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.LimitRegionalOverride, selected)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.LimitRegionalOverride, env, selected)
 	case domain.ConsolePropertyRegionalOverride:
 		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load console property regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.ConsolePropertyRegionalOverride, selected)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.ConsolePropertyRegionalOverride, env, selected)
 	case domain.PropertyRegionalOverride:
 		items, err := ld.LoadPropertyRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load property regional overrides: %w", err)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.PropertyRegionalOverride, selected)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.PropertyRegionalOverride, env, selected)
 	default:
 		dataset, err := ld.LoadDataset(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load dataset: %w", err)
 		}
-		return emitFromDataset(w, cat, dataset, filter, limit, opts, selected)
+		return emitFromDataset(w, cat, dataset, filter, limit, opts, env, selected)
 	}
 }
 
@@ -353,7 +353,12 @@ type writer interface {
 // JSON/JSONL/YAML bypass the registry and encode the typed items directly.
 // For table/csv/tsv, columns.RenderTable is called with cat and selected
 // (the parsed --columns list; empty means "use Default==true columns").
-func writeSlice[T any](w writer, items []T, limit int, opts output.Options, cat domain.Category, selected []string) error {
+// CSV/TSV additionally route through columns.RenderTableForExport with
+// the caller's env so columns marked with ExportRender (DAC and
+// ImportedModel Name/Tenant today) emit fully-qualified OCIDs instead
+// of raw suffixes. Table output keeps the display-mode Render to
+// preserve column-width headroom.
+func writeSlice[T any](w writer, items []T, limit int, opts output.Options, cat domain.Category, env models.Environment, selected []string) error {
 	items = collections.TruncateSlice(items, limit)
 	switch opts.Format {
 	case output.FormatJSON:
@@ -362,8 +367,14 @@ func writeSlice[T any](w writer, items []T, limit int, opts output.Options, cat 
 		return output.WriteJSONL(w, items, opts)
 	case output.FormatYAML:
 		return output.WriteYAML(w, items, opts)
-	case output.FormatTable, output.FormatCSV, output.FormatTSV:
+	case output.FormatTable:
 		headers, rows, err := columns.RenderTable(cat, items, selected)
+		if err != nil {
+			return err
+		}
+		return writeTableLike(w, headers, rows, opts)
+	case output.FormatCSV, output.FormatTSV:
+		headers, rows, err := columns.RenderTableForExport(cat, items, env.Realm, env.Region, selected)
 		if err != nil {
 			return err
 		}
@@ -390,14 +401,22 @@ func writeTableLike(w writer, headers []string, rows [][]string, opts output.Opt
 // writeMap renders a grouped map whose values already carry the group key
 // as a struct field (GpuNode.NodePool, DedicatedAICluster.TenantID,
 // ImportedModel.TenantID, ModelArtifact.ModelName). JSON/JSONL/YAML use
-// output.Flatten so the emitted objects look flat. Table/CSV/TSV go
-// through columns.RenderTable.
-func writeMap[T any](w writer, grouped map[string][]T, limit int, opts output.Options, cat domain.Category, selected []string) error {
+// output.Flatten so the emitted objects look flat. Table uses
+// columns.RenderTable; CSV/TSV route through RenderTableForExport
+// with env so OCID-shaped columns emit fully-qualified IDs.
+func writeMap[T any](w writer, grouped map[string][]T, limit int, opts output.Options, cat domain.Category, env models.Environment, selected []string) error {
 	switch opts.Format {
 	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
 		return writeEncoded(w, opts, collections.TruncateSlice(output.Flatten(grouped), limit))
-	case output.FormatTable, output.FormatCSV, output.FormatTSV:
+	case output.FormatTable:
 		headers, rows, err := columns.RenderTable(cat, grouped, selected)
+		if err != nil {
+			return err
+		}
+		rows = collections.TruncateSlice(rows, limit)
+		return writeTableLike(w, headers, rows, opts)
+	case output.FormatCSV, output.FormatTSV:
+		headers, rows, err := columns.RenderTableForExport(cat, grouped, env.Realm, env.Region, selected)
 		if err != nil {
 			return err
 		}
@@ -430,20 +449,21 @@ func emitTenancyGroup(
 	filter string,
 	limit int,
 	opts output.Options,
+	env models.Environment,
 	selected []string,
 ) error {
 	switch cat { //nolint:exhaustive
 	case domain.Tenant:
-		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, domain.Tenant, selected)
+		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, domain.Tenant, env, selected)
 	case domain.LimitTenancyOverride:
 		return writeMap(w, collections.FilterMapOrAll(group.LimitTenancyOverrideMap, filter), limit, opts,
-			domain.LimitTenancyOverride, selected)
+			domain.LimitTenancyOverride, env, selected)
 	case domain.ConsolePropertyTenancyOverride:
 		return writeMap(w, collections.FilterMapOrAll(group.ConsolePropertyTenancyOverrideMap, filter), limit, opts,
-			domain.ConsolePropertyTenancyOverride, selected)
+			domain.ConsolePropertyTenancyOverride, env, selected)
 	case domain.PropertyTenancyOverride:
 		return writeMap(w, collections.FilterMapOrAll(group.PropertyTenancyOverrideMap, filter), limit, opts,
-			domain.PropertyTenancyOverride, selected)
+			domain.PropertyTenancyOverride, env, selected)
 	default:
 		return fmt.Errorf("category %s not in tenancy group", cat)
 	}
@@ -456,34 +476,35 @@ func emitFromDataset(
 	filter string,
 	limit int,
 	opts output.Options,
+	env models.Environment,
 	selected []string,
 ) error {
 	switch cat { //nolint:exhaustive
 	case domain.LimitDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.LimitDefinitionGroup.Values, nil, filter, nil),
-			limit, opts, domain.LimitDefinition, selected)
+			limit, opts, domain.LimitDefinition, env, selected)
 	case domain.ConsolePropertyDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.ConsolePropertyDefinitionGroup.Values, nil, filter, nil),
-			limit, opts, domain.ConsolePropertyDefinition, selected)
+			limit, opts, domain.ConsolePropertyDefinition, env, selected)
 	case domain.PropertyDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.PropertyDefinitionGroup.Values, nil, filter, nil),
-			limit, opts, domain.PropertyDefinition, selected)
+			limit, opts, domain.PropertyDefinition, env, selected)
 	case domain.Environment:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.Environments, nil, filter, nil),
-			limit, opts, domain.Environment, selected)
+			limit, opts, domain.Environment, env, selected)
 	case domain.ServiceTenancy:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.ServiceTenancies, nil, filter, nil),
-			limit, opts, domain.ServiceTenancy, selected)
+			limit, opts, domain.ServiceTenancy, env, selected)
 	case domain.ModelArtifact:
 		// No top-level `model` injection: ModelArtifact.ModelName
 		// (json `model_name`) already carries the group key; the
 		// loader sets it from the same Terraform key used for the map.
-		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), limit, opts, domain.ModelArtifact, selected)
+		return writeMap(w, collections.FilterMapOrAll(dataset.ModelArtifactMap, filter), limit, opts, domain.ModelArtifact, env, selected)
 	default:
 		return fmt.Errorf("category %s is not supported by `toolkit get`", cat)
 	}
@@ -533,7 +554,9 @@ func writeAliases(w writer, filter string, limit int, opts output.Options, selec
 		}
 		return writeEncoded(w, opts, collections.TruncateSlice(items, limit))
 	case output.FormatTable, output.FormatCSV, output.FormatTSV:
-		return writeSlice(w, cats, limit, opts, domain.Alias, selected)
+		// Alias is a static enum dump — no env-dependent columns,
+		// so passing an empty environment is correct.
+		return writeSlice(w, cats, limit, opts, domain.Alias, models.Environment{}, selected)
 	default:
 		return fmt.Errorf("unsupported format %q", opts.Format)
 	}

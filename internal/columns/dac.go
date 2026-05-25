@@ -30,9 +30,15 @@ func dacUnitShapeOrProfile(d models.DedicatedAICluster) string {
 // title and ACTIVE/FAILED/READY values would truncate at ratio 0.04.
 var DacColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[models.DedicatedAICluster]{
 	{Title: "Name", Key: "name", Ratio: 0.20, TruncateMiddle: true,
-		Render: func(_ string, d models.DedicatedAICluster) string { return d.Name }},
+		Render: func(_ string, d models.DedicatedAICluster) string { return d.Name },
+		ExportRender: func(realm, region string, _ string, d models.DedicatedAICluster) string {
+			return d.GetID(realm, region)
+		}},
 	{Title: "Tenant", Key: "tenant", Ratio: 0.17, TruncateMiddle: true,
-		Render: func(k string, _ models.DedicatedAICluster) string { return k }},
+		Render: func(k string, _ models.DedicatedAICluster) string { return k },
+		ExportRender: func(realm, _ string, _ string, d models.DedicatedAICluster) string {
+			return d.GetTenantID(realm)
+		}},
 	{Title: "Internal", Key: "internal", Ratio: 0.09,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.GetOwnerState() }},
 	{Title: "Usage", Key: "usage", Ratio: 0.07,

@@ -14,11 +14,19 @@ import "strings"
 // OCID-suffix-shaped values where the head identifies the resource
 // shape and the tail is the distinguishing portion. CLI surfaces
 // ignore this hint — they emit the full value.
+//
+// ExportRender is an optional alternate renderer used by file/CSV
+// export paths (TUI <e> and CLI `-o csv`/`-o tsv` when env is set).
+// Use it when the export-appropriate value is fundamentally different
+// from the display value — e.g., expanding an OCID-suffix Name into
+// the fully-qualified ocid1.<type>.<realm>.<region>.<suffix> form
+// that downstream OCI tooling expects. Nil means "use Render".
 type Column[T any] struct {
 	Title          string
 	Key            string
 	Ratio          float64
 	Render         func(T) string
+	ExportRender   func(realm, region string, item T) string
 	TruncateMiddle bool
 }
 
@@ -27,12 +35,17 @@ type Column[T any] struct {
 // any column can use either. A "group key column" is just a
 // GroupedColumn whose Render ignores `item` and returns `key`.
 //
-// TruncateMiddle has the same semantics as Column.TruncateMiddle.
+// TruncateMiddle and ExportRender have the same semantics as
+// Column.TruncateMiddle / Column.ExportRender; ExportRender's
+// signature carries the group key alongside realm/region so a
+// column can substitute its display value with an export-mode
+// representation that depends on either.
 type GroupedColumn[T any] struct {
 	Title          string
 	Key            string
 	Ratio          float64
 	Render         func(key string, item T) string
+	ExportRender   func(realm, region, key string, item T) string
 	TruncateMiddle bool
 }
 
