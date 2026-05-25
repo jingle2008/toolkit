@@ -19,7 +19,7 @@ func (m *Model) deleteItem(itemKey models.ItemKey) tea.Cmd {
 	case domain.GpuNode:
 		return m.deleteGpuNode(itemKey)
 	default:
-		// exhausive
+		// exhaustive
 	}
 	return nil
 }

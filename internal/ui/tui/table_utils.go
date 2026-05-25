@@ -211,7 +211,7 @@ func deleteItem(dataset *models.Dataset, category domain.Category, key models.It
 	case domain.GpuNode:
 		deleteItemInMap(dataset.GpuNodeMap, key)
 	default:
-		// exhausive
+		// exhaustive
 	}
 }
 
