@@ -252,7 +252,13 @@ func (m *Model) findContextIndex(rows []table.Row) int {
 // updateLayout recalculates the layout for the view and table.
 func (m *Model) updateLayout(w, h int) {
 	m.viewWidth, m.viewHeight = w, h
-	m.help.Width = w
+	// Budget the info column out of the help bubble's width so the
+	// JoinHorizontal(infoView, helpView) header in frame() doesn't exceed the
+	// terminal and soft-wrap. The extra -1 dodges a bubbles/help edge case:
+	// when columns sum to exactly m.help.Width, the next column still
+	// triggers truncation (>) but the ellipsis-fits check (<) fails, so the
+	// bubble falls through and renders the column uncondensed.
+	m.help.Width = max(w-lipgloss.Width(m.infoView())-1, 0)
 	var borderStyle lipgloss.Border
 	if m.viewMode == common.DetailsView {
 		borderStyle = m.viewport.Style.GetBorderStyle()
@@ -269,8 +275,13 @@ func (m *Model) updateLayout(w, h int) {
 		m.viewport.Height = h - top
 	} else {
 		table.WithWidth(w - borderWidth)(m.table)
-		table.WithHeight(h - borderHeight - top)(m.table)
+		// updateColumns before WithHeight: WithHeight derives viewport.Height
+		// from lipgloss.Height(headersView()), so columns must be set first
+		// (otherwise an empty header is measured as 1 line and the viewport
+		// ends up 1 line too tall once columns are populated — the top header
+		// row gets clipped by bubbletea's renderer until a manual resize).
 		m.updateColumns()
+		table.WithHeight(h - borderHeight - top)(m.table)
 		m.table.UpdateViewport()
 	}
 }
