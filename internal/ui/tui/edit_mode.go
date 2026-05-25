@@ -13,21 +13,28 @@ func (m *Model) enterEditMode(target common.EditTarget) tea.Cmd {
 	m.editTarget = target
 	m.textInput.Focus()
 
-	// Provide category suggestions using domain.Aliases.
-	keys := domain.Aliases
 	if target == common.AliasTarget {
+		// Command mode: start from an empty input and offer the
+		// category alias list as completions.
 		m.textInput.Reset()
-	} else if len(m.textInput.Value()) > 0 {
-		keys = append(keys, m.textInput.Value())
-		cmd := m.backToLastState()
-		m.textInput.ShowSuggestions = len(keys) > 0
-		m.textInput.SetSuggestions(keys)
-		return cmd
+		m.textInput.ShowSuggestions = len(domain.Aliases) > 0
+		m.textInput.SetSuggestions(domain.Aliases)
+		return nil
 	}
 
+	// FilterTarget: keep the current input so re-entering filter mode
+	// preserves the partial. When the input is non-empty, also clear
+	// any active filter/scope (backToLastState) so the new typing
+	// matches against the full unscoped table.
+	keys := domain.Aliases
+	var cmd tea.Cmd
+	if len(m.textInput.Value()) > 0 {
+		keys = append(keys, m.textInput.Value())
+		cmd = m.backToLastState()
+	}
 	m.textInput.ShowSuggestions = len(keys) > 0
 	m.textInput.SetSuggestions(keys)
-	return nil
+	return cmd
 }
 
 func (m *Model) backToLastState() tea.Cmd {
