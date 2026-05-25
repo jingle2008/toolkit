@@ -296,7 +296,7 @@ func (m *Model) refreshDisplay() {
 
 // processData updates the model's dataset based on the incoming DataMsg.
 //
-//nolint:cyclop // legacy DataMsg router (see typed handlers below); complexity comes from the message type-switch.
+//nolint:cyclop // multi-shape DataMsg router; the typed loaded-message handlers below cover per-category loads, but the Dataset / TenancyOverrideGroup shapes still flow through here.
 func (m *Model) processData(msg DataMsg) tea.Cmd {
 	var cmd tea.Cmd
 	// Drop stale responses based on generation token (allow zero-value Gen).

@@ -55,9 +55,8 @@ func getGenAIClientWithDeps(
 	return &client, nil
 }
 
-/*
-GetGenAIClient returns a ConfigurationProvider for the given profile (profile name is uppercased).
-*/
+// GetGenAIClient returns a GenerativeAiClient for env (session-token
+// auth, profile name is uppercased and derived from env).
 func GetGenAIClient(env models.Environment) (*generativeai.GenerativeAiClient, error) {
 	return getGenAIClientWithDeps(
 		env,

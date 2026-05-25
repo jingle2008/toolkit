@@ -142,8 +142,10 @@ func MustNewLogger(debug bool) Logger {
 }
 
 /*
-NewFileLogger returns a Logger that writes only to the given file (overwriting it on each run).
-If debug is true, uses development encoder config, else production config.
+NewFileLogger returns a Logger that writes to filename through
+lumberjack rotation (size + age + gzip backups); see
+NewFileLoggerWithLevel for the rotation settings. If debug is
+true, uses development encoder config, else production config.
 logFormat: "console", "json", or "slog"
 */
 func NewFileLogger(debug bool, filename string, logFormat string) (Logger, error) {

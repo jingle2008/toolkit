@@ -164,8 +164,8 @@ func TestApplyMiddleTruncation_DACNameAndTenant(t *testing.T) {
 	m.table.SetColumns(cols)
 
 	rows := []table.Row{{
-		"amaaaaaasxj5imya...mndycca", // Name col 0 — must truncate left
-		"amaaaaaatenancysuffix",      // Tenant col 1 — must truncate left
+		"amaaaaaasxj5imya...mndycca", // Name col 0 — must middle-truncate
+		"amaaaaaatenancysuffix",      // Tenant col 1 — must middle-truncate
 		"true",                       // Internal col 2 — short, unchanged
 		"50%",                        // Usage col 3 — short, unchanged
 		"LARGE",                      // Type col 4 — short, unchanged
@@ -173,7 +173,7 @@ func TestApplyMiddleTruncation_DACNameAndTenant(t *testing.T) {
 		"BM.GPU.H100.8",              // Shape/Profile col 6
 		"4",                          // Size col 7
 		"2d",                         // Age col 8
-		"ACTIVE",                     // Status col 9 — not left-truncate
+		"ACTIVE",                     // Status col 9 — not middle-truncate
 	}}
 	m.applyMiddleTruncation(rows)
 
