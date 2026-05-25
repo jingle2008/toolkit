@@ -499,6 +499,30 @@ func TestLoadTenancyOverrideGroup_PopulatesTenantName(t *testing.T) {
 	}
 }
 
+// TestLoadTenancyOverrideGroup_EmptyTenantDir verifies that an
+// existing tenant directory containing zero override files is
+// handled safely: the map entry is present with an empty slice,
+// and the TenantName-population pass is a no-op (no panic, no
+// stray empty record).
+func TestLoadTenancyOverrideGroup_EmptyTenantDir(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	realm := "testrealm"
+	// Create an empty tenant directory under each of the three categories.
+	for _, category := range []string{"limits", "console_properties", "properties"} {
+		dir := filepath.Join(root, "shared_modules/limits", category+"_tenancy_overrides", "regional_values", realm, "tenant-empty")
+		require.NoError(t, os.MkdirAll(dir, 0o750)) // #nosec G301
+	}
+
+	group, err := LoadTenancyOverrideGroup(context.Background(), root, realm, &models.Metadata{})
+	require.NoError(t, err)
+
+	// Empty slices for the empty tenant — map presence + zero-length slice.
+	assert.Empty(t, group.LimitTenancyOverrideMap["tenant-empty"])
+	assert.Empty(t, group.ConsolePropertyTenancyOverrideMap["tenant-empty"])
+	assert.Empty(t, group.PropertyTenancyOverrideMap["tenant-empty"])
+}
+
 func TestLoadRegionalOverrides_MissingDir(t *testing.T) {
 	t.Parallel()
 	out, err := LoadLimitRegionalOverrides(context.Background(), "/no/such/path", "realm")

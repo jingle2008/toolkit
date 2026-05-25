@@ -155,7 +155,13 @@ func truncateMiddle(s string, w int) string {
 	}
 	const ellipsis = "…"
 	ew := runewidth.StringWidth(ellipsis)
-	if w <= ew {
+	if w <= 0 {
+		return ""
+	}
+	if w < ew {
+		return ""
+	}
+	if w == ew {
 		return ellipsis
 	}
 	keep := w - ew

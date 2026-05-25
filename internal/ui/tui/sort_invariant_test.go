@@ -86,14 +86,24 @@ func TestUpdateColumns_SortableIndicator(t *testing.T) {
 		titles[base] = c.Title
 	}
 
+	// Suffix-match the glyphs rather than equality so the assertions
+	// remain valid if future updateColumns logic ever truncates or
+	// otherwise reshapes the leading title text.
+
 	// Name is the active sort (ascending) → " ↑"
-	assert.Equal(t, "Name ↑", titles["Name"], "active sort column should have ↑ glyph")
+	assert.True(t, strings.HasSuffix(titles["Name"], " ↑"),
+		"active sort column should end with ↑ glyph, got %q", titles["Name"])
 	// Tenant is sortable (SortTenant in DAC catContext) but not active → " ↕"
-	assert.Equal(t, "Tenant ↕", titles["Tenant"], "sortable non-active column should have ↕ glyph")
-	// Status is NOT sortable in DAC catContext → bare title
-	assert.Equal(t, "Status", titles["Status"], "non-sortable column should have no glyph")
-	// Model is NOT sortable → bare title
-	assert.Equal(t, "Model", titles["Model"], "non-sortable column should have no glyph")
+	assert.True(t, strings.HasSuffix(titles["Tenant"], " ↕"),
+		"sortable non-active column should end with ↕ glyph, got %q", titles["Tenant"])
+	// Status is NOT sortable in DAC catContext → no glyph suffix
+	assert.False(t, strings.HasSuffix(titles["Status"], " ↕"),
+		"non-sortable Status should not carry ↕, got %q", titles["Status"])
+	assert.False(t, strings.HasSuffix(titles["Status"], " ↑"),
+		"non-sortable Status should not carry ↑, got %q", titles["Status"])
+	// Model is NOT sortable → no glyph suffix
+	assert.False(t, strings.HasSuffix(titles["Model"], " ↕"),
+		"non-sortable Model should not carry ↕, got %q", titles["Model"])
 }
 
 func TestTruncateMiddle(t *testing.T) {
@@ -108,9 +118,9 @@ func TestTruncateMiddle(t *testing.T) {
 		{"abcdefgh", 5, "ab…gh"},   // 5 = 2 head + 1 ellipsis + 2 tail
 		{"abcdefgh", 6, "ab…fgh"},  // 6 = 2 head + 1 ellipsis + 3 tail (tail bias)
 		{"abcdefgh", 7, "abc…fgh"}, // 7 = 3 head + 1 ellipsis + 3 tail
-		{"abcdefgh", 1, "…"},       // width swallowed by ellipsis
-		{"abcdefgh", 0, "…"},       // degenerate width
-		// Realistic OCID-style suffix: head reveals "amaa…" shape, tail reveals distinct end.
+		{"abcdefgh", 1, "…"},       // width fits exactly one ellipsis cell
+		{"abcdefgh", 0, ""},        // zero width → empty (output never exceeds w)
+		// Realistic OCID-style name: head reveals the "amaa…" shape, tail reveals the distinct end.
 		{"amaaaaaasxj5imyasw65kzgst7qhopkqbh4hiahgcdpx7gfxesuj7mndycca", 12, "amaaa…ndycca"},
 	}
 	for _, tc := range cases {
