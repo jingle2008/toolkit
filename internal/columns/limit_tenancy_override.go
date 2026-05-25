@@ -13,7 +13,7 @@ import (
 var LimitTenancyOverrideColumns = GroupedSet[models.LimitTenancyOverride]{Columns: []GroupedColumn[models.LimitTenancyOverride]{
 	{Title: "Name", Key: "name", Ratio: 0.40,
 		Render: func(_ string, v models.LimitTenancyOverride) string { return v.Name }},
-	{Title: "Tenant", Key: "tenant", Ratio: 0.24,
+	{Title: "Tenant", Key: "tenant", Ratio: 0.24, TruncateMiddle: true,
 		Render: func(k string, _ models.LimitTenancyOverride) string { return k }},
 	{Title: "Regions", Key: "regions", Ratio: 0.20,
 		Render: func(_ string, v models.LimitTenancyOverride) string { return strings.Join(v.Regions, ", ") }},

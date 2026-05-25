@@ -11,11 +11,11 @@ import (
 // room to render without truncation. Version stays reachable via `-o json`.
 // Ordering is name-first, tenant-key-second (matches TUI; Decision #4).
 var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedColumn[models.ImportedModel]{
-	{Title: "Name", Key: "name", Ratio: 0.20,
+	{Title: "Name", Key: "name", Ratio: 0.20, TruncateMiddle: true,
 		Render: func(_ string, m models.ImportedModel) string { return m.Name }},
-	{Title: "Tenant", Key: "tenant", Ratio: 0.22,
+	{Title: "Tenant", Key: "tenant", Ratio: 0.22, TruncateMiddle: true,
 		Render: func(k string, _ models.ImportedModel) string { return k }},
-	{Title: "Namespace", Key: "namespace", Ratio: 0.15,
+	{Title: "Namespace", Key: "namespace", Ratio: 0.15, TruncateMiddle: true,
 		Render: func(_ string, m models.ImportedModel) string { return m.Namespace }},
 	{Title: "Display Name", Key: "display-name", Ratio: 0.27,
 		Render: func(_ string, m models.ImportedModel) string { return m.DisplayName }},

@@ -7,22 +7,33 @@ package columns
 import "strings"
 
 // Column is a column for a flat (non-grouped) category.
+//
+// TruncateMiddle is an optional rendering hint: when the cell value is
+// wider than the column at display time, the TUI elides the MIDDLE
+// (head + "…" + tail) rather than chopping the tail. Useful for
+// OCID-suffix-shaped values where the head identifies the resource
+// shape and the tail is the distinguishing portion. CLI surfaces
+// ignore this hint — they emit the full value.
 type Column[T any] struct {
-	Title  string
-	Key    string
-	Ratio  float64
-	Render func(T) string
+	Title        string
+	Key          string
+	Ratio        float64
+	Render       func(T) string
+	TruncateMiddle bool
 }
 
 // GroupedColumn is a column for a grouped category (loader returns
 // map[string][]T). Render receives both the group key and the item;
 // any column can use either. A "group key column" is just a
 // GroupedColumn whose Render ignores `item` and returns `key`.
+//
+// TruncateMiddle has the same semantics as Column.TruncateMiddle.
 type GroupedColumn[T any] struct {
-	Title  string
-	Key    string
-	Ratio  float64
-	Render func(key string, item T) string
+	Title        string
+	Key          string
+	Ratio        float64
+	Render       func(key string, item T) string
+	TruncateMiddle bool
 }
 
 // Set is the canonical column list for a flat category.

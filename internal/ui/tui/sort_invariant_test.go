@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -93,4 +94,75 @@ func TestUpdateColumns_SortableIndicator(t *testing.T) {
 	assert.Equal(t, "Status", titles["Status"], "non-sortable column should have no glyph")
 	// Model is NOT sortable → bare title
 	assert.Equal(t, "Model", titles["Model"], "non-sortable column should have no glyph")
+}
+
+func TestTruncateMiddle(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		s    string
+		w    int
+		want string
+	}{
+		{"abc", 5, "abc"},          // fits, returned unchanged
+		{"abc", 3, "abc"},          // exactly fits
+		{"abcdefgh", 5, "ab…gh"},   // 5 = 2 head + 1 ellipsis + 2 tail
+		{"abcdefgh", 6, "ab…fgh"},  // 6 = 2 head + 1 ellipsis + 3 tail (tail bias)
+		{"abcdefgh", 7, "abc…fgh"}, // 7 = 3 head + 1 ellipsis + 3 tail
+		{"abcdefgh", 1, "…"},       // width swallowed by ellipsis
+		{"abcdefgh", 0, "…"},       // degenerate width
+		// Realistic OCID-style suffix: head reveals "amaa…" shape, tail reveals distinct end.
+		{"amaaaaaasxj5imyasw65kzgst7qhopkqbh4hiahgcdpx7gfxesuj7mndycca", 12, "amaaa…ndycca"},
+	}
+	for _, tc := range cases {
+		got := truncateMiddle(tc.s, tc.w)
+		assert.Equalf(t, tc.want, got, "truncateMiddle(%q, %d)", tc.s, tc.w)
+	}
+}
+
+// TestApplyMiddleTruncation_DACNameAndTenant proves the integration:
+// for a DAC row whose Name and Tenant are long OCID suffixes and
+// whose column widths are narrow, applyMiddleTruncation rewrites
+// those two cells with a head + ellipsis + tail and leaves the
+// other cells alone.
+func TestApplyMiddleTruncation_DACNameAndTenant(t *testing.T) {
+	t.Parallel()
+	m, _ := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
+	)
+	m.category = domain.DedicatedAICluster
+	m.keys = keys.ResolveKeys(m.category, common.ListView)
+	m.headers = getHeaders(m.category)
+	// Set narrow widths so truncation must occur on Name and Tenant.
+	cols := make([]table.Column, len(m.headers))
+	for i, h := range m.headers {
+		w := 8
+		if h.text == "Status" {
+			w = 10
+		}
+		cols[i] = table.Column{Title: h.text, Width: w}
+	}
+	m.table.SetColumns(cols)
+
+	rows := []table.Row{{
+		"amaaaaaasxj5imya...mndycca", // Name col 0 — must truncate left
+		"amaaaaaatenancysuffix",       // Tenant col 1 — must truncate left
+		"true",                        // Internal col 2 — short, unchanged
+		"50%",                         // Usage col 3 — short, unchanged
+		"LARGE",                       // Type col 4 — short, unchanged
+		"llama3",                      // Model col 5
+		"BM.GPU.H100.8",               // Shape/Profile col 6
+		"4",                           // Size col 7
+		"2d",                          // Age col 8
+		"ACTIVE",                      // Status col 9 — not left-truncate
+	}}
+	m.applyMiddleTruncation(rows)
+
+	assert.Contains(t, rows[0][0], "…", "Name should be middle-truncated, got %q", rows[0][0])
+	assert.Contains(t, rows[0][1], "…", "Tenant should be middle-truncated, got %q", rows[0][1])
+	assert.NotEqual(t, "…", rows[0][0][0:len("…")], "Name should NOT start with ellipsis (middle-truncate keeps head)")
+	assert.Equal(t, "true", rows[0][2], "Internal must not be touched")
+	assert.Equal(t, "ACTIVE", rows[0][9], "Status must not be touched (not TruncateMiddle)")
 }

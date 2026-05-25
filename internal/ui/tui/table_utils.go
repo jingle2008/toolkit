@@ -16,8 +16,9 @@ import (
 )
 
 type header struct {
-	text  string
-	ratio float64
+	text         string
+	ratio        float64
+	truncateMiddle bool
 }
 
 type tableStats map[string]int
@@ -95,7 +96,7 @@ var categoryHandlers = map[domain.Category]func(*models.Dataset, *domain.Toolkit
 func headersFromSet[T any](cols []columns.Column[T]) []header {
 	out := make([]header, len(cols))
 	for i, c := range cols {
-		out[i] = header{text: c.Title, ratio: c.Ratio}
+		out[i] = header{text: c.Title, ratio: c.Ratio, truncateMiddle: c.TruncateMiddle}
 	}
 	return out
 }
@@ -103,7 +104,7 @@ func headersFromSet[T any](cols []columns.Column[T]) []header {
 func headersFromGroupedSet[T any](cols []columns.GroupedColumn[T]) []header {
 	out := make([]header, len(cols))
 	for i, c := range cols {
-		out[i] = header{text: c.Title, ratio: c.Ratio}
+		out[i] = header{text: c.Title, ratio: c.Ratio, truncateMiddle: c.TruncateMiddle}
 	}
 	return out
 }

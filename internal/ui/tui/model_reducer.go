@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
@@ -93,6 +94,7 @@ func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
 
 func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	m.stats = stats
+	m.applyMiddleTruncation(rows)
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
@@ -105,6 +107,86 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	} else {
 		m.table.UpdateViewport()
 	}
+}
+
+// applyMiddleTruncation shortens cells in columns marked
+// TruncateMiddle so values wider than their column's display width
+// are elided in the MIDDLE (head + "…" + tail) instead of having
+// their tail chopped by bubbles' default right-truncation. After
+// this pass the cell's measured width is ≤ the column width, so
+// runewidth.Truncate inside bubbles becomes a no-op for these
+// cells. Rows are mutated in place.
+//
+// Columns marked TruncateMiddle today hold OCID-suffix values (DAC
+// and ImportedModel Name; the Tenant key on those plus tenancy-
+// override grouped sets); the head identifies the OCID shape while
+// the tail is the distinguishing portion — both worth keeping.
+func (m *Model) applyMiddleTruncation(rows []table.Row) {
+	if len(rows) == 0 || len(m.headers) == 0 {
+		return
+	}
+	cols := m.table.Columns()
+	for c, h := range m.headers {
+		if !h.truncateMiddle || c >= len(cols) {
+			continue
+		}
+		w := cols[c].Width
+		if w <= 0 {
+			continue
+		}
+		for r := range rows {
+			if c >= len(rows[r]) {
+				continue
+			}
+			rows[r][c] = truncateMiddle(rows[r][c], w)
+		}
+	}
+}
+
+// truncateMiddle returns s shortened to fit width w by eliding the
+// middle: head + "…" + tail, where head and tail are sized to use
+// the available width minus the ellipsis. The split favors the tail
+// by one cell when w-1 is odd, since the tail is typically the
+// distinguishing portion for OCID-shaped values. If s already fits,
+// it is returned unchanged.
+func truncateMiddle(s string, w int) string {
+	if runewidth.StringWidth(s) <= w {
+		return s
+	}
+	const ellipsis = "…"
+	ew := runewidth.StringWidth(ellipsis)
+	if w <= ew {
+		return ellipsis
+	}
+	keep := w - ew
+	headW := keep / 2
+	tailW := keep - headW
+
+	runes := []rune(s)
+	headEnd := 0
+	var acc int
+	for i := 0; i < len(runes); i++ {
+		rw := runewidth.RuneWidth(runes[i])
+		if acc+rw > headW {
+			break
+		}
+		acc += rw
+		headEnd = i + 1
+	}
+	tailStart := len(runes)
+	acc = 0
+	for i := len(runes) - 1; i >= 0; i-- {
+		rw := runewidth.RuneWidth(runes[i])
+		if acc+rw > tailW {
+			break
+		}
+		acc += rw
+		tailStart = i
+	}
+	if tailStart < headEnd {
+		tailStart = headEnd
+	}
+	return string(runes[:headEnd]) + ellipsis + string(runes[tailStart:])
 }
 
 // updateColumns updates the table columns based on the current category.
