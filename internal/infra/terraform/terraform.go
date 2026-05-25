@@ -271,10 +271,7 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 	return localObject.AsValueMap(), nil
 }
 
-/*
-LoadServiceTenancies loads ServiceTenancy objects from the given repository path.
-Now accepts context.Context as the first parameter.
-*/
+// LoadServiceTenancies loads ServiceTenancy objects from the given repository path.
 func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.ServiceTenancy, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
 	attributes, err := GetLocalAttributes(ctx, dirPath)
@@ -469,10 +466,7 @@ func extractAvailabilityDomain(v cty.Value) string {
 	return ""
 }
 
-/*
-LoadModelArtifacts loads ModelArtifact objects from the given repository path and environment.
-Now accepts context.Context as the first parameter.
-*/
+// LoadModelArtifacts loads ModelArtifact objects from the given repository path and environment.
 func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environment) (map[string][]models.ModelArtifact, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/tensorrt_models_config")
 	valueMap, err := loadLocalValueMap(ctx, dirPath, env)

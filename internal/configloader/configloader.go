@@ -239,7 +239,6 @@ func isValidEnvironment(env models.Environment, allEnvs []models.Environment) bo
 }
 
 // LoadDataset loads a Dataset from the given repository path and environment.
-// Now accepts context.Context as the first parameter.
 func LoadDataset(ctx context.Context, repoPath string, env models.Environment, metadata *models.Metadata) (*models.Dataset, error) {
 	serviceTenancies, err := terraform.LoadServiceTenancies(ctx, repoPath)
 	if err != nil {

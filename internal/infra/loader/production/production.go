@@ -41,11 +41,6 @@ func NewLoader(ctx context.Context, metadataFile string) loader.Loader {
 }
 
 /*
-NOTE: The following ProductionLoader methods and their corresponding utils.* functions
-must be updated to accept context.Context as the first parameter.
-*/
-
-/*
 LoadDataset loads a dataset from the given repo and environment.
 */
 func (l Loader) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
@@ -80,10 +75,7 @@ func (Loader) LoadGpuPools(ctx context.Context, repo string, env models.Environm
 	return terraform.LoadGpuPools(ctx, repo, env)
 }
 
-/*
-LoadGpuNodes loads GPU nodes from the given kube config and environment.
-Implements the Loader interface but is not yet migrated.
-*/
+// LoadGpuNodes loads GPU nodes from the given kube config and environment.
 func (Loader) LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error) {
 	client, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.GetKubeContext())
 	if err != nil {
@@ -92,10 +84,7 @@ func (Loader) LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Envir
 	return k8s.LoadGpuNodes(ctx, client)
 }
 
-/*
-LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
-Implements the Loader interface but is not yet migrated.
-*/
+// LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
 func (Loader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.GetKubeContext())
 	if err != nil {
