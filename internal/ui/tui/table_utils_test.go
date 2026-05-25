@@ -317,6 +317,10 @@ func TestFindItem_AllCategories(t *testing.T) {
 		{domain.GpuPool, "pool1", &ds.GpuPools[0]},
 		{domain.GpuNode, models.ScopedItemKey{Scope: "pool1", Name: "node1"}, &ds.GpuNodeMap["pool1"][0]},
 		{domain.DedicatedAICluster, models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}, &ds.DedicatedAIClusterMap["tenant1"][0]},
+		// Alias rows index category names, not addressable entities;
+		// rowSources[Alias].find is nil so findItem returns nil for
+		// any key. Pins the contract introduced in commit 8478164.
+		{domain.Alias, "Tenant", nil},
 	}
 
 	for _, tt := range tests {

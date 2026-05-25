@@ -90,12 +90,19 @@ func groupedSource[T models.NamedFilterable](
 	}
 }
 
-// aliasSource builds the rowSource for the Alias category and clears
-// the auto-generated find — see the Alias entry's comment in
-// rowSources for the rationale.
-func aliasSource() rowSource {
-	s := flatSource(columns.AliasColumns,
-		func(*models.Dataset) []domain.Category { return domain.Categories })
+// flatSourceNoFind builds a rowSource like flatSource but without a
+// find closure. Used for categories whose rows are an index rather
+// than a set of addressable entities (Alias today — its rows are
+// category names, not items the user can open in a detail view).
+// Structurally distinct from a flatSource whose find has been
+// mutated post-construction: the absence of find is part of the
+// constructor's contract, so readers and future maintainers can't
+// accidentally re-enable it.
+func flatSourceNoFind[T models.NamedFilterable](
+	cols columns.Set[T],
+	pick func(*models.Dataset) []T,
+) rowSource {
+	s := flatSource(cols, pick)
 	s.find = nil
 	return s
 }
@@ -106,10 +113,12 @@ func aliasSource() rowSource {
 // every domain.Category has one — a missing entry would otherwise
 // silently emit a header-only CSV on <e>.
 var rowSources = map[domain.Category]rowSource{
-	// Alias rows are an index of category names rather than addressable
-	// entities — no find. findItem returns nil for Alias and the TUI
-	// copy/detail actions degrade gracefully to "no item selected".
-	domain.Alias: aliasSource(),
+	// Alias rows index category names rather than addressable entities,
+	// so flatSourceNoFind omits the find closure — findItem returns nil
+	// for Alias and the TUI copy/detail actions degrade gracefully to
+	// "no item selected".
+	domain.Alias: flatSourceNoFind(columns.AliasColumns,
+		func(*models.Dataset) []domain.Category { return domain.Categories }),
 	domain.Tenant: flatSource(columns.TenantColumns,
 		func(d *models.Dataset) []models.Tenant { return d.Tenants }),
 	domain.LimitDefinition: flatSource(columns.LimitDefinitionColumns,

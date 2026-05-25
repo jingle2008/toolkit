@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -220,6 +221,47 @@ func TestExportTableCSV_IgnoresInteractiveSort(t *testing.T) {
 	assert.Equal(t, "charlie", records[1][0])
 	assert.Equal(t, "alice", records[2][0])
 	assert.Equal(t, "bob", records[3][0])
+}
+
+// TestExportTUIPathMatchesCLIPath_DAC pins the cross-path invariant
+// the CSV snapshot tests cannot directly assert: the TUI export
+// (m.exportRows → rowSources[DAC].rows → tuiRowsGroupedForExport)
+// must produce the same row content as the CLI export
+// (columns.RenderTableForExport) for ExportRender-bearing
+// categories. The snapshot tests in internal/cli exercise only the
+// CLI path; this guards the TUI path from silently diverging
+// (e.g., a future change to the filter pipeline inside
+// tuiRowsGroupedWith that doesn't land on the CLI side too).
+//
+// DAC is the workhorse: both the Name and Tenant columns
+// ExportRender into fully-qualified OCIDs, so a per-cell divergence
+// surfaces here. Map iteration order differs between the two paths
+// (CLI sorts keys; TUI uses Go's randomized iteration), so
+// comparison is set-equality, not pointwise.
+func TestExportTUIPathMatchesCLIPath_DAC(t *testing.T) {
+	t.Parallel()
+
+	realm, region := "oc1", "me-dubai-1"
+	fixture := map[string][]models.DedicatedAICluster{
+		"aaaaaaaatenant": {
+			{Name: "amaaaaaadac1", Status: "ACTIVE", TenantID: "aaaaaaaatenant"},
+			{Name: "amaaaaaadac2", Status: "FAILED", TenantID: "aaaaaaaatenant"},
+		},
+		"bbbbbbbbtenant": {
+			{Name: "amaaaaaadac3", Status: "ACTIVE", TenantID: "bbbbbbbbtenant"},
+		},
+	}
+
+	_, cliRows, err := columns.RenderTableForExport(domain.DedicatedAICluster, fixture, realm, region, nil)
+	require.NoError(t, err)
+
+	tuiRows := tuiRowsGroupedForExport(columns.DacColumns, fixture, domain.Tenant, nil, realm, region, "", false)
+	got := make([][]string, len(tuiRows))
+	for i, r := range tuiRows {
+		got[i] = []string(r)
+	}
+
+	assert.ElementsMatch(t, cliRows, got)
 }
 
 // TestRowSources_CoversAllCategories guards the structural fence
