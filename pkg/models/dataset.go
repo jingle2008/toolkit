@@ -39,54 +39,40 @@ func (d *Dataset) buildTenantIDSuffixMap() map[string]int {
 	return suffixMap
 }
 
-// SetDedicatedAIClusterMap sets the dedicated AI cluster map using tenant suffixes.
-func (d *Dataset) SetDedicatedAIClusterMap(m map[string][]DedicatedAICluster) {
-	dacMap := make(map[string][]DedicatedAICluster)
+// resolveOwnedMap re-keys raw (keyed by raw TenantID — label value
+// or "UNKNOWN_TENANCY") by resolved Tenant.Name when a match is
+// found in d.Tenants, otherwise the raw key is preserved. setOwner
+// is invoked on every value pointer with the matching tenant (nil
+// when unmatched), so each item carries a back-pointer to its
+// owning Tenant for downstream rendering.
+func resolveOwnedMap[T any](d *Dataset, raw map[string][]T, setOwner func(*T, *Tenant)) map[string][]T {
+	out := make(map[string][]T, len(raw))
 	suffixMap := d.buildTenantIDSuffixMap()
-
-	for k, v := range m {
+	for k, v := range raw {
 		name := k
 		var tenant *Tenant
 		if idx, ok := suffixMap[k]; ok {
 			tenant = &d.Tenants[idx]
 			name = tenant.Name
 		}
-
-		dacMap[name] = v
+		out[name] = v
 		for i := range v {
-			v[i].Owner = tenant
+			setOwner(&v[i], tenant)
 		}
 	}
-
-	d.DedicatedAIClusterMap = dacMap
+	return out
 }
 
-// SetImportedModelMap sets the imported model map using tenant
-// suffixes, mirroring SetDedicatedAIClusterMap. The input map is
-// keyed by raw TenantID (label value or `"UNKNOWN_TENANCY"`);
-// the resulting map is re-keyed by resolved Tenant.Name when a match
-// is found in Dataset.Tenants, otherwise the raw key is preserved.
-// Each item's Owner pointer is set to the matching tenant (nil when
-// unmatched).
+// SetDedicatedAIClusterMap sets the dedicated AI cluster map using tenant suffixes.
+func (d *Dataset) SetDedicatedAIClusterMap(m map[string][]DedicatedAICluster) {
+	d.DedicatedAIClusterMap = resolveOwnedMap(d, m,
+		func(v *DedicatedAICluster, t *Tenant) { v.Owner = t })
+}
+
+// SetImportedModelMap sets the imported model map using tenant suffixes.
 func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
-	imMap := make(map[string][]ImportedModel)
-	suffixMap := d.buildTenantIDSuffixMap()
-
-	for k, v := range m {
-		name := k
-		var tenant *Tenant
-		if idx, ok := suffixMap[k]; ok {
-			tenant = &d.Tenants[idx]
-			name = tenant.Name
-		}
-
-		imMap[name] = v
-		for i := range v {
-			v[i].Owner = tenant
-		}
-	}
-
-	d.ImportedModelMap = imMap
+	d.ImportedModelMap = resolveOwnedMap(d, m,
+		func(v *ImportedModel, t *Tenant) { v.Owner = t })
 }
 
 // ResetScopedData resets all realm-scoped fields to nil.
