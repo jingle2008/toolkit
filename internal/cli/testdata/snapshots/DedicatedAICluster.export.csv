@@ -1,0 +1,2 @@
+NAME,TENANT,INTERNAL,USAGE,TYPE,MODEL,SHAPE/PROFILE,SIZE,AGE,STATUS
+ocid1.generativeaidedicatedaicluster.oc1.me-dubai-1.dac-1,ocid1.tenancy.oc1..tenant-1,,,HOSTING,cohere.command,AI.LARGE,4,1d,ACTIVE

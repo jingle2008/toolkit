@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -391,6 +392,60 @@ func TestWriteMap_Limit_CapsAcrossGroups(t *testing.T) {
 	assert.Equal(t, "a1", arr[0]["name"])
 	assert.Equal(t, "a2", arr[1]["name"])
 	assert.Equal(t, "b1", arr[2]["name"], "should spill into pool-b's first item")
+}
+
+// TestWriteMap_DAC_CSVUsesFullOCIDs pins the CLI integration with
+// columns.RenderTableForExport. With a fully-populated env, the
+// csv branch in writeMap should route DAC Name and Tenant through
+// ExportRender, producing fully-qualified OCIDs instead of the
+// short suffixes that -o table would show. Mirrors the TUI's
+// TestExportTableCSV_DACUsesFullOCIDs assertion but locks the CLI
+// path independently — a regression in writeMap's csv/tsv branch
+// wouldn't be caught by the TUI test alone.
+func TestWriteMap_DAC_CSVUsesFullOCIDs(t *testing.T) {
+	t.Parallel()
+	grouped := map[string][]models.DedicatedAICluster{
+		"aaaaaaaatenant": {{
+			Name:     "amaaaaaadac",
+			Status:   "ACTIVE",
+			TenantID: "aaaaaaaatenant",
+		}},
+	}
+	env := models.Environment{Realm: "oc1", Region: "me-dubai-1"}
+	var buf bytes.Buffer
+	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatCSV}, domain.DedicatedAICluster, env, nil)
+	require.NoError(t, err)
+
+	records, err := csv.NewReader(&buf).ReadAll()
+	require.NoError(t, err)
+	require.Len(t, records, 2) // header + 1 row
+	// row[0]=NAME → full DAC OCID; row[1]=TENANT → full tenancy OCID.
+	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.me-dubai-1.amaaaaaadac", records[1][0])
+	assert.Equal(t, "ocid1.tenancy.oc1..aaaaaaaatenant", records[1][1])
+}
+
+// TestWriteMap_DAC_CSVEmptyEnvFallsBackToRender pins the
+// short-circuit in columns.RenderTableForExport: when realm OR
+// region is empty, csv output uses display-mode Render rather
+// than ExportRender, producing short suffixes (not malformed
+// ocid1.<type>.oc1..foo OCIDs). Belt-and-suspenders for the
+// `if realm == "" || region == ""` guard.
+func TestWriteMap_DAC_CSVEmptyEnvFallsBackToRender(t *testing.T) {
+	t.Parallel()
+	grouped := map[string][]models.DedicatedAICluster{
+		"aaaaaaaatenant": {{Name: "amaaaaaadac", Status: "ACTIVE", TenantID: "aaaaaaaatenant"}},
+	}
+	// Realm set, region empty — partial env. Should fall back.
+	env := models.Environment{Realm: "oc1"}
+	var buf bytes.Buffer
+	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatCSV}, domain.DedicatedAICluster, env, nil)
+	require.NoError(t, err)
+
+	records, err := csv.NewReader(&buf).ReadAll()
+	require.NoError(t, err)
+	require.Len(t, records, 2)
+	assert.Equal(t, "amaaaaaadac", records[1][0], "partial env must not produce malformed OCIDs")
+	assert.Equal(t, "aaaaaaaatenant", records[1][1])
 }
 
 // TestWriteMap_DACs_NoInjectedTenantField pins the no-inject contract

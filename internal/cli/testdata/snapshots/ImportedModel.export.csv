@@ -1,0 +1,2 @@
+NAME,TENANT,NAMESPACE,DISPLAY NAME,VENDOR,STATUS
+ocid1.generativeaiimportedmodel.oc1.me-dubai-1.my-model,ocid1.tenancy.oc1..tenant-1,ns1,My Model,acme,READY

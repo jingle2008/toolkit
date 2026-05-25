@@ -21,6 +21,12 @@ import "strings"
 // from the display value — e.g., expanding an OCID-suffix Name into
 // the fully-qualified ocid1.<type>.<realm>.<region>.<suffix> form
 // that downstream OCI tooling expects. Nil means "use Render".
+//
+// The signature carries both `realm` and `region` even though most
+// flat categories won't reference either — keeps the export-mode
+// contract symmetric with GroupedColumn.ExportRender and leaves
+// room for future flat columns whose export form depends on env
+// (e.g. a tenancy OCID column on the Tenant view).
 type Column[T any] struct {
 	Title          string
 	Key            string

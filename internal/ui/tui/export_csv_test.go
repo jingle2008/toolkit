@@ -165,6 +165,63 @@ func TestExportFilename(t *testing.T) {
 	assert.Equal(t, "iad-Tenant.csv", got)
 }
 
+// TestExportTableCSV_IgnoresInteractiveSort pins the documented
+// contract on writeCSV: the live table's interactive sort state is
+// NOT preserved on export — rows come out in the dataset's natural
+// (filter-and-faulty-applied) order. Before the export-normalization
+// commit, writeCSV iterated m.table.Rows() which carried the sort;
+// after the rewrite, rows are rebuilt from the dataset via the
+// export-mode row builder. Sort drops out. Test guards against an
+// accidental revert that would re-couple export to display state.
+func TestExportTableCSV_IgnoresInteractiveSort(t *testing.T) {
+	t.Parallel()
+
+	tbl := table.New()
+	tbl.SetColumns([]table.Column{
+		{Title: "Name"},
+		{Title: "OCIDs"},
+		{Title: "Internal"},
+		{Title: "Note"},
+	})
+
+	m := &Model{
+		headers: []header{
+			{text: "Name"},
+			{text: "OCIDs"},
+			{text: "Internal"},
+			{text: "Note"},
+		},
+		table:       &tbl,
+		category:    domain.Tenant,
+		environment: models.Environment{Region: "us-ashburn-1", Realm: "oc1"},
+		dataset: &models.Dataset{
+			Tenants: []models.Tenant{
+				{Name: "charlie", IDs: []string{"ocid1.tenancy.oc1..c"}},
+				{Name: "alice", IDs: []string{"ocid1.tenancy.oc1..a"}},
+				{Name: "bob", IDs: []string{"ocid1.tenancy.oc1..b"}},
+			},
+		},
+		// Simulate the user having sorted by Name descending in the
+		// live table. Export should ignore this — the rows below
+		// must appear in dataset order, not sort order.
+		sortColumn: "Name",
+		sortAsc:    false,
+		loader:     fakeLoader{dataset: &models.Dataset{}},
+		logger:     fakeLogger{},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, m.writeCSV(&buf))
+	records, err := csv.NewReader(&buf).ReadAll()
+	require.NoError(t, err)
+	require.Len(t, records, 4) // header + 3 rows
+	// Dataset insertion order: charlie, alice, bob. NOT sorted
+	// descending by name (would have been: charlie, bob, alice).
+	assert.Equal(t, "charlie", records[1][0])
+	assert.Equal(t, "alice", records[2][0])
+	assert.Equal(t, "bob", records[3][0])
+}
+
 // TestExportRowBuilders_CoversCategoryHandlers guards the parity
 // between the live row-rendering dispatch (categoryHandlers in
 // table_utils.go) and the export-mode dispatch (exportRowBuilders
