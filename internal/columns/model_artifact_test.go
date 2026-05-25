@@ -44,3 +44,18 @@ func TestModelArtifactColumns(t *testing.T) {
 		t.Errorf("ratio sum %.3f outside ±0.02 of 1.0", sum)
 	}
 }
+
+// TestModelArtifactColumns_ModelNameAtIndex1 pins a cross-package
+// invariant: the TUI's getItemKey treats row[1] of a ModelArtifact
+// row as the parent BaseModel scope (it equals the
+// ModelArtifactMap key by loader design). If "Model Internal Name"
+// ever moves to a different column position, getItemKey would mint
+// the wrong ScopedItemKey and findItem(ModelArtifact, ...) would
+// return nil for live selections. Fail fast at the column-registry
+// layer so the regression is caught here, not as a silent UI bug.
+func TestModelArtifactColumns_ModelNameAtIndex1(t *testing.T) {
+	t.Parallel()
+	if got := ModelArtifactColumns.Columns[1].Title; got != "Model Internal Name" {
+		t.Fatalf("Columns[1].Title = %q, want %q — getItemKey(ModelArtifact) depends on this position; see internal/ui/tui/table_utils.go", got, "Model Internal Name")
+	}
+}
