@@ -17,9 +17,18 @@ import (
 // writeCSV. Mirrors categoryHandlers in table_utils.go but routes
 // each cell through ExportRender when set, so OCID-shaped columns
 // emit fully-qualified IDs instead of the suffix-only display values.
-// Categories that have no live data source on the current Model
-// (e.g. Alias) are omitted; the popup doesn't reach them today.
+//
+// MUST stay key-aligned with categoryHandlers — any list-view
+// category the user can reach with <e> needs an entry here, or the
+// export silently emits a header-only CSV. TestExportRowBuilders_
+// CoversCategoryHandlers in export_csv_test.go pins that parity.
 var exportRowBuilders = map[domain.Category]func(*Model) []table.Row{
+	domain.Alias: func(m *Model) []table.Row {
+		// Alias is a static enum dump — no dataset access needed and
+		// no env-dependent columns to apply ExportRender to.
+		return tuiRowsFlatForExport(columns.AliasColumns, domain.Categories,
+			"", "", m.curFilter, m.showFaulty)
+	},
 	domain.Tenant: func(m *Model) []table.Row {
 		return tuiRowsFlatForExport(columns.TenantColumns, m.dataset.Tenants,
 			m.environment.Realm, m.environment.Region, m.curFilter, m.showFaulty)

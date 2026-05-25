@@ -15,12 +15,12 @@ func dacUnitShapeOrProfile(d models.DedicatedAICluster) string {
 
 // DacColumns is the canonical column set for domain.DedicatedAICluster.
 //
-// Ordering invariant: row[0]=Name, row[1]=Tenant. internal/ui/tui/export_csv.go
-// depends on this ordering when substituting the realm/region-qualified ID
-// for the Name column in CSV export. If you reorder, fix the substitution
-// there too.
-//
 // Ordering is name-first, tenant-key-second (matches TUI; Decision #4).
+// The Name and Tenant columns carry an ExportRender closure that
+// produces fully-qualified OCIDs (vs the suffix-only display form);
+// substitution happens per-column inside the column registry, so
+// reordering the columns here doesn't require companion edits in
+// the CSV export path.
 //
 // Name was rebalanced from 0.35 to 0.20 to match ImportedModel and free
 // width for the narrow sortable columns (Internal/Usage/Size/Age); they

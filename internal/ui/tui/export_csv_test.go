@@ -165,6 +165,23 @@ func TestExportFilename(t *testing.T) {
 	assert.Equal(t, "iad-Tenant.csv", got)
 }
 
+// TestExportRowBuilders_CoversCategoryHandlers guards the parity
+// between the live row-rendering dispatch (categoryHandlers in
+// table_utils.go) and the export-mode dispatch (exportRowBuilders
+// in export_csv.go). Any list-view category the user can reach
+// via <e> must have an export builder, or the CSV export silently
+// emits a header-only file. Before this invariant existed, Alias
+// was missing from exportRowBuilders despite categoryHandlers
+// registering it.
+func TestExportRowBuilders_CoversCategoryHandlers(t *testing.T) {
+	t.Parallel()
+	for cat := range categoryHandlers {
+		if _, ok := exportRowBuilders[cat]; !ok {
+			t.Errorf("category %s has a live row builder but no exportRowBuilders entry — pressing <e> would emit a header-only CSV", cat)
+		}
+	}
+}
+
 func TestExportView_ContainsFilenameAndPrompt(t *testing.T) {
 	t.Parallel()
 	m := &Model{

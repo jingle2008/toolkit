@@ -209,17 +209,17 @@ func RenderTable(cat domain.Category, items any, selected []string) ([]string, [
 // that have nothing export-specific to say behave identically to
 // RenderTable.
 //
-// When both realm and region are empty the function short-circuits
-// to RenderTable — ExportRender closures typically format `realm`
-// and `region` into the output, and an empty env would produce
-// well-formed-but-meaningless strings like `ocid1.foo...bar`.
-// Callers without an environment (e.g. unit tests that exercise
-// the column registry directly) should pass empty strings and get
-// raw output.
+// When either realm or region is empty the function short-circuits
+// to RenderTable — ExportRender closures typically format both into
+// the output, and a partial env would produce malformed OCIDs like
+// `ocid1.<type>.oc1..suffix` (missing region) or
+// `ocid1.<type>..iad.suffix` (missing realm). Callers without a
+// fully-populated env (e.g. unit tests that exercise the column
+// registry directly) get raw display-mode output.
 //
 //nolint:cyclop // a per-category switch is the contract here
 func RenderTableForExport(cat domain.Category, items any, realm, region string, selected []string) ([]string, [][]string, error) {
-	if realm == "" && region == "" {
+	if realm == "" || region == "" {
 		return RenderTable(cat, items, selected)
 	}
 	switch cat { //nolint:exhaustive
