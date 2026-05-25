@@ -29,7 +29,7 @@ func TestRenderTable_Tenant(t *testing.T) {
 	}
 	headers, rows, err := columns.RenderTable(domain.Tenant, items, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"NAME", "OCID", "INTERNAL", "NOTE"}, headers)
+	assert.Equal(t, []string{"NAME", "OCIDS", "INTERNAL", "NOTE"}, headers)
 	assert.Equal(t, [][]string{{"t1", "ocid1.a,ocid1.b", "true", "n"}}, rows)
 
 	// Empty input still returns headers + empty rows.

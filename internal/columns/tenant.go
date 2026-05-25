@@ -8,13 +8,14 @@ import (
 )
 
 // TenantColumns is the canonical column set for domain.Tenant. The
-// second column's Title is "OCID" (matches TUI; the legacy CLI header
-// was "IDS"); the cell content is the comma-joined IDs slice (matches
-// legacy CLI).
+// second column's Title is "OCIDs" (plural) — one tenant can have
+// multiple OCIDs (Tenant.IDs is a slice, and Tenant.IsFaulty flags
+// >1 IDs). The cell joins them with commas. Key stays "ocid" for
+// CLI --columns stability with prior releases.
 var TenantColumns = Set[models.Tenant]{Columns: []Column[models.Tenant]{
 	{Title: "Name", Key: "name", Ratio: 0.20,
 		Render: func(t models.Tenant) string { return t.Name }},
-	{Title: "OCID", Key: "ocid", Ratio: 0.60,
+	{Title: "OCIDs", Key: "ocid", Ratio: 0.60,
 		Render: func(t models.Tenant) string { return strings.Join(t.IDs, ",") }},
 	{Title: "Internal", Key: "internal", Ratio: 0.10,
 		Render: func(t models.Tenant) string { return fmt.Sprint(t.IsInternal) }},
