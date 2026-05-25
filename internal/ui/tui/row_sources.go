@@ -56,7 +56,11 @@ func flatSource[T models.NamedFilterable](
 		},
 		headers: headersFromSet(cols.Columns),
 		find: func(d *models.Dataset, key models.ItemKey) any {
-			return collections.FindByName(pick(d), key.(string))
+			name, ok := key.(string)
+			if !ok {
+				return nil
+			}
+			return collections.FindByName(pick(d), name)
 		},
 	}
 }
@@ -81,7 +85,10 @@ func groupedSource[T models.NamedFilterable](
 		},
 		headers: headersFromGroupedSet(cols.Columns),
 		find: func(d *models.Dataset, key models.ItemKey) any {
-			k := key.(models.ScopedItemKey)
+			k, ok := key.(models.ScopedItemKey)
+			if !ok {
+				return nil
+			}
 			if items, ok := pick(d)[k.Scope]; ok {
 				return collections.FindByName(items, k.Name)
 			}

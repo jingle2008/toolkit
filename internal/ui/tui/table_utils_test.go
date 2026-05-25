@@ -114,13 +114,19 @@ func TestFindItem_LimitRegionalOverride(t *testing.T) {
 
 func Test_getTableRows_empty_dataset(t *testing.T) {
 	t.Parallel()
-	// Should not panic or return rows for nil dataset
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("expected panic for nil dataset")
+	// A zero-value Dataset has nil slices and maps for every
+	// category; every dataset-backed category should produce zero
+	// rows without panicking. Alias is excluded — its rows are
+	// sourced from domain.Categories, not the Dataset, so the view
+	// is non-empty even with no data.
+	ds := &models.Dataset{}
+	for cat := domain.Tenant; cat <= domain.Alias; cat++ {
+		if cat == domain.Alias {
+			continue
 		}
-	}()
-	_, _ = getTableRows(nil, domain.Tenant, nil, "", "", true, false)
+		rows, _ := getTableRows(ds, cat, nil, "", "", true, false)
+		assert.Empty(t, rows, "category %v should have no rows for empty dataset", cat)
+	}
 }
 
 func TestGetTableRows_DedicatedAIClusterStats(t *testing.T) {
