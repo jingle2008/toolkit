@@ -151,11 +151,11 @@ toolkit --help
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  Tenant  LimitDefinition  PropertyDefinition  GpuPool  GpuNode  ...         │  ← Category tabs
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  NAME              │  INTERNAL  │  STATUS    │  REGION                       │  ← Column headers
-│  ──────────────────┼────────────┼────────────┼──────────────────────────── │
-│  acme-corp         │  false     │  Active    │  us-phoenix-1                 │
-│  ▶ beta-tenant     │  true      │  Active    │  us-ashburn-1                 │  ← Selected row
-│  gamma-inc         │  false     │  Inactive  │  eu-frankfurt-1               │
+│  NAME           │  OCIDS                            │  INTERNAL ↕ │  NOTE   │  ← Column headers (↕ = sortable)
+│  ───────────────┼───────────────────────────────────┼─────────────┼──────── │
+│  acme-corp      │  ocid1.tenancy.oc1..aaa…xyz       │  false      │         │
+│  ▶ beta-tenant  │  ocid1.tenancy.oc1..bbb…uvw,…(+1) │  true       │  pilot  │  ← Selected row
+│  gamma-inc      │  ocid1.tenancy.oc1..ccc…rst       │  false      │         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  Filter: _                                                                   │  ← Filter / status bar
 │  [?] Help  [q] Quit  [/] Filter  [tab] Next  [y] Details  [e] Export CSV   │  ← Key hints
@@ -206,6 +206,7 @@ The interface has four zones:
 | `cpro` | ConsolePropertyRegionalOverride |
 | `pro` | PropertyRegionalOverride |
 | `bm` | BaseModel |
+| `im` / `importedmodel` | ImportedModel |
 | `ma` | ModelArtifact |
 | `e` / `env` | Environment |
 | `st` | ServiceTenancy |
@@ -228,7 +229,7 @@ Some categories are **parent scopes** — pressing `Enter` on a row zooms in to 
 
 | Parent | Child categories available |
 |--------|---------------------------|
-| Tenant | LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster |
+| Tenant | LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster, ImportedModel |
 | LimitDefinition | LimitTenancyOverride, LimitRegionalOverride |
 | ConsolePropertyDefinition | ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride |
 | PropertyDefinition | PropertyTenancyOverride, PropertyRegionalOverride |
@@ -240,7 +241,7 @@ Press `Esc` to exit the scoped context and return to the parent.
 
 ## Categories
 
-Toolkit organises data into 17 categories:
+Toolkit organises data into 18 categories:
 
 ### Core Infrastructure
 
@@ -279,6 +280,7 @@ Toolkit organises data into 17 categories:
 | Category | Description |
 |----------|-------------|
 | **BaseModel** | AI model definitions; supports faulty tracking |
+| **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label) |
 | **ModelArtifact** | Model artifact versions |
 | **GpuPool** | OCI GPU instance pools; supports scaling |
 | **GpuNode** | Individual Kubernetes GPU compute nodes |
@@ -327,7 +329,9 @@ Shift+N    → sort by Name (ascending / descending toggle)
 
 ### Category-specific sort keys
 
-Each category exposes additional sort columns:
+Each category exposes additional sort columns. In the TUI, the column
+headers that participate in sorting are marked with a `↕` indicator so
+you can see at a glance which columns the keys below will reach.
 
 | Category | Key | Sorts by |
 |----------|-----|----------|
@@ -347,6 +351,8 @@ Each category exposes additional sort columns:
 | DedicatedAICluster | `Shift+U` | Usage |
 | DedicatedAICluster | `Shift+S` | Size |
 | DedicatedAICluster | `Shift+A` | Age |
+| ImportedModel | `Shift+T` | Tenant |
+| ImportedModel | `Shift+V` | Vendor |
 | LimitTenancyOverride | `Shift+T` | Tenant |
 | LimitTenancyOverride | `Shift+R` | Regions |
 | ConsolePropertyTenancyOverride | `Shift+T` | Tenant |
@@ -435,6 +441,17 @@ Select a node in the `GpuNode` category:
 | `r` | Refresh | Reload cluster data |
 | `Ctrl+Z` | Toggle Faulty | Show/hide faulty clusters |
 
+### Refreshing cluster-derived categories
+
+The `r` key reloads the current list from the live cluster. In addition
+to GpuNode / GpuPool / DedicatedAICluster above, it is also bound on the
+read-only cluster-derived categories:
+
+| Category | Key | Operation |
+|----------|-----|-----------|
+| BaseModel | `r` | Reload base models from the cluster |
+| ImportedModel | `r` | Reload tenant-imported models from the cluster |
+
 ### Faulty item tracking
 
 Several categories support a **faulty toggle** (`Ctrl+Z`). When enabled, only items that are in a faulty state are shown. The status bar displays counts like `Faulty: 2, Healthy: 10`.
@@ -457,8 +474,8 @@ The exported CSV reflects the **current filter and sort state** — what you see
 
 | Key | Available in | Copies |
 |-----|-------------|--------|
-| `c` | List & Detail view | Item name or ID |
-| `t` | Tenant, DedicatedAICluster, tenancy override categories | Tenant ID |
+| `c` | List & Detail view | Item name or ID (on ImportedModel, the full OCID) |
+| `t` | Tenant, DedicatedAICluster, ImportedModel, tenancy override categories | Tenant ID |
 | `o` | Detail view only | Full JSON object |
 | `p` | List view | *Pastes* clipboard content as a filter |
 
