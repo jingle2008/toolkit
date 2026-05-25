@@ -65,102 +65,88 @@ type GroupedSet[T any] struct {
 	Columns []GroupedColumn[T]
 }
 
+// selectByKey returns the subset of cols whose key (extracted via
+// keyOf) appears in wanted, preserving the order of wanted. Any
+// keys in wanted that aren't present in cols are bundled into a
+// single UnknownColumnError so the CLI can show one complete message.
+func selectByKey[T any](cols []T, keyOf func(T) string, wanted, validKeys []string) ([]T, error) {
+	byKey := make(map[string]T, len(cols))
+	for _, c := range cols {
+		byKey[keyOf(c)] = c
+	}
+	out := make([]T, 0, len(wanted))
+	var unknown []string
+	for _, k := range wanted {
+		if c, ok := byKey[k]; ok {
+			out = append(out, c)
+		} else {
+			unknown = append(unknown, k)
+		}
+	}
+	if len(unknown) > 0 {
+		return nil, &UnknownColumnError{Unknown: unknown, Valid: validKeys}
+	}
+	return out, nil
+}
+
+// extractField projects each col through extract, preserving order.
+func extractField[T any, F any](cols []T, extract func(T) F) []F {
+	out := make([]F, len(cols))
+	for i, c := range cols {
+		out[i] = extract(c)
+	}
+	return out
+}
+
+// sumField sums extract(col) across cols.
+func sumField[T any](cols []T, extract func(T) float64) float64 {
+	var sum float64
+	for _, c := range cols {
+		sum += extract(c)
+	}
+	return sum
+}
+
 // SelectColumns returns the columns of s whose Key is in keys,
 // in the order given by keys. Returns an error listing all unknown
 // keys (so the CLI can show a single complete message).
 func (s Set[T]) SelectColumns(keys []string) ([]Column[T], error) {
-	byKey := make(map[string]Column[T], len(s.Columns))
-	for _, c := range s.Columns {
-		byKey[c.Key] = c
-	}
-	out := make([]Column[T], 0, len(keys))
-	var unknown []string
-	for _, k := range keys {
-		if c, ok := byKey[k]; ok {
-			out = append(out, c)
-		} else {
-			unknown = append(unknown, k)
-		}
-	}
-	if len(unknown) > 0 {
-		return nil, &UnknownColumnError{Unknown: unknown, Valid: s.Keys()}
-	}
-	return out, nil
+	return selectByKey(s.Columns, func(c Column[T]) string { return c.Key }, keys, s.Keys())
 }
 
 // Keys returns the keys declared on s in order.
 func (s Set[T]) Keys() []string {
-	out := make([]string, len(s.Columns))
-	for i, c := range s.Columns {
-		out[i] = c.Key
-	}
-	return out
+	return extractField(s.Columns, func(c Column[T]) string { return c.Key })
 }
 
 // Titles returns the Title for each column of s in declared order.
 func (s Set[T]) Titles() []string {
-	out := make([]string, len(s.Columns))
-	for i, c := range s.Columns {
-		out[i] = c.Title
-	}
-	return out
+	return extractField(s.Columns, func(c Column[T]) string { return c.Title })
 }
 
 // RatioSum returns the sum of Ratio across all columns of s.
 func (s Set[T]) RatioSum() float64 {
-	var sum float64
-	for _, c := range s.Columns {
-		sum += c.Ratio
-	}
-	return sum
+	return sumField(s.Columns, func(c Column[T]) float64 { return c.Ratio })
 }
 
 // SelectColumns / Keys / Titles / RatioSum mirrors for GroupedSet.
 func (g GroupedSet[T]) SelectColumns(keys []string) ([]GroupedColumn[T], error) {
-	byKey := make(map[string]GroupedColumn[T], len(g.Columns))
-	for _, c := range g.Columns {
-		byKey[c.Key] = c
-	}
-	out := make([]GroupedColumn[T], 0, len(keys))
-	var unknown []string
-	for _, k := range keys {
-		if c, ok := byKey[k]; ok {
-			out = append(out, c)
-		} else {
-			unknown = append(unknown, k)
-		}
-	}
-	if len(unknown) > 0 {
-		return nil, &UnknownColumnError{Unknown: unknown, Valid: g.Keys()}
-	}
-	return out, nil
+	return selectByKey(g.Columns, func(c GroupedColumn[T]) string { return c.Key }, keys, g.Keys())
 }
 
 // Keys returns the keys declared on g in order.
 func (g GroupedSet[T]) Keys() []string {
-	out := make([]string, len(g.Columns))
-	for i, c := range g.Columns {
-		out[i] = c.Key
-	}
-	return out
+	return extractField(g.Columns, func(c GroupedColumn[T]) string { return c.Key })
 }
 
 // Titles returns the column titles declared on g in order.
 func (g GroupedSet[T]) Titles() []string {
-	out := make([]string, len(g.Columns))
-	for i, c := range g.Columns {
-		out[i] = c.Title
-	}
-	return out
+	return extractField(g.Columns, func(c GroupedColumn[T]) string { return c.Title })
 }
 
 // RatioSum returns the sum of column Ratio values on g.
 func (g GroupedSet[T]) RatioSum() float64 {
-	var sum float64
-	for _, c := range g.Columns {
-		sum += c.Ratio
-	}
-	return sum
+	return sumField(g.Columns, func(c GroupedColumn[T]) float64 { return c.Ratio })
 }
 
 // UnknownColumnError is returned by SelectColumns when one or more
