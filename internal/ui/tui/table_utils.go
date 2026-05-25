@@ -49,50 +49,13 @@ func headersFromGroupedSet[T any](cols []columns.GroupedColumn[T]) []header {
 	return out
 }
 
-/*
-getHeaders returns the header definitions for a given category.
-If no headers are defined for the category, it returns nil.
-*/
+// getHeaders returns the header strip for a category. Headers are
+// precomputed at rowSources construction so the live table, the
+// CSV export, and the header strip share one column set. Returns
+// nil for unregistered categories (e.g. CategoryUnknown).
 func getHeaders(category domain.Category) []header {
-	switch category { //nolint:exhaustive
-	case domain.Tenant:
-		return headersFromSet(columns.TenantColumns.Columns)
-	case domain.LimitDefinition:
-		return headersFromSet(columns.LimitDefinitionColumns.Columns)
-	case domain.ConsolePropertyDefinition:
-		return headersFromSet(columns.ConsolePropertyDefinitionColumns.Columns)
-	case domain.PropertyDefinition:
-		return headersFromSet(columns.PropertyDefinitionColumns.Columns)
-	case domain.LimitRegionalOverride:
-		return headersFromSet(columns.LimitRegionalOverrideColumns.Columns)
-	case domain.ConsolePropertyRegionalOverride:
-		return headersFromSet(columns.ConsolePropertyRegionalOverrideColumns.Columns)
-	case domain.PropertyRegionalOverride:
-		return headersFromSet(columns.PropertyRegionalOverrideColumns.Columns)
-	case domain.BaseModel:
-		return headersFromSet(columns.BaseModelColumns.Columns)
-	case domain.Environment:
-		return headersFromSet(columns.EnvironmentColumns.Columns)
-	case domain.ServiceTenancy:
-		return headersFromSet(columns.ServiceTenancyColumns.Columns)
-	case domain.GpuPool:
-		return headersFromSet(columns.GpuPoolColumns.Columns)
-	case domain.Alias:
-		return headersFromSet(columns.AliasColumns.Columns)
-	case domain.GpuNode:
-		return headersFromGroupedSet(columns.GpuNodeColumns.Columns)
-	case domain.DedicatedAICluster:
-		return headersFromGroupedSet(columns.DacColumns.Columns)
-	case domain.ImportedModel:
-		return headersFromGroupedSet(columns.ImportedModelColumns.Columns)
-	case domain.ModelArtifact:
-		return headersFromGroupedSet(columns.ModelArtifactColumns.Columns)
-	case domain.LimitTenancyOverride:
-		return headersFromGroupedSet(columns.LimitTenancyOverrideColumns.Columns)
-	case domain.ConsolePropertyTenancyOverride:
-		return headersFromGroupedSet(columns.ConsolePropertyTenancyOverrideColumns.Columns)
-	case domain.PropertyTenancyOverride:
-		return headersFromGroupedSet(columns.PropertyTenancyOverrideColumns.Columns)
+	if src, ok := rowSources[category]; ok {
+		return src.headers
 	}
 	return nil
 }
@@ -111,7 +74,7 @@ func getTableRows(dataset *models.Dataset, category domain.Category, context *do
 	if !exists {
 		return nil, nil
 	}
-	rows := src(rowCtx{
+	rows := src.rows(rowCtx{
 		dataset: dataset,
 		context: context,
 		filter:  filter,
@@ -193,43 +156,6 @@ func appendDedicatedAIClusterStats(rows []table.Row, stats tableStats) tableStat
 	stats["Active"] = active
 	stats["Failed"] = failed
 	return stats
-}
-
-// filterRowsScoped is used for tenancy and other scoped overrides.
-// Accepts a Logger interface for decoupling from zap.
-func filterRowsScoped[T models.NamedFilterable](
-	g map[string][]T,
-	scopeCategory domain.Category,
-	ctx *domain.ToolkitContext,
-	filter string,
-	faultyOnly bool,
-	rowFn func(T, string) table.Row,
-) []table.Row {
-	var (
-		key  *string
-		name *string
-	)
-
-	if ctx != nil {
-		if ctx.Category == scopeCategory {
-			key = &ctx.Name
-		} else {
-			name = &ctx.Name
-		}
-	}
-
-	var pred func(T) bool
-	if faultyOnly {
-		pred = faultyPred
-	}
-	matches := collections.FilterMap(g, key, name, filter, pred)
-	results := make([]table.Row, 0, len(matches))
-	for key, m := range matches {
-		for _, v := range m {
-			results = append(results, rowFn(v, key))
-		}
-	}
-	return results
 }
 
 /*

@@ -22,11 +22,17 @@ type rowCtx struct {
 	export  bool
 }
 
-// rowSource produces the rendered rows for one category. Each entry
-// in rowSources is constructed by flatSource or groupedSource, which
-// capture the typed column set and dataset accessor in a closure so
-// the dispatch map can stay non-generic.
-type rowSource func(rowCtx) []table.Row
+// rowSource bundles a category's per-cell row builder and its
+// precomputed headers. Each entry in rowSources is constructed by
+// flatSource or groupedSource, which capture the typed column set
+// and dataset accessor in a closure so the dispatch map can stay
+// non-generic. headers is derived from the same column set at
+// construction time, so the live table, the export, and the header
+// strip can never drift.
+type rowSource struct {
+	rows    func(rowCtx) []table.Row
+	headers []header
+}
 
 // flatSource builds a rowSource for a category backed by a flat
 // columns.Set. pick projects the dataset to the typed slice. The
@@ -36,12 +42,15 @@ func flatSource[T models.NamedFilterable](
 	cols columns.Set[T],
 	pick func(*models.Dataset) []T,
 ) rowSource {
-	return func(rc rowCtx) []table.Row {
-		items := pick(rc.dataset)
-		if rc.export {
-			return tuiRowsFlatForExport(cols, items, rc.realm, rc.region, rc.filter, rc.faulty)
-		}
-		return tuiRowsFlat(cols, items, rc.filter, rc.faulty)
+	return rowSource{
+		rows: func(rc rowCtx) []table.Row {
+			items := pick(rc.dataset)
+			if rc.export {
+				return tuiRowsFlatForExport(cols, items, rc.realm, rc.region, rc.filter, rc.faulty)
+			}
+			return tuiRowsFlat(cols, items, rc.filter, rc.faulty)
+		},
+		headers: headersFromSet(cols.Columns),
 	}
 }
 
@@ -55,12 +64,15 @@ func groupedSource[T models.NamedFilterable](
 	scope domain.Category,
 	pick func(*models.Dataset) map[string][]T,
 ) rowSource {
-	return func(rc rowCtx) []table.Row {
-		data := pick(rc.dataset)
-		if rc.export {
-			return tuiRowsGroupedForExport(cols, data, scope, rc.context, rc.realm, rc.region, rc.filter, rc.faulty)
-		}
-		return tuiRowsGrouped(cols, data, scope, rc.context, rc.filter, rc.faulty)
+	return rowSource{
+		rows: func(rc rowCtx) []table.Row {
+			data := pick(rc.dataset)
+			if rc.export {
+				return tuiRowsGroupedForExport(cols, data, scope, rc.context, rc.realm, rc.region, rc.filter, rc.faulty)
+			}
+			return tuiRowsGrouped(cols, data, scope, rc.context, rc.filter, rc.faulty)
+		},
+		headers: headersFromGroupedSet(cols.Columns),
 	}
 }
 

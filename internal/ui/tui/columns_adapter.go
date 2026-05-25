@@ -94,9 +94,9 @@ func tuiRowsGroupedWith[T models.NamedFilterable](
 	return rows
 }
 
-// tuiRowsGrouped renders a grouped map, preserving the scope logic
-// from filterRowsScoped. Display-mode: every cell uses the column's
-// Render closure with the (group key, item) pair.
+// tuiRowsGrouped renders a grouped map, applying the scope-context
+// gate (key vs name) before filter/faulty. Display-mode: every cell
+// uses the column's Render closure with the (group key, item) pair.
 func tuiRowsGrouped[T models.NamedFilterable](
 	g columns.GroupedSet[T],
 	m map[string][]T,

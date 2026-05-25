@@ -65,7 +65,7 @@ func (m *Model) exportRows() []table.Row {
 	if !ok {
 		return nil
 	}
-	return src(rowCtx{
+	return src.rows(rowCtx{
 		dataset: m.dataset,
 		context: m.context,
 		realm:   m.environment.Realm,
