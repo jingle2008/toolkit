@@ -7,10 +7,10 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// baseModelDacShape formats the default DAC shape as "{QuotaUnit}x {Name}",
+// baseModelDACShape formats the default DAC shape as "{QuotaUnit}x {Name}",
 // or returns "" when no default shape is configured.
-func baseModelDacShape(m models.BaseModel) string {
-	shape := m.GetDefaultDacShape()
+func baseModelDACShape(m models.BaseModel) string {
+	shape := m.GetDefaultDACShape()
 	if shape == nil {
 		return ""
 	}
@@ -37,7 +37,7 @@ var BaseModelColumns = Set[models.BaseModel]{Columns: []Column[models.BaseModel]
 	},
 	{
 		Title: "DAC Shape", Key: "dac-shape", Ratio: 0.14,
-		Render: baseModelDacShape,
+		Render: baseModelDACShape,
 	},
 	{
 		Title: "Size", Key: "size", Ratio: 0.07,

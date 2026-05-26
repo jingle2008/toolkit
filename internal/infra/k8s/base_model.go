@@ -44,9 +44,9 @@ func parseBaseModel(obj *unstructured.Unstructured) models.BaseModel {
 	capabilities, _, _ := unstructured.NestedStringSlice(spec, "modelCapabilities")
 	metadata, _, _ := unstructured.NestedStringMap(spec, "additionalMetadata")
 
-	var dacShapeConfigs *models.DacShapeConfigs
+	var dacShapeConfigs *models.DACShapeConfigs
 	if dac, ok := metadata["dacShapeConfigs"]; ok && dac != "" {
-		dacShapeConfigs = unmarshalYaml[models.DacShapeConfigs](dac)
+		dacShapeConfigs = unmarshalYaml[models.DACShapeConfigs](dac)
 	}
 
 	labels := getLabels(obj)
@@ -93,7 +93,7 @@ func parseBaseModel(obj *unstructured.Unstructured) models.BaseModel {
 		Capabilities:         capabilities,
 		Runtime:              runtime,
 		Replicas:             0,
-		DacShapeConfigs:      dacShapeConfigs,
+		DACShapeConfigs:      dacShapeConfigs,
 		DeprecatedDate:       labels["genai-model-deprecated-date"],
 		OnDemandRetiredDate:  labels["genai-model-on-demand-retired-date"],
 		DedicatedRetiredDate: labels["genai-model-dedicated-retired-date"],

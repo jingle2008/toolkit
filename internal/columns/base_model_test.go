@@ -19,7 +19,7 @@ func TestBaseModelColumns(t *testing.T) {
 		ParameterSize:  "7B",
 		Status:         "Ready",
 		IsExperimental: true,
-		DacShapeConfigs: &models.DacShapeConfigs{
+		DACShapeConfigs: &models.DACShapeConfigs{
 			CompatibleDACShapes: []models.DACShape{
 				{Name: "BM.GPU.A10.4", QuotaUnit: 2, Default: true},
 			},

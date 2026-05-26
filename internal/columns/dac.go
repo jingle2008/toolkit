@@ -13,7 +13,7 @@ func dacUnitShapeOrProfile(d models.DedicatedAICluster) string {
 	return d.Profile
 }
 
-// DacColumns is the canonical column set for domain.DedicatedAICluster.
+// DACColumns is the canonical column set for domain.DedicatedAICluster.
 //
 // Ordering is name-first, tenant-key-second (matches TUI; Decision #4).
 // The Name and Tenant columns carry an ExportRender closure that
@@ -28,7 +28,7 @@ func dacUnitShapeOrProfile(d models.DedicatedAICluster) string {
 // full title in Internal's case). The freed 0.15 is redistributed to
 // the columns that needed breathing room, including Status — its 6-char
 // title and ACTIVE/FAILED/READY values would truncate at ratio 0.04.
-var DacColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[models.DedicatedAICluster]{
+var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[models.DedicatedAICluster]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.20, TruncateMiddle: true,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Name },

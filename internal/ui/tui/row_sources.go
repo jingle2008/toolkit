@@ -168,6 +168,6 @@ var rowSources = map[domain.Category]rowSource{
 		func(d *models.Dataset) []models.GPUPool { return d.GPUPools }),
 	domain.GPUNode: groupedSource(columns.GPUNodeColumns, domain.GPUPool,
 		func(d *models.Dataset) map[string][]models.GPUNode { return d.GPUNodeMap }),
-	domain.DedicatedAICluster: groupedSource(columns.DacColumns, domain.Tenant,
+	domain.DedicatedAICluster: groupedSource(columns.DACColumns, domain.Tenant,
 		func(d *models.Dataset) map[string][]models.DedicatedAICluster { return d.DedicatedAIClusterMap }),
 }

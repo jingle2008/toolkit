@@ -262,7 +262,7 @@ func TestExportTUIPathMatchesCLIPath_DAC(t *testing.T) {
 	_, cliRows, err := columns.RenderTableForExport(domain.DedicatedAICluster, fixture, realm, region, nil)
 	require.NoError(t, err)
 
-	tuiRows := tuiRowsGroupedForExport(columns.DacColumns, fixture, domain.Tenant, nil, realm, region, "", false)
+	tuiRows := tuiRowsGroupedForExport(columns.DACColumns, fixture, domain.Tenant, nil, realm, region, "", false)
 	got := make([][]string, len(tuiRows))
 	for i, r := range tuiRows {
 		got[i] = []string(r)

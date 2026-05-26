@@ -6,7 +6,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-func TestDacColumns(t *testing.T) {
+func TestDACColumns(t *testing.T) {
 	t.Parallel()
 	d := models.DedicatedAICluster{
 		Name:          "dac-1",
@@ -22,7 +22,7 @@ func TestDacColumns(t *testing.T) {
 	}
 
 	got := map[string]string{}
-	for _, c := range DacColumns.Columns {
+	for _, c := range DACColumns.Columns {
 		got[c.Key] = c.Render("tenant-abc", d)
 	}
 
@@ -51,7 +51,7 @@ func TestDacColumns(t *testing.T) {
 	}
 
 	// Verify ratio sum is ~1.0.
-	sum := DacColumns.RatioSum()
+	sum := DACColumns.RatioSum()
 	if sum < 0.98 || sum > 1.02 {
 		t.Errorf("ratio sum %.3f outside ±0.02 of 1.0", sum)
 	}

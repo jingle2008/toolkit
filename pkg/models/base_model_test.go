@@ -10,14 +10,14 @@ func TestBaseModelFields(t *testing.T) {
 	t.Parallel()
 	bm := BaseModel{
 		Capabilities: []string{"generation", "embedding"},
-		DacShapeConfigs: &DacShapeConfigs{
+		DACShapeConfigs: &DACShapeConfigs{
 			CompatibleDACShapes: []DACShape{
 				{Name: "SMALL", QuotaUnit: 2, Default: true},
 			},
 		},
 	}
 	assert.ElementsMatch(t, []string{"embedding", "generation"}, bm.Capabilities)
-	assert.Equal(t, "SMALL", bm.DacShapeConfigs.CompatibleDACShapes[0].Name)
+	assert.Equal(t, "SMALL", bm.DACShapeConfigs.CompatibleDACShapes[0].Name)
 }
 
 func TestBaseModelIsFaulty(t *testing.T) {
@@ -26,33 +26,33 @@ func TestBaseModelIsFaulty(t *testing.T) {
 	assert.True(t, bm.IsFaulty())
 }
 
-func TestBaseModel_GetDefaultDacShape(t *testing.T) {
+func TestBaseModel_GetDefaultDACShape(t *testing.T) {
 	t.Parallel()
-	// No DacShapeConfigs
+	// No DACShapeConfigs
 	bm := BaseModel{}
-	assert.Nil(t, bm.GetDefaultDacShape())
+	assert.Nil(t, bm.GetDefaultDACShape())
 
-	// DacShapeConfigs with no default
+	// DACShapeConfigs with no default
 	bm = BaseModel{
-		DacShapeConfigs: &DacShapeConfigs{
+		DACShapeConfigs: &DACShapeConfigs{
 			CompatibleDACShapes: []DACShape{
 				{Name: "A", QuotaUnit: 1, Default: false},
 			},
 		},
 	}
-	assert.Nil(t, bm.GetDefaultDacShape())
+	assert.Nil(t, bm.GetDefaultDACShape())
 
-	// DacShapeConfigs with one default
+	// DACShapeConfigs with one default
 	shape := DACShape{Name: "B", QuotaUnit: 2, Default: true}
 	bm = BaseModel{
-		DacShapeConfigs: &DacShapeConfigs{
+		DACShapeConfigs: &DACShapeConfigs{
 			CompatibleDACShapes: []DACShape{
 				{Name: "A", QuotaUnit: 1, Default: false},
 				shape,
 			},
 		},
 	}
-	got := bm.GetDefaultDacShape()
+	got := bm.GetDefaultDACShape()
 	assert.NotNil(t, got)
 	assert.Equal(t, "B", got.Name)
 	assert.Equal(t, 2, got.QuotaUnit)
@@ -60,14 +60,14 @@ func TestBaseModel_GetDefaultDacShape(t *testing.T) {
 
 	// Multiple defaults: returns the first in declaration order, no panic.
 	bm = BaseModel{
-		DacShapeConfigs: &DacShapeConfigs{
+		DACShapeConfigs: &DACShapeConfigs{
 			CompatibleDACShapes: []DACShape{
 				{Name: "A", QuotaUnit: 1, Default: true},
 				{Name: "B", QuotaUnit: 2, Default: true},
 			},
 		},
 	}
-	got = bm.GetDefaultDacShape()
+	got = bm.GetDefaultDACShape()
 	assert.NotNil(t, got)
 	assert.Equal(t, "A", got.Name)
 }
@@ -127,8 +127,8 @@ func TestBaseModel_GetFilterableFields(t *testing.T) {
 	assert.Contains(t, fields, "r")
 }
 
-func TestDacShapeConfigs_Empty(t *testing.T) {
+func TestDACShapeConfigs_Empty(t *testing.T) {
 	t.Parallel()
-	cfg := DacShapeConfigs{}
+	cfg := DACShapeConfigs{}
 	assert.Empty(t, cfg.CompatibleDACShapes)
 }

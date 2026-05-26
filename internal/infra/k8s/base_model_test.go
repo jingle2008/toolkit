@@ -133,10 +133,10 @@ func TestLoadBaseModels_FakeDynamic(t *testing.T) {
 	assert.Equal(t, "7B", bm.ParameterSize)
 	assert.Equal(t, "Ready", bm.Status)
 	assert.Equal(t, "oci://n/tenancy/b/customer-model-store/o/customer-imported-basemodels/aaaa/amaaaa", bm.StorageURI)
-	if assert.NotNil(t, bm.DacShapeConfigs) && assert.NotEmpty(t, bm.DacShapeConfigs.CompatibleDACShapes) {
-		assert.Equal(t, "SHAPE1", bm.DacShapeConfigs.CompatibleDACShapes[0].Name)
-		assert.Equal(t, 2, bm.DacShapeConfigs.CompatibleDACShapes[0].QuotaUnit)
-		assert.True(t, bm.DacShapeConfigs.CompatibleDACShapes[0].Default)
+	if assert.NotNil(t, bm.DACShapeConfigs) && assert.NotEmpty(t, bm.DACShapeConfigs.CompatibleDACShapes) {
+		assert.Equal(t, "SHAPE1", bm.DACShapeConfigs.CompatibleDACShapes[0].Name)
+		assert.Equal(t, 2, bm.DACShapeConfigs.CompatibleDACShapes[0].QuotaUnit)
+		assert.True(t, bm.DACShapeConfigs.CompatibleDACShapes[0].Default)
 	}
 
 	// Minimal assertions
@@ -161,7 +161,7 @@ func TestLoadBaseModels_FakeDynamic(t *testing.T) {
 	assert.Equal(t, "", bm2.ParameterSize)
 	assert.Equal(t, "Creating", bm2.Status)
 	assert.Empty(t, bm2.StorageURI, "minimal CR without spec.storage should leave StorageURI empty")
-	assert.Nil(t, bm2.DacShapeConfigs)
+	assert.Nil(t, bm2.DACShapeConfigs)
 }
 
 // TestLoadBaseModels_SkipsTenantScopedModels pins the contract that
