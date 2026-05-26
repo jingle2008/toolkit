@@ -73,7 +73,7 @@ Examples:
 					DryRun:  dryRun,
 					Yes:     yes,
 				}, func(ctx context.Context) error {
-					changed, err := setCordonFn(ctx, cfg.KubeConfig, env.GetKubeContext(), nodeName, want)
+					changed, err := setCordonFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName, want)
 					if err != nil {
 						return err
 					}

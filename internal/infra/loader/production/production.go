@@ -51,7 +51,7 @@ func (l Loader) LoadDataset(ctx context.Context, repo string, env models.Environ
 LoadBaseModels loads base models from the cluster using the provided kubeconfig and environment.
 */
 func (Loader) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Environment) ([]models.BaseModel, error) {
-	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.GetKubeContext())
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (Loader) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Env
 // `tenancy-id` label) grouped by raw TenantID, using the provided
 // kubeconfig and environment.
 func (Loader) LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.ImportedModel, error) {
-	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.GetKubeContext())
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (Loader) LoadGPUPools(ctx context.Context, repo string, env models.Environm
 
 // LoadGPUNodes loads GPU nodes from the given kube config and environment.
 func (Loader) LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error) {
-	client, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.GetKubeContext())
+	client, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (Loader) LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Envir
 
 // LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
 func (Loader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
-	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.GetKubeContext())
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}

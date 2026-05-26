@@ -267,8 +267,8 @@ var shortNameRegion = map[string]Region{
 }
 
 // regionShortName is the inverse of shortNameRegion, populated at init
-// so GetCode is O(1) instead of scanning shortNameRegion linearly on
-// every per-row call from Environment.GetName / GetKubeContext.
+// so Code is O(1) instead of scanning shortNameRegion linearly on
+// every per-row call from Environment.GetName / KubeContext.
 var regionShortName = func() map[Region]string {
 	m := make(map[Region]string, len(shortNameRegion))
 	for k, v := range shortNameRegion {
@@ -278,7 +278,7 @@ var regionShortName = func() map[Region]string {
 }()
 
 /*
-GetCode returns the short code for the Region.
+Code returns the short code for the Region.
 
 For regions that haven't been added to the shortNameRegion map yet
 (typically newer SDK additions or sovereign-cloud regions that never
@@ -294,7 +294,7 @@ region key should add the mapping explicitly. Returns the literal
 "UNKNOWN" for inputs that don't look like region identifiers at all.
 */
 // Code not part of SDK
-func (r Region) GetCode() string {
+func (r Region) Code() string {
 	if k, ok := regionShortName[r]; ok {
 		return k
 	}

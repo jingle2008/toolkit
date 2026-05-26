@@ -123,13 +123,13 @@ func TestAliases(t *testing.T) {
 		assert.True(t, ok, "Alias %q should be present in aliasToCat", alias)
 	}
 
-	// Check that every category's GetAliases() are present in Aliases
+	// Check that every category's Aliases() are present in Aliases
 	aliasSet := make(map[string]struct{}, len(aliases))
 	for _, a := range aliases {
 		aliasSet[a] = struct{}{}
 	}
 	for c := Tenant; c <= Alias; c++ {
-		for _, a := range c.GetAliases() {
+		for _, a := range c.Aliases() {
 			_, ok := aliasSet[strings.ToLower(strings.TrimSpace(a))]
 			assert.True(t, ok, "Category %v alias %q should be present in Aliases", c, a)
 		}
@@ -159,7 +159,7 @@ func TestAliases_ContainsAllCatLookupKeys(t *testing.T) {
 func TestAliases_IterationRange(t *testing.T) {
 	t.Parallel()
 	for c := Tenant; c <= Alias; c++ {
-		aliases := c.GetAliases()
+		aliases := c.Aliases()
 		assert.NotEmpty(t, aliases, "Category %v should have at least one alias", c)
 	}
 }

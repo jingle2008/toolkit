@@ -108,7 +108,7 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := m.opContext()
 		defer cancel()
-		state, err := k8s.ToggleCordon(ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
+		state, err := k8s.ToggleCordon(ctx, m.kubeConfig, m.environment.KubeContext(), node.Name)
 		return cordonNodeResultMsg{key: itemKey, state: state, err: err}
 	}
 }
@@ -128,7 +128,7 @@ func (m *Model) drainNode(item any) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := m.opContext()
 		defer cancel()
-		err := k8s.DrainNode(ctx, m.kubeConfig, m.environment.GetKubeContext(), node.Name)
+		err := k8s.DrainNode(ctx, m.kubeConfig, m.environment.KubeContext(), node.Name)
 		return drainNodeResultMsg{key: itemKey, err: err}
 	}
 }

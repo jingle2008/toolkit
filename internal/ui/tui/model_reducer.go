@@ -30,7 +30,7 @@ func (m *Model) getCompartmentID(ctx context.Context) (string, error) {
 		}
 	}
 
-	clientset, err := k8s.NewClientsetFromKubeConfig(m.kubeConfig, m.environment.GetKubeContext())
+	clientset, err := k8s.NewClientsetFromKubeConfig(m.kubeConfig, m.environment.KubeContext())
 	if err != nil {
 		return "", err
 	}

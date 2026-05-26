@@ -16,14 +16,14 @@ func (m ModelArtifact) GetName() string {
 	return m.Name
 }
 
-// GetGPUConfig returns the GPU configuration string for the model artifact.
-func (m ModelArtifact) GetGPUConfig() string {
+// GPUConfig returns the GPU configuration string for the model artifact.
+func (m ModelArtifact) GPUConfig() string {
 	return fmt.Sprintf("%dx %s", m.GPUCount, m.GPUShape)
 }
 
 // FilterableFields returns filterable fields for the model artifact.
 func (m ModelArtifact) FilterableFields() []string {
-	return []string{m.Name, m.GetGPUConfig(), m.ModelName}
+	return []string{m.Name, m.GPUConfig(), m.ModelName}
 }
 
 // IsFaulty returns false by default for ModelArtifact.

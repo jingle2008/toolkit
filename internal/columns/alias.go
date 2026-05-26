@@ -16,6 +16,6 @@ var AliasColumns = Set[domain.Category]{Columns: []Column[domain.Category]{
 	},
 	{
 		Title: "Aliases", Key: "aliases", Ratio: 0.60,
-		Render: func(c domain.Category) string { return strings.Join(c.GetAliases(), ", ") },
+		Render: func(c domain.Category) string { return strings.Join(c.Aliases(), ", ") },
 	},
 }}

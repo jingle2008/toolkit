@@ -540,7 +540,7 @@ func writeAliases(w writer, filter string, limit int, opts output.Options, selec
 			catName := strings.ToLower(c.String())
 			if !strings.Contains(catName, filter) {
 				matched := false
-				for _, a := range c.GetAliases() {
+				for _, a := range c.Aliases() {
 					if strings.Contains(strings.ToLower(a), filter) {
 						matched = true
 						break
@@ -558,7 +558,7 @@ func writeAliases(w writer, filter string, limit int, opts output.Options, selec
 	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
 		items := make([]aliasView, 0, len(cats))
 		for _, c := range cats {
-			items = append(items, aliasView{Name: c.String(), Aliases: c.GetAliases()})
+			items = append(items, aliasView{Name: c.String(), Aliases: c.Aliases()})
 		}
 		return writeEncoded(w, opts, collections.TruncateSlice(items, limit))
 	case output.FormatTable, output.FormatCSV, output.FormatTSV:

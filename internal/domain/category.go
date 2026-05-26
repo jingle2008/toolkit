@@ -117,16 +117,16 @@ func (e Category) ScopedCategories() []Category {
 }
 
 /*
-GetAliases returns a list of aliases for the Category.
+Aliases returns a list of aliases for the Category.
 */
-func (e Category) GetAliases() []string {
+func (e Category) Aliases() []string {
 	cat := e.String()
-	short := GetInitials(cat)
+	short := uppercaseLetters(cat)
 	aliases := []string{strings.ToLower(short), strings.ToLower(cat)}
 
 	// Preserve short aliases that users typed before the GPU/DAC
 	// initialism normalization (Gpu→GPU, Dac→DAC) changed the
-	// auto-computed initials. GetInitials now yields GPUN/GPUP/DAIC
+	// auto-computed initials. uppercaseLetters now yields GPUN/GPUP/DAIC
 	// from these names; the old GN/GP/DAC short forms stay as aliases.
 	switch e {
 	case GPUNode:
@@ -150,7 +150,7 @@ func (e Category) GetName() string {
 FilterableFields returns the filterable fields for the Category.
 */
 func (e Category) FilterableFields() []string {
-	return e.GetAliases()
+	return e.Aliases()
 }
 
 // IsFaulty always returns false. Category exists in the Filterable
@@ -172,10 +172,11 @@ func (e Category) NeedsKubeConfig() bool {
 	return false
 }
 
-/*
-GetInitials returns the initials of a string, used for aliasing.
-*/
-func GetInitials(s string) string {
+// uppercaseLetters returns the concatenated uppercase-letter glyphs
+// of s (e.g. "DedicatedAICluster" → "DAIC"). Used by Aliases to
+// build a short-form alias from a category name. Not the linguistic
+// "initials" of words — purely a capital-letter filter.
+func uppercaseLetters(s string) string {
 	re := regexp.MustCompile(`[A-Z]`)
 	initials := re.FindAllString(s, -1)
 	return strings.Join(initials, "")
@@ -195,7 +196,7 @@ func init() {
 	aliasToCat = make(map[string]Category)
 
 	for c := Tenant; c <= Alias; c++ {
-		for _, a := range c.GetAliases() {
+		for _, a := range c.Aliases() {
 			aliasToCat[a] = c
 		}
 		Categories = append(Categories, c)

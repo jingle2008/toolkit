@@ -30,7 +30,7 @@ func TestBaseModel_GetDefaultDACShape(t *testing.T) {
 	t.Parallel()
 	// No DACShapeConfigs
 	bm := BaseModel{}
-	assert.Nil(t, bm.GetDefaultDACShape())
+	assert.Nil(t, bm.DefaultDACShape())
 
 	// DACShapeConfigs with no default
 	bm = BaseModel{
@@ -40,7 +40,7 @@ func TestBaseModel_GetDefaultDACShape(t *testing.T) {
 			},
 		},
 	}
-	assert.Nil(t, bm.GetDefaultDACShape())
+	assert.Nil(t, bm.DefaultDACShape())
 
 	// DACShapeConfigs with one default
 	shape := DACShape{Name: "B", QuotaUnit: 2, Default: true}
@@ -52,7 +52,7 @@ func TestBaseModel_GetDefaultDACShape(t *testing.T) {
 			},
 		},
 	}
-	got := bm.GetDefaultDACShape()
+	got := bm.DefaultDACShape()
 	assert.NotNil(t, got)
 	assert.Equal(t, "B", got.Name)
 	assert.Equal(t, 2, got.QuotaUnit)
@@ -67,7 +67,7 @@ func TestBaseModel_GetDefaultDACShape(t *testing.T) {
 			},
 		},
 	}
-	got = bm.GetDefaultDACShape()
+	got = bm.DefaultDACShape()
 	assert.NotNil(t, got)
 	assert.Equal(t, "A", got.Name)
 }
@@ -81,7 +81,7 @@ func TestBaseModel_GetFlags(t *testing.T) {
 		LifeCyclePhase:    "DEPRECATED",
 		IsImageTextToText: true,
 	}
-	flags := bm.GetFlags()
+	flags := bm.Flags()
 	assert.Contains(t, flags, "EXP")
 	assert.Contains(t, flags, "INT")
 	assert.Contains(t, flags, "RTD")
@@ -89,11 +89,11 @@ func TestBaseModel_GetFlags(t *testing.T) {
 
 	// Only DAC
 	bm = BaseModel{LifeCyclePhase: "ONDEMAND_SERVING_DISABLED"}
-	assert.Equal(t, "DAC", bm.GetFlags())
+	assert.Equal(t, "DAC", bm.Flags())
 
 	// No flags
 	bm = BaseModel{}
-	assert.Equal(t, "", bm.GetFlags())
+	assert.Equal(t, "", bm.Flags())
 }
 
 func TestBaseModel_IsFaulty(t *testing.T) {

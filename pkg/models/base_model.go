@@ -50,7 +50,7 @@ func (m BaseModel) GetName() string {
 	return m.Name
 }
 
-// GetDefaultDACShape returns the default DAC shape for the base model,
+// DefaultDACShape returns the default DAC shape for the base model,
 // or nil if none is marked default. If multiple shapes are marked default
 // (a malformed config), the first one in declaration order is returned.
 //
@@ -59,7 +59,7 @@ func (m BaseModel) GetName() string {
 // pointer field. Mutating the pointed-to DACShape will be visible to every
 // BaseModel value that shares the same DACShapeConfigs. Treat the result
 // as read-only.
-func (m BaseModel) GetDefaultDACShape() *DACShape {
+func (m BaseModel) DefaultDACShape() *DACShape {
 	if m.DACShapeConfigs == nil {
 		return nil
 	}
@@ -75,13 +75,13 @@ func (m BaseModel) GetDefaultDACShape() *DACShape {
 // FilterableFields returns filterable fields for the base model.
 func (m BaseModel) FilterableFields() []string {
 	var shapeName string
-	shape := m.GetDefaultDACShape()
+	shape := m.DefaultDACShape()
 	if shape != nil {
 		shapeName = shape.Name
 	}
 
 	return append(m.Capabilities, m.Name, m.DisplayName, m.Status,
-		m.Type, m.GetFlags(), shapeName, m.Runtime, m.StorageURI)
+		m.Type, m.Flags(), shapeName, m.Runtime, m.StorageURI)
 }
 
 // IsFaulty reports whether the model's Status is anything other than "Ready".
@@ -89,8 +89,8 @@ func (m BaseModel) IsFaulty() bool {
 	return m.Status != "Ready"
 }
 
-// GetFlags returns the flags for the base model.
-func (m BaseModel) GetFlags() string {
+// Flags returns the flags for the base model.
+func (m BaseModel) Flags() string {
 	flags := []string{}
 	if m.IsExperimental {
 		flags = append(flags, "EXP")

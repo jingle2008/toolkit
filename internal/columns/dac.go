@@ -45,11 +45,11 @@ var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 	},
 	{
 		Title: "Internal", Key: "internal", Ratio: 0.09,
-		Render: func(_ string, d models.DedicatedAICluster) string { return d.GetOwnerState() },
+		Render: func(_ string, d models.DedicatedAICluster) string { return d.OwnerState() },
 	},
 	{
 		Title: "Usage", Key: "usage", Ratio: 0.07,
-		Render: func(_ string, d models.DedicatedAICluster) string { return d.GetUsage() },
+		Render: func(_ string, d models.DedicatedAICluster) string { return d.Usage() },
 	},
 	{
 		Title: "Type", Key: "type", Ratio: 0.07,

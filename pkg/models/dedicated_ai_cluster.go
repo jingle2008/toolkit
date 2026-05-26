@@ -35,17 +35,17 @@ func (n DedicatedAICluster) FilterableFields() []string {
 		n.Status,
 		n.TenantID,
 		n.Profile,
-		n.GetOwnerState(),
+		n.OwnerState(),
 		n.ModelName,
-		n.GetUsage(),
+		n.Usage(),
 		n.Age,
 	}
 }
 
 /*
-GetOwnerState returns the state of the owner (internal/external) for the dedicated AI cluster.
+OwnerState returns the state of the owner (internal/external) for the dedicated AI cluster.
 */
-func (n DedicatedAICluster) GetOwnerState() string {
+func (n DedicatedAICluster) OwnerState() string {
 	var state string
 	if n.Owner != nil {
 		state = fmt.Sprint(n.Owner.IsInternal)
@@ -54,9 +54,9 @@ func (n DedicatedAICluster) GetOwnerState() string {
 }
 
 /*
-GetUsage returns the usage percentage as a string for the dedicated AI cluster.
+Usage returns the usage percentage as a string for the dedicated AI cluster.
 */
-func (n DedicatedAICluster) GetUsage() string {
+func (n DedicatedAICluster) Usage() string {
 	if n.TotalReplicas <= 0 {
 		return ""
 	}
@@ -79,7 +79,7 @@ func (n DedicatedAICluster) IsFaulty() bool {
 func normalizeRegion(region string) string {
 	r := Region(region)
 	if r == RegionIAD || r == RegionPHX {
-		return r.GetCode()
+		return r.Code()
 	}
 	return region
 }

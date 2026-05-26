@@ -24,7 +24,7 @@ func TestGPUPoolColumns(t *testing.T) {
 		got[c.Key] = c.Render(p)
 	}
 
-	// GetGPUs splits "BM.GPU.A10.4" → last part "4" → count=4, size=4 → 16
+	// GPUs splits "BM.GPU.A10.4" → last part "4" → count=4, size=4 → 16
 	want := map[string]string{
 		"name":          "pool-1",
 		"shape":         "BM.GPU.A10.4",

@@ -13,7 +13,7 @@ type Environment struct {
 
 // GetName returns the name of the environment.
 func (e Environment) GetName() string {
-	return fmt.Sprintf("%s-%s", e.Type, Region(e.Region).GetCode())
+	return fmt.Sprintf("%s-%s", e.Type, Region(e.Region).Code())
 }
 
 // FilterableFields returns filterable fields for the environment.
@@ -31,12 +31,12 @@ func (e Environment) Equals(o Environment) bool {
 	return e.Realm == o.Realm && e.GetName() == o.GetName()
 }
 
-// GetKubeContext returns the Kubernetes context string for the environment.
-func (e Environment) GetKubeContext() string {
+// KubeContext returns the Kubernetes context string for the environment.
+func (e Environment) KubeContext() string {
 	envType := e.Type
 	if envType == "preprod" {
 		envType = "ppe"
 	}
 
-	return fmt.Sprintf("dp-%s-%s", envType, Region(e.Region).GetCode())
+	return fmt.Sprintf("dp-%s-%s", envType, Region(e.Region).Code())
 }

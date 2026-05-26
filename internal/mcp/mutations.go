@@ -178,21 +178,21 @@ func (s *Server) handleMutation(
 
 func (s *Server) handleCordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "cordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
-		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node, true)
+		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node, true)
 		return err
 	})
 }
 
 func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "uncordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
-		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node, false)
+		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node, false)
 		return err
 	})
 }
 
 func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "drain", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
-		return mcpDrainNodeFn(ctx, s.cfg.KubeConfig, env.GetKubeContext(), in.Node)
+		return mcpDrainNodeFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
 	})
 }
 

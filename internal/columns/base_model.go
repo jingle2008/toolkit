@@ -10,7 +10,7 @@ import (
 // baseModelDACShape formats the default DAC shape as "{QuotaUnit}x {Name}",
 // or returns "" when no default shape is configured.
 func baseModelDACShape(m models.BaseModel) string {
-	shape := m.GetDefaultDACShape()
+	shape := m.DefaultDACShape()
 	if shape == nil {
 		return ""
 	}
@@ -49,7 +49,7 @@ var BaseModelColumns = Set[models.BaseModel]{Columns: []Column[models.BaseModel]
 	},
 	{
 		Title: "Flags", Key: "flags", Ratio: 0.09,
-		Render: func(m models.BaseModel) string { return m.GetFlags() },
+		Render: func(m models.BaseModel) string { return m.Flags() },
 	},
 	{
 		Title: "Status", Key: "status", Ratio: 0.07,

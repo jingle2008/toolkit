@@ -29,7 +29,7 @@ func TestModelArtifactColumns(t *testing.T) {
 	want := map[string]string{
 		"name":                "artifact-v1",
 		"model-internal-name": "llama3",
-		"gpu-config":          a.GetGPUConfig(),
+		"gpu-config":          a.GPUConfig(),
 		"tensorrt":            "8.6.1",
 	}
 	for k, v := range want {

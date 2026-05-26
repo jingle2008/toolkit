@@ -37,7 +37,7 @@ node so workloads relocate cleanly.`,
 					DryRun:  dryRun,
 					Yes:     yes,
 				}, func(ctx context.Context) error {
-					return drainNodeFn(ctx, cfg.KubeConfig, env.GetKubeContext(), nodeName)
+					return drainNodeFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 				})
 			})
 		},

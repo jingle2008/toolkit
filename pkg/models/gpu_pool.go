@@ -33,8 +33,8 @@ func (p GPUPool) IsFaulty() bool {
 	return p.ActualSize != p.Size
 }
 
-// GetGPUs returns the total number of GPUs in the pool.
-func (p GPUPool) GetGPUs() int {
+// GPUs returns the total number of GPUs in the pool.
+func (p GPUPool) GPUs() int {
 	parts := strings.Split(p.Shape, ".")
 	count, _ := strconv.Atoi(parts[len(parts)-1])
 	return count * p.Size

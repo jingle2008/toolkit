@@ -31,7 +31,7 @@ var GPUPoolColumns = Set[models.GPUPool]{Columns: []Column[models.GPUPool]{
 	},
 	{
 		Title: "GPUs", Key: "gpus", Ratio: 0.06,
-		Render: func(p models.GPUPool) string { return strconv.Itoa(p.GetGPUs()) },
+		Render: func(p models.GPUPool) string { return strconv.Itoa(p.GPUs()) },
 	},
 	{
 		Title: "OKE Managed", Key: "oke-managed", Ratio: 0.10,

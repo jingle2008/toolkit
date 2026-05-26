@@ -25,7 +25,7 @@ func (m *Model) infoView() string {
 		m.environment.Realm,
 		m.environment.Type,
 		m.environment.Region,
-		m.environment.GetKubeContext(),
+		m.environment.KubeContext(),
 		m.version,
 	}
 

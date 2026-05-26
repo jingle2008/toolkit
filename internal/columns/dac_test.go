@@ -29,8 +29,8 @@ func TestDACColumns(t *testing.T) {
 	want := map[string]string{
 		"name":          "dac-1",
 		"tenant":        "tenant-abc",
-		"internal":      d.GetOwnerState(),
-		"usage":         d.GetUsage(),
+		"internal":      d.OwnerState(),
+		"usage":         d.Usage(),
 		"type":          "LARGE",
 		"model":         "llama3",
 		"shape-profile": "BM.GPU.H100.8",

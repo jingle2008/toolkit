@@ -124,7 +124,7 @@ func EnrichGPUPools(ctx context.Context, pools []models.GPUPool, kubeConfig stri
 // identity for a given cluster is stable for the cluster's life, so
 // the cache has no semantic risk.
 //
-// Key is env.GetKubeContext() — a string like "dp-dev-iad" that
+// Key is env.KubeContext() — a string like "dp-dev-iad" that
 // uniquely identifies the target cluster. kubeConfig is intentionally
 // NOT part of the key: it's set once at NewServer (MCP) or once per
 // CLI invocation and never mutated within a process, so it can't
@@ -153,7 +153,7 @@ func clearCompartmentCache() {
 // pool enrichment. Successful lookups are cached per kubeContext for
 // the life of the process.
 func CompartmentID(ctx context.Context, kubeConfig string, env models.Environment) (string, error) {
-	kubeContext := env.GetKubeContext()
+	kubeContext := env.KubeContext()
 	if cached, ok := compartmentCache.Load(kubeContext); ok {
 		return cached.(string), nil //nolint:forcetypeassert // only Stored values are string
 	}

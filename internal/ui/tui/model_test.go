@@ -522,7 +522,7 @@ func TestModel_enterContext(t *testing.T) {
 		WithLoader(fakeLoader{}),
 		WithLogger(logging.NewNoOpLogger()),
 	)
-	// Region.GetCode("us-phoenix-1") == "phx", so Environment.GetName() == "dev-phx".
+	// Region.Code("us-phoenix-1") == "phx", so Environment.GetName() == "dev-phx".
 	m.table.SetColumns([]table.Column{{Title: "Region", Width: 10}})
 	m.table.SetRows([]table.Row{{"dev-phx"}})
 	m.category = domain.Environment
