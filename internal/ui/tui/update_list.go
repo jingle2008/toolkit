@@ -28,13 +28,13 @@ func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
-	case DataMsg:
+	case dataMsg:
 		return []tea.Cmd{m.handleDataMsg(msg)}
-	case FilterMsg:
+	case filterMsg:
 		return []tea.Cmd{m.handleFilterMsg(msg)}
-	case SetFilterMsg:
+	case setFilterMsg:
 		return []tea.Cmd{m.handleSetFilterMsg(msg)}
-	case FilterApplyMsg:
+	case filterApplyMsg:
 		return []tea.Cmd{m.handleFilterApplyMsg(msg)}
 	case deleteErrMsg:
 		m.handleDeleteErrMsg(msg)
@@ -70,7 +70,7 @@ func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
 
 func (m *Model) routeListDataMsg(msg tea.Msg) []tea.Cmd {
 	if dm, ok := msg.(datasetLoadedMsg); ok {
-		return []tea.Cmd{m.handleDataMsg(DataMsg{Data: dm.Dataset, Gen: dm.Gen})}
+		return []tea.Cmd{m.handleDataMsg(dataMsg{Data: dm.Dataset, Gen: dm.Gen})}
 	}
 	return m.routeLoadedDataMsg(msg)
 }
@@ -91,26 +91,26 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	return cmds
 }
 
-func (m *Model) handleDataMsg(msg DataMsg) tea.Cmd {
+func (m *Model) handleDataMsg(msg dataMsg) tea.Cmd {
 	return m.processData(msg)
 }
 
-func (m *Model) handleFilterMsg(msg FilterMsg) tea.Cmd {
+func (m *Model) handleFilterMsg(msg filterMsg) tea.Cmd {
 	return filterTableAsync(m, string(msg))
 }
 
-func (m *Model) handleSetFilterMsg(msg SetFilterMsg) tea.Cmd {
+func (m *Model) handleSetFilterMsg(msg setFilterMsg) tea.Cmd {
 	val := string(msg)
 	m.textInput.SetValue(val)
 	normalized := strings.ToLower(val)
 	// Invalidate any pending debounce tick that may be in-flight.
 	m.filterNonce++
 	return func() tea.Msg {
-		return FilterMsg(normalized)
+		return filterMsg(normalized)
 	}
 }
 
-func (m *Model) handleFilterApplyMsg(msg FilterApplyMsg) tea.Cmd {
+func (m *Model) handleFilterApplyMsg(msg filterApplyMsg) tea.Cmd {
 	// Only apply if this tick corresponds to the most recent debounce
 	if msg.Nonce == m.filterNonce {
 		return filterTableAsync(m, msg.Value)
@@ -191,7 +191,7 @@ func (*Model) pasteFilter() tea.Cmd {
 		if clip == "" {
 			return nil
 		}
-		return SetFilterMsg(clip)
+		return setFilterMsg(clip)
 	}
 }
 

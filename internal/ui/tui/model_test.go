@@ -143,27 +143,27 @@ func checkLoadDataResult(t *testing.T, msg any, wantData *models.Dataset, wantEr
 func assertLoadDataMessage(t *testing.T, msg any, wantData *models.Dataset) {
 	t.Helper()
 	switch m := msg.(type) {
-	case DataMsg:
+	case dataMsg:
 		if !reflect.DeepEqual(m.Data, wantData) {
-			t.Errorf("DataMsg.Data = %v, want %v", m.Data, wantData)
+			t.Errorf("dataMsg.Data = %v, want %v", m.Data, wantData)
 		}
 	case datasetLoadedMsg:
 		if !reflect.DeepEqual(m.Dataset, wantData) {
 			t.Errorf("datasetLoadedMsg.Dataset = %v, want %v", m.Dataset, wantData)
 		}
 	default:
-		t.Fatalf("expected DataMsg or datasetLoadedMsg, got %T", msg)
+		t.Fatalf("expected dataMsg or datasetLoadedMsg, got %T", msg)
 	}
 }
 
 func assertLoadErrorMessage(t *testing.T, msg any, wantError error) {
 	t.Helper()
-	emsg, ok := msg.(ErrMsg)
+	emsg, ok := msg.(errMsg)
 	if !ok {
-		t.Fatalf("expected ErrMsg, got %T", msg)
+		t.Fatalf("expected errMsg, got %T", msg)
 	}
 	if !errors.Is(emsg, wantError) {
-		t.Errorf("ErrMsg = %v, want %v", emsg, wantError)
+		t.Errorf("errMsg = %v, want %v", emsg, wantError)
 	}
 }
 
@@ -253,17 +253,17 @@ func TestProcessDataAndErrorMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	// processData with *models.Dataset
-	m.processData(DataMsg{Data: m.dataset})
+	m.processData(dataMsg{Data: m.dataset})
 	// processData with map[string]*models.BaseModel
-	m.processData(DataMsg{Data: map[string]*models.BaseModel{"bm": {}}})
+	m.processData(dataMsg{Data: map[string]*models.BaseModel{"bm": {}}})
 	// processData with []models.GpuPool
-	m.processData(DataMsg{Data: []models.GpuPool{{}}})
+	m.processData(dataMsg{Data: []models.GpuPool{{}}})
 	// processData with map[string][]models.GpuNode
-	m.processData(DataMsg{Data: map[string][]models.GpuNode{"pool": {}}})
+	m.processData(dataMsg{Data: map[string][]models.GpuNode{"pool": {}}})
 	// processData with map[string][]models.DedicatedAICluster
-	m.processData(DataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
+	m.processData(dataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
 	// Update with errorMsg
-	m.Update(ErrMsg(nil))
+	m.Update(errMsg(nil))
 }
 
 func TestModelUpdateBranches(t *testing.T) {
@@ -274,11 +274,11 @@ func TestModelUpdateBranches(t *testing.T) {
 	// Simulate tea.WindowSizeMsg
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	// Simulate dataMsg
-	m.Update(DataMsg{Data: m.dataset})
+	m.Update(dataMsg{Data: m.dataset})
 	// Simulate filterMsg
-	m.Update(FilterMsg("tenant1"))
+	m.Update(filterMsg("tenant1"))
 	// Simulate errMsg
-	m.Update(ErrMsg(nil))
+	m.Update(errMsg(nil))
 }
 
 func TestCenterTextReturnsCenteredText(t *testing.T) {

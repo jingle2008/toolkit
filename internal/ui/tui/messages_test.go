@@ -10,25 +10,25 @@ import (
 func TestErrMsg(t *testing.T) {
 	t.Parallel()
 	err := errors.New("fail")
-	msg := ErrMsg(err)
+	msg := errMsg(err)
 	assert.Equal(t, err, msg)
 }
 
 func TestDataMsg(t *testing.T) {
 	t.Parallel()
 	data := 42
-	msg := DataMsg{Data: data}
+	msg := dataMsg{Data: data}
 	assert.Equal(t, 42, msg.Data)
 }
 
 func TestFilterMsg(t *testing.T) {
 	t.Parallel()
-	msg := FilterMsg("foo")
+	msg := filterMsg("foo")
 	assert.Equal(t, "foo", string(msg))
 }
 
 func TestSetFilterMsg(t *testing.T) {
 	t.Parallel()
-	msg := SetFilterMsg("bar")
+	msg := setFilterMsg("bar")
 	assert.Equal(t, "bar", string(msg))
 }

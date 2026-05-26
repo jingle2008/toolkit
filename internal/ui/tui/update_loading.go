@@ -26,11 +26,11 @@ func (m *Model) routeLoadingMsg(msg tea.Msg) ([]tea.Cmd, bool) {
 			return nil, true
 		}
 		return nil, false
-	case DataMsg:
+	case dataMsg:
 		return []tea.Cmd{m.handleDataMsg(msg)}, false
 	case datasetLoadedMsg:
-		return []tea.Cmd{m.handleDataMsg(DataMsg{Data: msg.Dataset, Gen: msg.Gen})}, false
-	case ErrMsg:
+		return []tea.Cmd{m.handleDataMsg(dataMsg{Data: msg.Dataset, Gen: msg.Gen})}, false
+	case errMsg:
 		m.handleErrMsg(msg)
 		return nil, false
 	case spinner.TickMsg:

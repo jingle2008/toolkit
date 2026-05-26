@@ -16,7 +16,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.onResize(msg)
-	case ErrMsg:
+	case errMsg:
 		m.handleErrMsg(msg)
 		return m, nil
 	case tableRowsComputedMsg:

@@ -29,7 +29,7 @@ func (m *Model) loadData() []tea.Cmd {
 		func() tea.Msg {
 			dataset, err := m.loader.LoadDataset(m.loadCtx, m.repoPath, m.environment)
 			if err != nil {
-				return ErrMsg(err)
+				return errMsg(err)
 			}
 			return datasetLoadedMsg{Dataset: dataset, Gen: gen}
 		},
@@ -42,7 +42,7 @@ func setFilter(filter string) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		return SetFilterMsg(filter)
+		return setFilterMsg(filter)
 	}
 }
 

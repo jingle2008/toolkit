@@ -20,13 +20,13 @@ func filterTableAsync(m *Model, filter string) tea.Cmd {
 
 /*
 DebounceFilter triggers a debounced filter update for the model's text input.
-Emits FilterApplyMsg with a nonce so only the most recent tick applies.
+Emits filterApplyMsg with a nonce so only the most recent tick applies.
 */
 func DebounceFilter(m *Model) tea.Cmd {
 	val := strings.ToLower(m.textInput.Value())
 	m.filterNonce++
 	nonce := m.filterNonce
 	return tea.Tick(100*time.Millisecond, func(_ time.Time) tea.Msg {
-		return FilterApplyMsg{Value: val, Nonce: nonce}
+		return filterApplyMsg{Value: val, Nonce: nonce}
 	})
 }

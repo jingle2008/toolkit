@@ -30,13 +30,13 @@ func TestUpdateLoadingView_ErrMsg(t *testing.T) {
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
 	m.logger = &fakeLogger{}
-	msg := ErrMsg(fakeErrMsg("fail"))
+	msg := errMsg(fakeErrMsg("fail"))
 	_, cmd := m.updateLoadingView(msg)
 	if m.err == nil || m.err.Error() != "fail" {
 		t.Errorf("expected err to be set to 'fail', got %v", m.err)
 	}
 	if cmd != nil {
-		t.Errorf("expected nil command for ErrMsg, got %v", cmd)
+		t.Errorf("expected nil command for errMsg, got %v", cmd)
 	}
 }
 

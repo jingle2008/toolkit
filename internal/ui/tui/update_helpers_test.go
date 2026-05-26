@@ -105,7 +105,7 @@ func Test_updateLoadingView_DataMsg(t *testing.T) {
 	require.NoError(t, err)
 	m.viewMode = common.LoadingView
 	m.dataset = &models.Dataset{}
-	msg := DataMsg{}
+	msg := dataMsg{}
 	_, cmd := m.updateLoadingView(msg)
 	require.Nil(t, cmd)
 }
@@ -120,7 +120,7 @@ func Test_updateLoadingView_ErrMsg(t *testing.T) {
 	)
 	require.NoError(t, err)
 	m.viewMode = common.LoadingView
-	msg := ErrMsg(errors.New("fail"))
+	msg := errMsg(errors.New("fail"))
 	_, cmd := m.updateLoadingView(msg)
 	require.Nil(t, cmd)
 }
@@ -152,7 +152,7 @@ func Test_updateHelpView_OtherMsg(t *testing.T) {
 	)
 	require.NoError(t, err)
 	m.viewMode = common.HelpView
-	msg := DataMsg{}
+	msg := dataMsg{}
 	_, cmd := m.updateHelpView(msg)
 	require.Nil(t, cmd)
 }
@@ -168,7 +168,7 @@ func Test_updateDetailView_NoSelectedRow(t *testing.T) {
 	require.NoError(t, err)
 	m.viewMode = common.DetailsView
 	// No selected row
-	msg := DataMsg{}
+	msg := dataMsg{}
 	_, cmd := m.updateDetailView(msg)
 	require.Nil(t, cmd)
 }
@@ -190,7 +190,7 @@ func Test_updateDetailView_WithSelectedRow(t *testing.T) {
 	})
 	m.table.SetRows([]table.Row{{"id", "value"}})
 	m.table.SetCursor(0)
-	msg := DataMsg{}
+	msg := dataMsg{}
 	_, cmd := m.updateDetailView(msg)
 	require.Nil(t, cmd)
 }

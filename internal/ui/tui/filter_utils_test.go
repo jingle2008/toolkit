@@ -22,7 +22,7 @@ func TestDebounceFilter(t *testing.T) {
 	assert.NotNil(t, cmd)
 	// Simulate the Tick firing
 	msg := cmd()
-	applyMsg, ok := msg.(FilterApplyMsg)
+	applyMsg, ok := msg.(filterApplyMsg)
 	assert.True(t, ok)
 	assert.Equal(t, "foo", applyMsg.Value)
 	assert.Greater(t, applyMsg.Nonce, 0)

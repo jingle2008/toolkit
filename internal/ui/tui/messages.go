@@ -10,11 +10,11 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// ErrMsg is a message containing an error.
-type ErrMsg error
+// errMsg is a message containing an error.
+type errMsg error
 
-// DataMsg is a message containing generic data and a generation id to avoid stale updates.
-type DataMsg struct {
+// dataMsg is a message containing generic data and a generation id to avoid stale updates.
+type dataMsg struct {
 	Data any
 	Gen  int
 }
@@ -25,14 +25,14 @@ type datasetLoadedMsg struct {
 	Gen     int
 }
 
-// FilterMsg is a message containing filter text.
-type FilterMsg string
+// filterMsg is a message containing filter text.
+type filterMsg string
 
-// SetFilterMsg is a message to set the filter text in the model.
-type SetFilterMsg string
+// setFilterMsg is a message to set the filter text in the model.
+type setFilterMsg string
 
-// FilterApplyMsg carries a debounced filter value and a nonce to drop stale updates.
-type FilterApplyMsg struct {
+// filterApplyMsg carries a debounced filter value and a nonce to drop stale updates.
+type filterApplyMsg struct {
 	Value string
 	Nonce int
 }

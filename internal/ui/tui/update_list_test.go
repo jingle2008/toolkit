@@ -20,11 +20,11 @@ func TestHandleSetFilterMsg(t *testing.T) {
 	m := &Model{
 		textInput: &ti,
 	}
-	msg := SetFilterMsg("Foo")
+	msg := setFilterMsg("Foo")
 	cmd := m.handleSetFilterMsg(msg)
 	// newFilter removed; text input is updated immediately
 	assert.Equal(t, "Foo", m.textInput.Value())
-	// and a FilterMsg is emitted with lowercased value
+	// and a filterMsg is emitted with lowercased value
 	requireNotNil := func(c tea.Cmd) {
 		if c == nil {
 			t.Fatal("expected non-nil cmd")
@@ -32,9 +32,9 @@ func TestHandleSetFilterMsg(t *testing.T) {
 	}
 	requireNotNil(cmd)
 	got := cmd()
-	fm, ok := got.(FilterMsg)
+	fm, ok := got.(filterMsg)
 	if !ok {
-		t.Fatalf("expected FilterMsg, got %T", got)
+		t.Fatalf("expected filterMsg, got %T", got)
 	}
 	assert.Equal(t, "foo", string(fm))
 }
@@ -45,12 +45,12 @@ func TestHandleFilterApplyMsg(t *testing.T) {
 	m.curFilter = "old"
 	m.filterNonce = 2
 
-	m.handleFilterApplyMsg(FilterApplyMsg{Value: "new", Nonce: 1})
+	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Nonce: 1})
 	if m.curFilter != "old" {
 		t.Fatalf("unexpected filter update on stale nonce: %q", m.curFilter)
 	}
 
-	m.handleFilterApplyMsg(FilterApplyMsg{Value: "new", Nonce: 2})
+	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Nonce: 2})
 	if m.curFilter != "new" {
 		t.Fatalf("expected filter to update, got %q", m.curFilter)
 	}

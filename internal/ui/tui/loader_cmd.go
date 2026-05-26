@@ -15,13 +15,13 @@ import (
 )
 
 // Pure command constructors. Each builds a tea.Cmd that loads one
-// category and returns a typed *LoadedMsg on success or ErrMsg on
+// category and returns a typed *LoadedMsg on success or errMsg on
 // failure; the gen counter lets the reducer drop stale responses.
 func loadBaseModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadBaseModels(ctx, kubeCfg, env)
 		if err != nil {
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.BaseModel, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.BaseModel, err))
 		}
 		return baseModelsLoadedMsg{Items: items, Gen: gen}
 	}
@@ -31,7 +31,7 @@ func loadImportedModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string
 	return func() tea.Msg {
 		grouped, err := ld.LoadImportedModels(ctx, kubeCfg, env)
 		if err != nil {
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.ImportedModel, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.ImportedModel, err))
 		}
 		return importedModelsLoadedMsg{Items: grouped, Gen: gen}
 	}
@@ -49,7 +49,7 @@ func loadGpuPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env
 					"category", domain.GpuPool, "error", partial)
 				return gpuPoolsLoadedMsg{Items: items, Gen: gen}
 			}
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.GpuPool, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.GpuPool, err))
 		}
 		return gpuPoolsLoadedMsg{Items: items, Gen: gen}
 	}
@@ -59,7 +59,7 @@ func loadGpuNodesCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env 
 	return func() tea.Msg {
 		items, err := ld.LoadGpuNodes(ctx, kubeCfg, env)
 		if err != nil {
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.GpuNode, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.GpuNode, err))
 		}
 		return gpuNodesLoadedMsg{Items: items, Gen: gen}
 	}
@@ -69,7 +69,7 @@ func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Loader, kubeCfg s
 	return func() tea.Msg {
 		items, err := ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)
 		if err != nil {
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.DedicatedAICluster, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.DedicatedAICluster, err))
 		}
 		return dedicatedAIClustersLoadedMsg{Items: items, Gen: gen}
 	}
@@ -79,7 +79,7 @@ func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Loader, repoPath
 	return func() tea.Msg {
 		group, err := ld.LoadTenancyOverrideGroup(ctx, repoPath, env)
 		if err != nil {
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.Tenant, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.Tenant, err))
 		}
 		return tenancyOverridesLoadedMsg{Group: group, Gen: gen}
 	}
@@ -89,7 +89,7 @@ func loadLimitRegionalOverridesCmd(ctx context.Context, ld loader.Loader, repoPa
 	return func() tea.Msg {
 		items, err := ld.LoadLimitRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.LimitRegionalOverride, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.LimitRegionalOverride, err))
 		}
 		return limitRegionalOverridesLoadedMsg{Items: items, Gen: gen}
 	}
@@ -99,7 +99,7 @@ func loadConsolePropertyRegionalOverridesCmd(ctx context.Context, ld loader.Load
 	return func() tea.Msg {
 		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.ConsolePropertyRegionalOverride, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.ConsolePropertyRegionalOverride, err))
 		}
 		return consolePropertyRegionalOverridesLoadedMsg{Items: items, Gen: gen}
 	}
@@ -109,7 +109,7 @@ func loadPropertyRegionalOverridesCmd(ctx context.Context, ld loader.Loader, rep
 	return func() tea.Msg {
 		items, err := ld.LoadPropertyRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
-			return ErrMsg(fmt.Errorf("failed to load %s: %w", domain.PropertyRegionalOverride, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.PropertyRegionalOverride, err))
 		}
 		return propertyRegionalOverridesLoadedMsg{Items: items, Gen: gen}
 	}

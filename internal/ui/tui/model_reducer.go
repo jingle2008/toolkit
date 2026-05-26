@@ -19,7 +19,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-func refreshDataCmd() tea.Cmd { return func() tea.Msg { return DataMsg{} } }
+func refreshDataCmd() tea.Cmd { return func() tea.Msg { return dataMsg{} } }
 
 func (m *Model) getCompartmentID(ctx context.Context) (string, error) {
 	if m.dataset != nil && m.dataset.GpuNodeMap != nil {
@@ -294,10 +294,10 @@ func (m *Model) refreshDisplay() {
 	m.updateRows(true)
 }
 
-// processData updates the model's dataset based on the incoming DataMsg.
+// processData updates the model's dataset based on the incoming dataMsg.
 //
-//nolint:cyclop // multi-shape DataMsg router; the typed loaded-message handlers below cover per-category loads, but the Dataset / TenancyOverrideGroup shapes still flow through here.
-func (m *Model) processData(msg DataMsg) tea.Cmd {
+//nolint:cyclop // multi-shape dataMsg router; the typed loaded-message handlers below cover per-category loads, but the Dataset / TenancyOverrideGroup shapes still flow through here.
+func (m *Model) processData(msg dataMsg) tea.Cmd {
 	var cmd tea.Cmd
 	// Drop stale responses based on generation token (allow zero-value Gen).
 	// Still endTask: the matching beginTask was already issued when the
@@ -356,7 +356,7 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 	m.refreshDisplay()
 }
 
-// Typed lazy-load handlers (replace DataMsg type-switch path)
+// Typed lazy-load handlers (replace dataMsg type-switch path)
 // Each handler updates the dataset, ends the task, logs, refreshes display,
 // and returns any follow-up command (e.g., GPU pool state enrichment).
 // Each typed loaded-handler gates on gen to drop stale responses

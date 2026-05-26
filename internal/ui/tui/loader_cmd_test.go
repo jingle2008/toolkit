@@ -55,12 +55,12 @@ func TestLoadRegionalOverridesCmds_Error(t *testing.T) {
 	env := models.Environment{}
 
 	if msg := loadLimitRegionalOverridesCmd(ctx, ld, "repo", env, 1)(); msg == nil {
-		t.Fatal("expected ErrMsg, got nil")
+		t.Fatal("expected errMsg, got nil")
 	}
-	if _, ok := loadConsolePropertyRegionalOverridesCmd(ctx, ld, "repo", env, 1)().(ErrMsg); !ok {
-		t.Fatal("expected ErrMsg from console property override loader")
+	if _, ok := loadConsolePropertyRegionalOverridesCmd(ctx, ld, "repo", env, 1)().(errMsg); !ok {
+		t.Fatal("expected errMsg from console property override loader")
 	}
-	if _, ok := loadPropertyRegionalOverridesCmd(ctx, ld, "repo", env, 1)().(ErrMsg); !ok {
-		t.Fatal("expected ErrMsg from property override loader")
+	if _, ok := loadPropertyRegionalOverridesCmd(ctx, ld, "repo", env, 1)().(errMsg); !ok {
+		t.Fatal("expected errMsg from property override loader")
 	}
 }

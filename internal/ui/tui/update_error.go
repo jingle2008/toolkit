@@ -13,7 +13,7 @@ handleErrMsg centralizes error handling for async operations.
 It stores the error on the model and transitions the UI out of LoadingView
 by calling endTask(false), which sets the view to ErrorView and logs timing.
 */
-func (m *Model) handleErrMsg(msg ErrMsg) {
+func (m *Model) handleErrMsg(msg errMsg) {
 	m.err = msg
 	m.endTask(false)
 }
