@@ -34,19 +34,19 @@ type setFilterMsg string
 // filterApplyMsg carries a debounced filter value and a gen to drop stale updates.
 type filterApplyMsg struct {
 	Value string
-	Gen int
+	Gen   int
 }
 
 type tableRowsComputedMsg struct {
 	Rows  []table.Row
 	Stats tableStats
-	Gen int
+	Gen   int
 }
 
 type detailContentRenderedMsg struct {
 	Content string
 	Err     error
-	Gen   int
+	Gen     int
 }
 
 type deleteDoneMsg struct {

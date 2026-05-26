@@ -28,10 +28,10 @@ import (
 // addGetCommand wires the `toolkit get <category>` subcommand.
 func addGetCommand(rootCmd *cobra.Command, cfgFile *string) {
 	var (
-		format     string
-		noHeaders  bool
-		pretty     bool
-		limit      int
+		format          string
+		noHeaders       bool
+		pretty          bool
+		limit           int
 		selectedColumns string
 	)
 	getCmd := &cobra.Command{

@@ -28,12 +28,12 @@ import "strings"
 // room for future flat columns whose export form depends on env
 // (e.g. a tenancy OCID column on the Tenant view).
 type Column[T any] struct {
-	Title          string
-	Key            string
-	Ratio          float64
-	Render         func(T) string
-	RenderForExport   func(realm, region string, item T) string
-	TruncateMiddle bool
+	Title           string
+	Key             string
+	Ratio           float64
+	Render          func(T) string
+	RenderForExport func(realm, region string, item T) string
+	TruncateMiddle  bool
 }
 
 // GroupedColumn is a column for a grouped category (loader returns
@@ -47,12 +47,12 @@ type Column[T any] struct {
 // column can substitute its display value with an export-mode
 // representation that depends on either.
 type GroupedColumn[T any] struct {
-	Title          string
-	Key            string
-	Ratio          float64
-	Render         func(key string, item T) string
-	RenderForExport   func(realm, region, key string, item T) string
-	TruncateMiddle bool
+	Title           string
+	Key             string
+	Ratio           float64
+	Render          func(key string, item T) string
+	RenderForExport func(realm, region, key string, item T) string
+	TruncateMiddle  bool
 }
 
 // Set is the canonical column list for a flat category.

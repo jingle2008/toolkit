@@ -14,10 +14,10 @@ import (
 // at package-init time via newFlatEntry / newGroupedEntry, so the public
 // functions in this file cannot drift across categories.
 type registryEntry struct {
-	keys         []string
-	titles       []string
-	ratioSum     float64
-	render       func(items any, selected []string) ([]string, [][]string, error)
+	keys            []string
+	titles          []string
+	ratioSum        float64
+	render          func(items any, selected []string) ([]string, [][]string, error)
 	renderForExport func(items any, realm, region string, selected []string) ([]string, [][]string, error)
 }
 

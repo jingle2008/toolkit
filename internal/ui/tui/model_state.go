@@ -51,14 +51,14 @@ type Model struct {
 	editTarget     common.EditTarget
 	inputMode      common.InputMode
 	textInput      *textinput.Model
-	filter      string
+	filter         string
 	initialFilter  string
-	filterGen    int
-	rowsGen      int
-	detailGen    int
+	filterGen      int
+	rowsGen        int
+	detailGen      int
 	viewMode       common.ViewMode
 	lastViewMode   common.ViewMode // for toggling help view
-	selectedKey         models.ItemKey
+	selectedKey    models.ItemKey
 	viewport       *viewport.Model
 	renderer       view.Renderer
 	loader         loader.Composite

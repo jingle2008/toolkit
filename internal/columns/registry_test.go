@@ -253,7 +253,7 @@ func TestRenderFlatExport(t *testing.T) {
 		{Title: "Plain", Key: "plain", Ratio: 0.5, Render: func(i item) string { return i.Name }},
 		{
 			Title: "Exported", Key: "exported", Ratio: 0.5,
-			Render:       func(i item) string { return i.Name },
+			Render:          func(i item) string { return i.Name },
 			RenderForExport: func(realm, region string, i item) string { return realm + "/" + region + "/" + i.Name },
 		},
 	}}
@@ -282,7 +282,7 @@ func TestRenderGroupedExport(t *testing.T) {
 		{Title: "Key", Key: "key", Ratio: 0.5, Render: func(k string, _ item) string { return k }},
 		{
 			Title: "Val", Key: "val", Ratio: 0.5,
-			Render:       func(_ string, i item) string { return i.V },
+			Render:          func(_ string, i item) string { return i.V },
 			RenderForExport: func(realm, region, k string, i item) string { return realm + "/" + region + "/" + k + "/" + i.V },
 		},
 	}}

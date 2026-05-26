@@ -80,7 +80,7 @@ func (m *Model) updateRowsAsync() tea.Cmd {
 		return tableRowsComputedMsg{
 			Rows:  rows,
 			Stats: stats,
-			Gen: gen,
+			Gen:   gen,
 		}
 	}
 }

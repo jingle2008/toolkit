@@ -23,8 +23,8 @@ import (
 // Seam variables — tests in this package swap them to avoid touching
 // a live cluster or OCI tenancy. Each defaults to the real upstream.
 var (
-	populateGPUPoolsFn       = actions.PopulateGPUPools
-	newClientsetFromKubeFn   = k8s.NewClientsetFromKubeConfig
+	populateGPUPoolsFn          = actions.PopulateGPUPools
+	newClientsetFromKubeFn      = k8s.NewClientsetFromKubeConfig
 	listGPUNodesByCompartmentFn = k8s.ListGPUNodes
 )
 

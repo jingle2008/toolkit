@@ -8,14 +8,14 @@ import (
 
 type testImpl struct{}
 
-func (testImpl) GetName() string               { return "n" }
-func (testImpl) FilterableFields() []string { return []string{"f"} }
-func (testImpl) GetTenantID() string           { return "tid" }
-func (testImpl) GetRegions() []string          { return []string{"r"} }
-func (testImpl) GetValue() string              { return "v" }
-func (testImpl) Environments() []Environment   { return nil }
-func (testImpl) GetDescription() string        { return "desc" }
-func (testImpl) IsFaulty() bool                { return false }
+func (testImpl) GetName() string             { return "n" }
+func (testImpl) FilterableFields() []string  { return []string{"f"} }
+func (testImpl) GetTenantID() string         { return "tid" }
+func (testImpl) GetRegions() []string        { return []string{"r"} }
+func (testImpl) GetValue() string            { return "v" }
+func (testImpl) Environments() []Environment { return nil }
+func (testImpl) GetDescription() string      { return "desc" }
+func (testImpl) IsFaulty() bool              { return false }
 
 func TestDefinitionInterfaces(t *testing.T) {
 	t.Parallel()
