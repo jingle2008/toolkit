@@ -29,18 +29,18 @@ import (
 func NewRootCmd(version string) *cobra.Command {
 	var cfgFile string
 
-	const exampleConfig = `repo_path: "/path/to/your/repo"
+	const exampleConfig = `repo-path: "/path/to/your/repo"
 kubeconfig: "/path/to/your/.kube/config"
-env_type: "dev"
-env_region: "us-phoenix-1"
-env_realm: "oc1"
+env-type: "dev"
+env-region: "us-phoenix-1"
+env-realm: "oc1"
 category: "tenant"
-log_file: "toolkit.log"
-log_format: "console" # console|json|slog
-log_level: "" # debug|info|warn|error (empty uses debug flag)
+log-file: "toolkit.log"
+log-format: "console" # console|json|slog
+log-level: "" # debug|info|warn|error (empty uses debug flag)
 debug: false
 filter: ""
-metadata_file: "" # Optional path to a YAML or JSON file with additional metadata (e.g. tenants)
+metadata-file: "" # Optional path to a YAML or JSON file with additional metadata (e.g. tenants)
 `
 
 	home, _ := os.UserHomeDir()

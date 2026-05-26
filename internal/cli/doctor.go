@@ -25,7 +25,7 @@ func addDoctorCommand(rootCmd *cobra.Command, cfgFile *string) {
 		Long: `Run health checks against the current toolkit configuration.
 
 doctor inspects what get/mcp/<mutation> commands would see at startup —
-the merged config, the config file, repo_path, kubeconfig, metadata_file
+the merged config, the config file, repo-path, kubeconfig, metadata-file
 — and reports each check as PASS / FAIL / SKIP with a short remediation
 hint when something is wrong.
 
@@ -120,7 +120,7 @@ func collectChecks(cfgFile string, cfg config.Config, unmarshalErr error) []chec
 	return []checkResult{
 		checkConfigSchema(cfg, unmarshalErr),
 		checkConfigFile(cfgFile),
-		checkPath("repo_path", cfg.RepoPath, true, "set --repo_path or `repo_path:` in config.yaml"),
+		checkPath("repo-path", cfg.RepoPath, true, "set --repo-path or `repo-path:` in config.yaml"),
 		// kubeconfig is `required=true` to match config.Validate(): the
 		// TUI insists on it and the cluster-derived categories (BaseModel,
 		// GPUNode, DAC) refuse to load without it. If you only ever use
@@ -205,7 +205,7 @@ func checkPath(name, value string, required bool, hint string) checkResult {
 // checkMetadataFile is path-shaped but always optional, with its own
 // remediation hint pointing back to the example config.
 func checkMetadataFile(path string) checkResult {
-	r := checkResult{Name: "metadata_file"}
+	r := checkResult{Name: "metadata-file"}
 	if path == "" {
 		r.Status = statusSkip
 		r.Detail = "not set"
@@ -224,7 +224,7 @@ func checkMetadataFile(path string) checkResult {
 		}
 		r.Status = statusFail
 		r.Detail = err.Error()
-		r.Hint = "fix permissions or unset metadata_file"
+		r.Hint = "fix permissions or unset metadata-file"
 		return r
 	}
 	r.Status = statusPass

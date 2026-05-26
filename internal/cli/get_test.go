@@ -61,8 +61,8 @@ func TestGetCmd_MissingRequiredSettings(t *testing.T) {
 	// Error should name the specific missing flags and NOT mention "Category"
 	// (which the positional arg already supplies).
 	msg := err.Error()
-	if !strings.Contains(msg, "--repo_path") {
-		t.Errorf("expected --repo_path in error, got: %v", err)
+	if !strings.Contains(msg, "--repo-path") {
+		t.Errorf("expected --repo-path in error, got: %v", err)
 	}
 	if strings.Contains(strings.ToLower(msg), "category is required") {
 		t.Errorf("error should not mention Category, got: %v", err)

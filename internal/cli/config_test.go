@@ -43,8 +43,8 @@ func TestConfigCmd_YAML_DefaultPath(t *testing.T) {
 		t.Errorf("expected settings block in output:\n%s", out)
 	}
 	// At least one bound flag should appear as a key.
-	if !strings.Contains(out, "repo_path:") {
-		t.Errorf("expected repo_path key in settings, got:\n%s", out)
+	if !strings.Contains(out, "repo-path:") {
+		t.Errorf("expected repo-path key in settings, got:\n%s", out)
 	}
 }
 
@@ -74,8 +74,8 @@ func TestConfigCmd_JSON_ParsesCleanly(t *testing.T) {
 	if view.ConfigFile == "" {
 		t.Error("config_file should be set in JSON output")
 	}
-	if _, ok := view.Settings["repo_path"]; !ok {
-		t.Errorf("expected repo_path in settings, got: %+v", view.Settings)
+	if _, ok := view.Settings["repo-path"]; !ok {
+		t.Errorf("expected repo-path in settings, got: %+v", view.Settings)
 	}
 	// The persistent --config flag is bound to viper, but writeConfigView
 	// strips it from settings to avoid a redundant copy of ConfigFile.
@@ -149,7 +149,7 @@ func TestConfigCmd_PrettyFalseProducesCompactJSON(t *testing.T) {
 func TestConfigCmd_ReadsExistingFile(t *testing.T) {
 	tmp := t.TempDir()
 	cfgPath := filepath.Join(tmp, "cfg.yaml")
-	contents := []byte("repo_path: /from/file\nenv_realm: oc-stage\n")
+	contents := []byte("repo-path: /from/file\nenv-realm: oc-stage\n")
 	if err := os.WriteFile(cfgPath, contents, 0o600); err != nil {
 		t.Fatalf("seed config: %v", err)
 	}
@@ -179,11 +179,11 @@ func TestConfigCmd_ReadsExistingFile(t *testing.T) {
 	if !view.Exists {
 		t.Error("exists should be true when --config points at a real file")
 	}
-	if got := view.Settings["repo_path"]; got != "/from/file" {
-		t.Errorf("repo_path = %v, want /from/file", got)
+	if got := view.Settings["repo-path"]; got != "/from/file" {
+		t.Errorf("repo-path = %v, want /from/file", got)
 	}
-	if got := view.Settings["env_realm"]; got != "oc-stage" {
-		t.Errorf("env_realm = %v, want oc-stage", got)
+	if got := view.Settings["env-realm"]; got != "oc-stage" {
+		t.Errorf("env-realm = %v, want oc-stage", got)
 	}
 }
 
@@ -208,10 +208,10 @@ func TestConfigCmd_InvalidFormat(t *testing.T) {
 func TestConfigCmd_ValidatePasses(t *testing.T) {
 	tmp := t.TempDir()
 	cfgPath := filepath.Join(tmp, "cfg.yaml")
-	contents := []byte("repo_path: /tmp/repo\n" +
-		"env_type: dev\n" +
-		"env_region: us-phoenix-1\n" +
-		"env_realm: oc1\n" +
+	contents := []byte("repo-path: /tmp/repo\n" +
+		"env-type: dev\n" +
+		"env-region: us-phoenix-1\n" +
+		"env-realm: oc1\n" +
 		"category: tenant\n")
 	if err := os.WriteFile(cfgPath, contents, 0o600); err != nil {
 		t.Fatalf("seed config: %v", err)
@@ -255,7 +255,7 @@ func TestConfigCmd_ValidateFailsOnMissingFields(t *testing.T) {
 	// exit code.
 	tmp := t.TempDir()
 	cfgPath := filepath.Join(tmp, "cfg.yaml")
-	if err := os.WriteFile(cfgPath, []byte("env_type: dev\n"), 0o600); err != nil {
+	if err := os.WriteFile(cfgPath, []byte("env-type: dev\n"), 0o600); err != nil {
 		t.Fatalf("seed config: %v", err)
 	}
 	t.Setenv("HOME", tmp)

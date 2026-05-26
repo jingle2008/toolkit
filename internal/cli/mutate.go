@@ -61,16 +61,16 @@ var gpuPoolResolverFn = func(ctx context.Context, cfg config.Config, env models.
 func validateMutationConfig(cfg config.Config, needsKube, needsRepo bool) error {
 	var missing []string
 	if needsRepo && cfg.RepoPath == "" {
-		missing = append(missing, "--repo_path")
+		missing = append(missing, "--repo-path")
 	}
 	if cfg.EnvType == "" {
-		missing = append(missing, "--env_type")
+		missing = append(missing, "--env-type")
 	}
 	if cfg.EnvRegion == "" {
-		missing = append(missing, "--env_region")
+		missing = append(missing, "--env-region")
 	}
 	if cfg.EnvRealm == "" {
-		missing = append(missing, "--env_realm")
+		missing = append(missing, "--env-realm")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf(

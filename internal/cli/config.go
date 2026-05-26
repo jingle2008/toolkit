@@ -39,7 +39,7 @@ config.Validate (the same check the TUI runs before launching).
 Useful in CI/precondition checks: ` + "`toolkit config --validate || abort`" + `.
 
 Note: default-mode output may include local filesystem paths
-(repo_path, kubeconfig, log_file, metadata_file). Strip those
+(repo-path, kubeconfig, log-file, metadata-file). Strip those
 before sharing the output in bug reports.
 
 Examples:

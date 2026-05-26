@@ -77,8 +77,8 @@ func TestInitCreatesConfig(t *testing.T) {
 func TestDefaultFlags(t *testing.T) {
 	cmd := NewRootCmd("vtest")
 	tests := []struct{ name, want string }{
-		{"log_format", "console"},
-		{"log_file", "toolkit.log"},
+		{"log-format", "console"},
+		{"log-file", "toolkit.log"},
 	}
 	for _, tc := range tests {
 		got, _ := cmd.PersistentFlags().GetString(tc.name)

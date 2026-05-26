@@ -11,18 +11,18 @@ import (
 )
 
 func logOptionsFromViper() (string, string, error) {
-	logFormat := viper.GetString("log_format")
+	logFormat := viper.GetString("log-format")
 	if err := validateLogFormat(logFormat); err != nil {
 		return "", "", err
 	}
-	logLevel, err := normalizeLogLevel(viper.GetString("log_level"))
+	logLevel, err := normalizeLogLevel(viper.GetString("log-level"))
 	if err != nil {
 		return "", "", err
 	}
 	return logFormat, logLevel, nil
 }
 
-// initLogger reads log_format/log_level from viper and constructs a
+// initLogger reads log-format/log-level from viper and constructs a
 // file-backed logger writing to cfg.LogFile. Stdout is reserved for
 // command output (get) or MCP frames (mcp), so logs never bleed into
 // the data stream.
@@ -43,7 +43,7 @@ func validateLogFormat(logFormat string) error {
 	case "console", "json", "slog":
 		return nil
 	default:
-		return fmt.Errorf("invalid log_format %q (valid: console|json|slog)", logFormat)
+		return fmt.Errorf("invalid log-format %q (valid: console|json|slog)", logFormat)
 	}
 }
 
@@ -56,6 +56,6 @@ func normalizeLogLevel(level string) (string, error) {
 		}
 		return logLevel, nil
 	default:
-		return "", fmt.Errorf("invalid log_level %q (valid: debug|info|warn|error or empty)", logLevel)
+		return "", fmt.Errorf("invalid log-level %q (valid: debug|info|warn|error or empty)", logLevel)
 	}
 }

@@ -89,8 +89,8 @@ func TestScaleGPUPool_MissingRepoPath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when repo_path missing")
 	}
-	if !strings.Contains(err.Error(), "--repo_path") {
-		t.Errorf("error should mention --repo_path: %v", err)
+	if !strings.Contains(err.Error(), "--repo-path") {
+		t.Errorf("error should mention --repo-path: %v", err)
 	}
 }
 

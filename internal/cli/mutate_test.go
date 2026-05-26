@@ -203,7 +203,7 @@ func TestWithMutationSetup_InitLoggerError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error from invalid log_format")
 	}
-	if !strings.Contains(err.Error(), "log_format") {
+	if !strings.Contains(err.Error(), "log-format") {
 		t.Errorf("error should mention log_format, got: %v", err)
 	}
 }

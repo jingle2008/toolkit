@@ -137,7 +137,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		}
 
 		// Honor the same log_format / log_level config keys the TUI uses so
-		// users who configured `log_format: json` for scripting actually get
+		// users who configured `log-format: json` for scripting actually get
 		// JSON. Logs still go to cfg.LogFile by default, keeping stdout
 		// clean for piping.
 		logger, err := initLogger(cfg)
@@ -195,16 +195,16 @@ func isTableLike(f output.Format) bool {
 func validateLoaderConfig(cfg config.Config) []string {
 	var missing []string
 	if cfg.RepoPath == "" {
-		missing = append(missing, "--repo_path")
+		missing = append(missing, "--repo-path")
 	}
 	if cfg.EnvType == "" {
-		missing = append(missing, "--env_type")
+		missing = append(missing, "--env-type")
 	}
 	if cfg.EnvRegion == "" {
-		missing = append(missing, "--env_region")
+		missing = append(missing, "--env-region")
 	}
 	if cfg.EnvRealm == "" {
-		missing = append(missing, "--env_realm")
+		missing = append(missing, "--env-realm")
 	}
 	return missing
 }

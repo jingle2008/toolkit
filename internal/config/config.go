@@ -12,16 +12,16 @@ import (
 
 // Config holds configuration for the toolkit CLI application.
 type Config struct {
-	RepoPath     string `mapstructure:"repo_path"`
+	RepoPath     string `mapstructure:"repo-path"`
 	KubeConfig   string `mapstructure:"kubeconfig"`
-	EnvType      string `mapstructure:"env_type"`
-	EnvRegion    string `mapstructure:"env_region"`
-	EnvRealm     string `mapstructure:"env_realm"`
+	EnvType      string `mapstructure:"env-type"`
+	EnvRegion    string `mapstructure:"env-region"`
+	EnvRealm     string `mapstructure:"env-realm"`
 	Category     string `mapstructure:"category"`
-	LogFile      string `mapstructure:"log_file"`
+	LogFile      string `mapstructure:"log-file"`
 	Debug        bool   `mapstructure:"debug"`
 	Filter       string `mapstructure:"filter"`
-	MetadataFile string `mapstructure:"metadata_file"`
+	MetadataFile string `mapstructure:"metadata-file"`
 	// MutationEnvOverrideAllowed opts MCP mutation tools into per-call
 	// env_type / env_region / env_realm overrides. Default false: tools
 	// silently fall back to the startup env, even if the agent provides
@@ -30,7 +30,7 @@ type Config struct {
 	// controls which realm is targeted, so the operator's kubeconfig /
 	// OCI credentials decide the maximum blast radius — not the
 	// operator's startup-env choice.
-	MutationEnvOverrideAllowed bool `mapstructure:"mutation_env_override_allowed"`
+	MutationEnvOverrideAllowed bool `mapstructure:"mutation-env-override-allowed"`
 }
 
 /*

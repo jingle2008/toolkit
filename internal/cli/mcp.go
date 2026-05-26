@@ -27,10 +27,11 @@ func addMCPCommand(rootCmd *cobra.Command, cfgFile *string, version string) {
 AI agent — Claude Code, Claude Desktop, or any MCP-aware client — can
 list categories directly instead of shelling out to ` + "`toolkit get`" + `.
 
-Startup env (env_type / env_region / env_realm / repo_path / kubeconfig)
+Startup env (env-type / env-region / env-realm / repo-path / kubeconfig)
 comes from the same global flags and config file the TUI and ` + "`get`" + ` use;
-each tool call may override env_type/region/realm per-invocation so one
-running server can query multiple environments.
+each tool call may override env_type/region/realm per-invocation (the
+MCP tool-input JSON schema keeps snake_case naming) so one running
+server can query multiple environments.
 
 stdout is reserved for MCP JSON-RPC frames. Logs are written to
 cfg.LogFile (default toolkit.log).`,

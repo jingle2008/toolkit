@@ -13,14 +13,14 @@ import (
 )
 
 // fullCfgContents returns a YAML config that satisfies cfg.Validate(),
-// pointing repo_path/kubeconfig at the provided real paths.
+// pointing repo-path/kubeconfig at the provided real paths.
 func fullCfgContents(repoPath, kubeconfig string) []byte {
 	return []byte(
-		"repo_path: " + repoPath + "\n" +
+		"repo-path: " + repoPath + "\n" +
 			"kubeconfig: " + kubeconfig + "\n" +
-			"env_type: dev\n" +
-			"env_region: us-phoenix-1\n" +
-			"env_realm: oc1\n" +
+			"env-type: dev\n" +
+			"env-region: us-phoenix-1\n" +
+			"env-realm: oc1\n" +
 			"category: tenant\n",
 	)
 }
@@ -68,8 +68,8 @@ func TestDoctorCmd_AllPass(t *testing.T) {
 }
 
 func TestDoctorCmd_FailsOnMissingRepoPath(t *testing.T) {
-	// Config schema passes (repo_path is non-empty) but the path doesn't
-	// exist on disk → repo_path check should FAIL and command exit
+	// Config schema passes (repo-path is non-empty) but the path doesn't
+	// exist on disk → repo-path check should FAIL and command exit
 	// non-zero.
 	tmp := t.TempDir()
 	missingRepo := filepath.Join(tmp, "does-not-exist")
@@ -105,12 +105,12 @@ func TestDoctorCmd_FailsOnMissingRepoPath(t *testing.T) {
 	}
 	foundFail := false
 	for _, r := range results {
-		if r.Name == "repo_path" && r.Status == statusFail {
+		if r.Name == "repo-path" && r.Status == statusFail {
 			foundFail = true
 		}
 	}
 	if !foundFail {
-		t.Errorf("expected repo_path FAIL row, got: %+v", results)
+		t.Errorf("expected repo-path FAIL row, got: %+v", results)
 	}
 }
 

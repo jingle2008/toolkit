@@ -13,8 +13,8 @@ func TestLogOptionsFromViper_Valid(t *testing.T) {
 	viper.Reset()
 	t.Cleanup(viper.Reset)
 
-	viper.Set("log_format", "console")
-	viper.Set("log_level", "warning")
+	viper.Set("log-format", "console")
+	viper.Set("log-level", "warning")
 
 	format, level, err := logOptionsFromViper()
 	if err != nil {
@@ -33,8 +33,8 @@ func TestLogOptionsFromViper_InvalidFormat(t *testing.T) {
 	viper.Reset()
 	t.Cleanup(viper.Reset)
 
-	viper.Set("log_format", "bad")
-	viper.Set("log_level", "info")
+	viper.Set("log-format", "bad")
+	viper.Set("log-level", "info")
 
 	if _, _, err := logOptionsFromViper(); err == nil {
 		t.Fatal("expected error for invalid log format")
@@ -55,14 +55,14 @@ func TestReadConfigFile(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	cfgPath := filepath.Join(tmpDir, "config.yaml")
-	if err := os.WriteFile(cfgPath, []byte("log_format: console\n"), 0o600); err != nil {
+	if err := os.WriteFile(cfgPath, []byte("log-format: console\n"), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 
 	if err := readConfigFile(&cfgPath); err != nil {
 		t.Fatalf("readConfigFile error: %v", err)
 	}
-	if got := viper.GetString("log_format"); got != "console" {
-		t.Fatalf("log_format = %q, want %q", got, "console")
+	if got := viper.GetString("log-format"); got != "console" {
+		t.Fatalf("log-format = %q, want %q", got, "console")
 	}
 }
