@@ -91,10 +91,6 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	return cmds
 }
 
-func (m *Model) handleDataMsg(msg dataMsg) tea.Cmd {
-	return m.processData(msg)
-}
-
 func (m *Model) handleFilterMsg(msg filterMsg) tea.Cmd {
 	return filterTableAsync(m, string(msg))
 }

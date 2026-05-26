@@ -252,16 +252,16 @@ func TestEditModeTransitions(t *testing.T) {
 func TestProcessDataAndErrorMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	// processData with *models.Dataset
-	m.processData(dataMsg{Data: m.dataset})
-	// processData with map[string]*models.BaseModel
-	m.processData(dataMsg{Data: map[string]*models.BaseModel{"bm": {}}})
-	// processData with []models.GPUPool
-	m.processData(dataMsg{Data: []models.GPUPool{{}}})
-	// processData with map[string][]models.GPUNode
-	m.processData(dataMsg{Data: map[string][]models.GPUNode{"pool": {}}})
-	// processData with map[string][]models.DedicatedAICluster
-	m.processData(dataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
+	// handleDataMsg with *models.Dataset
+	m.handleDataMsg(dataMsg{Data: m.dataset})
+	// handleDataMsg with map[string]*models.BaseModel
+	m.handleDataMsg(dataMsg{Data: map[string]*models.BaseModel{"bm": {}}})
+	// handleDataMsg with []models.GPUPool
+	m.handleDataMsg(dataMsg{Data: []models.GPUPool{{}}})
+	// handleDataMsg with map[string][]models.GPUNode
+	m.handleDataMsg(dataMsg{Data: map[string][]models.GPUNode{"pool": {}}})
+	// handleDataMsg with map[string][]models.DedicatedAICluster
+	m.handleDataMsg(dataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
 	// Update with errorMsg
 	m.Update(errMsg(nil))
 }

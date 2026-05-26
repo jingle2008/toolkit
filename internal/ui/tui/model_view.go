@@ -82,9 +82,15 @@ func (m *Model) statusView() string {
 	statsText.WriteString(fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
 	statsCell := m.statsStyle.Render(statsText.String())
 
-	m.textInput.Width = max(m.viewWidth-w(contextCell)-w(statsCell)-
+	// Render-time width depends on the surrounding cells, so compute
+	// it here rather than in updateLayout. We deliberately operate on
+	// a copy of the textinput so View() stays pure — the original
+	// *m.textInput owned by the reducer is never mutated.
+	inputWidth := max(m.viewWidth-w(contextCell)-w(statsCell)-
 		w(m.textInput.Prompt)-1, 0)
-	inputCell := m.textInput.View()
+	ti := *m.textInput
+	ti.Width = inputWidth
+	inputCell := ti.View()
 
 	return lipgloss.JoinHorizontal(lipgloss.Top,
 		contextCell,

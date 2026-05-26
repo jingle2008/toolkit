@@ -294,10 +294,10 @@ func (m *Model) refreshDisplay() {
 	m.updateRows(true)
 }
 
-// processData updates the model's dataset based on the incoming dataMsg.
+// handleDataMsg updates the model's dataset based on the incoming dataMsg.
 //
 //nolint:cyclop // multi-shape dataMsg router; the typed loaded-message handlers below cover per-category loads, but the Dataset / TenancyOverrideGroup shapes still flow through here.
-func (m *Model) processData(msg dataMsg) tea.Cmd {
+func (m *Model) handleDataMsg(msg dataMsg) tea.Cmd {
 	var cmd tea.Cmd
 	// Drop stale responses based on generation token (allow zero-value Gen).
 	// Still endTask: the matching beginTask was already issued when the
