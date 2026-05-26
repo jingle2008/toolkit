@@ -98,7 +98,7 @@ func TestTitlesFor(t *testing.T) {
 
 // TestRenderTable_Flat drives RenderTable end-to-end for a flat
 // category. Pins the registry dispatch path: registry[Tenant] →
-// flatEntry's render closure → renderFlat.
+// newFlatEntry's render closure → renderFlat.
 func TestRenderTable_Flat(t *testing.T) {
 	t.Parallel()
 	items := []models.Tenant{
@@ -117,7 +117,7 @@ func TestRenderTable_Flat(t *testing.T) {
 }
 
 // TestRenderTable_Grouped drives RenderTable for a grouped category.
-// Pins registry[GpuNode] → groupedEntry's render closure →
+// Pins registry[GpuNode] → newGroupedEntry's render closure →
 // renderGrouped, including the sorted-key iteration.
 func TestRenderTable_Grouped(t *testing.T) {
 	t.Parallel()

@@ -1,6 +1,7 @@
 package columns
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -27,3 +28,21 @@ var LimitRegionalOverrideColumns = Set[models.LimitRegionalOverride]{Columns: []
 		Render: func(o models.LimitRegionalOverride) string { return limitOverrideMax(o.Values) },
 	},
 }}
+
+// limitOverrideMin returns Values[0].Min as a string, or "" when
+// Values is empty. Shared with limit_tenancy_override.go.
+func limitOverrideMin(values []models.LimitRange) string {
+	if len(values) == 0 {
+		return ""
+	}
+	return fmt.Sprint(values[0].Min)
+}
+
+// limitOverrideMax returns Values[0].Max as a string, or "" when
+// Values is empty. Shared with limit_tenancy_override.go.
+func limitOverrideMax(values []models.LimitRange) string {
+	if len(values) == 0 {
+		return ""
+	}
+	return fmt.Sprint(values[0].Max)
+}

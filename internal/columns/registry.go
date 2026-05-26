@@ -11,7 +11,7 @@ import (
 // registryEntry bundles a category's per-call dispatch (render and
 // render-for-export) and its precomputed metadata (keys, titles,
 // ratio sum). All five are derived from the same Set or GroupedSet
-// at package-init time via flatEntry / groupedEntry, so the public
+// at package-init time via newFlatEntry / newGroupedEntry, so the public
 // functions in this file cannot drift across categories.
 type registryEntry struct {
 	keys         []string
@@ -21,10 +21,10 @@ type registryEntry struct {
 	renderExport func(items any, realm, region string, selected []string) ([]string, [][]string, error)
 }
 
-// flatEntry builds a registryEntry from a flat columns.Set. The
+// newFlatEntry builds a registryEntry from a flat columns.Set. The
 // captured Set drives both the precomputed metadata and the render
 // closures, so a column reorder lands in every consumer at once.
-func flatEntry[T any](s Set[T]) registryEntry {
+func newFlatEntry[T any](s Set[T]) registryEntry {
 	return registryEntry{
 		keys:     s.Keys(),
 		titles:   s.Titles(),
@@ -38,8 +38,8 @@ func flatEntry[T any](s Set[T]) registryEntry {
 	}
 }
 
-// groupedEntry is the grouped counterpart to flatEntry.
-func groupedEntry[T any](g GroupedSet[T]) registryEntry {
+// newGroupedEntry is the grouped counterpart to newFlatEntry.
+func newGroupedEntry[T any](g GroupedSet[T]) registryEntry {
 	return registryEntry{
 		keys:     g.Keys(),
 		titles:   g.Titles(),
@@ -58,25 +58,25 @@ func groupedEntry[T any](g GroupedSet[T]) registryEntry {
 // requires exactly one entry here; missing entries surface as
 // "not registered" errors from RenderTable.
 var registry = map[domain.Category]registryEntry{
-	domain.Tenant:                          flatEntry(TenantColumns),
-	domain.Alias:                           flatEntry(AliasColumns),
-	domain.Environment:                     flatEntry(EnvironmentColumns),
-	domain.ServiceTenancy:                  flatEntry(ServiceTenancyColumns),
-	domain.LimitDefinition:                 flatEntry(LimitDefinitionColumns),
-	domain.LimitRegionalOverride:           flatEntry(LimitRegionalOverrideColumns),
-	domain.BaseModel:                       flatEntry(BaseModelColumns),
-	domain.GpuPool:                         flatEntry(GpuPoolColumns),
-	domain.ConsolePropertyDefinition:       flatEntry(ConsolePropertyDefinitionColumns),
-	domain.PropertyDefinition:              flatEntry(PropertyDefinitionColumns),
-	domain.ConsolePropertyRegionalOverride: flatEntry(ConsolePropertyRegionalOverrideColumns),
-	domain.PropertyRegionalOverride:        flatEntry(PropertyRegionalOverrideColumns),
-	domain.GpuNode:                         groupedEntry(GpuNodeColumns),
-	domain.DedicatedAICluster:              groupedEntry(DacColumns),
-	domain.ImportedModel:                   groupedEntry(ImportedModelColumns),
-	domain.ModelArtifact:                   groupedEntry(ModelArtifactColumns),
-	domain.LimitTenancyOverride:            groupedEntry(LimitTenancyOverrideColumns),
-	domain.ConsolePropertyTenancyOverride:  groupedEntry(ConsolePropertyTenancyOverrideColumns),
-	domain.PropertyTenancyOverride:         groupedEntry(PropertyTenancyOverrideColumns),
+	domain.Tenant:                          newFlatEntry(TenantColumns),
+	domain.Alias:                           newFlatEntry(AliasColumns),
+	domain.Environment:                     newFlatEntry(EnvironmentColumns),
+	domain.ServiceTenancy:                  newFlatEntry(ServiceTenancyColumns),
+	domain.LimitDefinition:                 newFlatEntry(LimitDefinitionColumns),
+	domain.LimitRegionalOverride:           newFlatEntry(LimitRegionalOverrideColumns),
+	domain.BaseModel:                       newFlatEntry(BaseModelColumns),
+	domain.GpuPool:                         newFlatEntry(GpuPoolColumns),
+	domain.ConsolePropertyDefinition:       newFlatEntry(ConsolePropertyDefinitionColumns),
+	domain.PropertyDefinition:              newFlatEntry(PropertyDefinitionColumns),
+	domain.ConsolePropertyRegionalOverride: newFlatEntry(ConsolePropertyRegionalOverrideColumns),
+	domain.PropertyRegionalOverride:        newFlatEntry(PropertyRegionalOverrideColumns),
+	domain.GpuNode:                         newGroupedEntry(GpuNodeColumns),
+	domain.DedicatedAICluster:              newGroupedEntry(DacColumns),
+	domain.ImportedModel:                   newGroupedEntry(ImportedModelColumns),
+	domain.ModelArtifact:                   newGroupedEntry(ModelArtifactColumns),
+	domain.LimitTenancyOverride:            newGroupedEntry(LimitTenancyOverrideColumns),
+	domain.ConsolePropertyTenancyOverride:  newGroupedEntry(ConsolePropertyTenancyOverrideColumns),
+	domain.PropertyTenancyOverride:         newGroupedEntry(PropertyTenancyOverrideColumns),
 }
 
 // IsRegistered reports whether cat has a canonical column set.
