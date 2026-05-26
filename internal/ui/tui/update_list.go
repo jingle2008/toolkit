@@ -130,7 +130,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.PrevCategory, func() []tea.Cmd { return []tea.Cmd{m.handlePrevCategory()} }},
 		{keys.FilterMode, func() []tea.Cmd { return []tea.Cmd{m.enterFilterMode()} }},
 		{keys.PasteFilter, func() []tea.Cmd { return []tea.Cmd{m.pasteFilter()} }},
-		{keys.CommandMode, func() []tea.Cmd { return []tea.Cmd{m.enterAliasMode()} }},
+		{keys.CommandMode, func() []tea.Cmd { m.enterAliasMode(); return nil }},
 		{keys.ViewDetails, func() []tea.Cmd { return []tea.Cmd{m.enterDetailView()} }},
 		{keys.Confirm, func() []tea.Cmd { return []tea.Cmd{m.enterContext()} }},
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
