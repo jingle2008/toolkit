@@ -291,8 +291,8 @@ func emitCategory(
 		// step the TUI runs after load). Degrades to placeholder on
 		// failure so an offline / no-OCI-auth session still prints the
 		// Terraform-derived columns.
-		if msg := resolve.EnrichGPUPools(ctx, items, cfg.KubeConfig, env); msg != "" {
-			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", msg)
+		if err := resolve.EnrichGPUPools(ctx, items, cfg.KubeConfig, env); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", err)
 		}
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GPUPool, env, selected)
 	case domain.GPUNode:

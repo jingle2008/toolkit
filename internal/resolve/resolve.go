@@ -92,29 +92,33 @@ func GPUPool(ctx context.Context, ld loader.Composite, repoPath, kubeConfig stri
 
 // EnrichGPUPools fills ActualSize and Status on every pool by
 // resolving the compartment ID via the live cluster and then calling
-// PopulateGPUPools. Returns a non-empty warning string if enrichment
-// could not complete; pools are still safe to use (the loader's
-// Status="..." placeholder remains, ActualSize stays at zero).
+// PopulateGPUPools.
 //
-// Used by `toolkit get gpupool` and MCP `list_gpu_pools` to match the
-// TUI's enriched view. Mutation paths (resolve.GPUPool) keep their
-// per-pool enrichment for the single-pool ID lookup they actually
-// need.
-func EnrichGPUPools(ctx context.Context, pools []models.GPUPool, kubeConfig string, env models.Environment) string {
+// Best-effort: a non-nil error means enrichment couldn't complete
+// (compartment lookup or OCI populate failed), but the pools slice
+// is still safe to use — the loader's Status="..." placeholder
+// remains and ActualSize stays at zero. Callers should surface the
+// error as a warning, not abort.
+//
+// Used by `toolkit get gpupool` and MCP `list_gpu_pools` to match
+// the TUI's enriched view. Mutation paths (resolve.GPUPool) keep
+// their per-pool enrichment for the single-pool ID lookup they
+// actually need.
+func EnrichGPUPools(ctx context.Context, pools []models.GPUPool, kubeConfig string, env models.Environment) error {
 	if len(pools) == 0 {
-		return ""
+		return nil
 	}
 	logger := logging.FromContext(ctx)
 	compartmentID, err := CompartmentID(ctx, kubeConfig, env)
 	if err != nil {
 		logger.Infow("gpu pool enrichment failed", "step", "compartment_id", "error", err)
-		return fmt.Sprintf("compartment lookup failed: %v", err)
+		return fmt.Errorf("compartment lookup failed: %w", err)
 	}
 	if err := populateGPUPoolsFn(ctx, pools, env, compartmentID); err != nil {
 		logger.Infow("gpu pool enrichment failed", "step", "populate", "error", err)
-		return fmt.Sprintf("OCI populate failed: %v", err)
+		return fmt.Errorf("OCI populate failed: %w", err)
 	}
-	return ""
+	return nil
 }
 
 // compartmentCache memoizes successful CompartmentID lookups for the

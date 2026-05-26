@@ -323,27 +323,27 @@ func TestEnrichGPUPools_HappyPath(t *testing.T) {
 	fakePopulate(t, "ocid1.instancepool.fake", nil)
 
 	pools := []models.GPUPool{{Name: "p1"}, {Name: "p2"}}
-	msg := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
-	assert.Empty(t, msg, "happy path should not return a warning")
+	err := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
+	assert.NoError(t, err, "happy path should not return a warning error")
 	assert.Equal(t, 4, pools[0].ActualSize, "fakePopulate fills ActualSize=4")
 	assert.Equal(t, 4, pools[1].ActualSize)
 }
 
 func TestEnrichGPUPools_EmptySlice_NoOp(t *testing.T) {
 	// Don't wire seams: the empty-slice early-return must avoid them.
-	msg := EnrichGPUPools(context.Background(), nil, "/kube", models.Environment{})
-	assert.Empty(t, msg, "empty input should be a no-op")
+	err := EnrichGPUPools(context.Background(), nil, "/kube", models.Environment{})
+	assert.NoError(t, err, "empty input should be a no-op")
 }
 
 func TestEnrichGPUPools_CompartmentLookupFailure_Warns(t *testing.T) {
 	// listGPUNodesByCompartmentFn returns no nodes → CompartmentID errors;
-	// EnrichGPUPools must surface that as a warning, not a panic.
+	// EnrichGPUPools must surface that as a warning error, not a panic.
 	fakeCompartmentResolver(t, "")
 
 	pools := []models.GPUPool{{Name: "p1", Status: "..."}}
-	msg := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
-	require.NotEmpty(t, msg)
-	assert.Contains(t, msg, "compartment lookup failed")
+	err := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "compartment lookup failed")
 	assert.Equal(t, "...", pools[0].Status, "placeholder must survive enrichment failure")
 }
 
@@ -352,8 +352,8 @@ func TestEnrichGPUPools_PopulateFailure_Warns(t *testing.T) {
 	fakePopulate(t, "", errors.New("OCI 500"))
 
 	pools := []models.GPUPool{{Name: "p1"}}
-	msg := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
-	require.NotEmpty(t, msg)
-	assert.Contains(t, msg, "OCI populate failed")
-	assert.Contains(t, msg, "OCI 500")
+	err := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "OCI populate failed")
+	assert.Contains(t, err.Error(), "OCI 500")
 }

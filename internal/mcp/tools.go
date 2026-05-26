@@ -178,9 +178,9 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 	// Enrich ActualSize / Status from OCI's ListInstancePools (same
 	// step the TUI runs after load). Degrades to a warning if the K8s
 	// or OCI call fails so callers still get Terraform-derived data.
-	if msg := resolve.EnrichGPUPools(ctx, items, s.cfg.KubeConfig, env); msg != "" {
-		warnings = append(warnings, "enrichment incomplete: "+msg)
-		notify(ctx, req.Session, "warning", "gpu pool enrichment incomplete: "+msg)
+	if err := resolve.EnrichGPUPools(ctx, items, s.cfg.KubeConfig, env); err != nil {
+		warnings = append(warnings, "enrichment incomplete: "+err.Error())
+		notify(ctx, req.Session, "warning", "gpu pool enrichment incomplete: "+err.Error())
 	}
 	return listFlatResult(items, in.Filter, in.Limit, warnings)
 }
