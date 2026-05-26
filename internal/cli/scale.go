@@ -52,7 +52,7 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 					DryRun:  dryRun,
 					Yes:     yes,
 				}, func(ctx context.Context) error {
-					pool, err := gpuPoolResolverFn(ctx, cfg, env, name)
+					pool, err := resolveGPUPoolFn(ctx, cfg, env, name)
 					if err != nil {
 						return err
 					}

@@ -32,7 +32,7 @@ func addGetCommand(rootCmd *cobra.Command, cfgFile *string) {
 		noHeaders  bool
 		pretty     bool
 		limit      int
-		columnsArg string
+		selectedColumns string
 	)
 	getCmd := &cobra.Command{
 		Use:   "get <category>",
@@ -57,13 +57,13 @@ discover them.`,
 		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 			return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
 		},
-		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit, &columnsArg),
+		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit, &selectedColumns),
 	}
 	getCmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|jsonl|yaml|csv|tsv")
 	getCmd.Flags().BoolVar(&noHeaders, "no-headers", false, "omit header row (table/csv/tsv only)")
 	getCmd.Flags().BoolVar(&pretty, "pretty", true, "pretty-print JSON/YAML output")
 	getCmd.Flags().IntVar(&limit, "limit", 0, "max items to render (client-side, applied after the fuzzy --filter match); 0 = unlimited. For grouped categories the cap is across the whole flattened result, not per group.")
-	getCmd.Flags().StringVar(&columnsArg, "columns", "",
+	getCmd.Flags().StringVar(&selectedColumns, "columns", "",
 		"comma-separated column keys (table/csv/tsv only; default: all columns). Use --columns help to list valid keys.")
 	_ = getCmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"table", "json", "jsonl", "yaml", "csv", "tsv"}, cobra.ShellCompDirectiveNoFileComp
@@ -94,7 +94,7 @@ discover them.`,
 // messages; splitting them into helpers would just shuffle state.
 //
 //nolint:cyclop // sequential CLI orchestration with one branch per failure mode
-func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int, columnsArg *string) func(cmd *cobra.Command, args []string) error {
+func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int, selectedColumns *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		cat, err := domain.ParseCategory(args[0])
 		if err != nil {
@@ -102,7 +102,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		}
 
 		// --columns help short-circuit: print key/title/default table, exit 0.
-		if *columnsArg == "help" {
+		if *selectedColumns == "help" {
 			headers, rows := columns.HelpTable(cat)
 			return output.WriteTable(cmd.OutOrStdout(), headers, rows, output.Options{})
 		}
@@ -112,7 +112,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 			return err
 		}
 
-		selected, err := parseColumnsFlag(*columnsArg)
+		selected, err := parseColumnsFlag(*selectedColumns)
 		if err != nil {
 			return err
 		}

@@ -25,10 +25,10 @@ func addUncordonCommand(rootCmd *cobra.Command, cfgFile *string) {
 		"Mark a node schedulable (idempotent)")
 }
 
-// addCordonOrUncordon wires either subcommand. want=true → cordon
-// (Unschedulable=true), want=false → uncordon. Both go through the
-// idempotent k8s.SetCordon path.
-func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, verb string, want bool, short string) {
+// addCordonOrUncordon wires either subcommand. unschedulable=true →
+// cordon (k8s Unschedulable=true), unschedulable=false → uncordon.
+// Both go through the idempotent k8s.SetCordon path.
+func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, verb string, unschedulable bool, short string) {
 	var (
 		dryRun bool
 		yes    bool
@@ -44,7 +44,7 @@ Examples:
   toolkit cordon gpu-node-42 --dry-run
   toolkit cordon gpu-node-42 -y
   toolkit cordon gpu-node-42                # interactive confirm`
-	if !want {
+	if !unschedulable {
 		long = `Mark a Kubernetes node schedulable again. New pods can land
 on the node; existing assignments are unaffected.
 
@@ -73,7 +73,7 @@ Examples:
 					DryRun:  dryRun,
 					Yes:     yes,
 				}, func(ctx context.Context) error {
-					changed, err := setCordonFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName, want)
+					changed, err := setCordonFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName, unschedulable)
 					if err != nil {
 						return err
 					}

@@ -75,7 +75,7 @@ func TestTerminateCmd_YesCallsOCI(t *testing.T) {
 
 func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 	stageMutationEnv(t)
-	defer swap(&gpuNodeResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUNode, error) {
+	defer swap(&resolveGPUNodeFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUNode, error) {
 		return &models.GPUNode{Name: name, ID: "ocid1.resolved"}, nil
 	})()
 	var gotNode *models.GPUNode

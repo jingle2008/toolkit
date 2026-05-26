@@ -45,7 +45,7 @@ func TestScaleGPUPool_DryRun_DoesNotCallOCI(t *testing.T) {
 
 func TestScaleGPUPool_HappyPath(t *testing.T) {
 	stageScaleEnv(t)
-	defer swap(&gpuPoolResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUPool, error) {
+	defer swap(&resolveGPUPoolFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUPool, error) {
 		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 8, ActualSize: 4}, nil
 	})()
 
@@ -69,7 +69,7 @@ func TestScaleGPUPool_HappyPath(t *testing.T) {
 
 func TestScaleGPUPool_PoolNotFound(t *testing.T) {
 	stageScaleEnv(t)
-	defer swap(&gpuPoolResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GPUPool, error) {
+	defer swap(&resolveGPUPoolFn, func(context.Context, config.Config, models.Environment, string) (*models.GPUPool, error) {
 		return nil, errors.New("gpu pool \"pool-x\" not found in repo")
 	})()
 

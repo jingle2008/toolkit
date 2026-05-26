@@ -19,10 +19,10 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// gpuNodeResolverFn is the seam tests use to fake the k8s lookup.
+// resolveGPUNodeFn is the seam tests use to fake the k8s lookup.
 // In production it constructs a fresh loader per call and delegates
 // to internal/resolve.GPUNode.
-var gpuNodeResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUNode, error) {
+var resolveGPUNodeFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUNode, error) {
 	ld := production.New(ctx, cfg.MetadataFile)
 	return resolve.GPUNode(ctx, ld, cfg.KubeConfig, env, name, "")
 }
@@ -30,19 +30,19 @@ var gpuNodeResolverFn = func(ctx context.Context, cfg config.Config, env models.
 // resolveGPUNode produces a *GPUNode suitable for handing to the
 // OCI compute actions. If ocid is set, a stub node is synthesized
 // (no cluster call); otherwise the live cluster is consulted via
-// gpuNodeResolverFn. name is always carried for audit / log
+// resolveGPUNodeFn. name is always carried for audit / log
 // readability.
 func resolveGPUNode(ctx context.Context, cfg config.Config, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 	if ocid != "" {
 		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
-	return gpuNodeResolverFn(ctx, cfg, env, name)
+	return resolveGPUNodeFn(ctx, cfg, env, name)
 }
 
-// gpuPoolResolverFn is the seam tests use to fake gpu-pool resolution.
+// resolveGPUPoolFn is the seam tests use to fake gpu-pool resolution.
 // In production it constructs a fresh loader and delegates to
 // internal/resolve.GPUPool.
-var gpuPoolResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUPool, error) {
+var resolveGPUPoolFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUPool, error) {
 	ld := production.New(ctx, cfg.MetadataFile)
 	return resolve.GPUPool(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name)
 }
