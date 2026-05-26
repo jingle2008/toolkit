@@ -32,7 +32,7 @@ func TestModel_updateContent_and_View(t *testing.T) {
 		},
 	}
 	m.viewMode = common.DetailsView
-	m.choice = "dev-UNKNOWN"
+	m.selectedKey = "dev-UNKNOWN"
 	cmd := m.updateContentAsync()
 	require.NotNil(t, cmd)
 	msg, ok := cmd().(detailContentRenderedMsg)
@@ -70,7 +70,7 @@ func TestContextString(t *testing.T) {
 	m := makeTestModel()
 	m.category = domain.Tenant
 	m.scope = &domain.ToolkitContext{Category: domain.Tenant, Name: "foo"}
-	m.choice = "foo"
+	m.selectedKey = "foo"
 	// Should only contain "foo" in DetailsView
 	m.viewMode = common.DetailsView
 	out := m.contextString()
@@ -99,7 +99,7 @@ func TestUpdateContent_DetailsView(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.DetailsView
-	m.choice = "foo"
+	m.selectedKey = "foo"
 	m.dataset = &models.Dataset{}
 	m.viewport.SetContent("")
 	m.renderer = &testRenderer{}
@@ -121,7 +121,7 @@ func TestUpdateContent_Error(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.DetailsView
-	m.choice = "foo"
+	m.selectedKey = "foo"
 	m.dataset = &models.Dataset{}
 	m.viewport.SetContent("")
 	m.renderer = &errRenderer{}
@@ -176,7 +176,7 @@ func TestView_DetailsView(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.DetailsView
-	m.choice = "foo"
+	m.selectedKey = "foo"
 	m.viewport.SetContent("details")
 	out := m.View()
 	assert.Contains(t, out, "details")

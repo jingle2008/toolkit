@@ -23,7 +23,7 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(keyMsg, keys.Back, keys.ViewDetails):
 			m.exitDetailView()
 		case key.Matches(keyMsg, keys.CopyName):
-			item := findItem(m.dataset, m.category, m.choice)
+			item := findItem(m.dataset, m.category, m.selectedKey)
 			cmds = append(cmds, m.copyItemNameCmd(item))
 		case key.Matches(keyMsg, keys.Help):
 			m.enterHelpView()
@@ -39,7 +39,7 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) copyItemJSONByChoice() tea.Cmd {
-	item := findItem(m.dataset, m.category, m.choice)
+	item := findItem(m.dataset, m.category, m.selectedKey)
 	return m.copyItemJSON(item)
 }
 

@@ -58,7 +58,7 @@ type Model struct {
 	detailNonce    int
 	viewMode       common.ViewMode
 	lastViewMode   common.ViewMode // for toggling help view
-	choice         models.ItemKey
+	selectedKey         models.ItemKey
 	viewport       *viewport.Model
 	renderer       view.Renderer
 	loader         loader.Composite

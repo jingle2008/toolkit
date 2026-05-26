@@ -161,7 +161,7 @@ func (m *Model) enterDetailView() tea.Cmd {
 
 	m.viewMode = common.DetailsView
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
-	m.choice = getItemKey(m.category, row)
+	m.selectedKey = getItemKey(m.category, row)
 	m.updateLayout(m.viewWidth, m.viewHeight)
 	return m.updateContentAsync()
 }

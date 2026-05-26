@@ -41,7 +41,7 @@ func (m *Model) infoView() string {
 func (m *Model) contextString() string {
 	scope := "all"
 	if m.viewMode == common.DetailsView {
-		scope = getItemKeyString(m.choice)
+		scope = getItemKeyString(m.selectedKey)
 	} else if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {
 		scope = m.scope.Name
 	}
@@ -115,7 +115,7 @@ func (m *Model) updateContentAsync() tea.Cmd {
 
 	m.detailNonce++
 	nonce := m.detailNonce
-	item := findItem(m.dataset, m.category, m.choice)
+	item := findItem(m.dataset, m.category, m.selectedKey)
 	width := m.detailRenderWidth()
 	renderer := m.renderer
 
