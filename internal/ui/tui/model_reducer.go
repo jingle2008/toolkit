@@ -44,7 +44,7 @@ func (m *Model) getCompartmentID(ctx context.Context) (string, error) {
 
 func (m *Model) updateGPUPoolState() tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := m.opContext()
+		ctx, cancel := m.opCtx()
 		defer cancel()
 		var err error
 		var compartmentID string

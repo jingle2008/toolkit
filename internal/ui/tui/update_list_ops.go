@@ -41,7 +41,7 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	dac.Status = "Deleting"
 	m.updateRows(false)
 	return func() tea.Msg {
-		ctx, cancel := m.opContext()
+		ctx, cancel := m.opCtx()
 		defer cancel()
 		if err := actions.DeleteDedicatedAICluster(ctx, dac, m.environment, m.logger); err != nil {
 			return deleteErrMsg{
@@ -71,7 +71,7 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 	node.SetStatus("Deleting")
 	m.updateRows(false)
 	return func() tea.Msg {
-		ctx, cancel := m.opContext()
+		ctx, cancel := m.opCtx()
 		defer cancel()
 		if err := actions.TerminateInstance(ctx, node, m.environment, m.logger); err != nil {
 			return deleteErrMsg{
@@ -108,7 +108,7 @@ func (m *Model) rebootNode(item any) tea.Cmd {
 	m.updateRows(false)
 
 	return func() tea.Msg {
-		ctx, cancel := m.opContext()
+		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := actions.SoftResetInstance(ctx, node, m.environment, m.logger)
 		return rebootNodeResultMsg{key: itemKey, err: err}
@@ -132,7 +132,7 @@ func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
 }
 
 func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
-	deleteItem(m.dataset, msg.category, msg.key)
+	removeItemFromDataset(m.dataset, msg.category, msg.key)
 
 	// update view if current
 	if msg.category == m.category {

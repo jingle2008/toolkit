@@ -442,7 +442,7 @@ func TestDeleteItem_NilKey_NoMutation(t *testing.T) {
 			"tenant1": {{Name: "dac1", Type: "t", UnitShape: "shape", Size: 1, Status: "active"}},
 		},
 	}
-	deleteItem(ds, domain.DedicatedAICluster, nil)
+	removeItemFromDataset(ds, domain.DedicatedAICluster, nil)
 	require.Len(t, ds.DedicatedAIClusterMap["tenant1"], 1)
 	assert.Equal(t, "dac1", ds.DedicatedAIClusterMap["tenant1"][0].Name)
 }
@@ -455,7 +455,7 @@ func TestDeleteItem_WrongCategory_NoMutation(t *testing.T) {
 		},
 	}
 	key := models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}
-	deleteItem(ds, domain.GPUPool, key) // Not DedicatedAICluster
+	removeItemFromDataset(ds, domain.GPUPool, key) // Not DedicatedAICluster
 	require.Len(t, ds.DedicatedAIClusterMap["tenant1"], 1)
 	assert.Equal(t, "dac1", ds.DedicatedAIClusterMap["tenant1"][0].Name)
 }
@@ -471,7 +471,7 @@ func TestDeleteItem_RemoveDedicatedAICluster(t *testing.T) {
 		},
 	}
 	key := models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}
-	deleteItem(ds, domain.DedicatedAICluster, key)
+	removeItemFromDataset(ds, domain.DedicatedAICluster, key)
 	remaining := ds.DedicatedAIClusterMap["tenant1"]
 	require.Len(t, remaining, 1)
 	assert.Equal(t, "dac2", remaining[0].Name)

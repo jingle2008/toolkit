@@ -36,7 +36,7 @@ func (m *Model) routeLoadingMsg(msg tea.Msg) ([]tea.Cmd, bool) {
 	case spinner.TickMsg:
 		return []tea.Cmd{m.handleSpinnerTickMsg(msg)}, false
 	default:
-		return m.routeLoadedDataMsg(msg), false
+		return m.routeListLoadedMsg(msg), false
 	}
 }
 

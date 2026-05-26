@@ -124,9 +124,9 @@ func sortByString(rows []table.Row, colIdx int, asc bool) {
 	})
 }
 
-// hasIntHeader checks if the header is in the intHeaders map (case-insensitive).
-func hasIntHeader(m map[string]struct{}, header string) bool {
-	for k := range m {
+// hasIntHeader checks if the header is in the intHeaders set (case-insensitive).
+func hasIntHeader(set map[string]struct{}, header string) bool {
+	for k := range set {
 		if strings.EqualFold(k, header) {
 			return true
 		}

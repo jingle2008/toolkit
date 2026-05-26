@@ -72,7 +72,7 @@ func (m *Model) routeListDataMsg(msg tea.Msg) []tea.Cmd {
 	if dm, ok := msg.(datasetLoadedMsg); ok {
 		return []tea.Cmd{m.handleDataMsg(dataMsg{Data: dm.Dataset, Gen: dm.Gen})}
 	}
-	return m.routeLoadedDataMsg(msg)
+	return m.routeListLoadedMsg(msg)
 }
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {

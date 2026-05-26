@@ -80,7 +80,7 @@ func (m *Model) scaleUpGPUPool(item any) tea.Cmd {
 	return tea.Batch(
 		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey} },
 		func() tea.Msg {
-			ctx, cancel := m.opContext()
+			ctx, cancel := m.opCtx()
 			defer cancel()
 			err := actions.IncreasePoolSize(ctx, pool, m.environment, m.logger)
 			return gpuPoolScaleResultMsg{key: itemKey, err: err}
@@ -106,7 +106,7 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 	itemKey := getItemKey(m.category, m.table.SelectedRow())
 	m.logger.Infow("action started", "action", "toggleCordon", "node", getItemKeyString(itemKey))
 	return func() tea.Msg {
-		ctx, cancel := m.opContext()
+		ctx, cancel := m.opCtx()
 		defer cancel()
 		state, err := k8s.ToggleCordon(ctx, m.kubeConfig, m.environment.KubeContext(), node.Name)
 		return cordonNodeResultMsg{key: itemKey, state: state, err: err}
@@ -126,7 +126,7 @@ func (m *Model) drainNode(item any) tea.Cmd {
 	itemKey := getItemKey(m.category, m.table.SelectedRow())
 	m.logger.Infow("action started", "action", "drainNode", "node", getItemKeyString(itemKey))
 	return func() tea.Msg {
-		ctx, cancel := m.opContext()
+		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := k8s.DrainNode(ctx, m.kubeConfig, m.environment.KubeContext(), node.Name)
 		return drainNodeResultMsg{key: itemKey, err: err}

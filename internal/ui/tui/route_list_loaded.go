@@ -2,14 +2,14 @@ package tui
 
 import tea "github.com/charmbracelet/bubbletea"
 
-// routeLoadedDataMsg dispatches a typed *LoadedMsg to its matching
+// routeListLoadedMsg dispatches a typed *LoadedMsg to its matching
 // handler. The only branch that returns a follow-up cmd is
 // gpuPoolsLoadedMsg (state enrichment); all others return nil.
 // Shared by updateLoadingView and updateListView so the per-type
 // switch lives in one place.
 //
 //nolint:cyclop // message router; complexity is inherent in the number of loaded-message types.
-func (m *Model) routeLoadedDataMsg(msg tea.Msg) []tea.Cmd {
+func (m *Model) routeListLoadedMsg(msg tea.Msg) []tea.Cmd {
 	switch msg := msg.(type) {
 	case baseModelsLoadedMsg:
 		m.handleBaseModelsLoaded(msg.Items, msg.Gen)

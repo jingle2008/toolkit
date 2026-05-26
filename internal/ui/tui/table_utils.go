@@ -200,7 +200,7 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 	return src.find(dataset, key)
 }
 
-func deleteItem(dataset *models.Dataset, category domain.Category, key models.ItemKey) {
+func removeItemFromDataset(dataset *models.Dataset, category domain.Category, key models.ItemKey) {
 	if key == nil {
 		return
 	}

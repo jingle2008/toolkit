@@ -217,7 +217,7 @@ func TestSortTableByColumn_Toggles(t *testing.T) {
 func TestOpContext(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	ctx, cancel := m.opContext()
+	ctx, cancel := m.opCtx()
 	t.Cleanup(cancel)
 
 	deadline, ok := ctx.Deadline()
