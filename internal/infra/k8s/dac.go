@@ -29,8 +29,8 @@ func listDedicatedAIClusters(ctx context.Context, client dynamic.Interface) ([]m
 	return append(v1Clusters, v2Clusters...), nil
 }
 
-// listDedicatedAIClustersGeneric fetches DedicatedAIClusters using a GVR and extractor.
-func listDedicatedAIClustersGeneric(
+// listDACsWithOverlay fetches DedicatedAIClusters using a GVR and extractor.
+func listDACsWithOverlay(
 	ctx context.Context,
 	client dynamic.Interface,
 	gvr schema.GroupVersionResource,
@@ -52,7 +52,7 @@ func listDedicatedAIClustersGeneric(
 // passed in so v1beta1 can populate Type from pod-derived metadata.
 type dacOverlay func(spec map[string]any, stats PodStats, dac *models.DedicatedAICluster)
 
-// extractDAC builds the per-item closure listDedicatedAIClustersGeneric
+// extractDAC builds the per-item closure listDACsWithOverlay
 // expects. statusField names the version-specific status string
 // (v1alpha1: "status"; v1beta1: "dacLifecycleState"); overlay applies
 // the remaining version-specific spec/stats overlays.
@@ -104,7 +104,7 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, ca
 		Version:  "v1alpha1",
 		Resource: "dedicatedaiclusters",
 	}
-	return listDedicatedAIClustersGeneric(ctx, client, gvr, extractDAC(ctx, cache, "status",
+	return listDACsWithOverlay(ctx, client, gvr, extractDAC(ctx, cache, "status",
 		func(spec map[string]any, _ PodStats, dac *models.DedicatedAICluster) {
 			dac.Type, _ = spec["type"].(string)
 			dac.UnitShape, _ = spec["unitShape"].(string)
@@ -120,7 +120,7 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 		Version:  "v1beta1",
 		Resource: "dedicatedaiclusters",
 	}
-	return listDedicatedAIClustersGeneric(ctx, client, gvr, extractDAC(ctx, cache, "dacLifecycleState",
+	return listDACsWithOverlay(ctx, client, gvr, extractDAC(ctx, cache, "dacLifecycleState",
 		func(spec map[string]any, stats PodStats, dac *models.DedicatedAICluster) {
 			dac.Profile, _ = spec["profile"].(string)
 			count, _ := spec["count"].(int64)
