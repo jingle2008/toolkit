@@ -186,7 +186,7 @@ func renderFlat[T any](s Set[T], items any, selected []string) ([]string, [][]st
 	if !ok {
 		return nil, nil, fmt.Errorf("renderFlat: items has wrong type %T", items)
 	}
-	cols, err := pickFlat(s, selected)
+	cols, err := selectFlat(s, selected)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -205,7 +205,7 @@ func renderFlat[T any](s Set[T], items any, selected []string) ([]string, [][]st
 	return headers, rows, nil
 }
 
-func pickFlat[T any](s Set[T], selected []string) ([]Column[T], error) {
+func selectFlat[T any](s Set[T], selected []string) ([]Column[T], error) {
 	if len(selected) == 0 {
 		return s.Columns, nil
 	}
@@ -218,7 +218,7 @@ func renderGrouped[T any](g GroupedSet[T], items any, selected []string) ([]stri
 	if !ok {
 		return nil, nil, fmt.Errorf("renderGrouped: items has wrong type %T", items)
 	}
-	cols, err := pickGrouped(g, selected)
+	cols, err := selectGrouped(g, selected)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -243,7 +243,7 @@ func renderGrouped[T any](g GroupedSet[T], items any, selected []string) ([]stri
 	return headers, rows, nil
 }
 
-func pickGrouped[T any](g GroupedSet[T], selected []string) ([]GroupedColumn[T], error) {
+func selectGrouped[T any](g GroupedSet[T], selected []string) ([]GroupedColumn[T], error) {
 	if len(selected) == 0 {
 		return g.Columns, nil
 	}
@@ -257,7 +257,7 @@ func renderFlatForExport[T any](s Set[T], items any, realm, region string, selec
 	if !ok {
 		return nil, nil, fmt.Errorf("renderFlatForExport: items has wrong type %T", items)
 	}
-	cols, err := pickFlat(s, selected)
+	cols, err := selectFlat(s, selected)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -287,7 +287,7 @@ func renderGroupedForExport[T any](g GroupedSet[T], items any, realm, region str
 	if !ok {
 		return nil, nil, fmt.Errorf("renderGroupedForExport: items has wrong type %T", items)
 	}
-	cols, err := pickGrouped(g, selected)
+	cols, err := selectGrouped(g, selected)
 	if err != nil {
 		return nil, nil, err
 	}

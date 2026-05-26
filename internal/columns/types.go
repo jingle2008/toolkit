@@ -91,8 +91,8 @@ func selectByKey[T any](cols []T, keyOf func(T) string, wanted []string, validKe
 	return out, nil
 }
 
-// extractField projects each col through extract, preserving order.
-func extractField[T any, F any](cols []T, extract func(T) F) []F {
+// mapColumns projects each col through extract, preserving order.
+func mapColumns[T any, F any](cols []T, extract func(T) F) []F {
 	out := make([]F, len(cols))
 	for i, c := range cols {
 		out[i] = extract(c)
@@ -100,8 +100,8 @@ func extractField[T any, F any](cols []T, extract func(T) F) []F {
 	return out
 }
 
-// sumField sums extract(col) across cols.
-func sumField[T any](cols []T, extract func(T) float64) float64 {
+// sumColumns sums extract(col) across cols.
+func sumColumns[T any](cols []T, extract func(T) float64) float64 {
 	var sum float64
 	for _, c := range cols {
 		sum += extract(c)
@@ -118,17 +118,17 @@ func (s Set[T]) Select(keys []string) ([]Column[T], error) {
 
 // Keys returns the keys declared on s in order.
 func (s Set[T]) Keys() []string {
-	return extractField(s.Columns, func(c Column[T]) string { return c.Key })
+	return mapColumns(s.Columns, func(c Column[T]) string { return c.Key })
 }
 
 // Titles returns the Title for each column of s in declared order.
 func (s Set[T]) Titles() []string {
-	return extractField(s.Columns, func(c Column[T]) string { return c.Title })
+	return mapColumns(s.Columns, func(c Column[T]) string { return c.Title })
 }
 
 // RatioSum returns the sum of Ratio across all columns of s.
 func (s Set[T]) RatioSum() float64 {
-	return sumField(s.Columns, func(c Column[T]) float64 { return c.Ratio })
+	return sumColumns(s.Columns, func(c Column[T]) float64 { return c.Ratio })
 }
 
 // Select / Keys / Titles / RatioSum mirrors for GroupedSet.
@@ -138,17 +138,17 @@ func (g GroupedSet[T]) Select(keys []string) ([]GroupedColumn[T], error) {
 
 // Keys returns the keys declared on g in order.
 func (g GroupedSet[T]) Keys() []string {
-	return extractField(g.Columns, func(c GroupedColumn[T]) string { return c.Key })
+	return mapColumns(g.Columns, func(c GroupedColumn[T]) string { return c.Key })
 }
 
 // Titles returns the column titles declared on g in order.
 func (g GroupedSet[T]) Titles() []string {
-	return extractField(g.Columns, func(c GroupedColumn[T]) string { return c.Title })
+	return mapColumns(g.Columns, func(c GroupedColumn[T]) string { return c.Title })
 }
 
 // RatioSum returns the sum of column Ratio values on g.
 func (g GroupedSet[T]) RatioSum() float64 {
-	return sumField(g.Columns, func(c GroupedColumn[T]) float64 { return c.Ratio })
+	return sumColumns(g.Columns, func(c GroupedColumn[T]) float64 { return c.Ratio })
 }
 
 // UnknownKeyError is returned by Set.Select / GroupedSet.Select when
