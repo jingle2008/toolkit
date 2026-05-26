@@ -120,16 +120,16 @@ func fakeCompartmentResolver(t *testing.T, compartmentID string) {
 	t.Helper()
 	clearCompartmentCache()
 	origClient := newClientsetFromKubeFn
-	origList := listGPUNodesForCompartFn
+	origList := listGPUNodesByCompartmentFn
 	t.Cleanup(func() {
 		newClientsetFromKubeFn = origClient
-		listGPUNodesForCompartFn = origList
+		listGPUNodesByCompartmentFn = origList
 		clearCompartmentCache()
 	})
 	newClientsetFromKubeFn = func(string, string) (kubernetes.Interface, error) {
 		return fake.NewSimpleClientset(), nil
 	}
-	listGPUNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
+	listGPUNodesByCompartmentFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
 		if compartmentID == "" {
 			return nil, nil // simulate empty cluster
 		}
@@ -244,7 +244,7 @@ func TestCompartmentID_HappyPath(t *testing.T) {
 }
 
 func TestCompartmentID_EmptyCluster(t *testing.T) {
-	// listGPUNodesForCompartFn returns no nodes — we can't infer.
+	// listGPUNodesByCompartmentFn returns no nodes — we can't infer.
 	fakeCompartmentResolver(t, "")
 
 	_, err := CompartmentID(context.Background(), "/kube", models.Environment{Type: "dev"})
@@ -281,7 +281,7 @@ func TestCompartmentID_Caches(t *testing.T) {
 	assert.Equal(t, "ocid1.compartment.first", got1)
 
 	// Swap the seam to a different value. Cache should win.
-	listGPUNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
+	listGPUNodesByCompartmentFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
 		return []models.GPUNode{{CompartmentID: "ocid1.compartment.SHOULD_NOT_SEE"}}, nil
 	}
 	got2, err := CompartmentID(context.Background(), "/kube", env)
@@ -308,7 +308,7 @@ func TestCompartmentID_DoesNotCacheErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "no GPU nodes")
 
 	// Cluster recovers. Cache shouldn't have stored the prior error.
-	listGPUNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
+	listGPUNodesByCompartmentFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
 		return []models.GPUNode{{CompartmentID: "ocid1.compartment.recovered"}}, nil
 	}
 	got, err := CompartmentID(context.Background(), "/kube", env)
@@ -336,7 +336,7 @@ func TestEnrichGPUPools_EmptySlice_NoOp(t *testing.T) {
 }
 
 func TestEnrichGPUPools_CompartmentLookupFailure_Warns(t *testing.T) {
-	// listGPUNodesForCompartFn returns no nodes → CompartmentID errors;
+	// listGPUNodesByCompartmentFn returns no nodes → CompartmentID errors;
 	// EnrichGPUPools must surface that as a warning, not a panic.
 	fakeCompartmentResolver(t, "")
 

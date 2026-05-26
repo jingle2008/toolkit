@@ -49,7 +49,7 @@ func listSubDirs(dirPath string) ([]string, error) {
 	return subDirs, nil
 }
 
-func loadOverridesDI[T models.NamedItem](
+func loadOverridesWith[T models.NamedItem](
 	ctx context.Context,
 	dirPath string,
 	listFilesFunc func(context.Context, string, string) ([]string, error),
@@ -73,10 +73,10 @@ func loadOverridesDI[T models.NamedItem](
 }
 
 func loadOverrides[T models.NamedItem](ctx context.Context, dirPath string) ([]T, error) {
-	return loadOverridesDI(ctx, dirPath, fileutil.ListFiles, jsonutil.LoadFile[T])
+	return loadOverridesWith(ctx, dirPath, fileutil.ListFiles, jsonutil.LoadFile[T])
 }
 
-func loadTenancyOverridesDI[T models.NamedItem](
+func loadTenancyOverridesWith[T models.NamedItem](
 	ctx context.Context,
 	root, realm, name string,
 	listSubDirsFunc func(string) ([]string, error),
@@ -102,7 +102,7 @@ func loadTenancyOverridesDI[T models.NamedItem](
 }
 
 func loadTenancyOverrides[T models.NamedItem](ctx context.Context, root, realm, name string) (map[string][]T, error) {
-	return loadTenancyOverridesDI(ctx, root, realm, name, listSubDirs, loadOverrides[T])
+	return loadTenancyOverridesWith(ctx, root, realm, name, listSubDirs, loadOverrides[T])
 }
 
 func loadRegionalOverrides[T models.NamedItem](ctx context.Context, root, realm, name string) ([]T, error) {

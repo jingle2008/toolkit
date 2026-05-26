@@ -39,7 +39,7 @@ func TestLoadOverrides_Success(t *testing.T) {
 
 func TestLoadOverridesDI_ListFilesError(t *testing.T) {
 	t.Parallel()
-	_, err := loadOverridesDI(
+	_, err := loadOverridesWith(
 		context.Background(),
 		"irrelevant",
 		func(_ context.Context, _, _ string) ([]string, error) { return nil, os.ErrNotExist },
@@ -51,7 +51,7 @@ func TestLoadOverridesDI_ListFilesError(t *testing.T) {
 func TestLoadOverridesDI_LoadFileError(t *testing.T) {
 	t.Parallel()
 	files := []string{"a.json", "b.json"}
-	_, err := loadOverridesDI(
+	_, err := loadOverridesWith(
 		context.Background(),
 		"irrelevant",
 		func(_ context.Context, _, _ string) ([]string, error) { return files, nil },
@@ -62,7 +62,7 @@ func TestLoadOverridesDI_LoadFileError(t *testing.T) {
 
 func TestLoadOverridesDI_Empty(t *testing.T) {
 	t.Parallel()
-	out, err := loadOverridesDI(
+	out, err := loadOverridesWith(
 		context.Background(),
 		"irrelevant",
 		func(_ context.Context, _, _ string) ([]string, error) { return []string{}, nil },
@@ -113,7 +113,7 @@ func TestLoadTenancyOverrides_Success(t *testing.T) {
 
 func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
 	t.Parallel()
-	_, err := loadTenancyOverridesDI(
+	_, err := loadTenancyOverridesWith(
 		context.Background(),
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return nil, os.ErrNotExist },
@@ -125,7 +125,7 @@ func TestLoadTenancyOverridesDI_ListSubDirsError(t *testing.T) {
 func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 	t.Parallel()
 	tenants := []string{"t1", "t2"}
-	_, err := loadTenancyOverridesDI(
+	_, err := loadTenancyOverridesWith(
 		context.Background(),
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return tenants, nil },
@@ -136,7 +136,7 @@ func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 
 func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
 	t.Parallel()
-	_, err := loadTenancyOverridesDI(
+	_, err := loadTenancyOverridesWith(
 		context.Background(),
 		"irrelevant", "realm", "name",
 		func(string) ([]string, error) { return []string{}, nil },

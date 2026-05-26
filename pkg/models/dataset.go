@@ -39,13 +39,13 @@ func (d *Dataset) buildTenantIDSuffixMap() map[string]int {
 	return suffixMap
 }
 
-// resolveOwnedMap re-keys raw (keyed by raw TenantID — label value
+// resolveTenantOwnedMap re-keys raw (keyed by raw TenantID — label value
 // or "UNKNOWN_TENANCY") by resolved Tenant.Name when a match is
 // found in d.Tenants, otherwise the raw key is preserved. setOwner
 // is invoked on every value pointer with the matching tenant (nil
 // when unmatched), so each item carries a back-pointer to its
 // owning Tenant for downstream rendering.
-func resolveOwnedMap[T any](d *Dataset, raw map[string][]T, setOwner func(*T, *Tenant)) map[string][]T {
+func resolveTenantOwnedMap[T any](d *Dataset, raw map[string][]T, setOwner func(*T, *Tenant)) map[string][]T {
 	out := make(map[string][]T, len(raw))
 	suffixMap := d.buildTenantIDSuffixMap()
 	for k, v := range raw {
@@ -65,13 +65,13 @@ func resolveOwnedMap[T any](d *Dataset, raw map[string][]T, setOwner func(*T, *T
 
 // SetDedicatedAIClusterMap sets the dedicated AI cluster map using tenant suffixes.
 func (d *Dataset) SetDedicatedAIClusterMap(m map[string][]DedicatedAICluster) {
-	d.DedicatedAIClusterMap = resolveOwnedMap(d, m,
+	d.DedicatedAIClusterMap = resolveTenantOwnedMap(d, m,
 		func(v *DedicatedAICluster, t *Tenant) { v.Owner = t })
 }
 
 // SetImportedModelMap sets the imported model map using tenant suffixes.
 func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
-	d.ImportedModelMap = resolveOwnedMap(d, m,
+	d.ImportedModelMap = resolveTenantOwnedMap(d, m,
 		func(v *ImportedModel, t *Tenant) { v.Owner = t })
 }
 

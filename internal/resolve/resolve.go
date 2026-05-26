@@ -25,7 +25,7 @@ import (
 var (
 	populateGPUPoolsFn       = actions.PopulateGPUPools
 	newClientsetFromKubeFn   = k8s.NewClientsetFromKubeConfig
-	listGPUNodesForCompartFn = k8s.ListGPUNodes
+	listGPUNodesByCompartmentFn = k8s.ListGPUNodes
 )
 
 // GPUNode finds a *models.GPUNode for the OCI compute actions. With
@@ -161,7 +161,7 @@ func CompartmentID(ctx context.Context, kubeConfig string, env models.Environmen
 	if err != nil {
 		return "", err
 	}
-	nodes, err := listGPUNodesForCompartFn(ctx, clientset, 1)
+	nodes, err := listGPUNodesByCompartmentFn(ctx, clientset, 1)
 	if err != nil {
 		return "", err
 	}

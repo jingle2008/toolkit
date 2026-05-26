@@ -179,7 +179,7 @@ const (
 	RegionUSNewark1 Region = "us-newark-1"
 )
 
-var shortNameRegion = map[string]Region{
+var regionByShortName = map[string]Region{
 	"yny": RegionAPChuncheon1,
 	"hyd": RegionAPHyderabad1,
 	"mel": RegionAPMelbourne1,
@@ -266,12 +266,12 @@ var shortNameRegion = map[string]Region{
 	"pgc": RegionUSNewark1,
 }
 
-// regionShortName is the inverse of shortNameRegion, populated at init
-// so Code is O(1) instead of scanning shortNameRegion linearly on
+// shortNameByRegion is the inverse of regionByShortName, populated at init
+// so Code is O(1) instead of scanning regionByShortName linearly on
 // every per-row call from Environment.GetName / KubeContext.
-var regionShortName = func() map[Region]string {
-	m := make(map[Region]string, len(shortNameRegion))
-	for k, v := range shortNameRegion {
+var shortNameByRegion = func() map[Region]string {
+	m := make(map[Region]string, len(regionByShortName))
+	for k, v := range regionByShortName {
 		m[v] = k
 	}
 	return m
@@ -280,7 +280,7 @@ var regionShortName = func() map[Region]string {
 /*
 Code returns the short code for the Region.
 
-For regions that haven't been added to the shortNameRegion map yet
+For regions that haven't been added to the regionByShortName map yet
 (typically newer SDK additions or sovereign-cloud regions that never
 ship in the public SDK), it falls back to the second-to-last
 dash-delimited segment of the region identifier — e.g.
@@ -295,7 +295,7 @@ region key should add the mapping explicitly. Returns the literal
 */
 // Code not part of SDK
 func (r Region) Code() string {
-	if k, ok := regionShortName[r]; ok {
+	if k, ok := shortNameByRegion[r]; ok {
 		return k
 	}
 	// Fallback: derive a slug from the region name so the table shows
@@ -311,5 +311,5 @@ func (r Region) Code() string {
 CodeToRegion returns the Region corresponding to the given code.
 */
 func CodeToRegion(code string) Region {
-	return shortNameRegion[code]
+	return regionByShortName[code]
 }
