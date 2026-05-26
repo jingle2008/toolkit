@@ -108,13 +108,13 @@ func TestVersionCommandWithCheck(t *testing.T) {
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetErr(buf)
-	cmd.SetArgs([]string{"version", "--check"})
+	cmd.SetArgs([]string{"version", "--check-updates"})
 	// This will hit the real GitHub API, so in a real test, you'd want to monkey-patch fetchLatestRelease.
 	// For now, just check that it doesn't panic and prints something.
 	_ = cmd.Execute()
 	out := buf.String()
 	if !strings.Contains(out, "toolkit version: vtest") {
-		t.Errorf("version --check output missing version: %q", out)
+		t.Errorf("version --check-updates output missing version: %q", out)
 	}
 }
 

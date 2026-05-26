@@ -18,7 +18,7 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 		Short: "Print the version number and check for updates",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "toolkit version: %s\n", currentVersion)
-			check, _ := cmd.Flags().GetBool("check")
+			check, _ := cmd.Flags().GetBool("check-updates")
 			if check {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
@@ -35,7 +35,7 @@ func addVersionCheckCommand(rootCmd *cobra.Command, currentVersion string) {
 			return nil
 		},
 	}
-	versionCmd.Flags().Bool("check", false, "Check for the latest release on GitHub")
+	versionCmd.Flags().Bool("check-updates", false, "Check for the latest release on GitHub")
 	rootCmd.AddCommand(versionCmd)
 }
 

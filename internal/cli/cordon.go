@@ -17,12 +17,12 @@ var setCordonFn = k8s.SetCordon
 
 func addCordonCommand(rootCmd *cobra.Command, cfgFile *string) {
 	addCordonOrUncordon(rootCmd, cfgFile, "cordon", true,
-		"Mark a node unschedulable (idempotent).")
+		"Mark a node unschedulable (idempotent)")
 }
 
 func addUncordonCommand(rootCmd *cobra.Command, cfgFile *string) {
 	addCordonOrUncordon(rootCmd, cfgFile, "uncordon", false,
-		"Mark a node schedulable (idempotent).")
+		"Mark a node schedulable (idempotent)")
 }
 
 // addCordonOrUncordon wires either subcommand. want=true → cordon

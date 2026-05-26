@@ -17,7 +17,7 @@ var deleteDACFn = actions.DeleteDedicatedAICluster
 func addDeleteCommand(rootCmd *cobra.Command, cfgFile *string) {
 	delCmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete a resource (destructive).",
+		Short: "Delete a resource (destructive)",
 	}
 
 	var (
@@ -26,7 +26,7 @@ func addDeleteCommand(rootCmd *cobra.Command, cfgFile *string) {
 	)
 	dacCmd := &cobra.Command{
 		Use:   "dac <name>",
-		Short: "Delete a dedicated AI cluster (synchronous; polls the work request).",
+		Short: "Delete a dedicated AI cluster (synchronous; polls the work request)",
 		Long: `Deletes the DAC and its endpoints. Synchronous: the call
 blocks until the work request reports SUCCEEDED or FAILED (10-min
 timeout). <name> is the DAC's identifier — the same string the table

@@ -22,7 +22,7 @@ func addTerminateCommand(rootCmd *cobra.Command, cfgFile *string) {
 	)
 	cmd := &cobra.Command{
 		Use:   "terminate <node>",
-		Short: "Terminate the OCI instance backing a GPU node (destructive).",
+		Short: "Terminate the OCI instance backing a GPU node (destructive)",
 		Long: `Submits a TerminateInstance request to OCI for the instance
 backing <node>. PreserveBootVolume=false (same default as the TUI's
 delete-node flow) — the boot volume is destroyed along with the

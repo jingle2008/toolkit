@@ -14,7 +14,7 @@ import (
 // increasePoolSizeFn is the seam tests use to fake the OCI call.
 var increasePoolSizeFn = actions.IncreasePoolSize
 
-// addScaleCommand wires `toolkit scale gpupool <name>`. Terraform is
+// addScaleCommand wires `toolkit scale gpu-pool <name>`. Terraform is
 // the source of truth for size: the action reads pool.Size (loaded
 // from the IaC repo) and submits an UpdateInstancePool to match it.
 // No --size flag — call this after `terraform apply` to push the
@@ -23,7 +23,7 @@ var increasePoolSizeFn = actions.IncreasePoolSize
 func addScaleCommand(rootCmd *cobra.Command, cfgFile *string) {
 	scaleCmd := &cobra.Command{
 		Use:   "scale",
-		Short: "Sync IaC-declared size to OCI.",
+		Short: "Sync IaC-declared size to OCI",
 	}
 
 	var (
@@ -31,8 +31,9 @@ func addScaleCommand(rootCmd *cobra.Command, cfgFile *string) {
 		yes    bool
 	)
 	gpuPoolCmd := &cobra.Command{
-		Use:   "gpupool <name>",
-		Short: "Sync a GPU pool's OCI instance-pool size to the Terraform-declared size.",
+		Use:     "gpu-pool <name>",
+		Aliases: []string{"gpupool"},
+		Short:   "Sync a GPU pool's OCI instance-pool size to the Terraform-declared size",
 		Long: `Reads pool.Size from the Terraform repo and submits an
 UpdateInstancePool request to OCI for the matching live instance pool.
 No --size flag: Terraform is the source of truth, and we deliberately

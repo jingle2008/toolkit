@@ -20,7 +20,7 @@ func addDrainCommand(rootCmd *cobra.Command, cfgFile *string) {
 	)
 	cmd := &cobra.Command{
 		Use:   "drain <node>",
-		Short: "Drain pods from a node (cordons first, then evicts).",
+		Short: "Drain pods from a node (cordons first, then evicts)",
 		Long: `Drain evicts pods from <node> using the same default kubectl
 behavior the TUI uses: IgnoreAllDaemonSets, DeleteEmptyDirData, and
 the pod's termination grace period. Use this before terminating a

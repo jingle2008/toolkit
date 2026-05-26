@@ -22,7 +22,7 @@ func addRebootCommand(rootCmd *cobra.Command, cfgFile *string) {
 	)
 	cmd := &cobra.Command{
 		Use:   "reboot <node>",
-		Short: "Soft-reset a GPU node's underlying OCI instance.",
+		Short: "Soft-reset a GPU node's underlying OCI instance",
 		Long: `Submits a soft-reset (graceful reboot) request to OCI for the
 instance backing <node>. Fire-and-forget: the call returns as soon as
 OCI accepts the request; check status via the OCI console or any
