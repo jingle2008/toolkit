@@ -76,8 +76,8 @@ func TestLoader_AllMethods_NoPanicOnEmptyInput(t *testing.T) {
 	// These should not panic, even if they return errors or empty data
 	_, _ = ldr.LoadDataset(ctx, "", env)
 	_, _ = ldr.LoadBaseModels(ctx, "", env)
-	_, _ = ldr.LoadGpuPools(ctx, "", env)
-	// Skip LoadGpuNodes and LoadDedicatedAIClusters: require valid kubeconfig
+	_, _ = ldr.LoadGPUPools(ctx, "", env)
+	// Skip LoadGPUNodes and LoadDedicatedAIClusters: require valid kubeconfig
 	_, _ = ldr.LoadTenancyOverrideGroup(ctx, "", env)
 	_, _ = ldr.LoadLimitRegionalOverrides(ctx, "", env)
 	_, _ = ldr.LoadConsolePropertyRegionalOverrides(ctx, "", env)
@@ -93,12 +93,12 @@ func TestLoadBaseModels_Error(t *testing.T) {
 	}
 }
 
-func TestLoadGpuPools_Error(t *testing.T) {
+func TestLoadGPUPools_Error(t *testing.T) {
 	t.Parallel()
 	ldr := NewLoader(context.Background(), "")
-	_, err := ldr.LoadGpuPools(context.Background(), "/nonexistent/path", models.Environment{})
+	_, err := ldr.LoadGPUPools(context.Background(), "/nonexistent/path", models.Environment{})
 	if err == nil {
-		t.Error("LoadGpuPools with bad path: want error, got nil")
+		t.Error("LoadGPUPools with bad path: want error, got nil")
 	}
 }
 
@@ -120,21 +120,21 @@ func TestProductionLoader_LoadBaseModels(t *testing.T) {
 	}
 }
 
-func TestProductionLoader_LoadGpuPools(t *testing.T) {
+func TestProductionLoader_LoadGPUPools(t *testing.T) {
 	t.Parallel()
 	loader := Loader{}
-	_, err := loader.LoadGpuPools(context.Background(), "dummy_repo", models.Environment{})
+	_, err := loader.LoadGPUPools(context.Background(), "dummy_repo", models.Environment{})
 	if err == nil {
-		t.Log("LoadGpuPools: expected error or empty result with dummy input")
+		t.Log("LoadGPUPools: expected error or empty result with dummy input")
 	}
 }
 
-func TestProductionLoader_LoadGpuNodes(t *testing.T) {
+func TestProductionLoader_LoadGPUNodes(t *testing.T) {
 	t.Parallel()
 	loader := Loader{}
-	_, err := loader.LoadGpuNodes(context.Background(), "dummy_kubeconfig", models.Environment{})
+	_, err := loader.LoadGPUNodes(context.Background(), "dummy_kubeconfig", models.Environment{})
 	if err == nil {
-		t.Log("LoadGpuNodes: expected error or empty result with dummy input")
+		t.Log("LoadGPUNodes: expected error or empty result with dummy input")
 	}
 }
 
@@ -191,13 +191,13 @@ func TestNewLoader_LoadsMetadataFile(t *testing.T) {
 	_ = NewLoader(context.Background(), tmp.Name())
 }
 
-func TestLoader_LoadGpuNodesAndDedicatedAIClusters_Error(t *testing.T) {
+func TestLoader_LoadGPUNodesAndDedicatedAIClusters_Error(t *testing.T) {
 	t.Parallel()
 	ldr := NewLoader(context.Background(), "")
 	env := models.Environment{}
-	_, err := ldr.LoadGpuNodes(context.Background(), "", env)
+	_, err := ldr.LoadGPUNodes(context.Background(), "", env)
 	if err == nil {
-		t.Error("LoadGpuNodes: want error for empty kubeconfig, got nil")
+		t.Error("LoadGPUNodes: want error for empty kubeconfig, got nil")
 	}
 	_, err = ldr.LoadDedicatedAIClusters(context.Background(), "", env)
 	if err == nil {

@@ -47,8 +47,8 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	handlers := map[domain.Category]handlerFn{
 		domain.BaseModel:                       func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleBaseModelCategory(refresh, gen) },
 		domain.ImportedModel:                   func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleImportedModelCategory(refresh, gen) },
-		domain.GpuPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGpuPoolCategory(refresh, gen) },
-		domain.GpuNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGpuNodeCategory(refresh, gen) },
+		domain.GPUPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUPoolCategory(refresh, gen) },
+		domain.GPUNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUNodeCategory(refresh, gen) },
 		domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
 		domain.LimitRegionalOverride:           func(m *Model, _ bool, gen int) tea.Cmd { return m.handleLimitRegionalOverrideCategory(gen) },
 		domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool, gen int) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory(gen) },
@@ -131,16 +131,16 @@ func (m *Model) handleImportedModelCategory(refresh bool, gen int) tea.Cmd {
 	return nil
 }
 
-func (m *Model) handleGpuPoolCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.GpuPools == nil || refresh {
-		return loadGpuPoolsCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
+func (m *Model) handleGPUPoolCategory(refresh bool, gen int) tea.Cmd {
+	if m.dataset == nil || m.dataset.GPUPools == nil || refresh {
+		return loadGPUPoolsCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
 	}
 	return nil
 }
 
-func (m *Model) handleGpuNodeCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.GpuNodeMap == nil || refresh {
-		return loadGpuNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+func (m *Model) handleGPUNodeCategory(refresh bool, gen int) tea.Cmd {
+	if m.dataset == nil || m.dataset.GPUNodeMap == nil || refresh {
+		return loadGPUNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }

@@ -56,7 +56,7 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.RebootNode):
 		return m.rebootNode(item)
 	case key.Matches(msg, keys.ScaleUp):
-		return m.scaleUpGpuPool(item)
+		return m.scaleUpGPUPool(item)
 	}
 	return nil
 }
@@ -68,15 +68,15 @@ func (m *Model) copyTenantID(item any) tea.Cmd {
 	}
 }
 
-func (m *Model) scaleUpGpuPool(item any) tea.Cmd {
-	pool, ok := item.(*models.GpuPool)
+func (m *Model) scaleUpGPUPool(item any) tea.Cmd {
+	pool, ok := item.(*models.GPUPool)
 	if !ok || pool == nil {
 		m.logger.Errorw("no GPU pool selected for scale up")
 		return nil
 	}
 
 	itemKey := getItemKey(m.category, m.table.SelectedRow())
-	m.logger.Infow("action started", "action", "scaleUpGpuPool", "pool", getItemKeyString(itemKey))
+	m.logger.Infow("action started", "action", "scaleUpGPUPool", "pool", getItemKeyString(itemKey))
 	return tea.Batch(
 		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey} },
 		func() tea.Msg {
@@ -98,7 +98,7 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
 		return nil
 	}
-	node, ok := item.(*models.GpuNode)
+	node, ok := item.(*models.GPUNode)
 	if !ok {
 		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
 		return nil
@@ -118,7 +118,7 @@ func (m *Model) drainNode(item any) tea.Cmd {
 		m.logger.Errorw("no item selected for draining", "category", m.category)
 		return nil
 	}
-	node, ok := item.(*models.GpuNode)
+	node, ok := item.(*models.GPUNode)
 	if !ok {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
 		return nil

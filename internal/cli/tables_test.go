@@ -55,10 +55,10 @@ func TestRenderTable_BaseModel(t *testing.T) {
 	assert.Equal(t, "1", rows[0][2])
 }
 
-func TestRenderTable_GpuPool(t *testing.T) {
+func TestRenderTable_GPUPool(t *testing.T) {
 	t.Parallel()
-	items := []models.GpuPool{{Name: "p1", Shape: "BM.GPU", AvailabilityDomain: "AD-1", Size: 8, ActualSize: 7, IsOkeManaged: true, CapacityType: "ondemand", Status: "RUNNING"}}
-	headers, rows, err := columns.RenderTable(domain.GpuPool, items, nil)
+	items := []models.GPUPool{{Name: "p1", Shape: "BM.GPU", AvailabilityDomain: "AD-1", Size: 8, ActualSize: 7, IsOkeManaged: true, CapacityType: "ondemand", Status: "RUNNING"}}
+	headers, rows, err := columns.RenderTable(domain.GPUPool, items, nil)
 	require.NoError(t, err)
 	// All 9 columns are Default==true now.
 	assert.Equal(t, []string{"NAME", "SHAPE", "AD", "SIZE", "ACTUAL SIZE", "GPUS", "OKE MANAGED", "CAPACITY TYPE", "STATUS"}, headers)
@@ -189,13 +189,13 @@ func TestRenderTable_ImportedModel(t *testing.T) {
 	assert.Equal(t, "team-x", rows[0][2])
 }
 
-func TestRenderTable_GpuNode(t *testing.T) {
+func TestRenderTable_GPUNode(t *testing.T) {
 	t.Parallel()
-	grouped := map[string][]models.GpuNode{
+	grouped := map[string][]models.GPUNode{
 		"pool-b": {{Name: "n2", InstanceType: "BM", Age: "1d"}},
 		"pool-a": {{Name: "n1", InstanceType: "BM", Age: "2d"}},
 	}
-	headers, rows, err := columns.RenderTable(domain.GpuNode, grouped, nil)
+	headers, rows, err := columns.RenderTable(domain.GPUNode, grouped, nil)
 	require.NoError(t, err)
 	// All 9 columns Default==true now; name-first (Decision #4).
 	assert.Equal(t, []string{"NAME", "POOL", "TYPE", "TOTAL", "FREE", "HEALTHY", "READY", "AGE", "STATUS"}, headers)
@@ -251,14 +251,14 @@ func TestRenderTable_ModelArtifact(t *testing.T) {
 
 // --- writeSlice / writeMap dispatch tests --------------------------------
 
-// TestWriteSlice_GpuPool_JSONShape pins the v0.3.0 lowercase JSON
+// TestWriteSlice_GPUPool_JSONShape pins the v0.3.0 lowercase JSON
 // contract for `toolkit get gpupool -o json`. Enrichment fills
 // `actualSize` and `status` (previously placeholders) but must not
 // rename or drop any key. Regression bait against accidental struct-tag
 // changes or struct renames during refactor.
-func TestWriteSlice_GpuPool_JSONShape(t *testing.T) {
+func TestWriteSlice_GPUPool_JSONShape(t *testing.T) {
 	t.Parallel()
-	items := []models.GpuPool{{
+	items := []models.GPUPool{{
 		Name:               "p1",
 		Shape:              "BM.GPU.A100-v2.8",
 		Size:               8,
@@ -269,7 +269,7 @@ func TestWriteSlice_GpuPool_JSONShape(t *testing.T) {
 		IsOkeManaged:       true,
 	}}
 	var buf bytes.Buffer
-	require.NoError(t, writeSlice(&buf, items, 0, output.Options{Format: output.FormatJSON}, domain.GpuPool, models.Environment{}, nil))
+	require.NoError(t, writeSlice(&buf, items, 0, output.Options{Format: output.FormatJSON}, domain.GPUPool, models.Environment{}, nil))
 
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
@@ -313,10 +313,10 @@ func TestWriteMap_Formats(t *testing.T) {
 	t.Parallel()
 	// Match what the loader produces: NodePool is set to the same
 	// value as the map key (internal/infra/k8s/gpu_node.go:151).
-	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a"}}}
+	grouped := map[string][]models.GPUNode{"pool-a": {{Name: "n1", NodePool: "pool-a"}}}
 	for _, fmt := range []output.Format{output.FormatJSON, output.FormatJSONL, output.FormatYAML, output.FormatTable} {
 		var buf bytes.Buffer
-		err := writeMap(&buf, grouped, 0, output.Options{Format: fmt}, domain.GpuNode, models.Environment{}, nil)
+		err := writeMap(&buf, grouped, 0, output.Options{Format: fmt}, domain.GPUNode, models.Environment{}, nil)
 		require.NoError(t, err, "format=%s", fmt)
 		got := buf.String()
 		assert.True(t, strings.Contains(got, "n1") || strings.Contains(got, "pool-a"),
@@ -324,20 +324,20 @@ func TestWriteMap_Formats(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, 0, output.Options{Format: "toml"}, domain.GpuNode, models.Environment{}, nil)
+	err := writeMap(&buf, grouped, 0, output.Options{Format: "toml"}, domain.GPUNode, models.Environment{}, nil)
 	require.Error(t, err)
 }
 
-// TestWriteMap_GpuNodes_NoInjectedPoolField pins the no-inject
+// TestWriteMap_GPUNodes_NoInjectedPoolField pins the no-inject
 // contract for grouped categories whose value already carries the
 // group key: the top-level JSON object must NOT have a redundant
-// `pool` field — only the GpuNode-native `poolName` survives.
+// `pool` field — only the GPUNode-native `poolName` survives.
 // Regression bait against accidentally re-injecting.
-func TestWriteMap_GpuNodes_NoInjectedPoolField(t *testing.T) {
+func TestWriteMap_GPUNodes_NoInjectedPoolField(t *testing.T) {
 	t.Parallel()
-	grouped := map[string][]models.GpuNode{"pool-a": {{Name: "n1", NodePool: "pool-a", IsReady: true}}}
+	grouped := map[string][]models.GPUNode{"pool-a": {{Name: "n1", NodePool: "pool-a", IsReady: true}}}
 	var buf bytes.Buffer
-	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, domain.GpuNode, models.Environment{}, nil)
+	err := writeMap(&buf, grouped, 0, output.Options{Format: output.FormatJSON, Pretty: true}, domain.GPUNode, models.Environment{}, nil)
 	require.NoError(t, err)
 
 	var arr []map[string]any
@@ -380,12 +380,12 @@ func TestWriteSlice_Limit(t *testing.T) {
 // limit=3 should yield 3 items across both groups (key-sorted).
 func TestWriteMap_Limit_CapsAcrossGroups(t *testing.T) {
 	t.Parallel()
-	grouped := map[string][]models.GpuNode{
+	grouped := map[string][]models.GPUNode{
 		"pool-a": {{Name: "a1", NodePool: "pool-a"}, {Name: "a2", NodePool: "pool-a"}},
 		"pool-b": {{Name: "b1", NodePool: "pool-b"}, {Name: "b2", NodePool: "pool-b"}},
 	}
 	var buf bytes.Buffer
-	require.NoError(t, writeMap(&buf, grouped, 3, output.Options{Format: output.FormatJSON, Pretty: true}, domain.GpuNode, models.Environment{}, nil))
+	require.NoError(t, writeMap(&buf, grouped, 3, output.Options{Format: output.FormatJSON, Pretty: true}, domain.GPUNode, models.Environment{}, nil))
 	var arr []map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &arr))
 	assert.Len(t, arr, 3, "limit=3 across 4 flattened items should yield 3")

@@ -39,11 +39,11 @@ func (stubLoader) LoadImportedModels(context.Context, string, models.Environment
 	return nil, nil //nolint:nilnil // empty-map stub; tests rarely read this
 }
 
-func (stubLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {
+func (stubLoader) LoadGPUPools(context.Context, string, models.Environment) ([]models.GPUPool, error) {
 	return nil, nil
 }
 
-func (stubLoader) LoadGpuNodes(context.Context, string, models.Environment) (map[string][]models.GpuNode, error) {
+func (stubLoader) LoadGPUNodes(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
 	return nil, nil //nolint:nilnil // empty-map test stub; integration tests never read this
 }
 
@@ -79,28 +79,28 @@ func (l errBaseModelsLoader) LoadBaseModels(context.Context, string, models.Envi
 	return nil, l.err
 }
 
-// partialGpuPoolsLoader makes LoadGpuPools return a *terraform.PartialLoadError
-// so we can exercise the partial-success path in handleListGpuPools
+// partialGPUPoolsLoader makes LoadGPUPools return a *terraform.PartialLoadError
+// so we can exercise the partial-success path in handleListGPUPools
 // (tool call still succeeds; a warning notification is emitted).
-type partialGpuPoolsLoader struct {
+type partialGPUPoolsLoader struct {
 	stubLoader
 	err *terraform.PartialLoadError
 }
 
-func (l partialGpuPoolsLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {
+func (l partialGPUPoolsLoader) LoadGPUPools(context.Context, string, models.Environment) ([]models.GPUPool, error) {
 	return nil, l.err
 }
 
-// fixedGpuPoolsLoader returns scripted pools so EnrichGpuPools's
+// fixedGPUPoolsLoader returns scripted pools so EnrichGPUPools's
 // fast-path (len(pools)==0) doesn't short-circuit the new
-// enrichment branch in handleListGpuPools. Everything else inherits
+// enrichment branch in handleListGPUPools. Everything else inherits
 // from stubLoader.
-type fixedGpuPoolsLoader struct {
+type fixedGPUPoolsLoader struct {
 	stubLoader
-	pools []models.GpuPool
+	pools []models.GPUPool
 }
 
-func (l fixedGpuPoolsLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {
+func (l fixedGPUPoolsLoader) LoadGPUPools(context.Context, string, models.Environment) ([]models.GPUPool, error) {
 	return l.pools, nil
 }
 
@@ -212,10 +212,10 @@ func TestIntegration_NotifiesOnPartialLoad(t *testing.T) {
 
 	rec := &recorder{}
 	partial := &terraform.PartialLoadError{
-		Source: "GpuPools",
+		Source: "GPUPools",
 		Errs:   []error{errors.New("oke nodepools dir missing")},
 	}
-	ld := partialGpuPoolsLoader{err: partial}
+	ld := partialGPUPoolsLoader{err: partial}
 	clientSess := newTestPair(ctx, t, ld, rec)
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
@@ -233,22 +233,22 @@ func TestIntegration_NotifiesOnPartialLoad(t *testing.T) {
 		"warning body should include the per-source error: %q", body)
 }
 
-// TestIntegration_NotifiesOnGpuPoolEnrichmentFailure pins the
-// enrichment branch in handleListGpuPools (TUI parity step). With a
+// TestIntegration_NotifiesOnGPUPoolEnrichmentFailure pins the
+// enrichment branch in handleListGPUPools (TUI parity step). With a
 // non-empty pool slice and a deliberately bad kubeconfig path,
-// resolve.EnrichGpuPools must fail at the CompartmentID step, surface
+// resolve.EnrichGPUPools must fail at the CompartmentID step, surface
 // the warning both in the listResult.warnings envelope field AND as a
 // notifications/message frame, and still return the Terraform-derived
 // pool (no IsError). Regression bait: a future drop of the `notify`
 // call, a missed append to warnings, or a re-introduction of
 // fail-on-enrichment will all break this test.
-func TestIntegration_NotifiesOnGpuPoolEnrichmentFailure(t *testing.T) {
+func TestIntegration_NotifiesOnGPUPoolEnrichmentFailure(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	rec := &recorder{}
-	ld := fixedGpuPoolsLoader{pools: []models.GpuPool{
+	ld := fixedGPUPoolsLoader{pools: []models.GPUPool{
 		{Name: "p1", Shape: "BM.GPU", Status: "...", Size: 8},
 	}}
 	clientSess := newTestPair(ctx, t, ld, rec, func(c *config.Config) {

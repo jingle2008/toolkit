@@ -6,43 +6,43 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// GpuPoolColumns is the canonical column set for domain.GpuPool.
+// GPUPoolColumns is the canonical column set for domain.GPUPool.
 // Matches today's CLI and TUI tables.
-var GpuPoolColumns = Set[models.GpuPool]{Columns: []Column[models.GpuPool]{
+var GPUPoolColumns = Set[models.GPUPool]{Columns: []Column[models.GPUPool]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.22,
-		Render: func(p models.GpuPool) string { return p.Name },
+		Render: func(p models.GPUPool) string { return p.Name },
 	},
 	{
 		Title: "Shape", Key: "shape", Ratio: 0.20,
-		Render: func(p models.GpuPool) string { return p.Shape },
+		Render: func(p models.GPUPool) string { return p.Shape },
 	},
 	{
 		Title: "AD", Key: "ad", Ratio: 0.06,
-		Render: func(p models.GpuPool) string { return p.AvailabilityDomain },
+		Render: func(p models.GPUPool) string { return p.AvailabilityDomain },
 	},
 	{
 		Title: "Size", Key: "size", Ratio: 0.06,
-		Render: func(p models.GpuPool) string { return strconv.Itoa(p.Size) },
+		Render: func(p models.GPUPool) string { return strconv.Itoa(p.Size) },
 	},
 	{
 		Title: "Actual Size", Key: "actual-size", Ratio: 0.10,
-		Render: func(p models.GpuPool) string { return strconv.Itoa(p.ActualSize) },
+		Render: func(p models.GPUPool) string { return strconv.Itoa(p.ActualSize) },
 	},
 	{
 		Title: "GPUs", Key: "gpus", Ratio: 0.06,
-		Render: func(p models.GpuPool) string { return strconv.Itoa(p.GetGPUs()) },
+		Render: func(p models.GPUPool) string { return strconv.Itoa(p.GetGPUs()) },
 	},
 	{
 		Title: "OKE Managed", Key: "oke-managed", Ratio: 0.10,
-		Render: func(p models.GpuPool) string { return strconv.FormatBool(p.IsOkeManaged) },
+		Render: func(p models.GPUPool) string { return strconv.FormatBool(p.IsOkeManaged) },
 	},
 	{
 		Title: "Capacity Type", Key: "capacity-type", Ratio: 0.10,
-		Render: func(p models.GpuPool) string { return p.CapacityType },
+		Render: func(p models.GPUPool) string { return p.CapacityType },
 	},
 	{
 		Title: "Status", Key: "status", Ratio: 0.10,
-		Render: func(p models.GpuPool) string { return p.Status },
+		Render: func(p models.GPUPool) string { return p.Status },
 	},
 }}

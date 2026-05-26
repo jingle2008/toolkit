@@ -20,12 +20,12 @@ func TestTuiRowsFlat_BaseModel(t *testing.T) {
 	}
 }
 
-func TestTuiRowsGrouped_GpuNode(t *testing.T) {
+func TestTuiRowsGrouped_GPUNode(t *testing.T) {
 	t.Parallel()
-	m := map[string][]models.GpuNode{
+	m := map[string][]models.GPUNode{
 		"pool-A": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, Age: "1d"}},
 	}
-	rows := tuiRowsGrouped(columns.GpuNodeColumns, m, domain.GpuPool, nil, "", false)
+	rows := tuiRowsGrouped(columns.GPUNodeColumns, m, domain.GPUPool, nil, "", false)
 	if len(rows) != 1 {
 		t.Fatalf("rows: got %d, want 1", len(rows))
 	}

@@ -100,7 +100,7 @@ type Model struct {
 	history    []domain.Category // chronological list of visited categories
 	historyIdx int               // index of the current position in history
 
-	// Show only faulty items in list view (Tenant, GpuNode, DedicatedAICluster)
+	// Show only faulty items in list view (Tenant, GPUNode, DedicatedAICluster)
 	showFaulty bool
 
 	// Export CSV popup state

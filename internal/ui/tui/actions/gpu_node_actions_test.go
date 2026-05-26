@@ -67,7 +67,7 @@ func TestSoftResetInstance_Success(t *testing.T) {
 			},
 		}, nil
 	}
-	node := &models.GpuNode{ID: "id1", Name: "n1"}
+	node := &models.GPUNode{ID: "id1", Name: "n1"}
 	logger := &testLogger{}
 	err := SoftResetInstance(context.Background(), node, makeEnv(), logger)
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestSoftResetInstance_Error(t *testing.T) {
 			},
 		}, nil
 	}
-	node := &models.GpuNode{ID: "id1", Name: "n1"}
+	node := &models.GPUNode{ID: "id1", Name: "n1"}
 	logger := &testLogger{}
 	err := SoftResetInstance(context.Background(), node, makeEnv(), logger)
 	require.Error(t, err)
@@ -105,7 +105,7 @@ func TestIncreasePoolSize_Success(t *testing.T) {
 			},
 		}, nil
 	}
-	pool := &models.GpuPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 5}
+	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 5}
 	logger := &testLogger{}
 	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestIncreasePoolSize_ActualSizeAtOrAboveDesired_NoOp(t *testing.T) {
 			},
 		}, nil
 	}
-	pool := &models.GpuPool{ID: "pid", Name: "pname", ActualSize: 3, Size: 3}
+	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 3, Size: 3}
 	logger := &testLogger{}
 	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
 	require.NoError(t, err)
@@ -142,7 +142,7 @@ func TestIncreasePoolSize_Error(t *testing.T) {
 			},
 		}, nil
 	}
-	pool := &models.GpuPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 3}
+	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 3}
 	logger := &testLogger{}
 	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
 	require.Error(t, err)
@@ -160,7 +160,7 @@ func TestTerminateInstance_Success(t *testing.T) {
 			},
 		}, nil
 	}
-	node := &models.GpuNode{ID: "id1", Name: "n1"}
+	node := &models.GPUNode{ID: "id1", Name: "n1"}
 	logger := &testLogger{}
 	err := TerminateInstance(context.Background(), node, makeEnv(), logger)
 	require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestTerminateInstance_Error(t *testing.T) {
 			},
 		}, nil
 	}
-	node := &models.GpuNode{ID: "id1", Name: "n1"}
+	node := &models.GPUNode{ID: "id1", Name: "n1"}
 	logger := &testLogger{}
 	err := TerminateInstance(context.Background(), node, makeEnv(), logger)
 	require.Error(t, err)
@@ -186,13 +186,13 @@ func TestTerminateInstance_Error(t *testing.T) {
 	require.Contains(t, err.Error(), "reqid")
 }
 
-func TestPopulateGpuPools(t *testing.T) {
+func TestPopulateGPUPools(t *testing.T) {
 	orig := newComputeMgmtClient
 	defer func() { newComputeMgmtClient = orig }()
 	// Case: empty slice or empty compartmentID
-	err := PopulateGpuPools(context.Background(), nil, makeEnv(), "comp")
+	err := PopulateGPUPools(context.Background(), nil, makeEnv(), "comp")
 	require.NoError(t, err)
-	err = PopulateGpuPools(context.Background(), []models.GpuPool{{}}, makeEnv(), "")
+	err = PopulateGPUPools(context.Background(), []models.GPUPool{{}}, makeEnv(), "")
 	require.NoError(t, err)
 
 	// Case: pool found
@@ -212,15 +212,15 @@ func TestPopulateGpuPools(t *testing.T) {
 			},
 		}, nil
 	}
-	pools := []models.GpuPool{{Name: "p1"}}
-	err = PopulateGpuPools(context.Background(), pools, makeEnv(), "comp")
+	pools := []models.GPUPool{{Name: "p1"}}
+	err = PopulateGPUPools(context.Background(), pools, makeEnv(), "comp")
 	require.NoError(t, err)
 	require.Equal(t, "id1", pools[0].ID)
 	require.Equal(t, 3, pools[0].ActualSize)
 	require.Equal(t, "RUNNING", pools[0].Status)
 
 	// Case: pool not found
-	pools = []models.GpuPool{{Name: "p2"}}
+	pools = []models.GPUPool{{Name: "p2"}}
 	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
 		return &fakeMgmtClient{
 			ListInstancePoolsFunc: func(_ context.Context, _ core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error) {
@@ -230,7 +230,7 @@ func TestPopulateGpuPools(t *testing.T) {
 			},
 		}, nil
 	}
-	err = PopulateGpuPools(context.Background(), pools, makeEnv(), "comp")
+	err = PopulateGPUPools(context.Background(), pools, makeEnv(), "comp")
 	require.NoError(t, err)
 	require.Equal(t, "NONEXIST", pools[0].Status)
 
@@ -242,8 +242,8 @@ func TestPopulateGpuPools(t *testing.T) {
 			},
 		}, nil
 	}
-	pools = []models.GpuPool{{Name: "p3"}}
-	err = PopulateGpuPools(context.Background(), pools, makeEnv(), "comp")
+	pools = []models.GPUPool{{Name: "p3"}}
+	err = PopulateGPUPools(context.Background(), pools, makeEnv(), "comp")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "fail")
 	require.Contains(t, err.Error(), "reqid")

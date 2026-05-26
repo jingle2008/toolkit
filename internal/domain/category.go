@@ -52,10 +52,10 @@ const (
 	Environment
 	// ServiceTenancy is a category for service tenancies.
 	ServiceTenancy
-	// GpuPool is a category for GPU pools.
-	GpuPool
-	// GpuNode is a category for GPU nodes.
-	GpuNode
+	// GPUPool is a category for GPU pools.
+	GPUPool
+	// GPUNode is a category for GPU nodes.
+	GPUNode
 	// DedicatedAICluster is a category for dedicated AI clusters.
 	DedicatedAICluster
 	// Alias is a category for reporting all aliases.
@@ -80,7 +80,7 @@ func (e Category) IsScopeOf(o Category) bool {
 // IsScope returns true if the category is a scope category.
 func (e Category) IsScope() bool {
 	switch e { //nolint:exhaustive
-	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool:
+	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GPUPool:
 		return true
 	}
 	return false
@@ -109,8 +109,8 @@ func (e Category) ScopedCategories() []Category {
 			PropertyTenancyOverride,
 			PropertyRegionalOverride,
 		}
-	case GpuPool:
-		return []Category{GpuNode}
+	case GPUPool:
+		return []Category{GPUNode}
 	default:
 		return nil
 	}
@@ -124,7 +124,16 @@ func (e Category) GetAliases() []string {
 	short := GetInitials(cat)
 	aliases := []string{strings.ToLower(short), strings.ToLower(cat)}
 
-	if e == DedicatedAICluster {
+	// Preserve short aliases that users typed before the GPU/DAC
+	// initialism normalization (Gpu→GPU, Dac→DAC) changed the
+	// auto-computed initials. GetInitials now yields GPUN/GPUP/DAIC
+	// from these names; the old GN/GP/DAC short forms stay as aliases.
+	switch e {
+	case GPUNode:
+		aliases = append(aliases, "gn")
+	case GPUPool:
+		aliases = append(aliases, "gp")
+	case DedicatedAICluster:
 		aliases = append(aliases, "dac")
 	}
 	return aliases
@@ -157,7 +166,7 @@ func (e Category) IsFaulty() bool {
 // rest come from the on-disk repo.
 func (e Category) NeedsKubeConfig() bool {
 	switch e { //nolint:exhaustive
-	case BaseModel, ImportedModel, GpuNode, DedicatedAICluster:
+	case BaseModel, ImportedModel, GPUNode, DedicatedAICluster:
 		return true
 	}
 	return false
@@ -215,8 +224,8 @@ func (e Category) Definition() Category {
 		return ConsolePropertyDefinition
 	case PropertyTenancyOverride, PropertyRegionalOverride:
 		return PropertyDefinition
-	case GpuNode:
-		return GpuPool
+	case GPUNode:
+		return GPUPool
 	default:
 		return Category(-1)
 	}

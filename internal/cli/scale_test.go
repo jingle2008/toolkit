@@ -23,10 +23,10 @@ func stageScaleEnv(t *testing.T) {
 	t.Setenv("TOOLKIT_REPO_PATH", t.TempDir())
 }
 
-func TestScaleGpuPool_DryRun_DoesNotCallOCI(t *testing.T) {
+func TestScaleGPUPool_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageScaleEnv(t)
 	called := false
-	defer swap(&increasePoolSizeFn, func(context.Context, *models.GpuPool, models.Environment, logging.Logger) error {
+	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, models.Environment, logging.Logger) error {
 		called = true
 		return nil
 	})()
@@ -43,14 +43,14 @@ func TestScaleGpuPool_DryRun_DoesNotCallOCI(t *testing.T) {
 	}
 }
 
-func TestScaleGpuPool_HappyPath(t *testing.T) {
+func TestScaleGPUPool_HappyPath(t *testing.T) {
 	stageScaleEnv(t)
-	defer swap(&gpuPoolResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuPool, error) {
-		return &models.GpuPool{Name: name, ID: "ocid1.instancepool.fake", Size: 8, ActualSize: 4}, nil
+	defer swap(&gpuPoolResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUPool, error) {
+		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 8, ActualSize: 4}, nil
 	})()
 
-	var gotPool *models.GpuPool
-	defer swap(&increasePoolSizeFn, func(_ context.Context, p *models.GpuPool, _ models.Environment, _ logging.Logger) error {
+	var gotPool *models.GPUPool
+	defer swap(&increasePoolSizeFn, func(_ context.Context, p *models.GPUPool, _ models.Environment, _ logging.Logger) error {
 		gotPool = p
 		return nil
 	})()
@@ -67,9 +67,9 @@ func TestScaleGpuPool_HappyPath(t *testing.T) {
 	}
 }
 
-func TestScaleGpuPool_PoolNotFound(t *testing.T) {
+func TestScaleGPUPool_PoolNotFound(t *testing.T) {
 	stageScaleEnv(t)
-	defer swap(&gpuPoolResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GpuPool, error) {
+	defer swap(&gpuPoolResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GPUPool, error) {
 		return nil, errors.New("gpu pool \"pool-x\" not found in repo")
 	})()
 
@@ -82,7 +82,7 @@ func TestScaleGpuPool_PoolNotFound(t *testing.T) {
 	}
 }
 
-func TestScaleGpuPool_MissingRepoPath(t *testing.T) {
+func TestScaleGPUPool_MissingRepoPath(t *testing.T) {
 	// stageMutationEnv only sets env + kubeconfig; no repo_path.
 	stageMutationEnv(t)
 	_, err := runRootCmd(t, []string{"scale", "gpupool", "pool-a", "-y"}, "")
@@ -94,10 +94,10 @@ func TestScaleGpuPool_MissingRepoPath(t *testing.T) {
 	}
 }
 
-func TestScaleGpuPool_InteractiveBail(t *testing.T) {
+func TestScaleGPUPool_InteractiveBail(t *testing.T) {
 	stageScaleEnv(t)
 	called := false
-	defer swap(&increasePoolSizeFn, func(context.Context, *models.GpuPool, models.Environment, logging.Logger) error {
+	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, models.Environment, logging.Logger) error {
 		called = true
 		return nil
 	})()

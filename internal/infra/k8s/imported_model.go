@@ -34,7 +34,7 @@ import (
 // `clusterbasemodels`) that often have asymmetric RBAC; a caller
 // with namespaced-only access will see a hard failure rather than
 // half the catalog. This is a deliberate choice over the
-// LoadGpuPools-style PartialLoadError idiom because the two
+// LoadGPUPools-style PartialLoadError idiom because the two
 // sources are conceptually one catalog — a missing half is more
 // confusing than an explicit error.
 func LoadImportedModels(ctx context.Context, client dynamic.Interface) (map[string][]models.ImportedModel, error) {

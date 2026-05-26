@@ -69,30 +69,30 @@ func TestHandleBaseModelsLoaded_GenMismatch(t *testing.T) {
 	}
 }
 
-func TestHandleGpuPoolsLoaded(t *testing.T) {
+func TestHandleGPUPoolsLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 1
-	items := []models.GpuPool{{Name: "pool1"}}
+	items := []models.GPUPool{{Name: "pool1"}}
 
-	cmd := m.handleGpuPoolsLoaded(items, 1)
+	cmd := m.handleGPUPoolsLoaded(items, 1)
 	if cmd == nil {
-		t.Fatal("expected non-nil cmd from handleGpuPoolsLoaded")
+		t.Fatal("expected non-nil cmd from handleGPUPoolsLoaded")
 	}
-	if len(m.dataset.GpuPools) != 1 || m.dataset.GpuPools[0].Name != "pool1" {
-		t.Fatalf("GpuPools not updated: %#v", m.dataset.GpuPools)
+	if len(m.dataset.GPUPools) != 1 || m.dataset.GPUPools[0].Name != "pool1" {
+		t.Fatalf("GPUPools not updated: %#v", m.dataset.GPUPools)
 	}
 }
 
-func TestHandleGpuNodesLoaded(t *testing.T) {
+func TestHandleGPUNodesLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 1
-	items := map[string][]models.GpuNode{"pool": {{Name: "node1"}}}
+	items := map[string][]models.GPUNode{"pool": {{Name: "node1"}}}
 
-	m.handleGpuNodesLoaded(items, 1)
-	if got := m.dataset.GpuNodeMap["pool"]; len(got) != 1 || got[0].Name != "node1" {
-		t.Fatalf("GpuNodeMap not updated: %#v", m.dataset.GpuNodeMap)
+	m.handleGPUNodesLoaded(items, 1)
+	if got := m.dataset.GPUNodeMap["pool"]; len(got) != 1 || got[0].Name != "node1" {
+		t.Fatalf("GPUNodeMap not updated: %#v", m.dataset.GPUNodeMap)
 	}
 }
 
@@ -185,7 +185,7 @@ func TestApplyDataset_ResetsFilter(t *testing.T) {
 func TestGetCompartmentID_FromDataset(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.dataset.GpuNodeMap = map[string][]models.GpuNode{
+	m.dataset.GPUNodeMap = map[string][]models.GPUNode{
 		"pool": {{CompartmentID: "ocid1.compartment"}},
 	}
 

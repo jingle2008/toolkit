@@ -16,9 +16,9 @@ func (m *Model) routeLoadedDataMsg(msg tea.Msg) []tea.Cmd {
 	case importedModelsLoadedMsg:
 		m.handleImportedModelsLoaded(msg.Items, msg.Gen)
 	case gpuPoolsLoadedMsg:
-		return []tea.Cmd{m.handleGpuPoolsLoaded(msg.Items, msg.Gen)}
+		return []tea.Cmd{m.handleGPUPoolsLoaded(msg.Items, msg.Gen)}
 	case gpuNodesLoadedMsg:
-		m.handleGpuNodesLoaded(msg.Items, msg.Gen)
+		m.handleGPUNodesLoaded(msg.Items, msg.Gen)
 	case dedicatedAIClustersLoadedMsg:
 		m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen)
 	case tenancyOverridesLoadedMsg:

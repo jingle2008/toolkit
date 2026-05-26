@@ -238,10 +238,10 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.PropertyDefinition: {
 		common.ListView: {SortValue},
 	},
-	domain.GpuPool: {
+	domain.GPUPool: {
 		common.ListView: {SortSize, ToggleFaulty, ScaleUp, Refresh},
 	},
-	domain.GpuNode: {
+	domain.GPUNode: {
 		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.DedicatedAICluster: {

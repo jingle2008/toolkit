@@ -56,13 +56,13 @@ func TestHandleFilterApplyMsg(t *testing.T) {
 	}
 }
 
-func TestHandleDeleteErrMsg_GpuNodeRestoresStatus(t *testing.T) {
+func TestHandleDeleteErrMsg_GPUNodeRestoresStatus(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.category = domain.GpuNode
-	node := models.GpuNode{Name: "node1", NodePool: "pool1"}
+	m.category = domain.GPUNode
+	node := models.GPUNode{Name: "node1", NodePool: "pool1"}
 	node.SetStatus("Deleting")
-	m.dataset.GpuNodeMap = map[string][]models.GpuNode{
+	m.dataset.GPUNodeMap = map[string][]models.GPUNode{
 		"pool1": {node},
 	}
 	m.updateColumns()
@@ -70,35 +70,35 @@ func TestHandleDeleteErrMsg_GpuNodeRestoresStatus(t *testing.T) {
 
 	msg := deleteErrMsg{
 		err:      errors.New("boom"),
-		category: domain.GpuNode,
+		category: domain.GPUNode,
 		key:      models.ScopedItemKey{Scope: "pool1", Name: "node1"},
 	}
 	msg.prevState = "OK"
 	m.handleDeleteErrMsg(msg)
 
-	got := m.dataset.GpuNodeMap["pool1"][0].GetStatus()
+	got := m.dataset.GPUNodeMap["pool1"][0].GetStatus()
 	if got != "OK" {
 		t.Fatalf("expected status OK, got %q", got)
 	}
 }
 
-func TestHandleDeleteDoneMsg_GpuNodeRemoved(t *testing.T) {
+func TestHandleDeleteDoneMsg_GPUNodeRemoved(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.category = domain.GpuNode
-	m.dataset.GpuNodeMap = map[string][]models.GpuNode{
+	m.category = domain.GPUNode
+	m.dataset.GPUNodeMap = map[string][]models.GPUNode{
 		"pool1": {{Name: "node1", NodePool: "pool1"}},
 	}
 	m.updateColumns()
 	m.updateRows(false)
 
 	m.handleDeleteDoneMsg(deleteDoneMsg{
-		category: domain.GpuNode,
+		category: domain.GPUNode,
 		key:      models.ScopedItemKey{Scope: "pool1", Name: "node1"},
 	})
 
-	if len(m.dataset.GpuNodeMap["pool1"]) != 0 {
-		t.Fatalf("expected node removed, got %#v", m.dataset.GpuNodeMap["pool1"])
+	if len(m.dataset.GPUNodeMap["pool1"]) != 0 {
+		t.Fatalf("expected node removed, got %#v", m.dataset.GPUNodeMap["pool1"])
 	}
 }
 
@@ -189,18 +189,18 @@ func makeModelWithHistory(hist []domain.Category, idx int) *Model {
 
 func TestMoveHistoryBackForward(t *testing.T) {
 	t.Parallel()
-	hist := []domain.Category{domain.Tenant, domain.GpuPool, domain.GpuNode}
+	hist := []domain.Category{domain.Tenant, domain.GPUPool, domain.GPUNode}
 	m := makeModelWithHistory(hist, 2)
 	// Move back
 	cmd := m.moveHistory(-1)
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 1, m.historyIdx)
-	assert.Equal(t, domain.GpuPool, m.history[m.historyIdx])
+	assert.Equal(t, domain.GPUPool, m.history[m.historyIdx])
 	// Move forward
 	cmd = m.moveHistory(1)
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 2, m.historyIdx)
-	assert.Equal(t, domain.GpuNode, m.history[m.historyIdx])
+	assert.Equal(t, domain.GPUNode, m.history[m.historyIdx])
 	// Out of bounds (forward)
 	cmd = m.moveHistory(1)
 	assert.Nil(t, cmd)
@@ -214,7 +214,7 @@ func TestMoveHistoryBackForward(t *testing.T) {
 
 func TestBackForwardKeyBindings(t *testing.T) {
 	t.Parallel()
-	hist := []domain.Category{domain.Tenant, domain.GpuPool}
+	hist := []domain.Category{domain.Tenant, domain.GPUPool}
 	m := makeModelWithHistory(hist, 1)
 	// Simulate "[" key
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'['}}

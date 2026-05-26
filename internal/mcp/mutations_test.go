@@ -152,10 +152,10 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	var gotNode *models.GpuNode
+	var gotNode *models.GPUNode
 	orig := mcpTerminateFn
 	defer func() { mcpTerminateFn = orig }()
-	mcpTerminateFn = func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	mcpTerminateFn = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
 	}
@@ -182,10 +182,10 @@ func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	var gotNode *models.GpuNode
+	var gotNode *models.GPUNode
 	orig := mcpSoftResetFn
 	defer func() { mcpSoftResetFn = orig }()
-	mcpSoftResetFn = func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	mcpSoftResetFn = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
 	}
@@ -213,22 +213,22 @@ func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
 	assert.Contains(t, body, "reboot node/node-a: OK")
 }
 
-func TestIntegration_ScaleGpuPoolTool_ConfirmTrueExecutes(t *testing.T) {
+func TestIntegration_ScaleGPUPoolTool_ConfirmTrueExecutes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	// Stub the MCP-level resolver seam so we don't need a fake k8s
 	// + OCI pipeline; the resolver is covered in internal/resolve.
-	origResolve := mcpResolveGpuPoolFn
-	defer func() { mcpResolveGpuPoolFn = origResolve }()
-	mcpResolveGpuPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GpuPool, error) {
-		return &models.GpuPool{Name: name, ID: "ocid1.instancepool.fake", Size: 12, ActualSize: 4}, nil
+	origResolve := mcpResolveGPUPoolFn
+	defer func() { mcpResolveGPUPoolFn = origResolve }()
+	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GPUPool, error) {
+		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 12, ActualSize: 4}, nil
 	}
 
-	var gotPool *models.GpuPool
+	var gotPool *models.GPUPool
 	origInc := mcpIncreasePoolSizeFn
 	defer func() { mcpIncreasePoolSizeFn = origInc }()
-	mcpIncreasePoolSizeFn = func(_ context.Context, p *models.GpuPool, _ models.Environment, _ logging.Logger) error {
+	mcpIncreasePoolSizeFn = func(_ context.Context, p *models.GPUPool, _ models.Environment, _ logging.Logger) error {
 		gotPool = p
 		return nil
 	}
@@ -254,13 +254,13 @@ func TestIntegration_ScaleGpuPoolTool_ConfirmTrueExecutes(t *testing.T) {
 	assert.Contains(t, body, "scale gpu_pool/pool-a: OK")
 }
 
-func TestIntegration_ScaleGpuPoolTool_ResolverError(t *testing.T) {
+func TestIntegration_ScaleGPUPoolTool_ResolverError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	origResolve := mcpResolveGpuPoolFn
-	defer func() { mcpResolveGpuPoolFn = origResolve }()
-	mcpResolveGpuPoolFn = func(context.Context, *Server, models.Environment, string) (*models.GpuPool, error) {
+	origResolve := mcpResolveGPUPoolFn
+	defer func() { mcpResolveGPUPoolFn = origResolve }()
+	mcpResolveGPUPoolFn = func(context.Context, *Server, models.Environment, string) (*models.GPUPool, error) {
 		return nil, errors.New("gpu pool \"pool-x\" not found in repo")
 	}
 
@@ -357,15 +357,15 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 
 	// reboot — env reaches the action AND the resolver.
 	var gotResolverEnv, gotActionEnv models.Environment
-	origResolve := mcpResolveGpuNodeFn
-	defer func() { mcpResolveGpuNodeFn = origResolve }()
-	mcpResolveGpuNodeFn = func(_ context.Context, _ *Server, env models.Environment, name, ocid string) (*models.GpuNode, error) {
+	origResolve := mcpResolveGPUNodeFn
+	defer func() { mcpResolveGPUNodeFn = origResolve }()
+	mcpResolveGPUNodeFn = func(_ context.Context, _ *Server, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 		gotResolverEnv = env
-		return &models.GpuNode{Name: name, ID: ocid}, nil
+		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
 	origReset := mcpSoftResetFn
 	defer func() { mcpSoftResetFn = origReset }()
-	mcpSoftResetFn = func(_ context.Context, _ *models.GpuNode, env models.Environment, _ logging.Logger) error {
+	mcpSoftResetFn = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ logging.Logger) error {
 		gotActionEnv = env
 		return nil
 	}
@@ -392,7 +392,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	gotActionEnv = models.Environment{}
 	origTerm := mcpTerminateFn
 	defer func() { mcpTerminateFn = origTerm }()
-	mcpTerminateFn = func(_ context.Context, _ *models.GpuNode, env models.Environment, _ logging.Logger) error {
+	mcpTerminateFn = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ logging.Logger) error {
 		gotActionEnv = env
 		return nil
 	}
@@ -411,15 +411,15 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	// scale — env reaches pool resolver AND IncreasePoolSize.
 	gotResolverEnv = models.Environment{}
 	gotActionEnv = models.Environment{}
-	origPoolResolve := mcpResolveGpuPoolFn
-	defer func() { mcpResolveGpuPoolFn = origPoolResolve }()
-	mcpResolveGpuPoolFn = func(_ context.Context, _ *Server, env models.Environment, name string) (*models.GpuPool, error) {
+	origPoolResolve := mcpResolveGPUPoolFn
+	defer func() { mcpResolveGPUPoolFn = origPoolResolve }()
+	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, env models.Environment, name string) (*models.GPUPool, error) {
 		gotResolverEnv = env
-		return &models.GpuPool{Name: name, ID: "ocid1.pool", Size: 4}, nil
+		return &models.GPUPool{Name: name, ID: "ocid1.pool", Size: 4}, nil
 	}
 	origInc := mcpIncreasePoolSizeFn
 	defer func() { mcpIncreasePoolSizeFn = origInc }()
-	mcpIncreasePoolSizeFn = func(_ context.Context, _ *models.GpuPool, env models.Environment, _ logging.Logger) error {
+	mcpIncreasePoolSizeFn = func(_ context.Context, _ *models.GPUPool, env models.Environment, _ logging.Logger) error {
 		gotActionEnv = env
 		return nil
 	}

@@ -92,8 +92,8 @@ func TestGetNodeIssues(t *testing.T) {
 		{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, Message: "disk ok"},
 		{Type: corev1.NodePIDPressure, Status: corev1.ConditionTrue, Message: "pid pressure!"},
 		{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionTrue, Message: "network unavailable!"},
-		{Type: nodeCondGpuBus, Status: corev1.ConditionTrue, Message: "gpu bus error!"},
-		{Type: nodeCondGpuCount, Status: corev1.ConditionTrue, Message: "gpu count mismatch!"},
+		{Type: nodeCondGPUBus, Status: corev1.ConditionTrue, Message: "gpu bus error!"},
+		{Type: nodeCondGPUCount, Status: corev1.ConditionTrue, Message: "gpu count mismatch!"},
 		{Type: corev1.NodeReady, Status: corev1.ConditionTrue, Message: "node is ready"},
 	}
 	want := []string{

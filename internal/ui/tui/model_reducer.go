@@ -22,8 +22,8 @@ import (
 func refreshDataCmd() tea.Cmd { return func() tea.Msg { return dataMsg{} } }
 
 func (m *Model) getCompartmentID(ctx context.Context) (string, error) {
-	if m.dataset != nil && m.dataset.GpuNodeMap != nil {
-		for _, v := range m.dataset.GpuNodeMap {
+	if m.dataset != nil && m.dataset.GPUNodeMap != nil {
+		for _, v := range m.dataset.GPUNodeMap {
 			for _, n := range v {
 				return n.CompartmentID, nil
 			}
@@ -34,7 +34,7 @@ func (m *Model) getCompartmentID(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	nodes, err := k8s.ListGpuNodes(ctx, clientset, 1)
+	nodes, err := k8s.ListGPUNodes(ctx, clientset, 1)
 	if err != nil || len(nodes) == 0 {
 		return "", err
 	}
@@ -42,16 +42,16 @@ func (m *Model) getCompartmentID(ctx context.Context) (string, error) {
 	return nodes[0].CompartmentID, nil
 }
 
-func (m *Model) updateGpuPoolState() tea.Cmd {
+func (m *Model) updateGPUPoolState() tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := m.opContext()
 		defer cancel()
 		var err error
 		var compartmentID string
 		if compartmentID, err = m.getCompartmentID(ctx); err == nil {
-			err = actions.PopulateGpuPools(ctx, m.dataset.GpuPools, m.environment, compartmentID)
+			err = actions.PopulateGPUPools(ctx, m.dataset.GPUPools, m.environment, compartmentID)
 		}
-		return updateDoneMsg{err: err, category: domain.GpuPool}
+		return updateDoneMsg{err: err, category: domain.GPUPool}
 	}
 }
 
@@ -315,11 +315,11 @@ func (m *Model) processData(msg dataMsg) tea.Cmd {
 		m.dataset.BaseModels = data
 	case map[string][]models.ImportedModel:
 		m.dataset.SetImportedModelMap(data)
-	case []models.GpuPool:
-		m.dataset.GpuPools = data
-		cmd = m.updateGpuPoolState()
-	case map[string][]models.GpuNode:
-		m.dataset.GpuNodeMap = data
+	case []models.GPUPool:
+		m.dataset.GPUPools = data
+		cmd = m.updateGPUPoolState()
+	case map[string][]models.GPUNode:
+		m.dataset.GPUNodeMap = data
 	case map[string][]models.DedicatedAICluster:
 		m.dataset.SetDedicatedAIClusterMap(data)
 	case models.TenancyOverrideGroup:
@@ -387,16 +387,16 @@ func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedMod
 	m.applyDataset(func(ds *models.Dataset) { ds.SetImportedModelMap(items) }, domain.ImportedModel, total)
 }
 
-func (m *Model) handleGpuPoolsLoaded(items []models.GpuPool, gen int) tea.Cmd {
+func (m *Model) handleGPUPoolsLoaded(items []models.GPUPool, gen int) tea.Cmd {
 	if gen != m.gen {
 		m.endTask(true)
 		return nil
 	}
-	m.applyDataset(func(ds *models.Dataset) { ds.GpuPools = items }, domain.GpuPool, len(items))
-	return m.updateGpuPoolState()
+	m.applyDataset(func(ds *models.Dataset) { ds.GPUPools = items }, domain.GPUPool, len(items))
+	return m.updateGPUPoolState()
 }
 
-func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode, gen int) {
+func (m *Model) handleGPUNodesLoaded(items map[string][]models.GPUNode, gen int) {
 	if gen != m.gen {
 		m.endTask(true)
 		return
@@ -405,7 +405,7 @@ func (m *Model) handleGpuNodesLoaded(items map[string][]models.GpuNode, gen int)
 	for _, v := range items {
 		total += len(v)
 	}
-	m.applyDataset(func(ds *models.Dataset) { ds.GpuNodeMap = items }, domain.GpuNode, total)
+	m.applyDataset(func(ds *models.Dataset) { ds.GPUNodeMap = items }, domain.GPUNode, total)
 }
 
 func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {

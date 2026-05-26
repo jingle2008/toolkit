@@ -127,8 +127,8 @@ func TestResetScopedData(t *testing.T) {
 		PropertyRegionalOverrides:         []PropertyRegionalOverride{{}},
 		BaseModels:                        []BaseModel{},
 		ImportedModelMap:                  map[string][]ImportedModel{"x": nil},
-		GpuPools:                          []GpuPool{{}},
-		GpuNodeMap:                        map[string][]GpuNode{"x": nil},
+		GPUPools:                          []GPUPool{{}},
+		GPUNodeMap:                        map[string][]GPUNode{"x": nil},
 		DedicatedAIClusterMap:             map[string][]DedicatedAICluster{"x": nil},
 	}
 	d.ResetScopedData()
@@ -141,8 +141,8 @@ func TestResetScopedData(t *testing.T) {
 		d.PropertyRegionalOverrides != nil ||
 		d.BaseModels != nil ||
 		d.ImportedModelMap != nil ||
-		d.GpuPools != nil ||
-		d.GpuNodeMap != nil ||
+		d.GPUPools != nil ||
+		d.GPUNodeMap != nil ||
 		d.DedicatedAIClusterMap != nil {
 		t.Errorf("ResetScopedData did not nil all fields")
 	}

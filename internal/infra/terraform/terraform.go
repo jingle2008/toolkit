@@ -345,7 +345,7 @@ errors.As and decide how to surface it (the TUI ignores it; the headless
 CLI prints a warning to stderr).
 */
 type PartialLoadError struct {
-	// Source is a human-readable label, e.g. "GpuPools".
+	// Source is a human-readable label, e.g. "GPUPools".
 	Source string
 	// Errs holds one error per failed source, already wrapped with the
 	// source identifier (e.g. "env_nodepools_config: …").
@@ -363,7 +363,7 @@ func (e *PartialLoadError) Error() string {
 func (e *PartialLoadError) Unwrap() []error { return e.Errs }
 
 /*
-LoadGpuPools loads GpuPool objects from the given repository path and environment.
+LoadGPUPools loads GPUPool objects from the given repository path and environment.
 
 It reads three sources (self-managed instance pools, self-managed cluster
 networks, OKE-managed nodepools). Failures in individual sources are
@@ -376,7 +376,7 @@ sources that succeeded. Return modes:
     partial-failure warning.
   - Every source fails: (nil, error) with all source errors joined.
 */
-func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GpuPool, error) {
+func LoadGPUPools(ctx context.Context, repoPath string, env models.Environment) ([]models.GPUPool, error) {
 	logger := logging.FromContext(ctx)
 	sources := []struct {
 		dir          string
@@ -389,13 +389,13 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 	}
 
 	var (
-		gpuPools []models.GpuPool
+		gpuPools []models.GPUPool
 		errs     []error
 	)
 	for _, s := range sources {
-		pools, err := loadGpuPools(ctx, s.dir, s.localName, s.isOkeManaged, env)
+		pools, err := loadGPUPools(ctx, s.dir, s.localName, s.isOkeManaged, env)
 		if err != nil {
-			logger.Errorw("skipping unresolved GpuPool source",
+			logger.Errorw("skipping unresolved GPUPool source",
 				"dir", s.dir, "local", s.localName, "error", err)
 			errs = append(errs, fmt.Errorf("%s: %w", s.localName, err))
 			continue
@@ -409,13 +409,13 @@ func LoadGpuPools(ctx context.Context, repoPath string, env models.Environment) 
 	case len(gpuPools) == 0:
 		return nil, fmt.Errorf("failed to parse HCL file: %w", errors.Join(errs...))
 	default:
-		return gpuPools, &PartialLoadError{Source: "GpuPools", Errs: errs}
+		return gpuPools, &PartialLoadError{Source: "GPUPools", Errs: errs}
 	}
 }
 
-func loadGpuPools(ctx context.Context, dirPath, poolConfigName string, isOkeManaged bool,
+func loadGPUPools(ctx context.Context, dirPath, poolConfigName string, isOkeManaged bool,
 	env models.Environment,
-) ([]models.GpuPool, error) {
+) ([]models.GPUPool, error) {
 	valueMap, err := loadLocalValueMap(ctx, dirPath, env)
 	if err != nil {
 		return nil, err
@@ -426,9 +426,9 @@ func loadGpuPools(ctx context.Context, dirPath, poolConfigName string, isOkeMana
 		return nil, fmt.Errorf("node pools config %s not resolved", poolConfigName)
 	}
 
-	var gpuPools []models.GpuPool
+	var gpuPools []models.GPUPool
 	for name, value := range poolsValue.AsValueMap() {
-		pool := models.GpuPool{Name: name, IsOkeManaged: isOkeManaged, CapacityType: "on-demand", Status: "..."}
+		pool := models.GPUPool{Name: name, IsOkeManaged: isOkeManaged, CapacityType: "on-demand", Status: "..."}
 		for k, v := range value.AsValueMap() {
 			switch k {
 			case "shape":
@@ -488,8 +488,8 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 					artifact := models.ModelArtifact{
 						Name:            v3.AsString(),
 						TensorRTVersion: trtVersion,
-						GpuCount:        extractGpuNumber(gpuCount),
-						GpuShape:        gpuShape,
+						GPUCount:        extractGPUNumber(gpuCount),
+						GPUShape:        gpuShape,
 						ModelName:       modelName,
 					}
 
@@ -504,7 +504,7 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 	return modelArtifactMap, nil
 }
 
-func extractGpuNumber(s string) int {
+func extractGPUNumber(s string) int {
 	numStr := strings.TrimSuffix(s, "Gpu")
 	num, _ := strconv.Atoi(numStr)
 	return num

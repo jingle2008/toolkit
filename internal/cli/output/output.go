@@ -123,7 +123,7 @@ func WriteYAML(w io.Writer, items any, _ Options) error {
 // Flatten concatenates a grouped map[string][]T into a flat []T with
 // deterministic key ordering. Use when the group key is already
 // preserved on each value (so injecting it again would just
-// duplicate — see GpuNode.NodePool / ModelArtifact.ModelName). The
+// duplicate — see GPUNode.NodePool / ModelArtifact.ModelName). The
 // returned slice preserves T's full type so the caller can keep
 // using struct tags / custom JSON marshaling.
 func Flatten[T any](grouped map[string][]T) []T {

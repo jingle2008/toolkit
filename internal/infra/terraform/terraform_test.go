@@ -71,7 +71,7 @@ func TestMergeObject(t *testing.T) {
 	assert.Equal(t, "y", out.AsValueMap()["b"].AsString())
 }
 
-func TestExtractGpuNumber(t *testing.T) {
+func TestExtractGPUNumber(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name     string
@@ -86,7 +86,7 @@ func TestExtractGpuNumber(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := extractGpuNumber(tc.input)
+			got := extractGPUNumber(tc.input)
 			assert.Equal(t, tc.expected, got)
 		})
 	}
@@ -122,7 +122,7 @@ func TestGetServiceTenancy(t *testing.T) {
 	assert.Equal(t, "realm1", ten.Realm)
 }
 
-func TestLoadGpuPools_Success(t *testing.T) {
+func TestLoadGPUPools_Success(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
@@ -175,13 +175,13 @@ locals {
 	err = os.WriteFile(filepath.Join(okeDir, "locals.tf"), []byte(tf3), 0o600) // #nosec G306
 	require.NoError(t, err)
 
-	pools, err := LoadGpuPools(context.Background(), dir, env)
+	pools, err := LoadGPUPools(context.Background(), dir, env)
 	require.NoError(t, err)
 	assert.NotNil(t, pools)
 	assert.GreaterOrEqual(t, len(pools), 3)
 }
 
-func TestLoadGpuPools_PlacementLogicalAdAll(t *testing.T) {
+func TestLoadGPUPools_PlacementLogicalAdAll(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
@@ -220,7 +220,7 @@ locals {
 	err = os.WriteFile(filepath.Join(ipDir, "locals.tf"), []byte(tf), 0o600)
 	require.NoError(t, err)
 
-	pools, err := LoadGpuPools(context.Background(), dir, env)
+	pools, err := LoadGPUPools(context.Background(), dir, env)
 	require.NoError(t, err)
 	require.NotNil(t, pools)
 	found := false
@@ -233,20 +233,20 @@ locals {
 	assert.True(t, found, "pool1 not found in loaded pools")
 }
 
-func TestLoadGpuPools_MissingConfig(t *testing.T) {
+func TestLoadGPUPools_MissingConfig(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
 	// No config files
-	_, err := LoadGpuPools(context.Background(), dir, env)
+	_, err := LoadGPUPools(context.Background(), dir, env)
 	require.Error(t, err)
 }
 
-// TestLoadGpuPools_PartialFailure exercises the contract that when at
-// least one source succeeds and at least one fails, LoadGpuPools returns
+// TestLoadGPUPools_PartialFailure exercises the contract that when at
+// least one source succeeds and at least one fails, LoadGPUPools returns
 // the partial pool slice together with a *PartialLoadError. Callers can
 // detect this case via errors.As and decide whether to treat it as fatal.
-func TestLoadGpuPools_PartialFailure(t *testing.T) {
+func TestLoadGPUPools_PartialFailure(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
@@ -261,17 +261,17 @@ func TestLoadGpuPools_PartialFailure(t *testing.T) {
 		[]byte(`locals { env_cluster_networks_config = { "pool2" = { shape = "GPU", node_pool_size = 3 } } }`),
 		0o600))
 	// Third source parses fine but doesn't declare the expected local —
-	// loadGpuPools returns "node pools config env_nodepools_config not resolved".
+	// loadGPUPools returns "node pools config env_nodepools_config not resolved".
 	okeDir := poolsConfigDir(t, dir, "oci_oke_nodepools_config")
 	require.NoError(t, os.WriteFile(filepath.Join(okeDir, "locals.tf"),
 		[]byte(`locals { unrelated_local = {} }`),
 		0o600))
 
-	pools, err := LoadGpuPools(context.Background(), dir, env)
+	pools, err := LoadGPUPools(context.Background(), dir, env)
 	require.Error(t, err)
 	partial, ok := errors.AsType[*PartialLoadError](err)
 	require.True(t, ok, "expected *PartialLoadError, got %T: %v", err, err)
-	assert.Equal(t, "GpuPools", partial.Source)
+	assert.Equal(t, "GPUPools", partial.Source)
 	assert.Len(t, partial.Errs, 1)
 	assert.GreaterOrEqual(t, len(pools), 2, "should still return pools from working sources")
 }

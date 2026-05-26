@@ -16,12 +16,12 @@ import (
 const gpuProperty corev1.ResourceName = "nvidia.com/gpu"
 
 const (
-	nodeCondGpuBus   corev1.NodeConditionType = "GpuBus"
-	nodeCondGpuCount corev1.NodeConditionType = "GpuCount"
+	nodeCondGPUBus   corev1.NodeConditionType = "GPUBus"
+	nodeCondGPUCount corev1.NodeConditionType = "GPUCount"
 )
 
-// ListGpuNodes lists a list of gpu nodes up to the limit.
-func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, limit int) ([]models.GpuNode, error) {
+// ListGPUNodes lists a list of gpu nodes up to the limit.
+func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int) ([]models.GPUNode, error) {
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, v1.ListOptions{
 		LabelSelector: "nvidia.com/gpu.present=true",
 		Limit:         int64(limit),
@@ -36,7 +36,7 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 		gpuAllocationMap[node.Name] = 0
 	}
 	err = processPodQueries(ctx, clientset, gpuPodSelectors, runningPodSelector,
-		getGpuAllocations,
+		getGPUAllocations,
 		func(node string, usage int64) {
 			gpuAllocationMap[node] += usage
 		})
@@ -66,7 +66,7 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 			fmt.Sprintf("pod %s: %s", p.Name, getPodReason(&p)))
 	}
 
-	gpuNodes := make([]models.GpuNode, 0, len(nodes.Items))
+	gpuNodes := make([]models.GPUNode, 0, len(nodes.Items))
 	for _, node := range nodes.Items {
 		allocQty := node.Status.Allocatable[gpuProperty]
 		allocatable, _ := allocQty.AsInt64()
@@ -74,7 +74,7 @@ func ListGpuNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 		issues := getNodeIssues(node.Status.Conditions)
 		// Add pod issues for this node
 		issues = append(issues, podIssueMap[node.Name]...)
-		gpuNodes = append(gpuNodes, models.GpuNode{
+		gpuNodes = append(gpuNodes, models.GPUNode{
 			Name:                 node.Name,
 			InstanceType:         node.Labels["beta.kubernetes.io/instance-type"],
 			NodePool:             node.Labels["instance-pool.name"],
@@ -100,8 +100,8 @@ func getNodeIssues(conditions []corev1.NodeCondition) []string {
 			corev1.NodeDiskPressure,
 			corev1.NodePIDPressure,
 			corev1.NodeNetworkUnavailable,
-			nodeCondGpuBus,
-			nodeCondGpuCount:
+			nodeCondGPUBus,
+			nodeCondGPUCount:
 			if c.Status == corev1.ConditionTrue {
 				issues = append(issues, c.Message)
 			}
@@ -137,16 +137,16 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 }
 
 /*
-LoadGpuNodes returns a map of node pool names to slices of GpuNode.
+LoadGPUNodes returns a map of node pool names to slices of GPUNode.
 It fetches all GPU nodes and groups them by their node pool label.
 */
-func LoadGpuNodes(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GpuNode, error) {
-	nodes, err := ListGpuNodes(ctx, clientset, 0)
+func LoadGPUNodes(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GPUNode, error) {
+	nodes, err := ListGPUNodes(ctx, clientset, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string][]models.GpuNode)
+	result := make(map[string][]models.GPUNode)
 	for _, node := range nodes {
 		result[node.NodePool] = append(result[node.NodePool], node)
 	}

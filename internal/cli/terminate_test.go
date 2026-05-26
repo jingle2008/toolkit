@@ -15,7 +15,7 @@ import (
 func TestTerminateCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageMutationEnv(t)
 	called := false
-	defer swap(&terminateInstanceFn, func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
 		called = true
 		return nil
 	})()
@@ -36,7 +36,7 @@ func TestTerminateCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 func TestTerminateCmd_RequiresExplicitYes(t *testing.T) {
 	stageMutationEnv(t)
 	called := false
-	defer swap(&terminateInstanceFn, func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
 		called = true
 		return nil
 	})()
@@ -55,8 +55,8 @@ func TestTerminateCmd_RequiresExplicitYes(t *testing.T) {
 
 func TestTerminateCmd_YesCallsOCI(t *testing.T) {
 	stageMutationEnv(t)
-	var gotNode *models.GpuNode
-	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	var gotNode *models.GPUNode
+	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
 	})()
@@ -75,11 +75,11 @@ func TestTerminateCmd_YesCallsOCI(t *testing.T) {
 
 func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 	stageMutationEnv(t)
-	defer swap(&gpuNodeResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuNode, error) {
-		return &models.GpuNode{Name: name, ID: "ocid1.resolved"}, nil
+	defer swap(&gpuNodeResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUNode, error) {
+		return &models.GPUNode{Name: name, ID: "ocid1.resolved"}, nil
 	})()
-	var gotNode *models.GpuNode
-	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	var gotNode *models.GPUNode
+	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
 	})()
@@ -94,7 +94,7 @@ func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 
 func TestTerminateCmd_PerformError(t *testing.T) {
 	stageMutationEnv(t)
-	defer swap(&terminateInstanceFn, func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
 		return errors.New("instance already terminating")
 	})()
 

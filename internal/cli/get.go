@@ -275,8 +275,8 @@ func emitCategory(
 		// own `tenantId` field already (same shape as DAC after
 		// the recent wrapper-drop refactor).
 		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.ImportedModel, env, selected)
-	case domain.GpuPool:
-		items, err := ld.LoadGpuPools(ctx, cfg.RepoPath, env)
+	case domain.GPUPool:
+		items, err := ld.LoadGPUPools(ctx, cfg.RepoPath, env)
 		if err != nil {
 			// Partial success: items has the rows we could load; surface
 			// the per-source failures on stderr so scripts and LLM
@@ -291,19 +291,19 @@ func emitCategory(
 		// step the TUI runs after load). Degrades to placeholder on
 		// failure so an offline / no-OCI-auth session still prints the
 		// Terraform-derived columns.
-		if msg := resolve.EnrichGpuPools(ctx, items, cfg.KubeConfig, env); msg != "" {
+		if msg := resolve.EnrichGPUPools(ctx, items, cfg.KubeConfig, env); msg != "" {
 			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", msg)
 		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GpuPool, env, selected)
-	case domain.GpuNode:
-		grouped, err := ld.LoadGpuNodes(ctx, cfg.KubeConfig, env)
+		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GPUPool, env, selected)
+	case domain.GPUNode:
+		grouped, err := ld.LoadGPUNodes(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load gpu nodes: %w", err)
 		}
-		// No top-level `pool` injection: GpuNode.NodePool (json
+		// No top-level `pool` injection: GPUNode.NodePool (json
 		// `poolName`) already carries the group key; the loader sets
 		// it from the same value used as the map key.
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.GpuNode, env, selected)
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.GPUNode, env, selected)
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -405,7 +405,7 @@ func writeTableLike(w writer, headers []string, rows [][]string, opts output.Opt
 }
 
 // writeMap renders a grouped map whose values already carry the group key
-// as a struct field (GpuNode.NodePool, DedicatedAICluster.TenantID,
+// as a struct field (GPUNode.NodePool, DedicatedAICluster.TenantID,
 // ImportedModel.TenantID, ModelArtifact.ModelName). JSON/JSONL/YAML use
 // output.Flatten so the emitted objects look flat. Table uses
 // columns.RenderTable; CSV/TSV route through RenderTableForExport

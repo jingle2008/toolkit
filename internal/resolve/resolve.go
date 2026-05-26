@@ -1,5 +1,5 @@
 // Package resolve maps a user-facing name (and optional OCID bypass)
-// into the full *models.GpuNode / *models.GpuPool struct that the OCI
+// into the full *models.GPUNode / *models.GPUPool struct that the OCI
 // compute actions require. Used by both `toolkit get`-derived
 // mutation subcommands (internal/cli) and the MCP server's mutating
 // tools (internal/mcp), so the find-by-name + OCI-enrichment chain
@@ -23,20 +23,20 @@ import (
 // Seam variables — tests in this package swap them to avoid touching
 // a live cluster or OCI tenancy. Each defaults to the real upstream.
 var (
-	populateGpuPoolsFn       = actions.PopulateGpuPools
+	populateGPUPoolsFn       = actions.PopulateGPUPools
 	newClientsetFromKubeFn   = k8s.NewClientsetFromKubeConfig
-	listGpuNodesForCompartFn = k8s.ListGpuNodes
+	listGPUNodesForCompartFn = k8s.ListGPUNodes
 )
 
-// GpuNode finds a *models.GpuNode for the OCI compute actions. With
+// GPUNode finds a *models.GPUNode for the OCI compute actions. With
 // ocid set, no cluster call is made — a stub {Name, ID:ocid} is
 // returned. With ocid empty, the loader is consulted and the named
 // node is returned by walking every pool.
-func GpuNode(ctx context.Context, ld loader.Loader, kubeConfig string, env models.Environment, name, ocid string) (*models.GpuNode, error) {
+func GPUNode(ctx context.Context, ld loader.Loader, kubeConfig string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 	if ocid != "" {
-		return &models.GpuNode{Name: name, ID: ocid}, nil
+		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
-	grouped, err := ld.LoadGpuNodes(ctx, kubeConfig, env)
+	grouped, err := ld.LoadGPUNodes(ctx, kubeConfig, env)
 	if err != nil {
 		return nil, fmt.Errorf("load gpu nodes: %w", err)
 	}
@@ -50,13 +50,13 @@ func GpuNode(ctx context.Context, ld loader.Loader, kubeConfig string, env model
 	return nil, fmt.Errorf("gpu node %q not found in any pool", name)
 }
 
-// GpuPool loads GPU pools from the Terraform repo, finds the named
+// GPUPool loads GPU pools from the Terraform repo, finds the named
 // one, then enriches with the live OCI ID + ActualSize via
-// PopulateGpuPools. Partial-load on the Terraform pass is tolerated
+// PopulateGPUPools. Partial-load on the Terraform pass is tolerated
 // as long as the named pool is among the rows that did load — that
 // matches the behavior of `toolkit get gpupool`.
-func GpuPool(ctx context.Context, ld loader.Loader, repoPath, kubeConfig string, env models.Environment, name string) (*models.GpuPool, error) {
-	pools, err := ld.LoadGpuPools(ctx, repoPath, env)
+func GPUPool(ctx context.Context, ld loader.Loader, repoPath, kubeConfig string, env models.Environment, name string) (*models.GPUPool, error) {
+	pools, err := ld.LoadGPUPools(ctx, repoPath, env)
 	if err != nil {
 		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {
 			return nil, fmt.Errorf("load gpu pools: %w", err)
@@ -80,8 +80,8 @@ func GpuPool(ctx context.Context, ld loader.Loader, repoPath, kubeConfig string,
 		return nil, fmt.Errorf("resolve compartment ID: %w", err)
 	}
 
-	enriched := []models.GpuPool{pools[idx]}
-	if err := populateGpuPoolsFn(ctx, enriched, env, compartmentID); err != nil {
+	enriched := []models.GPUPool{pools[idx]}
+	if err := populateGPUPoolsFn(ctx, enriched, env, compartmentID); err != nil {
 		return nil, fmt.Errorf("populate gpu pool: %w", err)
 	}
 	if enriched[0].ID == "" {
@@ -90,17 +90,17 @@ func GpuPool(ctx context.Context, ld loader.Loader, repoPath, kubeConfig string,
 	return &enriched[0], nil
 }
 
-// EnrichGpuPools fills ActualSize and Status on every pool by
+// EnrichGPUPools fills ActualSize and Status on every pool by
 // resolving the compartment ID via the live cluster and then calling
-// PopulateGpuPools. Returns a non-empty warning string if enrichment
+// PopulateGPUPools. Returns a non-empty warning string if enrichment
 // could not complete; pools are still safe to use (the loader's
 // Status="..." placeholder remains, ActualSize stays at zero).
 //
 // Used by `toolkit get gpupool` and MCP `list_gpu_pools` to match the
-// TUI's enriched view. Mutation paths (resolve.GpuPool) keep their
+// TUI's enriched view. Mutation paths (resolve.GPUPool) keep their
 // per-pool enrichment for the single-pool ID lookup they actually
 // need.
-func EnrichGpuPools(ctx context.Context, pools []models.GpuPool, kubeConfig string, env models.Environment) string {
+func EnrichGPUPools(ctx context.Context, pools []models.GPUPool, kubeConfig string, env models.Environment) string {
 	if len(pools) == 0 {
 		return ""
 	}
@@ -110,7 +110,7 @@ func EnrichGpuPools(ctx context.Context, pools []models.GpuPool, kubeConfig stri
 		logger.Infow("gpu pool enrichment failed", "step", "compartment_id", "error", err)
 		return fmt.Sprintf("compartment lookup failed: %v", err)
 	}
-	if err := populateGpuPoolsFn(ctx, pools, env, compartmentID); err != nil {
+	if err := populateGPUPoolsFn(ctx, pools, env, compartmentID); err != nil {
 		logger.Infow("gpu pool enrichment failed", "step", "populate", "error", err)
 		return fmt.Sprintf("OCI populate failed: %v", err)
 	}
@@ -161,7 +161,7 @@ func CompartmentID(ctx context.Context, kubeConfig string, env models.Environmen
 	if err != nil {
 		return "", err
 	}
-	nodes, err := listGpuNodesForCompartFn(ctx, clientset, 1)
+	nodes, err := listGPUNodesForCompartFn(ctx, clientset, 1)
 	if err != nil {
 		return "", err
 	}

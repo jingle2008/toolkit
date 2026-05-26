@@ -1,4 +1,4 @@
-//nolint:paralleltest // GpuPool / CompartmentID tests mutate shared seam vars (fakeCompartmentResolver, fakePopulate, newClientsetFromKubeFn) and must run sequentially
+//nolint:paralleltest // GPUPool / CompartmentID tests mutate shared seam vars (fakeCompartmentResolver, fakePopulate, newClientsetFromKubeFn) and must run sequentially
 package resolve
 
 import (
@@ -16,14 +16,14 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// stubLoader implements just enough of loader.Loader for GpuNode and
-// GpuPool tests; every method is either inert or driven by the public
-// fields. Keep narrow — the resolve package only calls LoadGpuNodes
-// and LoadGpuPools.
+// stubLoader implements just enough of loader.Loader for GPUNode and
+// GPUPool tests; every method is either inert or driven by the public
+// fields. Keep narrow — the resolve package only calls LoadGPUNodes
+// and LoadGPUPools.
 type stubLoader struct {
-	pools    []models.GpuPool
+	pools    []models.GPUPool
 	poolsErr error
-	nodes    map[string][]models.GpuNode
+	nodes    map[string][]models.GPUNode
 	nodesErr error
 }
 
@@ -39,11 +39,11 @@ func (l stubLoader) LoadBaseModels(context.Context, string, models.Environment) 
 	return nil, nil
 }
 
-func (l stubLoader) LoadGpuPools(context.Context, string, models.Environment) ([]models.GpuPool, error) {
+func (l stubLoader) LoadGPUPools(context.Context, string, models.Environment) ([]models.GPUPool, error) {
 	return l.pools, l.poolsErr
 }
 
-func (l stubLoader) LoadGpuNodes(context.Context, string, models.Environment) (map[string][]models.GpuNode, error) {
+func (l stubLoader) LoadGPUNodes(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
 	return l.nodes, l.nodesErr
 }
 
@@ -67,51 +67,51 @@ func (l stubLoader) LoadPropertyRegionalOverrides(context.Context, string, model
 	return nil, nil
 }
 
-// -- GpuNode -------------------------------------------------------
+// -- GPUNode -------------------------------------------------------
 
-func TestGpuNode_OcidBypassesLoader(t *testing.T) {
+func TestGPUNode_OcidBypassesLoader(t *testing.T) {
 	t.Parallel()
 	ld := stubLoader{nodesErr: errors.New("loader must not be called")}
-	node, err := GpuNode(context.Background(), ld, "/dev/null", models.Environment{}, "n1", "ocid1.instance.fake")
+	node, err := GPUNode(context.Background(), ld, "/dev/null", models.Environment{}, "n1", "ocid1.instance.fake")
 	require.NoError(t, err)
 	require.NotNil(t, node)
 	assert.Equal(t, "n1", node.Name)
 	assert.Equal(t, "ocid1.instance.fake", node.ID)
 }
 
-func TestGpuNode_FoundInCluster(t *testing.T) {
+func TestGPUNode_FoundInCluster(t *testing.T) {
 	t.Parallel()
-	ld := stubLoader{nodes: map[string][]models.GpuNode{
+	ld := stubLoader{nodes: map[string][]models.GPUNode{
 		"pool-a": {{Name: "n1", ID: "ocid1.a"}, {Name: "n2", ID: "ocid1.b"}},
 		"pool-b": {{Name: "n3", ID: "ocid1.c"}},
 	}}
-	node, err := GpuNode(context.Background(), ld, "/dev/null", models.Environment{}, "n2", "")
+	node, err := GPUNode(context.Background(), ld, "/dev/null", models.Environment{}, "n2", "")
 	require.NoError(t, err)
 	assert.Equal(t, "ocid1.b", node.ID)
 }
 
-func TestGpuNode_NotFound(t *testing.T) {
+func TestGPUNode_NotFound(t *testing.T) {
 	t.Parallel()
-	ld := stubLoader{nodes: map[string][]models.GpuNode{
+	ld := stubLoader{nodes: map[string][]models.GPUNode{
 		"pool-a": {{Name: "n1"}},
 	}}
-	_, err := GpuNode(context.Background(), ld, "/dev/null", models.Environment{}, "n-missing", "")
+	_, err := GPUNode(context.Background(), ld, "/dev/null", models.Environment{}, "n-missing", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestGpuNode_LoaderError(t *testing.T) {
+func TestGPUNode_LoaderError(t *testing.T) {
 	t.Parallel()
 	ld := stubLoader{nodesErr: errors.New("kube unreachable")}
-	_, err := GpuNode(context.Background(), ld, "/dev/null", models.Environment{}, "n1", "")
+	_, err := GPUNode(context.Background(), ld, "/dev/null", models.Environment{}, "n1", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "load gpu nodes")
 	assert.Contains(t, err.Error(), "kube unreachable")
 }
 
-// -- GpuPool -------------------------------------------------------
+// -- GPUPool -------------------------------------------------------
 
-// fakeCompartmentResolver wires the package-level seams so GpuPool's
+// fakeCompartmentResolver wires the package-level seams so GPUPool's
 // compartment-ID call returns a fixed value without touching k8s.
 // Also clears the compartment cache so tests don't pollute each other
 // — the cache is package-level, so a previous test's successful
@@ -120,20 +120,20 @@ func fakeCompartmentResolver(t *testing.T, compartmentID string) {
 	t.Helper()
 	clearCompartmentCache()
 	origClient := newClientsetFromKubeFn
-	origList := listGpuNodesForCompartFn
+	origList := listGPUNodesForCompartFn
 	t.Cleanup(func() {
 		newClientsetFromKubeFn = origClient
-		listGpuNodesForCompartFn = origList
+		listGPUNodesForCompartFn = origList
 		clearCompartmentCache()
 	})
 	newClientsetFromKubeFn = func(string, string) (kubernetes.Interface, error) {
 		return fake.NewSimpleClientset(), nil
 	}
-	listGpuNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GpuNode, error) {
+	listGPUNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
 		if compartmentID == "" {
 			return nil, nil // simulate empty cluster
 		}
-		return []models.GpuNode{{CompartmentID: compartmentID}}, nil
+		return []models.GPUNode{{CompartmentID: compartmentID}}, nil
 	}
 }
 
@@ -141,13 +141,13 @@ func fakeCompartmentResolver(t *testing.T, compartmentID string) {
 // test controls the outcome without calling OCI.
 func fakePopulate(t *testing.T, ocid string, perr error) {
 	t.Helper()
-	orig := populateGpuPoolsFn
-	t.Cleanup(func() { populateGpuPoolsFn = orig })
-	populateGpuPoolsFn = func(_ context.Context, pools []models.GpuPool, _ models.Environment, _ string) error {
+	orig := populateGPUPoolsFn
+	t.Cleanup(func() { populateGPUPoolsFn = orig })
+	populateGPUPoolsFn = func(_ context.Context, pools []models.GPUPool, _ models.Environment, _ string) error {
 		if perr != nil {
 			return perr
 		}
-		// Populate the slice in place, mirroring actions.PopulateGpuPools.
+		// Populate the slice in place, mirroring actions.PopulateGPUPools.
 		for i := range pools {
 			pools[i].ID = ocid
 			pools[i].ActualSize = 4
@@ -156,16 +156,16 @@ func fakePopulate(t *testing.T, ocid string, perr error) {
 	}
 }
 
-func TestGpuPool_HappyPath(t *testing.T) {
+func TestGPUPool_HappyPath(t *testing.T) {
 	// Sequential — seam vars are global.
 	fakeCompartmentResolver(t, "ocid1.compartment")
 	fakePopulate(t, "ocid1.instancepool.fake", nil)
 
-	ld := stubLoader{pools: []models.GpuPool{
+	ld := stubLoader{pools: []models.GPUPool{
 		{Name: "p1", Size: 8},
 		{Name: "p2", Size: 12},
 	}}
-	pool, err := GpuPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p2")
+	pool, err := GPUPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p2")
 	require.NoError(t, err)
 	require.NotNil(t, pool)
 	assert.Equal(t, "p2", pool.Name)
@@ -173,62 +173,62 @@ func TestGpuPool_HappyPath(t *testing.T) {
 	assert.Equal(t, 12, pool.Size)
 }
 
-func TestGpuPool_NotFound(t *testing.T) {
+func TestGPUPool_NotFound(t *testing.T) {
 	fakeCompartmentResolver(t, "ocid1.compartment")
 	fakePopulate(t, "", nil)
 
-	ld := stubLoader{pools: []models.GpuPool{{Name: "p1"}}}
-	_, err := GpuPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p-missing")
+	ld := stubLoader{pools: []models.GPUPool{{Name: "p1"}}}
+	_, err := GPUPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p-missing")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found in repo")
 }
 
-func TestGpuPool_TolerantOfPartialLoad(t *testing.T) {
+func TestGPUPool_TolerantOfPartialLoad(t *testing.T) {
 	// PartialLoadError is informational — proceed when the named pool
 	// is still in the returned slice.
 	fakeCompartmentResolver(t, "ocid1.compartment")
 	fakePopulate(t, "ocid1.instancepool.fake", nil)
 
 	partial := &terraform.PartialLoadError{
-		Source: "GpuPools",
+		Source: "GPUPools",
 		Errs:   []error{errors.New("oke source missing")},
 	}
 	ld := stubLoader{
-		pools:    []models.GpuPool{{Name: "p1", Size: 8}},
+		pools:    []models.GPUPool{{Name: "p1", Size: 8}},
 		poolsErr: partial,
 	}
-	pool, err := GpuPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p1")
+	pool, err := GPUPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p1")
 	require.NoError(t, err, "partial-load should not be fatal")
 	assert.Equal(t, "ocid1.instancepool.fake", pool.ID)
 }
 
-func TestGpuPool_HardLoaderErrorFatal(t *testing.T) {
+func TestGPUPool_HardLoaderErrorFatal(t *testing.T) {
 	// Non-partial errors must NOT be tolerated.
 	ld := stubLoader{poolsErr: errors.New("repo path invalid")}
-	_, err := GpuPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p1")
+	_, err := GPUPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "load gpu pools")
 }
 
-func TestGpuPool_PopulateError(t *testing.T) {
+func TestGPUPool_PopulateError(t *testing.T) {
 	fakeCompartmentResolver(t, "ocid1.compartment")
 	fakePopulate(t, "", errors.New("OCI throttled"))
 
-	ld := stubLoader{pools: []models.GpuPool{{Name: "p1", Size: 8}}}
-	_, err := GpuPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p1")
+	ld := stubLoader{pools: []models.GPUPool{{Name: "p1", Size: 8}}}
+	_, err := GPUPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "populate gpu pool")
 }
 
-func TestGpuPool_NoOcidAfterPopulate(t *testing.T) {
-	// Pool exists in Terraform but PopulateGpuPools didn't find it on
+func TestGPUPool_NoOcidAfterPopulate(t *testing.T) {
+	// Pool exists in Terraform but PopulateGPUPools didn't find it on
 	// OCI side (NONEXIST) — guard against handing UpdateInstancePool an
 	// empty OCID.
 	fakeCompartmentResolver(t, "ocid1.compartment")
 	fakePopulate(t, "", nil) // no ID assigned
 
-	ld := stubLoader{pools: []models.GpuPool{{Name: "p1", Size: 8}}}
-	_, err := GpuPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p1")
+	ld := stubLoader{pools: []models.GPUPool{{Name: "p1", Size: 8}}}
+	_, err := GPUPool(context.Background(), ld, "/repo", "/kube", models.Environment{}, "p1")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no OCID")
 }
@@ -244,7 +244,7 @@ func TestCompartmentID_HappyPath(t *testing.T) {
 }
 
 func TestCompartmentID_EmptyCluster(t *testing.T) {
-	// listGpuNodesForCompartFn returns no nodes — we can't infer.
+	// listGPUNodesForCompartFn returns no nodes — we can't infer.
 	fakeCompartmentResolver(t, "")
 
 	_, err := CompartmentID(context.Background(), "/kube", models.Environment{Type: "dev"})
@@ -281,8 +281,8 @@ func TestCompartmentID_Caches(t *testing.T) {
 	assert.Equal(t, "ocid1.compartment.first", got1)
 
 	// Swap the seam to a different value. Cache should win.
-	listGpuNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GpuNode, error) {
-		return []models.GpuNode{{CompartmentID: "ocid1.compartment.SHOULD_NOT_SEE"}}, nil
+	listGPUNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
+		return []models.GPUNode{{CompartmentID: "ocid1.compartment.SHOULD_NOT_SEE"}}, nil
 	}
 	got2, err := CompartmentID(context.Background(), "/kube", env)
 	require.NoError(t, err)
@@ -308,51 +308,51 @@ func TestCompartmentID_DoesNotCacheErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "no GPU nodes")
 
 	// Cluster recovers. Cache shouldn't have stored the prior error.
-	listGpuNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GpuNode, error) {
-		return []models.GpuNode{{CompartmentID: "ocid1.compartment.recovered"}}, nil
+	listGPUNodesForCompartFn = func(context.Context, kubernetes.Interface, int) ([]models.GPUNode, error) {
+		return []models.GPUNode{{CompartmentID: "ocid1.compartment.recovered"}}, nil
 	}
 	got, err := CompartmentID(context.Background(), "/kube", env)
 	require.NoError(t, err, "second call must not hit a cached error")
 	assert.Equal(t, "ocid1.compartment.recovered", got)
 }
 
-// -- EnrichGpuPools ------------------------------------------------
+// -- EnrichGPUPools ------------------------------------------------
 
-func TestEnrichGpuPools_HappyPath(t *testing.T) {
+func TestEnrichGPUPools_HappyPath(t *testing.T) {
 	fakeCompartmentResolver(t, "ocid1.compartment")
 	fakePopulate(t, "ocid1.instancepool.fake", nil)
 
-	pools := []models.GpuPool{{Name: "p1"}, {Name: "p2"}}
-	msg := EnrichGpuPools(context.Background(), pools, "/kube", models.Environment{})
+	pools := []models.GPUPool{{Name: "p1"}, {Name: "p2"}}
+	msg := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
 	assert.Empty(t, msg, "happy path should not return a warning")
 	assert.Equal(t, 4, pools[0].ActualSize, "fakePopulate fills ActualSize=4")
 	assert.Equal(t, 4, pools[1].ActualSize)
 }
 
-func TestEnrichGpuPools_EmptySlice_NoOp(t *testing.T) {
+func TestEnrichGPUPools_EmptySlice_NoOp(t *testing.T) {
 	// Don't wire seams: the empty-slice early-return must avoid them.
-	msg := EnrichGpuPools(context.Background(), nil, "/kube", models.Environment{})
+	msg := EnrichGPUPools(context.Background(), nil, "/kube", models.Environment{})
 	assert.Empty(t, msg, "empty input should be a no-op")
 }
 
-func TestEnrichGpuPools_CompartmentLookupFailure_Warns(t *testing.T) {
-	// listGpuNodesForCompartFn returns no nodes → CompartmentID errors;
-	// EnrichGpuPools must surface that as a warning, not a panic.
+func TestEnrichGPUPools_CompartmentLookupFailure_Warns(t *testing.T) {
+	// listGPUNodesForCompartFn returns no nodes → CompartmentID errors;
+	// EnrichGPUPools must surface that as a warning, not a panic.
 	fakeCompartmentResolver(t, "")
 
-	pools := []models.GpuPool{{Name: "p1", Status: "..."}}
-	msg := EnrichGpuPools(context.Background(), pools, "/kube", models.Environment{})
+	pools := []models.GPUPool{{Name: "p1", Status: "..."}}
+	msg := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
 	require.NotEmpty(t, msg)
 	assert.Contains(t, msg, "compartment lookup failed")
 	assert.Equal(t, "...", pools[0].Status, "placeholder must survive enrichment failure")
 }
 
-func TestEnrichGpuPools_PopulateFailure_Warns(t *testing.T) {
+func TestEnrichGPUPools_PopulateFailure_Warns(t *testing.T) {
 	fakeCompartmentResolver(t, "ocid1.compartment")
 	fakePopulate(t, "", errors.New("OCI 500"))
 
-	pools := []models.GpuPool{{Name: "p1"}}
-	msg := EnrichGpuPools(context.Background(), pools, "/kube", models.Environment{})
+	pools := []models.GPUPool{{Name: "p1"}}
+	msg := EnrichGPUPools(context.Background(), pools, "/kube", models.Environment{})
 	require.NotEmpty(t, msg)
 	assert.Contains(t, msg, "OCI populate failed")
 	assert.Contains(t, msg, "OCI 500")

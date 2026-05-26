@@ -53,9 +53,9 @@ func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
 func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
 	switch msg := msg.(type) {
 	case gpuPoolScaleStartedMsg:
-		m.handleGpuPoolScaleStartedMsg(msg)
+		m.handleGPUPoolScaleStartedMsg(msg)
 	case gpuPoolScaleResultMsg:
-		m.handleGpuPoolScaleResultMsg(msg)
+		m.handleGPUPoolScaleResultMsg(msg)
 	case cordonNodeResultMsg:
 		m.handleCordonNodeResultMsg(msg)
 	case drainNodeResultMsg:

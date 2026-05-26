@@ -15,8 +15,8 @@ import (
 
 // Seam variables — overrideable in tests so handlers don't reach a
 // live cluster or OCI tenancy. Production callers go through the
-// upstream packages directly. The resolver seams (mcpResolveGpuNodeFn,
-// mcpResolveGpuPoolFn) cover the lookup-and-enrich chain so handler
+// upstream packages directly. The resolver seams (mcpResolveGPUNodeFn,
+// mcpResolveGPUPoolFn) cover the lookup-and-enrich chain so handler
 // tests don't have to stub a fake k8s+OCI pipeline.
 var (
 	mcpSetCordonFn        = k8s.SetCordon
@@ -25,11 +25,11 @@ var (
 	mcpTerminateFn        = actions.TerminateInstance
 	mcpIncreasePoolSizeFn = actions.IncreasePoolSize
 	mcpDeleteDACFn        = actions.DeleteDedicatedAICluster
-	mcpResolveGpuNodeFn   = func(ctx context.Context, s *Server, env models.Environment, name, ocid string) (*models.GpuNode, error) {
-		return resolve.GpuNode(ctx, s.loader, s.cfg.KubeConfig, env, name, ocid)
+	mcpResolveGPUNodeFn   = func(ctx context.Context, s *Server, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+		return resolve.GPUNode(ctx, s.loader, s.cfg.KubeConfig, env, name, ocid)
 	}
-	mcpResolveGpuPoolFn = func(ctx context.Context, s *Server, env models.Environment, name string) (*models.GpuPool, error) {
-		return resolve.GpuPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
+	mcpResolveGPUPoolFn = func(ctx context.Context, s *Server, env models.Environment, name string) (*models.GPUPool, error) {
+		return resolve.GPUPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
 	}
 )
 
@@ -142,7 +142,7 @@ type terminateNodeInput struct {
 	envOverride
 }
 
-type scaleGpuPoolInput struct {
+type scaleGPUPoolInput struct {
 	Name string `json:"name" jsonschema:"the pool name from the Terraform repo (same as toolkit get gpupool)"`
 	confirmGate
 	envOverride
@@ -198,7 +198,7 @@ func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, 
 
 func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest, in rebootNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "reboot", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
-		node, err := mcpResolveGpuNodeFn(ctx, s, env, in.Node, in.OCID)
+		node, err := mcpResolveGPUNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest,
 
 func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolRequest, in terminateNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "terminate", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
-		node, err := mcpResolveGpuNodeFn(ctx, s, env, in.Node, in.OCID)
+		node, err := mcpResolveGPUNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
 			return err
 		}
@@ -216,9 +216,9 @@ func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolReque
 	})
 }
 
-func (s *Server) handleScaleGpuPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGpuPoolInput) (*sdk.CallToolResult, mutationResult, error) {
+func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGPUPoolInput) (*sdk.CallToolResult, mutationResult, error) {
 	return s.handleMutation(ctx, req, "scale", "gpu_pool", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
-		pool, err := mcpResolveGpuPoolFn(ctx, s, env, in.Name)
+		pool, err := mcpResolveGPUPoolFn(ctx, s, env, in.Name)
 		if err != nil {
 			return err
 		}
@@ -285,7 +285,7 @@ func registerMutationTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "scale_gpu_pool",
 		Description: "Push the Terraform-declared pool.Size to OCI for the named GPU pool. No size override: Terraform is the source of truth." + mutationToolFooter,
-	}, s.handleScaleGpuPool)
+	}, s.handleScaleGPUPool)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "delete_dac",

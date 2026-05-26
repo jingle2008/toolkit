@@ -37,12 +37,12 @@ func (f fakeLoader) LoadImportedModels(_ context.Context, _ string, _ models.Env
 	return map[string][]models.ImportedModel{}, nil
 }
 
-func (f fakeLoader) LoadGpuPools(_ context.Context, _ string, _ models.Environment) ([]models.GpuPool, error) {
+func (f fakeLoader) LoadGPUPools(_ context.Context, _ string, _ models.Environment) ([]models.GPUPool, error) {
 	return nil, nil
 }
 
-func (f fakeLoader) LoadGpuNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GpuNode, error) {
-	return map[string][]models.GpuNode{}, nil
+func (f fakeLoader) LoadGPUNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GPUNode, error) {
+	return map[string][]models.GPUNode{}, nil
 }
 
 func (f fakeLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ models.Environment) (map[string][]models.DedicatedAICluster, error) {
@@ -256,10 +256,10 @@ func TestProcessDataAndErrorMsg(t *testing.T) {
 	m.processData(dataMsg{Data: m.dataset})
 	// processData with map[string]*models.BaseModel
 	m.processData(dataMsg{Data: map[string]*models.BaseModel{"bm": {}}})
-	// processData with []models.GpuPool
-	m.processData(dataMsg{Data: []models.GpuPool{{}}})
-	// processData with map[string][]models.GpuNode
-	m.processData(dataMsg{Data: map[string][]models.GpuNode{"pool": {}}})
+	// processData with []models.GPUPool
+	m.processData(dataMsg{Data: []models.GPUPool{{}}})
+	// processData with map[string][]models.GPUNode
+	m.processData(dataMsg{Data: map[string][]models.GPUNode{"pool": {}}})
 	// processData with map[string][]models.DedicatedAICluster
 	m.processData(dataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
 	// Update with errorMsg
@@ -503,8 +503,8 @@ func TestModel_changeCategory(t *testing.T) {
 	)
 	m.dataset = &models.Dataset{
 		BaseModels:            []models.BaseModel{},
-		GpuPools:              []models.GpuPool{},
-		GpuNodeMap:            map[string][]models.GpuNode{},
+		GPUPools:              []models.GPUPool{},
+		GPUNodeMap:            map[string][]models.GPUNode{},
 		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{},
 	}
 	ti := textinput.New()

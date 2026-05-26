@@ -36,19 +36,19 @@ type ImportedModelLoader interface {
 }
 
 /*
-GpuPoolLoader defines an interface for loading GPU pools.
+GPUPoolLoader defines an interface for loading GPU pools.
 */
-type GpuPoolLoader interface {
-	// LoadGpuPools loads GPU pools from the given repo and environment.
-	LoadGpuPools(ctx context.Context, repo string, env models.Environment) ([]models.GpuPool, error)
+type GPUPoolLoader interface {
+	// LoadGPUPools loads GPU pools from the given repo and environment.
+	LoadGPUPools(ctx context.Context, repo string, env models.Environment) ([]models.GPUPool, error)
 }
 
 /*
-GpuNodeLoader defines an interface for loading GPU nodes.
+GPUNodeLoader defines an interface for loading GPU nodes.
 */
-type GpuNodeLoader interface {
-	// LoadGpuNodes loads GPU nodes from the given kube config and environment.
-	LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error)
+type GPUNodeLoader interface {
+	// LoadGPUNodes loads GPU nodes from the given kube config and environment.
+	LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error)
 }
 
 /*
@@ -82,8 +82,8 @@ type Loader interface {
 	DatasetLoader
 	BaseModelLoader
 	ImportedModelLoader
-	GpuPoolLoader
-	GpuNodeLoader
+	GPUPoolLoader
+	GPUNodeLoader
 	DedicatedAIClusterLoader
 	TenancyOverrideLoader
 	RegionalOverrideLoader

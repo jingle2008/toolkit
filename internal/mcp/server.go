@@ -120,7 +120,7 @@ type kindInput struct {
 //
 //	items     — the matching rows (array of category-shaped objects)
 //	count     — len(items), provided for quick parsing
-//	warnings  — non-fatal loader warnings (e.g. partial GpuPool sources)
+//	warnings  — non-fatal loader warnings (e.g. partial GPUPool sources)
 type listResult[T any] struct {
 	Items    []T      `json:"items"`
 	Count    int      `json:"count"`

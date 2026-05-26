@@ -19,8 +19,8 @@ type Dataset struct {
 	ModelArtifactMap                  map[string][]ModelArtifact
 	Environments                      []Environment
 	ServiceTenancies                  []ServiceTenancy
-	GpuPools                          []GpuPool
-	GpuNodeMap                        map[string][]GpuNode
+	GPUPools                          []GPUPool
+	GPUNodeMap                        map[string][]GPUNode
 	DedicatedAIClusterMap             map[string][]DedicatedAICluster
 }
 
@@ -86,7 +86,7 @@ func (d *Dataset) ResetScopedData() {
 	d.PropertyRegionalOverrides = nil
 	d.BaseModels = nil
 	d.ImportedModelMap = nil
-	d.GpuPools = nil
-	d.GpuNodeMap = nil
+	d.GPUPools = nil
+	d.GPUNodeMap = nil
 	d.DedicatedAIClusterMap = nil
 }

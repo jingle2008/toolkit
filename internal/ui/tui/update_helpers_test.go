@@ -41,11 +41,11 @@ func (dummyLoader) LoadImportedModels(_ context.Context, _ string, _ models.Envi
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadGpuPools(_ context.Context, _ string, _ models.Environment) ([]models.GpuPool, error) {
+func (dummyLoader) LoadGPUPools(_ context.Context, _ string, _ models.Environment) ([]models.GPUPool, error) {
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadGpuNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GpuNode, error) {
+func (dummyLoader) LoadGPUNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GPUNode, error) {
 	return nil, errDummy
 }
 

@@ -34,7 +34,7 @@ type computeMgmtClient interface {
 // SoftResetInstance performs a soft reset (reboot) of the given instance.
 func SoftResetInstance(
 	ctx context.Context,
-	node *models.GpuNode,
+	node *models.GPUNode,
 	env models.Environment,
 	logger logging.Logger,
 ) error {
@@ -64,7 +64,7 @@ func SoftResetInstance(
 // IncreasePoolSize scales up the given GPU pool and returns the work request ID.
 func IncreasePoolSize(
 	ctx context.Context,
-	pool *models.GpuPool,
+	pool *models.GPUPool,
 	env models.Environment,
 	logger logging.Logger,
 ) error {
@@ -99,7 +99,7 @@ func IncreasePoolSize(
 // TerminateInstance terminates the given instance, optionally preserving the boot volume.
 func TerminateInstance(
 	ctx context.Context,
-	node *models.GpuNode,
+	node *models.GPUNode,
 	env models.Environment,
 	logger logging.Logger,
 ) error {
@@ -125,11 +125,11 @@ func TerminateInstance(
 	return nil
 }
 
-// PopulateGpuPools populates ActualSize and Status for a GpuPool using OCI instance pool API.
+// PopulateGPUPools populates ActualSize and Status for a GPUPool using OCI instance pool API.
 // compartmentID is required to look up the pool.
-func PopulateGpuPools(
+func PopulateGPUPools(
 	ctx context.Context,
-	gpuPools []models.GpuPool,
+	gpuPools []models.GPUPool,
 	env models.Environment,
 	compartmentID string,
 ) error {
@@ -154,7 +154,7 @@ func PopulateGpuPools(
 		return fmt.Errorf("failed to list instance pools: %w, request id: %s", err, reqID)
 	}
 
-	gpuPoolMap := make(map[string]*models.GpuPool)
+	gpuPoolMap := make(map[string]*models.GPUPool)
 	for i := range gpuPools {
 		gpuPoolMap[gpuPools[i].Name] = &gpuPools[i]
 		gpuPools[i].Status = "NONEXIST"

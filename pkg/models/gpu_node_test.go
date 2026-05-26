@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGpuNode_Getters(t *testing.T) {
+func TestGPUNode_Getters(t *testing.T) {
 	t.Parallel()
-	node := GpuNode{
+	node := GPUNode{
 		Name:         "node1",
 		InstanceType: "NVIDIA.A100.8",
 		NodePool:     "poolA",
@@ -20,7 +20,7 @@ func TestGpuNode_Getters(t *testing.T) {
 	assert.ElementsMatch(t, []string{"node1", "NVIDIA.A100.8", "poolA", "OK"}, node.GetFilterableFields())
 	assert.Equal(t, "OK", node.GetStatus())
 
-	node2 := GpuNode{
+	node2 := GPUNode{
 		Name:         "node2",
 		InstanceType: "NVIDIA.A100.8",
 		NodePool:     "poolB",
@@ -29,7 +29,7 @@ func TestGpuNode_Getters(t *testing.T) {
 	}
 	assert.Equal(t, "ERROR: Missing GPUs", node2.GetStatus())
 
-	node3 := GpuNode{
+	node3 := GPUNode{
 		Name:         "node3",
 		InstanceType: "NVIDIA.A100.8",
 		NodePool:     "poolC",
@@ -39,7 +39,7 @@ func TestGpuNode_Getters(t *testing.T) {
 	}
 	assert.Equal(t, "ERROR: Unhealthy", node3.GetStatus())
 
-	node4 := GpuNode{
+	node4 := GPUNode{
 		Name:         "node4",
 		InstanceType: "NVIDIA.A100.8",
 		NodePool:     "poolD",

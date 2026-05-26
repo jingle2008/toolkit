@@ -21,30 +21,30 @@ import (
 
 // gpuNodeResolverFn is the seam tests use to fake the k8s lookup.
 // In production it constructs a fresh loader per call and delegates
-// to internal/resolve.GpuNode.
-var gpuNodeResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GpuNode, error) {
+// to internal/resolve.GPUNode.
+var gpuNodeResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUNode, error) {
 	ld := production.NewLoader(ctx, cfg.MetadataFile)
-	return resolve.GpuNode(ctx, ld, cfg.KubeConfig, env, name, "")
+	return resolve.GPUNode(ctx, ld, cfg.KubeConfig, env, name, "")
 }
 
-// resolveGpuNode produces a *GpuNode suitable for handing to the
+// resolveGPUNode produces a *GPUNode suitable for handing to the
 // OCI compute actions. If ocid is set, a stub node is synthesized
 // (no cluster call); otherwise the live cluster is consulted via
 // gpuNodeResolverFn. name is always carried for audit / log
 // readability.
-func resolveGpuNode(ctx context.Context, cfg config.Config, env models.Environment, name, ocid string) (*models.GpuNode, error) {
+func resolveGPUNode(ctx context.Context, cfg config.Config, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 	if ocid != "" {
-		return &models.GpuNode{Name: name, ID: ocid}, nil
+		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
 	return gpuNodeResolverFn(ctx, cfg, env, name)
 }
 
 // gpuPoolResolverFn is the seam tests use to fake gpu-pool resolution.
 // In production it constructs a fresh loader and delegates to
-// internal/resolve.GpuPool.
-var gpuPoolResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GpuPool, error) {
+// internal/resolve.GPUPool.
+var gpuPoolResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUPool, error) {
 	ld := production.NewLoader(ctx, cfg.MetadataFile)
-	return resolve.GpuPool(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name)
+	return resolve.GPUPool(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name)
 }
 
 // validateMutationConfig checks the minimum settings a mutation

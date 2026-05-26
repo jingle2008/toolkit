@@ -17,7 +17,7 @@ import (
 func TestRebootCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageMutationEnv(t)
 	called := false
-	defer swap(&softResetInstanceFn, func(context.Context, *models.GpuNode, models.Environment, logging.Logger) error {
+	defer swap(&softResetInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
 		called = true
 		return nil
 	})()
@@ -45,13 +45,13 @@ func TestRebootCmd_OcidBypassesResolver(t *testing.T) {
 	t.Cleanup(viper.Reset)
 
 	resolverCalled := false
-	defer swap(&gpuNodeResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GpuNode, error) {
+	defer swap(&gpuNodeResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GPUNode, error) {
 		resolverCalled = true
 		return nil, errors.New("should not be called")
 	})()
 
-	var gotNode *models.GpuNode
-	defer swap(&softResetInstanceFn, func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	var gotNode *models.GPUNode
+	defer swap(&softResetInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
 	})()
@@ -69,15 +69,15 @@ func TestRebootCmd_OcidBypassesResolver(t *testing.T) {
 
 func TestRebootCmd_NameResolvesViaCluster(t *testing.T) {
 	stageMutationEnv(t)
-	defer swap(&gpuNodeResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GpuNode, error) {
+	defer swap(&gpuNodeResolverFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUNode, error) {
 		if name != "node-a" {
 			t.Errorf("resolver got %q, want node-a", name)
 		}
-		return &models.GpuNode{Name: name, ID: "ocid1.resolved"}, nil
+		return &models.GPUNode{Name: name, ID: "ocid1.resolved"}, nil
 	})()
 
-	var gotNode *models.GpuNode
-	defer swap(&softResetInstanceFn, func(_ context.Context, n *models.GpuNode, _ models.Environment, _ logging.Logger) error {
+	var gotNode *models.GPUNode
+	defer swap(&softResetInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
 		return nil
 	})()
@@ -92,7 +92,7 @@ func TestRebootCmd_NameResolvesViaCluster(t *testing.T) {
 
 func TestRebootCmd_ResolverNotFound(t *testing.T) {
 	stageMutationEnv(t)
-	defer swap(&gpuNodeResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GpuNode, error) {
+	defer swap(&gpuNodeResolverFn, func(context.Context, config.Config, models.Environment, string) (*models.GPUNode, error) {
 		return nil, errors.New("gpu node \"node-missing\" not found in any pool")
 	})()
 

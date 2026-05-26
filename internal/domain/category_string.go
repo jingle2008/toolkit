@@ -24,13 +24,13 @@ func _() {
 	_ = x[ModelArtifact-13]
 	_ = x[Environment-14]
 	_ = x[ServiceTenancy-15]
-	_ = x[GpuPool-16]
-	_ = x[GpuNode-17]
+	_ = x[GPUPool-16]
+	_ = x[GPUNode-17]
 	_ = x[DedicatedAICluster-18]
 	_ = x[Alias-19]
 }
 
-const _Category_name = "CategoryUnknownTenantLimitDefinitionConsolePropertyDefinitionPropertyDefinitionLimitTenancyOverrideConsolePropertyTenancyOverridePropertyTenancyOverrideLimitRegionalOverrideConsolePropertyRegionalOverridePropertyRegionalOverrideBaseModelImportedModelModelArtifactEnvironmentServiceTenancyGpuPoolGpuNodeDedicatedAIClusterAlias"
+const _Category_name = "CategoryUnknownTenantLimitDefinitionConsolePropertyDefinitionPropertyDefinitionLimitTenancyOverrideConsolePropertyTenancyOverridePropertyTenancyOverrideLimitRegionalOverrideConsolePropertyRegionalOverridePropertyRegionalOverrideBaseModelImportedModelModelArtifactEnvironmentServiceTenancyGPUPoolGPUNodeDedicatedAIClusterAlias"
 
 var _Category_index = [...]uint16{0, 15, 21, 36, 61, 79, 99, 129, 152, 173, 204, 228, 237, 250, 263, 274, 288, 295, 302, 320, 325}
 

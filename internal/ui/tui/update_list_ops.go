@@ -16,8 +16,8 @@ func (m *Model) deleteItem(itemKey models.ItemKey) tea.Cmd {
 	switch m.category {
 	case domain.DedicatedAICluster:
 		return m.deleteDedicatedAICluster(itemKey)
-	case domain.GpuNode:
-		return m.deleteGpuNode(itemKey)
+	case domain.GPUNode:
+		return m.deleteGPUNode(itemKey)
 	default:
 		// exhaustive
 	}
@@ -58,9 +58,9 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	}
 }
 
-func (m *Model) deleteGpuNode(itemKey models.ItemKey) tea.Cmd {
+func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
-	node, ok := item.(*models.GpuNode)
+	node, ok := item.(*models.GPUNode)
 	if !ok || node == nil {
 		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
@@ -76,12 +76,12 @@ func (m *Model) deleteGpuNode(itemKey models.ItemKey) tea.Cmd {
 		if err := actions.TerminateInstance(ctx, node, m.environment, m.logger); err != nil {
 			return deleteErrMsg{
 				err:      err,
-				category: domain.GpuNode,
+				category: domain.GPUNode,
 				key:      itemKey,
 			}
 		}
 		return deleteDoneMsg{
-			category: domain.GpuNode,
+			category: domain.GPUNode,
 			key:      itemKey,
 		}
 	}
@@ -93,7 +93,7 @@ func (m *Model) rebootNode(item any) tea.Cmd {
 		return nil
 	}
 
-	node, ok := item.(*models.GpuNode)
+	node, ok := item.(*models.GPUNode)
 	if !ok {
 		m.logger.Errorw("unsupported item type for reboot operation", "item", item)
 		return nil
@@ -121,7 +121,7 @@ func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
 
 	if dac, ok := item.(*models.DedicatedAICluster); ok {
 		dac.Status = msg.prevState
-	} else if node, ok := item.(*models.GpuNode); ok {
+	} else if node, ok := item.(*models.GPUNode); ok {
 		node.SetStatus(msg.prevState)
 	}
 
@@ -147,8 +147,8 @@ func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
 func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
 	if msg.err != nil {
 		m.logger.Errorw("failed to update data", "category", msg.category, "error", msg.err)
-		for i := range m.dataset.GpuPools {
-			m.dataset.GpuPools[i].Status = "UNKNOWN"
+		for i := range m.dataset.GPUPools {
+			m.dataset.GPUPools[i].Status = "UNKNOWN"
 		}
 	}
 
@@ -158,19 +158,19 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
 	}
 }
 
-func (m *Model) handleGpuPoolScaleStartedMsg(msg gpuPoolScaleStartedMsg) {
-	item := findItem(m.dataset, domain.GpuPool, msg.key)
-	if pool, ok := item.(*models.GpuPool); ok && pool != nil {
+func (m *Model) handleGPUPoolScaleStartedMsg(msg gpuPoolScaleStartedMsg) {
+	item := findItem(m.dataset, domain.GPUPool, msg.key)
+	if pool, ok := item.(*models.GPUPool); ok && pool != nil {
 		pool.Status = "SCALING"
-		if m.category == domain.GpuPool {
+		if m.category == domain.GPUPool {
 			m.updateRows(false)
 		}
 	}
 }
 
-func (m *Model) handleGpuPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
-	item := findItem(m.dataset, domain.GpuPool, msg.key)
-	if pool, ok := item.(*models.GpuPool); ok && pool != nil {
+func (m *Model) handleGPUPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
+	item := findItem(m.dataset, domain.GPUPool, msg.key)
+	if pool, ok := item.(*models.GPUPool); ok && pool != nil {
 		if msg.err != nil {
 			m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
 			pool.Status = "FAILED"
@@ -178,15 +178,15 @@ func (m *Model) handleGpuPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
 			// Optimistic success state until enrichment updates the pool
 			pool.Status = "RUNNING"
 		}
-		if m.category == domain.GpuPool {
+		if m.category == domain.GPUPool {
 			m.updateRows(false)
 		}
 	}
 }
 
 func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) {
-	item := findItem(m.dataset, domain.GpuNode, msg.key)
-	if node, ok := item.(*models.GpuNode); ok && node != nil {
+	item := findItem(m.dataset, domain.GPUNode, msg.key)
+	if node, ok := item.(*models.GPUNode); ok && node != nil {
 		if msg.err != nil {
 			m.logger.Errorw("failed to toggle cordon state", "key", msg.key, "error", msg.err)
 		} else {
@@ -194,7 +194,7 @@ func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) {
 			// Clear transient status so GetStatus reflects current state
 			node.SetStatus("")
 		}
-		if m.category == domain.GpuNode {
+		if m.category == domain.GPUNode {
 			m.updateRows(false)
 		}
 	}
@@ -204,14 +204,14 @@ func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) {
 	if msg.err != nil {
 		m.logger.Errorw("failed to drain node", "key", msg.key, "error", msg.err)
 	}
-	if m.category == domain.GpuNode {
+	if m.category == domain.GPUNode {
 		m.updateRows(false)
 	}
 }
 
 func (m *Model) handleRebootNodeResultMsg(msg rebootNodeResultMsg) {
-	item := findItem(m.dataset, domain.GpuNode, msg.key)
-	if node, ok := item.(*models.GpuNode); ok && node != nil {
+	item := findItem(m.dataset, domain.GPUNode, msg.key)
+	if node, ok := item.(*models.GPUNode); ok && node != nil {
 		if msg.err != nil {
 			m.logger.Errorw("failed to reboot node", "key", msg.key, "error", msg.err)
 			node.SetStatus("FAILED")
@@ -220,7 +220,7 @@ func (m *Model) handleRebootNodeResultMsg(msg rebootNodeResultMsg) {
 			node.SetStatus("")
 		}
 	}
-	if m.category == domain.GpuNode {
+	if m.category == domain.GPUNode {
 		m.updateRows(false)
 	}
 }

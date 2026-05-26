@@ -19,7 +19,7 @@ var ModelArtifactColumns = GroupedSet[models.ModelArtifact]{Columns: []GroupedCo
 	},
 	{
 		Title: "GPU Config", Key: "gpu-config", Ratio: 0.10,
-		Render: func(_ string, a models.ModelArtifact) string { return a.GetGpuConfig() },
+		Render: func(_ string, a models.ModelArtifact) string { return a.GetGPUConfig() },
 	},
 	{
 		Title: "TensorRT", Key: "tensorrt", Ratio: 0.10,

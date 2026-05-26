@@ -28,8 +28,8 @@ func TestCategory_String(t *testing.T) {
 		{ModelArtifact, "ModelArtifact"},
 		{Environment, "Environment"},
 		{ServiceTenancy, "ServiceTenancy"},
-		{GpuPool, "GpuPool"},
-		{GpuNode, "GpuNode"},
+		{GPUPool, "GPUPool"},
+		{GPUNode, "GPUNode"},
 		{DedicatedAICluster, "DedicatedAICluster"},
 		{Category(99), "Category(99)"},
 	}
@@ -44,12 +44,12 @@ func TestCategory_String(t *testing.T) {
 func TestCategory_IsScope(t *testing.T) {
 	t.Parallel()
 	scopeCases := []Category{
-		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GpuPool,
+		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GPUPool,
 	}
 	nonScopeCases := []Category{
 		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
 		ConsolePropertyRegionalOverride, PropertyRegionalOverride, ModelArtifact,
-		Environment, ServiceTenancy, GpuNode, DedicatedAICluster,
+		Environment, ServiceTenancy, GPUNode, DedicatedAICluster,
 	}
 	for _, c := range scopeCases {
 		t.Run("scope_"+c.String(), func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		{LimitDefinition, []Category{LimitTenancyOverride, LimitRegionalOverride}},
 		{ConsolePropertyDefinition, []Category{ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride}},
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},
-		{GpuPool, []Category{GpuNode}},
+		{GPUPool, []Category{GPUNode}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.scope.String(), func(t *testing.T) {
@@ -95,7 +95,7 @@ func TestCategory_IsScopeOf(t *testing.T) {
 	assert.True(t, Tenant.IsScopeOf(ConsolePropertyTenancyOverride))
 	assert.True(t, Tenant.IsScopeOf(PropertyTenancyOverride))
 	assert.True(t, Tenant.IsScopeOf(DedicatedAICluster))
-	assert.False(t, Tenant.IsScopeOf(GpuNode))
+	assert.False(t, Tenant.IsScopeOf(GPUNode))
 	assert.False(t, LimitTenancyOverride.IsScopeOf(Tenant))
 }
 
@@ -106,7 +106,7 @@ func TestCategory_Definition(t *testing.T) {
 	assert.Equal(t, ConsolePropertyDefinition, ConsolePropertyRegionalOverride.Definition())
 	assert.Equal(t, PropertyDefinition, PropertyTenancyOverride.Definition())
 	assert.Equal(t, PropertyDefinition, PropertyRegionalOverride.Definition())
-	assert.Equal(t, GpuPool, GpuNode.Definition())
+	assert.Equal(t, GPUPool, GPUNode.Definition())
 
 	// non-override category should return Category(-1)
 	assert.Equal(t, Category(-1), Tenant.Definition())
@@ -139,11 +139,11 @@ func TestAliases(t *testing.T) {
 	assert.IsIncreasing(t, aliases, "Aliases should be sorted")
 }
 
-func TestParseCategory_GpuNodeShortAlias(t *testing.T) {
+func TestParseCategory_GPUNodeShortAlias(t *testing.T) {
 	t.Parallel()
 	cat, err := ParseCategory("gn")
 	require.NoError(t, err)
-	assert.Equal(t, GpuNode, cat)
+	assert.Equal(t, GPUNode, cat)
 }
 
 func TestAliases_ContainsAllCatLookupKeys(t *testing.T) {
@@ -172,7 +172,7 @@ func TestCategory_NeedsKubeConfig(t *testing.T) {
 	}{
 		{BaseModel, true},
 		{ImportedModel, true},
-		{GpuNode, true},
+		{GPUNode, true},
 		{DedicatedAICluster, true},
 		{Tenant, false},
 	}

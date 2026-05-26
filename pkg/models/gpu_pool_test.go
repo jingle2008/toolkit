@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGpuPool_Getters(t *testing.T) {
+func TestGPUPool_Getters(t *testing.T) {
 	t.Parallel()
-	pool := GpuPool{
+	pool := GPUPool{
 		Name:         "pool1",
 		Shape:        "NVIDIA.A100.8",
 		CapacityType: "dedicated",
@@ -18,7 +18,7 @@ func TestGpuPool_Getters(t *testing.T) {
 	assert.ElementsMatch(t, []string{"pool1", "NVIDIA.A100.8", "dedicated"}, pool.GetFilterableFields())
 	assert.Equal(t, 8, pool.GetGPUs())
 
-	pool2 := GpuPool{
+	pool2 := GPUPool{
 		Name:         "pool2",
 		Shape:        "NVIDIA.A100.8",
 		CapacityType: "dedicated",

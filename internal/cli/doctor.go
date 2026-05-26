@@ -123,7 +123,7 @@ func collectChecks(cfgFile string, cfg config.Config, unmarshalErr error) []chec
 		checkPath("repo_path", cfg.RepoPath, true, "set --repo_path or `repo_path:` in config.yaml"),
 		// kubeconfig is `required=true` to match config.Validate(): the
 		// TUI insists on it and the cluster-derived categories (BaseModel,
-		// GpuNode, DAC) refuse to load without it. If you only ever use
+		// GPUNode, DAC) refuse to load without it. If you only ever use
 		// repo-derived categories from `toolkit get` and want a SKIP
 		// instead of a FAIL, that's a future cfg.ValidateFor(category)
 		// feature — until then doctor must not contradict Validate.

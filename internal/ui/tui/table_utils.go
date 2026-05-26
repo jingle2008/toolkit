@@ -23,8 +23,8 @@ type header struct {
 type tableStats map[string]int
 
 var statsColumns = map[domain.Category][]string{
-	domain.GpuPool:            {common.SizeCol, "GPUs"},
-	domain.GpuNode:            {"Total", common.FreeCol},
+	domain.GPUPool:            {common.SizeCol, "GPUs"},
+	domain.GPUNode:            {"Total", common.FreeCol},
 	domain.DedicatedAICluster: {common.SizeCol},
 }
 
@@ -166,12 +166,12 @@ func getItemKey(category domain.Category, row table.Row) models.ItemKey {
 	}
 	switch category {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
-		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GpuPool,
+		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GPUPool,
 		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
 		domain.PropertyRegionalOverride, domain.Alias, domain.BaseModel:
 		return row[0]
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
-		domain.PropertyTenancyOverride, domain.GpuNode, domain.DedicatedAICluster,
+		domain.PropertyTenancyOverride, domain.GPUNode, domain.DedicatedAICluster,
 		domain.ImportedModel, domain.ModelArtifact:
 		// ModelArtifact row[1] is "Model Internal Name" which equals
 		// the ModelArtifactMap's parent BaseModel key — see
@@ -208,8 +208,8 @@ func deleteItem(dataset *models.Dataset, category domain.Category, key models.It
 	switch category {
 	case domain.DedicatedAICluster:
 		deleteItemInMap(dataset.DedicatedAIClusterMap, key)
-	case domain.GpuNode:
-		deleteItemInMap(dataset.GpuNodeMap, key)
+	case domain.GPUNode:
+		deleteItemInMap(dataset.GPUNodeMap, key)
 	default:
 		// exhaustive
 	}

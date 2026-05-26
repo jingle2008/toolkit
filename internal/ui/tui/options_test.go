@@ -41,9 +41,9 @@ func TestWithEnvironment(t *testing.T) {
 func TestWithCategory(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	opt := WithCategory(domain.GpuPool)
+	opt := WithCategory(domain.GPUPool)
 	opt(m)
-	assert.Equal(t, domain.GpuPool, m.category)
+	assert.Equal(t, domain.GPUPool, m.category)
 }
 
 func TestWithTable(t *testing.T) {

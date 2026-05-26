@@ -15,7 +15,7 @@ import (
 // "stuck in loading forever" bug on `toolkit -c <lazy-category>`.
 //
 // Init() on a lazy-loaded category (ImportedModel, BaseModel,
-// GpuPool, GpuNode, DAC) issues TWO beginTask calls:
+// GPUPool, GPUNode, DAC) issues TWO beginTask calls:
 //
 //  1. loadData() bumps gen to 1 and begins the dataset load.
 //  2. updateCategory() bumps gen to 2 and begins the lazy load.

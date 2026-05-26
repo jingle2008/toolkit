@@ -117,14 +117,14 @@ func TestRenderTable_Flat(t *testing.T) {
 }
 
 // TestRenderTable_Grouped drives RenderTable for a grouped category.
-// Pins registry[GpuNode] → newGroupedEntry's render closure →
+// Pins registry[GPUNode] → newGroupedEntry's render closure →
 // renderGrouped, including the sorted-key iteration.
 func TestRenderTable_Grouped(t *testing.T) {
 	t.Parallel()
-	items := map[string][]models.GpuNode{
+	items := map[string][]models.GPUNode{
 		"pool-a": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, Age: "1d"}},
 	}
-	headers, rows, err := RenderTable(domain.GpuNode, items, nil)
+	headers, rows, err := RenderTable(domain.GPUNode, items, nil)
 	if err != nil {
 		t.Fatalf("RenderTable: %v", err)
 	}

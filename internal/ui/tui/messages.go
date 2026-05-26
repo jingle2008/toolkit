@@ -108,12 +108,12 @@ type importedModelsLoadedMsg struct {
 }
 
 type gpuPoolsLoadedMsg struct {
-	Items []models.GpuPool
+	Items []models.GPUPool
 	Gen   int
 }
 
 type gpuNodesLoadedMsg struct {
-	Items map[string][]models.GpuNode
+	Items map[string][]models.GPUNode
 	Gen   int
 }
 

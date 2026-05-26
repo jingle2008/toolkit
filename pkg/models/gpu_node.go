@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// GpuNode represents a GPU node.
-type GpuNode struct {
+// GPUNode represents a GPU node.
+type GPUNode struct {
 	Name                 string   `json:"name"`
 	InstanceType         string   `json:"instanceType"`
 	NodePool             string   `json:"poolName"`
@@ -22,22 +22,22 @@ type GpuNode struct {
 }
 
 // GetName returns the name of the GPU node.
-func (n GpuNode) GetName() string {
+func (n GPUNode) GetName() string {
 	return n.Name
 }
 
 // GetFilterableFields returns filterable fields for the GPU node.
-func (n GpuNode) GetFilterableFields() []string {
+func (n GPUNode) GetFilterableFields() []string {
 	return []string{n.Name, n.InstanceType, n.NodePool, n.GetStatus()}
 }
 
 // SetStatus sets the status of the GPU node.
-func (n *GpuNode) SetStatus(status string) {
+func (n *GPUNode) SetStatus(status string) {
 	n.status = status
 }
 
 // GetStatus returns the status of the GPU node.
-func (n GpuNode) GetStatus() string {
+func (n GPUNode) GetStatus() string {
 	if n.status != "" {
 		return n.status
 	}
@@ -60,11 +60,11 @@ func (n GpuNode) GetStatus() string {
 /*
 IsHealthy returns true if the GPU node has no issues.
 */
-func (n GpuNode) IsHealthy() bool {
+func (n GPUNode) IsHealthy() bool {
 	return len(n.Issues) == 0
 }
 
 // IsFaulty returns true if the node is cordoned, missing GPUs, unhealthy, or not ready.
-func (n GpuNode) IsFaulty() bool {
+func (n GPUNode) IsFaulty() bool {
 	return n.GetStatus() != "OK"
 }

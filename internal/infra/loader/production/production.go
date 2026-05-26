@@ -70,18 +70,18 @@ func (Loader) LoadImportedModels(ctx context.Context, kubeCfg string, env models
 	return k8s.LoadImportedModels(ctx, client)
 }
 
-// LoadGpuPools loads GPU pools from the given repo and environment.
-func (Loader) LoadGpuPools(ctx context.Context, repo string, env models.Environment) ([]models.GpuPool, error) {
-	return terraform.LoadGpuPools(ctx, repo, env)
+// LoadGPUPools loads GPU pools from the given repo and environment.
+func (Loader) LoadGPUPools(ctx context.Context, repo string, env models.Environment) ([]models.GPUPool, error) {
+	return terraform.LoadGPUPools(ctx, repo, env)
 }
 
-// LoadGpuNodes loads GPU nodes from the given kube config and environment.
-func (Loader) LoadGpuNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GpuNode, error) {
+// LoadGPUNodes loads GPU nodes from the given kube config and environment.
+func (Loader) LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error) {
 	client, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.GetKubeContext())
 	if err != nil {
 		return nil, err
 	}
-	return k8s.LoadGpuNodes(ctx, client)
+	return k8s.LoadGPUNodes(ctx, client)
 }
 
 // LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.

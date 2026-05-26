@@ -87,7 +87,7 @@ func TestWarningsFromPartial(t *testing.T) {
 	assert.Nil(t, warningsFromPartial(errors.New("plain error")))
 
 	p := &terraform.PartialLoadError{
-		Source: "GpuPools",
+		Source: "GPUPools",
 		Errs: []error{
 			errors.New("source-a: nope"),
 			errors.New("source-b: also nope"),

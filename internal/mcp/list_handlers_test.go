@@ -53,20 +53,20 @@ func TestList_ServiceTenancies(t *testing.T) {
 	callList(t, "list_service_tenancies", nil)
 }
 
-func TestList_GpuNodes(t *testing.T) {
+func TestList_GPUNodes(t *testing.T) {
 	t.Parallel()
 	callList(t, "list_gpu_nodes", nil)
 }
 
-// fakeGpuNodeLoader returns scripted data from LoadGpuNodes while
+// fakeGPUNodeLoader returns scripted data from LoadGPUNodes while
 // delegating every other Loader method to the empty stubLoader. Used
 // to exercise the typed wrapper path with real items.
-type fakeGpuNodeLoader struct {
+type fakeGPUNodeLoader struct {
 	stubLoader
-	nodes map[string][]models.GpuNode
+	nodes map[string][]models.GPUNode
 }
 
-func (f *fakeGpuNodeLoader) LoadGpuNodes(context.Context, string, models.Environment) (map[string][]models.GpuNode, error) {
+func (f *fakeGPUNodeLoader) LoadGPUNodes(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
 	return f.nodes, nil
 }
 
@@ -106,7 +106,7 @@ func assertGroupedItem(
 }
 
 // assertGroupedFlatShape is for tools whose group key is already a
-// value field on the model (poolName on GpuNode, tenantId on DAC,
+// value field on the model (poolName on GPUNode, tenantId on DAC,
 // model_name on ModelArtifact — none use a wrapper). The closure
 // does its own assertions including checking the redundant key is
 // absent.
@@ -120,16 +120,16 @@ func assertGroupedFlatShape(
 	assertGroupedItem(t, toolName, ld, check)
 }
 
-// TestList_GpuNodes_FlatShape pins the wire shape: each item is a
-// GpuNode object with the originating pool already on it as
+// TestList_GPUNodes_FlatShape pins the wire shape: each item is a
+// GPUNode object with the originating pool already on it as
 // `poolName`. No wrapper, no separate `pool` field — the loader
 // always sets node.NodePool to the same value as the map key, so
 // injection would just duplicate. Regression bait against
 // accidentally re-wrapping in the future.
-func TestList_GpuNodes_FlatShape(t *testing.T) {
+func TestList_GPUNodes_FlatShape(t *testing.T) {
 	t.Parallel()
-	loader := &fakeGpuNodeLoader{
-		nodes: map[string][]models.GpuNode{
+	loader := &fakeGPUNodeLoader{
+		nodes: map[string][]models.GPUNode{
 			"pool-a": {{Name: "node-1", NodePool: "pool-a", IsReady: true}},
 		},
 	}
@@ -144,7 +144,7 @@ func TestList_GpuNodes_FlatShape(t *testing.T) {
 }
 
 // fakeDACLoader returns scripted DACs from LoadDedicatedAIClusters; every
-// other method delegates to stubLoader. Mirrors fakeGpuNodeLoader.
+// other method delegates to stubLoader. Mirrors fakeGPUNodeLoader.
 type fakeDACLoader struct {
 	stubLoader
 	dacs map[string][]models.DedicatedAICluster
@@ -210,14 +210,14 @@ func TestList_ModelArtifacts_FlatShape(t *testing.T) {
 		})
 }
 
-// TestList_GpuNodes_LimitCapsAcrossGroups pins the limit semantic
+// TestList_GPUNodes_LimitCapsAcrossGroups pins the limit semantic
 // for MCP grouped tools: cap is across the whole flattened result,
 // not per group. Filter happens before limit (the only ordering
 // that makes sense — see CHANGELOG).
-func TestList_GpuNodes_LimitCapsAcrossGroups(t *testing.T) {
+func TestList_GPUNodes_LimitCapsAcrossGroups(t *testing.T) {
 	t.Parallel()
-	loader := &fakeGpuNodeLoader{
-		nodes: map[string][]models.GpuNode{
+	loader := &fakeGPUNodeLoader{
+		nodes: map[string][]models.GPUNode{
 			"pool-a": {{Name: "a1", NodePool: "pool-a"}, {Name: "a2", NodePool: "pool-a"}},
 			"pool-b": {{Name: "b1", NodePool: "pool-b"}, {Name: "b2", NodePool: "pool-b"}},
 		},
@@ -248,15 +248,15 @@ func TestList_GpuNodes_LimitCapsAcrossGroups(t *testing.T) {
 	assert.Equal(t, "b1", env.Items[2]["name"], "limit should spill into next group's items, not skip the group")
 }
 
-// TestList_GpuNodes_Limit_ZeroAndOverflow pins the same kubectl-style
+// TestList_GPUNodes_Limit_ZeroAndOverflow pins the same kubectl-style
 // no-cap semantics the CLI side asserts in TestWriteSlice_Limit:
 // limit=0 is unlimited; limit > len is a no-op. Doing this against a
 // real CallTool ensures the contract holds at the MCP wire layer
 // even if TruncateSlice is later reimplemented per-handler.
-func TestList_GpuNodes_Limit_ZeroAndOverflow(t *testing.T) {
+func TestList_GPUNodes_Limit_ZeroAndOverflow(t *testing.T) {
 	t.Parallel()
-	loader := &fakeGpuNodeLoader{
-		nodes: map[string][]models.GpuNode{
+	loader := &fakeGPUNodeLoader{
+		nodes: map[string][]models.GPUNode{
 			"pool-a": {{Name: "a1", NodePool: "pool-a"}, {Name: "a2", NodePool: "pool-a"}},
 			"pool-b": {{Name: "b1", NodePool: "pool-b"}, {Name: "b2", NodePool: "pool-b"}},
 		},

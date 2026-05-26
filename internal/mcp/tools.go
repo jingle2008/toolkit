@@ -20,7 +20,7 @@ import (
 // flattenGrouped concatenates a grouped map[string][]T into a flat
 // []T with deterministic key ordering; applies filter + limit. Used
 // by every grouped list_* tool: each model already carries its group
-// key as a top-level field (GpuNode.NodePool → poolName,
+// key as a top-level field (GPUNode.NodePool → poolName,
 // DedicatedAICluster.TenantID → tenantId, ModelArtifact.ModelName →
 // model_name), so wrapping with an injected key would just duplicate.
 //
@@ -61,13 +61,13 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_pools",
-		Description: "List GPU pools (self-managed instance pools, self-managed cluster networks, and OKE-managed nodepools). Returns GpuPool objects with live `actualSize` and `status` enriched from OCI's ListInstancePools (matches the TUI). Warnings field is populated when one or more pool sources fail to resolve or enrichment is incomplete. Supports `limit` (max items after filter; 0 = unlimited).",
-	}, s.handleListGpuPools)
+		Description: "List GPU pools (self-managed instance pools, self-managed cluster networks, and OKE-managed nodepools). Returns GPUPool objects with live `actualSize` and `status` enriched from OCI's ListInstancePools (matches the TUI). Warnings field is populated when one or more pool sources fail to resolve or enrichment is incomplete. Supports `limit` (max items after filter; 0 = unlimited).",
+	}, s.handleListGPUPools)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_nodes",
 		Description: "List GPU nodes across all pools as a flat array. The originating pool is preserved on each item as `poolName`. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
-	}, s.handleListGpuNodes)
+	}, s.handleListGPUNodes)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_dacs",
@@ -163,12 +163,12 @@ func (s *Server) handleListImportedModels(ctx context.Context, req *sdk.CallTool
 	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
-func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GpuPool], error) {
+func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUPool], error) {
 	env := s.envFor(in.envOverride)
-	items, err := s.loader.LoadGpuPools(ctx, s.cfg.RepoPath, env)
+	items, err := s.loader.LoadGPUPools(ctx, s.cfg.RepoPath, env)
 	warnings := warningsFromPartial(err)
 	if err != nil && len(warnings) == 0 {
-		return failTool[listResult[models.GpuPool]](ctx, req, "load gpu pools", err)
+		return failTool[listResult[models.GPUPool]](ctx, req, "load gpu pools", err)
 	}
 	if len(warnings) > 0 {
 		notify(ctx, req.Session, "warning",
@@ -178,19 +178,19 @@ func (s *Server) handleListGpuPools(ctx context.Context, req *sdk.CallToolReques
 	// Enrich ActualSize / Status from OCI's ListInstancePools (same
 	// step the TUI runs after load). Degrades to a warning if the K8s
 	// or OCI call fails so callers still get Terraform-derived data.
-	if msg := resolve.EnrichGpuPools(ctx, items, s.cfg.KubeConfig, env); msg != "" {
+	if msg := resolve.EnrichGPUPools(ctx, items, s.cfg.KubeConfig, env); msg != "" {
 		warnings = append(warnings, "enrichment incomplete: "+msg)
 		notify(ctx, req.Session, "warning", "gpu pool enrichment incomplete: "+msg)
 	}
 	return listFlatResult(items, in.Filter, in.Limit, warnings)
 }
 
-func (s *Server) handleListGpuNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GpuNode], error) {
-	grouped, err := s.loader.LoadGpuNodes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUNode], error) {
+	grouped, err := s.loader.LoadGPUNodes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.GpuNode]](ctx, req, "load gpu nodes", err)
+		return failTool[listResult[models.GPUNode]](ctx, req, "load gpu nodes", err)
 	}
-	// No wrapper: GpuNode.NodePool (JSON `poolName`) already carries
+	// No wrapper: GPUNode.NodePool (JSON `poolName`) already carries
 	// the group key. Wrapping would duplicate.
 	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }

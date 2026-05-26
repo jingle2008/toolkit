@@ -58,8 +58,8 @@ func Test_getModelArtifacts_returns_rows(t *testing.T) {
 					ModelName:       "M1",
 					Name:            "artifactA",
 					TensorRTVersion: "8.0",
-					GpuCount:        2,
-					GpuShape:        "A100",
+					GPUCount:        2,
+					GPUShape:        "A100",
 				},
 			},
 		},
@@ -172,8 +172,8 @@ func TestGetItemKeyAndString(t *testing.T) {
 		{domain.ModelArtifact, table.Row{"artifact", "bm1", "gpu", "trt"}, "bm1/artifact"},
 		{domain.Environment, table.Row{"env"}, "env"},
 		{domain.ServiceTenancy, table.Row{"svc"}, "svc"},
-		{domain.GpuPool, table.Row{"pool"}, "pool"},
-		{domain.GpuNode, table.Row{"node", "pool"}, "pool/node"},
+		{domain.GPUPool, table.Row{"pool"}, "pool"},
+		{domain.GPUNode, table.Row{"node", "pool"}, "pool/node"},
 		{domain.DedicatedAICluster, table.Row{"dac", "tenant1"}, "tenant1/dac"},
 	}
 	for _, tt := range tests {
@@ -190,7 +190,7 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 		domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
 		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride,
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride, domain.BaseModel, domain.ModelArtifact,
-		domain.Environment, domain.ServiceTenancy, domain.GpuPool, domain.GpuNode, domain.DedicatedAICluster,
+		domain.Environment, domain.ServiceTenancy, domain.GPUPool, domain.GPUNode, domain.DedicatedAICluster,
 	}
 	ds := &models.Dataset{}
 	for _, cat := range categories {
@@ -208,8 +208,8 @@ func buildFullTestDataset() *models.Dataset {
 	return &models.Dataset{
 		Tenants:          []models.Tenant{{Name: "tenant1"}},
 		Environments:     []models.Environment{{Type: "type1", Region: "region1", Realm: "realm1"}},
-		GpuPools:         []models.GpuPool{{Name: "pool1"}},
-		GpuNodeMap:       map[string][]models.GpuNode{"pool1": {{NodePool: "pool1", Name: "node1"}}},
+		GPUPools:         []models.GPUPool{{Name: "pool1"}},
+		GPUNodeMap:       map[string][]models.GPUNode{"pool1": {{NodePool: "pool1", Name: "node1"}}},
 		ServiceTenancies: []models.ServiceTenancy{{Name: "svc1"}},
 		BaseModels:       []models.BaseModel{{InternalName: "v1", Name: "bm1", Version: "v1", Type: "typeA"}},
 		ModelArtifactMap: map[string][]models.ModelArtifact{
@@ -320,8 +320,8 @@ func TestFindItem_AllCategories(t *testing.T) {
 		{domain.ModelArtifact, models.ScopedItemKey{Scope: "bm1", Name: "artifact1"}, &ds.ModelArtifactMap["bm1"][0]},
 		{domain.Environment, "type1-UNKNOWN", &ds.Environments[0]},
 		{domain.ServiceTenancy, "svc1", &ds.ServiceTenancies[0]},
-		{domain.GpuPool, "pool1", &ds.GpuPools[0]},
-		{domain.GpuNode, models.ScopedItemKey{Scope: "pool1", Name: "node1"}, &ds.GpuNodeMap["pool1"][0]},
+		{domain.GPUPool, "pool1", &ds.GPUPools[0]},
+		{domain.GPUNode, models.ScopedItemKey{Scope: "pool1", Name: "node1"}, &ds.GPUNodeMap["pool1"][0]},
 		{domain.DedicatedAICluster, models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}, &ds.DedicatedAIClusterMap["tenant1"][0]},
 		// Alias rows index category names, not addressable entities;
 		// rowSources[Alias].find is nil so findItem returns nil for
@@ -419,15 +419,15 @@ func TestGetTableRows_AliasCategory(t *testing.T) {
 	rows, _ := getTableRows(dataset, domain.Alias, nil, "", "", true, false)
 	assert.Equal(t, len(domain.Categories), len(rows), "should return one row per category")
 
-	// Find GpuNode row
+	// Find GPUNode row
 	found := false
 	for _, row := range rows {
-		if len(row) > 0 && row[0] == "GpuNode" {
+		if len(row) > 0 && row[0] == "GPUNode" {
 			found = true
 			break
 		}
 	}
-	assert.True(t, found, "GpuNode row should be present")
+	assert.True(t, found, "GPUNode row should be present")
 
 	// Filtering
 	filtered, _ := getTableRows(dataset, domain.Alias, nil, "tenant", "", true, false)
@@ -455,7 +455,7 @@ func TestDeleteItem_WrongCategory_NoMutation(t *testing.T) {
 		},
 	}
 	key := models.ScopedItemKey{Scope: "tenant1", Name: "dac1"}
-	deleteItem(ds, domain.GpuPool, key) // Not DedicatedAICluster
+	deleteItem(ds, domain.GPUPool, key) // Not DedicatedAICluster
 	require.Len(t, ds.DedicatedAIClusterMap["tenant1"], 1)
 	assert.Equal(t, "dac1", ds.DedicatedAIClusterMap["tenant1"][0].Name)
 }

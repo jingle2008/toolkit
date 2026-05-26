@@ -6,9 +6,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-func TestGpuPoolColumns(t *testing.T) {
+func TestGPUPoolColumns(t *testing.T) {
 	t.Parallel()
-	p := models.GpuPool{
+	p := models.GPUPool{
 		Name:               "pool-1",
 		Shape:              "BM.GPU.A10.4",
 		AvailabilityDomain: "AD-1",
@@ -20,7 +20,7 @@ func TestGpuPoolColumns(t *testing.T) {
 	}
 
 	got := map[string]string{}
-	for _, c := range GpuPoolColumns.Columns {
+	for _, c := range GPUPoolColumns.Columns {
 		got[c.Key] = c.Render(p)
 	}
 
@@ -43,7 +43,7 @@ func TestGpuPoolColumns(t *testing.T) {
 	}
 
 	// Verify ratio sum is ~1.0.
-	sum := GpuPoolColumns.RatioSum()
+	sum := GPUPoolColumns.RatioSum()
 	if sum < 0.98 || sum > 1.02 {
 		t.Errorf("ratio sum %.3f outside ±0.02 of 1.0", sum)
 	}

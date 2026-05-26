@@ -37,29 +37,29 @@ func loadImportedModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string
 	}
 }
 
-func loadGpuPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadGPUPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
-		items, err := ld.LoadGpuPools(ctx, repoPath, env)
+		items, err := ld.LoadGPUPools(ctx, repoPath, env)
 		if err != nil {
 			// Partial-success is non-fatal in the TUI: items still has
 			// the rows we could load, and the per-source error has
 			// already been logged inside the terraform package.
 			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
 				logging.FromContext(ctx).Errorw("loaded GPU pools with partial failures",
-					"category", domain.GpuPool, "error", partial)
+					"category", domain.GPUPool, "error", partial)
 				return gpuPoolsLoadedMsg{Items: items, Gen: gen}
 			}
-			return errMsg(fmt.Errorf("failed to load %s: %w", domain.GpuPool, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.GPUPool, err))
 		}
 		return gpuPoolsLoadedMsg{Items: items, Gen: gen}
 	}
 }
 
-func loadGpuNodesCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func loadGPUNodesCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
-		items, err := ld.LoadGpuNodes(ctx, kubeCfg, env)
+		items, err := ld.LoadGPUNodes(ctx, kubeCfg, env)
 		if err != nil {
-			return errMsg(fmt.Errorf("failed to load %s: %w", domain.GpuNode, err))
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.GPUNode, err))
 		}
 		return gpuNodesLoadedMsg{Items: items, Gen: gen}
 	}

@@ -16,8 +16,8 @@ import (
 func TestToggleFaultyList(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.category = domain.GpuNode
-	m.dataset.GpuNodeMap = map[string][]models.GpuNode{
+	m.category = domain.GPUNode
+	m.dataset.GPUNodeMap = map[string][]models.GPUNode{
 		"pool": {{Name: "node1", InstanceType: "gpu.1"}},
 	}
 	m.updateColumns()
@@ -36,9 +36,9 @@ func TestToggleFaultyList(t *testing.T) {
 func TestHandleItemActions_Refresh(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.category = domain.GpuPool
+	m.category = domain.GPUPool
 	m.keys = keys.ResolveKeys(m.category, common.ListView)
-	m.dataset.GpuPools = []models.GpuPool{{Name: "pool1"}}
+	m.dataset.GPUPools = []models.GPUPool{{Name: "pool1"}}
 	m.updateColumns()
 	m.updateRows(true)
 
@@ -48,13 +48,13 @@ func TestHandleItemActions_Refresh(t *testing.T) {
 	}
 }
 
-func TestScaleUpGpuPool_InvalidItem(t *testing.T) {
+func TestScaleUpGPUPool_InvalidItem(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	if cmd := m.scaleUpGpuPool(nil); cmd != nil {
+	if cmd := m.scaleUpGPUPool(nil); cmd != nil {
 		t.Fatal("expected nil cmd for nil pool")
 	}
-	if cmd := m.scaleUpGpuPool("not-a-pool"); cmd != nil {
+	if cmd := m.scaleUpGPUPool("not-a-pool"); cmd != nil {
 		t.Fatal("expected nil cmd for invalid pool type")
 	}
 }
@@ -96,8 +96,8 @@ func TestDeleteItemActions(t *testing.T) {
 		t.Fatalf("expected dedicated AI cluster status Deleting, got %q", dac.Status)
 	}
 
-	m.category = domain.GpuNode
-	m.dataset.GpuNodeMap = map[string][]models.GpuNode{
+	m.category = domain.GPUNode
+	m.dataset.GPUNodeMap = map[string][]models.GPUNode{
 		"pool": {{Name: "node1", InstanceType: "gpu.1"}},
 	}
 	m.updateColumns()
@@ -107,7 +107,7 @@ func TestDeleteItemActions(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected deleteItem to return cmd for gpu node")
 	}
-	node := findItem(m.dataset, m.category, key).(*models.GpuNode)
+	node := findItem(m.dataset, m.category, key).(*models.GPUNode)
 	if node.GetStatus() != "Deleting" {
 		t.Fatalf("expected gpu node status Deleting, got %q", node.GetStatus())
 	}
@@ -127,13 +127,13 @@ func TestRebootNode_InvalidItem(t *testing.T) {
 func TestHandleUpdateDoneMsg_ErrorUpdatesStatus(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.category = domain.GpuPool
-	m.dataset.GpuPools = []models.GpuPool{{Name: "pool1", Status: "RUNNING"}}
+	m.category = domain.GPUPool
+	m.dataset.GPUPools = []models.GPUPool{{Name: "pool1", Status: "RUNNING"}}
 	m.updateColumns()
 	m.updateRows(true)
 
-	m.handleUpdateDoneMsg(updateDoneMsg{err: errors.New("boom"), category: domain.GpuPool})
-	if got := m.dataset.GpuPools[0].Status; got != "UNKNOWN" {
+	m.handleUpdateDoneMsg(updateDoneMsg{err: errors.New("boom"), category: domain.GPUPool})
+	if got := m.dataset.GPUPools[0].Status; got != "UNKNOWN" {
 		t.Fatalf("expected gpu pool status UNKNOWN, got %q", got)
 	}
 }

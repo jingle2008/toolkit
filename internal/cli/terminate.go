@@ -48,7 +48,7 @@ already know the instance OCID.`,
 					Yes:                yes,
 					RequireExplicitYes: true,
 				}, func(ctx context.Context) error {
-					node, err := resolveGpuNode(ctx, cfg, env, name, ocid)
+					node, err := resolveGPUNode(ctx, cfg, env, name, ocid)
 					if err != nil {
 						return err
 					}

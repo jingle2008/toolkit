@@ -179,16 +179,16 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 		}
 	case domain.ModelArtifact:
 		return map[string][]models.ModelArtifact{
-			"cohere.command": {{Name: "artifact-v1", ModelName: "cohere.command", GpuCount: 8, GpuShape: "BM.GPU.H100.8", TensorRTVersion: "8.6.1"}},
+			"cohere.command": {{Name: "artifact-v1", ModelName: "cohere.command", GPUCount: 8, GPUShape: "BM.GPU.H100.8", TensorRTVersion: "8.6.1"}},
 		}
 	case domain.Environment:
 		return []models.Environment{{Type: "prod", Region: "us-ashburn-1", Realm: "oc1"}}
 	case domain.ServiceTenancy:
 		return []models.ServiceTenancy{{Name: "svc-prod", Realm: "oc1", Environment: "prod", HomeRegion: "us-ashburn-1", Regions: []string{"us-ashburn-1", "us-phoenix-1"}}}
-	case domain.GpuPool:
-		return []models.GpuPool{{Name: "pool-1", Shape: "BM.GPU.H100.8", Size: 4, ActualSize: 3, CapacityType: "OnDemand", Status: "ACTIVE", AvailabilityDomain: "AD-1", IsOkeManaged: true}}
-	case domain.GpuNode:
-		return map[string][]models.GpuNode{
+	case domain.GPUPool:
+		return []models.GPUPool{{Name: "pool-1", Shape: "BM.GPU.H100.8", Size: 4, ActualSize: 3, CapacityType: "OnDemand", Status: "ACTIVE", AvailabilityDomain: "AD-1", IsOkeManaged: true}}
+	case domain.GPUNode:
+		return map[string][]models.GPUNode{
 			"pool-A": {{Name: "node-1", NodePool: "pool-A", InstanceType: "BM.GPU.H100.8", Allocatable: 8, Allocated: 3, IsReady: true, Age: "1d"}},
 		}
 	case domain.DedicatedAICluster:

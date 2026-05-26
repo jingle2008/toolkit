@@ -33,7 +33,7 @@ var gpuPodSelectors = []string{
 	trainingLabelV2,
 }
 
-func getGpuAllocations(
+func getGPUAllocations(
 	ctx context.Context,
 	clientset kubernetes.Interface,
 	labelSelector string,
@@ -44,7 +44,7 @@ func getGpuAllocations(
 		FieldSelector: fieldSelector,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list pods for selector %q in getGpuAllocations: %w", labelSelector, err)
+		return nil, fmt.Errorf("failed to list pods for selector %q in getGPUAllocations: %w", labelSelector, err)
 	}
 
 	usageMap := make(map[string]int64)

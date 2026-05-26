@@ -50,8 +50,8 @@ func setFilter(filter string) tea.Cmd {
 var lazyLoadedCategories = map[domain.Category]struct{}{
 	domain.BaseModel:          {},
 	domain.ImportedModel:      {},
-	domain.GpuPool:            {},
-	domain.GpuNode:            {},
+	domain.GPUPool:            {},
+	domain.GPUNode:            {},
 	domain.DedicatedAICluster: {},
 }
 

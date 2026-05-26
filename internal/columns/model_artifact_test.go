@@ -11,8 +11,8 @@ func TestModelArtifactColumns(t *testing.T) {
 	a := models.ModelArtifact{
 		Name:            "artifact-v1",
 		ModelName:       "llama3",
-		GpuCount:        8,
-		GpuShape:        "BM.GPU.H100.8",
+		GPUCount:        8,
+		GPUShape:        "BM.GPU.H100.8",
 		TensorRTVersion: "8.6.1",
 	}
 
@@ -29,7 +29,7 @@ func TestModelArtifactColumns(t *testing.T) {
 	want := map[string]string{
 		"name":                "artifact-v1",
 		"model-internal-name": "llama3",
-		"gpu-config":          a.GetGpuConfig(),
+		"gpu-config":          a.GetGPUConfig(),
 		"tensorrt":            "8.6.1",
 	}
 	for k, v := range want {
