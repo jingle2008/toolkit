@@ -212,10 +212,10 @@ func TestHelpTable(t *testing.T) {
 	}
 }
 
-// TestGroupedSet_SelectColumns covers the grouped variant of
-// SelectColumns including the unknown-key error path. Mirrors the
-// flat-Set equivalent that already had coverage.
-func TestGroupedSet_SelectColumns(t *testing.T) {
+// TestGroupedSet_Select covers the grouped variant of Select
+// including the unknown-key error path. Mirrors the flat-Set
+// equivalent that already had coverage.
+func TestGroupedSet_Select(t *testing.T) {
 	t.Parallel()
 	type item struct {
 		V string
@@ -224,20 +224,20 @@ func TestGroupedSet_SelectColumns(t *testing.T) {
 		{Title: "Key", Key: "key", Ratio: 0.5, Render: func(k string, _ item) string { return k }},
 		{Title: "Val", Key: "val", Ratio: 0.5, Render: func(_ string, i item) string { return i.V }},
 	}}
-	got, err := g.SelectColumns([]string{"val"})
+	got, err := g.Select([]string{"val"})
 	if err != nil {
-		t.Fatalf("SelectColumns: %v", err)
+		t.Fatalf("Select: %v", err)
 	}
 	if len(got) != 1 || got[0].Key != "val" {
-		t.Errorf("SelectColumns([val]): got %v", got)
+		t.Errorf("Select([val]): got %v", got)
 	}
-	// Unknown key surfaces via UnknownColumnError.Error.
-	_, err = g.SelectColumns([]string{"bogus"})
+	// Unknown key surfaces via UnknownKeyError.Error.
+	_, err = g.Select([]string{"bogus"})
 	if err == nil {
-		t.Fatal("SelectColumns([bogus]): want error")
+		t.Fatal("Select([bogus]): want error")
 	}
 	if err.Error() == "" {
-		t.Error("UnknownColumnError.Error: empty message")
+		t.Error("UnknownKeyError.Error: empty message")
 	}
 }
 

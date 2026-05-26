@@ -68,7 +68,7 @@ type GroupedSet[T any] struct {
 // selectByKey returns the subset of cols whose key (extracted via
 // keyOf) appears in wanted, preserving the order of wanted. Any
 // keys in wanted that aren't present in cols are bundled into a
-// single UnknownColumnError so the CLI can show one complete message.
+// single UnknownKeyError so the CLI can show one complete message.
 // validKeys is a thunk so the keys slice is only materialized on the
 // unknown-key error path; the success path skips the allocation.
 func selectByKey[T any](cols []T, keyOf func(T) string, wanted []string, validKeys func() []string) ([]T, error) {
@@ -86,7 +86,7 @@ func selectByKey[T any](cols []T, keyOf func(T) string, wanted []string, validKe
 		}
 	}
 	if len(unknown) > 0 {
-		return nil, &UnknownColumnError{Unknown: unknown, Valid: validKeys()}
+		return nil, &UnknownKeyError{Unknown: unknown, Valid: validKeys()}
 	}
 	return out, nil
 }
@@ -109,10 +109,10 @@ func sumField[T any](cols []T, extract func(T) float64) float64 {
 	return sum
 }
 
-// SelectColumns returns the columns of s whose Key is in keys,
-// in the order given by keys. Returns an error listing all unknown
-// keys (so the CLI can show a single complete message).
-func (s Set[T]) SelectColumns(keys []string) ([]Column[T], error) {
+// Select returns the columns of s whose Key is in keys, in the order
+// given by keys. Returns an error listing all unknown keys (so the
+// CLI can show a single complete message).
+func (s Set[T]) Select(keys []string) ([]Column[T], error) {
 	return selectByKey(s.Columns, func(c Column[T]) string { return c.Key }, keys, s.Keys)
 }
 
@@ -131,8 +131,8 @@ func (s Set[T]) RatioSum() float64 {
 	return sumField(s.Columns, func(c Column[T]) float64 { return c.Ratio })
 }
 
-// SelectColumns / Keys / Titles / RatioSum mirrors for GroupedSet.
-func (g GroupedSet[T]) SelectColumns(keys []string) ([]GroupedColumn[T], error) {
+// Select / Keys / Titles / RatioSum mirrors for GroupedSet.
+func (g GroupedSet[T]) Select(keys []string) ([]GroupedColumn[T], error) {
 	return selectByKey(g.Columns, func(c GroupedColumn[T]) string { return c.Key }, keys, g.Keys)
 }
 
@@ -151,14 +151,14 @@ func (g GroupedSet[T]) RatioSum() float64 {
 	return sumField(g.Columns, func(c GroupedColumn[T]) float64 { return c.Ratio })
 }
 
-// UnknownColumnError is returned by SelectColumns when one or more
-// requested keys are not present in the set.
-type UnknownColumnError struct {
+// UnknownKeyError is returned by Set.Select / GroupedSet.Select when
+// one or more requested keys are not present in the set.
+type UnknownKeyError struct {
 	Unknown []string
 	Valid   []string
 }
 
-func (e *UnknownColumnError) Error() string {
+func (e *UnknownKeyError) Error() string {
 	return "unknown column key(s): " + strings.Join(e.Unknown, ", ") +
 		" (valid keys: " + strings.Join(e.Valid, ", ") + ")"
 }

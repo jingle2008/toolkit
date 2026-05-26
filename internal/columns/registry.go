@@ -209,7 +209,7 @@ func pickFlat[T any](s Set[T], selected []string) ([]Column[T], error) {
 	if len(selected) == 0 {
 		return s.Columns, nil
 	}
-	return s.SelectColumns(selected)
+	return s.Select(selected)
 }
 
 // renderGrouped renders a grouped category for RenderTable.
@@ -247,7 +247,7 @@ func pickGrouped[T any](g GroupedSet[T], selected []string) ([]GroupedColumn[T],
 	if len(selected) == 0 {
 		return g.Columns, nil
 	}
-	return g.SelectColumns(selected)
+	return g.Select(selected)
 }
 
 // renderFlatExport mirrors renderFlat but uses Column.ExportRender
