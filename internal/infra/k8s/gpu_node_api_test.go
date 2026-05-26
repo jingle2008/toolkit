@@ -142,7 +142,7 @@ func TestLoadGPUNodes_HappyPath(t *testing.T) {
 		"instance-pool.name":     "pool4",
 	}, 8, false, nil)
 	client := fake.NewSimpleClientset(node)
-	result, err := LoadGPUNodes(ctx, client)
+	result, err := LoadGPUNodesByPool(ctx, client)
 	require.NoError(t, err)
 	assert.Contains(t, result, "pool4")
 	assert.Equal(t, "n4", result["pool4"][0].Name)
@@ -152,7 +152,7 @@ func TestLoadGPUNodes_Empty(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	client := fake.NewSimpleClientset()
-	result, err := LoadGPUNodes(ctx, client)
+	result, err := LoadGPUNodesByPool(ctx, client)
 	require.NoError(t, err)
 	assert.Empty(t, result)
 }

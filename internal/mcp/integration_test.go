@@ -43,7 +43,7 @@ func (stubLoader) LoadGPUPools(context.Context, string, models.Environment) ([]m
 	return nil, nil
 }
 
-func (stubLoader) LoadGPUNodes(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
+func (stubLoader) LoadGPUNodesByPool(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
 	return nil, nil //nolint:nilnil // empty-map test stub; integration tests never read this
 }
 

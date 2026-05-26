@@ -77,7 +77,7 @@ func TestLoader_AllMethods_NoPanicOnEmptyInput(t *testing.T) {
 	_, _ = ldr.LoadDataset(ctx, "", env)
 	_, _ = ldr.LoadBaseModels(ctx, "", env)
 	_, _ = ldr.LoadGPUPools(ctx, "", env)
-	// Skip LoadGPUNodes and LoadDedicatedAIClusters: require valid kubeconfig
+	// Skip LoadGPUNodesByPool and LoadDedicatedAIClusters: require valid kubeconfig
 	_, _ = ldr.LoadTenancyOverrideGroup(ctx, "", env)
 	_, _ = ldr.LoadLimitRegionalOverrides(ctx, "", env)
 	_, _ = ldr.LoadConsolePropertyRegionalOverrides(ctx, "", env)
@@ -132,9 +132,9 @@ func TestProductionLoader_LoadGPUPools(t *testing.T) {
 func TestProductionLoader_LoadGPUNodes(t *testing.T) {
 	t.Parallel()
 	loader := Client{}
-	_, err := loader.LoadGPUNodes(context.Background(), "dummy_kubeconfig", models.Environment{})
+	_, err := loader.LoadGPUNodesByPool(context.Background(), "dummy_kubeconfig", models.Environment{})
 	if err == nil {
-		t.Log("LoadGPUNodes: expected error or empty result with dummy input")
+		t.Log("LoadGPUNodesByPool: expected error or empty result with dummy input")
 	}
 }
 
@@ -195,9 +195,9 @@ func TestLoader_LoadGPUNodesAndDedicatedAIClusters_Error(t *testing.T) {
 	t.Parallel()
 	ldr := New(context.Background(), "")
 	env := models.Environment{}
-	_, err := ldr.LoadGPUNodes(context.Background(), "", env)
+	_, err := ldr.LoadGPUNodesByPool(context.Background(), "", env)
 	if err == nil {
-		t.Error("LoadGPUNodes: want error for empty kubeconfig, got nil")
+		t.Error("LoadGPUNodesByPool: want error for empty kubeconfig, got nil")
 	}
 	_, err = ldr.LoadDedicatedAIClusters(context.Background(), "", env)
 	if err == nil {

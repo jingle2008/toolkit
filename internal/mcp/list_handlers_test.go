@@ -58,7 +58,7 @@ func TestList_GPUNodes(t *testing.T) {
 	callList(t, "list_gpu_nodes", nil)
 }
 
-// fakeGPUNodeLoader returns scripted data from LoadGPUNodes while
+// fakeGPUNodeLoader returns scripted data from LoadGPUNodesByPool while
 // delegating every other Loader method to the empty stubLoader. Used
 // to exercise the typed wrapper path with real items.
 type fakeGPUNodeLoader struct {
@@ -66,7 +66,7 @@ type fakeGPUNodeLoader struct {
 	nodes map[string][]models.GPUNode
 }
 
-func (f *fakeGPUNodeLoader) LoadGPUNodes(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
+func (f *fakeGPUNodeLoader) LoadGPUNodesByPool(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
 	return f.nodes, nil
 }
 

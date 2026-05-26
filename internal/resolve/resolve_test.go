@@ -18,7 +18,7 @@ import (
 
 // stubLoader implements just enough of loader.Composite for GPUNode and
 // GPUPool tests; every method is either inert or driven by the public
-// fields. Keep narrow — the resolve package only calls LoadGPUNodes
+// fields. Keep narrow — the resolve package only calls LoadGPUNodesByPool
 // and LoadGPUPools.
 type stubLoader struct {
 	pools    []models.GPUPool
@@ -43,7 +43,7 @@ func (l stubLoader) LoadGPUPools(context.Context, string, models.Environment) ([
 	return l.pools, l.poolsErr
 }
 
-func (l stubLoader) LoadGPUNodes(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
+func (l stubLoader) LoadGPUNodesByPool(context.Context, string, models.Environment) (map[string][]models.GPUNode, error) {
 	return l.nodes, l.nodesErr
 }
 

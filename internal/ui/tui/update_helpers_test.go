@@ -45,7 +45,7 @@ func (dummyLoader) LoadGPUPools(_ context.Context, _ string, _ models.Environmen
 	return nil, errDummy
 }
 
-func (dummyLoader) LoadGPUNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GPUNode, error) {
+func (dummyLoader) LoadGPUNodesByPool(_ context.Context, _ string, _ models.Environment) (map[string][]models.GPUNode, error) {
 	return nil, errDummy
 }
 

@@ -137,10 +137,10 @@ func isNodeReady(conditions []corev1.NodeCondition) bool {
 }
 
 /*
-LoadGPUNodes returns a map of node pool names to slices of GPUNode.
+LoadGPUNodesByPool returns a map of node pool names to slices of GPUNode.
 It fetches all GPU nodes and groups them by their node pool label.
 */
-func LoadGPUNodes(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GPUNode, error) {
+func LoadGPUNodesByPool(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GPUNode, error) {
 	nodes, err := ListGPUNodes(ctx, clientset, 0)
 	if err != nil {
 		return nil, err

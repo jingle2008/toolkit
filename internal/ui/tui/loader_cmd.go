@@ -57,7 +57,7 @@ func loadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, 
 
 func loadGPUNodesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
-		items, err := ld.LoadGPUNodes(ctx, kubeCfg, env)
+		items, err := ld.LoadGPUNodesByPool(ctx, kubeCfg, env)
 		if err != nil {
 			return errMsg(fmt.Errorf("failed to load %s: %w", domain.GPUNode, err))
 		}

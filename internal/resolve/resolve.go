@@ -36,7 +36,7 @@ func GPUNode(ctx context.Context, ld loader.Composite, kubeConfig string, env mo
 	if ocid != "" {
 		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
-	grouped, err := ld.LoadGPUNodes(ctx, kubeConfig, env)
+	grouped, err := ld.LoadGPUNodesByPool(ctx, kubeConfig, env)
 	if err != nil {
 		return nil, fmt.Errorf("load gpu nodes: %w", err)
 	}

@@ -186,7 +186,7 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 }
 
 func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUNode], error) {
-	grouped, err := s.loader.LoadGPUNodes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	grouped, err := s.loader.LoadGPUNodesByPool(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[models.GPUNode]](ctx, req, "load gpu nodes", err)
 	}

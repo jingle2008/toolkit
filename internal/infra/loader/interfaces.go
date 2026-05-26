@@ -47,8 +47,8 @@ type GPUPoolLoader interface {
 GPUNodeLoader defines an interface for loading GPU nodes.
 */
 type GPUNodeLoader interface {
-	// LoadGPUNodes loads GPU nodes from the given kube config and environment.
-	LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error)
+	// LoadGPUNodesByPool loads GPU nodes from the given kube config and environment.
+	LoadGPUNodesByPool(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error)
 }
 
 /*

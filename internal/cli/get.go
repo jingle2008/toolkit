@@ -296,7 +296,7 @@ func emitCategory(
 		}
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GPUPool, env, selected)
 	case domain.GPUNode:
-		grouped, err := ld.LoadGPUNodes(ctx, cfg.KubeConfig, env)
+		grouped, err := ld.LoadGPUNodesByPool(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load gpu nodes: %w", err)
 		}

@@ -75,13 +75,13 @@ func (Client) LoadGPUPools(ctx context.Context, repo string, env models.Environm
 	return terraform.LoadGPUPools(ctx, repo, env)
 }
 
-// LoadGPUNodes loads GPU nodes from the given kube config and environment.
-func (Client) LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error) {
+// LoadGPUNodesByPool loads GPU nodes from the given kube config and environment.
+func (Client) LoadGPUNodesByPool(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error) {
 	client, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
-	return k8s.LoadGPUNodes(ctx, client)
+	return k8s.LoadGPUNodesByPool(ctx, client)
 }
 
 // LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.

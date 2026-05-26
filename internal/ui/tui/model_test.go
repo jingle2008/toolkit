@@ -41,7 +41,7 @@ func (f fakeLoader) LoadGPUPools(_ context.Context, _ string, _ models.Environme
 	return nil, nil
 }
 
-func (f fakeLoader) LoadGPUNodes(_ context.Context, _ string, _ models.Environment) (map[string][]models.GPUNode, error) {
+func (f fakeLoader) LoadGPUNodesByPool(_ context.Context, _ string, _ models.Environment) (map[string][]models.GPUNode, error) {
 	return map[string][]models.GPUNode{}, nil
 }
 
