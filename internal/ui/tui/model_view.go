@@ -113,8 +113,8 @@ func (m *Model) updateContentAsync() tea.Cmd {
 		return nil
 	}
 
-	m.detailNonce++
-	nonce := m.detailNonce
+	m.detailGen++
+	gen := m.detailGen
 	item := findItem(m.dataset, m.category, m.selectedKey)
 	width := m.detailRenderWidth()
 	renderer := m.renderer
@@ -125,12 +125,12 @@ func (m *Model) updateContentAsync() tea.Cmd {
 			content = err.Error()
 		}
 		str, err := renderer.RenderJSON(content, width)
-		return detailContentRenderedMsg{Content: str, Err: err, Nonce: nonce}
+		return detailContentRenderedMsg{Content: str, Err: err, Gen: gen}
 	}
 }
 
 func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) {
-	if msg.Nonce != m.detailNonce || m.viewMode != common.DetailsView {
+	if msg.Gen != m.detailGen || m.viewMode != common.DetailsView {
 		return
 	}
 	if msg.Err != nil {

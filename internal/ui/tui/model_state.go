@@ -53,9 +53,9 @@ type Model struct {
 	textInput      *textinput.Model
 	filter      string
 	initialFilter  string
-	filterNonce    int
-	rowsNonce      int
-	detailNonce    int
+	filterGen    int
+	rowsGen      int
+	detailGen    int
 	viewMode       common.ViewMode
 	lastViewMode   common.ViewMode // for toggling help view
 	selectedKey         models.ItemKey

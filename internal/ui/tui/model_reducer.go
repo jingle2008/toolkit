@@ -60,14 +60,14 @@ updateRows updates the table rows based on the current model state.
 Now also sets m.stats from computeTableRows.
 */
 func (m *Model) updateRows(autoSelect bool) {
-	m.rowsNonce++
+	m.rowsGen++
 	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.filter, m.sortColumn, m.sortAsc, m.showFaulty)
 	m.applyRows(rows, stats, autoSelect)
 }
 
 func (m *Model) updateRowsAsync() tea.Cmd {
-	m.rowsNonce++
-	nonce := m.rowsNonce
+	m.rowsGen++
+	gen := m.rowsGen
 	dataset := m.dataset
 	category := m.category
 	scope := m.scope
@@ -80,13 +80,13 @@ func (m *Model) updateRowsAsync() tea.Cmd {
 		return tableRowsComputedMsg{
 			Rows:  rows,
 			Stats: stats,
-			Nonce: nonce,
+			Gen: gen,
 		}
 	}
 }
 
 func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
-	if msg.Nonce != m.rowsNonce {
+	if msg.Gen != m.rowsGen {
 		return
 	}
 	m.applyRows(msg.Rows, msg.Stats, true)

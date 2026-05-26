@@ -43,14 +43,14 @@ func TestHandleFilterApplyMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.filter = "old"
-	m.filterNonce = 2
+	m.filterGen = 2
 
-	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Nonce: 1})
+	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Gen: 1})
 	if m.filter != "old" {
-		t.Fatalf("unexpected filter update on stale nonce: %q", m.filter)
+		t.Fatalf("unexpected filter update on stale gen: %q", m.filter)
 	}
 
-	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Nonce: 2})
+	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Gen: 2})
 	if m.filter != "new" {
 		t.Fatalf("expected filter to update, got %q", m.filter)
 	}

@@ -25,5 +25,5 @@ func TestDebounceFilter(t *testing.T) {
 	applyMsg, ok := msg.(filterApplyMsg)
 	assert.True(t, ok)
 	assert.Equal(t, "foo", applyMsg.Value)
-	assert.Greater(t, applyMsg.Nonce, 0)
+	assert.Greater(t, applyMsg.Gen, 0)
 }

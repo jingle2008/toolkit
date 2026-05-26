@@ -31,22 +31,22 @@ type filterMsg string
 // setFilterMsg is a message to set the filter text in the model.
 type setFilterMsg string
 
-// filterApplyMsg carries a debounced filter value and a nonce to drop stale updates.
+// filterApplyMsg carries a debounced filter value and a gen to drop stale updates.
 type filterApplyMsg struct {
 	Value string
-	Nonce int
+	Gen int
 }
 
 type tableRowsComputedMsg struct {
 	Rows  []table.Row
 	Stats tableStats
-	Nonce int
+	Gen int
 }
 
 type detailContentRenderedMsg struct {
 	Content string
 	Err     error
-	Nonce   int
+	Gen   int
 }
 
 type deleteDoneMsg struct {
