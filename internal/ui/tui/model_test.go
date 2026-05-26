@@ -449,7 +449,7 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	m.category = domain.BaseModel
 
 	// getCurrentItem should return the pointer to bm
-	got := m.getSelectedItem()
+	got := m.selectedItem()
 	require.Equal(t, &bm, got)
 }
 

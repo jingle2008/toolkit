@@ -19,7 +19,7 @@ func (t testFaulty) IsFaulty() bool { return t.faulty }
 
 func Test_getHeaders_returns_expected_headers(t *testing.T) {
 	t.Parallel()
-	headers := getHeaders(domain.Tenant)
+	headers := headersFor(domain.Tenant)
 	assert.NotNil(t, headers)
 	assert.Equal(t, "Name", headers[0].text)
 	assert.InEpsilon(t, 0.20, headers[0].ratio, 0.0001)
@@ -51,7 +51,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 
 func Test_getModelArtifacts_returns_rows(t *testing.T) {
 	t.Parallel()
-	rows, _ := getTableRows(&models.Dataset{
+	rows, _ := computeTableRows(&models.Dataset{
 		ModelArtifactMap: map[string][]models.ModelArtifact{
 			"M1": {
 				{
@@ -71,9 +71,9 @@ func Test_getModelArtifacts_returns_rows(t *testing.T) {
 func Test_getItemKey_and_getItemKeyString(t *testing.T) {
 	t.Parallel()
 	row := table.Row{"DAC1", "TenantX", "GPU", "A100", "4", "Active"}
-	key := getItemKey(domain.DedicatedAICluster, row)
+	key := itemKeyFrom(domain.DedicatedAICluster, row)
 	assert.Equal(t, models.ScopedItemKey{Scope: "TenantX", Name: "DAC1"}, key)
-	keyStr := getItemKeyString(key)
+	keyStr := itemKeyString(key)
 	assert.Equal(t, "TenantX/DAC1", keyStr)
 }
 
@@ -124,7 +124,7 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 		if cat == domain.Alias {
 			continue
 		}
-		rows, _ := getTableRows(ds, cat, nil, "", "", true, false)
+		rows, _ := computeTableRows(ds, cat, nil, "", "", true, false)
 		assert.Empty(t, rows, "category %v should have no rows for empty dataset", cat)
 	}
 }
@@ -143,7 +143,7 @@ func TestGetTableRows_DedicatedAIClusterStats(t *testing.T) {
 		},
 	}
 
-	rows, stats := getTableRows(dataset, domain.DedicatedAICluster, nil, "", "", true, false)
+	rows, stats := computeTableRows(dataset, domain.DedicatedAICluster, nil, "", "", true, false)
 	require.Len(t, rows, 5)
 	require.NotNil(t, stats)
 	assert.Equal(t, 11, stats[common.SizeCol])
@@ -177,15 +177,15 @@ func TestGetItemKeyAndString(t *testing.T) {
 		{domain.DedicatedAICluster, table.Row{"dac", "tenant1"}, "tenant1/dac"},
 	}
 	for _, tt := range tests {
-		key := getItemKey(tt.category, tt.row)
-		str := getItemKeyString(key)
+		key := itemKeyFrom(tt.category, tt.row)
+		str := itemKeyString(key)
 		require.Equal(t, tt.keyStr, str, "category %v", tt.category)
 	}
 }
 
 func TestGetHeadersAndTableRows(t *testing.T) {
 	t.Parallel()
-	// Cover all categories for getHeaders and getTableRows
+	// Cover all categories for headersFor and computeTableRows
 	categories := []domain.Category{
 		domain.Tenant, domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition,
 		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride,
@@ -194,8 +194,8 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 	}
 	ds := &models.Dataset{}
 	for _, cat := range categories {
-		headers := getHeaders(cat)
-		_, _ = getTableRows(ds, cat, nil, "", "", true, false)
+		headers := headersFor(cat)
+		_, _ = computeTableRows(ds, cat, nil, "", "", true, false)
 		// Extra assertions for coverage
 		if len(headers) > 0 {
 			require.NotEmpty(t, headers[0].text)
@@ -280,7 +280,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 	ds := buildFullTestDataset()
 	// Iterate from Tenant to Alias (skip CategoryUnknown)
 	for cat := domain.Tenant; cat <= domain.Alias; cat++ {
-		headers := getHeaders(cat)
+		headers := headersFor(cat)
 		if len(headers) > 0 {
 			sum := 0.0
 			for _, h := range headers {
@@ -290,8 +290,8 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 			}
 			require.InDelta(t, 1.0, sum, 0.1, "header ratios should sum to ~1")
 		}
-		// getTableRows should not panic
-		_, _ = getTableRows(ds, cat, nil, "", "", true, false)
+		// computeTableRows should not panic
+		_, _ = computeTableRows(ds, cat, nil, "", "", true, false)
 	}
 }
 
@@ -338,40 +338,40 @@ func TestFindItem_AllCategories(t *testing.T) {
 func TestGetItemKey_EmptyRow(t *testing.T) {
 	t.Parallel()
 	var empty table.Row
-	key := getItemKey(domain.Tenant, empty)
+	key := itemKeyFrom(domain.Tenant, empty)
 	require.Nil(t, key)
 }
 
 func TestGetItemKey_NilRow(t *testing.T) {
 	t.Parallel()
 	var nilRow table.Row
-	key := getItemKey(domain.Tenant, nilRow)
+	key := itemKeyFrom(domain.Tenant, nilRow)
 	require.Nil(t, key)
 }
 
 func TestGetHeaders_KnownCategory(t *testing.T) {
 	t.Parallel()
-	headers := getHeaders(domain.Tenant)
+	headers := headersFor(domain.Tenant)
 	assert.NotNil(t, headers)
 	assert.NotEmpty(t, headers)
 }
 
 func TestGetHeaders_UnknownCategory(t *testing.T) {
 	t.Parallel()
-	headers := getHeaders(domain.Category(9999))
+	headers := headersFor(domain.Category(9999))
 	assert.Nil(t, headers)
 }
 
 func TestGetItemKeyString_Simple(t *testing.T) {
 	t.Parallel()
-	key := getItemKeyString("foo")
+	key := itemKeyString("foo")
 	assert.Equal(t, "foo", key)
 }
 
 func TestGetItemKeyString_Scoped(t *testing.T) {
 	t.Parallel()
 	k := models.ScopedItemKey{Scope: "scope", Name: "name"}
-	key := getItemKeyString(k)
+	key := itemKeyString(k)
 	assert.Equal(t, "scope/name", key)
 }
 
@@ -388,14 +388,14 @@ func TestFilterRows(t *testing.T) {
 
 func TestGetTableRows_UnknownCategory(t *testing.T) {
 	t.Parallel()
-	rows, _ := getTableRows(&models.Dataset{}, domain.Category(9999), nil, "", "", true, false)
+	rows, _ := computeTableRows(&models.Dataset{}, domain.Category(9999), nil, "", "", true, false)
 	assert.Nil(t, rows)
 }
 
 func TestGetItemKey_AndFindItem(t *testing.T) {
 	t.Parallel()
 	row := table.Row{"foo"}
-	key := getItemKey(domain.Tenant, row)
+	key := itemKeyFrom(domain.Tenant, row)
 	assert.Equal(t, "foo", key)
 	ds := &models.Dataset{Tenants: []models.Tenant{{Name: "foo"}}}
 	item := findItem(ds, domain.Tenant, key)
@@ -416,7 +416,7 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 func TestGetTableRows_AliasCategory(t *testing.T) {
 	t.Parallel()
 	dataset := &models.Dataset{}
-	rows, _ := getTableRows(dataset, domain.Alias, nil, "", "", true, false)
+	rows, _ := computeTableRows(dataset, domain.Alias, nil, "", "", true, false)
 	assert.Equal(t, len(domain.Categories), len(rows), "should return one row per category")
 
 	// Find GPUNode row
@@ -430,7 +430,7 @@ func TestGetTableRows_AliasCategory(t *testing.T) {
 	assert.True(t, found, "GPUNode row should be present")
 
 	// Filtering
-	filtered, _ := getTableRows(dataset, domain.Alias, nil, "tenant", "", true, false)
+	filtered, _ := computeTableRows(dataset, domain.Alias, nil, "tenant", "", true, false)
 	assert.Len(t, filtered, 1, "filter 'tenant' should return exactly one row")
 	assert.Equal(t, "Tenant", filtered[0][0])
 }

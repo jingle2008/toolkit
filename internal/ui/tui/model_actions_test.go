@@ -181,7 +181,7 @@ func TestRegionalOverrideHandlers(t *testing.T) {
 func TestGetViewportBinding(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	bindings := m.getViewportBinding()
+	bindings := m.viewportBinding()
 	if len(bindings) != 6 {
 		t.Fatalf("expected 6 viewport bindings, got %d", len(bindings))
 	}

@@ -41,7 +41,7 @@ func TestSortBindings_MatchColumnTitles(t *testing.T) {
 			if len(sortable) == 0 {
 				return // not every category has sort bindings, that's fine
 			}
-			headers := getHeaders(cat)
+			headers := headersFor(cat)
 			titles := map[string]bool{}
 			for _, h := range headers {
 				titles[strings.ToLower(h.text)] = true
@@ -151,7 +151,7 @@ func TestApplyMiddleTruncation_DACNameAndTenant(t *testing.T) {
 	)
 	m.category = domain.DedicatedAICluster
 	m.keys = keys.ResolveKeys(m.category, common.ListView)
-	m.headers = getHeaders(m.category)
+	m.headers = headersFor(m.category)
 	// Set narrow widths so truncation must occur on Name and Tenant.
 	cols := make([]table.Column, len(m.headers))
 	for i, h := range m.headers {

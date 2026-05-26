@@ -102,7 +102,7 @@ func (m *Model) rebootNode(item any) tea.Cmd {
 	if node.GetStatus() == "Rebooting" {
 		return nil
 	}
-	itemKey := getItemKey(m.category, m.table.SelectedRow())
+	itemKey := itemKeyFrom(m.category, m.table.SelectedRow())
 	// optimistic UI
 	node.SetStatus("Rebooting")
 	m.updateRows(false)

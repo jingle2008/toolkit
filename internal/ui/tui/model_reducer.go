@@ -21,7 +21,7 @@ import (
 
 func refreshDataCmd() tea.Cmd { return func() tea.Msg { return dataMsg{} } }
 
-func (m *Model) getCompartmentID(ctx context.Context) (string, error) {
+func (m *Model) lookupCompartmentID(ctx context.Context) (string, error) {
 	if m.dataset != nil && m.dataset.GPUNodeMap != nil {
 		for _, v := range m.dataset.GPUNodeMap {
 			for _, n := range v {
@@ -48,7 +48,7 @@ func (m *Model) updateGPUPoolState() tea.Cmd {
 		defer cancel()
 		var err error
 		var compartmentID string
-		if compartmentID, err = m.getCompartmentID(ctx); err == nil {
+		if compartmentID, err = m.lookupCompartmentID(ctx); err == nil {
 			err = actions.PopulateGPUPools(ctx, m.dataset.GPUPools, m.environment, compartmentID)
 		}
 		return updateDoneMsg{err: err, category: domain.GPUPool}
@@ -57,11 +57,11 @@ func (m *Model) updateGPUPoolState() tea.Cmd {
 
 /*
 updateRows updates the table rows based on the current model state.
-Now also sets m.stats from getTableRows.
+Now also sets m.stats from computeTableRows.
 */
 func (m *Model) updateRows(autoSelect bool) {
 	m.rowsNonce++
-	rows, stats := getTableRows(m.dataset, m.category, m.scope, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
+	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
 	m.applyRows(rows, stats, autoSelect)
 }
 
@@ -76,7 +76,7 @@ func (m *Model) updateRowsAsync() tea.Cmd {
 	sortAsc := m.sortAsc
 	showFaulty := m.showFaulty
 	return func() tea.Msg {
-		rows, stats := getTableRows(dataset, category, scope, filter, sortColumn, sortAsc, showFaulty)
+		rows, stats := computeTableRows(dataset, category, scope, filter, sortColumn, sortAsc, showFaulty)
 		return tableRowsComputedMsg{
 			Rows:  rows,
 			Stats: stats,
@@ -197,7 +197,7 @@ func truncateMiddle(s string, w int) string {
 
 // updateColumns updates the table columns based on the current category.
 func (m *Model) updateColumns() {
-	m.headers = getHeaders(m.category)
+	m.headers = headersFor(m.category)
 	sortable := m.keys.SortableColumns()
 	columns := make([]table.Column, len(m.headers))
 	remaining := m.table.Width()

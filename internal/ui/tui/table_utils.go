@@ -48,11 +48,11 @@ func headersFromGroupedSet[T any](cols []columns.GroupedColumn[T]) []header {
 	return out
 }
 
-// getHeaders returns the header strip for a category. Headers are
+// headersFor returns the header strip for a category. Headers are
 // precomputed at rowSources construction so the live table, the
 // CSV export, and the header strip share one column set. Returns
 // nil for unregistered categories (e.g. CategoryUnknown).
-func getHeaders(category domain.Category) []header {
+func headersFor(category domain.Category) []header {
 	if src, ok := rowSources[category]; ok {
 		return src.headers
 	}
@@ -60,11 +60,11 @@ func getHeaders(category domain.Category) []header {
 }
 
 /*
-getTableRows returns the table rows for a given category, using the appropriate handler.
+computeTableRows returns the table rows for a given category, using the appropriate handler.
 If the scope is not valid for the category, it is set to nil.
 Returns: rows, stats (nil if not applicable)
 */
-func getTableRows(dataset *models.Dataset, category domain.Category, scope *domain.Scope, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
+func computeTableRows(dataset *models.Dataset, category domain.Category, scope *domain.Scope, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
 	if scope != nil && !scope.Category.IsScopeOf(category) {
 		scope = nil
 	}
@@ -80,7 +80,7 @@ func getTableRows(dataset *models.Dataset, category domain.Category, scope *doma
 		faulty:  faultyOnly,
 	})
 	if sortColumn != "" && len(rows) > 0 {
-		headers := getHeaders(category)
+		headers := headersFor(category)
 		sortRows(rows, headers, sortColumn, sortAsc)
 	}
 	return rows, computeStats(category, rows)
@@ -107,7 +107,7 @@ func computeNumericStats(category domain.Category, rows []table.Row) tableStats 
 		return nil
 	}
 
-	headers := getHeaders(category)
+	headers := headersFor(category)
 	idx := make(map[string]int)
 	for i, h := range headers {
 		idx[h.text] = i
@@ -133,7 +133,7 @@ func computeNumericStats(category domain.Category, rows []table.Row) tableStats 
 }
 
 func appendDedicatedAIClusterStats(rows []table.Row, stats tableStats) tableStats {
-	headers := getHeaders(domain.DedicatedAICluster)
+	headers := headersFor(domain.DedicatedAICluster)
 	statusIdx := -1
 	for i, h := range headers {
 		if h.text == "Status" {
@@ -158,9 +158,9 @@ func appendDedicatedAIClusterStats(rows []table.Row, stats tableStats) tableStat
 }
 
 /*
-getItemKey returns the ItemKey for a given category and table row.
+itemKeyFrom returns the ItemKey for a given category and table row.
 */
-func getItemKey(category domain.Category, row table.Row) models.ItemKey {
+func itemKeyFrom(category domain.Category, row table.Row) models.ItemKey {
 	if len(row) == 0 {
 		return nil
 	}
@@ -226,9 +226,9 @@ func deleteItemInMap[T models.NamedItem](m map[string][]T, key models.ItemKey) {
 }
 
 /*
-getItemKeyString returns a string representation of the ItemKey.
+itemKeyString returns a string representation of the ItemKey.
 */
-func getItemKeyString(key models.ItemKey) string {
+func itemKeyString(key models.ItemKey) string {
 	if k, ok := key.(string); ok {
 		return k
 	} else if k, ok := key.(models.ScopedItemKey); ok {

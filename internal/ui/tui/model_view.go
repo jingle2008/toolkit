@@ -41,7 +41,7 @@ func (m *Model) infoView() string {
 func (m *Model) contextString() string {
 	scope := "all"
 	if m.viewMode == common.DetailsView {
-		scope = getItemKeyString(m.selectedKey)
+		scope = itemKeyString(m.selectedKey)
 	} else if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {
 		scope = m.scope.Name
 	}
@@ -209,16 +209,16 @@ func (m *Model) fullHelpView() string {
 	renderSection("General Actions", m.keys.Global)
 	switch m.lastViewMode {
 	case common.ListView:
-		renderSection("Table Actions", m.getTableBinding())
+		renderSection("Table Actions", m.tableBinding())
 	case common.DetailsView:
-		renderSection("Viewport Actions", m.getViewportBinding())
+		renderSection("Viewport Actions", m.viewportBinding())
 	case common.LoadingView, common.HelpView, common.ErrorView, common.ExportView:
 		// No additional sections for these view modes
 	}
 	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())
 }
 
-func (m *Model) getTableBinding() []key.Binding {
+func (m *Model) tableBinding() []key.Binding {
 	return []key.Binding{
 		m.table.KeyMap.LineUp,
 		m.table.KeyMap.LineDown,
@@ -231,7 +231,7 @@ func (m *Model) getTableBinding() []key.Binding {
 	}
 }
 
-func (m *Model) getViewportBinding() []key.Binding {
+func (m *Model) viewportBinding() []key.Binding {
 	return []key.Binding{
 		m.viewport.KeyMap.Up,
 		m.viewport.KeyMap.Down,

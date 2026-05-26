@@ -147,7 +147,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	}
 
 	if key.Matches(msg, keys.CopyName) {
-		cmds = append(cmds, m.copyItemNameCmd(m.getSelectedItem()))
+		cmds = append(cmds, m.copyItemNameCmd(m.selectedItem()))
 		return cmds
 	}
 
