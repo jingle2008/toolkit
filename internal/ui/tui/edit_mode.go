@@ -7,25 +7,34 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
-func (m *Model) enterEditMode(target common.EditTarget) tea.Cmd {
+// beginEditInput is the shared prelude for the two edit-mode entry
+// points (alias and filter): switch the table into edit-input mode,
+// stamp the target, and focus the text input.
+func (m *Model) beginEditInput(target common.EditTarget) {
 	m.table.Blur()
 	m.inputMode = common.EditInput
 	m.editTarget = target
 	m.textInput.Focus()
+}
 
-	if target == common.AliasTarget {
-		// Command mode: start from an empty input and offer the
-		// category alias list as completions.
-		m.textInput.Reset()
-		m.textInput.ShowSuggestions = len(domain.Aliases) > 0
-		m.textInput.SetSuggestions(domain.Aliases)
-		return nil
-	}
+// enterAliasMode enters the alias-completion (command) mode: starts
+// from an empty input and offers the category alias list as
+// completions.
+func (m *Model) enterAliasMode() tea.Cmd {
+	m.beginEditInput(common.AliasTarget)
+	m.textInput.Reset()
+	m.textInput.ShowSuggestions = len(domain.Aliases) > 0
+	m.textInput.SetSuggestions(domain.Aliases)
+	return nil
+}
 
-	// FilterTarget: keep the current input so re-entering filter mode
-	// preserves the partial. When the input is non-empty, also clear
-	// any active filter/scope (backToLastState) so the new typing
-	// matches against the full unscoped table.
+// enterFilterMode enters the filter mode: keeps the current input
+// so re-entering filter mode preserves the partial. When the input
+// is non-empty, also clears any active filter/scope
+// (backToLastState) so the new typing matches against the full
+// unscoped table.
+func (m *Model) enterFilterMode() tea.Cmd {
+	m.beginEditInput(common.FilterTarget)
 	keys := domain.Aliases
 	var cmd tea.Cmd
 	if len(m.textInput.Value()) > 0 {

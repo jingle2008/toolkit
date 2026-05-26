@@ -85,7 +85,7 @@ func TestEnterEditModeAndExitEditMode(t *testing.T) {
 		WithLoader(fakeLoader{}),
 		WithLogger(fakeLogger{}),
 	)
-	m.enterEditMode(common.FilterTarget)
+	m.enterFilterMode()
 	assert.Equal(t, common.EditInput, m.inputMode)
 	assert.Equal(t, common.FilterTarget, m.editTarget)
 	m.exitEditMode(true)

@@ -220,7 +220,7 @@ func TestContextStringAndStatusView(t *testing.T) {
 func TestFilterAndBackToLastState(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.enterEditMode(common.FilterTarget)
+	m.enterFilterMode()
 	require.Equal(t, common.EditInput, m.inputMode)
 	m.textInput.SetValue("tenant1")
 	cmd := DebounceFilter(m)
@@ -243,7 +243,7 @@ func TestFilterAndBackToLastState(t *testing.T) {
 func TestEditModeTransitions(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.enterEditMode(common.AliasTarget)
+	m.enterAliasMode()
 	require.Equal(t, common.EditInput, m.inputMode)
 	m.exitEditMode(true)
 	require.Equal(t, common.NormalInput, m.inputMode)
