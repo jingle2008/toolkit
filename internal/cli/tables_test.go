@@ -397,7 +397,7 @@ func TestWriteMap_Limit_CapsAcrossGroups(t *testing.T) {
 // TestWriteMap_DAC_CSVUsesFullOCIDs pins the CLI integration with
 // columns.RenderTableForExport. With a fully-populated env, the
 // csv branch in writeMap should route DAC Name and Tenant through
-// ExportRender, producing fully-qualified OCIDs instead of the
+// RenderForExport, producing fully-qualified OCIDs instead of the
 // short suffixes that -o table would show. Mirrors the TUI's
 // TestExportTableCSV_DACUsesFullOCIDs assertion but locks the CLI
 // path independently — a regression in writeMap's csv/tsv branch
@@ -427,7 +427,7 @@ func TestWriteMap_DAC_CSVUsesFullOCIDs(t *testing.T) {
 // TestWriteMap_DAC_CSVEmptyEnvFallsBackToRender pins the
 // short-circuit in columns.RenderTableForExport: when realm OR
 // region is empty, csv output uses display-mode Render rather
-// than ExportRender, producing short suffixes (not malformed
+// than RenderForExport, producing short suffixes (not malformed
 // ocid1.<type>.oc1..foo OCIDs). Belt-and-suspenders for the
 // `if realm == "" || region == ""` guard.
 func TestWriteMap_DAC_CSVEmptyEnvFallsBackToRender(t *testing.T) {

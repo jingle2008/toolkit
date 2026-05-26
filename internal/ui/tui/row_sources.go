@@ -12,7 +12,7 @@ import (
 // rowCtx bundles every input the per-category row builders consume.
 // Display callers leave realm/region empty and export=false; export
 // callers populate realm/region and set export=true so each cell
-// prefers columns.Column.ExportRender over Render.
+// prefers columns.Column.RenderForExport over Render.
 type rowCtx struct {
 	dataset *models.Dataset
 	scope   *domain.ToolkitContext

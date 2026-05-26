@@ -6,7 +6,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-func dacUnitShapeOrProfile(d models.DedicatedAICluster) string {
+func dacShapeOrProfile(d models.DedicatedAICluster) string {
 	if d.UnitShape != "" {
 		return d.UnitShape
 	}
@@ -16,7 +16,7 @@ func dacUnitShapeOrProfile(d models.DedicatedAICluster) string {
 // DACColumns is the canonical column set for domain.DedicatedAICluster.
 //
 // Ordering is name-first, tenant-key-second (matches TUI; Decision #4).
-// The Name and Tenant columns carry an ExportRender closure that
+// The Name and Tenant columns carry an RenderForExport closure that
 // produces fully-qualified OCIDs (vs the suffix-only display form);
 // substitution happens per-column inside the column registry, so
 // reordering the columns here doesn't require companion edits in
@@ -32,14 +32,14 @@ var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 	{
 		Title: "Name", Key: "name", Ratio: 0.20, TruncateMiddle: true,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Name },
-		ExportRender: func(realm, region string, _ string, d models.DedicatedAICluster) string {
+		RenderForExport: func(realm, region string, _ string, d models.DedicatedAICluster) string {
 			return d.OCID(realm, region)
 		},
 	},
 	{
 		Title: "Tenant", Key: "tenant", Ratio: 0.17, TruncateMiddle: true,
 		Render: func(k string, _ models.DedicatedAICluster) string { return k },
-		ExportRender: func(realm, _ string, _ string, d models.DedicatedAICluster) string {
+		RenderForExport: func(realm, _ string, _ string, d models.DedicatedAICluster) string {
 			return d.TenancyOCID(realm)
 		},
 	},
@@ -61,7 +61,7 @@ var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 	},
 	{
 		Title: "Shape/Profile", Key: "shape-profile", Ratio: 0.12,
-		Render: func(_ string, d models.DedicatedAICluster) string { return dacUnitShapeOrProfile(d) },
+		Render: func(_ string, d models.DedicatedAICluster) string { return dacShapeOrProfile(d) },
 	},
 	{
 		Title: "Size", Key: "size", Ratio: 0.06,

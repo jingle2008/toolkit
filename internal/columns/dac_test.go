@@ -44,10 +44,10 @@ func TestDACColumns(t *testing.T) {
 		}
 	}
 
-	// dacUnitShapeOrProfile falls back to Profile when UnitShape is empty.
+	// dacShapeOrProfile falls back to Profile when UnitShape is empty.
 	dProfile := models.DedicatedAICluster{Profile: "standard"}
-	if dacUnitShapeOrProfile(dProfile) != "standard" {
-		t.Errorf("dacUnitShapeOrProfile: expected %q, got %q", "standard", dacUnitShapeOrProfile(dProfile))
+	if dacShapeOrProfile(dProfile) != "standard" {
+		t.Errorf("dacShapeOrProfile: expected %q, got %q", "standard", dacShapeOrProfile(dProfile))
 	}
 
 	// Verify ratio sum is ~1.0.

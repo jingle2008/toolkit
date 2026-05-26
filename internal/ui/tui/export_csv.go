@@ -36,7 +36,7 @@ func (m *Model) exportTableCSV(outPath string) (err error) {
 
 // writeCSV emits the current filtered table data (with headers) to w.
 // Routes through output.WriteDelimited so the on-wire format matches
-// `toolkit get -o csv` exactly. ExportRender on a column produces
+// `toolkit get -o csv` exactly. RenderForExport on a column produces
 // fully-qualified OCIDs in place of raw suffixes — see the
 // applyMiddleTruncation neighbor for the corresponding display-mode
 // behaviour. Sort order is the dataset's natural order (the live
@@ -56,7 +56,7 @@ func (m *Model) writeCSV(w io.Writer) error {
 }
 
 // exportRows rebuilds rows for the current category in export mode
-// (ExportRender preferred over Render), applying the live filter
+// (RenderForExport preferred over Render), applying the live filter
 // and faulty-toggle state. Returns nil if no rowSource is
 // registered for the category. Shares its dispatch with the live
 // table via rowSources — see row_sources.go.

@@ -52,12 +52,12 @@ func TestCSVSnapshots(t *testing.T) {
 }
 
 // TestCSVSnapshotsExport pins the export-mode CSV output for the
-// categories that declare ExportRender closures (DAC, ImportedModel
+// categories that declare RenderForExport closures (DAC, ImportedModel
 // today). Drives columns.RenderTableForExport with a fixed realm +
 // region so the fully-qualified OCID format is recorded explicitly
-// and any regression in ExportRender — for either of those columns
+// and any regression in RenderForExport — for either of those columns
 // or any future addition — fails this test at the snapshot level.
-// Categories without ExportRender are skipped; their snapshots are
+// Categories without RenderForExport are skipped; their snapshots are
 // already pinned by TestCSVSnapshots above.
 func TestCSVSnapshotsExport(t *testing.T) {
 	t.Parallel()

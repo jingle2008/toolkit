@@ -360,7 +360,7 @@ type writer interface {
 // For table/csv/tsv, columns.RenderTable is called with cat and selected
 // (the parsed --columns list; empty means "render every column").
 // CSV/TSV additionally route through columns.RenderTableForExport with
-// the caller's env so columns marked with ExportRender (DAC and
+// the caller's env so columns marked with RenderForExport (DAC and
 // ImportedModel Name/Tenant today) emit fully-qualified OCIDs instead
 // of raw suffixes. Table output keeps the display-mode Render to
 // preserve column-width headroom.

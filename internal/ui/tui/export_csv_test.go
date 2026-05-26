@@ -65,7 +65,7 @@ func TestExportTableCSV_Success(t *testing.T) {
 }
 
 // TestExportTableCSV_DACUsesFullOCIDs locks in the column-registry
-// ExportRender behaviour for DAC: Name should expand to the
+// RenderForExport behaviour for DAC: Name should expand to the
 // realm/region-qualified resource OCID and Tenant should expand to
 // the realm-qualified tenancy OCID. Mirrors the substitution the
 // CLI -o csv path now also performs.
@@ -234,14 +234,14 @@ func TestExportTableCSV_IgnoresInteractiveSort(t *testing.T) {
 // the CSV snapshot tests cannot directly assert: the TUI export
 // (m.exportRows → rowSources[DAC].rows → tuiRowsGroupedForExport)
 // must produce the same row content as the CLI export
-// (columns.RenderTableForExport) for ExportRender-bearing
+// (columns.RenderTableForExport) for RenderForExport-bearing
 // categories. The snapshot tests in internal/cli exercise only the
 // CLI path; this guards the TUI path from silently diverging
 // (e.g., a future change to the filter pipeline inside
 // tuiRowsGroupedWith that doesn't land on the CLI side too).
 //
 // DAC is the workhorse: both the Name and Tenant columns
-// ExportRender into fully-qualified OCIDs, so a per-cell divergence
+// RenderForExport into fully-qualified OCIDs, so a per-cell divergence
 // surfaces here. Map iteration order differs between the two paths
 // (CLI sorts keys; TUI uses Go's randomized iteration), so
 // comparison is set-equality, not pointwise.

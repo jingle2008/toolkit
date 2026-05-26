@@ -11,7 +11,7 @@ import (
 
 // tuiRowsFlatWith is the shared core of tuiRowsFlat and
 // tuiRowsFlatForExport. The cell argument decides whether each cell
-// uses the display-mode Render or the export-mode ExportRender (with
+// uses the display-mode Render or the export-mode RenderForExport (with
 // fallback). The filter + faulty pipeline is identical for both.
 func tuiRowsFlatWith[T models.NamedFilterable](s columns.Set[T], items []T, filter string, faultyOnly bool, cell func(columns.Column[T], T) string) []table.Row {
 	var pred func(T) bool
@@ -40,13 +40,13 @@ func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, filter s
 }
 
 // tuiRowsFlatForExport mirrors tuiRowsFlat but consults each column's
-// ExportRender when present. Used by the CSV export path so
+// RenderForExport when present. Used by the CSV export path so
 // OCID-shaped columns emit fully-qualified IDs rather than raw
 // suffixes.
 func tuiRowsFlatForExport[T models.NamedFilterable](s columns.Set[T], items []T, realm, region, filter string, faultyOnly bool) []table.Row {
 	return tuiRowsFlatWith(s, items, filter, faultyOnly, func(c columns.Column[T], m T) string {
-		if c.ExportRender != nil {
-			return c.ExportRender(realm, region, m)
+		if c.RenderForExport != nil {
+			return c.RenderForExport(realm, region, m)
 		}
 		return c.Render(m)
 	})
@@ -111,7 +111,7 @@ func tuiRowsGrouped[T models.NamedFilterable](
 }
 
 // tuiRowsGroupedForExport mirrors tuiRowsGrouped but consults each
-// column's ExportRender when present. Used by the CSV export path so
+// column's RenderForExport when present. Used by the CSV export path so
 // OCID-shaped columns emit fully-qualified IDs.
 func tuiRowsGroupedForExport[T models.NamedFilterable](
 	g columns.GroupedSet[T],
@@ -122,8 +122,8 @@ func tuiRowsGroupedForExport[T models.NamedFilterable](
 	faultyOnly bool,
 ) []table.Row {
 	return tuiRowsGroupedWith(g, m, scopeCategory, ctx, filter, faultyOnly, func(c columns.GroupedColumn[T], k string, it T) string {
-		if c.ExportRender != nil {
-			return c.ExportRender(realm, region, k, it)
+		if c.RenderForExport != nil {
+			return c.RenderForExport(realm, region, k, it)
 		}
 		return c.Render(k, it)
 	})

@@ -18,7 +18,7 @@ type registryEntry struct {
 	titles       []string
 	ratioSum     float64
 	render       func(items any, selected []string) ([]string, [][]string, error)
-	renderExport func(items any, realm, region string, selected []string) ([]string, [][]string, error)
+	renderForExport func(items any, realm, region string, selected []string) ([]string, [][]string, error)
 }
 
 // newFlatEntry builds a registryEntry from a flat columns.Set. The
@@ -32,8 +32,8 @@ func newFlatEntry[T any](s Set[T]) registryEntry {
 		render: func(items any, selected []string) ([]string, [][]string, error) {
 			return renderFlat(s, items, selected)
 		},
-		renderExport: func(items any, realm, region string, selected []string) ([]string, [][]string, error) {
-			return renderFlatExport(s, items, realm, region, selected)
+		renderForExport: func(items any, realm, region string, selected []string) ([]string, [][]string, error) {
+			return renderFlatForExport(s, items, realm, region, selected)
 		},
 	}
 }
@@ -47,8 +47,8 @@ func newGroupedEntry[T any](g GroupedSet[T]) registryEntry {
 		render: func(items any, selected []string) ([]string, [][]string, error) {
 			return renderGrouped(g, items, selected)
 		},
-		renderExport: func(items any, realm, region string, selected []string) ([]string, [][]string, error) {
-			return renderGroupedExport(g, items, realm, region, selected)
+		renderForExport: func(items any, realm, region string, selected []string) ([]string, [][]string, error) {
+			return renderGroupedForExport(g, items, realm, region, selected)
 		},
 	}
 }
@@ -94,9 +94,9 @@ func KeysFor(cat domain.Category) []string {
 	return nil
 }
 
-// RatioSum returns the sum of Ratio across all columns of cat
+// RatioSumFor returns the sum of Ratio across all columns of cat
 // (for the ratios-sum-to-1 registry test).
-func RatioSum(cat domain.Category) float64 {
+func RatioSumFor(cat domain.Category) float64 {
 	if e, ok := registry[cat]; ok {
 		return e.ratioSum
 	}
@@ -127,15 +127,15 @@ func RenderTable(cat domain.Category, items any, selected []string) ([]string, [
 }
 
 // RenderTableForExport mirrors RenderTable but consults each
-// column's ExportRender when present, producing the values
+// column's RenderForExport when present, producing the values
 // downstream OCI tooling expects (e.g. fully-qualified OCIDs in
 // place of raw Name suffixes for DAC and ImportedModel rows).
-// Columns without ExportRender fall back to Render, so categories
+// Columns without RenderForExport fall back to Render, so categories
 // that have nothing export-specific to say behave identically to
 // RenderTable.
 //
 // When either realm or region is empty the function short-circuits
-// to RenderTable — ExportRender closures typically format both into
+// to RenderTable — RenderForExport closures typically format both into
 // the output, and a partial env would produce malformed OCIDs like
 // `ocid1.<type>.oc1..suffix` (missing region) or
 // `ocid1.<type>..iad.suffix` (missing realm). Callers without a
@@ -146,7 +146,7 @@ func RenderTableForExport(cat domain.Category, items any, realm, region string, 
 		return RenderTable(cat, items, selected)
 	}
 	if e, ok := registry[cat]; ok {
-		return e.renderExport(items, realm, region, selected)
+		return e.renderForExport(items, realm, region, selected)
 	}
 	return nil, nil, fmt.Errorf("category %s is not registered with the columns package", cat)
 }
@@ -250,12 +250,12 @@ func pickGrouped[T any](g GroupedSet[T], selected []string) ([]GroupedColumn[T],
 	return g.Select(selected)
 }
 
-// renderFlatExport mirrors renderFlat but uses Column.ExportRender
+// renderFlatForExport mirrors renderFlat but uses Column.RenderForExport
 // when set, falling back to Column.Render otherwise.
-func renderFlatExport[T any](s Set[T], items any, realm, region string, selected []string) ([]string, [][]string, error) {
+func renderFlatForExport[T any](s Set[T], items any, realm, region string, selected []string) ([]string, [][]string, error) {
 	typed, ok := items.([]T)
 	if !ok {
-		return nil, nil, fmt.Errorf("renderFlatExport: items has wrong type %T", items)
+		return nil, nil, fmt.Errorf("renderFlatForExport: items has wrong type %T", items)
 	}
 	cols, err := pickFlat(s, selected)
 	if err != nil {
@@ -269,8 +269,8 @@ func renderFlatExport[T any](s Set[T], items any, realm, region string, selected
 	for i, it := range typed {
 		row := make([]string, len(cols))
 		for j, c := range cols {
-			if c.ExportRender != nil {
-				row[j] = c.ExportRender(realm, region, it)
+			if c.RenderForExport != nil {
+				row[j] = c.RenderForExport(realm, region, it)
 			} else {
 				row[j] = c.Render(it)
 			}
@@ -280,12 +280,12 @@ func renderFlatExport[T any](s Set[T], items any, realm, region string, selected
 	return headers, rows, nil
 }
 
-// renderGroupedExport mirrors renderGrouped but uses
-// GroupedColumn.ExportRender when set.
-func renderGroupedExport[T any](g GroupedSet[T], items any, realm, region string, selected []string) ([]string, [][]string, error) {
+// renderGroupedForExport mirrors renderGrouped but uses
+// GroupedColumn.RenderForExport when set.
+func renderGroupedForExport[T any](g GroupedSet[T], items any, realm, region string, selected []string) ([]string, [][]string, error) {
 	typed, ok := items.(map[string][]T)
 	if !ok {
-		return nil, nil, fmt.Errorf("renderGroupedExport: items has wrong type %T", items)
+		return nil, nil, fmt.Errorf("renderGroupedForExport: items has wrong type %T", items)
 	}
 	cols, err := pickGrouped(g, selected)
 	if err != nil {
@@ -304,8 +304,8 @@ func renderGroupedExport[T any](g GroupedSet[T], items any, realm, region string
 		for _, it := range typed[k] {
 			row := make([]string, len(cols))
 			for j, c := range cols {
-				if c.ExportRender != nil {
-					row[j] = c.ExportRender(realm, region, k, it)
+				if c.RenderForExport != nil {
+					row[j] = c.RenderForExport(realm, region, k, it)
 				} else {
 					row[j] = c.Render(k, it)
 				}

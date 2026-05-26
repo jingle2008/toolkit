@@ -71,7 +71,7 @@ func TestRegistry_RatiosSumToOne(t *testing.T) {
 		if cat == domain.CategoryUnknown || !IsRegistered(cat) {
 			continue
 		}
-		sum := RatioSum(cat)
+		sum := RatioSumFor(cat)
 		if math.Abs(sum-1.0) > 0.02 {
 			t.Errorf("%s: ratio sum %.3f outside ±0.02 of 1.0", cat, sum)
 		}
@@ -163,8 +163,8 @@ func TestRenderTableForExport_ShortCircuit(t *testing.T) {
 	}
 }
 
-// TestRenderTableForExport_Grouped covers the grouped ExportRender
-// path for DAC, which is the canonical ExportRender-bearing
+// TestRenderTableForExport_Grouped covers the grouped RenderForExport
+// path for DAC, which is the canonical RenderForExport-bearing
 // category (Name → full DAC OCID; Tenant → full tenancy OCID).
 func TestRenderTableForExport_Grouped(t *testing.T) {
 	t.Parallel()
@@ -242,8 +242,8 @@ func TestGroupedSet_Select(t *testing.T) {
 }
 
 // TestRenderFlatExport mirrors TestRenderFlat for the export path:
-// ExportRender takes precedence over Render when set; columns
-// without ExportRender fall back to Render.
+// RenderForExport takes precedence over Render when set; columns
+// without RenderForExport fall back to Render.
 func TestRenderFlatExport(t *testing.T) {
 	t.Parallel()
 	type item struct {
@@ -254,25 +254,25 @@ func TestRenderFlatExport(t *testing.T) {
 		{
 			Title: "Exported", Key: "exported", Ratio: 0.5,
 			Render:       func(i item) string { return i.Name },
-			ExportRender: func(realm, region string, i item) string { return realm + "/" + region + "/" + i.Name },
+			RenderForExport: func(realm, region string, i item) string { return realm + "/" + region + "/" + i.Name },
 		},
 	}}
 	items := []item{{"foo"}}
-	_, rows, err := renderFlatExport(s, items, "oc1", "iad", nil)
+	_, rows, err := renderFlatForExport(s, items, "oc1", "iad", nil)
 	if err != nil {
-		t.Fatalf("renderFlatExport: %v", err)
+		t.Fatalf("renderFlatForExport: %v", err)
 	}
 	if rows[0][0] != "foo" || rows[0][1] != "oc1/iad/foo" {
 		t.Errorf("rows[0] = %v, want [foo oc1/iad/foo]", rows[0])
 	}
 	// Wrong type surfaces as error, not panic.
-	if _, _, err := renderFlatExport(s, "not a slice", "oc1", "iad", nil); err == nil {
-		t.Error("renderFlatExport with wrong type: expected error")
+	if _, _, err := renderFlatForExport(s, "not a slice", "oc1", "iad", nil); err == nil {
+		t.Error("renderFlatForExport with wrong type: expected error")
 	}
 }
 
 // TestRenderGroupedExport mirrors TestRenderGrouped for the export
-// path: ExportRender (with key + item) takes precedence over Render.
+// path: RenderForExport (with key + item) takes precedence over Render.
 func TestRenderGroupedExport(t *testing.T) {
 	t.Parallel()
 	type item struct {
@@ -283,18 +283,18 @@ func TestRenderGroupedExport(t *testing.T) {
 		{
 			Title: "Val", Key: "val", Ratio: 0.5,
 			Render:       func(_ string, i item) string { return i.V },
-			ExportRender: func(realm, region, k string, i item) string { return realm + "/" + region + "/" + k + "/" + i.V },
+			RenderForExport: func(realm, region, k string, i item) string { return realm + "/" + region + "/" + k + "/" + i.V },
 		},
 	}}
 	items := map[string][]item{"g": {{V: "x"}}}
-	_, rows, err := renderGroupedExport(g, items, "oc1", "iad", nil)
+	_, rows, err := renderGroupedForExport(g, items, "oc1", "iad", nil)
 	if err != nil {
-		t.Fatalf("renderGroupedExport: %v", err)
+		t.Fatalf("renderGroupedForExport: %v", err)
 	}
 	if rows[0][0] != "g" || rows[0][1] != "oc1/iad/g/x" {
 		t.Errorf("rows[0] = %v", rows[0])
 	}
-	if _, _, err := renderGroupedExport(g, []item{}, "oc1", "iad", nil); err == nil {
-		t.Error("renderGroupedExport with wrong type: expected error")
+	if _, _, err := renderGroupedForExport(g, []item{}, "oc1", "iad", nil); err == nil {
+		t.Error("renderGroupedForExport with wrong type: expected error")
 	}
 }
