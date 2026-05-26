@@ -23,8 +23,8 @@ type fakeGenAI struct {
 }
 
 func TestDeleteDedicatedAICluster_Success(t *testing.T) {
-	origGetGenAIClient := getGenAIClient
-	defer func() { getGenAIClient = origGetGenAIClient }()
+	origNewGenAIClient := newGenAIClient
+	defer func() { newGenAIClient = origNewGenAIClient }()
 
 	// Setup fake responses
 	clusterID := "ocid1.dedicatedaicluster.oc1..example"
@@ -66,7 +66,7 @@ func TestDeleteDedicatedAICluster_Success(t *testing.T) {
 		},
 	}
 
-	getGenAIClient = func(_ models.Environment) (genAI, error) {
+	newGenAIClient = func(_ models.Environment) (genAI, error) {
 		return fakeClient, nil
 	}
 
@@ -99,11 +99,11 @@ func (f *fakeGenAI) GetWorkRequest(_ context.Context, _ generativeai.GetWorkRequ
 
 func TestDeleteDedicatedAICluster_ClientError(t *testing.T) {
 	t.Parallel()
-	origGetGenAIClient := getGenAIClient
-	defer func() { getGenAIClient = origGetGenAIClient }()
+	origNewGenAIClient := newGenAIClient
+	defer func() { newGenAIClient = origNewGenAIClient }()
 
-	// Patch getGenAIClient to simulate client creation error
-	getGenAIClient = func(_ models.Environment) (genAI, error) {
+	// Patch newGenAIClient to simulate client creation error
+	newGenAIClient = func(_ models.Environment) (genAI, error) {
 		return nil, errors.New("client creation failed")
 	}
 

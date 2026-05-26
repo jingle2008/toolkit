@@ -87,7 +87,7 @@ func Test_getServiceEndpoint(t *testing.T) {
 	}
 }
 
-func Test_getGenAIClientWithDeps(t *testing.T) {
+func Test_newGenAIClientWithDeps(t *testing.T) {
 	t.Parallel()
 	makeProvider := func(err error) configProviderFunc {
 		return func(_ /*OciConfigPath*/, _ /*profile*/, _ string) (common.ConfigurationProvider, error) {
@@ -110,7 +110,7 @@ func Test_getGenAIClientWithDeps(t *testing.T) {
 	t.Run("provider error", func(t *testing.T) {
 		t.Parallel()
 		env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-		client, err := getGenAIClientWithDeps(env, makeProvider(errors.New("fail provider")), makeClient(nil, nil, nil))
+		client, err := newGenAIClientWithDeps(env, makeProvider(errors.New("fail provider")), makeClient(nil, nil, nil))
 		assert.Nil(t, client)
 		assert.ErrorContains(t, err, "failed to get OCI config provider")
 	})
@@ -118,7 +118,7 @@ func Test_getGenAIClientWithDeps(t *testing.T) {
 	t.Run("client error", func(t *testing.T) {
 		t.Parallel()
 		env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-		client, err := getGenAIClientWithDeps(env, makeProvider(nil), makeClient(errors.New("fail client"), nil, nil))
+		client, err := newGenAIClientWithDeps(env, makeProvider(nil), makeClient(errors.New("fail client"), nil, nil))
 		assert.Nil(t, client)
 		assert.ErrorContains(t, err, "failed to create GenerativeAI client")
 	})
@@ -131,7 +131,7 @@ func Test_getGenAIClientWithDeps(t *testing.T) {
 			c.SetRegion(env.Region)
 			return c, nil
 		}
-		client, err := getGenAIClientWithDeps(env, makeProvider(nil), clientFn)
+		client, err := newGenAIClientWithDeps(env, makeProvider(nil), clientFn)
 		require.NoError(t, err)
 		assert.NotNil(t, client)
 	})
@@ -146,7 +146,7 @@ func Test_getGenAIClientWithDeps(t *testing.T) {
 			c.Host = "generativeai.us-ashburn-1.oci.oraclecloud.com"
 			return c, nil
 		}
-		client, err := getGenAIClientWithDeps(env, makeProvider(nil), clientFn)
+		client, err := newGenAIClientWithDeps(env, makeProvider(nil), clientFn)
 		require.NoError(t, err)
 		assert.NotNil(t, client)
 		// Host should be overridden with prefix

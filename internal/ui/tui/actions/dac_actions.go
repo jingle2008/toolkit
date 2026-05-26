@@ -25,8 +25,8 @@ type genAI interface {
 	GetWorkRequest(ctx context.Context, req generativeai.GetWorkRequestRequest) (generativeai.GetWorkRequestResponse, error)
 }
 
-var getGenAIClient = func(env models.Environment) (genAI, error) {
-	return oci.GetGenAIClient(env)
+var newGenAIClient = func(env models.Environment) (genAI, error) {
+	return oci.NewGenAIClient(env)
 }
 
 /*
@@ -36,7 +36,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	client, err := getGenAIClient(env)
+	client, err := newGenAIClient(env)
 	if err != nil {
 		return fmt.Errorf("failed to create GenerativeAI client: %w", err)
 	}

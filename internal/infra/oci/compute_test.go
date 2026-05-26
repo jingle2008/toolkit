@@ -34,7 +34,7 @@ func (f *fakeProvider) Region() (string, error)                 { return "", nil
 func (f *fakeProvider) AuthType() (common.AuthConfig, error)    { return common.AuthConfig{}, nil }
 func (f *fakeProvider) PrivateRSAKey() (*rsa.PrivateKey, error) { return nil, errNoKey }
 
-func TestGetComputeClient_Success(t *testing.T) {
+func TestNewComputeClient_Success(t *testing.T) {
 	origProvider := computeConfigProviderFunc
 	origFactory := computeClientFactory
 	defer func() {
@@ -54,13 +54,13 @@ func TestGetComputeClient_Success(t *testing.T) {
 	}
 
 	env := makeEnv()
-	client, err := GetComputeClient(env)
+	client, err := NewComputeClient(env)
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	require.True(t, called)
 }
 
-func TestGetComputeClient_ConfigProviderError(t *testing.T) {
+func TestNewComputeClient_ConfigProviderError(t *testing.T) {
 	origProvider := computeConfigProviderFunc
 	defer func() { computeConfigProviderFunc = origProvider }()
 
@@ -68,13 +68,13 @@ func TestGetComputeClient_ConfigProviderError(t *testing.T) {
 		return nil, errors.New("provider error")
 	}
 	env := makeEnv()
-	client, err := GetComputeClient(env)
+	client, err := NewComputeClient(env)
 	require.Error(t, err)
 	require.Nil(t, client)
 	require.Contains(t, err.Error(), "provider error")
 }
 
-func TestGetComputeClient_ClientFactoryError(t *testing.T) {
+func TestNewComputeClient_ClientFactoryError(t *testing.T) {
 	origProvider := computeConfigProviderFunc
 	origFactory := computeClientFactory
 	defer func() {
@@ -89,13 +89,13 @@ func TestGetComputeClient_ClientFactoryError(t *testing.T) {
 		return core.ComputeClient{}, errors.New("client error")
 	}
 	env := makeEnv()
-	client, err := GetComputeClient(env)
+	client, err := NewComputeClient(env)
 	require.Error(t, err)
 	require.Nil(t, client)
 	require.Contains(t, err.Error(), "client error")
 }
 
-func TestGetComputeManagementClient_Success(t *testing.T) {
+func TestNewComputeManagementClient_Success(t *testing.T) {
 	origProvider := computeConfigProviderFunc
 	origFactory := computeMgmtClientFactory
 	defer func() {
@@ -113,12 +113,12 @@ func TestGetComputeManagementClient_Success(t *testing.T) {
 	}
 
 	env := makeEnv()
-	client, err := GetComputeManagementClient(env)
+	client, err := NewComputeManagementClient(env)
 	require.NoError(t, err)
 	require.NotNil(t, client)
 }
 
-func TestGetComputeManagementClient_ConfigProviderError(t *testing.T) {
+func TestNewComputeManagementClient_ConfigProviderError(t *testing.T) {
 	origProvider := computeConfigProviderFunc
 	defer func() { computeConfigProviderFunc = origProvider }()
 
@@ -126,13 +126,13 @@ func TestGetComputeManagementClient_ConfigProviderError(t *testing.T) {
 		return nil, errors.New("provider error")
 	}
 	env := makeEnv()
-	client, err := GetComputeManagementClient(env)
+	client, err := NewComputeManagementClient(env)
 	require.Error(t, err)
 	require.Nil(t, client)
 	require.Contains(t, err.Error(), "provider error")
 }
 
-func TestGetComputeManagementClient_ClientFactoryError(t *testing.T) {
+func TestNewComputeManagementClient_ClientFactoryError(t *testing.T) {
 	origProvider := computeConfigProviderFunc
 	origFactory := computeMgmtClientFactory
 	defer func() {
@@ -147,7 +147,7 @@ func TestGetComputeManagementClient_ClientFactoryError(t *testing.T) {
 		return core.ComputeManagementClient{}, errors.New("mgmt client error")
 	}
 	env := makeEnv()
-	client, err := GetComputeManagementClient(env)
+	client, err := NewComputeManagementClient(env)
 	require.Error(t, err)
 	require.Nil(t, client)
 	require.Contains(t, err.Error(), "mgmt client error")

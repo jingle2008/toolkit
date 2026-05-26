@@ -30,8 +30,8 @@ type (
 	genAIClientFunc    func(common.ConfigurationProvider) (generativeai.GenerativeAiClient, error)
 )
 
-// getGenAIClientWithDeps is like GetGenAIClient but allows dependency injection for testing.
-func getGenAIClientWithDeps(
+// newGenAIClientWithDeps is like NewGenAIClient but allows dependency injection for testing.
+func newGenAIClientWithDeps(
 	env models.Environment,
 	providerFn configProviderFunc,
 	clientFn genAIClientFunc,
@@ -55,10 +55,10 @@ func getGenAIClientWithDeps(
 	return &client, nil
 }
 
-// GetGenAIClient returns a GenerativeAiClient for env (session-token
+// NewGenAIClient returns a GenerativeAiClient for env (session-token
 // auth, profile name is uppercased and derived from env).
-func GetGenAIClient(env models.Environment) (*generativeai.GenerativeAiClient, error) {
-	return getGenAIClientWithDeps(
+func NewGenAIClient(env models.Environment) (*generativeai.GenerativeAiClient, error) {
+	return newGenAIClientWithDeps(
 		env,
 		common.ConfigurationProviderForSessionTokenWithProfile,
 		generativeai.NewGenerativeAiClientWithConfigurationProvider,

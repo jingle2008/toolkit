@@ -14,10 +14,10 @@ import (
 
 var (
 	newComputeClient func(models.Environment) (computeClient, error) = func(env models.Environment) (computeClient, error) {
-		return oci.GetComputeClient(env)
+		return oci.NewComputeClient(env)
 	}
 	newComputeMgmtClient func(models.Environment) (computeMgmtClient, error) = func(env models.Environment) (computeMgmtClient, error) {
-		return oci.GetComputeManagementClient(env)
+		return oci.NewComputeManagementClient(env)
 	}
 )
 

@@ -41,12 +41,12 @@ func newOCIClient[T any](
 	return &client, nil
 }
 
-// GetComputeClient creates a new OCI ComputeClient for the given region.
-func GetComputeClient(env models.Environment) (*core.ComputeClient, error) {
+// NewComputeClient creates a new OCI ComputeClient for the given region.
+func NewComputeClient(env models.Environment) (*core.ComputeClient, error) {
 	return newOCIClient(env, computeClientFactory, (*core.ComputeClient).SetRegion, "compute client")
 }
 
-// GetComputeManagementClient creates a new OCI ComputeManagementClient for the given region.
-func GetComputeManagementClient(env models.Environment) (*core.ComputeManagementClient, error) {
+// NewComputeManagementClient creates a new OCI ComputeManagementClient for the given region.
+func NewComputeManagementClient(env models.Environment) (*core.ComputeManagementClient, error) {
 	return newOCIClient(env, computeMgmtClientFactory, (*core.ComputeManagementClient).SetRegion, "compute management client")
 }
