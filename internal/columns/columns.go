@@ -69,7 +69,9 @@ type GroupedSet[T any] struct {
 // keyOf) appears in wanted, preserving the order of wanted. Any
 // keys in wanted that aren't present in cols are bundled into a
 // single UnknownColumnError so the CLI can show one complete message.
-func selectByKey[T any](cols []T, keyOf func(T) string, wanted, validKeys []string) ([]T, error) {
+// validKeys is a thunk so the keys slice is only materialized on the
+// unknown-key error path; the success path skips the allocation.
+func selectByKey[T any](cols []T, keyOf func(T) string, wanted []string, validKeys func() []string) ([]T, error) {
 	byKey := make(map[string]T, len(cols))
 	for _, c := range cols {
 		byKey[keyOf(c)] = c
@@ -84,7 +86,7 @@ func selectByKey[T any](cols []T, keyOf func(T) string, wanted, validKeys []stri
 		}
 	}
 	if len(unknown) > 0 {
-		return nil, &UnknownColumnError{Unknown: unknown, Valid: validKeys}
+		return nil, &UnknownColumnError{Unknown: unknown, Valid: validKeys()}
 	}
 	return out, nil
 }
@@ -111,7 +113,7 @@ func sumField[T any](cols []T, extract func(T) float64) float64 {
 // in the order given by keys. Returns an error listing all unknown
 // keys (so the CLI can show a single complete message).
 func (s Set[T]) SelectColumns(keys []string) ([]Column[T], error) {
-	return selectByKey(s.Columns, func(c Column[T]) string { return c.Key }, keys, s.Keys())
+	return selectByKey(s.Columns, func(c Column[T]) string { return c.Key }, keys, s.Keys)
 }
 
 // Keys returns the keys declared on s in order.
@@ -131,7 +133,7 @@ func (s Set[T]) RatioSum() float64 {
 
 // SelectColumns / Keys / Titles / RatioSum mirrors for GroupedSet.
 func (g GroupedSet[T]) SelectColumns(keys []string) ([]GroupedColumn[T], error) {
-	return selectByKey(g.Columns, func(c GroupedColumn[T]) string { return c.Key }, keys, g.Keys())
+	return selectByKey(g.Columns, func(c GroupedColumn[T]) string { return c.Key }, keys, g.Keys)
 }
 
 // Keys returns the keys declared on g in order.
