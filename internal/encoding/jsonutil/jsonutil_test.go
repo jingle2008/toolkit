@@ -88,13 +88,13 @@ func TestPrettyJSON(t *testing.T) {
 	type Foo struct {
 		A int `json:"a"`
 	}
-	out, err := PrettyJSON(Foo{A: 7})
+	out, err := Pretty(Foo{A: 7})
 	require.NoError(t, err)
 	assert.Contains(t, out, `"a": 7`)
 
 	// error path: non-serializable value
 	ch := make(chan int)
-	_, err = PrettyJSON(ch)
+	_, err = Pretty(ch)
 	require.Error(t, err)
 }
 
@@ -106,7 +106,7 @@ func TestPrettyJSON_Success(t *testing.T) {
 		X string `json:"x"`
 		Y int    `json:"y"`
 	}{"foo", 7}
-	out, err := PrettyJSON(obj)
+	out, err := Pretty(obj)
 	require.NoError(t, err)
 	assert.Contains(t, out, "{\n    \"x\": \"foo\",\n    \"y\": 7\n}")
 }
@@ -114,7 +114,7 @@ func TestPrettyJSON_Success(t *testing.T) {
 func TestPrettyJSON_MarshalError(t *testing.T) {
 	t.Parallel()
 	ch := make(chan int)
-	_, err := PrettyJSON(ch)
+	_, err := Pretty(ch)
 	require.Error(t, err)
 }
 

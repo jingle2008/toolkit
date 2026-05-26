@@ -32,7 +32,7 @@ var (
 // ocid set, no cluster call is made — a stub {Name, ID:ocid} is
 // returned. With ocid empty, the loader is consulted and the named
 // node is returned by walking every pool.
-func GPUNode(ctx context.Context, ld loader.Loader, kubeConfig string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+func GPUNode(ctx context.Context, ld loader.Composite, kubeConfig string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 	if ocid != "" {
 		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
@@ -55,7 +55,7 @@ func GPUNode(ctx context.Context, ld loader.Loader, kubeConfig string, env model
 // PopulateGPUPools. Partial-load on the Terraform pass is tolerated
 // as long as the named pool is among the rows that did load — that
 // matches the behavior of `toolkit get gpupool`.
-func GPUPool(ctx context.Context, ld loader.Loader, repoPath, kubeConfig string, env models.Environment, name string) (*models.GPUPool, error) {
+func GPUPool(ctx context.Context, ld loader.Composite, repoPath, kubeConfig string, env models.Environment, name string) (*models.GPUPool, error) {
 	pools, err := ld.LoadGPUPools(ctx, repoPath, env)
 	if err != nil {
 		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {

@@ -168,7 +168,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithCategory(category),
 		tui.WithLogger(logger),
 		tui.WithContext(ctx),
-		tui.WithLoader(production.NewLoader(ctx, cfg.MetadataFile)),
+		tui.WithLoader(production.New(ctx, cfg.MetadataFile)),
 		tui.WithFilter(cfg.Filter),
 		tui.WithVersion(version),
 	)

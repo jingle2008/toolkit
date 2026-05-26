@@ -17,7 +17,7 @@ import (
 // Pure command constructors. Each builds a tea.Cmd that loads one
 // category and returns a typed *LoadedMsg on success or errMsg on
 // failure; the gen counter lets the reducer drop stale responses.
-func loadBaseModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func loadBaseModelsCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadBaseModels(ctx, kubeCfg, env)
 		if err != nil {
@@ -27,7 +27,7 @@ func loadBaseModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, en
 	}
 }
 
-func loadImportedModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func loadImportedModelsCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		grouped, err := ld.LoadImportedModels(ctx, kubeCfg, env)
 		if err != nil {
@@ -37,7 +37,7 @@ func loadImportedModelsCmd(ctx context.Context, ld loader.Loader, kubeCfg string
 	}
 }
 
-func loadGPUPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadGPUPools(ctx, repoPath, env)
 		if err != nil {
@@ -55,7 +55,7 @@ func loadGPUPoolsCmd(ctx context.Context, ld loader.Loader, repoPath string, env
 	}
 }
 
-func loadGPUNodesCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func loadGPUNodesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadGPUNodes(ctx, kubeCfg, env)
 		if err != nil {
@@ -65,7 +65,7 @@ func loadGPUNodesCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env 
 	}
 }
 
-func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Loader, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)
 		if err != nil {
@@ -75,7 +75,7 @@ func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Loader, kubeCfg s
 	}
 }
 
-func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		group, err := ld.LoadTenancyOverrideGroup(ctx, repoPath, env)
 		if err != nil {
@@ -85,7 +85,7 @@ func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Loader, repoPath
 	}
 }
 
-func loadLimitRegionalOverridesCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadLimitRegionalOverridesCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadLimitRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
@@ -95,7 +95,7 @@ func loadLimitRegionalOverridesCmd(ctx context.Context, ld loader.Loader, repoPa
 	}
 }
 
-func loadConsolePropertyRegionalOverridesCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadConsolePropertyRegionalOverridesCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
@@ -105,7 +105,7 @@ func loadConsolePropertyRegionalOverridesCmd(ctx context.Context, ld loader.Load
 	}
 }
 
-func loadPropertyRegionalOverridesCmd(ctx context.Context, ld loader.Loader, repoPath string, env models.Environment, gen int) tea.Cmd {
+func loadPropertyRegionalOverridesCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadPropertyRegionalOverrides(ctx, repoPath, env)
 		if err != nil {

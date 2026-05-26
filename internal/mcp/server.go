@@ -29,7 +29,7 @@ import (
 // Server is the toolkit's MCP server. Build with NewServer, then call Run.
 type Server struct {
 	cfg    config.Config
-	loader loader.Loader
+	loader loader.Composite
 	logger logging.Logger
 	server *sdk.Server
 }
@@ -37,7 +37,7 @@ type Server struct {
 // NewServer constructs a server that exposes read-only category tools.
 // cfg supplies the startup env defaults; each tool call may override
 // env_type / env_region / env_realm per-call.
-func NewServer(cfg config.Config, ld loader.Loader, logger logging.Logger, version string) *Server {
+func NewServer(cfg config.Config, ld loader.Composite, logger logging.Logger, version string) *Server {
 	s := &Server{
 		cfg:    cfg,
 		loader: ld,

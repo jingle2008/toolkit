@@ -16,7 +16,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// stubLoader implements just enough of loader.Loader for GPUNode and
+// stubLoader implements just enough of loader.Composite for GPUNode and
 // GPUPool tests; every method is either inert or driven by the public
 // fields. Keep narrow — the resolve package only calls LoadGPUNodes
 // and LoadGPUPools.

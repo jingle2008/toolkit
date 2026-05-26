@@ -23,7 +23,7 @@ import (
 // In production it constructs a fresh loader per call and delegates
 // to internal/resolve.GPUNode.
 var gpuNodeResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUNode, error) {
-	ld := production.NewLoader(ctx, cfg.MetadataFile)
+	ld := production.New(ctx, cfg.MetadataFile)
 	return resolve.GPUNode(ctx, ld, cfg.KubeConfig, env, name, "")
 }
 
@@ -43,7 +43,7 @@ func resolveGPUNode(ctx context.Context, cfg config.Config, env models.Environme
 // In production it constructs a fresh loader and delegates to
 // internal/resolve.GPUPool.
 var gpuPoolResolverFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUPool, error) {
-	ld := production.NewLoader(ctx, cfg.MetadataFile)
+	ld := production.New(ctx, cfg.MetadataFile)
 	return resolve.GPUPool(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name)
 }
 

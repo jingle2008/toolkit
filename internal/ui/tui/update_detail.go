@@ -45,7 +45,7 @@ func (m *Model) copyItemJSONByChoice() tea.Cmd {
 
 func (m *Model) copyItemJSON(item any) tea.Cmd {
 	return func() tea.Msg {
-		content, err := jsonutil.PrettyJSON(item)
+		content, err := jsonutil.Pretty(item)
 		if err != nil {
 			m.logger.Errorw("failed to convert item to JSON", "error", err)
 			return nil

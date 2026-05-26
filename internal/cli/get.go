@@ -151,7 +151,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		ctx = logging.WithContext(ctx, logger)
 
 		env := models.Environment{Type: cfg.EnvType, Region: cfg.EnvRegion, Realm: cfg.EnvRealm}
-		ld := production.NewLoader(ctx, cfg.MetadataFile)
+		ld := production.New(ctx, cfg.MetadataFile)
 
 		filter := strings.ToLower(strings.TrimSpace(cfg.Filter))
 		opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty}
@@ -246,7 +246,7 @@ func validateGetConfig(cfg config.Config, cat domain.Category) error {
 func emitCategory(
 	ctx context.Context,
 	w writer,
-	ld loader.Loader,
+	ld loader.Composite,
 	cat domain.Category,
 	cfg config.Config,
 	env models.Environment,

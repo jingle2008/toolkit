@@ -73,7 +73,7 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		defer stop()
 		ctx = logging.WithContext(ctx, logger)
 
-		ld := production.NewLoader(ctx, cfg.MetadataFile)
+		ld := production.New(ctx, cfg.MetadataFile)
 		srv := mcp.NewServer(cfg, ld, logger, version)
 		logger.Infow("mcp server starting",
 			"repo", cfg.RepoPath,

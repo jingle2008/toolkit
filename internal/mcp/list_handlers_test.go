@@ -78,7 +78,7 @@ func (f *fakeGPUNodeLoader) LoadGPUNodes(context.Context, string, models.Environ
 func assertGroupedItem(
 	t *testing.T,
 	toolName string,
-	ld loader.Loader,
+	ld loader.Composite,
 	check func(t *testing.T, item map[string]any),
 ) {
 	t.Helper()
@@ -113,7 +113,7 @@ func assertGroupedItem(
 func assertGroupedFlatShape(
 	t *testing.T,
 	toolName string,
-	ld loader.Loader,
+	ld loader.Composite,
 	check func(t *testing.T, item map[string]any),
 ) {
 	t.Helper()

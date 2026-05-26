@@ -1,5 +1,5 @@
 /*
-Package production provides the production Loader implementation for the toolkit application.
+Package production provides the production Client implementation for the toolkit application.
 */
 package production
 
@@ -15,16 +15,16 @@ import (
 )
 
 /*
-Loader implements all loader interfaces using the production utils package.
+Client implements all loader interfaces using the production utils package.
 */
-type Loader struct {
+type Client struct {
 	metadataFile string
 	metadata     *models.Metadata
 }
 
-// NewLoader returns a Loader implementation for production use.
-func NewLoader(ctx context.Context, metadataFile string) loader.Loader {
-	l := &Loader{
+// New returns a Client implementation for production use.
+func New(ctx context.Context, metadataFile string) loader.Composite {
+	l := &Client{
 		metadataFile: metadataFile,
 		metadata:     &models.Metadata{},
 	}
@@ -43,14 +43,14 @@ func NewLoader(ctx context.Context, metadataFile string) loader.Loader {
 /*
 LoadDataset loads a dataset from the given repo and environment.
 */
-func (l Loader) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
+func (l Client) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
 	return configloader.LoadDataset(ctx, repo, env, l.metadata)
 }
 
 /*
 LoadBaseModels loads base models from the cluster using the provided kubeconfig and environment.
 */
-func (Loader) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Environment) ([]models.BaseModel, error) {
+func (Client) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Environment) ([]models.BaseModel, error) {
 	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (Loader) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Env
 // (namespaced BaseModel CRs + ClusterBaseModel CRs with a
 // `tenancy-id` label) grouped by raw TenantID, using the provided
 // kubeconfig and environment.
-func (Loader) LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.ImportedModel, error) {
+func (Client) LoadImportedModels(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.ImportedModel, error) {
 	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
@@ -71,12 +71,12 @@ func (Loader) LoadImportedModels(ctx context.Context, kubeCfg string, env models
 }
 
 // LoadGPUPools loads GPU pools from the given repo and environment.
-func (Loader) LoadGPUPools(ctx context.Context, repo string, env models.Environment) ([]models.GPUPool, error) {
+func (Client) LoadGPUPools(ctx context.Context, repo string, env models.Environment) ([]models.GPUPool, error) {
 	return terraform.LoadGPUPools(ctx, repo, env)
 }
 
 // LoadGPUNodes loads GPU nodes from the given kube config and environment.
-func (Loader) LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error) {
+func (Client) LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error) {
 	client, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (Loader) LoadGPUNodes(ctx context.Context, kubeCfg string, env models.Envir
 }
 
 // LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
-func (Loader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
+func (Client) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
@@ -94,23 +94,23 @@ func (Loader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env m
 }
 
 // LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.
-func (l Loader) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
+func (l Client) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
 	return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, l.metadata)
 }
 
 /*
 LoadLimitRegionalOverrides ...
 */
-func (Loader) LoadLimitRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.LimitRegionalOverride, error) {
+func (Client) LoadLimitRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.LimitRegionalOverride, error) {
 	return configloader.LoadLimitRegionalOverrides(ctx, repo, env.Realm)
 }
 
 // LoadConsolePropertyRegionalOverrides loads console property regional overrides for the given repo and environment.
-func (Loader) LoadConsolePropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.ConsolePropertyRegionalOverride, error) {
+func (Client) LoadConsolePropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.ConsolePropertyRegionalOverride, error) {
 	return configloader.LoadConsolePropertyRegionalOverrides(ctx, repo, env.Realm)
 }
 
 // LoadPropertyRegionalOverrides loads property regional overrides for the given repo and environment.
-func (Loader) LoadPropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.PropertyRegionalOverride, error) {
+func (Client) LoadPropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.PropertyRegionalOverride, error) {
 	return configloader.LoadPropertyRegionalOverrides(ctx, repo, env.Realm)
 }

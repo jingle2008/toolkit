@@ -61,10 +61,10 @@ func WithTable(tbl *table.Model) ModelOption {
 }
 
 // WithLoader sets the Loader implementation for the Model.
-// The provided value must satisfy loader.Loader (see
+// The provided value must satisfy loader.Composite (see
 // internal/infra/loader/interfaces.go for the canonical list of
 // embedded loader interfaces).
-func WithLoader(l loader.Loader) ModelOption {
+func WithLoader(l loader.Composite) ModelOption {
 	return func(m *Model) {
 		m.loader = l
 	}

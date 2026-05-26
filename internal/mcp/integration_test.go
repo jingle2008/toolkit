@@ -20,11 +20,11 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// stubLoader implements just enough of the loader.Loader interface to
+// stubLoader implements just enough of the loader.Composite interface to
 // satisfy NewServer. The integration test only exercises list_aliases
 // (which doesn't reach the loader at all), so every method returns an
 // empty result; the methods exist only because Server's constructor
-// stores a loader.Loader.
+// stores a loader.Composite.
 type stubLoader struct{}
 
 func (stubLoader) LoadDataset(context.Context, string, models.Environment) (*models.Dataset, error) {
@@ -124,7 +124,7 @@ func (r *recorder) snapshot() []*sdk.LoggingMessageParams {
 	return out
 }
 
-func newTestPair(ctx context.Context, t *testing.T, ld loader.Loader, rec *recorder, opts ...func(*config.Config)) *sdk.ClientSession {
+func newTestPair(ctx context.Context, t *testing.T, ld loader.Composite, rec *recorder, opts ...func(*config.Config)) *sdk.ClientSession {
 	t.Helper()
 	cfg := config.Config{
 		RepoPath:  "/dev/null",

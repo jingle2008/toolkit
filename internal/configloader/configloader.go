@@ -117,7 +117,7 @@ func loadRegionalOverrides[T models.NamedItem](ctx context.Context, root, realm,
 	return overrides, nil
 }
 
-type idMap map[string]struct{}
+type idSet map[string]struct{}
 
 func merge[T any](value T, override *T) T {
 	if override == nil {
@@ -126,7 +126,7 @@ func merge[T any](value T, override *T) T {
 	return *override
 }
 
-func getTenants(tenantMap map[string]idMap, tenantMeta []models.TenantMetadata) []models.Tenant {
+func getTenants(tenantMap map[string]idSet, tenantMeta []models.TenantMetadata) []models.Tenant {
 	// Build id -> TenantMetadata map for quick lookup
 	idToMeta := make(map[string]models.TenantMetadata, len(tenantMeta))
 	consumed := make(map[string]bool, len(tenantMeta))
@@ -200,7 +200,7 @@ type tenancyOverrideRecord interface {
 func loadAndStamp[T tenancyOverrideRecord](
 	ctx context.Context,
 	limitsRoot, realm, key string,
-	tenantMap map[string]idMap,
+	tenantMap map[string]idSet,
 	setTenantName func(*T, string),
 ) (map[string][]T, error) {
 	m, err := loadTenancyOverrides[T](ctx, limitsRoot, realm, key)
@@ -217,12 +217,12 @@ func loadAndStamp[T tenancyOverrideRecord](
 }
 
 func updateTenants[T models.TenancyOverride](
-	tenantMap map[string]idMap, overrideMap map[string][]T,
+	tenantMap map[string]idSet, overrideMap map[string][]T,
 ) {
 	for name, overrides := range overrideMap {
 		info, ok := tenantMap[name]
 		if !ok {
-			info = idMap{}
+			info = idSet{}
 			tenantMap[name] = info
 		}
 
@@ -357,7 +357,7 @@ func loadDefinitionGroups(repoPath string) (
 LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.
 */
 func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metadata *models.Metadata) (models.TenancyOverrideGroup, error) {
-	tenantMap := make(map[string]idMap)
+	tenantMap := make(map[string]idSet)
 	limitsRoot := getLimitsRoot(repoPath)
 
 	limitTenancyOverrideMap, err := loadAndStamp(

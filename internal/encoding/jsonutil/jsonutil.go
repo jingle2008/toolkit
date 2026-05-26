@@ -40,7 +40,7 @@ func LoadFile[T any](path string) (*T, error) {
 }
 
 /*
-PrettyJSON returns a pretty-printed JSON string representation of the given object.
+Pretty returns a pretty-printed JSON string representation of the given object.
 
 Parameters:
   - object: the value to marshal as JSON
@@ -49,7 +49,7 @@ Returns:
   - string: the pretty-printed JSON
   - error: if marshaling fails
 */
-func PrettyJSON[T any](object T) (string, error) {
+func Pretty[T any](object T) (string, error) {
 	data, err := json.MarshalIndent(object, "", "    ")
 	if err != nil {
 		return "", err

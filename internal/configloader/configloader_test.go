@@ -234,7 +234,7 @@ func TestLoadTenancyOverrides_Error(t *testing.T) {
 
 func TestGetTenants(t *testing.T) {
 	t.Parallel()
-	m := map[string]idMap{
+	m := map[string]idSet{
 		"Tenant1": map[string]struct{}{"id1": {}},
 		"Tenant2": map[string]struct{}{"id2": {}},
 	}
@@ -260,10 +260,10 @@ func (t testOverride) GetTenantID() string { return t.tenantID }
 func TestUpdateTenants(t *testing.T) {
 	t.Parallel()
 	// Just test that it doesn't panic on empty input
-	updateTenants(map[string]idMap{}, map[string][]testOverride{})
+	updateTenants(map[string]idSet{}, map[string][]testOverride{})
 
 	// Test with actual data
-	tenantMap := make(map[string]idMap)
+	tenantMap := make(map[string]idSet)
 	overrideMap := map[string][]testOverride{
 		"TenantA": {
 			{tenantID: "idA"},
@@ -551,7 +551,7 @@ func TestMerge_PrimitivesAndPointers(t *testing.T) {
 func TestGetTenants_MergeAndUnmatched(t *testing.T) {
 	t.Parallel()
 	// tenantMap has two tenants, metadata has one matching and one extra
-	tenantMap := map[string]idMap{
+	tenantMap := map[string]idSet{
 		"TenantA": {"idA": {}},
 		"TenantB": {"idB": {}},
 	}

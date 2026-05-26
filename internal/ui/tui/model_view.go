@@ -114,7 +114,7 @@ func (m *Model) updateContentAsync() tea.Cmd {
 	renderer := m.renderer
 
 	return func() tea.Msg {
-		content, err := jsonutil.PrettyJSON(item)
+		content, err := jsonutil.Pretty(item)
 		if err != nil {
 			content = err.Error()
 		}

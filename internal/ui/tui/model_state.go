@@ -61,7 +61,7 @@ type Model struct {
 	choice         models.ItemKey
 	viewport       *viewport.Model
 	renderer       view.Renderer
-	loader         loader.Loader
+	loader         loader.Composite
 	scope          *domain.ToolkitContext // selected scope (parent context for current category)
 	keys           keys.KeyMap
 	help           *help.Model

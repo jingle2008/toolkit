@@ -10,12 +10,12 @@ import (
 
 func TestNewLoaderImplementsInterface(t *testing.T) {
 	t.Parallel()
-	_ = NewLoader(context.Background(), "")
+	_ = New(context.Background(), "")
 }
 
 func TestLoadDataset_Error(t *testing.T) {
 	t.Parallel()
-	ldr := NewLoader(context.Background(), "")
+	ldr := New(context.Background(), "")
 	// Use a repo path that does not exist to trigger error
 	_, err := ldr.LoadDataset(context.Background(), "/nonexistent/path", models.Environment{})
 	if err == nil {
@@ -25,7 +25,7 @@ func TestLoadDataset_Error(t *testing.T) {
 
 func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
 	t.Parallel()
-	ldr := NewLoader(context.Background(), "")
+	ldr := New(context.Background(), "")
 	_, err := ldr.LoadTenancyOverrideGroup(context.Background(), "/nonexistent/path", models.Environment{Realm: "bad"})
 	if err == nil {
 		t.Error("LoadTenancyOverrideGroup with bad path: want error, got nil")
@@ -34,7 +34,7 @@ func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
 
 func TestLoadLimitRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 	t.Parallel()
-	ldr := NewLoader(context.Background(), "")
+	ldr := New(context.Background(), "")
 	got, err := ldr.LoadLimitRegionalOverrides(context.Background(), "/nonexistent/path", models.Environment{Realm: "bad"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -46,7 +46,7 @@ func TestLoadLimitRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 
 func TestLoadConsolePropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 	t.Parallel()
-	ldr := NewLoader(context.Background(), "")
+	ldr := New(context.Background(), "")
 	got, err := ldr.LoadConsolePropertyRegionalOverrides(context.Background(), "/nonexistent/path", models.Environment{Realm: "bad"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -58,7 +58,7 @@ func TestLoadConsolePropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 
 func TestLoadPropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 	t.Parallel()
-	ldr := NewLoader(context.Background(), "")
+	ldr := New(context.Background(), "")
 	got, err := ldr.LoadPropertyRegionalOverrides(context.Background(), "/nonexistent/path", models.Environment{Realm: "bad"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -71,7 +71,7 @@ func TestLoadPropertyRegionalOverrides_EmptyOnBadPath(t *testing.T) {
 func TestLoader_AllMethods_NoPanicOnEmptyInput(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	ldr := NewLoader(ctx, "")
+	ldr := New(ctx, "")
 	env := models.Environment{}
 	// These should not panic, even if they return errors or empty data
 	_, _ = ldr.LoadDataset(ctx, "", env)
@@ -86,7 +86,7 @@ func TestLoader_AllMethods_NoPanicOnEmptyInput(t *testing.T) {
 
 func TestLoadBaseModels_Error(t *testing.T) {
 	t.Parallel()
-	ldr := NewLoader(context.Background(), "")
+	ldr := New(context.Background(), "")
 	_, err := ldr.LoadBaseModels(context.Background(), "/nonexistent/path", models.Environment{})
 	if err == nil {
 		t.Error("LoadBaseModels with bad path: want error, got nil")
@@ -95,7 +95,7 @@ func TestLoadBaseModels_Error(t *testing.T) {
 
 func TestLoadGPUPools_Error(t *testing.T) {
 	t.Parallel()
-	ldr := NewLoader(context.Background(), "")
+	ldr := New(context.Background(), "")
 	_, err := ldr.LoadGPUPools(context.Background(), "/nonexistent/path", models.Environment{})
 	if err == nil {
 		t.Error("LoadGPUPools with bad path: want error, got nil")
@@ -104,7 +104,7 @@ func TestLoadGPUPools_Error(t *testing.T) {
 
 func TestProductionLoader_LoadDataset(t *testing.T) {
 	t.Parallel()
-	loader := Loader{}
+	loader := Client{}
 	_, err := loader.LoadDataset(context.Background(), "dummy_repo", models.Environment{})
 	if err == nil {
 		t.Log("LoadDataset: expected error or empty result with dummy input")
@@ -113,7 +113,7 @@ func TestProductionLoader_LoadDataset(t *testing.T) {
 
 func TestProductionLoader_LoadBaseModels(t *testing.T) {
 	t.Parallel()
-	loader := Loader{}
+	loader := Client{}
 	_, err := loader.LoadBaseModels(context.Background(), "dummy_repo", models.Environment{})
 	if err == nil {
 		t.Log("LoadBaseModels: expected error or empty result with dummy input")
@@ -122,7 +122,7 @@ func TestProductionLoader_LoadBaseModels(t *testing.T) {
 
 func TestProductionLoader_LoadGPUPools(t *testing.T) {
 	t.Parallel()
-	loader := Loader{}
+	loader := Client{}
 	_, err := loader.LoadGPUPools(context.Background(), "dummy_repo", models.Environment{})
 	if err == nil {
 		t.Log("LoadGPUPools: expected error or empty result with dummy input")
@@ -131,7 +131,7 @@ func TestProductionLoader_LoadGPUPools(t *testing.T) {
 
 func TestProductionLoader_LoadGPUNodes(t *testing.T) {
 	t.Parallel()
-	loader := Loader{}
+	loader := Client{}
 	_, err := loader.LoadGPUNodes(context.Background(), "dummy_kubeconfig", models.Environment{})
 	if err == nil {
 		t.Log("LoadGPUNodes: expected error or empty result with dummy input")
@@ -140,7 +140,7 @@ func TestProductionLoader_LoadGPUNodes(t *testing.T) {
 
 func TestProductionLoader_LoadDedicatedAIClusters(t *testing.T) {
 	t.Parallel()
-	loader := Loader{}
+	loader := Client{}
 	_, err := loader.LoadDedicatedAIClusters(context.Background(), "dummy_kubeconfig", models.Environment{})
 	if err == nil {
 		t.Log("LoadDedicatedAIClusters: expected error or empty result with dummy input")
@@ -149,7 +149,7 @@ func TestProductionLoader_LoadDedicatedAIClusters(t *testing.T) {
 
 func TestProductionLoader_RegionalOverrides(t *testing.T) {
 	t.Parallel()
-	loader := Loader{}
+	loader := Client{}
 	ctx := context.Background()
 	repo := "dummy_repo"
 	env := models.Environment{}
@@ -188,12 +188,12 @@ func TestNewLoader_LoadsMetadataFile(t *testing.T) {
 	}
 	_ = tmp.Close()
 
-	_ = NewLoader(context.Background(), tmp.Name())
+	_ = New(context.Background(), tmp.Name())
 }
 
 func TestLoader_LoadGPUNodesAndDedicatedAIClusters_Error(t *testing.T) {
 	t.Parallel()
-	ldr := NewLoader(context.Background(), "")
+	ldr := New(context.Background(), "")
 	env := models.Environment{}
 	_, err := ldr.LoadGPUNodes(context.Background(), "", env)
 	if err == nil {

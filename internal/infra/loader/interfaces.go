@@ -76,9 +76,9 @@ type RegionalOverrideLoader interface {
 }
 
 /*
-Loader is a composite interface that embeds all loader interfaces.
+Composite is a composite interface that embeds all loader interfaces.
 */
-type Loader interface {
+type Composite interface {
 	DatasetLoader
 	BaseModelLoader
 	ImportedModelLoader

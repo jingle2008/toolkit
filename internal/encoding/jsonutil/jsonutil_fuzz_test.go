@@ -15,6 +15,6 @@ func FuzzPrettyJSON(f *testing.F) {
 	f.Fuzz(func(_ *testing.T, input string) {
 		var v any
 		_ = json.Unmarshal([]byte(input), &v)
-		_, _ = PrettyJSON(v)
+		_, _ = Pretty(v)
 	})
 }
