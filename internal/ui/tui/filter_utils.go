@@ -11,10 +11,10 @@ import (
 )
 
 func filterTableAsync(m *Model, filter string) tea.Cmd {
-	if filter == m.curFilter {
+	if filter == m.filter {
 		return nil
 	}
-	m.curFilter = filter
+	m.filter = filter
 	return m.updateRowsAsync()
 }
 

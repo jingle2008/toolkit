@@ -170,15 +170,15 @@ func TestApplyDataset_ResetsFilter(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 1
-	m.curFilter = "old"
+	m.filter = "old"
 	m.category = domain.Tenant
 
 	m.applyDataset(func(ds *models.Dataset) {
 		ds.Tenants = []models.Tenant{{Name: "tenant1"}}
 	}, domain.Tenant, 1)
 
-	if m.curFilter != "" {
-		t.Fatalf("expected curFilter reset, got %q", m.curFilter)
+	if m.filter != "" {
+		t.Fatalf("expected filter reset, got %q", m.filter)
 	}
 }
 

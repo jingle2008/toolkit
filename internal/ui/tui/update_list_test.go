@@ -42,17 +42,17 @@ func TestHandleSetFilterMsg(t *testing.T) {
 func TestHandleFilterApplyMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.curFilter = "old"
+	m.filter = "old"
 	m.filterNonce = 2
 
 	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Nonce: 1})
-	if m.curFilter != "old" {
-		t.Fatalf("unexpected filter update on stale nonce: %q", m.curFilter)
+	if m.filter != "old" {
+		t.Fatalf("unexpected filter update on stale nonce: %q", m.filter)
 	}
 
 	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Nonce: 2})
-	if m.curFilter != "new" {
-		t.Fatalf("expected filter to update, got %q", m.curFilter)
+	if m.filter != "new" {
+		t.Fatalf("expected filter to update, got %q", m.filter)
 	}
 }
 

@@ -61,7 +61,7 @@ Now also sets m.stats from computeTableRows.
 */
 func (m *Model) updateRows(autoSelect bool) {
 	m.rowsNonce++
-	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
+	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.filter, m.sortColumn, m.sortAsc, m.showFaulty)
 	m.applyRows(rows, stats, autoSelect)
 }
 
@@ -71,7 +71,7 @@ func (m *Model) updateRowsAsync() tea.Cmd {
 	dataset := m.dataset
 	category := m.category
 	scope := m.scope
-	filter := m.curFilter
+	filter := m.filter
 	sortColumn := m.sortColumn
 	sortAsc := m.sortAsc
 	showFaulty := m.showFaulty
@@ -288,7 +288,7 @@ func (m *Model) updateLayout(w, h int) {
 
 // refreshDisplay resets filters and updates columns and rows.
 func (m *Model) refreshDisplay() {
-	m.curFilter = ""
+	m.filter = ""
 	m.textInput.Reset()
 	m.updateColumns()
 	m.updateRows(true)

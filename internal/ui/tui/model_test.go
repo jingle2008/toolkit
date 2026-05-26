@@ -231,13 +231,13 @@ func TestFilterAndBackToLastState(t *testing.T) {
 	rowsMsg, ok := cmd().(tableRowsComputedMsg)
 	require.True(t, ok)
 	m.handleTableRowsComputedMsg(rowsMsg)
-	require.Equal(t, "tenant1", m.curFilter)
+	require.Equal(t, "tenant1", m.filter)
 	cmd = m.backToLastState()
 	require.NotNil(t, cmd)
 	rowsMsg, ok = cmd().(tableRowsComputedMsg)
 	require.True(t, ok)
 	m.handleTableRowsComputedMsg(rowsMsg)
-	require.Equal(t, "", m.curFilter)
+	require.Equal(t, "", m.filter)
 }
 
 func TestEditModeTransitions(t *testing.T) {

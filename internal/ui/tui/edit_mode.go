@@ -47,7 +47,7 @@ func (m *Model) enterFilterMode() tea.Cmd {
 }
 
 func (m *Model) backToLastState() tea.Cmd {
-	if m.curFilter != "" {
+	if m.filter != "" {
 		m.textInput.Reset()
 		return filterTableAsync(m, "")
 	} else if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {

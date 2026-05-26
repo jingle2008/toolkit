@@ -51,7 +51,7 @@ type Model struct {
 	editTarget     common.EditTarget
 	inputMode      common.InputMode
 	textInput      *textinput.Model
-	curFilter      string
+	filter      string
 	initialFilter  string
 	filterNonce    int
 	rowsNonce      int
