@@ -64,7 +64,7 @@ getTableRows returns the table rows for a given category, using the appropriate 
 If the scope is not valid for the category, it is set to nil.
 Returns: rows, stats (nil if not applicable)
 */
-func getTableRows(dataset *models.Dataset, category domain.Category, scope *domain.ToolkitContext, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
+func getTableRows(dataset *models.Dataset, category domain.Category, scope *domain.Scope, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
 	if scope != nil && !scope.Category.IsScopeOf(category) {
 		scope = nil
 	}

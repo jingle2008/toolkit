@@ -197,7 +197,7 @@ func (m *Model) enterContext() tea.Cmd {
 	target := row[0]
 	switch {
 	case m.category.IsScope():
-		m.scope = &domain.ToolkitContext{Category: m.category, Name: target}
+		m.scope = &domain.Scope{Category: m.category, Name: target}
 		return tea.Sequence(m.updateCategory(m.category.ScopedCategories()[0])...)
 	case m.category == domain.Environment:
 		envPtr := collections.FindByName(m.dataset.Environments, target)

@@ -60,7 +60,7 @@ func tuiRowsGroupedWith[T models.NamedFilterable](
 	g columns.GroupedSet[T],
 	m map[string][]T,
 	scopeCategory domain.Category,
-	ctx *domain.ToolkitContext,
+	ctx *domain.Scope,
 	filter string,
 	faultyOnly bool,
 	cell func(columns.GroupedColumn[T], string, T) string,
@@ -101,7 +101,7 @@ func tuiRowsGrouped[T models.NamedFilterable](
 	g columns.GroupedSet[T],
 	m map[string][]T,
 	scopeCategory domain.Category,
-	ctx *domain.ToolkitContext,
+	ctx *domain.Scope,
 	filter string,
 	faultyOnly bool,
 ) []table.Row {
@@ -117,7 +117,7 @@ func tuiRowsGroupedForExport[T models.NamedFilterable](
 	g columns.GroupedSet[T],
 	m map[string][]T,
 	scopeCategory domain.Category,
-	ctx *domain.ToolkitContext,
+	ctx *domain.Scope,
 	realm, region, filter string,
 	faultyOnly bool,
 ) []table.Row {

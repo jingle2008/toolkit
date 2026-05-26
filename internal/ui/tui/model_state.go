@@ -62,7 +62,7 @@ type Model struct {
 	viewport       *viewport.Model
 	renderer       view.Renderer
 	loader         loader.Composite
-	scope          *domain.ToolkitContext // selected scope (parent context for current category)
+	scope          *domain.Scope // selected scope (parent context for current category)
 	keys           keys.KeyMap
 	help           *help.Model
 	kubeConfig     string

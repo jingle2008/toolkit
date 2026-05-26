@@ -15,7 +15,7 @@ import (
 // prefers columns.Column.RenderForExport over Render.
 type rowCtx struct {
 	dataset *models.Dataset
-	scope   *domain.ToolkitContext
+	scope   *domain.Scope
 	realm   string
 	region  string
 	filter  string
