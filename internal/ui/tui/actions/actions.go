@@ -21,7 +21,7 @@ func CopyItemName(item any, env models.Environment, logger logging.Logger) {
 	}
 
 	if r, ok := item.(models.RealmedID); ok {
-		if err := clipboardWriteAll(r.GetID(env.Realm, env.Region)); err != nil {
+		if err := clipboardWriteAll(r.OCID(env.Realm, env.Region)); err != nil {
 			logger.Errorw("failed to copy id to clipboard", "error", err)
 		}
 	} else if to, ok := item.(models.NamedItem); ok {
@@ -44,7 +44,7 @@ func CopyTenantID(item any, env models.Environment, logger logging.Logger) {
 	}
 
 	if r, ok := item.(models.RealmedTenancyID); ok {
-		if err := clipboardWriteAll(r.GetTenantID(env.Realm)); err != nil {
+		if err := clipboardWriteAll(r.TenancyOCID(env.Realm)); err != nil {
 			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
 		}
 	} else if to, ok := item.(models.TenancyOverride); ok {

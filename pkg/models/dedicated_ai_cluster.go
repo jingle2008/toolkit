@@ -84,13 +84,15 @@ func normalizeRegion(region string) string {
 	return region
 }
 
-// GetID returns the OCID for the DedicatedAICluster.
-func (n DedicatedAICluster) GetID(realm, region string) string {
+// OCID returns the full OCID for the DedicatedAICluster, built from
+// realm + region + the stored Name suffix.
+func (n DedicatedAICluster) OCID(realm, region string) string {
 	region = normalizeRegion(region)
 	return fmt.Sprintf("ocid1.generativeaidedicatedaicluster.%s.%s.%s", realm, region, n.Name)
 }
 
-// GetTenantID returns the OCID for the tenancy of the DedicatedAICluster.
-func (n DedicatedAICluster) GetTenantID(realm string) string {
+// TenancyOCID returns the full tenancy OCID for the
+// DedicatedAICluster, built from realm + the stored TenantID suffix.
+func (n DedicatedAICluster) TenancyOCID(realm string) string {
 	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, n.TenantID)
 }

@@ -35,7 +35,7 @@ type TenancyOverride interface {
 // NamedItem.GetName (which returns just the suffix) and used by the
 // TUI's CopyItemName action to produce the full OCID.
 type RealmedID interface {
-	GetID(realm, region string) string
+	OCID(realm, region string) string
 }
 
 // RealmedTenancyID is implemented by OCI resources whose owning
@@ -45,7 +45,7 @@ type RealmedID interface {
 // implemented by file-backed override types whose stored TenantID
 // is already the full identifier).
 type RealmedTenancyID interface {
-	GetTenantID(realm string) string
+	TenancyOCID(realm string) string
 }
 
 // DefinitionOverride represents a definition override with regions and value.

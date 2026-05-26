@@ -63,11 +63,11 @@ func TestDedicatedAICluster_GetIDAndTenantID(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			dac := DedicatedAICluster{Name: c.dacName, TenantID: c.tenantID}
-			gotID := dac.GetID(c.realm, c.region)
+			gotID := dac.OCID(c.realm, c.region)
 			if gotID != c.expID {
 				t.Errorf("GetID() = %q, want %q", gotID, c.expID)
 			}
-			gotTenant := dac.GetTenantID(c.realm)
+			gotTenant := dac.TenancyOCID(c.realm)
 			if gotTenant != c.expTenant {
 				t.Errorf("GetTenantID() = %q, want %q", gotTenant, c.expTenant)
 			}

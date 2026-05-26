@@ -33,14 +33,14 @@ var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 		Title: "Name", Key: "name", Ratio: 0.20, TruncateMiddle: true,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Name },
 		ExportRender: func(realm, region string, _ string, d models.DedicatedAICluster) string {
-			return d.GetID(realm, region)
+			return d.OCID(realm, region)
 		},
 	},
 	{
 		Title: "Tenant", Key: "tenant", Ratio: 0.17, TruncateMiddle: true,
 		Render: func(k string, _ models.DedicatedAICluster) string { return k },
 		ExportRender: func(realm, _ string, _ string, d models.DedicatedAICluster) string {
-			return d.GetTenantID(realm)
+			return d.TenancyOCID(realm)
 		},
 	},
 	{

@@ -41,7 +41,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 		return fmt.Errorf("failed to create GenerativeAI client: %w", err)
 	}
 
-	dacID := dac.GetID(env.Realm, env.Region)
+	dacID := dac.OCID(env.Realm, env.Region)
 	getReq := generativeai.GetDedicatedAiClusterRequest{
 		DedicatedAiClusterId: &dacID,
 	}

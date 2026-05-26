@@ -47,18 +47,18 @@ func (m ImportedModel) FilterableFields() []string {
 	return append(m.BaseModel.FilterableFields(), m.Namespace, m.TenantID)
 }
 
-// GetTenantID returns the full tenancy OCID for the ImportedModel by
+// TenancyOCID returns the full tenancy OCID for the ImportedModel by
 // combining the realm with the `tenancy-id` label suffix stored in
-// TenantID. Mirrors DedicatedAICluster.GetTenantID.
-func (m ImportedModel) GetTenantID(realm string) string {
+// TenantID. Mirrors DedicatedAICluster.TenancyOCID.
+func (m ImportedModel) TenancyOCID(realm string) string {
 	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, m.TenantID)
 }
 
-// GetID returns the full OCID for the ImportedModel by combining the
+// OCID returns the full OCID for the ImportedModel by combining the
 // realm and region with the Name suffix. Mirrors
-// DedicatedAICluster.GetID; PHX/IAD regions are normalized to their
+// DedicatedAICluster.OCID; PHX/IAD regions are normalized to their
 // short codes the same way.
-func (m ImportedModel) GetID(realm, region string) string {
+func (m ImportedModel) OCID(realm, region string) string {
 	region = normalizeRegion(region)
 	return fmt.Sprintf("ocid1.generativeaiimportedmodel.%s.%s.%s", realm, region, m.Name)
 }
