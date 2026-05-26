@@ -147,9 +147,9 @@ func (e Category) GetName() string {
 }
 
 /*
-GetFilterableFields returns the filterable fields for the Category.
+FilterableFields returns the filterable fields for the Category.
 */
-func (e Category) GetFilterableFields() []string {
+func (e Category) FilterableFields() []string {
 	return e.GetAliases()
 }
 

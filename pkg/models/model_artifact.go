@@ -21,8 +21,8 @@ func (m ModelArtifact) GetGPUConfig() string {
 	return fmt.Sprintf("%dx %s", m.GPUCount, m.GPUShape)
 }
 
-// GetFilterableFields returns filterable fields for the model artifact.
-func (m ModelArtifact) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the model artifact.
+func (m ModelArtifact) FilterableFields() []string {
 	return []string{m.Name, m.GetGPUConfig(), m.ModelName}
 }
 

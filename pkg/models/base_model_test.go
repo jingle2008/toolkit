@@ -117,7 +117,7 @@ func TestBaseModel_GetFilterableFields(t *testing.T) {
 		Version:      "v",
 		Runtime:      "r",
 	}
-	fields := bm.GetFilterableFields()
+	fields := bm.FilterableFields()
 	assert.Contains(t, fields, "capA")
 	assert.Contains(t, fields, "capB")
 	assert.Contains(t, fields, "n")

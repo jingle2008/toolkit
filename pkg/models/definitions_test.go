@@ -9,7 +9,7 @@ import (
 type testImpl struct{}
 
 func (testImpl) GetName() string               { return "n" }
-func (testImpl) GetFilterableFields() []string { return []string{"f"} }
+func (testImpl) FilterableFields() []string { return []string{"f"} }
 func (testImpl) GetTenantID() string           { return "tid" }
 func (testImpl) GetRegions() []string          { return []string{"r"} }
 func (testImpl) GetValue() string              { return "v" }

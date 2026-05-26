@@ -23,7 +23,7 @@ func TestLimitDefinition_Getters(t *testing.T) {
 	}
 	assert.Equal(t, "CPU", ld.GetName())
 	assert.Equal(t, "CPU limit", ld.GetDescription())
-	assert.ElementsMatch(t, []string{"CPU", "CPU limit"}, ld.GetFilterableFields())
+	assert.ElementsMatch(t, []string{"CPU", "CPU limit"}, ld.FilterableFields())
 }
 
 func TestLimitTenancyOverride_Getters(t *testing.T) {
@@ -40,9 +40,9 @@ func TestLimitTenancyOverride_Getters(t *testing.T) {
 	}
 	assert.Equal(t, "CPU", lto.GetName())
 	assert.Equal(t, "tenantX", lto.GetTenantID())
-	assert.Contains(t, lto.GetFilterableFields(), "us-phoenix-1")
-	assert.Contains(t, lto.GetFilterableFields(), "us-ashburn-1")
-	assert.Contains(t, lto.GetFilterableFields(), "CPU")
+	assert.Contains(t, lto.FilterableFields(), "us-phoenix-1")
+	assert.Contains(t, lto.FilterableFields(), "us-ashburn-1")
+	assert.Contains(t, lto.FilterableFields(), "CPU")
 }
 
 func TestLimitRegionalOverride_FilterableFields_And_IsFaulty(t *testing.T) {
@@ -51,7 +51,7 @@ func TestLimitRegionalOverride_FilterableFields_And_IsFaulty(t *testing.T) {
 		Regions: []string{"us-ashburn-1"},
 		Name:    "gpuCount",
 	}
-	fields := lro.GetFilterableFields()
+	fields := lro.FilterableFields()
 	assert.Contains(t, fields, "us-ashburn-1")
 	assert.Contains(t, fields, "gpuCount")
 	assert.False(t, lro.IsFaulty())
@@ -60,11 +60,11 @@ func TestLimitRegionalOverride_FilterableFields_And_IsFaulty(t *testing.T) {
 		LimitRegionalOverride: lro,
 		TenantID:              "ocid1.tenancy.oc1..aaaa",
 	}
-	fields2 := lto.GetFilterableFields()
+	fields2 := lto.FilterableFields()
 	assert.Contains(t, fields2, "ocid1.tenancy.oc1..aaaa")
 	assert.False(t, lto.IsFaulty())
 
 	ld := LimitDefinition{Name: "foo", Description: "bar"}
-	assert.ElementsMatch(t, []string{"foo", "bar"}, ld.GetFilterableFields())
+	assert.ElementsMatch(t, []string{"foo", "bar"}, ld.FilterableFields())
 	assert.False(t, ld.IsFaulty())
 }

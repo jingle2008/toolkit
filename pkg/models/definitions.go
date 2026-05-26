@@ -2,7 +2,7 @@ package models
 
 // Filterable represents an item that can be filtered by fields.
 type Filterable interface {
-	GetFilterableFields() []string
+	FilterableFields() []string
 }
 
 // NamedItem represents an item with a name.

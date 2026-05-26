@@ -16,7 +16,7 @@ func TestDedicatedAICluster_Getters(t *testing.T) {
 		TenantID:  "tenant1",
 	}
 	assert.Equal(t, "cluster1", cluster.GetName())
-	assert.ElementsMatch(t, []string{"cluster1", "A100", "shapeA", "Ready", "tenant1", "", "", "", "", ""}, cluster.GetFilterableFields())
+	assert.ElementsMatch(t, []string{"cluster1", "A100", "shapeA", "Ready", "tenant1", "", "", "", "", ""}, cluster.FilterableFields())
 }
 
 func TestDedicatedAICluster_GetIDAndTenantID(t *testing.T) {

@@ -18,7 +18,7 @@ func TestPropertyDefinition_Getters(t *testing.T) {
 	assert.Equal(t, "foo", p.GetName())
 	assert.Equal(t, "desc", p.GetDescription())
 	assert.Equal(t, "bar", p.GetValue())
-	assert.ElementsMatch(t, []string{"foo", "desc"}, p.GetFilterableFields())
+	assert.ElementsMatch(t, []string{"foo", "desc"}, p.FilterableFields())
 }
 
 func TestPropertyRegionalOverride_Getters(t *testing.T) {
@@ -35,8 +35,8 @@ func TestPropertyRegionalOverride_Getters(t *testing.T) {
 	assert.Equal(t, "p1", pro.GetName())
 	assert.Equal(t, []string{"us-phoenix-1"}, pro.GetRegions())
 	assert.Equal(t, "v1", pro.GetValue())
-	assert.Contains(t, pro.GetFilterableFields(), "p1")
-	assert.Contains(t, pro.GetFilterableFields(), "us-phoenix-1")
+	assert.Contains(t, pro.FilterableFields(), "p1")
+	assert.Contains(t, pro.FilterableFields(), "us-phoenix-1")
 }
 
 func TestPropertyTenancyOverride_GetTenantID(t *testing.T) {

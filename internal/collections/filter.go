@@ -40,7 +40,7 @@ func IsMatch(item models.Filterable, filter string, ignoreCase bool) bool {
 		filter = strings.ToLower(filter)
 	}
 
-	for _, value := range item.GetFilterableFields() {
+	for _, value := range item.FilterableFields() {
 		if value == "" {
 			continue
 		}

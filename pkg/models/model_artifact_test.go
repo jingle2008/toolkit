@@ -16,5 +16,5 @@ func TestModelArtifact_Getters(t *testing.T) {
 	}
 	assert.Equal(t, "artifact1", ma.GetName())
 	assert.Equal(t, "4x A100", ma.GetGPUConfig())
-	assert.ElementsMatch(t, []string{"artifact1", "4x A100", "m1"}, ma.GetFilterableFields())
+	assert.ElementsMatch(t, []string{"artifact1", "4x A100", "m1"}, ma.FilterableFields())
 }

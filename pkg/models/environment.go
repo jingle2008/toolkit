@@ -16,8 +16,8 @@ func (e Environment) GetName() string {
 	return fmt.Sprintf("%s-%s", e.Type, Region(e.Region).GetCode())
 }
 
-// GetFilterableFields returns filterable fields for the environment.
-func (e Environment) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the environment.
+func (e Environment) FilterableFields() []string {
 	return []string{e.Type, e.Region, e.Realm, e.GetName()}
 }
 

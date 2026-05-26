@@ -26,8 +26,8 @@ func (n GPUNode) GetName() string {
 	return n.Name
 }
 
-// GetFilterableFields returns filterable fields for the GPU node.
-func (n GPUNode) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the GPU node.
+func (n GPUNode) FilterableFields() []string {
 	return []string{n.Name, n.InstanceType, n.NodePool, n.GetStatus()}
 }
 

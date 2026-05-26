@@ -22,8 +22,8 @@ func (c ConsolePropertyDefinition) GetValue() string {
 	return c.Value
 }
 
-// GetFilterableFields returns filterable fields for the console property definition.
-func (c ConsolePropertyDefinition) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the console property definition.
+func (c ConsolePropertyDefinition) FilterableFields() []string {
 	return []string{c.Name, c.Description}
 }
 
@@ -61,8 +61,8 @@ func (o ConsolePropertyRegionalOverride) GetValue() string {
 	return o.Values[0].Value
 }
 
-// GetFilterableFields returns filterable fields for the console property regional override.
-func (o ConsolePropertyRegionalOverride) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the console property regional override.
+func (o ConsolePropertyRegionalOverride) FilterableFields() []string {
 	return append(o.Regions, o.Name)
 }
 
@@ -91,8 +91,8 @@ func (o *ConsolePropertyTenancyOverride) SetTenantName(name string) {
 	o.TenantName = name
 }
 
-// GetFilterableFields returns filterable fields for the console property tenancy override.
-func (o ConsolePropertyTenancyOverride) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the console property tenancy override.
+func (o ConsolePropertyTenancyOverride) FilterableFields() []string {
 	return append(o.Regions, o.Name, o.TenantName, o.TenantID)
 }
 

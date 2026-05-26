@@ -40,11 +40,11 @@ type ImportedModel struct {
 	Owner     *Tenant `json:"owner,omitempty"`
 }
 
-// GetFilterableFields extends BaseModel's filterable set with the
+// FilterableFields extends BaseModel's filterable set with the
 // imported-specific identity fields so `--filter namespace-x` or
 // `--filter ocid1.tenancy.…` work without users knowing the source.
-func (m ImportedModel) GetFilterableFields() []string {
-	return append(m.BaseModel.GetFilterableFields(), m.Namespace, m.TenantID)
+func (m ImportedModel) FilterableFields() []string {
+	return append(m.BaseModel.FilterableFields(), m.Namespace, m.TenantID)
 }
 
 // GetTenantID returns the full tenancy OCID for the ImportedModel by

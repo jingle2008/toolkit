@@ -26,8 +26,8 @@ func (t Tenant) GetTenantID() string {
 	return ""
 }
 
-// GetFilterableFields returns filterable fields for the tenant.
-func (t Tenant) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the tenant.
+func (t Tenant) FilterableFields() []string {
 	var fields []string
 	if len(t.IDs) > 1 {
 		fields = t.IDs[1:]

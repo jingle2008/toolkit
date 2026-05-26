@@ -14,8 +14,8 @@ func (t ServiceTenancy) GetName() string {
 	return t.Name
 }
 
-// GetFilterableFields returns filterable fields for the service tenancy.
-func (t ServiceTenancy) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the service tenancy.
+func (t ServiceTenancy) FilterableFields() []string {
 	return append(t.Regions, t.Name, t.Realm, t.HomeRegion, t.Environment)
 }
 

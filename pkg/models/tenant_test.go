@@ -14,7 +14,7 @@ func TestTenant_Getters(t *testing.T) {
 	}
 	assert.Equal(t, "tenantA", tenant.GetName())
 	assert.Equal(t, "id1 (+1)", tenant.GetTenantID())
-	fields := tenant.GetFilterableFields()
+	fields := tenant.FilterableFields()
 	assert.Contains(t, fields, "tenantA")
 	assert.Contains(t, fields, "id1 (+1)")
 

@@ -23,8 +23,8 @@ func (p GPUPool) GetName() string {
 	return p.Name
 }
 
-// GetFilterableFields returns filterable fields for the GPU pool.
-func (p GPUPool) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the GPU pool.
+func (p GPUPool) FilterableFields() []string {
 	return []string{p.Name, p.Shape, p.CapacityType}
 }
 

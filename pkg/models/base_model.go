@@ -72,8 +72,8 @@ func (m BaseModel) GetDefaultDACShape() *DACShape {
 	return nil
 }
 
-// GetFilterableFields returns filterable fields for the base model.
-func (m BaseModel) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the base model.
+func (m BaseModel) FilterableFields() []string {
 	var shapeName string
 	shape := m.GetDefaultDACShape()
 	if shape != nil {

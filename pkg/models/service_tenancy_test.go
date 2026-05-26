@@ -16,7 +16,7 @@ func TestServiceTenancy_Getters(t *testing.T) {
 		Environment: "dev",
 	}
 	assert.Equal(t, "svc1", st.GetName())
-	assert.ElementsMatch(t, []string{"us-phoenix-1", "us-ashburn-1", "svc1", "oc1", "us-phoenix-1", "dev"}, st.GetFilterableFields())
+	assert.ElementsMatch(t, []string{"us-phoenix-1", "us-ashburn-1", "svc1", "oc1", "us-phoenix-1", "dev"}, st.FilterableFields())
 	expectedEnvs := []Environment{
 		{Type: "dev", Region: "us-phoenix-1", Realm: "oc1"},
 		{Type: "dev", Region: "us-ashburn-1", Realm: "oc1"},

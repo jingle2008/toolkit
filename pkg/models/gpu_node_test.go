@@ -17,7 +17,7 @@ func TestGPUNode_Getters(t *testing.T) {
 		IsReady:      true,
 	}
 	assert.Equal(t, "node1", node.GetName())
-	assert.ElementsMatch(t, []string{"node1", "NVIDIA.A100.8", "poolA", "OK"}, node.GetFilterableFields())
+	assert.ElementsMatch(t, []string{"node1", "NVIDIA.A100.8", "poolA", "OK"}, node.FilterableFields())
 	assert.Equal(t, "OK", node.GetStatus())
 
 	node2 := GPUNode{

@@ -15,7 +15,7 @@ func TestGPUPool_Getters(t *testing.T) {
 		Size:         1,
 	}
 	assert.Equal(t, "pool1", pool.GetName())
-	assert.ElementsMatch(t, []string{"pool1", "NVIDIA.A100.8", "dedicated"}, pool.GetFilterableFields())
+	assert.ElementsMatch(t, []string{"pool1", "NVIDIA.A100.8", "dedicated"}, pool.FilterableFields())
 	assert.Equal(t, 8, pool.GetGPUs())
 
 	pool2 := GPUPool{

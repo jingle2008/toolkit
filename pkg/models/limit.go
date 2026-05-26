@@ -26,8 +26,8 @@ func (c LimitDefinition) GetDescription() string {
 	return c.Description
 }
 
-// GetFilterableFields returns filterable fields for the limit definition.
-func (c LimitDefinition) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the limit definition.
+func (c LimitDefinition) FilterableFields() []string {
 	return []string{c.Name, c.Description}
 }
 
@@ -56,8 +56,8 @@ func (o LimitRegionalOverride) GetName() string {
 	return o.Name
 }
 
-// GetFilterableFields returns filterable fields for the limit regional override.
-func (o LimitRegionalOverride) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the limit regional override.
+func (o LimitRegionalOverride) FilterableFields() []string {
 	return append(o.Regions, o.Name)
 }
 
@@ -95,7 +95,7 @@ func (o *LimitTenancyOverride) SetTenantName(name string) {
 	o.TenantName = name
 }
 
-// GetFilterableFields returns filterable fields for the limit tenancy override.
-func (o LimitTenancyOverride) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the limit tenancy override.
+func (o LimitTenancyOverride) FilterableFields() []string {
 	return append(o.Regions, o.Name, o.TenantName, o.TenantID)
 }

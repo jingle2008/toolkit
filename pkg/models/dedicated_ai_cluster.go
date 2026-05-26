@@ -26,8 +26,8 @@ func (n DedicatedAICluster) GetName() string {
 	return n.Name
 }
 
-// GetFilterableFields returns filterable fields for the dedicated AI cluster.
-func (n DedicatedAICluster) GetFilterableFields() []string {
+// FilterableFields returns filterable fields for the dedicated AI cluster.
+func (n DedicatedAICluster) FilterableFields() []string {
 	return []string{
 		n.Name,
 		n.Type,
