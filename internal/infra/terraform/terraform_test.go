@@ -49,9 +49,9 @@ func writeTempFile(t *testing.T, dir, name, content string) string {
 	return path
 }
 
-func TestGetLocalAttributes_Error(t *testing.T) {
+func TestLoadLocalAttributes_Error(t *testing.T) {
 	t.Parallel()
-	_, err := GetLocalAttributes(context.Background(), "/no/such/dir")
+	_, err := LoadLocalAttributes(context.Background(), "/no/such/dir")
 	assert.Error(t, err)
 }
 

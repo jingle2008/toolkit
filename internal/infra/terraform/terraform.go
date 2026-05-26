@@ -75,9 +75,9 @@ func getLocalAttributesDI(
 }
 
 /*
-GetLocalAttributes loads and returns all local attributes from Terraform files in the specified directory.
+LoadLocalAttributes loads and returns all local attributes from Terraform files in the specified directory.
 */
-func GetLocalAttributes(ctx context.Context, dirPath string) (hclsyntax.Attributes, error) {
+func LoadLocalAttributes(ctx context.Context, dirPath string) (hclsyntax.Attributes, error) {
 	return getLocalAttributesDI(ctx, dirPath, fileutil.ListFiles, updateLocalAttributes)
 }
 
@@ -157,7 +157,7 @@ func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 
 func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environment) (map[string]cty.Value, error) { //nolint:cyclop
 	logger := logging.FromContext(ctx)
-	attributes, err := GetLocalAttributes(ctx, dirPath)
+	attributes, err := LoadLocalAttributes(ctx, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode HCL: %w", err)
 	}
@@ -274,7 +274,7 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 // LoadServiceTenancies loads ServiceTenancy objects from the given repository path.
 func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.ServiceTenancy, error) {
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
-	attributes, err := GetLocalAttributes(ctx, dirPath)
+	attributes, err := LoadLocalAttributes(ctx, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse attributes: %w", err)
 	}
