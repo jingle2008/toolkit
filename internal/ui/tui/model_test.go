@@ -321,8 +321,8 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 		WithLogger(logging.NewNoOpLogger()),
 	)
 	require.NoError(t, err)
-	// Set context.Category to Tenant, m.category to LimitTenancyOverride
-	m.context = &domain.ToolkitContext{Name: "scopeA", Category: domain.Tenant}
+	// Set scope.Category to Tenant, m.category to LimitTenancyOverride
+	m.scope = &domain.ToolkitContext{Name: "scopeA", Category: domain.Tenant}
 	m.viewMode = common.ListView
 	cs := m.contextString()
 	assert.Contains(t, cs, "LimitTenancyOverride")

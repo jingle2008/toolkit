@@ -61,7 +61,7 @@ Now also sets m.stats from getTableRows.
 */
 func (m *Model) updateRows(autoSelect bool) {
 	m.rowsNonce++
-	rows, stats := getTableRows(m.dataset, m.category, m.context, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
+	rows, stats := getTableRows(m.dataset, m.category, m.scope, m.curFilter, m.sortColumn, m.sortAsc, m.showFaulty)
 	m.applyRows(rows, stats, autoSelect)
 }
 
@@ -70,13 +70,13 @@ func (m *Model) updateRowsAsync() tea.Cmd {
 	nonce := m.rowsNonce
 	dataset := m.dataset
 	category := m.category
-	context := m.context
+	scope := m.scope
 	filter := m.curFilter
 	sortColumn := m.sortColumn
 	sortAsc := m.sortAsc
 	showFaulty := m.showFaulty
 	return func() tea.Msg {
-		rows, stats := getTableRows(dataset, category, context, filter, sortColumn, sortAsc, showFaulty)
+		rows, stats := getTableRows(dataset, category, scope, filter, sortColumn, sortAsc, showFaulty)
 		return tableRowsComputedMsg{
 			Rows:  rows,
 			Stats: stats,
@@ -234,8 +234,8 @@ func (m *Model) findContextIndex(rows []table.Row) int {
 	switch {
 	case m.category == domain.Environment:
 		name = m.environment.GetName()
-	case m.context != nil && m.category == m.context.Category:
-		name = m.context.Name
+	case m.scope != nil && m.category == m.scope.Category:
+		name = m.scope.Name
 	default:
 		return -1
 	}

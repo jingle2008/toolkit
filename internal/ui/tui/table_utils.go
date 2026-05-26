@@ -61,12 +61,12 @@ func getHeaders(category domain.Category) []header {
 
 /*
 getTableRows returns the table rows for a given category, using the appropriate handler.
-If the context is not valid for the category, it is set to nil.
+If the scope is not valid for the category, it is set to nil.
 Returns: rows, stats (nil if not applicable)
 */
-func getTableRows(dataset *models.Dataset, category domain.Category, context *domain.ToolkitContext, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
-	if context != nil && !context.Category.IsScopeOf(category) {
-		context = nil
+func getTableRows(dataset *models.Dataset, category domain.Category, scope *domain.ToolkitContext, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
+	if scope != nil && !scope.Category.IsScopeOf(category) {
+		scope = nil
 	}
 
 	src, exists := rowSources[category]
@@ -75,7 +75,7 @@ func getTableRows(dataset *models.Dataset, category domain.Category, context *do
 	}
 	rows := src.rows(rowCtx{
 		dataset: dataset,
-		context: context,
+		scope:   scope,
 		filter:  filter,
 		faulty:  faultyOnly,
 	})

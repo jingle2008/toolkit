@@ -41,8 +41,8 @@ func (m *Model) backToLastState() tea.Cmd {
 	if m.curFilter != "" {
 		m.textInput.Reset()
 		return filterTableAsync(m, "")
-	} else if m.context != nil && m.context.Category.IsScopeOf(m.category) {
-		m.context = nil
+	} else if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {
+		m.scope = nil
 		return m.updateRowsAsync()
 	}
 	return nil

@@ -15,7 +15,7 @@ import (
 // prefers columns.Column.ExportRender over Render.
 type rowCtx struct {
 	dataset *models.Dataset
-	context *domain.ToolkitContext
+	scope   *domain.ToolkitContext
 	realm   string
 	region  string
 	filter  string
@@ -66,22 +66,22 @@ func flatSource[T models.NamedFilterable](
 }
 
 // groupedSource is the grouped counterpart to flatSource. pick
-// projects the dataset to the typed scope→items map; scope is the
-// category that owns the grouping key (e.g. domain.Tenant for
-// DedicatedAICluster). Filter/faulty/scope-context handling is
+// projects the dataset to the typed scope→items map; scopeCategory
+// is the category that owns the grouping key (e.g. domain.Tenant
+// for DedicatedAICluster). Filter/faulty/scope-context handling is
 // shared between display and export.
 func groupedSource[T models.NamedFilterable](
 	cols columns.GroupedSet[T],
-	scope domain.Category,
+	scopeCategory domain.Category,
 	pick func(*models.Dataset) map[string][]T,
 ) rowSource {
 	return rowSource{
 		rows: func(rc rowCtx) []table.Row {
 			data := pick(rc.dataset)
 			if rc.export {
-				return tuiRowsGroupedForExport(cols, data, scope, rc.context, rc.realm, rc.region, rc.filter, rc.faulty)
+				return tuiRowsGroupedForExport(cols, data, scopeCategory, rc.scope, rc.realm, rc.region, rc.filter, rc.faulty)
 			}
-			return tuiRowsGrouped(cols, data, scope, rc.context, rc.filter, rc.faulty)
+			return tuiRowsGrouped(cols, data, scopeCategory, rc.scope, rc.filter, rc.faulty)
 		},
 		headers: headersFromGroupedSet(cols.Columns),
 		find: func(d *models.Dataset, key models.ItemKey) any {

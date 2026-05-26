@@ -69,7 +69,7 @@ func TestContextString(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.category = domain.Tenant
-	m.context = &domain.ToolkitContext{Category: domain.Tenant, Name: "foo"}
+	m.scope = &domain.ToolkitContext{Category: domain.Tenant, Name: "foo"}
 	m.choice = "foo"
 	// Should only contain "foo" in DetailsView
 	m.viewMode = common.DetailsView

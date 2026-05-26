@@ -42,8 +42,8 @@ func (m *Model) contextString() string {
 	scope := "all"
 	if m.viewMode == common.DetailsView {
 		scope = getItemKeyString(m.choice)
-	} else if m.context != nil && m.context.Category.IsScopeOf(m.category) {
-		scope = m.context.Name
+	} else if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {
+		scope = m.scope.Name
 	}
 
 	return fmt.Sprintf("%s (%s)", m.category.String(), scope)

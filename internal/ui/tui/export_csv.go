@@ -67,7 +67,7 @@ func (m *Model) exportRows() []table.Row {
 	}
 	return src.rows(rowCtx{
 		dataset: m.dataset,
-		context: m.context,
+		scope:   m.scope,
 		realm:   m.environment.Realm,
 		region:  m.environment.Region,
 		filter:  m.curFilter,
