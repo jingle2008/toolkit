@@ -75,8 +75,8 @@ func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
 		func(v *ImportedModel, t *Tenant) { v.Owner = t })
 }
 
-// ResetScopedData resets all realm-scoped fields to nil.
-func (d *Dataset) ResetScopedData() {
+// ResetRealmScopedFields resets all realm-scoped fields to nil.
+func (d *Dataset) ResetRealmScopedFields() {
 	d.LimitTenancyOverrideMap = nil
 	d.ConsolePropertyTenancyOverrideMap = nil
 	d.PropertyTenancyOverrideMap = nil

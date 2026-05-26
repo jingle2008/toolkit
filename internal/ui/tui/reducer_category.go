@@ -208,7 +208,7 @@ func (m *Model) enterContext() tea.Cmd {
 		}
 		if !m.environment.Equals(*envPtr) {
 			m.environment = *envPtr
-			m.dataset.ResetScopedData()
+			m.dataset.ResetRealmScopedFields()
 			return tea.Sequence(m.updateCategory(domain.Tenant)...)
 		}
 	case m.category == domain.Alias:

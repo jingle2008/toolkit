@@ -112,10 +112,10 @@ func keys[V any](m map[string]V) []string {
 }
 
 /*
-TestResetScopedData checks that ResetScopedData nils all relevant fields.
+TestResetRealmScopedFields checks that ResetRealmScopedFields nils all relevant fields.
 */
 //nolint:cyclop // test is clear and further splitting would reduce readability
-func TestResetScopedData(t *testing.T) {
+func TestResetRealmScopedFields(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{
 		LimitTenancyOverrideMap:           map[string][]LimitTenancyOverride{"x": nil},
@@ -131,7 +131,7 @@ func TestResetScopedData(t *testing.T) {
 		GPUNodeMap:                        map[string][]GPUNode{"x": nil},
 		DedicatedAIClusterMap:             map[string][]DedicatedAICluster{"x": nil},
 	}
-	d.ResetScopedData()
+	d.ResetRealmScopedFields()
 	if d.LimitTenancyOverrideMap != nil ||
 		d.ConsolePropertyTenancyOverrideMap != nil ||
 		d.PropertyTenancyOverrideMap != nil ||
@@ -144,6 +144,6 @@ func TestResetScopedData(t *testing.T) {
 		d.GPUPools != nil ||
 		d.GPUNodeMap != nil ||
 		d.DedicatedAIClusterMap != nil {
-		t.Errorf("ResetScopedData did not nil all fields")
+		t.Errorf("ResetRealmScopedFields did not nil all fields")
 	}
 }
