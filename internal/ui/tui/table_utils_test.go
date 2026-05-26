@@ -249,7 +249,7 @@ func buildFullTestDataset() *models.Dataset {
 		},
 		PropertyTenancyOverrideMap: map[string][]models.PropertyTenancyOverride{
 			"tenant1": {{
-				Tag: "tenant1",
+				TenantID: "tenant1",
 				PropertyRegionalOverride: models.PropertyRegionalOverride{
 					Name:    "pdef",
 					Regions: []string{"us"},

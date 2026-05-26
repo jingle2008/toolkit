@@ -51,7 +51,7 @@ func TestPropertyTenancyOverride_GetTenantID(t *testing.T) {
 		}{{Value: "v1"}},
 	}
 	pto := PropertyTenancyOverride{
-		Tag:                      "tenantX",
+		TenantID:                 "tenantX",
 		PropertyRegionalOverride: pro,
 	}
 	assert.Equal(t, "tenantX", pto.GetTenantID())

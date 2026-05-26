@@ -388,7 +388,7 @@ locals {
 	data, err = json.Marshal(consoleOverride)
 	require.NoError(t, err)
 	_ = os.WriteFile(consoleOverridePath, data, 0o600)
-	propOverride := models.PropertyTenancyOverride{Tag: "tenant1"}
+	propOverride := models.PropertyTenancyOverride{TenantID: "tenant1"}
 	propOverridePath := filepath.Join(propTenancyDir, "properties_tenancy_overrides.json")
 	data, err = json.Marshal(propOverride)
 	require.NoError(t, err)
