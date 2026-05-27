@@ -22,7 +22,7 @@ import (
 // inherit the redirected fd. unix.Dup3-based on linux/arm64,
 // dup2-based on darwin and the other unix targets.
 func redirectStderr(path string) (func(), error) {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644) //nolint:gosec // path is the user-configured log-file location (cfg.LogFile + ".stderr"); user choice is the design.
 	if err != nil {
 		return nil, fmt.Errorf("open stderr sink %q: %w", path, err)
 	}

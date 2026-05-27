@@ -14,6 +14,8 @@ import (
 /*
 Update implements the tea.Model interface and updates the Model state in response to a message.
 */
+//
+//nolint:cyclop // top-level message router; the per-message-type switch is intentionally exhaustive — splitting it into helpers would obscure the routing surface without reducing real complexity.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
