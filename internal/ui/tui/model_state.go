@@ -263,7 +263,7 @@ func setDefaults(m *Model) {
 		m.loadingSpinner = &loadingSpinner
 	}
 	if m.loadingTimer == nil {
-		sw := stopwatch.NewWithInterval(time.Millisecond * 500)
+		sw := stopwatch.NewWithInterval(time.Second)
 		m.loadingTimer = &sw
 	}
 	if m.dirPicker == nil {

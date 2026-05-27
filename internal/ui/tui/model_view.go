@@ -84,8 +84,7 @@ func (m *Model) statusView() string {
 
 	loadingCell := ""
 	if m.pendingTasks > 0 {
-		loadingCell = m.statsStyle.Render(
-			fmt.Sprintf("%s %s", m.loadingSpinner.View(), m.loadingTimer.View()))
+		loadingCell = fmt.Sprintf(" %s %s ", m.loadingSpinner.View(), m.loadingTimer.View())
 	}
 
 	// Render-time width depends on the surrounding cells, so compute
