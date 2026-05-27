@@ -20,7 +20,6 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case exportErrMsg:
 		err := fmt.Errorf("export failed: %w", msg.err)
-		m.err = err
 		m.viewMode = m.lastViewMode
 		return m, m.showToast(err.Error(), toastError)
 	}

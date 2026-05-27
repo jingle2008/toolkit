@@ -32,9 +32,6 @@ func TestUpdateLoadingView_ErrMsg(t *testing.T) {
 	m.logger = &fakeLogger{}
 	msg := errMsg(fakeErrMsg("fail"))
 	_, cmd := m.updateLoadingView(msg)
-	if m.err == nil || m.err.Error() != "fail" {
-		t.Errorf("expected err to be set to 'fail', got %v", m.err)
-	}
 	if m.toast == nil || m.toast.msg != "fail" || m.toast.sev != toastError {
 		t.Errorf("expected error toast with msg 'fail', got %+v", m.toast)
 	}

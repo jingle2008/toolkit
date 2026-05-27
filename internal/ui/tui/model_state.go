@@ -43,7 +43,6 @@ type Model struct {
 	viewHeight     int
 	viewWidth      int
 	dataset        *models.Dataset
-	err            error
 	table          *table.Model
 	styles         table.Styles
 	category       domain.Category

@@ -12,8 +12,6 @@ const (
 	LoadingView
 	// HelpView is the view mode for displaying help information.
 	HelpView
-	// ErrorView is the view mode for displaying error state.
-	ErrorView
 	// ExportView is the view mode for exporting table data as CSV.
 	ExportView
 )
@@ -29,8 +27,6 @@ func (v ViewMode) String() string {
 		return "Loading"
 	case HelpView:
 		return "Help"
-	case ErrorView:
-		return "Error"
 	case ExportView:
 		return "Export"
 	default:

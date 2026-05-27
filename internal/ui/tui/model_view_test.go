@@ -129,8 +129,11 @@ func TestUpdateContent_Error(t *testing.T) {
 	require.NotNil(t, cmd)
 	msg, ok := cmd().(detailContentRenderedMsg)
 	require.True(t, ok)
-	m.handleDetailContentRenderedMsg(msg)
-	assert.Error(t, m.err)
+	toastCmd := m.handleDetailContentRenderedMsg(msg)
+	require.NotNil(t, toastCmd, "render error should emit a toast cmd")
+	require.NotNil(t, m.toast)
+	assert.Contains(t, m.toast.msg, "render failed")
+	assert.Equal(t, toastError, m.toast.sev)
 }
 
 type errRenderer struct{}
@@ -145,15 +148,6 @@ func TestView_LoadingView(t *testing.T) {
 	m.viewMode = common.LoadingView
 	out := m.View()
 	assert.Contains(t, out, "Loading data")
-}
-
-func TestView_Error(t *testing.T) {
-	t.Parallel()
-	m := makeTestModel()
-	m.err = errors.New("fail")
-	m.viewMode = common.ErrorView
-	out := m.View()
-	assert.Contains(t, out, "fail")
 }
 
 func TestView_HelpView(t *testing.T) {

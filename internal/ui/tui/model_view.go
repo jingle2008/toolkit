@@ -129,15 +129,15 @@ func (m *Model) updateContentAsync() tea.Cmd {
 	}
 }
 
-func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) {
+func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea.Cmd {
 	if msg.Gen != m.detailGen || m.viewMode != common.DetailsView {
-		return
+		return nil
 	}
 	if msg.Err != nil {
-		m.err = fmt.Errorf("error encountered rendering content: %w", msg.Err)
-		return
+		return m.showToast(fmt.Sprintf("render failed: %v", msg.Err), toastError)
 	}
 	m.viewport.SetContent(msg.Content)
+	return nil
 }
 
 // View renders the current state of the model as a string.
@@ -156,8 +156,6 @@ func (m *Model) renderActiveView() string {
 		spin := m.loadingSpinner.View()
 		sw := m.loadingTimer.View()
 		return m.centered(fmt.Sprintf("%s Loading data: %s … %s", spin, m.category.String(), sw))
-	case common.ErrorView:
-		return m.centered(m.err.Error())
 	case common.HelpView:
 		return m.centered(m.fullHelpView())
 	case common.ListView:
@@ -220,7 +218,7 @@ func (m *Model) fullHelpView() string {
 		renderSection("Table Actions", m.tableBinding())
 	case common.DetailsView:
 		renderSection("Viewport Actions", m.viewportBinding())
-	case common.LoadingView, common.HelpView, common.ErrorView, common.ExportView:
+	case common.LoadingView, common.HelpView, common.ExportView:
 		// No additional sections for these view modes
 	}
 	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())

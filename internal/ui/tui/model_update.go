@@ -25,8 +25,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil
 	case detailContentRenderedMsg:
-		m.handleDetailContentRenderedMsg(msg)
-		return m, nil
+		return m, m.handleDetailContentRenderedMsg(msg)
 	default:
 		return m.delegateToActiveView(msg)
 	}
@@ -50,8 +49,6 @@ func (m *Model) delegateToActiveView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateDetailView(msg)
 	case common.LoadingView:
 		return m.updateLoadingView(msg)
-	case common.ErrorView:
-		return m.updateErrorView(msg)
 	case common.ExportView:
 		return m.updateExportView(msg)
 	}
