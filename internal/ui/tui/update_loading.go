@@ -20,12 +20,10 @@ func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// Spinner/stopwatch ticks are self-perpetuating: Update on a TickMsg
-// returns the next Tick cmd. We let that chain die when no load is in
-// flight so we don't burn ~10Hz of empty event-loop wakeups idle.
-// beginTask kicks off a fresh chain via tea.Sequence the next time
-// pendingTasks goes 0 → 1.
-
+// handleSpinnerTickMsg advances the spinner one frame and lets the
+// tick chain die when no load is in flight, so we don't burn empty
+// event-loop wakeups idle. beginTask kicks off a fresh chain via
+// tea.Sequence the next time pendingTasks goes 0 → 1.
 func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 	loadingSpinner, cmd := m.loadingSpinner.Update(msg)
 	m.loadingSpinner = &loadingSpinner
