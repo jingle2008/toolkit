@@ -40,6 +40,14 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		m.sortColumn = common.NameCol
 		m.sortAsc = true
 		m.showFaulty = false
+		// Switch the visible chrome to the destination immediately so
+		// the user sees what they navigated to (new headers, empty
+		// rows) instead of stale data under a mismatched label.
+		// refreshDisplay will repopulate rows once the load lands.
+		if m.dataset != nil {
+			m.updateColumns()
+			m.applyRows(nil, nil, false)
+		}
 	}
 
 	// Dispatch table for category handlers

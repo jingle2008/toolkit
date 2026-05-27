@@ -77,3 +77,35 @@ func TestStartupHang_LazyCategory(t *testing.T) {
 		t.Error("viewMode still LoadingView after all (stale) loads drained — startup hang regression")
 	}
 }
+
+// TestBeginTask_KeepsActiveViewWhenDatasetExists pins the inline-loading
+// invariant: once a dataset is loaded, subsequent loads must not switch
+// to the full-screen LoadingView; the user keeps seeing the active view
+// while the status-bar spinner indicates progress.
+func TestBeginTask_KeepsActiveViewWhenDatasetExists(t *testing.T) {
+	t.Parallel()
+
+	m := &Model{
+		loadingSpinner: &spinner.Model{},
+		loadingTimer:   &stopwatch.Model{},
+		logger:         fakeLogger{},
+		viewMode:       common.ListView,
+		dataset:        &models.Dataset{}, // already loaded
+	}
+
+	cmd := m.beginTask()
+	if cmd == nil {
+		t.Fatal("beginTask should still return spinner/timer tick cmd even when not switching view")
+	}
+	if m.viewMode != common.ListView {
+		t.Errorf("viewMode = %v, want ListView (dataset != nil so we should stay inline)", m.viewMode)
+	}
+	if m.pendingTasks != 1 {
+		t.Errorf("pendingTasks = %d, want 1", m.pendingTasks)
+	}
+
+	m.endTask(true)
+	if m.viewMode != common.ListView {
+		t.Errorf("viewMode after endTask = %v, want ListView", m.viewMode)
+	}
+}

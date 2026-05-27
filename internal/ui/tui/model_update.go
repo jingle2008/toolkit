@@ -4,6 +4,8 @@ Package tui implements the update/reduce logic for the Model.
 package tui
 
 import (
+	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/stopwatch"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -21,6 +23,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case toastExpireMsg:
 		m.handleToastExpireMsg(msg)
 		return m, nil
+	case spinner.TickMsg:
+		// Spinner ticks must fire regardless of view mode so the
+		// status-bar loading nugget keeps animating while the user
+		// stays in ListView/DetailsView during a load.
+		return m, m.handleSpinnerTickMsg(msg)
+	case stopwatch.TickMsg, stopwatch.StartStopMsg, stopwatch.ResetMsg:
+		return m, m.handleStopwatchMsg(msg)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil

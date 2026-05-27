@@ -145,9 +145,25 @@ func (errRenderer) RenderJSON(_ any, _ int) (string, error) {
 func TestView_LoadingView(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
+	m.dataset = nil // full-screen LoadingView is only used while the first dataset is still loading
 	m.viewMode = common.LoadingView
 	out := m.View()
 	assert.Contains(t, out, "Loading data")
+}
+
+func TestStatusView_LoadingNugget(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	m.statsStyle = lipgloss.NewStyle()
+	m.pendingTasks = 1
+	out := m.statusView()
+	// The stopwatch renders elapsed time; pendingTasks>0 means the
+	// inline loading cell should appear with a duration token like "0s".
+	assert.Contains(t, out, "s")
+	// Sanity-check that pendingTasks=0 omits the nugget.
+	m.pendingTasks = 0
+	bareOut := m.statusView()
+	assert.NotEqual(t, out, bareOut)
 }
 
 func TestView_HelpView(t *testing.T) {

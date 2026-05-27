@@ -470,27 +470,34 @@ func (m *Model) sortTableByColumn(column string) tea.Cmd {
 }
 
 /*
-beginTask increments the pendingTasks counter and switches to LoadingView if needed.
-Call this before starting an async task.
+beginTask increments the pendingTasks counter and kicks off the
+spinner + stopwatch ticks so the inline indicator in statusView can
+animate. For the very first load (m.dataset == nil) we still swap
+into the full-screen LoadingView because there's no content to layer
+the indicator over; every subsequent load stays in the active view.
 */
 func (m *Model) beginTask() tea.Cmd {
 	var cmd tea.Cmd
 	if m.pendingTasks == 0 {
-		m.lastViewMode = m.viewMode
-		m.viewMode = common.LoadingView
 		cmd = tea.Sequence(
-			m.loadingSpinner.Tick, // start the spinner
+			m.loadingSpinner.Tick,
 			m.loadingTimer.Reset(),
-			m.loadingTimer.Start(), // start the stopwatch
+			m.loadingTimer.Start(),
 		)
+		if m.dataset == nil {
+			m.lastViewMode = m.viewMode
+			m.viewMode = common.LoadingView
+		}
 	}
 	m.pendingTasks++
 	return cmd
 }
 
 /*
-endTask decrements the pendingTasks counter and restores the previous view mode if all tasks are done.
-Call this after an async task completes.
+endTask decrements the pendingTasks counter. If we entered the
+full-screen LoadingView for a first load, restore the prior view;
+otherwise leave m.viewMode alone — the user may have navigated
+(DetailsView, HelpView, …) while the load was in flight.
 */
 func (m *Model) endTask(success bool) {
 	if m.pendingTasks > 0 {
@@ -503,9 +510,8 @@ func (m *Model) endTask(success bool) {
 			"success", success,
 			"elapsed", elapsed,
 		)
-		// Always restore the prior view. Failures surface as a toast
-		// over that view (see handleErrMsg / showToast) so the user
-		// can retry via 'r' or keep navigating.
-		m.viewMode = m.lastViewMode
+		if m.viewMode == common.LoadingView {
+			m.viewMode = m.lastViewMode
+		}
 	}
 }
