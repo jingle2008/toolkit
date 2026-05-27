@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/charmbracelet/bubbles/key"
+
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
