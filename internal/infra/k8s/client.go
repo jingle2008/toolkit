@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 // DefaultRequestTimeout caps every client-go call so a broken or
@@ -54,6 +55,16 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	// kubeconfig).
 	if config.Timeout == 0 && RequestTimeout > 0 {
 		config.Timeout = RequestTimeout
+	}
+	// Force exec auth plugins (oci-cli session token, aws-iam-authenticator,
+	// etc.) into non-interactive mode. With Always/IfAvailable, client-go
+	// pipes the plugin's stderr directly to os.Stderr when stdin is a tty —
+	// which the TUI's alt-screen is — and any Python traceback or "session
+	// expired" message corrupts the bubbletea frame, manifesting as dropped
+	// keystrokes. Never makes client-go capture the plugin's stderr into a
+	// buffer and surface it inside the returned error instead.
+	if config.ExecProvider != nil {
+		config.ExecProvider.InteractiveMode = clientcmdapi.NeverExecInteractiveMode
 	}
 	// Identify this client in user agent.
 	rest.AddUserAgent(config, "toolkit")
