@@ -15,6 +15,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `toolkit get basemodel` (CLI), MCP `list_base_models`, and the TUI BaseModel view no longer include `ClusterBaseModel` CRs carrying a `tenancy-id` label — those are tenant-specific (custom or fine-tuned for a single tenancy) and are now surfaced exclusively under the new `importedmodel` category. Scripts that ran `toolkit get basemodel -o json | jq length` against a cluster with tenant-scoped CBMs will see fewer items in this release; use `importedmodel` (or query both) to recover the full set.
 - MCP `list_base_models` description updated to point at `list_imported_models` for tenant-scoped CRs.
 
+### Breaking changes
+
+CLI surface (audit-driven naming sweep):
+
+- **Persistent flags renamed snake_case → kebab-case.** `--repo_path` → `--repo-path`; `--env_type` / `--env_region` / `--env_realm` → `--env-type` / `--env-region` / `--env-realm`; `--metadata_file` → `--metadata-file`; `--log_file` / `--log_format` / `--log_level` → `--log-file` / `--log-format` / `--log-level`; `--mutation_env_override_allowed` → `--mutation-env-override-allowed`. No alias period — scripts and config files using the old names break at this release. **Config file keys (YAML/JSON) follow the same rename**: `repo_path:` → `repo-path:`, etc. Environment variables are unchanged: viper's existing `SetEnvKeyReplacer("-", "_")` keeps `TOOLKIT_REPO_PATH`-style env vars resolving to the new kebab keys.
+- **`toolkit version --check` renamed to `--check-updates`.** Bare `--check` was ambiguous; the verbose form spells out the action.
+- **`toolkit scale gpupool` renamed to `toolkit scale gpu-pool`.** `gpupool` retained as a Cobra alias (per the same pattern that lets `get gpupool` work), so existing scripts continue.
+- **Category display strings became all-caps initialisms.** TUI tabs and CLI output show `GPUPool` / `GPUNode` (was `GpuPool` / `GpuNode`). Auto-computed short aliases shifted from `gp`/`gn` to `gpup`/`gpun`; the legacy `gp` and `gn` are kept as manual aliases, so `toolkit get gp`/`gn` still works.
+
+MCP tool input JSON schema is **unchanged** — agent-facing field names (`env_type`, `env_region`, `env_realm`, `repo_path` references in tool descriptions) stay snake_case. The CLI and MCP layers are intentionally different surfaces.
+
+Public Go API (anyone consuming `pkg/models` as a library):
+
+- **Initialism casing normalized**: every exported `Gpu*` → `GPU*` (types `GpuPool` → `GPUPool`, `GpuNode` → `GPUNode`; fields `GpuPools`, `GpuNodeMap`, `GpuCount`, `GpuShape`, …); every `Dac*` → `DAC*` (`DacShapeConfigs` → `DACShapeConfigs`).
+- **`Get*` prefix dropped from non-field-shadowing accessors**: `Filterable.GetFilterableFields` → `FilterableFields`; `RealmedID.GetID(realm, region)` → `OCID(realm, region)`; `RealmedTenancyID.GetTenantID(realm)` → `TenancyOCID(realm)`; plus `GetOwnerState/Usage/GPUs/KubeContext/DefaultDACShape/Flags/Code/GPUConfig/Aliases` (drop prefix on each). `GetName`, `GetDescription`, `GetValue`, `GetRegions`, `GetStatus`, `GetTenants`, and zero-arg `GetTenantID` are **kept** because the new names would shadow same-named struct fields on the receiver types.
+- **`Dataset.ResetScopedData` → `Dataset.ResetRealmScopedFields`.** Method body unchanged; name now matches semantics.
+- **`PropertyTenancyOverride.Tag` Go field → `TenantID`.** YAML/JSON wire format is preserved (`json:"tag" yaml:"tag"`), so on-disk override files don't need to change. Only Go consumers of the struct literal see the rename.
+- **Package-stutter renames**: `loader.Loader` → `loader.Composite`; `production.Loader`/`NewLoader` → `production.Client`/`New`; `jsonutil.PrettyJSON` → `jsonutil.Pretty`; `columns.Set.SelectColumns` → `Set.Select`; `columns.UnknownColumnError` → `columns.UnknownKeyError`.
+- **`domain.ToolkitContext` → `domain.Scope`** (file `context.go` → `scope.go`).
+- **`internal/infra/k8s.LoadGPUNodes` → `LoadGPUNodesByPool`.** Disambiguates from the flat `ListGPUNodes` in the same package.
+- **`internal/resolve.EnrichGPUPools` return type changed from `string` (warning) to `error`** (nil on success). Best-effort semantics are unchanged; the function still doesn't abort the caller's operation.
+- **`internal/infra/oci.GetComputeClient`/`GetComputeManagementClient`/`GetGenAIClient` → `NewComputeClient`/`NewComputeManagementClient`/`NewGenAIClient`.**
+- **`internal/infra/terraform.GetLocalAttributes` → `LoadLocalAttributes`.**
+
 ## [0.5.0] - 2026-05-19
 
 ### Changed

@@ -38,9 +38,9 @@ flowchart LR
     viper --> Cfg["config.Config"]
 
     subgraph SRC ["Data sources"]
-        tf["Terraform repo<br/>(repo_path)"]
+        tf["Terraform repo<br/>(repo-path)"]
         k8s["Kubernetes API<br/>(kubeconfig)"]
-        oci["OCI APIs<br/>(env_realm)"]
+        oci["OCI APIs<br/>(env-realm)"]
     end
 
     Cfg --> Loader
@@ -98,7 +98,7 @@ toolkit config --validate
 toolkit completion bash   # or zsh/fish
 # Output shell completion script for your shell
 
-toolkit version --check
+toolkit version --check-updates
 # Print your installed version and check for updates
 ```
 
@@ -115,19 +115,19 @@ toolkit --help                # all global flags
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
 | `--config` | `~/.config/toolkit/config.yaml` | Path to config file (YAML or JSON) |
-| `--repo_path` |  | Path to the repository |
-| `--env_type` |  | Environment type (e.g. dev, prod) |
-| `--env_region` |  | Environment region |
-| `--env_realm` |  | Environment realm |
+| `--repo-path` |  | Path to the repository |
+| `--env-type` |  | Environment type (e.g. dev, prod) |
+| `--env-region` |  | Environment region |
+| `--env-realm` |  | Environment realm |
 | `--category, -c` |  | Category to display |
 | `--filter, -f` |  | Initial filter for current category |
-| `--metadata_file` | `~/.config/toolkit/metadata.yaml` | Optional additional metadata file |
+| `--metadata-file` | `~/.config/toolkit/metadata.yaml` | Optional additional metadata file |
 | `--kubeconfig` | `~/.kube/config` | Path to kubeconfig file |
-| `--log_file` | `toolkit.log` | Path to log file |
+| `--log-file` | `toolkit.log` | Path to log file |
 | `--debug` | `false` | Enable debug logging |
-| `--log_format` | `console` | Log format: `console`, `json`, or `slog` |
-| `--log_level` | | Minimum log level: `debug`, `info`, `warn`, `error` (empty uses `--debug` flag) |
-| `--mutation_env_override_allowed` | `false` | Allow MCP mutation tools to override the startup env per call (off by default for safety) |
+| `--log-format` | `console` | Log format: `console`, `json`, or `slog` |
+| `--log-level` | | Minimum log level: `debug`, `info`, `warn`, `error` (empty uses `--debug` flag) |
+| `--mutation-env-override-allowed` | `false` | Allow MCP mutation tools to override the startup env per call (off by default for safety) |
 
 *(See `internal/cli/flags.go` for the authoritative list.)*
 
@@ -160,7 +160,7 @@ toolkit get gpupool -o tsv | cut -f1,3
 toolkit get tenant --no-headers
 ```
 
-Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit get alias` for the full list, or enable shell completion (`toolkit completion zsh`) for tab-completion. Logs are written to `--log_file` (default `toolkit.log`) so stdout stays clean for parsing.
+Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit get alias` for the full list, or enable shell completion (`toolkit completion zsh`) for tab-completion. Logs are written to `--log-file` (default `toolkit.log`) so stdout stays clean for parsing.
 
 For `gpunode`, `dac`, `modelartifact`, and the tenancy-override categories, the structured outputs (`json`, `jsonl`, `yaml`) are a flat array of objects with the originating group key injected as `pool`, `tenant`, or `model` — easier for `jq` and LLM consumers than the previous map-shaped output.
 
@@ -186,7 +186,7 @@ Maintenance operations the TUI exposes via keyboard shortcuts are also available
 | `toolkit cordon <node>` / `toolkit uncordon <node>` | Toggle scheduling on a Kubernetes node |
 | `toolkit drain <node>` | Evict pods and cordon |
 | `toolkit reboot <node>` | Reboot the underlying instance |
-| `toolkit scale gpupool <name>` | Sync OCI instance-pool size to the Terraform-declared `pool.Size` (no `--size` flag — Terraform is the source of truth) |
+| `toolkit scale gpu-pool <name>` | Sync OCI instance-pool size to the Terraform-declared `pool.Size` (no `--size` flag — Terraform is the source of truth). The `gpupool` alias is accepted for back-compat. |
 | `toolkit delete dac <name>` | Delete a dedicated AI cluster (destructive — requires `--yes`) |
 | `toolkit terminate <node>` | Terminate the underlying OCI instance (destructive — requires `--yes`) |
 
@@ -256,7 +256,7 @@ Every read tool takes an optional `filter` (fuzzy substring) and optional `env_t
 | `delete_dac` | Delete a dedicated AI cluster |
 | `terminate_node` | Terminate the underlying OCI instance |
 
-By default, mutation tools ignore any per-call `env_type` / `env_region` / `env_realm` and only act in the startup env — the operator's credentials decide the maximum blast radius, not the agent. Pass `--mutation_env_override_allowed` at server start to opt in to per-call env routing.
+By default, mutation tools ignore any per-call `env_type` / `env_region` / `env_realm` (MCP tool input fields — these stay snake_case as the JSON-schema field names) and only act in the startup env — the operator's credentials decide the maximum blast radius, not the agent. Pass `--mutation-env-override-allowed` at server start to opt in to per-call env routing.
 
 ---
 
@@ -354,7 +354,7 @@ Toolkit follows a modular, testable architecture:
 
 ## Logging
 
-Toolkit uses [zap](https://github.com/uber-go/zap) for structured, machine-readable logging. By default logs are written to `toolkit.log` (configurable via `--log_file`) and support `--log_format` of `console`, `json`, or `slog`. The minimum log level can be set via `--log_level` (`debug`, `info`, `warn`, `error`).
+Toolkit uses [zap](https://github.com/uber-go/zap) for structured, machine-readable logging. By default logs are written to `toolkit.log` (configurable via `--log-file`) and support `--log-format` of `console`, `json`, or `slog`. The minimum log level can be set via `--log-level` (`debug`, `info`, `warn`, `error`).
 
 ## Contributing
 

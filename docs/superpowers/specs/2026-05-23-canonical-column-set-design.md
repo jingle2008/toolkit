@@ -114,7 +114,7 @@ type GroupedSet[T any] struct {
 //
 // `items` must be the concrete payload for cat: a typed slice
 // (e.g. []models.Tenant) for flat categories, or a typed grouped map
-// (e.g. map[string][]models.GpuNode) for grouped categories. The
+// (e.g. map[string][]models.GPUNode) for grouped categories. The
 // type switch unwraps it; a mismatch returns an error rather than
 // panicking. `selected` is the parsed --columns value (nil/empty
 // means "use Default==true columns").
@@ -210,7 +210,7 @@ This file does not enumerate every column for every category; concrete contents 
    - Completion func returns the right keys for a given category arg.
 
 4. **TUI adapter** (`internal/ui/tui/...`)
-   - For a representative flat category (BaseModel) and a representative grouped one (GpuNode), assert `tuiColumns*` produces today's `[]table.Column{Title, Width}` at a fixed total width.
+   - For a representative flat category (BaseModel) and a representative grouped one (GPUNode), assert `tuiColumns*` produces today's `[]table.Column{Title, Width}` at a fixed total width.
    - Assert `tuiRows*` produces today's `table.Row` cells for a fixture model.
 
 5. **Behavior-preservation snapshot** (`internal/cli/snapshot_test.go`)
@@ -218,7 +218,7 @@ This file does not enumerate every column for every category; concrete contents 
    - 7 of 19 categories match byte-for-byte against a stored snapshot.
    - 12 categories diff intentionally — the snapshots reflect the new canonical output:
      - **Widened (3, Decision #9)** — `LimitTenancyOverride`, `ConsolePropertyTenancyOverride`, `PropertyTenancyOverride`: default columns grow from `[TENANT, NAME]` to the full TUI set.
-     - **Grouped reordered to item-name-first (4, Decision #4)** — `ImportedModel`, `ModelArtifact`, `GpuNode`, `DedicatedAICluster`: NAME column moves to position 0; group key moves to position 1.
+     - **Grouped reordered to item-name-first (4, Decision #4)** — `ImportedModel`, `ModelArtifact`, `GPUNode`, `DedicatedAICluster`: NAME column moves to position 0; group key moves to position 1.
      - **Header label/ordering aligned with TUI (4)** — `Tenant` ("IDS" → "OCID"), `BaseModel` (FLAGS/STATUS order swap), `LimitDefinition` ("DEFAULT MIN/MAX" → "MIN/MAX"), `Environment` (TYPE/REGION/REALM → REALM/TYPE/REGION ordering). Cell content unchanged; titles/order follow the TUI's existing convention so the canonical layer doesn't pick arbitrarily.
      - **Structural shape change (1)** — `Alias`: CLI table/CSV switches from one-row-per-alias (`ALIAS,CATEGORY`) to one-row-per-category (`NAME,ALIASES`) matching the TUI. Affects table/csv/tsv. JSON shape becomes `[{name, aliases}, ...]` (richer than the legacy `[{alias, category}, ...]`).
 

@@ -732,7 +732,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 
 ---
 
-## Task 3: Port complex flat categories (BaseModel, GpuPool)
+## Task 3: Port complex flat categories (BaseModel, GPUPool)
 
 **Files:**
 - Create: `internal/columns/base_model.go`, `base_model_test.go`
@@ -769,7 +769,7 @@ func baseModelDacShape(m models.BaseModel) string {
 
 Test fixture: a `models.BaseModel` with a non-nil DAC shape and `MaxTokens=4096`; assert `dac-shape == "1x foo.shape"`, `context == "4096"`, etc.
 
-### `gpu_pool.go` — `Set[models.GpuPool]`
+### `gpu_pool.go` — `Set[models.GPUPool]`
 
 | Title | Key | Default | Ratio | Render |
 |-------|-----|---------|-------|--------|
@@ -783,12 +783,12 @@ Test fixture: a `models.BaseModel` with a non-nil DAC shape and `MaxTokens=4096`
 | Capacity Type | capacity-type | true | 0.10 | `p.CapacityType` |
 | Status | status | true | 0.10 | `p.Status` |
 
-Test fixture: a populated `models.GpuPool` with `IsOkeManaged=true`, `Size=4`, `ActualSize=3`; assert each Render returns the expected value.
+Test fixture: a populated `models.GPUPool` with `IsOkeManaged=true`, `Size=4`, `ActualSize=3`; assert each Render returns the expected value.
 
 - [ ] **Step 1: Write failing test for BaseModel** (mirrors Task 2 Step 1).
 - [ ] **Step 2: Create `base_model.go`** with the inventory above.
 - [ ] **Step 3: Wire BaseModel into registry switches** (same shape as Task 2 Step 3).
-- [ ] **Step 4: Repeat for GpuPool**.
+- [ ] **Step 4: Repeat for GPUPool**.
 - [ ] **Step 5: Run tests, expect green.**
 
 ```bash
@@ -798,7 +798,7 @@ go test ./internal/columns/ -v
 - [ ] **Step 6: Commit.**
 
 ```bash
-git commit -m "feat(columns): port BaseModel and GpuPool flat columns
+git commit -m "feat(columns): port BaseModel and GPUPool flat columns
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ```
@@ -904,7 +904,7 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 
 ---
 
-## Task 5: Port grouped non-widened categories (GpuNode, DAC, ImportedModel, ModelArtifact)
+## Task 5: Port grouped non-widened categories (GPUNode, DAC, ImportedModel, ModelArtifact)
 
 **Files:**
 - Create: `internal/columns/gpu_node.go`, `gpu_node_test.go`
@@ -917,7 +917,7 @@ All four use **name-first ordering** (per spec Decision #4) — the item name co
 
 Exported variable names (used by registry switches and the TUI adapter): `GpuNodeColumns`, `DacColumns`, `ImportedModelColumns`, `ModelArtifactColumns`.
 
-### `gpu_node.go` — `GroupedSet[models.GpuNode]`
+### `gpu_node.go` — `GroupedSet[models.GPUNode]`
 
 | Title | Key | Default | Ratio | Render(k, n) |
 |-------|-----|---------|-------|--------------|
@@ -990,12 +990,12 @@ Today's CLI table header was `MODEL` for the key column; the canonical Title is 
 
 - [ ] **Step 1: Write failing tests** for each grouped category.
 
-Example test for GpuNode:
+Example test for GPUNode:
 
 ```go
 func TestGpuNodeColumns(t *testing.T) {
 	t.Parallel()
-	n := models.GpuNode{
+	n := models.GPUNode{
 		Name:         "node-1",
 		NodePool:     "pool-A",
 		InstanceType: "BM.GPU4.8",
@@ -1027,11 +1027,11 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-var GpuNodeColumns = GroupedSet[models.GpuNode]{Columns: []GroupedColumn[models.GpuNode]{
+var GpuNodeColumns = GroupedSet[models.GPUNode]{Columns: []GroupedColumn[models.GPUNode]{
 	{Title: "Name", Key: "name", Default: true, Ratio: 0.15,
-		Render: func(_ string, n models.GpuNode) string { return n.Name }},
+		Render: func(_ string, n models.GPUNode) string { return n.Name }},
 	{Title: "Pool", Key: "pool", Default: true, Ratio: 0.22,
-		Render: func(k string, _ models.GpuNode) string { return k }},
+		Render: func(k string, _ models.GPUNode) string { return k }},
 	// ...remaining columns from the inventory above
 }}
 ```
@@ -1049,7 +1049,7 @@ go test ./internal/columns/ -v
 - [ ] **Step 5: Commit.**
 
 ```bash
-git commit -m "feat(columns): port grouped categories (GpuNode, DAC, IM, MA)
+git commit -m "feat(columns): port grouped categories (GPUNode, DAC, IM, MA)
 
 Canonical ordering is name-first, key-second (matches TUI). CLI
 table output reorders for these 4 categories — intentional per
@@ -1379,11 +1379,11 @@ func getHeaders(cat domain.Category) []header {
 		return headersFromSet(columns.EnvironmentColumns.Columns)
 	case domain.ServiceTenancy:
 		return headersFromSet(columns.ServiceTenancyColumns.Columns)
-	case domain.GpuPool:
+	case domain.GPUPool:
 		return headersFromSet(columns.GpuPoolColumns.Columns)
 	case domain.Alias:
 		return headersFromSet(columns.AliasColumns.Columns)
-	case domain.GpuNode:
+	case domain.GPUNode:
 		return headersFromGroupedSet(columns.GpuNodeColumns.Columns)
 	case domain.DedicatedAICluster:
 		return headersFromGroupedSet(columns.DacColumns.Columns)
@@ -1488,7 +1488,7 @@ func TestTuiColumnsFlat_BaseModelWidth(t *testing.T) {
 
 func TestTuiRowsGrouped_GpuNode(t *testing.T) {
 	t.Parallel()
-	m := map[string][]models.GpuNode{
+	m := map[string][]models.GPUNode{
 		"pool-A": {{Name: "n1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, Age: "1d"}},
 	}
 	rows := tuiRowsGrouped(columns.GpuNodeColumns, m, 0, nil, "", false)
@@ -1799,7 +1799,7 @@ func renderSnapshot(t *testing.T, cat domain.Category) string {
 }
 ```
 
-This sidesteps the loader and gives a deterministic snapshot per fixture. `fixtureFor(cat)` is a `switch` returning small typed values — one Tenant, one BaseModel, one GpuPool, one map[string][]GpuNode with a single key/item, etc.
+This sidesteps the loader and gives a deterministic snapshot per fixture. `fixtureFor(cat)` is a `switch` returning small typed values — one Tenant, one BaseModel, one GPUPool, one map[string][]GPUNode with a single key/item, etc.
 
 - [ ] **Step 2: Write the snapshot test.**
 

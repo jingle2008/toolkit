@@ -6,7 +6,7 @@ End-to-end flows that compose toolkit's primitives. Each recipe is real and copy
 > ```bash
 > toolkit init                    # scaffolds ~/.config/toolkit/config.yaml
 > $EDITOR ~/.config/toolkit/config.yaml
-> toolkit doctor                  # confirms repo_path, kubeconfig, etc. are wired
+> toolkit doctor                  # confirms repo-path, kubeconfig, etc. are wired
 > ```
 
 ---
@@ -76,11 +76,11 @@ The agent will fan out to the right tools and combine the results. Filter narrow
 
 ### Multi-environment in one server
 
-A single `toolkit mcp` server boots in one env (`env_type`/`env_region`/`env_realm` from your config) but every **read** tool accepts per-call env overrides. So a single server can answer cross-env questions:
+A single `toolkit mcp` server boots in one env (`env-type` / `env-region` / `env-realm` from your config; the matching `env_type` / `env_region` / `env_realm` snake_case keys are what each MCP tool accepts in its input JSON for per-call overrides) but every **read** tool accepts per-call env overrides. So a single server can answer cross-env questions:
 
 > Compare the base-model lineup in `oc1`/`us-phoenix-1` versus `oc1`/`us-ashburn-1`.
 
-For **mutation** tools, env overrides are off by default — the operator's startup env is the maximum blast radius. Opt in (carefully) with `--mutation_env_override_allowed` at server start if your agent needs multi-realm authority.
+For **mutation** tools, env overrides are off by default — the operator's startup env is the maximum blast radius. Opt in (carefully) with `--mutation-env-override-allowed` at server start if your agent needs multi-realm authority.
 
 ---
 
@@ -116,7 +116,7 @@ toolkit uncordon $NODE -y
 
 ### Inspect the audit trail
 
-Every mutation writes a structured line to the log (configured via `--log_file` / `log_file:` — defaults to `toolkit.log`). Set `log_format: json` to make it `jq`-friendly:
+Every mutation writes a structured line to the log (configured via `--log-file` / `log-file:` — defaults to `toolkit.log`). Set `log-format: json` to make it `jq`-friendly:
 
 ```bash
 jq 'select(.msg=="mutation") | {ts, action, target, phase, dry_run, error}' toolkit.log
@@ -193,8 +193,8 @@ comm -23 <(sort /tmp/external_tenants.txt) /tmp/tenants_with_dacs.txt
 ### Compare two environments
 
 ```bash
-toolkit --env_realm oc1 --env_region us-ashburn-1 get tenant -o tsv > /tmp/ash.tsv
-toolkit --env_realm oc1 --env_region us-phoenix-1 get tenant -o tsv > /tmp/phx.tsv
+toolkit --env-realm oc1 --env-region us-ashburn-1 get tenant -o tsv > /tmp/ash.tsv
+toolkit --env-realm oc1 --env-region us-phoenix-1 get tenant -o tsv > /tmp/phx.tsv
 diff <(cut -f1 /tmp/ash.tsv | sort) <(cut -f1 /tmp/phx.tsv | sort)
 ```
 

@@ -78,26 +78,26 @@ This creates `~/.config/toolkit/config.yaml` with all available options pre-popu
 
 ```yaml
 # Path to your Terraform / infrastructure repository
-repo_path: "/path/to/your/repo"
+repo-path: "/path/to/your/repo"
 
 # Kubernetes config (defaults to ~/.kube/config)
 kubeconfig: "/path/to/.kube/config"
 
 # Environment identifiers
-env_type:   "dev"          # e.g. dev, staging, prod
-env_region: "us-phoenix-1" # OCI region
-env_realm:  "oc1"          # OCI realm
+env-type:   "dev"          # e.g. dev, staging, prod
+env-region: "us-phoenix-1" # OCI region
+env-realm:  "oc1"          # OCI realm
 
 # Default category to open on startup
 category: "tenant"
 
 # Optional: path to extra metadata (tenants, etc.)
-metadata_file: ""
+metadata-file: ""
 
 # Logging
-log_file:   "toolkit.log"
-log_format: "console"   # console | json | slog
-log_level:  ""           # debug | info | warn | error (empty = default)
+log-file:   "toolkit.log"
+log-format: "console"   # console | json | slog
+log-level:  ""           # debug | info | warn | error (empty = default)
 debug:      false
 ```
 
@@ -111,19 +111,19 @@ All flags can be set in the config file or passed directly on the command line. 
 
 | Config Key      | CLI Flag           | Default                              | Required | Description                                  |
 |-----------------|--------------------|--------------------------------------|----------|----------------------------------------------|
-| `repo_path`     | `--repo_path`      | —                                    | Yes      | Path to Terraform / config repository        |
+| `repo-path`     | `--repo-path`      | —                                    | Yes      | Path to Terraform / config repository        |
 | `kubeconfig`    | `--kubeconfig`     | `~/.kube/config`                     | No       | Path to kubeconfig file                      |
-| `env_type`      | `--env_type`       | —                                    | Yes      | Environment type (`dev`, `prod`, …)          |
-| `env_region`    | `--env_region`     | —                                    | Yes      | Cloud region (e.g. `us-phoenix-1`)           |
-| `env_realm`     | `--env_realm`      | —                                    | Yes      | Cloud realm (e.g. `oc1`)                     |
+| `env-type`      | `--env-type`       | —                                    | Yes      | Environment type (`dev`, `prod`, …)          |
+| `env-region`    | `--env-region`     | —                                    | Yes      | Cloud region (e.g. `us-phoenix-1`)           |
+| `env-realm`     | `--env-realm`      | —                                    | Yes      | Cloud realm (e.g. `oc1`)                     |
 | `category`      | `-c / --category`  | —                                    | Yes      | Initial data category to display             |
 | `filter`        | `-f / --filter`    | `""`                                 | No       | Pre-applied filter on startup                |
-| `metadata_file` | `--metadata_file`  | `~/.config/toolkit/metadata.yaml`    | No       | Optional extra metadata file                 |
+| `metadata-file` | `--metadata-file`  | `~/.config/toolkit/metadata.yaml`    | No       | Optional extra metadata file                 |
 | `config`        | `--config`         | `~/.config/toolkit/config.yaml`      | No       | Path to the config file itself               |
-| `log_file`      | `--log_file`       | `toolkit.log`                        | No       | Log output path                              |
+| `log-file`      | `--log-file`       | `toolkit.log`                        | No       | Log output path                              |
 | `debug`         | `--debug`          | `false`                              | No       | Enable debug-level logging                   |
-| `log_format`    | `--log_format`     | `console`                            | No       | Log format: `console`, `json`, or `slog`     |
-| `log_level`     | `--log_level`      | `""`                                 | No       | Minimum log level: `debug` `info` `warn` `error` |
+| `log-format`    | `--log-format`     | `console`                            | No       | Log format: `console`, `json`, or `slog`     |
+| `log-level`     | `--log-level`      | `""`                                 | No       | Minimum log level: `debug` `info` `warn` `error` |
 
 ---
 
@@ -137,7 +137,7 @@ toolkit
 toolkit -c gpunode -f "phoenix"
 
 # Point to a different environment
-toolkit --env_type prod --env_region us-ashburn-1
+toolkit --env-type prod --env-region us-ashburn-1
 
 # Show all flags
 toolkit --help
@@ -149,7 +149,7 @@ toolkit --help
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  Tenant  LimitDefinition  PropertyDefinition  GpuPool  GpuNode  ...         │  ← Category tabs
+│  Tenant  LimitDefinition  PropertyDefinition  GPUPool  GPUNode  ...         │  ← Category tabs
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  NAME           │  OCIDS                            │  INTERNAL ↕ │  NOTE   │  ← Column headers (↕ = sortable)
 │  ───────────────┼───────────────────────────────────┼─────────────┼──────── │
@@ -210,8 +210,8 @@ The interface has four zones:
 | `ma` | ModelArtifact |
 | `e` / `env` | Environment |
 | `st` | ServiceTenancy |
-| `gp` | GpuPool |
-| `gn` | GpuNode |
+| `gp` | GPUPool |
+| `gn` | GPUNode |
 | `dac` | DedicatedAICluster |
 
 ### History navigation
@@ -233,7 +233,7 @@ Some categories are **parent scopes** — pressing `Enter` on a row zooms in to 
 | LimitDefinition | LimitTenancyOverride, LimitRegionalOverride |
 | ConsolePropertyDefinition | ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride |
 | PropertyDefinition | PropertyTenancyOverride, PropertyRegionalOverride |
-| GpuPool | GpuNode |
+| GPUPool | GPUNode |
 
 Press `Esc` to exit the scoped context and return to the parent.
 
@@ -282,8 +282,8 @@ Toolkit organises data into 18 categories:
 | **BaseModel** | AI model definitions; supports faulty tracking |
 | **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label) |
 | **ModelArtifact** | Model artifact versions |
-| **GpuPool** | OCI GPU instance pools; supports scaling |
-| **GpuNode** | Individual Kubernetes GPU compute nodes |
+| **GPUPool** | OCI GPU instance pools; supports scaling |
+| **GPUNode** | Individual Kubernetes GPU compute nodes |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters |
 
 ---
@@ -342,10 +342,10 @@ you can see at a glance which columns the keys below will reach.
 | ServiceTenancy | `Shift+T` | Type |
 | ConsolePropertyDefinition | `Shift+V` | Value |
 | PropertyDefinition | `Shift+V` | Value |
-| GpuPool | `Shift+S` | Size |
-| GpuNode | `Shift+F` | Free |
-| GpuNode | `Shift+T` | Type |
-| GpuNode | `Shift+A` | Age |
+| GPUPool | `Shift+S` | Size |
+| GPUNode | `Shift+F` | Free |
+| GPUNode | `Shift+T` | Type |
+| GPUNode | `Shift+A` | Age |
 | DedicatedAICluster | `Shift+T` | Tenant |
 | DedicatedAICluster | `Shift+I` | Internal |
 | DedicatedAICluster | `Shift+U` | Usage |
@@ -412,9 +412,9 @@ Certain categories expose live infrastructure operations. These require Kubernet
 
 > **Warning:** Operations like Drain, Reboot, and Delete are **irreversible**. Toolkit guards against duplicate in-flight requests automatically.
 
-### GPU Nodes (`GpuNode`)
+### GPU Nodes (`GPUNode`)
 
-Select a node in the `GpuNode` category:
+Select a node in the `GPUNode` category:
 
 | Key | Operation | Description |
 |-----|-----------|-------------|
@@ -425,7 +425,7 @@ Select a node in the `GpuNode` category:
 | `r` | Refresh | Reload GPU node data |
 | `Ctrl+Z` | Toggle Faulty | Show/hide nodes flagged as faulty |
 
-### GPU Pools (`GpuPool`)
+### GPU Pools (`GPUPool`)
 
 | Key | Operation | Description |
 |-----|-----------|-------------|
@@ -444,7 +444,7 @@ Select a node in the `GpuNode` category:
 ### Refreshing cluster-derived categories
 
 The `r` key reloads the current list from the live cluster. In addition
-to GpuNode / GpuPool / DedicatedAICluster above, it is also bound on the
+to GPUNode / GPUPool / DedicatedAICluster above, it is also bound on the
 read-only cluster-derived categories:
 
 | Category | Key | Operation |
@@ -555,13 +555,13 @@ Toolkit writes structured logs to a file (default: `toolkit.log` in your working
 toolkit --debug
 
 # Write logs to a custom path
-toolkit --log_file /tmp/tk-debug.log
+toolkit --log-file /tmp/tk-debug.log
 
 # Use JSON format for log shipping / parsing
-toolkit --log_format json
+toolkit --log-format json
 
 # Set minimum log level
-toolkit --log_level warn
+toolkit --log-level warn
 ```
 
 Supported log levels (from most to least verbose): `debug` → `info` → `warn` → `error`.
@@ -576,13 +576,13 @@ Supported log formats: `console` (human-readable), `json` (structured), `slog` (
 |------------|-------------|
 | `toolkit init` | Scaffold `~/.config/toolkit/config.yaml` with example values |
 | `toolkit completion <shell>` | Print shell completion script for `bash`, `zsh`, `fish`, or `powershell` |
-| `toolkit version [--check]` | Print installed version; `--check` fetches the latest release from GitHub and compares |
+| `toolkit version [--check-updates]` | Print installed version; `--check-updates` fetches the latest release from GitHub and compares |
 
 ---
 
 ## Tips & Tricks
 
-- **Start with a filter** — pass `-f <term>` on the command line to pre-filter noisy categories like `GpuNode` or `Tenant`.
+- **Start with a filter** — pass `-f <term>` on the command line to pre-filter noisy categories like `GPUNode` or `Tenant`.
 - **Scope then drill** — select a `LimitDefinition` and press `Enter` to instantly view all tenancy overrides for that specific limit.
 - **Use command mode for fast navigation** — press `:dac Enter` to jump straight to DedicatedAICluster from any category.
 - **Copy-then-filter workflow** — copy a tenant ID with `t`, switch to another category, then paste it as a filter with `p` to quickly cross-reference data.
