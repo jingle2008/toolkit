@@ -65,6 +65,14 @@ If the scope is not valid for the category, it is set to nil.
 Returns: rows, stats (nil if not applicable)
 */
 func computeTableRows(dataset *models.Dataset, category domain.Category, scope *domain.Scope, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
+	// row-source closures dereference dataset to pull category-specific
+	// slices/maps; before the first successful load there's nothing to
+	// render. Bail out so refresh-paths driven by user navigation (now
+	// reachable since load failures no longer trap the user in
+	// ErrorView) don't NPE on Tenant.<Field>.
+	if dataset == nil {
+		return nil, nil
+	}
 	if scope != nil && !scope.Category.IsScopeOf(category) {
 		scope = nil
 	}

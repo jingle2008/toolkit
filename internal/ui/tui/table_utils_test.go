@@ -183,6 +183,21 @@ func TestGetItemKeyAndString(t *testing.T) {
 	}
 }
 
+// TestComputeTableRows_NilDataset pins the regression that a nil
+// dataset must not crash the row sources. Reachable since load
+// failures route through toasts instead of trapping the user in
+// ErrorView — pressing `r` or Tab on a category whose data hasn't
+// loaded yet sends a dataMsg{} → refreshDisplay → computeTableRows
+// with a nil dataset.
+func TestComputeTableRows_NilDataset(t *testing.T) {
+	t.Parallel()
+	for cat := domain.Tenant; cat <= domain.Alias; cat++ {
+		rows, stats := computeTableRows(nil, cat, nil, "", "", true, false)
+		require.Nil(t, rows, "category %v: rows should be nil with nil dataset", cat)
+		require.Nil(t, stats, "category %v: stats should be nil with nil dataset", cat)
+	}
+}
+
 func TestGetHeadersAndTableRows(t *testing.T) {
 	t.Parallel()
 	// Cover all categories for headersFor and computeTableRows

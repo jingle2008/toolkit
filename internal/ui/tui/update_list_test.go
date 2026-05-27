@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/stopwatch"
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
@@ -116,9 +117,13 @@ func TestHandleSpinnerTickMsg(t *testing.T) {
 func TestHandleNextCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
+	tbl := table.New()
+	ti := textinput.New()
 	m := &Model{
 		category:       domain.Tenant,
 		loadingSpinner: &s,
+		table:          &tbl,
+		textInput:      &ti,
 	}
 	// Seed initial history as in NewModel
 	m.history = []domain.Category{m.category}
@@ -131,10 +136,14 @@ func TestHandlePrevCategory(t *testing.T) {
 	t.Parallel()
 	s := spinner.New()
 	w := stopwatch.New()
+	tbl := table.New()
+	ti := textinput.New()
 	m := &Model{
 		category:       domain.Tenant,
 		loadingSpinner: &s,
 		loadingTimer:   &w,
+		table:          &tbl,
+		textInput:      &ti,
 	}
 	// Seed initial history as in NewModel
 	m.history = []domain.Category{m.category}
@@ -179,11 +188,15 @@ func TestHistoryCap20(t *testing.T) {
 }
 
 func makeModelWithHistory(hist []domain.Category, idx int) *Model {
+	tbl := table.New()
+	ti := textinput.New()
 	return &Model{
 		history:        append([]domain.Category{}, hist...),
 		historyIdx:     idx,
 		loadingSpinner: &spinner.Model{},
 		loadingTimer:   &stopwatch.Model{},
+		table:          &tbl,
+		textInput:      &ti,
 	}
 }
 
