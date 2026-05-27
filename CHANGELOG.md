@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-27
+
+### Added
+- CLI flag shorthands. `-d` for the root `--debug` flag (interactive use), and `-n` for `--dry-run` on `cordon` / `reboot` / `terminate` / `drain` / `delete dac` / `scale gpu-pool`. Long forms are unchanged.
+
+### Changed
+- **TUI load-error handling redesign.** A failed category or dataset load no longer traps the user in a terminal `ErrorView` (where only `q` worked); the error now shows as a transient red toast banner at the bottom of the active view, auto-dismissed after 8s. Retry remains the existing `r` (Refresh) key. The same path covers export errors and detail-render errors. Pressing `r` on the failed category re-runs the load.
+- **Commit-navigation on category switch.** Switching to a category whose data hasn't loaded yet now immediately shows the destination chrome — new headers, empty rows — with a small loading indicator in the status bar. Previously the table kept showing the *previous* category's rows under the new category's name, and a failed load locked the user in `ErrorView`. The new behavior matches industry convention (k9s, Gmail, GitHub): commit the navigation, surface the failure inline. Full-screen `LoadingView` is now only used for the very first dataset load, when there's no content to layer over.
+- TUI's inline status-bar loading indicator is unstyled (no lipgloss background pill, so it doesn't compete with the context/stats cells) and the elapsed-time stopwatch ticks at 1s intervals (was 500ms).
+
+### Fixed
+- **Input lag and dropped keystrokes during navigation when k8s auth is expired.** Two-layer fix: (1) force `ExecProvider.InteractiveMode = Never` on every `rest.Config` so client-go no longer pipes `cmd.Stdin = os.Stdin` to the exec auth plugin — the OCI CLI's interactive prompt was eating keystrokes the user thought they were sending to the TUI; (2) redirect process stderr (fd 2 at the kernel level via `dup2`) to a sibling `<log-file>.stderr` capture file for the duration of the TUI session, so the OCI CLI's "Abort:" output on non-tty prompt failure can't interleave with bubbletea's alt-screen frame writes. Child processes inherit the redirected fd because the swap happens at the kernel level rather than via reassigning `os.Stderr`. Stderr is restored on TUI exit.
+- **NPE on category switch when no dataset is loaded.** Pressing `r` or `Tab` after a failed first load used to crash the TUI because the row-source closure dereferenced a nil `dataset` (`d.LimitDefinitionGroup.Values` etc.). `computeTableRows` now returns `(nil, nil)` early when `dataset == nil`.
+- **Spinner and stopwatch ticks no longer fire when no load is in flight.** The self-perpetuating tick chain used to keep firing forever after the first load — invisible before this release because the full-screen `LoadingView` swap hid the spinner, but newly visible with the inline indicator. Ticks now die when `pendingTasks` reaches 0 and re-arm on the next load.
+- **Lazy-loaded category data arriving in `DetailsView`/`HelpView`/`ExportView` is no longer silently dropped.** Typed `*LoadedMsg` messages and `dataMsg`/`datasetLoadedMsg` are now routed at the top of `Update`; pre-fix, only `updateListView` and `updateLoadingView` consumed them, so a load completing while the user had navigated into a non-list view left `pendingTasks` elevated, the dataset un-updated, and the inline spinner stuck on.
+- **Detail-render errors no longer silently swallow the error.** Failures inside `handleDetailContentRenderedMsg` now flow through the same toast path as load errors instead of being captured into an unread `m.err` field.
+
+### Internal
+- Removed unreachable `common.ErrorView` constant, `updateErrorView` function, `m.err` field, and three associated `case common.ErrorView:` branches across `delegateToActiveView` / `renderActiveView` / `fullHelpView` — all dead code after the toast-banner switch.
+- Promoted `dataMsg`, `datasetLoadedMsg`, and 9 typed `*LoadedMsg` variants to top-level `Update` routing alongside `errMsg` / `spinner.TickMsg` / `stopwatch.TickMsg`. Collapsed the now-dead `routeListDataMsg` helper and shrank `updateLoadingView` to just the Quit handler.
+- Dropped `yaml:"tag"` from `PropertyTenancyOverride.TenantID`; `json:"tag"` preserves on-disk back-compat. No user-visible effect because `sigs.k8s.io/yaml` (used by `toolkit get -o yaml`) marshals via JSON struct tags.
+- `redirectStderr` helper is split into per-OS files (`redirect_stderr_unix.go` + `redirect_stderr_other.go`) so the binary still builds on linux/arm64 (which only exposes `dup3(2)`) and windows. Uses `golang.org/x/sys/unix.Dup`/`Dup2` instead of the stdlib `syscall` package.
+
 ## [0.6.0] - 2026-05-26
 
 ### Added
