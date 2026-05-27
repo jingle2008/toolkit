@@ -44,18 +44,18 @@ func TestUpdate_ErrMsgRoutesToToast(t *testing.T) {
 
 func TestUpdate_SpinnerTickRoutesAtTop(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	m := &Model{pendingTasks: 1} // a load is in flight
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
 	_, cmd := m.Update(spinner.TickMsg{})
 	if cmd == nil {
-		t.Error("expected non-nil command for spinner.TickMsg")
+		t.Error("expected non-nil command for spinner.TickMsg while a load is pending")
 	}
 }
 
 func TestUpdate_StopwatchTickRoutesAtTop(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	m := &Model{pendingTasks: 1}
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
 	defer func() {
@@ -64,4 +64,27 @@ func TestUpdate_StopwatchTickRoutesAtTop(t *testing.T) {
 		}
 	}()
 	_, _ = m.Update(stopwatch.TickMsg{})
+}
+
+// TestTickGate pins issue #5 from code review: when pendingTasks
+// drops to 0 the spinner/stopwatch tick chain must die instead of
+// self-perpetuating forever. beginTask re-kicks them on the next load.
+func TestTickGate_SpinnerStopsWhenIdle(t *testing.T) {
+	t.Parallel()
+	m := &Model{pendingTasks: 0}
+	m.loadingSpinner = &spinner.Model{}
+	cmd := m.handleSpinnerTickMsg(spinner.TickMsg{})
+	if cmd != nil {
+		t.Errorf("expected nil cmd when pendingTasks=0 (tick chain should die), got %v", cmd)
+	}
+}
+
+func TestTickGate_StopwatchStopsWhenIdle(t *testing.T) {
+	t.Parallel()
+	m := &Model{pendingTasks: 0}
+	m.loadingTimer = &stopwatch.Model{}
+	cmd := m.handleStopwatchMsg(stopwatch.TickMsg{})
+	if cmd != nil {
+		t.Errorf("expected nil cmd when pendingTasks=0 (tick chain should die), got %v", cmd)
+	}
 }

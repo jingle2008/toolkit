@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/stopwatch"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -19,14 +20,29 @@ func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// Spinner/stopwatch ticks are self-perpetuating: Update on a TickMsg
+// returns the next Tick cmd. We let that chain die when no load is in
+// flight so we don't burn ~10Hz of empty event-loop wakeups idle.
+// beginTask kicks off a fresh chain via tea.Sequence the next time
+// pendingTasks goes 0 → 1.
+
 func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 	loadingSpinner, cmd := m.loadingSpinner.Update(msg)
 	m.loadingSpinner = &loadingSpinner
+	if m.pendingTasks == 0 {
+		return nil
+	}
 	return cmd
 }
 
 func (m *Model) handleStopwatchMsg(msg tea.Msg) tea.Cmd {
 	timer, cmd := m.loadingTimer.Update(msg)
 	m.loadingTimer = &timer
+	// Only the Tick chain is self-perpetuating; StartStopMsg/ResetMsg
+	// are one-shot state transitions emitted by beginTask, so we keep
+	// propagating those even when pendingTasks is 0.
+	if _, isTick := msg.(stopwatch.TickMsg); isTick && m.pendingTasks == 0 {
+		return nil
+	}
 	return cmd
 }

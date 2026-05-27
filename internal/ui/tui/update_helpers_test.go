@@ -83,7 +83,7 @@ func Test_updateLoadingView_QuitKey(t *testing.T) {
 
 func Test_Update_SpinnerTick(t *testing.T) {
 	t.Parallel()
-	m := &Model{}
+	m := &Model{pendingTasks: 1}
 	m.viewMode = common.LoadingView
 	s := spinner.New()
 	r := stopwatch.New()

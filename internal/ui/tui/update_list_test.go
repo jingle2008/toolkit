@@ -108,6 +108,7 @@ func TestHandleSpinnerTickMsg(t *testing.T) {
 	s := spinner.New()
 	m := &Model{
 		loadingSpinner: &s,
+		pendingTasks:   1, // simulate an in-flight load so the tick chain stays alive
 	}
 	msg := spinner.TickMsg{}
 	cmd := m.handleSpinnerTickMsg(msg)
