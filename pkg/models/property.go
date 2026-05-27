@@ -77,14 +77,11 @@ func (o PropertyRegionalOverride) IsFaulty() bool {
 //
 // TenantName is the originating tenant directory name (populated by
 // the configloader, same convention as LimitTenancyOverride).
-// TenantID is the yaml-declared per-record tenant identifier;
-// historically the on-disk yaml key for this field was "tag", so
-// the json/yaml tag preserves that wire name for back-compat — only
-// the Go field is renamed to match the LimitTenancyOverride /
-// ConsolePropertyTenancyOverride siblings.
+// TenantID is the per-record tenant identifier; the JSON key is kept
+// as "tag" for back-compat with the on-disk record format.
 type PropertyTenancyOverride struct {
 	TenantName string `json:"tenant"`
-	TenantID   string `json:"tag" yaml:"tag"`
+	TenantID   string `json:"tag"`
 	PropertyRegionalOverride
 }
 
