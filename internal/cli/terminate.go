@@ -57,7 +57,7 @@ already know the instance OCID.`,
 			})
 		},
 	}
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print what would happen and exit")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Required: this action has no interactive prompt")
 	cmd.Flags().StringVar(&ocid, "ocid", "", "Skip k8s lookup and target this instance OCID directly")
 	rootCmd.AddCommand(cmd)

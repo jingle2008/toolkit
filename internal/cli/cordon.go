@@ -85,7 +85,7 @@ Examples:
 			})
 		},
 	}
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print what would happen and exit")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
 	rootCmd.AddCommand(cmd)
 }

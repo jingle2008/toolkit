@@ -21,7 +21,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	rootCmd.PersistentFlags().String("metadata-file", defaultMetadata, "Optional path to a YAML or JSON file with additional metadata (e.g. tenants)")
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
 	rootCmd.PersistentFlags().String("log-file", "toolkit.log", "Path to log file")
-	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
+	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Enable debug logging")
 	rootCmd.PersistentFlags().String("log-format", "console", "Log format: console|json|slog")
 	rootCmd.PersistentFlags().String("log-level", "", "Minimum log level: debug|info|warn|error (empty uses debug flag)")
 	rootCmd.PersistentFlags().Bool("mutation-env-override-allowed", false,

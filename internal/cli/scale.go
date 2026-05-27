@@ -61,7 +61,7 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 			})
 		},
 	}
-	gpuPoolCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print what would happen and exit")
+	gpuPoolCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
 	gpuPoolCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
 
 	scaleCmd.AddCommand(gpuPoolCmd)

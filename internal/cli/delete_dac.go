@@ -54,7 +54,7 @@ deliberately disabled to prevent reflex "y" answers.`,
 			})
 		},
 	}
-	dacCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print what would happen and exit")
+	dacCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
 	dacCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Required: this action has no interactive prompt")
 
 	delCmd.AddCommand(dacCmd)
