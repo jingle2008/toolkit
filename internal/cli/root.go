@@ -196,4 +196,3 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 	}
 	return nil
 }
-
