@@ -105,6 +105,10 @@ type Model struct {
 
 	// Export CSV popup state
 	dirPicker *filepicker.Model
+
+	// Transient banner shown over the active view; auto-dismissed via tea.Tick.
+	toast    *toastState
+	toastSeq int
 }
 
 /*

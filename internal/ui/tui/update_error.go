@@ -10,12 +10,14 @@ import (
 /*
 handleErrMsg centralizes error handling for async operations.
 
-It stores the error on the model and transitions the UI out of LoadingView
-by calling endTask(false), which sets the view to ErrorView and logs timing.
+It records the error, dismisses LoadingView via endTask, and surfaces
+the failure as a transient toast over the restored view — so the user
+can keep navigating instead of being trapped in a terminal ErrorView.
 */
-func (m *Model) handleErrMsg(msg errMsg) {
+func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	m.err = msg
 	m.endTask(false)
+	return m.showToast(msg.Error(), toastError)
 }
 
 // updateErrorView handles command routing while in ErrorView mode.

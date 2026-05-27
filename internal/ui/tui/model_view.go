@@ -142,6 +142,14 @@ func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) {
 
 // View renders the current state of the model as a string.
 func (m *Model) View() string {
+	body := m.renderActiveView()
+	if m.toast == nil {
+		return body
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, body, m.renderToast(m.viewWidth))
+}
+
+func (m *Model) renderActiveView() string {
 	// exhaustive:common.ViewMode
 	switch m.viewMode {
 	case common.LoadingView:

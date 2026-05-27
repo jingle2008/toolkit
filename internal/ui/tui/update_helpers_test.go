@@ -122,7 +122,9 @@ func Test_updateLoadingView_ErrMsg(t *testing.T) {
 	m.viewMode = common.LoadingView
 	msg := errMsg(errors.New("fail"))
 	_, cmd := m.updateLoadingView(msg)
-	require.Nil(t, cmd)
+	require.NotNil(t, cmd, "errMsg should return a tea.Cmd (toast auto-dismiss tick)")
+	require.NotNil(t, m.toast, "errMsg should set an error toast")
+	require.Equal(t, "fail", m.toast.msg)
 }
 
 func Test_updateHelpView_KeyMsg(t *testing.T) {

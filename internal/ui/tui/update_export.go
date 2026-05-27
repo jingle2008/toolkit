@@ -19,9 +19,10 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewMode = common.ListView
 		return m, nil
 	case exportErrMsg:
-		m.err = fmt.Errorf("export failed: %w", msg.err)
-		m.viewMode = common.ErrorView
-		return m, nil
+		err := fmt.Errorf("export failed: %w", msg.err)
+		m.err = err
+		m.viewMode = m.lastViewMode
+		return m, m.showToast(err.Error(), toastError)
 	}
 
 	keyMsg, isKeyMsg := msg.(tea.KeyMsg)

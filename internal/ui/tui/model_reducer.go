@@ -503,10 +503,9 @@ func (m *Model) endTask(success bool) {
 			"success", success,
 			"elapsed", elapsed,
 		)
-		if success {
-			m.viewMode = m.lastViewMode
-		} else {
-			m.viewMode = common.ErrorView
-		}
+		// Always restore the prior view. Failures surface as a toast
+		// over that view (see handleErrMsg / showToast) so the user
+		// can retry via 'r' or keep navigating.
+		m.viewMode = m.lastViewMode
 	}
 }

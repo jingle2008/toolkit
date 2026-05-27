@@ -35,8 +35,11 @@ func TestUpdateLoadingView_ErrMsg(t *testing.T) {
 	if m.err == nil || m.err.Error() != "fail" {
 		t.Errorf("expected err to be set to 'fail', got %v", m.err)
 	}
-	if cmd != nil {
-		t.Errorf("expected nil command for errMsg, got %v", cmd)
+	if m.toast == nil || m.toast.msg != "fail" || m.toast.sev != toastError {
+		t.Errorf("expected error toast with msg 'fail', got %+v", m.toast)
+	}
+	if cmd == nil {
+		t.Error("expected non-nil tea.Cmd (toast auto-dismiss tick), got nil")
 	}
 }
 

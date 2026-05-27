@@ -17,7 +17,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.onResize(msg)
 	case errMsg:
-		m.handleErrMsg(msg)
+		return m, m.handleErrMsg(msg)
+	case toastExpireMsg:
+		m.handleToastExpireMsg(msg)
 		return m, nil
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
