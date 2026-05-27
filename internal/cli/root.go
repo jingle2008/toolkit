@@ -176,6 +176,19 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		logger.Errorw("failed to create toolkit model", "error", err)
 		return fmt.Errorf("create toolkit model: %w", err)
 	}
+	// Redirect process stderr to the log file for the duration of the
+	// TUI session. The bubbletea alt-screen has exclusive ownership of
+	// the terminal; any bytes written to fd 2 by client-go's exec
+	// auth plugins (oci-cli prints "Abort:" on a non-tty prompt
+	// failure, for instance) or by runtime panic stacks would otherwise
+	// interleave with bubbletea's frame writes. Restored on exit so
+	// post-cleanup writes still reach the user's terminal.
+	restoreStderr, err := redirectStderr(cfg.LogFile)
+	if err != nil {
+		return err
+	}
+	defer restoreStderr()
+
 	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(ctx))
 	_, err = p.Run()
 	if err != nil && !errors.Is(err, context.Canceled) {
@@ -183,4 +196,29 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		return fmt.Errorf("program error: %w", err)
 	}
 	return nil
+}
+
+// redirectStderr points the process's fd 2 at the given file for the
+// duration of the returned function's lifetime. The restoration
+// function dup2's the original fd back and closes both sides.
+func redirectStderr(path string) (func(), error) {
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		return nil, fmt.Errorf("open stderr sink %q: %w", path, err)
+	}
+	orig, err := syscall.Dup(int(os.Stderr.Fd()))
+	if err != nil {
+		_ = f.Close()
+		return nil, fmt.Errorf("dup stderr: %w", err)
+	}
+	if err := syscall.Dup2(int(f.Fd()), int(os.Stderr.Fd())); err != nil {
+		_ = f.Close()
+		_ = syscall.Close(orig)
+		return nil, fmt.Errorf("redirect stderr: %w", err)
+	}
+	return func() {
+		_ = syscall.Dup2(orig, int(os.Stderr.Fd()))
+		_ = syscall.Close(orig)
+		_ = f.Close()
+	}, nil
 }
