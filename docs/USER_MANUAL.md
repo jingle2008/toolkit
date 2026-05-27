@@ -121,7 +121,7 @@ All flags can be set in the config file or passed directly on the command line. 
 | `metadata-file` | `--metadata-file`  | `~/.config/toolkit/metadata.yaml`    | No       | Optional extra metadata file                 |
 | `config`        | `--config`         | `~/.config/toolkit/config.yaml`      | No       | Path to the config file itself               |
 | `log-file`      | `--log-file`       | `toolkit.log`                        | No       | Log output path                              |
-| `debug`         | `--debug`          | `false`                              | No       | Enable debug-level logging                   |
+| `debug`         | `-d / --debug`     | `false`                              | No       | Enable debug-level logging                   |
 | `log-format`    | `--log-format`     | `console`                            | No       | Log format: `console`, `json`, or `slog`     |
 | `log-level`     | `--log-level`      | `""`                                 | No       | Minimum log level: `debug` `info` `warn` `error` |
 

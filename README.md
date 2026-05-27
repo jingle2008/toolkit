@@ -124,7 +124,7 @@ toolkit --help                # all global flags
 | `--metadata-file` | `~/.config/toolkit/metadata.yaml` | Optional additional metadata file |
 | `--kubeconfig` | `~/.kube/config` | Path to kubeconfig file |
 | `--log-file` | `toolkit.log` | Path to log file |
-| `--debug` | `false` | Enable debug logging |
+| `--debug, -d` | `false` | Enable debug logging |
 | `--log-format` | `console` | Log format: `console`, `json`, or `slog` |
 | `--log-level` | | Minimum log level: `debug`, `info`, `warn`, `error` (empty uses `--debug` flag) |
 | `--mutation-env-override-allowed` | `false` | Allow MCP mutation tools to override the startup env per call (off by default for safety) |
@@ -179,7 +179,7 @@ toolkit config --validate         # run config.Validate(); exit non-zero on fail
 
 ### Cluster mutations
 
-Maintenance operations the TUI exposes via keyboard shortcuts are also available as scriptable subcommands. All mutations support `--dry-run` (preview the action) and `--yes` / `-y` (skip the interactive prompt). Each call writes a JSON line to the audit log.
+Maintenance operations the TUI exposes via keyboard shortcuts are also available as scriptable subcommands. All mutations support `--dry-run` / `-n` (preview the action) and `--yes` / `-y` (skip the interactive prompt). Each call writes a JSON line to the audit log.
 
 | Command | Effect |
 | ------- | ------ |
