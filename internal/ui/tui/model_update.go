@@ -30,6 +30,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleSpinnerTickMsg(msg)
 	case stopwatch.TickMsg, stopwatch.StartStopMsg, stopwatch.ResetMsg:
 		return m, m.handleStopwatchMsg(msg)
+	// Data / loaded messages: routed at the top so a load completing
+	// while the user has navigated into DetailsView/HelpView/ExportView
+	// still updates the dataset and drains endTask — without this,
+	// pendingTasks would stay elevated and the inline spinner would
+	// tick forever.
+	case dataMsg:
+		return m, m.handleDataMsg(msg)
+	case datasetLoadedMsg:
+		return m, m.handleDataMsg(dataMsg{Data: msg.Dataset, Gen: msg.Gen})
+	case baseModelsLoadedMsg, importedModelsLoadedMsg, gpuPoolsLoadedMsg,
+		gpuNodesLoadedMsg, dedicatedAIClustersLoadedMsg, tenancyOverridesLoadedMsg,
+		limitRegionalOverridesLoadedMsg, consolePropertyRegionalOverridesLoadedMsg,
+		propertyRegionalOverridesLoadedMsg:
+		return m, tea.Batch(m.routeListLoadedMsg(msg)...)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil

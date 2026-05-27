@@ -148,6 +148,12 @@ func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea
 }
 
 // View renders the current state of the model as a string.
+//
+// When a toast is up we append it under the active view's body rather
+// than budget a row for it in updateLayout. The terminal scrolls one
+// row to accommodate, briefly clipping the table's bottom border —
+// acceptable for an 8s transient banner, and far simpler than running
+// layout twice per toast-set/dismiss.
 func (m *Model) View() string {
 	body := m.renderActiveView()
 	if m.toast == nil {

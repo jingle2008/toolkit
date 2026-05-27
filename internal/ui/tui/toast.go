@@ -12,6 +12,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// toastTTL is how long a toast stays before auto-dismiss. 8s ≈ enough
+// to read a typical ~80-char error without forcing the user to
+// acknowledge; matches the dwell time k9s and Gmail use for similar
+// transient errors.
 const toastTTL = 8 * time.Second
 
 type toastSeverity int

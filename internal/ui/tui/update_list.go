@@ -25,11 +25,12 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
+	// dataMsg, datasetLoadedMsg, and the typed *LoadedMsg family are
+	// intercepted at the top of Update so they fire from any view —
+	// they don't reach this router.
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
-	case dataMsg:
-		return []tea.Cmd{m.handleDataMsg(msg)}
 	case filterMsg:
 		return []tea.Cmd{m.handleFilterMsg(msg)}
 	case setFilterMsg:
@@ -62,17 +63,8 @@ func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
 		m.handleDrainNodeResultMsg(msg)
 	case rebootNodeResultMsg:
 		m.handleRebootNodeResultMsg(msg)
-	default:
-		return m.routeListDataMsg(msg)
 	}
 	return nil
-}
-
-func (m *Model) routeListDataMsg(msg tea.Msg) []tea.Cmd {
-	if dm, ok := msg.(datasetLoadedMsg); ok {
-		return []tea.Cmd{m.handleDataMsg(dataMsg{Data: dm.Dataset, Gen: dm.Gen})}
-	}
-	return m.routeListLoadedMsg(msg)
 }
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {

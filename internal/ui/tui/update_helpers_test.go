@@ -81,7 +81,7 @@ func Test_updateLoadingView_QuitKey(t *testing.T) {
 	require.IsType(t, tea.QuitMsg{}, res)
 }
 
-func Test_updateLoadingView_SpinnerTick(t *testing.T) {
+func Test_Update_SpinnerTick(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	m.viewMode = common.LoadingView
@@ -89,12 +89,11 @@ func Test_updateLoadingView_SpinnerTick(t *testing.T) {
 	r := stopwatch.New()
 	m.loadingSpinner = &s
 	m.loadingTimer = &r
-	msg := spinner.TickMsg{}
-	_, cmd := m.updateLoadingView(msg)
+	_, cmd := m.Update(spinner.TickMsg{})
 	require.NotNil(t, cmd)
 }
 
-func Test_updateLoadingView_DataMsg(t *testing.T) {
+func Test_Update_DataMsgWithEmptyData(t *testing.T) {
 	t.Parallel()
 	m, err := NewModel(
 		WithRepoPath("/tmp"),
@@ -105,12 +104,11 @@ func Test_updateLoadingView_DataMsg(t *testing.T) {
 	require.NoError(t, err)
 	m.viewMode = common.LoadingView
 	m.dataset = &models.Dataset{}
-	msg := dataMsg{}
-	_, cmd := m.updateLoadingView(msg)
+	_, cmd := m.Update(dataMsg{})
 	require.Nil(t, cmd)
 }
 
-func Test_updateLoadingView_ErrMsg(t *testing.T) {
+func Test_Update_ErrMsgEmitsToast(t *testing.T) {
 	t.Parallel()
 	m, err := NewModel(
 		WithRepoPath("/tmp"),
@@ -120,8 +118,7 @@ func Test_updateLoadingView_ErrMsg(t *testing.T) {
 	)
 	require.NoError(t, err)
 	m.viewMode = common.LoadingView
-	msg := errMsg(errors.New("fail"))
-	_, cmd := m.updateLoadingView(msg)
+	_, cmd := m.Update(errMsg(errors.New("fail")))
 	require.NotNil(t, cmd, "errMsg should return a tea.Cmd (toast auto-dismiss tick)")
 	require.NotNil(t, m.toast, "errMsg should set an error toast")
 	require.Equal(t, "fail", m.toast.msg)

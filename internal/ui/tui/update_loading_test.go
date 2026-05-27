@@ -24,14 +24,16 @@ func TestUpdateLoadingView_QuitKey(t *testing.T) {
 	}
 }
 
-func TestUpdateLoadingView_ErrMsg(t *testing.T) {
+// errMsg, spinner.TickMsg, stopwatch.TickMsg are now routed at the top
+// of Update rather than via updateLoadingView. Tests exercise that path.
+
+func TestUpdate_ErrMsgRoutesToToast(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
 	m.logger = &fakeLogger{}
-	msg := errMsg(fakeErrMsg("fail"))
-	_, cmd := m.updateLoadingView(msg)
+	_, cmd := m.Update(errMsg(fakeErrMsg("fail")))
 	if m.toast == nil || m.toast.msg != "fail" || m.toast.sev != toastError {
 		t.Errorf("expected error toast with msg 'fail', got %+v", m.toast)
 	}
@@ -40,30 +42,26 @@ func TestUpdateLoadingView_ErrMsg(t *testing.T) {
 	}
 }
 
-func TestUpdateLoadingView_SpinnerTickMsg(t *testing.T) {
+func TestUpdate_SpinnerTickRoutesAtTop(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
-	msg := spinner.TickMsg{}
-	_, cmd := m.updateLoadingView(msg)
+	_, cmd := m.Update(spinner.TickMsg{})
 	if cmd == nil {
 		t.Error("expected non-nil command for spinner.TickMsg")
 	}
 }
 
-func TestUpdateLoadingView_StopwatchTickMsg(t *testing.T) {
+func TestUpdate_StopwatchTickRoutesAtTop(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
-	// The stopwatch.TickMsg handler always returns nil (no-op) for a zero stopwatch,
-	// so we only check that it does not panic.
-	msg := stopwatch.TickMsg{}
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("panic in handleStopwatchTickMsg: %v", r)
+			t.Errorf("panic in stopwatch routing: %v", r)
 		}
 	}()
-	_, _ = m.updateLoadingView(msg)
+	_, _ = m.Update(stopwatch.TickMsg{})
 }
