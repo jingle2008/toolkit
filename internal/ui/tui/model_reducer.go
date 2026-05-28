@@ -94,6 +94,7 @@ func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
 
 func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	m.stats = stats
+	m.rawRows = cloneRows(rows)
 	m.applyMiddleTruncation(rows)
 	table.WithRows(rows)(m.table)
 

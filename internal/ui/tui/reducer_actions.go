@@ -40,7 +40,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 
 // handleItemActions processes per-row actions for the current category.
 func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
-	itemKey := itemKeyFrom(m.category, m.table.SelectedRow())
+	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	item := findItem(m.dataset, m.category, itemKey)
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
@@ -75,7 +75,7 @@ func (m *Model) scaleUpGPUPool(item any) tea.Cmd {
 		return nil
 	}
 
-	itemKey := itemKeyFrom(m.category, m.table.SelectedRow())
+	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	m.logger.Infow("action started", "action", "scaleUpGPUPool", "pool", itemKeyString(itemKey))
 	return tea.Batch(
 		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey} },
@@ -103,7 +103,7 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
 		return nil
 	}
-	itemKey := itemKeyFrom(m.category, m.table.SelectedRow())
+	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	m.logger.Infow("action started", "action", "toggleCordon", "node", itemKeyString(itemKey))
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
@@ -123,7 +123,7 @@ func (m *Model) drainNode(item any) tea.Cmd {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
 		return nil
 	}
-	itemKey := itemKeyFrom(m.category, m.table.SelectedRow())
+	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	m.logger.Infow("action started", "action", "drainNode", "node", itemKeyString(itemKey))
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
@@ -135,6 +135,6 @@ func (m *Model) drainNode(item any) tea.Cmd {
 
 // selectedItem returns the currently selected item in the table.
 func (m *Model) selectedItem() any {
-	itemKey := itemKeyFrom(m.category, m.table.SelectedRow())
+	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	return findItem(m.dataset, m.category, itemKey)
 }

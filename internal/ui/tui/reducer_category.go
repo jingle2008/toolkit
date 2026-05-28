@@ -160,7 +160,7 @@ func (m *Model) handleDedicatedAIClusterCategory(refresh bool, gen int) tea.Cmd 
 
 // enterDetailView switches the model into detail view mode.
 func (m *Model) enterDetailView() tea.Cmd {
-	row := m.table.SelectedRow()
+	row := m.selectedRawRow()
 	if len(row) == 0 {
 		return nil
 	}
@@ -195,7 +195,7 @@ func (m *Model) changeCategory() tea.Cmd {
 
 // enterContext moves the model into a new context based on the selected row.
 func (m *Model) enterContext() tea.Cmd {
-	row := m.table.SelectedRow()
+	row := m.selectedRawRow()
 	if len(row) == 0 {
 		return nil
 	}

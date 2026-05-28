@@ -183,3 +183,46 @@ func TestApplyMiddleTruncation_DACNameAndTenant(t *testing.T) {
 	assert.Equal(t, "true", rows[0][2], "Internal must not be touched")
 	assert.Equal(t, "ACTIVE", rows[0][9], "Status must not be touched (not TruncateMiddle)")
 }
+
+// TestApplyRows_PreservesRawRowForKeyLookup is a regression guard for
+// the bug where detail view for DAC/ImportedModel rendered "null":
+// applyMiddleTruncation rewrote Name/Tenant cells in place, and the
+// downstream itemKeyFrom(category, m.table.SelectedRow()) then built
+// a ScopedItemKey from truncated strings — ImportedModelMap lookup
+// missed, findItem returned nil, jsonutil.Pretty rendered "null".
+// applyRows must preserve a parallel un-truncated copy so the
+// selectedRawRow helper can recover the real key.
+func TestApplyRows_PreservesRawRowForKeyLookup(t *testing.T) {
+	t.Parallel()
+	m, _ := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
+	)
+	m.category = domain.DedicatedAICluster
+	m.keys = keys.ResolveKeys(m.category, common.ListView)
+	m.headers = headersFor(m.category)
+	cols := make([]table.Column, len(m.headers))
+	for i, h := range m.headers {
+		w := 8
+		if h.text == "Status" {
+			w = 10
+		}
+		cols[i] = table.Column{Title: h.text, Width: w}
+	}
+	m.table.SetColumns(cols)
+
+	rawName := "amaaaaaasxj5imyasw65kzgst7qhopkqbh4hiahgcdpx7gfxesuj7mndycca"
+	rawTenant := "amaaaaaatenancysuffixxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+	rows := []table.Row{{
+		rawName, rawTenant, "true", "50%", "LARGE",
+		"llama3", "BM.GPU.H100.8", "4", "2d", "ACTIVE",
+	}}
+	m.applyRows(rows, nil, false)
+
+	assert.Contains(t, m.table.SelectedRow()[0], "…", "sanity: live row should be truncated")
+	raw := m.selectedRawRow()
+	assert.Equal(t, rawName, raw[0], "raw row 0 (Name) must keep the original OCID")
+	assert.Equal(t, rawTenant, raw[1], "raw row 1 (Tenant) must keep the original OCID")
+}
