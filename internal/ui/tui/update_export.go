@@ -27,7 +27,7 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	keyMsg, isKeyMsg := msg.(tea.KeyMsg)
 	if isKeyMsg {
 		switch {
-		case key.Matches(keyMsg, keys.ExportCSV):
+		case key.Matches(keyMsg, keys.ExportCSV), key.Matches(keyMsg, keys.Back):
 			m.viewMode = m.lastViewMode
 			return m, nil
 		case key.Matches(keyMsg, keys.Quit):

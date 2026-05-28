@@ -273,6 +273,9 @@ func setDefaults(m *Model) {
 		p.DirAllowed = true
 		p.FileAllowed = false
 		p.SetHeight(15)
+		// Release esc so updateExportView can use it to dismiss the popup;
+		// h/backspace/left still go up a directory.
+		p.KeyMap.Back.SetKeys("h", "backspace", "left")
 		m.dirPicker = &p
 	}
 }

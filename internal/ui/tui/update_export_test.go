@@ -29,3 +29,14 @@ func TestUpdateExportView_ExitAndQuit(t *testing.T) {
 		t.Fatal("expected quit message")
 	}
 }
+
+func TestUpdateExportView_EscDismisses(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.viewMode = common.ExportView
+	m.lastViewMode = common.ListView
+
+	model, cmd := m.updateExportView(tea.KeyMsg{Type: tea.KeyEsc})
+	assert.Equal(t, common.ListView, model.(*Model).viewMode)
+	assert.Nil(t, cmd)
+}
