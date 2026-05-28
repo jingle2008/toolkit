@@ -193,25 +193,26 @@ func itemKeyFrom(category domain.Category, row table.Row) models.ItemKey {
 }
 
 // cloneRows returns a deep copy of rows so callers can mutate one
-// without disturbing the other. Used by applyRows to preserve a
-// pre-truncation copy of the table — applyMiddleTruncation mutates
-// in place, and itemKeyFrom needs the original Name/Tenant strings.
+// without disturbing the other.
 func cloneRows(rows []table.Row) []table.Row {
 	if rows == nil {
 		return nil
 	}
 	out := make([]table.Row, len(rows))
 	for i, r := range rows {
-		out[i] = append(table.Row(nil), r...)
+		out[i] = table.Row(slices.Clone(r))
 	}
 	return out
 }
 
 // selectedRawRow returns the un-truncated row at the table's cursor,
 // or the table's (possibly truncated) SelectedRow as a fallback when
-// the parallel rawRows index isn't populated. Callers that derive
-// ItemKey from cell values (itemKeyFrom) must use this; the live
-// SelectedRow may contain "…" in Name/Tenant cells.
+// the parallel rawRows index isn't populated. In normal production
+// flow rawRows is always populated by applyRows; the fallback exists
+// for tests that call m.table.SetRows directly and for genuinely
+// empty tables. Callers that derive ItemKey from cell values
+// (itemKeyFrom) must use this; the live SelectedRow may contain
+// "…" in Name/Tenant cells.
 func (m *Model) selectedRawRow() table.Row {
 	idx := m.table.Cursor()
 	if idx < 0 || idx >= len(m.rawRows) {

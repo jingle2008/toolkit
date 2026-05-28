@@ -51,10 +51,10 @@ func TestHandleItemActions_Refresh(t *testing.T) {
 func TestScaleUpGPUPool_InvalidItem(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	if cmd := m.scaleUpGPUPool(nil); cmd != nil {
+	if cmd := m.scaleUpGPUPool(nil, nil); cmd != nil {
 		t.Fatal("expected nil cmd for nil pool")
 	}
-	if cmd := m.scaleUpGPUPool("not-a-pool"); cmd != nil {
+	if cmd := m.scaleUpGPUPool("not-a-pool", nil); cmd != nil {
 		t.Fatal("expected nil cmd for invalid pool type")
 	}
 }
@@ -62,16 +62,16 @@ func TestScaleUpGPUPool_InvalidItem(t *testing.T) {
 func TestCordonAndDrainNode_InvalidItem(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	if cmd := m.cordonNode(nil); cmd != nil {
+	if cmd := m.cordonNode(nil, nil); cmd != nil {
 		t.Fatal("expected nil cmd for nil cordon item")
 	}
-	if cmd := m.cordonNode("not-a-node"); cmd != nil {
+	if cmd := m.cordonNode("not-a-node", nil); cmd != nil {
 		t.Fatal("expected nil cmd for invalid cordon item type")
 	}
-	if cmd := m.drainNode(nil); cmd != nil {
+	if cmd := m.drainNode(nil, nil); cmd != nil {
 		t.Fatal("expected nil cmd for nil drain item")
 	}
-	if cmd := m.drainNode("not-a-node"); cmd != nil {
+	if cmd := m.drainNode("not-a-node", nil); cmd != nil {
 		t.Fatal("expected nil cmd for invalid drain item type")
 	}
 }
@@ -116,10 +116,10 @@ func TestDeleteItemActions(t *testing.T) {
 func TestRebootNode_InvalidItem(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	if cmd := m.rebootNode(nil); cmd != nil {
+	if cmd := m.rebootNode(nil, nil); cmd != nil {
 		t.Fatal("expected nil cmd for nil reboot item")
 	}
-	if cmd := m.rebootNode("not-a-node"); cmd != nil {
+	if cmd := m.rebootNode("not-a-node", nil); cmd != nil {
 		t.Fatal("expected nil cmd for invalid reboot item type")
 	}
 }

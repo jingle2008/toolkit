@@ -87,7 +87,7 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 	}
 }
 
-func (m *Model) rebootNode(item any) tea.Cmd {
+func (m *Model) rebootNode(item any, itemKey models.ItemKey) tea.Cmd {
 	if item == nil {
 		m.logger.Errorw("no item selected for reboot operation", "category", m.category)
 		return nil
@@ -102,7 +102,6 @@ func (m *Model) rebootNode(item any) tea.Cmd {
 	if node.GetStatus() == "Rebooting" {
 		return nil
 	}
-	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	// optimistic UI
 	node.SetStatus("Rebooting")
 	m.updateRows(false)

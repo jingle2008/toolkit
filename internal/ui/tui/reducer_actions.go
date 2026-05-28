@@ -48,15 +48,15 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.Refresh):
 		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):
-		return m.cordonNode(item)
+		return m.cordonNode(item, itemKey)
 	case key.Matches(msg, keys.DrainNode):
-		return m.drainNode(item)
+		return m.drainNode(item, itemKey)
 	case key.Matches(msg, keys.Delete):
 		return m.deleteItem(itemKey)
 	case key.Matches(msg, keys.RebootNode):
-		return m.rebootNode(item)
+		return m.rebootNode(item, itemKey)
 	case key.Matches(msg, keys.ScaleUp):
-		return m.scaleUpGPUPool(item)
+		return m.scaleUpGPUPool(item, itemKey)
 	}
 	return nil
 }
@@ -68,14 +68,13 @@ func (m *Model) copyTenantID(item any) tea.Cmd {
 	}
 }
 
-func (m *Model) scaleUpGPUPool(item any) tea.Cmd {
+func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey) tea.Cmd {
 	pool, ok := item.(*models.GPUPool)
 	if !ok || pool == nil {
 		m.logger.Errorw("no GPU pool selected for scale up")
 		return nil
 	}
 
-	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	m.logger.Infow("action started", "action", "scaleUpGPUPool", "pool", itemKeyString(itemKey))
 	return tea.Batch(
 		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey} },
@@ -93,7 +92,7 @@ func (m *Model) toggleFaultyList() tea.Cmd {
 	return m.updateRowsAsync()
 }
 
-func (m *Model) cordonNode(item any) tea.Cmd {
+func (m *Model) cordonNode(item any, itemKey models.ItemKey) tea.Cmd {
 	if item == nil {
 		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
 		return nil
@@ -103,7 +102,6 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
 		return nil
 	}
-	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	m.logger.Infow("action started", "action", "toggleCordon", "node", itemKeyString(itemKey))
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
@@ -113,7 +111,7 @@ func (m *Model) cordonNode(item any) tea.Cmd {
 	}
 }
 
-func (m *Model) drainNode(item any) tea.Cmd {
+func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 	if item == nil {
 		m.logger.Errorw("no item selected for draining", "category", m.category)
 		return nil
@@ -123,7 +121,6 @@ func (m *Model) drainNode(item any) tea.Cmd {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
 		return nil
 	}
-	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	m.logger.Infow("action started", "action", "drainNode", "node", itemKeyString(itemKey))
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()

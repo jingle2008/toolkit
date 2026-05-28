@@ -40,3 +40,23 @@ func TestUpdateExportView_EscDismisses(t *testing.T) {
 	assert.Equal(t, common.ListView, model.(*Model).viewMode)
 	assert.Nil(t, cmd)
 }
+
+// TestUpdateExportView_DismissRestoresLastViewMode guards against a
+// regression where esc or e is changed from "restore lastViewMode" to
+// a hardcoded ListView. The popup must return the user to whichever
+// view they opened it from, including DetailsView.
+func TestUpdateExportView_DismissRestoresLastViewMode(t *testing.T) {
+	t.Parallel()
+	for _, k := range []tea.KeyMsg{
+		{Type: tea.KeyEsc},
+		{Type: tea.KeyRunes, Runes: []rune(keys.ExportCSV.Keys()[0])},
+	} {
+		m := newTestModel(t)
+		m.viewMode = common.ExportView
+		m.lastViewMode = common.DetailsView
+
+		model, cmd := m.updateExportView(k)
+		assert.Equal(t, common.DetailsView, model.(*Model).viewMode, "key=%v", k)
+		assert.Nil(t, cmd, "key=%v", k)
+	}
+}
