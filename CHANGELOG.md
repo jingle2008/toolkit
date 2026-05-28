@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-05-27
+
+### Fixed
+- **Detail view (`y` from a list row) showed the literal string `null` for `DedicatedAICluster` and `ImportedModel` (and any other category whose key columns are middle-truncated).** Root cause: `applyMiddleTruncation` rewrites Name/Tenant cells in place to elide long OCID-shaped values with `…`, then 8 downstream sites derived `ItemKey` from `m.table.SelectedRow()` — `itemKeyFrom` built a `ScopedItemKey` from the truncated strings, the `DedicatedAIClusterMap`/`ImportedModelMap` lookup missed, `findItem` returned nil, and `jsonutil.Pretty(nil)` rendered `null`. The same path also silently broke `delete`, `toggle cordon`, `drain`, `reboot`, `scale up`, `copy tenant`, and tenant scope-enter actions on those categories (and on the three `*TenancyOverride` categories whose Tenant column is also middle-truncated). Fix: `applyRows` now stores a pre-truncation clone of the rows in `m.rawRows`; a new `selectedRawRow()` helper returns the un-elided row at the cursor; all identity-deriving call sites use it.
+- **Export-CSV popup couldn't be cancelled with `esc`.** The bubbles `filepicker.KeyMap.Back` default included `esc` (alongside h/backspace/left for "go up a directory"), so the popup absorbed esc and the only exits were re-pressing `e` (undocumented in the popup's help line) or `q` (quits the whole app). Fix: drop `esc` from the filepicker's Back keymap so h/backspace/left still navigate up a directory, and intercept `esc` in `updateExportView` to restore `m.lastViewMode` — matching the global Back/Clear convention used in every other view.
+
+### Internal
+- New `Model.rawRows []table.Row` field + `cloneRows` helper preserve a parallel un-truncated copy of the table for identity lookups; `applyMiddleTruncation` continues to mutate the live rows in place for display.
+- `handleItemActions` now threads `itemKey` through to `cordonNode` / `drainNode` / `rebootNode` / `scaleUpGPUPool` instead of each method re-deriving it via `itemKeyFrom(m.category, m.selectedRawRow())`. Single source of truth for the per-key-press identity, four fewer duplicate lookups.
+
 ## [0.7.0] - 2026-05-27
 
 ### Added
