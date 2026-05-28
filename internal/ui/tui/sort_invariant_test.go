@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -225,4 +226,25 @@ func TestApplyRows_PreservesRawRowForKeyLookup(t *testing.T) {
 	raw := m.selectedRawRow()
 	assert.Equal(t, rawName, raw[0], "raw row 0 (Name) must keep the original OCID")
 	assert.Equal(t, rawTenant, raw[1], "raw row 1 (Tenant) must keep the original OCID")
+
+	// End-to-end: the truncated row would have produced a ScopedItemKey
+	// whose Scope misses DedicatedAIClusterMap. Round-trip via
+	// selectedRawRow → itemKeyFrom → findItem must resolve to the
+	// original DAC pointer, not nil.
+	m.dataset = &models.Dataset{
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			rawTenant: {{Name: rawName, Status: "ACTIVE"}},
+		},
+	}
+	resolved := findItem(m.dataset, m.category, itemKeyFrom(m.category, m.selectedRawRow()))
+	require.NotNil(t, resolved, "findItem should resolve the DAC from the raw row")
+	dac, ok := resolved.(*models.DedicatedAICluster)
+	require.True(t, ok, "resolved item must be *DedicatedAICluster, got %T", resolved)
+	assert.Equal(t, rawName, dac.Name)
+
+	// And the truncated row that bubbles serves to the user still misses
+	// — proves the bug exists in the absence of selectedRawRow.
+	truncatedKey := itemKeyFrom(m.category, m.table.SelectedRow())
+	assert.Nil(t, findItem(m.dataset, m.category, truncatedKey),
+		"sanity: lookup via the truncated row must miss; if this fires, applyMiddleTruncation isn't truncating")
 }

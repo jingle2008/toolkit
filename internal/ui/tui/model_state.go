@@ -44,11 +44,6 @@ type Model struct {
 	viewWidth      int
 	dataset        *models.Dataset
 	table          *table.Model
-	// rawRows mirrors m.table.Rows() pre-truncation so itemKeyFrom can
-	// recover un-elided Name/Tenant cells. See applyMiddleTruncation —
-	// it mutates the table's rows in place, which would otherwise leak
-	// "…" into ScopedItemKey lookups.
-	rawRows        []table.Row
 	styles         table.Styles
 	category       domain.Category
 	headers        []header
@@ -106,6 +101,12 @@ type Model struct {
 
 	// Show only faulty items in list view (Tenant, GPUNode, DedicatedAICluster)
 	showFaulty bool
+
+	// rawRows mirrors m.table.Rows() pre-truncation so itemKeyFrom can
+	// recover un-elided Name/Tenant cells. applyMiddleTruncation
+	// mutates the table's rows in place, which would otherwise leak
+	// "…" into ScopedItemKey lookups.
+	rawRows []table.Row
 
 	// Export CSV popup state
 	dirPicker *filepicker.Model
