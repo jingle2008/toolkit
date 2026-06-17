@@ -181,12 +181,13 @@ func TestRenderTable_ImportedModel(t *testing.T) {
 	}
 	headers, rows, err := columns.RenderTable(domain.ImportedModel, grouped, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"NAME", "TENANT", "NAMESPACE", "DISPLAY NAME", "VENDOR", "STATUS"}, headers)
+	assert.Equal(t, []string{"NAME", "TENANT", "INTERNAL", "NAMESPACE", "DISPLAY NAME", "VENDOR", "STATUS"}, headers)
 	// renderGrouped iterates sorted keys; both rows present.
 	require.Len(t, rows, 2)
 	assert.Equal(t, "im-a", rows[0][0])
 	assert.Equal(t, "ocid1.tenancy.x", rows[0][1])
-	assert.Equal(t, "team-x", rows[0][2])
+	assert.Equal(t, "", rows[0][2])
+	assert.Equal(t, "team-x", rows[0][3])
 }
 
 func TestRenderTable_GPUNode(t *testing.T) {
