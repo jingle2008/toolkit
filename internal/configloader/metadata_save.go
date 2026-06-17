@@ -23,7 +23,7 @@ func SaveMetadata(path string, m *models.Metadata) error {
 	)
 	switch ext {
 	case ".json":
-		data, err = json.MarshalIndent(m, "", "  ")
+		data, err = json.MarshalIndent(m, "", "    ")
 	case ".yaml", ".yml":
 		data, err = yaml.Marshal(m)
 	default:
@@ -32,7 +32,7 @@ func SaveMetadata(path string, m *models.Metadata) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	if mkErr := os.MkdirAll(filepath.Dir(path), 0o755); mkErr != nil {
+	if mkErr := os.MkdirAll(filepath.Dir(path), 0o750); mkErr != nil {
 		return fmt.Errorf("failed to create metadata dir: %w", mkErr)
 	}
 	if wErr := os.WriteFile(path, data, 0o600); wErr != nil {
