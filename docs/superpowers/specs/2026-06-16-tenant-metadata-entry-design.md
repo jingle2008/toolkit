@@ -1,7 +1,21 @@
 # Tenant Metadata Entry (TUI) — Design
 
 **Date:** 2026-06-16
-**Status:** Approved (pending spec review)
+**Status:** Implemented (branch `feat/tui-tenant-metadata-entry`)
+
+## Accepted deviations (recorded at final review)
+
+- **Gating toast is combined.** §1 designed two distinct rejection messages
+  ("tenant already resolved" vs "no tenancy id to identify"). The implementation
+  emits a single combined message ("tenant already resolved or has no tenancy id")
+  because the `tenantEditTarget` helper returns a plain `ok` bool; distinguishing
+  would require signature churn (and test ripple) for a marginal wording nuance on
+  a rarely-hit error path. Behavior (the gating itself) matches the spec.
+- **No end-to-end reload re-keying test.** Unit tests cover the save/merge, gating,
+  form, writer interface, columns, and that a reload command is dispatched; the
+  suffix-match resolution it triggers is already covered by existing
+  `getTenants` / `resolveTenantOwnedMap` tests, so the integration is exercised
+  indirectly rather than by a dedicated test.
 
 ## Problem
 
