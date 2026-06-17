@@ -15,6 +15,12 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
+// Compile-time guard: *Client must satisfy the optional writer
+// interface. If UpsertTenantMetadata is ever changed to a value
+// receiver, New's &Client return would no longer carry it where this
+// matters — this line keeps that a compile error, not a runtime one.
+var _ loader.TenantMetadataWriter = (*Client)(nil)
+
 /*
 Client implements all loader interfaces using the production utils package.
 */
@@ -116,19 +122,34 @@ func (Client) LoadPropertyRegionalOverrides(ctx context.Context, repo string, en
 	return configloader.LoadPropertyRegionalOverrides(ctx, repo, env.Realm)
 }
 
-// UpsertTenantMetadata merges entry into the in-memory metadata and
-// persists the whole set to the configured metadata file, creating it
-// if absent. Pointer receiver: it mutates l.metadata, so the runtime
-// type behind a loader.Composite must be *Client for the optional
+// UpsertTenantMetadata merges entry into the metadata file (replacing
+// any entry with the same ID, else appending) and persists it,
+// creating the file if absent. The in-memory metadata is updated only
+// after the write succeeds, so a failed write leaves memory and disk
+// consistent (the caller's error is the single source of truth).
+//
+// Pointer receiver: it reassigns l.metadata, so the runtime type
+// behind a loader.Composite must be *Client for the optional
 // loader.TenantMetadataWriter assertion to succeed (production.New
 // returns &Client{...}, so it does).
+//
+// Not safe for concurrent use with the Load* methods: they share the
+// same *models.Metadata. Callers must sequence the write before any
+// concurrent read (the TUI dispatches the save, waits for its result,
+// then triggers the reload).
 func (l *Client) UpsertTenantMetadata(entry models.TenantMetadata) error {
 	if l.metadataFile == "" {
 		return errors.New("no metadata file configured")
 	}
-	if l.metadata == nil {
-		l.metadata = &models.Metadata{}
+	next := &models.Metadata{}
+	if l.metadata != nil {
+		next.Tenants = make([]models.TenantMetadata, len(l.metadata.Tenants))
+		copy(next.Tenants, l.metadata.Tenants)
 	}
-	configloader.UpsertTenant(l.metadata, entry)
-	return configloader.SaveMetadata(l.metadataFile, l.metadata)
+	configloader.UpsertTenant(next, entry)
+	if err := configloader.SaveMetadata(l.metadataFile, next); err != nil {
+		return err
+	}
+	l.metadata = next
+	return nil
 }

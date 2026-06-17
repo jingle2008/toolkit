@@ -12,7 +12,7 @@ import (
 )
 
 func sp(s string) *string { return &s }
-func bp(b bool) *bool      { return &b }
+func bp(b bool) *bool     { return &b }
 
 func TestNewLoaderImplementsInterface(t *testing.T) {
 	t.Parallel()
@@ -222,14 +222,17 @@ func TestNew_ImplementsTenantMetadataWriter(t *testing.T) {
 func TestUpsertTenantMetadata_WritesAndReplaces(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "metadata.yaml")
-	ld := New(context.Background(), path).(loader.TenantMetadataWriter)
+	w, ok := New(context.Background(), path).(loader.TenantMetadataWriter)
+	if !ok {
+		t.Fatal("production.New(...) must satisfy loader.TenantMetadataWriter")
+	}
 
-	if err := ld.UpsertTenantMetadata(models.TenantMetadata{
+	if err := w.UpsertTenantMetadata(models.TenantMetadata{
 		ID: "ocid1.tenancy.oc1..abc", Name: sp("acme"), IsInternal: bp(true),
 	}); err != nil {
 		t.Fatalf("first upsert: %v", err)
 	}
-	if err := ld.UpsertTenantMetadata(models.TenantMetadata{
+	if err := w.UpsertTenantMetadata(models.TenantMetadata{
 		ID: "ocid1.tenancy.oc1..abc", Name: sp("acme-renamed"), IsInternal: bp(false),
 	}); err != nil {
 		t.Fatalf("second upsert: %v", err)
@@ -245,12 +248,18 @@ func TestUpsertTenantMetadata_WritesAndReplaces(t *testing.T) {
 	if got.Tenants[0].Name == nil || *got.Tenants[0].Name != "acme-renamed" {
 		t.Fatalf("want replaced name, got %+v", got.Tenants[0])
 	}
+	if got.Tenants[0].IsInternal == nil || *got.Tenants[0].IsInternal {
+		t.Fatalf("want IsInternal replaced to false, got %+v", got.Tenants[0])
+	}
 }
 
 func TestUpsertTenantMetadata_NoPathErrors(t *testing.T) {
 	t.Parallel()
-	ld := New(context.Background(), "").(loader.TenantMetadataWriter)
-	if err := ld.UpsertTenantMetadata(models.TenantMetadata{ID: "x", Name: sp("y"), IsInternal: bp(true)}); err == nil {
+	w, ok := New(context.Background(), "").(loader.TenantMetadataWriter)
+	if !ok {
+		t.Fatal("production.New(...) must satisfy loader.TenantMetadataWriter")
+	}
+	if err := w.UpsertTenantMetadata(models.TenantMetadata{ID: "x", Name: sp("y"), IsInternal: bp(true)}); err == nil {
 		t.Fatal("expected error when no metadata file is configured")
 	}
 }
