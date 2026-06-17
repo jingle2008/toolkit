@@ -26,6 +26,7 @@ func TestImportedModelColumns(t *testing.T) {
 	want := map[string]string{
 		"name":         "llama3-8b",
 		"tenant":       "tenant-xyz",
+		"internal":     "",
 		"namespace":    "ns-prod",
 		"display-name": "Llama 3 8B",
 		"vendor":       "Meta",
@@ -34,6 +35,30 @@ func TestImportedModelColumns(t *testing.T) {
 	for k, v := range want {
 		if got[k] != v {
 			t.Errorf("col %s: got %q, want %q", k, got[k], v)
+		}
+	}
+
+	// Non-nil owner: "internal" column should reflect OwnerState().
+	mWithOwner := models.ImportedModel{
+		BaseModel: models.BaseModel{
+			Name:        "llama3-8b",
+			DisplayName: "Llama 3 8B",
+			Vendor:      "Meta",
+			Status:      "Ready",
+		},
+		Namespace: "ns-prod",
+		Owner:     &models.Tenant{IsInternal: true},
+	}
+	gotWithOwner := map[string]string{}
+	for _, c := range ImportedModelColumns.Columns {
+		gotWithOwner[c.Key] = c.Render("tenant-xyz", mWithOwner)
+	}
+	wantWithOwner := map[string]string{
+		"internal": "true",
+	}
+	for k, v := range wantWithOwner {
+		if gotWithOwner[k] != v {
+			t.Errorf("col %s (with owner): got %q, want %q", k, gotWithOwner[k], v)
 		}
 	}
 
