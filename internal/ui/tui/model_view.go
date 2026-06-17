@@ -176,6 +176,8 @@ func (m *Model) renderActiveView() string {
 		return m.frame(m.viewport.View())
 	case common.ExportView:
 		return m.centered(m.exportView())
+	case common.EditTenantView:
+		return m.centered(m.editTenantView())
 	default:
 		return ""
 	}
@@ -230,7 +232,7 @@ func (m *Model) fullHelpView() string {
 		renderSection("Table Actions", m.tableBinding())
 	case common.DetailsView:
 		renderSection("Viewport Actions", m.viewportBinding())
-	case common.LoadingView, common.HelpView, common.ExportView:
+	case common.LoadingView, common.HelpView, common.ExportView, common.EditTenantView:
 		// No additional sections for these view modes
 	}
 	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())

@@ -76,6 +76,8 @@ func (m *Model) delegateToActiveView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateLoadingView(msg)
 	case common.ExportView:
 		return m.updateExportView(msg)
+	case common.EditTenantView:
+		return m.updateEditTenantView(msg)
 	}
 	return m, nil
 }

@@ -45,6 +45,8 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
 		return m.copyTenantID(item)
+	case key.Matches(msg, keys.EditTenant):
+		return m.enterEditTenantView()
 	case key.Matches(msg, keys.Refresh):
 		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):

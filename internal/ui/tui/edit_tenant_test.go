@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -52,5 +53,58 @@ func TestTenantEditTarget(t *testing.T) {
 	// Unrelated type → not a target.
 	if _, ok := tenantEditTarget(&models.GPUPool{}, realm); ok {
 		t.Fatal("non tenant-owned type must not be a target")
+	}
+}
+
+func TestEnterEditTenantView_GatingAndOpen(t *testing.T) {
+	t.Parallel()
+
+	m := makeTestModel()
+	m.environment.Realm = "oc1"
+
+	// Resolved row → no form, stays in list view.
+	m.editTenant = nil
+	m.viewMode = common.ListView
+	_ = m.openTenantForm(&models.DedicatedAICluster{Name: "d", TenantID: "abc", Owner: &models.Tenant{Name: "acme"}})
+	if m.viewMode != common.ListView || m.editTenant != nil {
+		t.Fatal("resolved row must not open the form")
+	}
+
+	// Unresolved row → form opens, seeded with internal=true default.
+	_ = m.openTenantForm(&models.DedicatedAICluster{Name: "d", TenantID: "abc"})
+	if m.viewMode != common.EditTenantView || m.editTenant == nil {
+		t.Fatal("unresolved row should open the form")
+	}
+	if m.editTenant.ocid != "ocid1.tenancy.oc1..abc" {
+		t.Fatalf("form ocid: got %q", m.editTenant.ocid)
+	}
+	if !m.editTenant.isInternal {
+		t.Fatal("internal should default to true")
+	}
+
+	// Toggle internal.
+	m.editTenant.toggleInternal()
+	if m.editTenant.isInternal {
+		t.Fatal("toggleInternal should flip to false")
+	}
+}
+
+func TestEditTenantForm_EntryRequiresName(t *testing.T) {
+	t.Parallel()
+
+	f := newEditTenantForm(editTarget{ocid: "ocid1.tenancy.oc1..abc", tenantID: "abc"})
+	if _, ok := f.toEntry(); ok {
+		t.Fatal("empty name must be rejected")
+	}
+	f.name.SetValue("acme")
+	f.note.SetValue("hi")
+	f.isInternal = true
+	entry, ok := f.toEntry()
+	if !ok {
+		t.Fatal("valid form should produce an entry")
+	}
+	if entry.ID != "ocid1.tenancy.oc1..abc" || entry.Name == nil || *entry.Name != "acme" ||
+		entry.IsInternal == nil || !*entry.IsInternal || entry.Note == nil || *entry.Note != "hi" {
+		t.Fatalf("entry mismatch: %+v", entry)
 	}
 }

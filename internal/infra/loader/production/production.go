@@ -47,6 +47,9 @@ func New(ctx context.Context, metadataFile string) loader.Composite {
 	return l
 }
 
+// MetadataPath returns the configured metadata file path (for display).
+func (l Client) MetadataPath() string { return l.metadataFile }
+
 /*
 LoadDataset loads a dataset from the given repo and environment.
 */
