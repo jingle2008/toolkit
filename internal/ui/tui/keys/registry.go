@@ -222,6 +222,12 @@ var (
 		key.WithKeys("ctrl+z"),
 		key.WithHelp("<ctrl+z>", "Toggle Faulty"),
 	)
+	// EditTenant opens the tenant-metadata entry form for an
+	// unresolved DAC/ImportedModel row.
+	EditTenant = key.NewBinding(
+		key.WithKeys("E"),
+		key.WithHelp("<shift+e>", "Edit Tenant"),
+	)
 )
 
 // Category+mode-specific key bindings
@@ -245,10 +251,10 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, Refresh, ToggleFaulty, Delete},
+		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, Refresh, ToggleFaulty, Delete},
 	},
 	domain.ImportedModel: {
-		common.ListView: {SortTenant, SortInternal, SortVendor, CopyTenant, Refresh},
+		common.ListView: {SortTenant, SortInternal, SortVendor, CopyTenant, EditTenant, Refresh},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {SortTenant, SortRegions, CopyTenant},

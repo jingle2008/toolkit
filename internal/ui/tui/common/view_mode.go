@@ -14,6 +14,8 @@ const (
 	HelpView
 	// ExportView is the view mode for exporting table data as CSV.
 	ExportView
+	// EditTenantView is the view mode for the tenant-metadata entry form.
+	EditTenantView
 )
 
 // String returns the string representation of the ViewMode.
@@ -29,6 +31,8 @@ func (v ViewMode) String() string {
 		return "Help"
 	case ExportView:
 		return "Export"
+	case EditTenantView:
+		return "EditTenant"
 	default:
 		return "Unknown"
 	}
