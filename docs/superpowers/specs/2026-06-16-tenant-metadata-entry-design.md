@@ -67,6 +67,19 @@ friendly name + internal status.
 Rejected: having the TUI own merge + rebuild the loader (TUI would need the file path
 it doesn't hold today, and would duplicate `production.New` error handling).
 
+**Caveat — pointer receiver / method set.** `UpsertTenantMetadata` mutates
+`l.metadata`, so it must be declared with a **pointer receiver**
+(`func (l *Client) UpsertTenantMetadata(...)`). The runtime type assertion
+`m.loader.(TenantMetadataWriter)` therefore succeeds only when the dynamic type
+behind `m.loader` is `*production.Client` — which holds today, since
+`production.New` returns `&Client{...}`. If a future refactor made `New` return a
+value (`Client`), the assertion would silently start returning `ok == false` and
+every save would no-op into an error toast rather than failing to compile. Guard
+this with a compile-time/round-trip test asserting that the value returned by
+`production.New(...)` satisfies `TenantMetadataWriter` (e.g.
+`var _ TenantMetadataWriter = production.New(ctx, "")` or an explicit type
+assertion in a test).
+
 ## Components
 
 ### 1. Key binding & gating
@@ -152,6 +165,8 @@ it doesn't hold today, and would duplicate `production.New` error handling).
 - Save path with a fake `TenantMetadataWriter`: asserts the dispatched
   `TenantMetadata` (ID/Name/IsInternal/Note) and that a reload is triggered.
 - ImportedModel columns: ratio sum == 1.00; `OwnerState()` for nil/internal/external.
+- `production.New(...)` satisfies `TenantMetadataWriter` (guards the pointer-receiver
+  caveat above — see Approach).
 
 ## Out of scope (YAGNI)
 - Editing already-resolved tenants.
