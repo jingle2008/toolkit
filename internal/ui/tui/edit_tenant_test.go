@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -106,5 +107,26 @@ func TestEditTenantForm_EntryRequiresName(t *testing.T) {
 	if entry.ID != "ocid1.tenancy.oc1..abc" || entry.Name == nil || *entry.Name != "acme" ||
 		entry.IsInternal == nil || !*entry.IsInternal || entry.Note == nil || *entry.Note != "hi" {
 		t.Fatalf("entry mismatch: %+v", entry)
+	}
+}
+
+// TestHandleTenantSavedMsg_AfterFormDismissed proves the success
+// handler still fires (toast + reload) when the user dismissed the form
+// (esc) before the async write landed.
+func TestHandleTenantSavedMsg_AfterFormDismissed(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	m.viewMode = common.ListView
+	m.editTenant = nil // user already pressed esc
+	// makeTestModel has a nil dataset; give reloadAfterTenantSave a
+	// matching dataset + category so it builds a real cmd.
+	m.dataset = &models.Dataset{}
+	m.category = domain.DedicatedAICluster
+	cmd := m.handleTenantSavedMsg(tenantSavedMsg{path: "/tmp/metadata.yaml"})
+	if cmd == nil {
+		t.Fatal("expected a toast+reload cmd even when the form was already dismissed")
+	}
+	if m.viewMode != common.ListView {
+		t.Fatalf("viewMode should remain ListView, got %v", m.viewMode)
 	}
 }

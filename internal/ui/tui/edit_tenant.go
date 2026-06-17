@@ -150,27 +150,39 @@ func (m *Model) enterEditTenantView() tea.Cmd {
 	return m.openTenantForm(m.selectedItem())
 }
 
-// updateEditTenantView handles key events and async results while the
-// form is open.
+// updateEditTenantView handles key events while the form is open. The
+// async save-result messages (tenantSavedMsg / tenantSaveErrMsg) are
+// intercepted at the top of Update so they fire regardless of the
+// active view, and therefore never reach here.
 func (m *Model) updateEditTenantView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tenantSavedMsg:
-		m.editTenant = nil
-		m.viewMode = common.ListView
-		return m, tea.Batch(
-			m.showToast(fmt.Sprintf("saved tenant metadata to %s", msg.path), toastInfo),
-			m.reloadAfterTenantSave(),
-		)
-	case tenantSaveErrMsg:
-		// Keep the form open so the user's input isn't lost.
-		return m, m.showToast(fmt.Sprintf("save failed: %v", msg.err), toastError)
-	}
-
 	keyMsg, ok := msg.(tea.KeyMsg)
 	if !ok || m.editTenant == nil {
 		return m, nil
 	}
 	return m.handleEditTenantKey(keyMsg)
+}
+
+// handleTenantSavedMsg finalizes a successful tenant-metadata save. It
+// runs regardless of the current view: the user may have dismissed the
+// form (esc) before the async write landed, so it keys off editTenant
+// state, not viewMode.
+func (m *Model) handleTenantSavedMsg(msg tenantSavedMsg) tea.Cmd {
+	if m.editTenant != nil {
+		m.editTenant = nil
+	}
+	if m.viewMode == common.EditTenantView {
+		m.viewMode = common.ListView
+	}
+	return tea.Batch(
+		m.showToast(fmt.Sprintf("saved tenant metadata to %s", msg.path), toastInfo),
+		m.reloadAfterTenantSave(),
+	)
+}
+
+// handleTenantSaveErrMsg surfaces a failed save. The form (if still
+// open) is left intact so the user's input isn't lost.
+func (m *Model) handleTenantSaveErrMsg(msg tenantSaveErrMsg) tea.Cmd {
+	return m.showToast(fmt.Sprintf("save failed: %v", msg.err), toastError)
 }
 
 // handleEditTenantKey routes a key event while the form is open: nav
@@ -241,10 +253,8 @@ func (m *Model) reloadAfterTenantSave() tea.Cmd {
 	if ds == nil {
 		return nil
 	}
-	ds.Tenants = nil
-	ds.LimitTenancyOverrideMap = nil
-	ds.ConsolePropertyTenancyOverrideMap = nil
-	ds.PropertyTenancyOverrideMap = nil
+	// Run the category guard FIRST so a non-matching category is a true
+	// no-op that leaves the tenancy data intact.
 	switch m.category {
 	case domain.DedicatedAICluster:
 		ds.DedicatedAIClusterMap = nil
@@ -253,6 +263,10 @@ func (m *Model) reloadAfterTenantSave() tea.Cmd {
 	default:
 		return nil
 	}
+	ds.Tenants = nil
+	ds.LimitTenancyOverrideMap = nil
+	ds.ConsolePropertyTenancyOverrideMap = nil
+	ds.PropertyTenancyOverrideMap = nil
 
 	m.newLoadContext()
 	gen := m.bumpGen()

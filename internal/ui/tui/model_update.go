@@ -46,6 +46,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		limitRegionalOverridesLoadedMsg, consolePropertyRegionalOverridesLoadedMsg,
 		propertyRegionalOverridesLoadedMsg:
 		return m, tea.Batch(m.routeListLoadedMsg(msg)...)
+	// Tenant-save results are intercepted here so they fire from any
+	// view: the user may dismiss the form (esc) before the async write
+	// lands, otherwise the result would route to the list view and be
+	// silently dropped (no toast, no reload).
+	case tenantSavedMsg:
+		return m, m.handleTenantSavedMsg(msg)
+	case tenantSaveErrMsg:
+		return m, m.handleTenantSaveErrMsg(msg)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil
