@@ -54,6 +54,16 @@ func (m ImportedModel) TenancyOCID(realm string) string {
 	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, m.TenantID)
 }
 
+// OwnerState returns the owner's internal/external state ("true" /
+// "false"), or "" when the owning tenant is unresolved. Mirrors
+// DedicatedAICluster.OwnerState.
+func (m ImportedModel) OwnerState() string {
+	if m.Owner != nil {
+		return fmt.Sprint(m.Owner.IsInternal)
+	}
+	return ""
+}
+
 // OCID returns the full OCID for the ImportedModel by combining the
 // realm and region with the Name suffix. Mirrors
 // DedicatedAICluster.OCID; PHX/IAD regions are normalized to their

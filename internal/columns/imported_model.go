@@ -5,7 +5,7 @@ import (
 )
 
 // ImportedModelColumns is the canonical column set for domain.ImportedModel.
-// 6 columns, ratios sum to 1.00. Version was dropped (imported models are
+// 7 columns, ratios sum to 1.00. Version was dropped (imported models are
 // keyed by Name, which already carries the operator-meaningful versioning
 // convention); its 0.05 width was released to Vendor so vendor strings have
 // room to render without truncation. Version stays reachable via `-o json`.
@@ -19,18 +19,22 @@ var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedCo
 		},
 	},
 	{
-		Title: "Tenant", Key: "tenant", Ratio: 0.22, TruncateMiddle: true,
+		Title: "Tenant", Key: "tenant", Ratio: 0.20, TruncateMiddle: true,
 		Render: func(k string, _ models.ImportedModel) string { return k },
 		RenderForExport: func(realm, _ string, _ string, m models.ImportedModel) string {
 			return m.TenancyOCID(realm)
 		},
 	},
 	{
-		Title: "Namespace", Key: "namespace", Ratio: 0.15, TruncateMiddle: true,
+		Title: "Internal", Key: "internal", Ratio: 0.08,
+		Render: func(_ string, m models.ImportedModel) string { return m.OwnerState() },
+	},
+	{
+		Title: "Namespace", Key: "namespace", Ratio: 0.13, TruncateMiddle: true,
 		Render: func(_ string, m models.ImportedModel) string { return m.Namespace },
 	},
 	{
-		Title: "Display Name", Key: "display-name", Ratio: 0.27,
+		Title: "Display Name", Key: "display-name", Ratio: 0.23,
 		Render: func(_ string, m models.ImportedModel) string { return m.DisplayName },
 	},
 	{
