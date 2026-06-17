@@ -3,10 +3,16 @@ package production
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/jingle2008/toolkit/internal/configloader"
+	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
+
+func sp(s string) *string { return &s }
+func bp(b bool) *bool      { return &b }
 
 func TestNewLoaderImplementsInterface(t *testing.T) {
 	t.Parallel()
@@ -202,5 +208,49 @@ func TestLoader_LoadGPUNodesAndDedicatedAIClusters_Error(t *testing.T) {
 	_, err = ldr.LoadDedicatedAIClusters(context.Background(), "", env)
 	if err == nil {
 		t.Error("LoadDedicatedAIClusters: want error for empty kubeconfig, got nil")
+	}
+}
+
+func TestNew_ImplementsTenantMetadataWriter(t *testing.T) {
+	t.Parallel()
+	ld := New(context.Background(), "")
+	if _, ok := ld.(loader.TenantMetadataWriter); !ok {
+		t.Fatal("production.New(...) must satisfy loader.TenantMetadataWriter")
+	}
+}
+
+func TestUpsertTenantMetadata_WritesAndReplaces(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "metadata.yaml")
+	ld := New(context.Background(), path).(loader.TenantMetadataWriter)
+
+	if err := ld.UpsertTenantMetadata(models.TenantMetadata{
+		ID: "ocid1.tenancy.oc1..abc", Name: sp("acme"), IsInternal: bp(true),
+	}); err != nil {
+		t.Fatalf("first upsert: %v", err)
+	}
+	if err := ld.UpsertTenantMetadata(models.TenantMetadata{
+		ID: "ocid1.tenancy.oc1..abc", Name: sp("acme-renamed"), IsInternal: bp(false),
+	}); err != nil {
+		t.Fatalf("second upsert: %v", err)
+	}
+
+	got, err := configloader.LoadMetadata(path)
+	if err != nil {
+		t.Fatalf("LoadMetadata: %v", err)
+	}
+	if len(got.Tenants) != 1 {
+		t.Fatalf("want 1 tenant (replace, not append), got %d", len(got.Tenants))
+	}
+	if got.Tenants[0].Name == nil || *got.Tenants[0].Name != "acme-renamed" {
+		t.Fatalf("want replaced name, got %+v", got.Tenants[0])
+	}
+}
+
+func TestUpsertTenantMetadata_NoPathErrors(t *testing.T) {
+	t.Parallel()
+	ld := New(context.Background(), "").(loader.TenantMetadataWriter)
+	if err := ld.UpsertTenantMetadata(models.TenantMetadata{ID: "x", Name: sp("y"), IsInternal: bp(true)}); err == nil {
+		t.Fatal("expected error when no metadata file is configured")
 	}
 }

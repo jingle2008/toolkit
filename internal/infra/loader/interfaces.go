@@ -88,3 +88,17 @@ type Composite interface {
 	TenancyOverrideLoader
 	RegionalOverrideLoader
 }
+
+/*
+TenantMetadataWriter is an OPTIONAL capability: persisting a tenant
+metadata entry to the backing metadata file. It is deliberately kept
+out of Composite so the many fake loaders used in tests need not
+implement it. Callers type-assert a Composite to this interface and
+degrade gracefully when the assertion fails.
+*/
+type TenantMetadataWriter interface {
+	// UpsertTenantMetadata merges entry into the metadata file
+	// (replacing any entry with the same ID, else appending) and
+	// persists it, creating the file if it does not exist.
+	UpsertTenantMetadata(entry models.TenantMetadata) error
+}

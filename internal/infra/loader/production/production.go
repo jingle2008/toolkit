@@ -5,6 +5,7 @@ package production
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
@@ -113,4 +114,21 @@ func (Client) LoadConsolePropertyRegionalOverrides(ctx context.Context, repo str
 // LoadPropertyRegionalOverrides loads property regional overrides for the given repo and environment.
 func (Client) LoadPropertyRegionalOverrides(ctx context.Context, repo string, env models.Environment) ([]models.PropertyRegionalOverride, error) {
 	return configloader.LoadPropertyRegionalOverrides(ctx, repo, env.Realm)
+}
+
+// UpsertTenantMetadata merges entry into the in-memory metadata and
+// persists the whole set to the configured metadata file, creating it
+// if absent. Pointer receiver: it mutates l.metadata, so the runtime
+// type behind a loader.Composite must be *Client for the optional
+// loader.TenantMetadataWriter assertion to succeed (production.New
+// returns &Client{...}, so it does).
+func (l *Client) UpsertTenantMetadata(entry models.TenantMetadata) error {
+	if l.metadataFile == "" {
+		return errors.New("no metadata file configured")
+	}
+	if l.metadata == nil {
+		l.metadata = &models.Metadata{}
+	}
+	configloader.UpsertTenant(l.metadata, entry)
+	return configloader.SaveMetadata(l.metadataFile, l.metadata)
 }
