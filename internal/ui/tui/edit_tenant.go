@@ -255,6 +255,11 @@ func (m *Model) reloadAfterTenantSave() tea.Cmd {
 	}
 	// Run the category guard FIRST so a non-matching category is a true
 	// no-op that leaves the tenancy data intact.
+	// NOTE: only the CURRENT category's tenant-owned map is nil'd here. The
+	// sibling map (DAC when the current category is ImportedModel, or vice
+	// versa) is left in place, so its entries keep stale Owner pointers into
+	// the OLD Tenants slice. A renamed tenant therefore won't show as resolved
+	// in that sibling category until it is itself reloaded.
 	switch m.category {
 	case domain.DedicatedAICluster:
 		ds.DedicatedAIClusterMap = nil

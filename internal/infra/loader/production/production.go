@@ -6,6 +6,8 @@ package production
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 
 	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
@@ -25,8 +27,9 @@ var _ loader.TenantMetadataWriter = (*Client)(nil)
 Client implements all loader interfaces using the production utils package.
 */
 type Client struct {
-	metadataFile string
-	metadata     *models.Metadata
+	metadataFile    string
+	metadata        *models.Metadata
+	metadataLoadErr error // non-nil when an EXISTING metadata file failed to parse; blocks writes to avoid clobbering it
 }
 
 // New returns a Client implementation for production use.
@@ -37,12 +40,18 @@ func New(ctx context.Context, metadataFile string) loader.Composite {
 	}
 
 	if metadataFile != "" {
-		m, err := configloader.LoadMetadata(metadataFile)
-		if err != nil {
-			logging.FromContext(ctx).Errorw("failed to load metadata file", "file", metadataFile, "error", err)
-		} else {
-			l.metadata = m
+		if _, statErr := os.Stat(metadataFile); statErr == nil {
+			// File exists: a parse failure must NOT be swallowed, or the
+			// first write would overwrite the user's existing entries.
+			m, err := configloader.LoadMetadata(metadataFile)
+			if err != nil {
+				l.metadataLoadErr = fmt.Errorf("existing metadata file %s failed to load: %w", metadataFile, err)
+				logging.FromContext(ctx).Errorw("failed to load metadata file", "file", metadataFile, "error", err)
+			} else {
+				l.metadata = m
+			}
 		}
+		// Missing file: leave empty metadata; the first save creates it.
 	}
 	return l
 }
@@ -143,6 +152,9 @@ func (Client) LoadPropertyRegionalOverrides(ctx context.Context, repo string, en
 func (l *Client) UpsertTenantMetadata(entry models.TenantMetadata) error {
 	if l.metadataFile == "" {
 		return errors.New("no metadata file configured")
+	}
+	if l.metadataLoadErr != nil {
+		return fmt.Errorf("refusing to overwrite metadata: %w", l.metadataLoadErr)
 	}
 	next := &models.Metadata{}
 	if l.metadata != nil {

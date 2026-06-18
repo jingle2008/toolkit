@@ -9,6 +9,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/pkg/models"
+	"github.com/stretchr/testify/require"
 )
 
 func sp(s string) *string { return &s }
@@ -251,6 +252,53 @@ func TestUpsertTenantMetadata_WritesAndReplaces(t *testing.T) {
 	if got.Tenants[0].IsInternal == nil || *got.Tenants[0].IsInternal {
 		t.Fatalf("want IsInternal replaced to false, got %+v", got.Tenants[0])
 	}
+}
+
+func TestUpsertTenantMetadata_PreservesExistingEntries(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "metadata.yaml")
+	// Seed an on-disk file with two tenants.
+	seed := &models.Metadata{Tenants: []models.TenantMetadata{
+		{ID: "ocid1.tenancy.oc1..aaa", Name: sp("one"), IsInternal: bp(true)},
+		{ID: "ocid1.tenancy.oc1..bbb", Name: sp("two"), IsInternal: bp(false)},
+	}}
+	require.NoError(t, configloader.SaveMetadata(path, seed))
+
+	ld, ok := New(context.Background(), path).(loader.TenantMetadataWriter)
+	require.True(t, ok)
+	require.NoError(t, ld.UpsertTenantMetadata(models.TenantMetadata{
+		ID: "ocid1.tenancy.oc1..ccc", Name: sp("three"), IsInternal: bp(true),
+	}))
+
+	got, err := configloader.LoadMetadata(path)
+	require.NoError(t, err)
+	require.Len(t, got.Tenants, 3) // existing two preserved + new one
+}
+
+func TestUpsertTenantMetadata_RefusesToOverwriteUnparseableFile(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "metadata.yaml")
+	// Write content that is NOT valid for the Metadata schema / YAML.
+	const corrupt = "this: : not: valid: yaml\n\t- broken"
+	require.NoError(t, os.WriteFile(path, []byte(corrupt), 0o600))
+
+	// Precondition: the corpus must actually fail to parse, otherwise
+	// metadataLoadErr would never be set and this test would pass for
+	// the wrong reason.
+	_, lerr := configloader.LoadMetadata(path)
+	require.Error(t, lerr)
+
+	ld, ok := New(context.Background(), path).(loader.TenantMetadataWriter)
+	require.True(t, ok)
+	err := ld.UpsertTenantMetadata(models.TenantMetadata{
+		ID: "ocid1.tenancy.oc1..ccc", Name: sp("three"), IsInternal: bp(true),
+	})
+	require.Error(t, err) // must refuse rather than clobber
+
+	// The corrupt file must be left untouched (not overwritten).
+	raw, readErr := os.ReadFile(path) // #nosec G304 -- path is a test-controlled t.TempDir() file
+	require.NoError(t, readErr)
+	require.Equal(t, corrupt, string(raw))
 }
 
 func TestUpsertTenantMetadata_NoPathErrors(t *testing.T) {

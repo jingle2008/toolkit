@@ -16,6 +16,13 @@
   suffix-match resolution it triggers is already covered by existing
   `getTenants` / `resolveTenantOwnedMap` tests, so the integration is exercised
   indirectly rather than by a dedicated test.
+- **Lossy rewrite.** Saving through the TUI rewrites the metadata file from the
+  parsed `Metadata`/`TenantMetadata` struct. Consequently YAML comments and any
+  fields not modeled by `TenantMetadata` (only Name/ID/IsInternal/Note are
+  modeled) are NOT preserved across a save. As a data-loss guard, a metadata file
+  that exists but fails to parse is NOT overwritten: the save is refused with an
+  error (the form stays open and a toast surfaces) rather than clobbering the
+  user's hand-authored entries. A missing file is still created on first save.
 
 ## Problem
 
