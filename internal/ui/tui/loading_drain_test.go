@@ -13,23 +13,17 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// TestStartupHang_LazyCategory reproduces and pins the fix for the
-// "stuck in loading forever" bug on `toolkit -c <lazy-category>`.
+// TestStartupHang_LazyCategory pins the invariant that a dropped stale
+// load still calls endTask, so the view leaves LoadingView. (The
+// foundational dataset load is now ungenerationed — Gen 0, always
+// applied — see TestStartupLazyCategory_KeepsFullDataset; the genuinely
+// stale loads that remain are superseded lazy loads from rapid
+// re-navigation.) A stale drop that returned early without endTask would
+// leave pendingTasks elevated and trap the model in LoadingView forever.
 //
-// Init() on a lazy-loaded category (ImportedModel, BaseModel,
-// GPUPool, GPUNode, DAC) issues TWO beginTask calls:
-//
-//  1. loadData() bumps gen to 1 and begins the dataset load.
-//  2. updateCategory() bumps gen to 2 and begins the lazy load.
-//
-// The dataset load's response carries Gen=1, which the gen guard
-// drops (1 != m.gen=2). Before the fix, the drop path returned
-// early without endTask, leaving pendingTasks elevated by 1; even
-// after the lazy load completes and decrements once, the model is
-// stuck in LoadingView.
-//
-// After the fix, stale drops still call endTask so the begin/end
-// pair stays balanced and the view transitions back to ListView.
+// This test simulates two beginTask calls under an advanced generation
+// and feeds matching stale responses; each must still endTask so the
+// begin/end pairs balance and the view transitions back to ListView.
 func TestStartupHang_LazyCategory(t *testing.T) {
 	t.Parallel()
 
@@ -41,10 +35,9 @@ func TestStartupHang_LazyCategory(t *testing.T) {
 		viewMode:       common.ListView,
 	}
 
-	// Simulate the two beginTask calls Init() makes for a lazy
-	// category: dataset (gen=1) and lazy load (gen=2). Each
-	// beginTask increments pendingTasks; the first also flips the
-	// view to LoadingView.
+	// Two loads are in flight (e.g. from rapid re-navigation); the
+	// generation has since advanced to 2. Each beginTask increments
+	// pendingTasks; the first also flips the view to LoadingView.
 	_ = m.beginTask()
 	m.gen = 1
 	_ = m.beginTask()
@@ -57,15 +50,14 @@ func TestStartupHang_LazyCategory(t *testing.T) {
 		t.Fatalf("viewMode after first beginTask = %v, want LoadingView", m.viewMode)
 	}
 
-	// Two stale loads arrive (Gen=1 each), both must drop. Both must
+	// Two stale responses arrive (Gen=1 while gen=2); both must drop but
 	// still call endTask so the matching beginTasks balance out. Tests
-	// the drop path without needing a fully wired-up Model (the
-	// success path requires textInput / table state that's out of
-	// scope here).
+	// the drop path without needing a fully wired-up Model (the success
+	// path requires textInput / table state that's out of scope here).
 	_ = m.handleDataMsg(dataMsg{Data: &models.Dataset{}, Gen: 1})
 
 	if m.pendingTasks != 1 {
-		t.Errorf("after stale datasetLoadedMsg drop: pendingTasks = %d, want 1 (stale drops must still endTask)", m.pendingTasks)
+		t.Errorf("after stale drop: pendingTasks = %d, want 1 (stale drops must still endTask)", m.pendingTasks)
 	}
 
 	m.handleImportedModelsLoaded(map[string][]models.ImportedModel{}, 1)

@@ -19,8 +19,6 @@ func (m *Model) bumpGen() int {
 
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() []tea.Cmd {
-	// bump generation so that responses from previous loads are ignored
-	gen := m.bumpGen()
 	m.newLoadContext()
 
 	return []tea.Cmd{
@@ -31,7 +29,14 @@ func (m *Model) loadData() []tea.Cmd {
 			if err != nil {
 				return errMsg(err)
 			}
-			return datasetLoadedMsg{Dataset: dataset, Gen: gen}
+			// Gen 0 is the always-apply sentinel (see handleDataMsg). This
+			// foundational load is issued exactly once from Init and must
+			// never be dropped as stale: when Init starts on a lazy-loaded
+			// category it ALSO issues updateCategory, which bumps the
+			// generation. A generationed dataset here would then look stale
+			// (gen < current) and be dropped, blanking every non-lazy
+			// category (e.g. definitions) on `toolkit -c <lazy-cat>`.
+			return datasetLoadedMsg{Dataset: dataset, Gen: 0}
 		},
 	}
 }
