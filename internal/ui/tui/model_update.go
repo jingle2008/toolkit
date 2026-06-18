@@ -4,6 +4,8 @@ Package tui implements the update/reduce logic for the Model.
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/stopwatch"
 	tea "github.com/charmbracelet/bubbletea"
@@ -54,6 +56,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleTenantSavedMsg(msg)
 	case tenantSaveErrMsg:
 		return m, m.handleTenantSaveErrMsg(msg)
+	case portalOpenErrMsg:
+		// Intercepted here (not in the form handler) so the toast still
+		// fires if the user dismissed the form before the launch failed.
+		return m, m.showToast(fmt.Sprintf("failed to open portal: %v", msg.err), toastError)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil

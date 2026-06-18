@@ -97,6 +97,13 @@ var (
 		key.WithKeys("ctrl+x"),
 		key.WithHelp("<ctrl+x>", "Delete"),
 	)
+	// OpenPortal opens the selected tenant in the OCI console portal.
+	// Bound to a control key so it never collides with typing into the
+	// tenant-metadata form's Name/Note text fields.
+	OpenPortal = key.NewBinding(
+		key.WithKeys("ctrl+o"),
+		key.WithHelp("<ctrl+o>", "Open in portal"),
+	)
 )
 
 var listModeKeys = []key.Binding{

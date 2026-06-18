@@ -24,6 +24,16 @@
   error (the form stays open and a toast surfaces) rather than clobbering the
   user's hand-authored entries. A missing file is still created on first save.
 
+## Follow-up enhancements
+
+- **Open in console portal (`ctrl+o`).** While the entry form is open, `ctrl+o`
+  opens the tenant in the OCI console at
+  `https://devops.oci.oraclecorp.com/account/admin/detail/metadata/<tenancy-ocid>?realm=<realm>`
+  via the platform browser launcher (`actions.OpenURL`: `open`/`xdg-open`/
+  `rundll32`). A control key is used so it never collides with typing into the
+  Name/Note fields; launch failures surface as an error toast (intercepted at the
+  top of `Update`, so the toast fires even if the form was dismissed first).
+
 ## Problem
 
 On the **DedicatedAICluster** (DAC) and **ImportedModel** pages, each row is

@@ -90,6 +90,16 @@ func TestEnterEditTenantView_GatingAndOpen(t *testing.T) {
 	}
 }
 
+func TestPortalURL(t *testing.T) {
+	t.Parallel()
+
+	got := portalURL("ocid1.tenancy.oc1..abc", "oc1")
+	want := "https://devops.oci.oraclecorp.com/account/admin/detail/metadata/ocid1.tenancy.oc1..abc?realm=oc1"
+	if got != want {
+		t.Fatalf("portalURL:\n got %q\nwant %q", got, want)
+	}
+}
+
 func TestEditTenantForm_EntryRequiresName(t *testing.T) {
 	t.Parallel()
 

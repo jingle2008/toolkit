@@ -9,6 +9,7 @@ package tui
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -17,10 +18,24 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
+
+// portalBaseURL is the OCI console metadata-detail page; the tenancy
+// OCID is appended as a path segment and the realm as a query param,
+// e.g. .../detail/metadata/ocid1.tenancy.oc1..aaaa?realm=oc1
+const portalBaseURL = "https://devops.oci.oraclecorp.com/account/admin/detail/metadata/"
+
+// portalURL builds the console portal URL for a tenancy OCID + realm.
+func portalURL(ocid, realm string) string {
+	return fmt.Sprintf("%s%s?realm=%s", portalBaseURL, ocid, url.QueryEscape(realm))
+}
+
+// portalOpenErrMsg reports a failure to launch the browser.
+type portalOpenErrMsg struct{ err error }
 
 // editTarget identifies the tenant a row points at and whether it can
 // be edited (unresolved + has a real tenancy id).
@@ -205,6 +220,8 @@ func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case keyMsg.Type == tea.KeyShiftTab, keyMsg.Type == tea.KeyUp:
 		f.cycleFocus(-1)
 		return m, nil
+	case key.Matches(keyMsg, keys.OpenPortal):
+		return m, m.openPortalCmd()
 	case key.Matches(keyMsg, keys.Confirm):
 		entry, valid := f.toEntry()
 		if !valid {
@@ -226,6 +243,22 @@ func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		f.note, cmd = f.note.Update(keyMsg)
 	}
 	return m, cmd
+}
+
+// openPortalCmd launches the OCI console portal for the form's tenancy
+// OCID in the user's browser, off the UI goroutine. The URL is built
+// before the closure so it doesn't read m concurrently.
+func (m *Model) openPortalCmd() tea.Cmd {
+	if m.editTenant == nil {
+		return nil
+	}
+	target := portalURL(m.editTenant.ocid, m.environment.Realm)
+	return func() tea.Msg {
+		if err := actions.OpenURL(target); err != nil {
+			return portalOpenErrMsg{err: err}
+		}
+		return nil
+	}
 }
 
 // saveTenantMetadataCmd persists the entry via the optional loader
@@ -313,7 +346,7 @@ func (m *Model) editTenantView() string {
 		marker(focusInternal) + "Internal: " + internal + "  (space/left/right to toggle)",
 		marker(focusNote) + "Note:     " + f.note.View(),
 		"",
-		m.help.ShortHelpView([]key.Binding{keys.Confirm, keys.Back}),
+		m.help.ShortHelpView([]key.Binding{keys.Confirm, keys.OpenPortal, keys.Back}),
 	}
 	return m.helpBorder.Width(m.viewWidth * 3 / 5).Render(strings.Join(lines, "\n"))
 }
