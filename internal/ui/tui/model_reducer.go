@@ -101,7 +101,13 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	if autoSelect {
 		idx := m.findContextIndex(rows)
 		if idx >= 0 {
-			m.table.SetCursor(idx)
+			// SetCursor moves the cursor and render window but leaves the
+			// viewport's scroll offset untouched, so a target beyond the
+			// first page lands one row below the visible window (off by
+			// one). GotoTop then MoveDown drives bubbles' own scroll logic,
+			// which brings the row fully into view.
+			m.table.GotoTop()
+			m.table.MoveDown(idx)
 		} else {
 			m.table.GotoTop()
 		}
