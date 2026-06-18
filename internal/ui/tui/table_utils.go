@@ -192,6 +192,45 @@ func itemKeyFrom(category domain.Category, row table.Row) models.ItemKey {
 	return nil
 }
 
+// ownerScope derives the owning (parent) scope of a sub-category row so the
+// user can jump back to the owner without having drilled in from it. For the
+// grouped sub-categories row[1] is the owner's key by construction (the same
+// grouping key itemKeyFrom puts in ScopedItemKey.Scope); for the flat
+// regional overrides the override's Name (row[0]) is its definition. Returns
+// ok=false for categories that have no owner.
+func ownerScope(category domain.Category, row table.Row) (domain.Scope, bool) {
+	switch category {
+	case domain.DedicatedAICluster, domain.ImportedModel,
+		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
+		domain.PropertyTenancyOverride:
+		if len(row) < 2 {
+			return domain.Scope{}, false
+		}
+		return domain.Scope{Category: domain.Tenant, Name: row[1]}, true
+	case domain.GPUNode:
+		if len(row) < 2 {
+			return domain.Scope{}, false
+		}
+		return domain.Scope{Category: domain.GPUPool, Name: row[1]}, true
+	case domain.LimitRegionalOverride:
+		if len(row) == 0 {
+			return domain.Scope{}, false
+		}
+		return domain.Scope{Category: domain.LimitDefinition, Name: row[0]}, true
+	case domain.ConsolePropertyRegionalOverride:
+		if len(row) == 0 {
+			return domain.Scope{}, false
+		}
+		return domain.Scope{Category: domain.ConsolePropertyDefinition, Name: row[0]}, true
+	case domain.PropertyRegionalOverride:
+		if len(row) == 0 {
+			return domain.Scope{}, false
+		}
+		return domain.Scope{Category: domain.PropertyDefinition, Name: row[0]}, true
+	}
+	return domain.Scope{}, false
+}
+
 // cloneRows returns a deep copy of rows so callers can mutate one
 // without disturbing the other.
 func cloneRows(rows []table.Row) []table.Row {

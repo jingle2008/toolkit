@@ -193,6 +193,28 @@ func (m *Model) changeCategory() tea.Cmd {
 	return tea.Sequence(m.updateCategory(category)...)
 }
 
+// jumpToOwner navigates from a sub-category back to its owner — the parent
+// category — and re-selects the owning row. The scope is kept/set so
+// applyRows' auto-select highlights the owner (computeTableRows ignores a
+// scope that does not scope its own category, so the full parent list shows).
+//
+// When we drilled in from a parent, the existing scope identifies the owner
+// unambiguously (it even disambiguates the tenancy overrides, which are owned
+// by both a Tenant and a Definition). Otherwise — a sub-category reached
+// directly via tab/command with no context selected — the owner is derived
+// from the selected row. It is a no-op for categories that have no owner.
+func (m *Model) jumpToOwner() tea.Cmd {
+	if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {
+		return tea.Sequence(m.updateCategory(m.scope.Category)...)
+	}
+	owner, ok := ownerScope(m.category, m.selectedRawRow())
+	if !ok {
+		return nil
+	}
+	m.scope = &owner
+	return tea.Sequence(m.updateCategory(owner.Category)...)
+}
+
 // enterContext moves the model into a new context based on the selected row.
 func (m *Model) enterContext() tea.Cmd {
 	row := m.selectedRawRow()

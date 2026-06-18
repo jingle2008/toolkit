@@ -104,6 +104,14 @@ var (
 		key.WithKeys("ctrl+o"),
 		key.WithHelp("<ctrl+o>", "Open in portal"),
 	)
+	// Owner jumps from a sub-category back to its owning (parent) category,
+	// re-selecting the owning row. Listed in each sub-category's catContext
+	// (list view only); it shares the "o" key with CopyObject, which is
+	// details-view only, so the two never coexist in the same view.
+	Owner = key.NewBinding(
+		key.WithKeys("o"),
+		key.WithHelp("<o>", "Owner"),
+	)
 )
 
 var listModeKeys = []key.Binding{
@@ -255,31 +263,31 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize, ToggleFaulty, ScaleUp, Refresh},
 	},
 	domain.GPUNode: {
-		common.ListView: {SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
+		common.ListView: {Owner, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, Refresh, ToggleFaulty, Delete},
+		common.ListView: {Owner, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, Refresh, ToggleFaulty, Delete},
 	},
 	domain.ImportedModel: {
-		common.ListView: {SortTenant, SortInternal, SortVendor, CopyTenant, EditTenant, Refresh},
+		common.ListView: {Owner, SortTenant, SortInternal, SortVendor, CopyTenant, EditTenant, Refresh},
 	},
 	domain.LimitTenancyOverride: {
-		common.ListView: {SortTenant, SortRegions, CopyTenant},
+		common.ListView: {Owner, SortTenant, SortRegions, CopyTenant},
 	},
 	domain.ConsolePropertyTenancyOverride: {
-		common.ListView: {SortTenant, SortRegions, SortValue, CopyTenant},
+		common.ListView: {Owner, SortTenant, SortRegions, SortValue, CopyTenant},
 	},
 	domain.PropertyTenancyOverride: {
-		common.ListView: {SortTenant, SortRegions, SortValue, CopyTenant},
+		common.ListView: {Owner, SortTenant, SortRegions, SortValue, CopyTenant},
 	},
 	domain.LimitRegionalOverride: {
-		common.ListView: {SortRegions},
+		common.ListView: {Owner, SortRegions},
 	},
 	domain.PropertyRegionalOverride: {
-		common.ListView: {SortRegions, SortValue},
+		common.ListView: {Owner, SortRegions, SortValue},
 	},
 	domain.ConsolePropertyRegionalOverride: {
-		common.ListView: {SortRegions, SortValue},
+		common.ListView: {Owner, SortRegions, SortValue},
 	},
 	domain.Environment: {
 		common.ListView: {SortType},
