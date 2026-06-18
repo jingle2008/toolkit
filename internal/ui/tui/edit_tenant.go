@@ -93,7 +93,7 @@ type editTenantForm struct {
 // tenantSavedMsg carries the persisted entry so the reducer can apply
 // the same resolution in memory (no reload).
 type (
-	tenantSavedMsg   struct {
+	tenantSavedMsg struct {
 		path  string
 		entry models.TenantMetadata
 	}
