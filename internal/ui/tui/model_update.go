@@ -60,6 +60,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Intercepted here (not in the form handler) so the toast still
 		// fires if the user dismissed the form before the launch failed.
 		return m, m.showToast(fmt.Sprintf("failed to open portal: %v", msg.err), toastError)
+	case tenantRekeyMsg:
+		// In-memory re-resolution of the current category after a metadata
+		// save; sequenced to run right after Tenants are rebuilt.
+		m.handleTenantRekeyMsg(msg)
+		return m, nil
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil

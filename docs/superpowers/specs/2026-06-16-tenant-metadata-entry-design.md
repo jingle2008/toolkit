@@ -11,11 +11,12 @@
   because the `tenantEditTarget` helper returns a plain `ok` bool; distinguishing
   would require signature churn (and test ripple) for a marginal wording nuance on
   a rarely-hit error path. Behavior (the gating itself) matches the spec.
-- **No end-to-end reload re-keying test.** Unit tests cover the save/merge, gating,
-  form, writer interface, columns, and that a reload command is dispatched; the
-  suffix-match resolution it triggers is already covered by existing
-  `getTenants` / `resolveTenantOwnedMap` tests, so the integration is exercised
-  indirectly rather than by a dedicated test.
+- **Re-key coverage.** `TestHandleTenantRekeyMsg_ResolvesWithoutLoader` asserts the
+  in-memory re-key resolves a newly-named tenant (raw-suffix key → tenant-name key,
+  `Owner` populated) with no loader/cluster call, and `_DropsStaleGen` covers the
+  navigated-away drop. The full load→re-key wiring is exercised indirectly (the
+  underlying suffix match is also covered by existing `getTenants` /
+  `resolveTenantOwnedMap` tests).
 - **Lossy rewrite.** Saving through the TUI rewrites the metadata file from the
   parsed `Metadata`/`TenantMetadata` struct. Consequently YAML comments and any
   fields not modeled by `TenantMetadata` (only Name/ID/IsInternal/Note are
@@ -144,13 +145,26 @@ assertion in a test).
 - Errors surface as an error toast; the form stays open so input isn't lost.
 
 ### 4. Refresh (write + auto-refresh)
-- On save success, reset the realm-scoped tenant fields (`Tenants` + the three
-  tenancy-override maps) and the **current category's** map (`DedicatedAIClusterMap`
-  or `ImportedModelMap`) to `nil`.
-- Dispatch `tea.Sequence(loadTenancyOverrideGroupCmd(...), <current-category load cmd>)`
-  so `d.Tenants` is rebuilt from the updated metadata **before** the DAC/ImportedModel
-  map is re-fetched from k8s and re-keyed — ensuring the edited row resolves.
-- Return to `ListView` and show a success toast including the metadata file path.
+- On save success, return to `ListView` and show a success toast with the metadata
+  file path, then run `reloadAfterTenantSave`.
+- `reloadAfterTenantSave` reloads only the tenancy-override group
+  (`loadTenancyOverrideGroupCmd` — a **local repo read** that rebuilds `Tenants` from
+  the updated metadata), then re-keys the **current category's** map **in memory**
+  against those fresh `Tenants` — no k8s re-fetch. Each `DedicatedAICluster` /
+  `ImportedModel` still carries its raw `TenantID` after the earlier name-keying, so
+  the suffix-keyed raw map is reconstructed from what's already loaded and fed back
+  through `SetDedicatedAIClusterMap` / `SetImportedModelMap`.
+- Sequencing: `tea.Sequence(beginTask, loadTenancyOverrideGroupCmd(...), <rekeyCmd>)`.
+  `Update`'s FIFO message handling guarantees the group's loaded-msg is processed
+  (rebuilding `Tenants`) before the `tenantRekeyMsg` is processed, so the re-key
+  resolves against fresh `Tenants`. The re-key carries the load generation and is
+  dropped if the user navigated away. Only the group load is a task (one
+  `beginTask`/`endTask`); the re-key is instant.
+- The current map is **not** nil'd, so the table keeps showing prior (correct-except-
+  the-just-saved-row) data until the re-key lands a beat later — no empty-table flash.
+- Rationale: a save is a rare, manual action; the only avoidable cost was the k8s
+  re-fetch, which the in-memory re-key eliminates. (Earlier revision re-fetched the
+  category from the cluster; superseded.)
 
 ### 5. Display — ImportedModel Internal column
 - Add an `Internal` column to `internal/columns/imported_model.go`, mirroring DAC:
@@ -175,8 +189,8 @@ assertion in a test).
   -> enter
   -> TenantMetadata{ID: TenancyOCID(realm), Name, IsInternal, Note}
   -> loader.UpsertTenantMetadata  (merge in-memory + SaveMetadata to file)
-  -> reset Tenants + tenancy maps + current category map
-  -> Sequence(load tenancy group -> load current category)
+  -> Sequence(reload tenancy group [local] -> tenantRekeyMsg)
+  -> group load rebuilds Tenants; rekey re-resolves the current map in memory
   -> row now resolved: friendly Name + Internal
 ```
 

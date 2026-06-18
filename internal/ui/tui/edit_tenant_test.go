@@ -120,6 +120,72 @@ func TestEditTenantForm_EntryRequiresName(t *testing.T) {
 	}
 }
 
+// TestHandleTenantRekeyMsg_ResolvesWithoutLoader proves the in-memory
+// re-key resolves a newly-named tenant against the (already-rebuilt)
+// Tenants slice with no loader/cluster call: the unresolved row, keyed
+// by its raw TenantID suffix, becomes keyed by the tenant Name with a
+// resolved Owner.
+func TestHandleTenantRekeyMsg_ResolvesWithoutLoader(t *testing.T) {
+	t.Parallel()
+
+	m := makeTestModel()
+	m.category = domain.DedicatedAICluster
+	// Simulate the state right after the tenancy-group reload: Tenants
+	// now contains the just-saved tenant whose ID suffix is "abc".
+	m.dataset = &models.Dataset{
+		Tenants: []models.Tenant{
+			{Name: "acme", IDs: []string{"ocid1.tenancy.oc1..abc"}, IsInternal: true},
+		},
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"abc": {{Name: "dac1", TenantID: "abc"}}, // unresolved: keyed by raw suffix, Owner nil
+		},
+	}
+
+	// Raw map reconstructed from item.TenantID (what reloadAfterTenantSave does).
+	raw := map[string][]models.DedicatedAICluster{"abc": {{Name: "dac1", TenantID: "abc"}}}
+	m.handleTenantRekeyMsg(tenantRekeyMsg{gen: m.gen, category: domain.DedicatedAICluster, dac: raw})
+
+	items, ok := m.dataset.DedicatedAIClusterMap["acme"]
+	if !ok {
+		t.Fatalf("expected map re-keyed by tenant name %q, got keys %v", "acme", keysOf(m.dataset.DedicatedAIClusterMap))
+	}
+	if len(items) != 1 || items[0].Owner == nil || items[0].Owner.Name != "acme" {
+		t.Fatalf("expected resolved Owner=acme, got %+v", items)
+	}
+	if _, stale := m.dataset.DedicatedAIClusterMap["abc"]; stale {
+		t.Fatal("raw suffix key should be gone after re-key")
+	}
+}
+
+func keysOf[V any](mm map[string]V) []string {
+	out := make([]string, 0, len(mm))
+	for k := range mm {
+		out = append(out, k)
+	}
+	return out
+}
+
+// TestHandleTenantRekeyMsg_DropsStaleGen proves a re-key from a
+// superseded generation (user navigated) is ignored.
+func TestHandleTenantRekeyMsg_DropsStaleGen(t *testing.T) {
+	t.Parallel()
+
+	m := makeTestModel()
+	m.category = domain.DedicatedAICluster
+	m.dataset = &models.Dataset{
+		Tenants: []models.Tenant{{Name: "acme", IDs: []string{"ocid1.tenancy.oc1..abc"}, IsInternal: true}},
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"abc": {{Name: "dac1", TenantID: "abc"}},
+		},
+	}
+	raw := map[string][]models.DedicatedAICluster{"abc": {{Name: "dac1", TenantID: "abc"}}}
+	m.handleTenantRekeyMsg(tenantRekeyMsg{gen: m.gen + 1, category: domain.DedicatedAICluster, dac: raw})
+
+	if _, ok := m.dataset.DedicatedAIClusterMap["abc"]; !ok {
+		t.Fatal("stale re-key must leave the map untouched")
+	}
+}
+
 // TestHandleTenantSavedMsg_AfterFormDismissed proves the success
 // handler still fires (toast + reload) when the user dismissed the form
 // (esc) before the async write landed.

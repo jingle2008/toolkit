@@ -37,6 +37,17 @@ func portalURL(ocid, realm string) string {
 // portalOpenErrMsg reports a failure to launch the browser.
 type portalOpenErrMsg struct{ err error }
 
+// tenantRekeyMsg carries the raw (suffix-keyed) tenant-owned map to be
+// re-resolved against freshly-loaded Tenants in memory, avoiding a
+// cluster re-fetch after a metadata save. Exactly one of dac/imported is
+// populated, per category.
+type tenantRekeyMsg struct {
+	gen      int
+	category domain.Category
+	dac      map[string][]models.DedicatedAICluster
+	imported map[string][]models.ImportedModel
+}
+
 // editTarget identifies the tenant a row points at and whether it can
 // be edited (unresolved + has a real tenancy id).
 type editTarget struct {
@@ -277,50 +288,80 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 	}
 }
 
-// reloadAfterTenantSave resets the tenant-derived data and re-loads the
-// tenancy group (rebuilding Tenants from the new metadata) followed by
-// the current category, so owner resolution reruns. The Sequence keeps
-// Tenants populated before the DAC/ImportedModel map is re-keyed.
+// reloadAfterTenantSave reloads only the tenancy-override group (LOCAL
+// repo read — rebuilds Tenants from the new metadata) and then re-keys
+// the current category's map IN MEMORY against those fresh Tenants,
+// avoiding a cluster re-fetch. Each DAC/ImportedModel item still carries
+// its raw TenantID after the earlier name-keying, so the suffix-keyed
+// raw map can be reconstructed from what's already loaded.
+//
+// The current map is deliberately NOT nil'd: it keeps showing the prior
+// (correct-except-the-just-saved-row) data until the re-key lands a beat
+// later, so there's no empty-table flash. The tenancyOverridesLoaded
+// handler overwrites Tenants + the three override maps wholesale, so
+// they need no nil'ing either.
+//
+// NOTE: only the CURRENT category is re-keyed. The sibling tenant-owned
+// map (DAC vs ImportedModel) keeps stale Owner pointers into the old
+// Tenants slice until it is itself reloaded.
 func (m *Model) reloadAfterTenantSave() tea.Cmd {
 	ds := m.dataset
 	if ds == nil {
 		return nil
 	}
-	// Run the category guard FIRST so a non-matching category is a true
-	// no-op that leaves the tenancy data intact.
-	// NOTE: only the CURRENT category's tenant-owned map is nil'd here. The
-	// sibling map (DAC when the current category is ImportedModel, or vice
-	// versa) is left in place, so its entries keep stale Owner pointers into
-	// the OLD Tenants slice. A renamed tenant therefore won't show as resolved
-	// in that sibling category until it is itself reloaded.
+	// Reconstruct the raw (suffix-keyed) map from the in-memory items so
+	// the re-key can re-resolve Owner without a cluster round-trip.
+	rekey := tenantRekeyMsg{category: m.category}
 	switch m.category {
 	case domain.DedicatedAICluster:
-		ds.DedicatedAIClusterMap = nil
+		raw := make(map[string][]models.DedicatedAICluster, len(ds.DedicatedAIClusterMap))
+		for _, items := range ds.DedicatedAIClusterMap {
+			for _, it := range items {
+				raw[it.TenantID] = append(raw[it.TenantID], it)
+			}
+		}
+		rekey.dac = raw
 	case domain.ImportedModel:
-		ds.ImportedModelMap = nil
+		raw := make(map[string][]models.ImportedModel, len(ds.ImportedModelMap))
+		for _, items := range ds.ImportedModelMap {
+			for _, it := range items {
+				raw[it.TenantID] = append(raw[it.TenantID], it)
+			}
+		}
+		rekey.imported = raw
 	default:
 		return nil
 	}
-	ds.Tenants = nil
-	ds.LimitTenancyOverrideMap = nil
-	ds.ConsolePropertyTenancyOverrideMap = nil
-	ds.PropertyTenancyOverrideMap = nil
 
 	m.newLoadContext()
 	gen := m.bumpGen()
+	rekey.gen = gen
 	grp := loadTenancyOverrideGroupCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
-	var cat tea.Cmd
-	switch m.category {
-	case domain.DedicatedAICluster:
-		cat = loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	case domain.ImportedModel:
-		cat = loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	// Sequence guarantees the group's loaded-msg is enqueued (and so
+	// processed, rebuilding Tenants) before the rekey msg — see Update's
+	// FIFO handling. Only the group load is a task; the re-key is instant.
+	rekeyCmd := func() tea.Msg { return rekey }
+	return tea.Sequence(m.beginTask(), grp, rekeyCmd)
+}
+
+// handleTenantRekeyMsg re-resolves the current category's tenant-owned
+// map against the freshly-loaded Tenants, in memory. It runs after the
+// tenancy-override group load (which sets ds.Tenants); the gen guard
+// drops it if the user navigated away meanwhile. The re-key is not a
+// task, so there is no endTask here.
+func (m *Model) handleTenantRekeyMsg(msg tenantRekeyMsg) {
+	if msg.gen != m.gen || m.dataset == nil {
+		return
 	}
-	// One beginTask per load to keep pendingTasks balanced; the first
-	// returns the spinner cmd, the second returns nil.
-	spin := m.beginTask()
-	m.beginTask()
-	return tea.Sequence(spin, grp, cat)
+	switch msg.category {
+	case domain.DedicatedAICluster:
+		m.dataset.SetDedicatedAIClusterMap(msg.dac)
+	case domain.ImportedModel:
+		m.dataset.SetImportedModelMap(msg.imported)
+	default:
+		return
+	}
+	m.refreshDisplay()
 }
 
 // editTenantView renders the form overlay.
