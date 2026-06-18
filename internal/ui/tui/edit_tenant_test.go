@@ -3,6 +3,8 @@ package tui
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -120,89 +122,87 @@ func TestEditTenantForm_EntryRequiresName(t *testing.T) {
 	}
 }
 
-// TestHandleTenantRekeyMsg_ResolvesWithoutLoader proves the in-memory
-// re-key resolves a newly-named tenant against the (already-rebuilt)
-// Tenants slice with no loader/cluster call: the unresolved row, keyed
-// by its raw TenantID suffix, becomes keyed by the tenant Name with a
-// resolved Owner.
-func TestHandleTenantRekeyMsg_ResolvesWithoutLoader(t *testing.T) {
-	t.Parallel()
+func strp(s string) *string { return &s }
+func boolp(b bool) *bool    { return &b }
 
-	m := makeTestModel()
-	m.category = domain.DedicatedAICluster
-	// Simulate the state right after the tenancy-group reload: Tenants
-	// now contains the just-saved tenant whose ID suffix is "abc".
-	m.dataset = &models.Dataset{
-		Tenants: []models.Tenant{
-			{Name: "acme", IDs: []string{"ocid1.tenancy.oc1..abc"}, IsInternal: true},
-		},
-		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
-			"abc": {{Name: "dac1", TenantID: "abc"}}, // unresolved: keyed by raw suffix, Owner nil
-		},
-	}
-
-	// Raw map reconstructed from item.TenantID (what reloadAfterTenantSave does).
-	raw := map[string][]models.DedicatedAICluster{"abc": {{Name: "dac1", TenantID: "abc"}}}
-	m.handleTenantRekeyMsg(tenantRekeyMsg{gen: m.gen, category: domain.DedicatedAICluster, dac: raw})
-
-	items, ok := m.dataset.DedicatedAIClusterMap["acme"]
-	if !ok {
-		t.Fatalf("expected map re-keyed by tenant name %q, got keys %v", "acme", keysOf(m.dataset.DedicatedAIClusterMap))
-	}
-	if len(items) != 1 || items[0].Owner == nil || items[0].Owner.Name != "acme" {
-		t.Fatalf("expected resolved Owner=acme, got %+v", items)
-	}
-	if _, stale := m.dataset.DedicatedAIClusterMap["abc"]; stale {
-		t.Fatal("raw suffix key should be gone after re-key")
-	}
-}
-
-func keysOf[V any](mm map[string]V) []string {
-	out := make([]string, 0, len(mm))
-	for k := range mm {
-		out = append(out, k)
-	}
-	return out
-}
-
-// TestHandleTenantRekeyMsg_DropsStaleGen proves a re-key from a
-// superseded generation (user navigated) is ignored.
-func TestHandleTenantRekeyMsg_DropsStaleGen(t *testing.T) {
+// TestApplyTenantSave_ResolvesBothMapsInMemory proves a saved entry is
+// reflected entirely in memory (no loader/cluster call): the new tenant
+// is appended to Tenants and BOTH tenant-owned maps are re-keyed from
+// raw suffix → tenant name with a resolved Owner.
+func TestApplyTenantSave_ResolvesBothMapsInMemory(t *testing.T) {
 	t.Parallel()
 
 	m := makeTestModel()
 	m.category = domain.DedicatedAICluster
 	m.dataset = &models.Dataset{
-		Tenants: []models.Tenant{{Name: "acme", IDs: []string{"ocid1.tenancy.oc1..abc"}, IsInternal: true}},
 		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
-			"abc": {{Name: "dac1", TenantID: "abc"}},
+			"abc": {{Name: "dac1", TenantID: "abc"}}, // unresolved: raw-suffix key, Owner nil
+		},
+		ImportedModelMap: map[string][]models.ImportedModel{
+			"abc": {{BaseModel: models.BaseModel{Name: "im1"}, TenantID: "abc"}},
 		},
 	}
-	raw := map[string][]models.DedicatedAICluster{"abc": {{Name: "dac1", TenantID: "abc"}}}
-	m.handleTenantRekeyMsg(tenantRekeyMsg{gen: m.gen + 1, category: domain.DedicatedAICluster, dac: raw})
 
-	if _, ok := m.dataset.DedicatedAIClusterMap["abc"]; !ok {
-		t.Fatal("stale re-key must leave the map untouched")
+	m.applyTenantSave(models.TenantMetadata{
+		ID: "ocid1.tenancy.oc1..abc", Name: strp("acme"), IsInternal: boolp(true),
+	})
+
+	// New standalone tenant appended.
+	require.Len(t, m.dataset.Tenants, 1)
+	require.Equal(t, "acme", m.dataset.Tenants[0].Name)
+	require.True(t, m.dataset.Tenants[0].IsInternal)
+
+	// DAC map re-keyed (raw suffix → tenant name) + Owner resolved.
+	require.NotContains(t, m.dataset.DedicatedAIClusterMap, "abc")
+	dac := m.dataset.DedicatedAIClusterMap["acme"]
+	require.Len(t, dac, 1)
+	require.NotNil(t, dac[0].Owner)
+	require.Equal(t, "acme", dac[0].Owner.Name)
+
+	// ImportedModel map (the sibling category) re-keyed + resolved too.
+	imm := m.dataset.ImportedModelMap["acme"]
+	require.Len(t, imm, 1)
+	require.NotNil(t, imm[0].Owner)
+	require.Equal(t, "acme", imm[0].Owner.Name)
+}
+
+// TestApplyTenantSave_NilMapsSafe ensures a not-yet-loaded category map
+// is skipped without panicking; Tenants still gains the entry.
+func TestApplyTenantSave_NilMapsSafe(t *testing.T) {
+	t.Parallel()
+
+	m := makeTestModel()
+	m.category = domain.DedicatedAICluster
+	m.dataset = &models.Dataset{} // both maps nil
+	m.applyTenantSave(models.TenantMetadata{
+		ID: "ocid1.tenancy.oc1..abc", Name: strp("acme"), IsInternal: boolp(false),
+	})
+	if len(m.dataset.Tenants) != 1 || m.dataset.Tenants[0].Name != "acme" {
+		t.Fatalf("Tenants: %+v", m.dataset.Tenants)
 	}
 }
 
-// TestHandleTenantSavedMsg_AfterFormDismissed proves the success
-// handler still fires (toast + reload) when the user dismissed the form
-// (esc) before the async write landed.
+// TestHandleTenantSavedMsg_AfterFormDismissed proves the success handler
+// still applies (toast + in-memory resolution) when the user dismissed
+// the form (esc) before the async write landed.
 func TestHandleTenantSavedMsg_AfterFormDismissed(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.ListView
 	m.editTenant = nil // user already pressed esc
-	// makeTestModel has a nil dataset; give reloadAfterTenantSave a
-	// matching dataset + category so it builds a real cmd.
 	m.dataset = &models.Dataset{}
 	m.category = domain.DedicatedAICluster
-	cmd := m.handleTenantSavedMsg(tenantSavedMsg{path: "/tmp/metadata.yaml"})
+	cmd := m.handleTenantSavedMsg(tenantSavedMsg{
+		path:  "/tmp/metadata.yaml",
+		entry: models.TenantMetadata{ID: "ocid1.tenancy.oc1..abc", Name: strp("acme"), IsInternal: boolp(true)},
+	})
 	if cmd == nil {
-		t.Fatal("expected a toast+reload cmd even when the form was already dismissed")
+		t.Fatal("expected a toast cmd even when the form was already dismissed")
 	}
 	if m.viewMode != common.ListView {
 		t.Fatalf("viewMode should remain ListView, got %v", m.viewMode)
+	}
+	if len(m.dataset.Tenants) != 1 {
+		t.Fatalf("save should have applied in memory; Tenants=%+v", m.dataset.Tenants)
 	}
 }

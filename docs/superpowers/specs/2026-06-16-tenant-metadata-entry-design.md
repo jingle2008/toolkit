@@ -11,12 +11,12 @@
   because the `tenantEditTarget` helper returns a plain `ok` bool; distinguishing
   would require signature churn (and test ripple) for a marginal wording nuance on
   a rarely-hit error path. Behavior (the gating itself) matches the spec.
-- **Re-key coverage.** `TestHandleTenantRekeyMsg_ResolvesWithoutLoader` asserts the
-  in-memory re-key resolves a newly-named tenant (raw-suffix key → tenant-name key,
-  `Owner` populated) with no loader/cluster call, and `_DropsStaleGen` covers the
-  navigated-away drop. The full load→re-key wiring is exercised indirectly (the
-  underlying suffix match is also covered by existing `getTenants` /
-  `resolveTenantOwnedMap` tests).
+- **In-memory apply coverage.** `TestApplyTenantSave_ResolvesBothMapsInMemory` asserts
+  a saved entry appends the `Tenant` and re-keys BOTH the DAC and ImportedModel maps
+  (raw-suffix key → tenant-name key, `Owner` populated) with no loader/cluster call;
+  `TestApplyTenantSave_NilMapsSafe` covers not-yet-loaded maps; and
+  `TestHandleTenantSavedMsg_AfterFormDismissed` confirms the apply runs even if the
+  form was dismissed first.
 - **Lossy rewrite.** Saving through the TUI rewrites the metadata file from the
   parsed `Metadata`/`TenantMetadata` struct. Consequently YAML comments and any
   fields not modeled by `TenantMetadata` (only Name/ID/IsInternal/Note are
@@ -144,27 +144,34 @@ assertion in a test).
   interface (shouldn't happen in production) or the file path is empty → error toast.
 - Errors surface as an error toast; the form stays open so input isn't lost.
 
-### 4. Refresh (write + auto-refresh)
-- On save success, return to `ListView` and show a success toast with the metadata
-  file path, then run `reloadAfterTenantSave`.
-- `reloadAfterTenantSave` reloads only the tenancy-override group
-  (`loadTenancyOverrideGroupCmd` — a **local repo read** that rebuilds `Tenants` from
-  the updated metadata), then re-keys the **current category's** map **in memory**
-  against those fresh `Tenants` — no k8s re-fetch. Each `DedicatedAICluster` /
-  `ImportedModel` still carries its raw `TenantID` after the earlier name-keying, so
-  the suffix-keyed raw map is reconstructed from what's already loaded and fed back
-  through `SetDedicatedAIClusterMap` / `SetImportedModelMap`.
-- Sequencing: `tea.Sequence(beginTask, loadTenancyOverrideGroupCmd(...), <rekeyCmd>)`.
-  `Update`'s FIFO message handling guarantees the group's loaded-msg is processed
-  (rebuilding `Tenants`) before the `tenantRekeyMsg` is processed, so the re-key
-  resolves against fresh `Tenants`. The re-key carries the load generation and is
-  dropped if the user navigated away. Only the group load is a task (one
-  `beginTask`/`endTask`); the re-key is instant.
-- The current map is **not** nil'd, so the table keeps showing prior (correct-except-
-  the-just-saved-row) data until the re-key lands a beat later — no empty-table flash.
-- Rationale: a save is a rare, manual action; the only avoidable cost was the k8s
-  re-fetch, which the in-memory re-key eliminates. (Earlier revision re-fetched the
-  category from the cluster; superseded.)
+### 4. Refresh (write + apply in memory)
+- On save success, return to `ListView`, show a success toast with the metadata file
+  path, and run `applyTenantSave(entry)` — **fully synchronous, no reload, no I/O**.
+  The persisted `TenantMetadata` rides along on `tenantSavedMsg` so the reducer has it.
+- `applyTenantSave`:
+  - Appends a standalone `Tenant{IDs:[entry.ID], Name, IsInternal, Note}` to
+    `ds.Tenants` (`upsertTenantByID` — replace-by-ID, else append).
+  - Re-keys **both** `DedicatedAIClusterMap` and `ImportedModelMap` (whichever are
+    loaded) in memory via `SetDedicatedAIClusterMap` / `SetImportedModelMap`,
+    reconstructing the raw suffix-keyed map from each item's retained `TenantID`
+    (`rawByTenantID`). This re-resolves `Owner` against the updated `Tenants`.
+  - Calls `refreshDisplay`.
+- **Why this is correct without re-running `getTenants` or reloading:** the form only
+  edits **unresolved** rows (`Owner == nil`). An unresolved tenancy matched no existing
+  `Tenant`, which (since any tenant with terraform overrides would already have a
+  `Tenant` built from the discovered `tenantMap`) also means it has **no tenancy-
+  override entries**. So the edit is always a *standalone* tenant (getTenants' second
+  pass), built directly from the entry — no `tenantMap` needed — and the three override
+  maps are provably unaffected, so they are left untouched.
+- Re-keying both category maps (not just the current one) means a tenant owning
+  resources in both DAC and ImportedModel resolves everywhere at once — no sibling-map
+  staleness.
+- **Constraint:** this holds only while the form edits unresolved rows. If it is ever
+  extended to edit *resolved* tenants, a rename could affect override-map display and a
+  fuller rebuild (group reload) would be required. Documented at `applyTenantSave`.
+- History: earlier revisions (a) re-fetched the category from the cluster, then (b)
+  reloaded the tenancy group locally + re-keyed via an async `tenantRekeyMsg`. Both are
+  superseded by this synchronous in-memory apply.
 
 ### 5. Display — ImportedModel Internal column
 - Add an `Internal` column to `internal/columns/imported_model.go`, mirroring DAC:
@@ -189,15 +196,16 @@ assertion in a test).
   -> enter
   -> TenantMetadata{ID: TenancyOCID(realm), Name, IsInternal, Note}
   -> loader.UpsertTenantMetadata  (merge in-memory + SaveMetadata to file)
-  -> Sequence(reload tenancy group [local] -> tenantRekeyMsg)
-  -> group load rebuilds Tenants; rekey re-resolves the current map in memory
-  -> row now resolved: friendly Name + Internal
+  -> tenantSavedMsg{path, entry}
+  -> applyTenantSave: append Tenant + re-key DAC & ImportedModel maps in memory
+  -> row now resolved: friendly Name + Internal (no reload / no I/O)
 ```
 
 ## Error handling
 - Empty Name → inline form hint, save blocked.
 - Loader not a writer / empty metadata path / write failure → error toast; form stays open.
-- Refresh load failure → existing load-error path (error toast); the file was still written.
+- Post-save apply is pure in-memory (no I/O), so it has no failure mode of its own; if
+  the dataset is unexpectedly nil it is a no-op.
 
 ## Testing
 - `configloader.SaveMetadata`: round-trip JSON and YAML; create-if-missing (file +
@@ -208,7 +216,8 @@ assertion in a test).
 - OCID construction from a row for both DAC and ImportedModel.
 - Form: focus cycling, Internal toggle, empty-Name block, esc cancel.
 - Save path with a fake `TenantMetadataWriter`: asserts the dispatched
-  `TenantMetadata` (ID/Name/IsInternal/Note) and that a reload is triggered.
+  `TenantMetadata` (ID/Name/IsInternal/Note); `applyTenantSave` resolves both maps in
+  memory; the saved-after-dismiss case still applies.
 - ImportedModel columns: ratio sum == 1.00; `OwnerState()` for nil/internal/external.
 - `production.New(...)` satisfies `TenantMetadataWriter` (guards the pointer-receiver
   caveat above — see Approach).

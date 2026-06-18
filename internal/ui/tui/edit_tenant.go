@@ -10,13 +10,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -36,17 +36,6 @@ func portalURL(ocid, realm string) string {
 
 // portalOpenErrMsg reports a failure to launch the browser.
 type portalOpenErrMsg struct{ err error }
-
-// tenantRekeyMsg carries the raw (suffix-keyed) tenant-owned map to be
-// re-resolved against freshly-loaded Tenants in memory, avoiding a
-// cluster re-fetch after a metadata save. Exactly one of dac/imported is
-// populated, per category.
-type tenantRekeyMsg struct {
-	gen      int
-	category domain.Category
-	dac      map[string][]models.DedicatedAICluster
-	imported map[string][]models.ImportedModel
-}
 
 // editTarget identifies the tenant a row points at and whether it can
 // be edited (unresolved + has a real tenancy id).
@@ -101,8 +90,13 @@ type editTenantForm struct {
 }
 
 // tenantSavedMsg / tenantSaveErrMsg report the async upsert result.
+// tenantSavedMsg carries the persisted entry so the reducer can apply
+// the same resolution in memory (no reload).
 type (
-	tenantSavedMsg   struct{ path string }
+	tenantSavedMsg   struct {
+		path  string
+		entry models.TenantMetadata
+	}
 	tenantSaveErrMsg struct{ err error }
 )
 
@@ -199,10 +193,8 @@ func (m *Model) handleTenantSavedMsg(msg tenantSavedMsg) tea.Cmd {
 	if m.viewMode == common.EditTenantView {
 		m.viewMode = common.ListView
 	}
-	return tea.Batch(
-		m.showToast(fmt.Sprintf("saved tenant metadata to %s", msg.path), toastInfo),
-		m.reloadAfterTenantSave(),
-	)
+	m.applyTenantSave(msg.entry)
+	return m.showToast(fmt.Sprintf("saved tenant metadata to %s", msg.path), toastInfo)
 }
 
 // handleTenantSaveErrMsg surfaces a failed save. The form (if still
@@ -284,84 +276,84 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 		if err := writer.UpsertTenantMetadata(entry); err != nil {
 			return tenantSaveErrMsg{err: err}
 		}
-		return tenantSavedMsg{path: path}
+		return tenantSavedMsg{path: path, entry: entry}
 	}
 }
 
-// reloadAfterTenantSave reloads only the tenancy-override group (LOCAL
-// repo read — rebuilds Tenants from the new metadata) and then re-keys
-// the current category's map IN MEMORY against those fresh Tenants,
-// avoiding a cluster re-fetch. Each DAC/ImportedModel item still carries
-// its raw TenantID after the earlier name-keying, so the suffix-keyed
-// raw map can be reconstructed from what's already loaded.
+// applyTenantSave reflects a just-saved tenant entry in the dataset
+// entirely in memory — no reload. Because the form only edits UNRESOLVED
+// rows, the entry is always a standalone tenant (getTenants' second
+// pass): its tenancy suffix matched no existing Tenant, which also means
+// it has no tenancy-override entries. So we add the one Tenant directly
+// and re-resolve the tenant-owned maps against it; the override maps are
+// provably unaffected and left alone.
 //
-// The current map is deliberately NOT nil'd: it keeps showing the prior
-// (correct-except-the-just-saved-row) data until the re-key lands a beat
-// later, so there's no empty-table flash. The tenancyOverridesLoaded
-// handler overwrites Tenants + the three override maps wholesale, so
-// they need no nil'ing either.
+// Both the DAC and ImportedModel maps are re-keyed (not just the current
+// category) so a tenant owning resources in both resolves everywhere at
+// once. Each item retains its raw TenantID after the earlier name-keying,
+// so the suffix-keyed raw map is reconstructed from what's already loaded.
 //
-// NOTE: only the CURRENT category is re-keyed. The sibling tenant-owned
-// map (DAC vs ImportedModel) keeps stale Owner pointers into the old
-// Tenants slice until it is itself reloaded.
-func (m *Model) reloadAfterTenantSave() tea.Cmd {
+// If the form is ever extended to edit RESOLVED tenants, this assumption
+// breaks (a rename could affect override-map display) and a fuller
+// rebuild would be needed.
+func (m *Model) applyTenantSave(entry models.TenantMetadata) {
 	ds := m.dataset
 	if ds == nil {
-		return nil
-	}
-	// Reconstruct the raw (suffix-keyed) map from the in-memory items so
-	// the re-key can re-resolve Owner without a cluster round-trip.
-	rekey := tenantRekeyMsg{category: m.category}
-	switch m.category {
-	case domain.DedicatedAICluster:
-		raw := make(map[string][]models.DedicatedAICluster, len(ds.DedicatedAIClusterMap))
-		for _, items := range ds.DedicatedAIClusterMap {
-			for _, it := range items {
-				raw[it.TenantID] = append(raw[it.TenantID], it)
-			}
-		}
-		rekey.dac = raw
-	case domain.ImportedModel:
-		raw := make(map[string][]models.ImportedModel, len(ds.ImportedModelMap))
-		for _, items := range ds.ImportedModelMap {
-			for _, it := range items {
-				raw[it.TenantID] = append(raw[it.TenantID], it)
-			}
-		}
-		rekey.imported = raw
-	default:
-		return nil
-	}
-
-	m.newLoadContext()
-	gen := m.bumpGen()
-	rekey.gen = gen
-	grp := loadTenancyOverrideGroupCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
-	// Sequence guarantees the group's loaded-msg is enqueued (and so
-	// processed, rebuilding Tenants) before the rekey msg — see Update's
-	// FIFO handling. Only the group load is a task; the re-key is instant.
-	rekeyCmd := func() tea.Msg { return rekey }
-	return tea.Sequence(m.beginTask(), grp, rekeyCmd)
-}
-
-// handleTenantRekeyMsg re-resolves the current category's tenant-owned
-// map against the freshly-loaded Tenants, in memory. It runs after the
-// tenancy-override group load (which sets ds.Tenants); the gen guard
-// drops it if the user navigated away meanwhile. The re-key is not a
-// task, so there is no endTask here.
-func (m *Model) handleTenantRekeyMsg(msg tenantRekeyMsg) {
-	if msg.gen != m.gen || m.dataset == nil {
 		return
 	}
-	switch msg.category {
-	case domain.DedicatedAICluster:
-		m.dataset.SetDedicatedAIClusterMap(msg.dac)
-	case domain.ImportedModel:
-		m.dataset.SetImportedModelMap(msg.imported)
-	default:
-		return
+	ds.Tenants = upsertTenantByID(ds.Tenants, tenantFromEntry(entry))
+	if ds.DedicatedAIClusterMap != nil {
+		ds.SetDedicatedAIClusterMap(rawByTenantID(ds.DedicatedAIClusterMap,
+			func(d models.DedicatedAICluster) string { return d.TenantID }))
+	}
+	if ds.ImportedModelMap != nil {
+		ds.SetImportedModelMap(rawByTenantID(ds.ImportedModelMap,
+			func(i models.ImportedModel) string { return i.TenantID }))
 	}
 	m.refreshDisplay()
+}
+
+// tenantFromEntry builds a Tenant from a saved metadata entry.
+func tenantFromEntry(e models.TenantMetadata) models.Tenant {
+	t := models.Tenant{IDs: []string{e.ID}}
+	if e.Name != nil {
+		t.Name = *e.Name
+	}
+	if e.IsInternal != nil {
+		t.IsInternal = *e.IsInternal
+	}
+	if e.Note != nil {
+		t.Note = *e.Note
+	}
+	return t
+}
+
+// upsertTenantByID replaces the tenant whose IDs contain t's ID, else
+// appends t. (Replacement only matters defensively; the unresolved-only
+// gate means the form never re-edits an already-present tenant.)
+func upsertTenantByID(tenants []models.Tenant, t models.Tenant) []models.Tenant {
+	id := t.IDs[0]
+	for i := range tenants {
+		if slices.Contains(tenants[i].IDs, id) {
+			tenants[i] = t
+			return tenants
+		}
+	}
+	return append(tenants, t)
+}
+
+// rawByTenantID rebuilds the raw (TenantID-keyed) map from an
+// already-loaded, name-keyed tenant-owned map, so SetXxxMap can
+// re-resolve Owner against the current Tenants without a re-fetch.
+func rawByTenantID[T any](mm map[string][]T, tenantID func(T) string) map[string][]T {
+	raw := make(map[string][]T, len(mm))
+	for _, items := range mm {
+		for _, it := range items {
+			k := tenantID(it)
+			raw[k] = append(raw[k], it)
+		}
+	}
+	return raw
 }
 
 // editTenantView renders the form overlay.
