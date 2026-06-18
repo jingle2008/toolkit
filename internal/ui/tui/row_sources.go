@@ -46,13 +46,35 @@ func flatSource[T models.NamedFilterable](
 	cols columns.Set[T],
 	pick func(*models.Dataset) []T,
 ) rowSource {
+	// CategoryUnknown never matches a real scope.Category, so the rows
+	// are never narrowed by scope — the plain flat behaviour.
+	return flatScopedSource(cols, domain.CategoryUnknown, pick)
+}
+
+// flatScopedSource is a flatSource whose rows are narrowed to a single
+// owner when a matching scope is active. owner is the parent category
+// that scopes this one (e.g. domain.LimitDefinition for
+// LimitRegionalOverride); when rc.scope names that owner, only items
+// whose GetName equals scope.Name are rendered — the flat analogue of
+// the "name" gate tuiRowsGrouped applies to grouped categories. The
+// owner check (rather than "any non-nil scope") keeps the unguarded
+// export path from filtering on an unrelated lingering scope.
+func flatScopedSource[T models.NamedFilterable](
+	cols columns.Set[T],
+	owner domain.Category,
+	pick func(*models.Dataset) []T,
+) rowSource {
 	return rowSource{
 		rows: func(rc rowCtx) []table.Row {
+			var name *string
+			if rc.scope != nil && rc.scope.Category == owner {
+				name = &rc.scope.Name
+			}
 			items := pick(rc.dataset)
 			if rc.export {
-				return tuiRowsFlatForExport(cols, items, rc.realm, rc.region, rc.filter, rc.faulty)
+				return tuiRowsFlatForExport(cols, items, name, rc.realm, rc.region, rc.filter, rc.faulty)
 			}
-			return tuiRowsFlat(cols, items, rc.filter, rc.faulty)
+			return tuiRowsFlat(cols, items, name, rc.filter, rc.faulty)
 		},
 		headers: headersFromSet(cols.Columns),
 		find: func(d *models.Dataset, key models.ItemKey) any {
@@ -146,13 +168,17 @@ var rowSources = map[domain.Category]rowSource{
 		func(d *models.Dataset) map[string][]models.PropertyTenancyOverride {
 			return d.PropertyTenancyOverrideMap
 		}),
-	domain.LimitRegionalOverride: flatSource(columns.LimitRegionalOverrideColumns,
+	// Regional overrides are scoped by their definition (e.g. drilling into
+	// a LimitDefinition then tabbing to its regional overrides). They are a
+	// flat slice, so use flatScopedSource to narrow by the owning
+	// definition's name — matching the override's GetName.
+	domain.LimitRegionalOverride: flatScopedSource(columns.LimitRegionalOverrideColumns, domain.LimitDefinition,
 		func(d *models.Dataset) []models.LimitRegionalOverride { return d.LimitRegionalOverrides }),
-	domain.ConsolePropertyRegionalOverride: flatSource(columns.ConsolePropertyRegionalOverrideColumns,
+	domain.ConsolePropertyRegionalOverride: flatScopedSource(columns.ConsolePropertyRegionalOverrideColumns, domain.ConsolePropertyDefinition,
 		func(d *models.Dataset) []models.ConsolePropertyRegionalOverride {
 			return d.ConsolePropertyRegionalOverrides
 		}),
-	domain.PropertyRegionalOverride: flatSource(columns.PropertyRegionalOverrideColumns,
+	domain.PropertyRegionalOverride: flatScopedSource(columns.PropertyRegionalOverrideColumns, domain.PropertyDefinition,
 		func(d *models.Dataset) []models.PropertyRegionalOverride { return d.PropertyRegionalOverrides }),
 	domain.BaseModel: flatSource(columns.BaseModelColumns,
 		func(d *models.Dataset) []models.BaseModel { return d.BaseModels }),

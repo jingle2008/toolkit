@@ -11,7 +11,7 @@ import (
 func TestTuiRowsFlat_BaseModel(t *testing.T) {
 	t.Parallel()
 	m := []models.BaseModel{{Name: "cohere.command", InternalName: "command-r"}}
-	rows := tuiRowsFlat(columns.BaseModelColumns, m, "", false)
+	rows := tuiRowsFlat(columns.BaseModelColumns, m, nil, "", false)
 	if len(rows) != 1 {
 		t.Fatalf("rows: got %d, want 1", len(rows))
 	}

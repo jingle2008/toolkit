@@ -13,12 +13,12 @@ import (
 // tuiRowsFlatForExport. The cell argument decides whether each cell
 // uses the display-mode Render or the export-mode RenderForExport (with
 // fallback). The filter + faulty pipeline is identical for both.
-func tuiRowsFlatWith[T models.NamedFilterable](s columns.Set[T], items []T, filter string, faultyOnly bool, cell func(columns.Column[T], T) string) []table.Row {
+func tuiRowsFlatWith[T models.NamedFilterable](s columns.Set[T], items []T, name *string, filter string, faultyOnly bool, cell func(columns.Column[T], T) string) []table.Row {
 	var pred func(T) bool
 	if faultyOnly {
 		pred = faultyPred
 	}
-	matches := collections.FilterSlice(items, nil, filter, pred)
+	matches := collections.FilterSlice(items, name, filter, pred)
 	rows := make([]table.Row, len(matches))
 	for i, m := range matches {
 		row := make(table.Row, len(s.Columns))
@@ -31,10 +31,12 @@ func tuiRowsFlatWith[T models.NamedFilterable](s columns.Set[T], items []T, filt
 }
 
 // tuiRowsFlat renders a slice through a flat Set, applying the
-// TUI's filter + faulty gates. Display-mode: every cell uses the
+// TUI's filter + faulty gates and, when name is non-nil, narrowing to
+// items whose GetName matches (the flat analogue of tuiRowsGrouped's
+// scope-context "name" gate). Display-mode: every cell uses the
 // column's Render closure.
-func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, filter string, faultyOnly bool) []table.Row {
-	return tuiRowsFlatWith(s, items, filter, faultyOnly, func(c columns.Column[T], m T) string {
+func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, name *string, filter string, faultyOnly bool) []table.Row {
+	return tuiRowsFlatWith(s, items, name, filter, faultyOnly, func(c columns.Column[T], m T) string {
 		return c.Render(m)
 	})
 }
@@ -43,8 +45,8 @@ func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, filter s
 // RenderForExport when present. Used by the CSV export path so
 // OCID-shaped columns emit fully-qualified IDs rather than raw
 // suffixes.
-func tuiRowsFlatForExport[T models.NamedFilterable](s columns.Set[T], items []T, realm, region, filter string, faultyOnly bool) []table.Row {
-	return tuiRowsFlatWith(s, items, filter, faultyOnly, func(c columns.Column[T], m T) string {
+func tuiRowsFlatForExport[T models.NamedFilterable](s columns.Set[T], items []T, name *string, realm, region, filter string, faultyOnly bool) []table.Row {
+	return tuiRowsFlatWith(s, items, name, filter, faultyOnly, func(c columns.Column[T], m T) string {
 		if c.RenderForExport != nil {
 			return c.RenderForExport(realm, region, m)
 		}

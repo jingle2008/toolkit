@@ -40,7 +40,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 			LifeCyclePhase: "DEPRECATED",
 		},
 	}
-	rows := tuiRowsFlat(columns.BaseModelColumns, baseModels, "", false)
+	rows := tuiRowsFlat(columns.BaseModelColumns, baseModels, nil, "", false)
 	assert.Len(t, rows, 1)
 	// BaseModelColumns: Name, Display Name, Version, DAC Shape, Size,
 	// Context, Flags, Status. Internal/Vendor/Type were dropped.
@@ -396,7 +396,7 @@ func TestFilterRows(t *testing.T) {
 		{Type: "foo", Region: "us-phx-1"},
 		{Type: "bar", Region: "us-ashburn-1"},
 	}
-	rows := tuiRowsFlat(columns.EnvironmentColumns, items, "foo", false)
+	rows := tuiRowsFlat(columns.EnvironmentColumns, items, nil, "foo", false)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, "foo-phx", rows[0][0])
 }
@@ -423,7 +423,7 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 		{InternalName: "a", Name: "A"},
 		{InternalName: "b", Name: "B"},
 	}
-	rows := tuiRowsFlat(columns.BaseModelColumns, m, "a", false)
+	rows := tuiRowsFlat(columns.BaseModelColumns, m, nil, "a", false)
 	assert.Len(t, rows, 1)
 	assert.Contains(t, rows[0][0], "A")
 }
