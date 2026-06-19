@@ -65,6 +65,16 @@ func loadGPUNodesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, e
 	}
 }
 
+func loadGPUWorkloadsCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+	return func() tea.Msg {
+		items, err := ld.LoadGPUWorkloadsByNode(ctx, kubeCfg, env)
+		if err != nil {
+			return errMsg(fmt.Errorf("failed to load %s: %w", domain.GPUWorkload, err))
+		}
+		return gpuWorkloadsLoadedMsg{Items: items, Gen: gen}
+	}
+}
+
 func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)

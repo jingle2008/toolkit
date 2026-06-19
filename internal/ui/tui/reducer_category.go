@@ -55,6 +55,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		domain.ImportedModel:                   func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleImportedModelCategory(refresh, gen) },
 		domain.GPUPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUPoolCategory(refresh, gen) },
 		domain.GPUNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUNodeCategory(refresh, gen) },
+		domain.GPUWorkload:                     func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUWorkloadCategory(refresh, gen) },
 		domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
 		domain.LimitRegionalOverride:           func(m *Model, _ bool, gen int) tea.Cmd { return m.handleLimitRegionalOverrideCategory(gen) },
 		domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool, gen int) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory(gen) },
@@ -147,6 +148,13 @@ func (m *Model) handleGPUPoolCategory(refresh bool, gen int) tea.Cmd {
 func (m *Model) handleGPUNodeCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.GPUNodeMap == nil || refresh {
 		return loadGPUNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	}
+	return nil
+}
+
+func (m *Model) handleGPUWorkloadCategory(refresh bool, gen int) tea.Cmd {
+	if m.dataset == nil || m.dataset.GPUWorkloadMap == nil || refresh {
+		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }

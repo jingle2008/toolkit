@@ -117,6 +117,11 @@ type gpuNodesLoadedMsg struct {
 	Gen   int
 }
 
+type gpuWorkloadsLoadedMsg struct {
+	Items map[string][]models.GPUWorkload
+	Gen   int
+}
+
 type dedicatedAIClustersLoadedMsg struct {
 	Items map[string][]models.DedicatedAICluster
 	Gen   int

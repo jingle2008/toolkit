@@ -96,6 +96,17 @@ func TestHandleGPUNodesLoaded(t *testing.T) {
 	}
 }
 
+func TestHandleGPUWorkloadsLoaded(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset = &models.Dataset{}
+	items := map[string][]models.GPUWorkload{"node-a": {{Name: "p1", Node: "node-a"}}}
+	m.handleGPUWorkloadsLoaded(items, m.gen)
+	if got := m.dataset.GPUWorkloadMap["node-a"]; len(got) != 1 || got[0].Name != "p1" {
+		t.Fatalf("GPUWorkloadMap not applied: %+v", m.dataset.GPUWorkloadMap)
+	}
+}
+
 func TestHandleDedicatedAIClustersLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
