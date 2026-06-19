@@ -9,9 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//nolint:paralleltest // mutates the package-global execCommand seam; must not run concurrently with the sibling OpenURL test
 func TestOpenURL_LaunchesPlatformOpener(t *testing.T) {
-	t.Parallel()
-
 	var gotName string
 	var gotArgs []string
 	orig := execCommand
@@ -40,9 +39,8 @@ func TestOpenURL_LaunchesPlatformOpener(t *testing.T) {
 	assert.Equal(t, url, gotArgs[len(gotArgs)-1])
 }
 
+//nolint:paralleltest // mutates the package-global execCommand seam; must not run concurrently with the sibling OpenURL test
 func TestOpenURL_StartErrorIsWrapped(t *testing.T) {
-	t.Parallel()
-
 	orig := execCommand
 	t.Cleanup(func() { execCommand = orig })
 	execCommand = func(_ string, _ ...string) *exec.Cmd {

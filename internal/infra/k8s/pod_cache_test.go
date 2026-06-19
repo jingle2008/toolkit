@@ -21,7 +21,7 @@ func TestGetUniqeKey(t *testing.T) {
 	assert.Equal(t, "", getUniqeKey(logger, m2, "label"))
 }
 
-func makeUnstructuredPod(labels, annos map[string]string, name, ns string) *unstructured.Unstructured {
+func makeUnstructuredPod(labels, annos map[string]string, name string) *unstructured.Unstructured {
 	// Convert to map[string]interface{} as expected by unstructured helpers.
 	labelsIfc := make(map[string]any, len(labels))
 	for k, v := range labels {
@@ -35,7 +35,7 @@ func makeUnstructuredPod(labels, annos map[string]string, name, ns string) *unst
 	obj := map[string]any{
 		"metadata": map[string]any{
 			"name":        name,
-			"namespace":   ns,
+			"namespace":   "ns1",
 			"labels":      labelsIfc,
 			"annotations": annosIfc,
 		},
@@ -64,19 +64,19 @@ func TestGetPodStats(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	idle := withGPURequest(makeUnstructuredPod(map[string]string{appLabel: reservationLabel}, nil, "idle", "ns1"))
+	idle := withGPURequest(makeUnstructuredPod(map[string]string{appLabel: reservationLabel}, nil, "idle"))
 	// workload pod with annotation
 	workAnn := withGPURequest(makeUnstructuredPod(
 		map[string]string{servingLabelV1: "dummy"},
 		map[string]string{baseModelLabelV2: "m1"},
-		"w1", "ns1"))
+		"w1"))
 	// workload pod missing model/component (still requests GPU, counts)
-	bad := withGPURequest(makeUnstructuredPod(map[string]string{}, nil, "bad", "ns1"))
+	bad := withGPURequest(makeUnstructuredPod(map[string]string{}, nil, "bad"))
 	// serving pod that requests no GPU — excluded from the counts
 	nonGPU := makeUnstructuredPod(
 		map[string]string{servingLabelV1: "dummy"},
 		map[string]string{baseModelLabelV2: "m2"},
-		"non-gpu", "ns1")
+		"non-gpu")
 
 	cache := PodCache{byNS: map[string][]*unstructured.Unstructured{
 		"ns1": {idle, workAnn, bad, nonGPU},

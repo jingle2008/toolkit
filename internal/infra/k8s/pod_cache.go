@@ -24,6 +24,7 @@ type PodCache struct {
 	byNS map[string][]*unstructured.Unstructured
 }
 
+//nolint:cyclop // single-pass pod classification; the label/annotation branches are clearer inline than split across helpers
 func (c PodCache) getPodStats(ctx context.Context, namespace string) PodStats {
 	pods := c.byNS[namespace]
 	idlePods, totalPods := 0, 0

@@ -25,6 +25,7 @@ func TestJumpToParent(t *testing.T) {
 	t.Parallel()
 
 	t.Run("drilled-in: uses the active scope and keeps it", func(t *testing.T) {
+		t.Parallel()
 		m := newTestModel(t)
 		m.category = domain.DedicatedAICluster
 		m.scope = &domain.Scope{Category: domain.Tenant, Name: "tenant1"}
@@ -38,6 +39,7 @@ func TestJumpToParent(t *testing.T) {
 	})
 
 	t.Run("no scope: derives the parent Tenant from the selected row", func(t *testing.T) {
+		t.Parallel()
 		m := newTestModel(t)
 		m.category = domain.DedicatedAICluster
 		m.scope = nil
@@ -53,6 +55,7 @@ func TestJumpToParent(t *testing.T) {
 	})
 
 	t.Run("no scope: regional override derives its definition", func(t *testing.T) {
+		t.Parallel()
 		m := newTestModel(t)
 		m.category = domain.LimitRegionalOverride
 		m.scope = nil
@@ -66,6 +69,7 @@ func TestJumpToParent(t *testing.T) {
 	})
 
 	t.Run("multi-parent: drilled-in tenancy override returns to the breadcrumb parent", func(t *testing.T) {
+		t.Parallel()
 		// Drilled in from a Definition — jump back to that Definition,
 		// not the Tenant; the breadcrumb disambiguates the two parents.
 		m := newTestModel(t)
@@ -80,6 +84,7 @@ func TestJumpToParent(t *testing.T) {
 	})
 
 	t.Run("multi-parent: no scope is a no-op (ambiguous parent)", func(t *testing.T) {
+		t.Parallel()
 		// Reached directly (no breadcrumb): a tenancy override has two
 		// parents, so we don't guess — jump is a no-op.
 		m := newTestModel(t)
@@ -90,6 +95,7 @@ func TestJumpToParent(t *testing.T) {
 	})
 
 	t.Run("no-op when the category has no parent", func(t *testing.T) {
+		t.Parallel()
 		m := newTestModel(t)
 		m.category = domain.Tenant
 		m.scope = nil
@@ -121,6 +127,7 @@ func TestParentScope(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got, ok := parentScope(tc.cat, tc.row)
 			require.Equal(t, tc.ok, ok)
 			require.Equal(t, tc.want, got)

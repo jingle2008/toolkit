@@ -2,6 +2,7 @@ package models
 
 import "testing"
 
+//nolint:cyclop // straight-line assertions over the model's accessors; splitting would not aid clarity
 func TestGPUWorkload(t *testing.T) {
 	t.Parallel()
 	w := GPUWorkload{

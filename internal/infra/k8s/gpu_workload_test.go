@@ -31,6 +31,7 @@ func gpuPod(name, node string, gpus int64, labels, annos map[string]string) *cor
 	}
 }
 
+//nolint:cyclop // end-to-end loader test; the sequential setup + assertions read better in one body
 func TestLoadGPUWorkloadsByNode(t *testing.T) {
 	t.Parallel()
 	serving := gpuPod("serv", "node-a", 2,

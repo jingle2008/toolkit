@@ -52,6 +52,7 @@ func TestComputeTableRows_RegionalOverrideScopeFilter(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ds := tc.dataset()
 			scope := &domain.Scope{Category: tc.owner, Name: "item-a"}
 

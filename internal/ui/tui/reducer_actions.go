@@ -156,14 +156,22 @@ func (m *Model) openDacMetrics(item any) tea.Cmd {
 		m.logger.Errorw("no dedicated AI cluster selected for metrics", "category", m.category)
 		return nil
 	}
-	ocid := dac.OCID(m.environment.Realm, m.environment.Region)
-	fleet := "generative-ai-service-api-" + m.environment.Type
-	now := time.Now()
-	target := telemetry.MetricsURL(ocid, m.environment.Region, telemetry.Project, fleet, now.Add(-7*24*time.Hour), now)
+	target := m.dacMetricsURL(dac, time.Now())
 	return func() tea.Msg {
 		if err := actions.OpenURL(target); err != nil {
 			return metricsOpenErrMsg{err: err}
 		}
 		return nil
 	}
+}
+
+// dacMetricsURL builds the OCI Telemetry MQL dashboard URL for the DAC
+// from the current environment (realm/region/type) and a 7-day window
+// ending at now. Split out from openDacMetrics so the URL construction
+// is unit-testable without launching a browser.
+func (m *Model) dacMetricsURL(dac *models.DedicatedAICluster, now time.Time) string {
+	ocid := dac.OCID(m.environment.Realm, m.environment.Region)
+	fleet := "generative-ai-service-api-" + m.environment.Type
+	return telemetry.MetricsURL(ocid, m.environment.Region, telemetry.Project, fleet,
+		now.Add(-7*24*time.Hour), now)
 }
