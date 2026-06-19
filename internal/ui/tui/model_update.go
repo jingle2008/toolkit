@@ -60,6 +60,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Intercepted here (not in the form handler) so the toast still
 		// fires if the user dismissed the form before the launch failed.
 		return m, m.showToast(fmt.Sprintf("failed to open portal: %v", msg.err), toastError)
+	case metricsOpenErrMsg:
+		return m, m.showToast(fmt.Sprintf("failed to open metrics: %v", msg.err), toastError)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil

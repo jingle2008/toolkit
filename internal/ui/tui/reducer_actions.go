@@ -3,11 +3,13 @@ package tui
 import (
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/telemetry"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -47,6 +49,8 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 		return m.copyTenantID(item)
 	case key.Matches(msg, keys.EditTenant):
 		return m.enterEditTenantView()
+	case key.Matches(msg, keys.OpenMetrics):
+		return m.openDacMetrics(item)
 	case key.Matches(msg, keys.Refresh):
 		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):
@@ -136,4 +140,33 @@ func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 func (m *Model) selectedItem() any {
 	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	return findItem(m.dataset, m.category, itemKey)
+}
+
+// metricsProject is the OCI Telemetry namespace for GenAI metrics.
+const metricsProject = "GenerativeAIService"
+
+// metricsOpenErrMsg reports a failure to launch the metrics dashboard.
+type metricsOpenErrMsg struct{ err error }
+
+// openDacMetrics builds the OCI Telemetry MQL dashboard URL for the
+// selected DedicatedAICluster and opens it in the browser, off the UI
+// goroutine. Non-DAC selections are a logged no-op. The fleet is derived
+// from the environment type (dev/preprod/prod); the window is the last
+// 24h.
+func (m *Model) openDacMetrics(item any) tea.Cmd {
+	dac, ok := item.(*models.DedicatedAICluster)
+	if !ok || dac == nil {
+		m.logger.Errorw("no dedicated AI cluster selected for metrics", "category", m.category)
+		return nil
+	}
+	ocid := dac.OCID(m.environment.Realm, m.environment.Region)
+	fleet := "generative-ai-service-api-" + m.environment.Type
+	now := time.Now()
+	target := telemetry.MetricsURL(ocid, m.environment.Region, metricsProject, fleet, now.Add(-24*time.Hour), now)
+	return func() tea.Msg {
+		if err := actions.OpenURL(target); err != nil {
+			return metricsOpenErrMsg{err: err}
+		}
+		return nil
+	}
 }

@@ -32,6 +32,21 @@ func TestKeyBindingHelp(t *testing.T) {
 	}
 }
 
+func TestResolveKeys_DacHasOpenMetrics(t *testing.T) {
+	t.Parallel()
+	km := ResolveKeys(domain.DedicatedAICluster, common.ListView)
+	found := false
+	for _, b := range km.Context {
+		if b.Help().Key == OpenMetrics.Help().Key {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("DedicatedAICluster/ListView context missing OpenMetrics binding")
+	}
+}
+
 func TestResolveKeys_GlobalAndContext(t *testing.T) {
 	t.Parallel()
 	km := ResolveKeys(domain.BaseModel, common.ListView)
