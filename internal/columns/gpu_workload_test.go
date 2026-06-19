@@ -14,7 +14,7 @@ func TestGPUWorkloadColumns(t *testing.T) {
 	}
 	w := models.GPUWorkload{
 		Name: "p1", Node: "node-a", TenantID: "suffix1", Namespace: "ns1",
-		Model: "gpt", Runtime: "vllm", GPUs: 2, Mode: "RawDeployment",
+		Model: "gpt", Runtime: "vllm", GPUs: 2, Restarts: 4, Age: "3d", Mode: "RawDeployment",
 		Owner: &models.Tenant{Name: "acme"},
 	}
 	got := map[string]string{}
@@ -23,7 +23,7 @@ func TestGPUWorkloadColumns(t *testing.T) {
 	}
 	want := map[string]string{
 		"name": "p1", "node": "node-a", "tenant": "acme", "namespace": "ns1",
-		"model": "gpt", "runtime": "vllm", "gpus": "2", "mode": "RawDeployment",
+		"model": "gpt", "runtime": "vllm", "gpus": "2", "restarts": "4", "age": "3d", "mode": "RawDeployment",
 	}
 	for k, v := range want {
 		if got[k] != v {

@@ -15,14 +15,19 @@ import (
 func gpuPod(name, node string, gpus int64, labels, annos map[string]string) *corev1.Pod {
 	c := corev1.Container{Name: "main"}
 	if gpus > 0 {
-		c.Resources = corev1.ResourceRequirements{
-			Limits: corev1.ResourceList{gpuProperty: *resource.NewQuantity(gpus, resource.DecimalSI)},
-		}
+		// Set both requests and limits — Kubernetes requires them equal
+		// for nvidia.com/gpu, and the loader counts requests via
+		// calculatePodGPUs.
+		q := corev1.ResourceList{gpuProperty: *resource.NewQuantity(gpus, resource.DecimalSI)}
+		c.Resources = corev1.ResourceRequirements{Requests: q, Limits: q}
 	}
 	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ns1", Labels: labels, Annotations: annos},
-		Spec:       corev1.PodSpec{NodeName: node, Containers: []corev1.Container{c}},
-		Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name, Namespace: "ns1", Labels: labels, Annotations: annos,
+			CreationTimestamp: metav1.Now(),
+		},
+		Spec:   corev1.PodSpec{NodeName: node, Containers: []corev1.Container{c}},
+		Status: corev1.PodStatus{Phase: corev1.PodRunning},
 	}
 }
 
@@ -31,6 +36,10 @@ func TestLoadGPUWorkloadsByNode(t *testing.T) {
 	serving := gpuPod("serv", "node-a", 2,
 		map[string]string{"tenancy-id": "suffix1", "base-model-name": "gpt", "serving-runtime": "vllm"},
 		map[string]string{"ome.io/deploymentMode": "RawDeployment"})
+	serving.Status.ContainerStatuses = []corev1.ContainerStatus{
+		{Name: "main", RestartCount: 2},
+		{Name: "sidecar", RestartCount: 1},
+	}
 	bare := gpuPod("bare", "node-a", 1, nil, nil)   // GPU pod, no serving labels
 	noGPU := gpuPod("nogpu", "node-a", 0, nil, nil) // excluded
 	noNode := gpuPod("nonode", "", 4, nil, nil)      // excluded (unscheduled)
@@ -48,6 +57,15 @@ func TestLoadGPUWorkloadsByNode(t *testing.T) {
 			if w.Model != "gpt" || w.Runtime != "vllm" || w.GPUs != 2 ||
 				w.Mode != "RawDeployment" || w.TenantID != "suffix1" || w.Namespace != "ns1" {
 				t.Errorf("serv extraction wrong: %+v", w)
+			}
+			if w.Restarts != 3 { // 2 (main) + 1 (sidecar)
+				t.Errorf("serv restarts = %d, want 3", w.Restarts)
+			}
+			if w.Age == "" {
+				t.Errorf("serv age should be populated from creationTimestamp")
+			}
+			if !w.IsFaulty() {
+				t.Errorf("serv with restarts>0 should be faulty")
 			}
 		}
 		if w.Name == "bare" && (w.Model != "" || w.Runtime != "" || w.GPUs != 1) {

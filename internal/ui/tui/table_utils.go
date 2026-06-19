@@ -25,6 +25,7 @@ type tableStats map[string]int
 var statsColumns = map[domain.Category][]string{
 	domain.GPUPool:            {common.SizeCol, "GPUs"},
 	domain.GPUNode:            {"Total", common.FreeCol},
+	domain.GPUWorkload:        {common.GpusCol},
 	domain.DedicatedAICluster: {common.SizeCol},
 }
 

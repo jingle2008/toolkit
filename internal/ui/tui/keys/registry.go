@@ -271,7 +271,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Parent, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.GPUWorkload: {
-		common.ListView: {Parent, SortTenant, SortGpus, Refresh},
+		common.ListView: {Parent, SortTenant, SortGpus, SortAge, ToggleFaulty, Refresh},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, Refresh, ToggleFaulty, Delete},

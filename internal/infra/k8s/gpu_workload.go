@@ -2,8 +2,8 @@ package k8s
 
 import (
 	"context"
+	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -15,23 +15,6 @@ import (
 // running-pod set into one response. Pages are followed via the
 // Continue token in LoadGPUWorkloadsByNode.
 const gpuWorkloadPageSize = 500
-
-// podGPULimits sums nvidia.com/gpu across the pod's containers' limits.
-// Only Spec.Containers are considered (not InitContainers / sidecars),
-// matching calculatePodGPUs: GPU serving/training/reservation workloads
-// request the device on their main container. Limits (not requests) per
-// spec; for nvidia.com/gpu the two are equal — Kubernetes forbids
-// overcommitting extended resources — so this agrees with the
-// requests-based node "Allocated" sum.
-func podGPULimits(pod *corev1.Pod) int {
-	var total int64
-	for _, c := range pod.Spec.Containers {
-		if q, ok := c.Resources.Limits[gpuProperty]; ok {
-			total += q.Value()
-		}
-	}
-	return int(total)
-}
 
 // LoadGPUWorkloadsByNode lists running pods that consume GPU and groups
 // them by spec.nodeName (== GPUNode.Name). A pod qualifies when it limits
@@ -56,12 +39,27 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 		}
 		for i := range page.Items {
 			pod := &page.Items[i]
-			gpus := podGPULimits(pod)
+			// calculatePodGPUs (requests) is the same accounting the
+			// GPUNode "Allocated" sum uses. For nvidia.com/gpu requests
+			// equal limits (Kubernetes forbids overcommitting extended
+			// resources), so this matches the spec's "limits" intent while
+			// keeping a single source of truth. Only Spec.Containers count
+			// (not init/sidecars) — GPU workloads request the device on
+			// their main container.
+			gpus := int(calculatePodGPUs(pod))
 			if gpus <= 0 || pod.Spec.NodeName == "" {
 				continue
 			}
 			labels := pod.Labels
 			annos := pod.Annotations
+			var restarts int
+			for _, cs := range pod.Status.ContainerStatuses {
+				restarts += int(cs.RestartCount)
+			}
+			age := ""
+			if ts := pod.CreationTimestamp; !ts.IsZero() {
+				age = FormatAge(time.Since(ts.Time))
+			}
 			w := models.GPUWorkload{
 				Name:      pod.Name,
 				Node:      pod.Spec.NodeName,
@@ -70,6 +68,8 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 				Model:     labels["base-model-name"],
 				Runtime:   labels["serving-runtime"],
 				GPUs:      gpus,
+				Restarts:  restarts,
+				Age:       age,
 				Mode:      annos["ome.io/deploymentMode"],
 			}
 			result[pod.Spec.NodeName] = append(result[pod.Spec.NodeName], w)
