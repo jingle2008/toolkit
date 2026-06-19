@@ -70,6 +70,11 @@ func registerTools(s *Server) {
 	}, s.handleListGPUNodes)
 
 	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "list_gpu_workloads",
+		Description: "List GPU-consuming pods (workloads) across all nodes as a flat array. The hosting node is preserved on each item as `node`. Each item is {name, node, tenantId, namespace, model, runtime, gpus, mode}; model/runtime/mode are best-effort and blank for non-serving GPU pods. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+	}, s.handleListGPUWorkloads)
+
+	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_dacs",
 		Description: "List dedicated AI clusters as a flat array. The owning tenant is preserved on each item as `tenantId`. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListDACs)
@@ -192,6 +197,16 @@ func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolReques
 	}
 	// No wrapper: GPUNode.NodePool (JSON `poolName`) already carries
 	// the group key. Wrapping would duplicate.
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
+}
+
+func (s *Server) handleListGPUWorkloads(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUWorkload], error) {
+	grouped, err := s.loader.LoadGPUWorkloadsByNode(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	if err != nil {
+		return failTool[listResult[models.GPUWorkload]](ctx, req, "load gpu workloads", err)
+	}
+	// No wrapper: GPUWorkload.Node (JSON `node`) already carries the
+	// group key. Wrapping would duplicate.
 	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
