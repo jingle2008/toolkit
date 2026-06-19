@@ -208,6 +208,11 @@ var (
 		key.WithKeys("G"),
 		key.WithHelp("<shift+g>", SortPrefix+common.GpusCol),
 	)
+	// SortRestarts is a key binding for sorting by the "Restarts" column.
+	SortRestarts = key.NewBinding(
+		key.WithKeys("R"),
+		key.WithHelp("<shift+r>", SortPrefix+common.RestartsCol),
+	)
 	// SortAge is a key binding for sorting by the "Age" column.
 	SortAge = key.NewBinding(
 		key.WithKeys("A"),
@@ -271,7 +276,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Parent, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.GPUWorkload: {
-		common.ListView: {Parent, SortTenant, SortGpus, SortAge, ToggleFaulty, Refresh},
+		common.ListView: {Parent, SortTenant, SortGpus, SortRestarts, SortAge, ToggleFaulty, Refresh},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, Refresh, ToggleFaulty, Delete},

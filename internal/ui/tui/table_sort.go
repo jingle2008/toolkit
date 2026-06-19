@@ -21,10 +21,10 @@ func sortRows(rows []table.Row, headers []header, sortColumn string, asc bool) {
 	}
 
 	intCols := map[string]struct{}{
-		common.FreeCol:    {},
-		common.ContextCol: {},
-		common.GpusCol:    {},
-		"Restarts":        {},
+		common.FreeCol:     {},
+		common.ContextCol:  {},
+		common.GpusCol:     {},
+		common.RestartsCol: {},
 	}
 
 	switch {

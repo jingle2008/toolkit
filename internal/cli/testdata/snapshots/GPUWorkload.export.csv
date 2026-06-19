@@ -1,2 +1,2 @@
-NAME,NODE,TENANT,NAMESPACE,MODEL,RUNTIME,GPUS,RESTARTS,AGE,MODE
-pod-1,node-1,ocid1.tenancy.oc1..tenant-1,ns1,gpt-oss-120b,vllm,2,0,3d,RawDeployment
+NAME,NODE,TENANT,NAMESPACE,MODEL,RUNTIME,GPUS,RESTARTS,AGE
+pod-1,node-1,ocid1.tenancy.oc1..tenant-1,ns1,gpt-oss-120b,vllm,2,0,3d
