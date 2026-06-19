@@ -27,7 +27,6 @@ type BaseModel struct {
 	IsImageTextToText    bool             `json:"isImageTextToText"`
 	DACShapeConfigs      *DACShapeConfigs `json:"dacShapeConfigs,omitempty"`
 	Runtime              string           `json:"runtime"`
-	Replicas             int              `json:"replicas"`
 	Status               string           `json:"status"`
 	ParameterSize        string           `json:"parameterSize"`
 	StorageURI           string           `json:"storageUri,omitempty"`

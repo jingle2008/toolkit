@@ -92,7 +92,6 @@ func parseBaseModel(obj *unstructured.Unstructured) models.BaseModel {
 		IsInternal:           annotations["models.ome.io/internal"] == "true",
 		Capabilities:         capabilities,
 		Runtime:              runtime,
-		Replicas:             0,
 		DACShapeConfigs:      dacShapeConfigs,
 		DeprecatedDate:       labels["genai-model-deprecated-date"],
 		OnDemandRetiredDate:  labels["genai-model-on-demand-retired-date"],
