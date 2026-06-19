@@ -99,19 +99,6 @@ func TestCategory_IsScopeOf(t *testing.T) {
 	assert.False(t, LimitTenancyOverride.IsScopeOf(Tenant))
 }
 
-func TestCategory_Definition(t *testing.T) {
-	t.Parallel()
-	assert.Equal(t, LimitDefinition, LimitTenancyOverride.Definition())
-	assert.Equal(t, ConsolePropertyDefinition, ConsolePropertyTenancyOverride.Definition())
-	assert.Equal(t, ConsolePropertyDefinition, ConsolePropertyRegionalOverride.Definition())
-	assert.Equal(t, PropertyDefinition, PropertyTenancyOverride.Definition())
-	assert.Equal(t, PropertyDefinition, PropertyRegionalOverride.Definition())
-	assert.Equal(t, GPUPool, GPUNode.Definition())
-
-	// non-override category should return Category(-1)
-	assert.Equal(t, Category(-1), Tenant.Definition())
-}
-
 func TestAliases(t *testing.T) {
 	t.Parallel()
 	aliases := Aliases

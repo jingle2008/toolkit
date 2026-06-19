@@ -77,13 +77,11 @@ func (e Category) IsScopeOf(o Category) bool {
 	return slices.Contains(categories, o)
 }
 
-// IsScope returns true if the category is a scope category.
+// IsScope returns true if the category is a scope category — i.e. it
+// scopes at least one other category. Derived from ScopedCategories so
+// the set of scope categories has a single source of truth.
 func (e Category) IsScope() bool {
-	switch e { //nolint:exhaustive
-	case Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GPUPool:
-		return true
-	}
-	return false
+	return len(e.ScopedCategories()) > 0
 }
 
 // ScopedCategories returns the categories that are scoped by the receiver.
@@ -213,24 +211,6 @@ func init() {
 
 // ErrUnknownCategory is returned when a string cannot be parsed into a known Category.
 var ErrUnknownCategory = errors.New("unknown category")
-
-/*
-Definition returns the definition category for the receiver.
-*/
-func (e Category) Definition() Category {
-	switch e { //nolint:exhaustive
-	case LimitTenancyOverride, LimitRegionalOverride:
-		return LimitDefinition
-	case ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride:
-		return ConsolePropertyDefinition
-	case PropertyTenancyOverride, PropertyRegionalOverride:
-		return PropertyDefinition
-	case GPUNode:
-		return GPUPool
-	default:
-		return Category(-1)
-	}
-}
 
 /*
 ParseCategory parses a string (case-insensitive, with common aliases) into a Category enum.
