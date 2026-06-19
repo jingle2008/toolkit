@@ -42,7 +42,7 @@ func TestLoadGPUWorkloadsByNode(t *testing.T) {
 	}
 	bare := gpuPod("bare", "node-a", 1, nil, nil)   // GPU pod, no serving labels
 	noGPU := gpuPod("nogpu", "node-a", 0, nil, nil) // excluded
-	noNode := gpuPod("nonode", "", 4, nil, nil)      // excluded (unscheduled)
+	noNode := gpuPod("nonode", "", 4, nil, nil)     // excluded (unscheduled)
 
 	cs := fake.NewSimpleClientset(serving, bare, noGPU, noNode)
 	got, err := LoadGPUWorkloadsByNode(context.Background(), cs)

@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/pkg/models"
-	"github.com/stretchr/testify/require"
 )
 
 func sp(s string) *string { return &s }

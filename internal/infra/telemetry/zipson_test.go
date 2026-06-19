@@ -46,6 +46,6 @@ func TestEncoder_StringReference(t *testing.T) {
 func TestEncoder_StrStripsDelimiter(t *testing.T) {
 	t.Parallel()
 	var e Encoder
-	e.Str("a¨b") // embedded U+00A8 must be stripped so it can't close the string early
+	e.Str("a¨b")                        // embedded U+00A8 must be stripped so it can't close the string early
 	assert.Equal(t, "¨ab¨", e.String()) // ¨ab¨
 }
