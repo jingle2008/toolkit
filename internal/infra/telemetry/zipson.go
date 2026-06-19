@@ -6,16 +6,12 @@ import "strings"
 // base62Alphabet is Zipson's integer alphabet.
 const base62Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
-// base62 encodes n using Zipson's base62 alphabet. Negative values are
-// prefixed with '-'. Used for Zipson integer tokens (e.g. epoch-ms
-// timestamps).
+// base62 encodes a non-negative integer using Zipson's base62 alphabet.
+// Used for Zipson integer tokens (e.g. epoch-ms timestamps and small
+// counts); every caller passes a non-negative value.
 func base62(n int64) string {
-	if n == 0 {
+	if n <= 0 {
 		return "0"
-	}
-	neg := n < 0
-	if neg {
-		n = -n
 	}
 	var buf [16]byte
 	i := len(buf)
@@ -24,11 +20,7 @@ func base62(n int64) string {
 		buf[i] = base62Alphabet[n%62]
 		n /= 62
 	}
-	s := string(buf[i:])
-	if neg {
-		return "-" + s
-	}
-	return s
+	return string(buf[i:])
 }
 
 // Zipson serialization tokens (see OCI Telemetry MQL Decode notes).
@@ -42,8 +34,8 @@ const (
 
 // Encoder builds a Zipson payload. Strings are emitted in full (no
 // reference compression), which is still valid Zipson and decodes
-// correctly. It does NOT escape the string-delimiter rune (U+00A8); the
-// caller must not pass values containing it.
+// correctly. Str defends the wire format by stripping the
+// string-delimiter rune (U+00A8) from values.
 type Encoder struct {
 	b strings.Builder
 }
@@ -60,8 +52,14 @@ func (e *Encoder) BeginArray() *Encoder { e.b.WriteByte('|'); return e }
 // EndArray writes the array-end token '÷'.
 func (e *Encoder) EndArray() *Encoder { e.b.WriteString(tokenArrEnd); return e }
 
-// Str writes a delimited Zipson string.
+// Str writes a delimited Zipson string. Any embedded string-delimiter
+// rune (U+00A8) is stripped, since it would otherwise prematurely close
+// the string; no legitimate input (OCIDs, region ids, MQL queries)
+// contains it, so this is a defensive guard rather than a data transform.
 func (e *Encoder) Str(s string) *Encoder {
+	if strings.Contains(s, tokenString) {
+		s = strings.ReplaceAll(s, tokenString, "")
+	}
 	e.b.WriteString(tokenString)
 	e.b.WriteString(s)
 	e.b.WriteString(tokenString)

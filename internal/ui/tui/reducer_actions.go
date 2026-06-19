@@ -142,9 +142,6 @@ func (m *Model) selectedItem() any {
 	return findItem(m.dataset, m.category, itemKey)
 }
 
-// metricsProject is the OCI Telemetry namespace for GenAI metrics.
-const metricsProject = "GenerativeAIService"
-
 // metricsOpenErrMsg reports a failure to launch the metrics dashboard.
 type metricsOpenErrMsg struct{ err error }
 
@@ -162,7 +159,7 @@ func (m *Model) openDacMetrics(item any) tea.Cmd {
 	ocid := dac.OCID(m.environment.Realm, m.environment.Region)
 	fleet := "generative-ai-service-api-" + m.environment.Type
 	now := time.Now()
-	target := telemetry.MetricsURL(ocid, m.environment.Region, metricsProject, fleet, now.Add(-24*time.Hour), now)
+	target := telemetry.MetricsURL(ocid, m.environment.Region, telemetry.Project, fleet, now.Add(-24*time.Hour), now)
 	return func() tea.Msg {
 		if err := actions.OpenURL(target); err != nil {
 			return metricsOpenErrMsg{err: err}

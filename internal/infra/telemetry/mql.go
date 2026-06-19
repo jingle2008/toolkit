@@ -9,6 +9,10 @@ import (
 // exploreBaseURL is the OCI Telemetry MQL Explore page.
 const exploreBaseURL = "https://devops.oci.oraclecorp.com/telemetry/mql/explore"
 
+// Project is the OCI Telemetry namespace (the "project" dimension) that
+// scopes GenAI service metrics. Callers pass it to MetricsURL.
+const Project = "GenerativeAIService"
+
 // metricGroups × metricKinds form the 3×3 token-length metric grid.
 var (
 	metricGroups = []string{"chat", "chatCompletions", "responses"}
