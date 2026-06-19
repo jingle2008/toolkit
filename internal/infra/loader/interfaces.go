@@ -51,6 +51,11 @@ type GPUNodeLoader interface {
 	LoadGPUNodesByPool(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUNode, error)
 }
 
+// GPUWorkloadLoader loads GPU-consuming pods grouped by node.
+type GPUWorkloadLoader interface {
+	LoadGPUWorkloadsByNode(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUWorkload, error)
+}
+
 /*
 DedicatedAIClusterLoader defines an interface for loading dedicated AI clusters.
 */
@@ -84,6 +89,7 @@ type Composite interface {
 	ImportedModelLoader
 	GPUPoolLoader
 	GPUNodeLoader
+	GPUWorkloadLoader
 	DedicatedAIClusterLoader
 	TenancyOverrideLoader
 	RegionalOverrideLoader

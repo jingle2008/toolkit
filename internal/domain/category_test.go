@@ -30,6 +30,7 @@ func TestCategory_String(t *testing.T) {
 		{ServiceTenancy, "ServiceTenancy"},
 		{GPUPool, "GPUPool"},
 		{GPUNode, "GPUNode"},
+		{GPUWorkload, "GPUWorkload"},
 		{DedicatedAICluster, "DedicatedAICluster"},
 		{Category(99), "Category(99)"},
 	}
@@ -44,12 +45,12 @@ func TestCategory_String(t *testing.T) {
 func TestCategory_IsScope(t *testing.T) {
 	t.Parallel()
 	scopeCases := []Category{
-		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GPUPool,
+		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GPUPool, GPUNode,
 	}
 	nonScopeCases := []Category{
 		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
 		ConsolePropertyRegionalOverride, PropertyRegionalOverride, ModelArtifact,
-		Environment, ServiceTenancy, GPUNode, DedicatedAICluster,
+		Environment, ServiceTenancy, DedicatedAICluster,
 	}
 	for _, c := range scopeCases {
 		t.Run("scope_"+c.String(), func(t *testing.T) {
@@ -77,6 +78,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		{ConsolePropertyDefinition, []Category{ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride}},
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},
 		{GPUPool, []Category{GPUNode}},
+		{GPUNode, []Category{GPUWorkload}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.scope.String(), func(t *testing.T) {
@@ -99,6 +101,7 @@ func TestCategory_Parents(t *testing.T) {
 		{DedicatedAICluster, []Category{Tenant}},
 		{ImportedModel, []Category{Tenant}},
 		{GPUNode, []Category{GPUPool}},
+		{GPUWorkload, []Category{GPUNode}},
 		{LimitRegionalOverride, []Category{LimitDefinition}},
 		{ConsolePropertyRegionalOverride, []Category{ConsolePropertyDefinition}},
 		{PropertyRegionalOverride, []Category{PropertyDefinition}},
@@ -190,6 +193,7 @@ func TestCategory_NeedsKubeConfig(t *testing.T) {
 		{ImportedModel, true},
 		{GPUNode, true},
 		{DedicatedAICluster, true},
+		{GPUWorkload, true},
 		{Tenant, false},
 	}
 	for _, tt := range tests {
@@ -205,4 +209,15 @@ func TestParseCategory_Unknown(t *testing.T) {
 	cat, err := ParseCategory("not-real")
 	require.Error(t, err)
 	assert.Equal(t, CategoryUnknown, cat)
+}
+
+func TestCategory_GPUWorkload(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, []Category{GPUWorkload}, GPUNode.ScopedCategories())
+	assert.True(t, GPUNode.IsScope())
+	assert.Equal(t, []Category{GPUNode}, GPUWorkload.Parents())
+	assert.True(t, GPUWorkload.NeedsKubeConfig())
+	c, err := ParseCategory("gw")
+	require.NoError(t, err)
+	assert.Equal(t, GPUWorkload, c)
 }

@@ -117,6 +117,7 @@ func TestParentScope(t *testing.T) {
 		{"no parent", domain.Tenant, table.Row{"t1"}, domain.Scope{}, false},
 		{"grouped missing parent column", domain.DedicatedAICluster, table.Row{"dac1"}, domain.Scope{}, false},
 		{"empty row", domain.GPUNode, table.Row{}, domain.Scope{}, false},
+		{"gpu workload", domain.GPUWorkload, table.Row{"pod1", "node-a"}, domain.Scope{Category: domain.GPUNode, Name: "node-a"}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -140,6 +141,22 @@ func TestParentKey_DispatchesInListView(t *testing.T) {
 	require.Equal(t, domain.Tenant, m.category, "o should jump to the parent category")
 }
 
+func TestGPUWorkloadKeys(t *testing.T) {
+	t.Parallel()
+	km := keys.ResolveKeys(domain.GPUWorkload, common.ListView)
+	wantDescs := map[string]bool{"Parent": false, keys.SortPrefix + common.TenantCol: false, keys.SortPrefix + common.GpusCol: false}
+	for _, b := range km.Context {
+		if _, ok := wantDescs[b.Help().Desc]; ok {
+			wantDescs[b.Help().Desc] = true
+		}
+	}
+	for d, found := range wantDescs {
+		if !found {
+			t.Errorf("GPUWorkload list view missing binding %q", d)
+		}
+	}
+}
+
 func TestParentShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 	t.Parallel()
 
@@ -149,6 +166,7 @@ func TestParentShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.LimitRegionalOverride,
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride,
+		domain.GPUWorkload,
 	}
 	for _, c := range subCategories {
 		require.True(t, contextHasParent(keys.ResolveKeys(c, common.ListView)),

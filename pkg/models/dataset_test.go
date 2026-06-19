@@ -103,6 +103,29 @@ func TestSetImportedModelMap(t *testing.T) {
 	}
 }
 
+func TestSetGPUWorkloadMap_ResolvesOwnerKeepsNodeKey(t *testing.T) {
+	t.Parallel()
+	d := &Dataset{
+		Tenants: []Tenant{{Name: "acme", IDs: []string{"ocid1.tenancy.oc1..suffix1"}}},
+	}
+	d.SetGPUWorkloadMap(map[string][]GPUWorkload{
+		"node-a": {{Name: "p1", Node: "node-a", TenantID: "suffix1"}},
+		"node-b": {{Name: "p2", Node: "node-b", TenantID: "unknown"}},
+	})
+	// Keyed by node, not re-keyed by tenant.
+	if _, ok := d.GPUWorkloadMap["node-a"]; !ok {
+		t.Fatalf("expected key node-a; got %v", d.GPUWorkloadMap)
+	}
+	// Owner resolved for matching suffix.
+	if d.GPUWorkloadMap["node-a"][0].Owner == nil || d.GPUWorkloadMap["node-a"][0].Owner.Name != "acme" {
+		t.Errorf("owner not resolved: %+v", d.GPUWorkloadMap["node-a"][0].Owner)
+	}
+	// Unmatched suffix → nil owner, key preserved.
+	if d.GPUWorkloadMap["node-b"][0].Owner != nil {
+		t.Errorf("expected nil owner for unknown suffix")
+	}
+}
+
 func keys[V any](m map[string]V) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {
@@ -129,6 +152,7 @@ func TestResetRealmScopedFields(t *testing.T) {
 		ImportedModelMap:                  map[string][]ImportedModel{"x": nil},
 		GPUPools:                          []GPUPool{{}},
 		GPUNodeMap:                        map[string][]GPUNode{"x": nil},
+		GPUWorkloadMap:                    map[string][]GPUWorkload{"x": nil},
 		DedicatedAIClusterMap:             map[string][]DedicatedAICluster{"x": nil},
 	}
 	d.ResetRealmScopedFields()
@@ -143,6 +167,7 @@ func TestResetRealmScopedFields(t *testing.T) {
 		d.ImportedModelMap != nil ||
 		d.GPUPools != nil ||
 		d.GPUNodeMap != nil ||
+		d.GPUWorkloadMap != nil ||
 		d.DedicatedAIClusterMap != nil {
 		t.Errorf("ResetRealmScopedFields did not nil all fields")
 	}

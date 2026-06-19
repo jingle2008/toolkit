@@ -180,7 +180,7 @@ func itemKeyFrom(category domain.Category, row table.Row) models.ItemKey {
 		return row[0]
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GPUNode, domain.DedicatedAICluster,
-		domain.ImportedModel, domain.ModelArtifact:
+		domain.ImportedModel, domain.ModelArtifact, domain.GPUWorkload:
 		// ModelArtifact row[1] is "Model Internal Name" which equals
 		// the ModelArtifactMap's parent BaseModel key — see
 		// columns/model_artifact.go. Treating it as a scoped key
@@ -215,7 +215,7 @@ func parentScope(category domain.Category, row table.Row) (domain.Scope, bool) {
 
 	parent := parents[0]
 	switch parent {
-	case domain.Tenant, domain.GPUPool:
+	case domain.Tenant, domain.GPUPool, domain.GPUNode:
 		if len(row) < 2 {
 			return domain.Scope{}, false
 		}

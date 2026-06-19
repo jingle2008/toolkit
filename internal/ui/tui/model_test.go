@@ -45,6 +45,10 @@ func (f fakeLoader) LoadGPUNodesByPool(_ context.Context, _ string, _ models.Env
 	return map[string][]models.GPUNode{}, nil
 }
 
+func (f fakeLoader) LoadGPUWorkloadsByNode(_ context.Context, _ string, _ models.Environment) (map[string][]models.GPUWorkload, error) {
+	return map[string][]models.GPUWorkload{}, nil
+}
+
 func (f fakeLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	return map[string][]models.DedicatedAICluster{}, nil
 }

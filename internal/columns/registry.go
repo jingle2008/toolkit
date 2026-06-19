@@ -71,6 +71,7 @@ var registry = map[domain.Category]registryEntry{
 	domain.ConsolePropertyRegionalOverride: newFlatEntry(ConsolePropertyRegionalOverrideColumns),
 	domain.PropertyRegionalOverride:        newFlatEntry(PropertyRegionalOverrideColumns),
 	domain.GPUNode:                         newGroupedEntry(GPUNodeColumns),
+	domain.GPUWorkload:                     newGroupedEntry(GPUWorkloadColumns),
 	domain.DedicatedAICluster:              newGroupedEntry(DACColumns),
 	domain.ImportedModel:                   newGroupedEntry(ImportedModelColumns),
 	domain.ModelArtifact:                   newGroupedEntry(ModelArtifactColumns),

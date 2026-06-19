@@ -415,6 +415,18 @@ func (m *Model) handleGPUNodesLoaded(items map[string][]models.GPUNode, gen int)
 	m.applyDataset(func(ds *models.Dataset) { ds.GPUNodeMap = items }, domain.GPUNode, total)
 }
 
+func (m *Model) handleGPUWorkloadsLoaded(items map[string][]models.GPUWorkload, gen int) {
+	if gen != m.gen {
+		m.endTask(true)
+		return
+	}
+	total := 0
+	for _, v := range items {
+		total += len(v)
+	}
+	m.applyDataset(func(ds *models.Dataset) { ds.SetGPUWorkloadMap(items) }, domain.GPUWorkload, total)
+}
+
 func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {
 	if gen != m.gen {
 		m.endTask(true)

@@ -304,6 +304,12 @@ func emitCategory(
 		// `poolName`) already carries the group key; the loader sets
 		// it from the same value used as the map key.
 		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.GPUNode, env, selected)
+	case domain.GPUWorkload:
+		grouped, err := ld.LoadGPUWorkloadsByNode(ctx, cfg.KubeConfig, env)
+		if err != nil {
+			return fmt.Errorf("load gpu workloads: %w", err)
+		}
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.GPUWorkload, env, selected)
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {

@@ -56,6 +56,10 @@ const (
 	GPUPool
 	// GPUNode is a category for GPU nodes.
 	GPUNode
+	// GPUWorkload is a category for GPU-consuming pods (any pod that
+	// requests nvidia.com/gpu). Scoped by GPUNode: GPUPool → GPUNode →
+	// GPUWorkload.
+	GPUWorkload
 	// DedicatedAICluster is a category for dedicated AI clusters.
 	DedicatedAICluster
 	// Alias is a category for reporting all aliases.
@@ -109,6 +113,8 @@ func (e Category) ScopedCategories() []Category {
 		}
 	case GPUPool:
 		return []Category{GPUNode}
+	case GPUNode:
+		return []Category{GPUWorkload}
 	default:
 		return nil
 	}
@@ -147,6 +153,8 @@ func (e Category) Aliases() []string {
 		aliases = append(aliases, "gp")
 	case DedicatedAICluster:
 		aliases = append(aliases, "dac")
+	case GPUWorkload:
+		aliases = append(aliases, "gw")
 	}
 	return aliases
 }
@@ -178,7 +186,7 @@ func (e Category) IsFaulty() bool {
 // rest come from the on-disk repo.
 func (e Category) NeedsKubeConfig() bool {
 	switch e { //nolint:exhaustive
-	case BaseModel, ImportedModel, GPUNode, DedicatedAICluster:
+	case BaseModel, ImportedModel, GPUNode, DedicatedAICluster, GPUWorkload:
 		return true
 	}
 	return false

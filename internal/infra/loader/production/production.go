@@ -103,6 +103,15 @@ func (Client) LoadGPUNodesByPool(ctx context.Context, kubeCfg string, env models
 	return k8s.LoadGPUNodesByPool(ctx, client)
 }
 
+// LoadGPUWorkloadsByNode lists GPU-consuming pods grouped by node.
+func (Client) LoadGPUWorkloadsByNode(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.GPUWorkload, error) {
+	client, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.LoadGPUWorkloadsByNode(ctx, client)
+}
+
 // LoadDedicatedAIClusters loads dedicated AI clusters from the given kube config and environment.
 func (Client) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
