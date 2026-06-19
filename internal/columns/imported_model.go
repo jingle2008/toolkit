@@ -32,7 +32,7 @@ var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedCo
 		},
 	},
 	{
-		Title: "Display Name", Key: "display-name", Ratio: 0.19,
+		Title: "Display Name", Key: "display-name", Ratio: 0.22,
 		Render: func(_ string, m models.ImportedModel) string { return m.DisplayName },
 	},
 	{
@@ -52,7 +52,7 @@ var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedCo
 		Render: func(_ string, m models.ImportedModel) string { return m.Vendor },
 	},
 	{
-		Title: "Status", Key: "status", Ratio: 0.08,
+		Title: "Status", Key: "status", Ratio: 0.05,
 		Render: func(_ string, m models.ImportedModel) string { return m.Status },
 	},
 }}
