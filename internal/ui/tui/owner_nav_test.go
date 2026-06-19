@@ -65,6 +65,30 @@ func TestJumpToOwner(t *testing.T) {
 		require.Equal(t, "some-limit", m.scope.Name)
 	})
 
+	t.Run("multi-parent: drilled-in tenancy override returns to the breadcrumb parent", func(t *testing.T) {
+		// Drilled in from a Definition — jump back to that Definition,
+		// not the Tenant; the breadcrumb disambiguates the two parents.
+		m := newTestModel(t)
+		m.category = domain.LimitTenancyOverride
+		m.scope = &domain.Scope{Category: domain.LimitDefinition, Name: "some-limit"}
+
+		cmd := m.jumpToOwner()
+
+		require.NotNil(t, cmd)
+		require.Equal(t, domain.LimitDefinition, m.category)
+		require.Equal(t, "some-limit", m.scope.Name)
+	})
+
+	t.Run("multi-parent: no scope is a no-op (ambiguous parent)", func(t *testing.T) {
+		// Reached directly (no breadcrumb): a tenancy override has two
+		// parents, so we don't guess — jump is a no-op.
+		m := newTestModel(t)
+		m.category = domain.LimitTenancyOverride
+		m.scope = nil
+		m.rawRows = []table.Row{{"o1", "tenantX"}}
+		require.Nil(t, m.jumpToOwner())
+	})
+
 	t.Run("no-op when the category has no owner", func(t *testing.T) {
 		m := newTestModel(t)
 		m.category = domain.Tenant
@@ -85,7 +109,9 @@ func TestOwnerScope(t *testing.T) {
 	}{
 		{"dac", domain.DedicatedAICluster, table.Row{"dac1", "tenant1"}, domain.Scope{Category: domain.Tenant, Name: "tenant1"}, true},
 		{"imported model", domain.ImportedModel, table.Row{"m1", "tenant2"}, domain.Scope{Category: domain.Tenant, Name: "tenant2"}, true},
-		{"limit tenancy override", domain.LimitTenancyOverride, table.Row{"o1", "tenantX"}, domain.Scope{Category: domain.Tenant, Name: "tenantX"}, true},
+		// Tenancy overrides have two parents (Tenant + Definition), so
+		// there is no unambiguous parent to derive without a breadcrumb.
+		{"limit tenancy override (ambiguous parent)", domain.LimitTenancyOverride, table.Row{"o1", "tenantX"}, domain.Scope{}, false},
 		{"gpu node", domain.GPUNode, table.Row{"node1", "poolA"}, domain.Scope{Category: domain.GPUPool, Name: "poolA"}, true},
 		{"regional override", domain.LimitRegionalOverride, table.Row{"lim1", "r1"}, domain.Scope{Category: domain.LimitDefinition, Name: "lim1"}, true},
 		{"no owner", domain.Tenant, table.Row{"t1"}, domain.Scope{}, false},

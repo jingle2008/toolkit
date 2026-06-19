@@ -89,6 +89,35 @@ func TestCategory_ScopedCategories(t *testing.T) {
 	assert.Nil(t, ModelArtifact.ScopedCategories())
 }
 
+func TestCategory_Parents(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		child Category
+		want  []Category
+	}{
+		// Single-parent children.
+		{DedicatedAICluster, []Category{Tenant}},
+		{ImportedModel, []Category{Tenant}},
+		{GPUNode, []Category{GPUPool}},
+		{LimitRegionalOverride, []Category{LimitDefinition}},
+		{ConsolePropertyRegionalOverride, []Category{ConsolePropertyDefinition}},
+		{PropertyRegionalOverride, []Category{PropertyDefinition}},
+		// Dual-parent children: scoped by both a Tenant and a Definition.
+		{LimitTenancyOverride, []Category{Tenant, LimitDefinition}},
+		{ConsolePropertyTenancyOverride, []Category{Tenant, ConsolePropertyDefinition}},
+		{PropertyTenancyOverride, []Category{Tenant, PropertyDefinition}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.child.String(), func(t *testing.T) {
+			t.Parallel()
+			assert.ElementsMatch(t, tc.want, tc.child.Parents())
+		})
+	}
+	// Top-level categories have no parent.
+	assert.Nil(t, Tenant.Parents())
+	assert.Nil(t, BaseModel.Parents())
+}
+
 func TestCategory_IsScopeOf(t *testing.T) {
 	t.Parallel()
 	assert.True(t, Tenant.IsScopeOf(LimitTenancyOverride))

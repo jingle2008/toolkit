@@ -192,41 +192,39 @@ func itemKeyFrom(category domain.Category, row table.Row) models.ItemKey {
 	return nil
 }
 
-// ownerScope derives the owning (parent) scope of a sub-category row so the
-// user can jump back to the owner without having drilled in from it. For the
-// grouped sub-categories row[1] is the owner's key by construction (the same
-// grouping key itemKeyFrom puts in ScopedItemKey.Scope); for the flat
-// regional overrides the override's Name (row[0]) is its definition. Returns
-// ok=false for categories that have no owner.
+// ownerScope derives the parent scope of a sub-category row so the user
+// can jump back to the parent without having drilled in from it.
+//
+// It only resolves a parent when the category has exactly one — an
+// unambiguous "the parent". Multi-parent categories (the tenancy
+// overrides, scoped by both a Tenant and a Definition) return ok=false:
+// there is no single parent to pick without a breadcrumb, which
+// jumpToOwner handles separately via the active scope. Top-level
+// categories (no parent) also return ok=false.
+//
+// The parent's instance name lives in the rendered row, keyed on the
+// parent's type: grouped sub-categories (Tenant/GPUPool owners) carry
+// the parent key at row[1] (the same grouping key itemKeyFrom puts in
+// ScopedItemKey.Scope), while flat regional overrides are named after
+// their definition at row[0].
 func ownerScope(category domain.Category, row table.Row) (domain.Scope, bool) {
-	switch category {
-	case domain.DedicatedAICluster, domain.ImportedModel,
-		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
-		domain.PropertyTenancyOverride:
+	parents := category.Parents()
+	if len(parents) != 1 {
+		return domain.Scope{}, false
+	}
+
+	parent := parents[0]
+	switch parent {
+	case domain.Tenant, domain.GPUPool:
 		if len(row) < 2 {
 			return domain.Scope{}, false
 		}
-		return domain.Scope{Category: domain.Tenant, Name: row[1]}, true
-	case domain.GPUNode:
-		if len(row) < 2 {
-			return domain.Scope{}, false
-		}
-		return domain.Scope{Category: domain.GPUPool, Name: row[1]}, true
-	case domain.LimitRegionalOverride:
+		return domain.Scope{Category: parent, Name: row[1]}, true
+	case domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition:
 		if len(row) == 0 {
 			return domain.Scope{}, false
 		}
-		return domain.Scope{Category: domain.LimitDefinition, Name: row[0]}, true
-	case domain.ConsolePropertyRegionalOverride:
-		if len(row) == 0 {
-			return domain.Scope{}, false
-		}
-		return domain.Scope{Category: domain.ConsolePropertyDefinition, Name: row[0]}, true
-	case domain.PropertyRegionalOverride:
-		if len(row) == 0 {
-			return domain.Scope{}, false
-		}
-		return domain.Scope{Category: domain.PropertyDefinition, Name: row[0]}, true
+		return domain.Scope{Category: parent, Name: row[0]}, true
 	}
 	return domain.Scope{}, false
 }

@@ -114,6 +114,20 @@ func (e Category) ScopedCategories() []Category {
 	}
 }
 
+// Parents returns the categories that scope the receiver — the inverse
+// of ScopedCategories. A category may have more than one parent: the
+// tenancy overrides are scoped by both a Tenant and a Definition.
+// Returns nil for top-level categories that have no parent.
+func (e Category) Parents() []Category {
+	var parents []Category
+	for c := Tenant; c <= Alias; c++ {
+		if c.IsScopeOf(e) {
+			parents = append(parents, c)
+		}
+	}
+	return parents
+}
+
 /*
 Aliases returns a list of aliases for the Category.
 */
