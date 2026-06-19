@@ -149,7 +149,7 @@ type metricsOpenErrMsg struct{ err error }
 // selected DedicatedAICluster and opens it in the browser, off the UI
 // goroutine. Non-DAC selections are a logged no-op. The fleet is derived
 // from the environment type (dev/preprod/prod); the window is the last
-// 24h.
+// 7 days.
 func (m *Model) openDacMetrics(item any) tea.Cmd {
 	dac, ok := item.(*models.DedicatedAICluster)
 	if !ok || dac == nil {
@@ -159,7 +159,7 @@ func (m *Model) openDacMetrics(item any) tea.Cmd {
 	ocid := dac.OCID(m.environment.Realm, m.environment.Region)
 	fleet := "generative-ai-service-api-" + m.environment.Type
 	now := time.Now()
-	target := telemetry.MetricsURL(ocid, m.environment.Region, telemetry.Project, fleet, now.Add(-24*time.Hour), now)
+	target := telemetry.MetricsURL(ocid, m.environment.Region, telemetry.Project, fleet, now.Add(-7*24*time.Hour), now)
 	return func() tea.Msg {
 		if err := actions.OpenURL(target); err != nil {
 			return metricsOpenErrMsg{err: err}
