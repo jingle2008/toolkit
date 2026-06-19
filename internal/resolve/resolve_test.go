@@ -47,6 +47,10 @@ func (l stubLoader) LoadGPUNodesByPool(context.Context, string, models.Environme
 	return l.nodes, l.nodesErr
 }
 
+func (l stubLoader) LoadGPUWorkloadsByNode(context.Context, string, models.Environment) (map[string][]models.GPUWorkload, error) {
+	return map[string][]models.GPUWorkload{}, nil //nolint:nilnil // empty-map stub; resolve tests never read this
+}
+
 func (l stubLoader) LoadDedicatedAIClusters(context.Context, string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	return nil, nil //nolint:nilnil // empty-map test stub; resolve tests never read this
 }

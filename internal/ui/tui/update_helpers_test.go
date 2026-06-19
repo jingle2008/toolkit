@@ -49,6 +49,10 @@ func (dummyLoader) LoadGPUNodesByPool(_ context.Context, _ string, _ models.Envi
 	return nil, errDummy
 }
 
+func (dummyLoader) LoadGPUWorkloadsByNode(_ context.Context, _ string, _ models.Environment) (map[string][]models.GPUWorkload, error) {
+	return nil, errDummy
+}
+
 func (dummyLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	return nil, errDummy
 }
