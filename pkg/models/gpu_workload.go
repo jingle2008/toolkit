@@ -27,9 +27,11 @@ func (w GPUWorkload) GetName() string { return w.Name }
 // which usually signals a crash-looping or otherwise unhealthy pod.
 func (w GPUWorkload) IsFaulty() bool { return w.Restarts > 0 }
 
-// FilterableFields returns the fields matched by `--filter`.
+// FilterableFields returns the fields matched by `--filter`. Age is
+// excluded (matching GPUNode): a formatted duration like "3d" is noise
+// for text filtering.
 func (w GPUWorkload) FilterableFields() []string {
-	return []string{w.Name, w.Node, w.TenantID, w.Namespace, w.Model, w.Runtime, w.Mode, w.Age}
+	return []string{w.Name, w.Node, w.TenantID, w.Namespace, w.Model, w.Runtime, w.Mode}
 }
 
 // TenancyOCID returns the full tenancy OCID from realm + tenancy-id suffix.

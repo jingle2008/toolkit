@@ -52,6 +52,8 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 			}
 			labels := pod.Labels
 			annos := pod.Annotations
+			// Only ContainerStatuses: init containers run once at startup,
+			// so their restarts don't signal an ongoing serving failure.
 			var restarts int
 			for _, cs := range pod.Status.ContainerStatuses {
 				restarts += int(cs.RestartCount)

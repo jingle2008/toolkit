@@ -34,7 +34,7 @@ func TestGPUWorkload(t *testing.T) {
 	}
 	// FilterableFields includes identity fields.
 	fields := w.FilterableFields()
-	want := []string{"pod-1", "10.0.0.1", "suffix1", "ns1", "gpt", "vllm", "RawDeployment", "3d"}
+	want := []string{"pod-1", "10.0.0.1", "suffix1", "ns1", "gpt", "vllm", "RawDeployment"}
 	for _, exp := range want {
 		found := false
 		for _, f := range fields {

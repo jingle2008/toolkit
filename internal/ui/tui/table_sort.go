@@ -24,6 +24,7 @@ func sortRows(rows []table.Row, headers []header, sortColumn string, asc bool) {
 		common.FreeCol:    {},
 		common.ContextCol: {},
 		common.GpusCol:    {},
+		"Restarts":        {},
 	}
 
 	switch {
