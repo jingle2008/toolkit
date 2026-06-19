@@ -21,3 +21,17 @@ func TestBase62(t *testing.T) {
 		assert.Equal(t, want, base62(n), "base62(%d)", n)
 	}
 }
+
+func TestEncoder_Object(t *testing.T) {
+	t.Parallel()
+	var e Encoder
+	e.BeginObject().Key("a").Str("b").EndObject()
+	assert.Equal(t, "{¨a¨¨b¨}", e.String()) // {¨a¨¨b¨}
+}
+
+func TestEncoder_ArrayIntBool(t *testing.T) {
+	t.Parallel()
+	var e Encoder
+	e.BeginArray().Int(1).Bool(true).Bool(false).EndArray()
+	assert.Equal(t, "|¢1»«÷", e.String()) // |¢1»«÷
+}
