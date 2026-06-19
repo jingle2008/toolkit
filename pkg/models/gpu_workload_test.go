@@ -6,13 +6,19 @@ func TestGPUWorkload(t *testing.T) {
 	t.Parallel()
 	w := GPUWorkload{
 		Name: "pod-1", Node: "10.0.0.1", TenantID: "suffix1",
-		Namespace: "ns1", Model: "gpt", Runtime: "vllm", GPUs: 2, Mode: "RawDeployment",
+		Namespace: "ns1", Model: "gpt", Runtime: "vllm", GPUs: 2, Age: "3d", Mode: "RawDeployment",
 	}
 	if w.GetName() != "pod-1" {
 		t.Errorf("GetName = %q", w.GetName())
 	}
+	// Restarts == 0 → not faulty.
 	if w.IsFaulty() {
-		t.Error("IsFaulty should be false")
+		t.Error("IsFaulty should be false when Restarts == 0")
+	}
+	// Restarts > 0 → faulty.
+	w.Restarts = 1
+	if !w.IsFaulty() {
+		t.Error("IsFaulty should be true when Restarts > 0")
 	}
 	if got := w.TenancyOCID("oc1"); got != "ocid1.tenancy.oc1..suffix1" {
 		t.Errorf("TenancyOCID = %q", got)

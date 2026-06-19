@@ -200,7 +200,7 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 		}
 	case domain.GPUWorkload:
 		return map[string][]models.GPUWorkload{
-			"node-1": {{Name: "pod-1", Node: "node-1", TenantID: "tenant-1", Namespace: "ns1", Model: "gpt-oss-120b", Runtime: "vllm", GPUs: 2, Mode: "RawDeployment"}},
+			"node-1": {{Name: "pod-1", Node: "node-1", TenantID: "tenant-1", Namespace: "ns1", Model: "gpt-oss-120b", Runtime: "vllm", GPUs: 2, Restarts: 0, Age: "3d", Mode: "RawDeployment"}},
 		}
 	case domain.Alias:
 		cats := make([]domain.Category, 0, len(domain.Categories))

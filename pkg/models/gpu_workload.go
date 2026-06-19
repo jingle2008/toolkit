@@ -14,6 +14,8 @@ type GPUWorkload struct {
 	Model     string  `json:"model,omitempty"`
 	Runtime   string  `json:"runtime,omitempty"`
 	GPUs      int     `json:"gpus"`
+	Restarts  int     `json:"restarts"`
+	Age       string  `json:"age"`
 	Mode      string  `json:"mode,omitempty"`
 	Owner     *Tenant `json:"owner,omitempty"`
 }
@@ -21,10 +23,13 @@ type GPUWorkload struct {
 // GetName returns the pod name.
 func (w GPUWorkload) GetName() string { return w.Name }
 
-// IsFaulty is always false; GPUWorkload has no faulty notion.
-func (w GPUWorkload) IsFaulty() bool { return false }
+// IsFaulty reports whether the workload's containers have restarted,
+// which usually signals a crash-looping or otherwise unhealthy pod.
+func (w GPUWorkload) IsFaulty() bool { return w.Restarts > 0 }
 
-// FilterableFields returns the fields matched by `--filter`.
+// FilterableFields returns the fields matched by `--filter`. Age is
+// excluded (matching GPUNode): a formatted duration like "3d" is noise
+// for text filtering.
 func (w GPUWorkload) FilterableFields() []string {
 	return []string{w.Name, w.Node, w.TenantID, w.Namespace, w.Model, w.Runtime, w.Mode}
 }
