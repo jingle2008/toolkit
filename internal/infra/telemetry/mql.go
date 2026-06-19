@@ -53,6 +53,7 @@ func MetricsURL(dacOCID, regionID, project, fleet string, start, end time.Time) 
 	e.Key("searchPanelState").BeginObject().
 		Key("regionId").Str(regionID).
 		Key("project").Str(project).
+		Key("fleet").Str(fleet).
 		EndObject()
 	e.Key("layout").Str("full")
 	e.Key("startMs").Int(start.UnixMilli())
