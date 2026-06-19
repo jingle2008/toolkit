@@ -362,6 +362,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"list_imported_models",
 		"list_gpu_pools",
 		"list_gpu_nodes",
+		"list_gpu_workloads",
 		"list_dacs",
 		"list_environments",
 		"list_service_tenancies",
