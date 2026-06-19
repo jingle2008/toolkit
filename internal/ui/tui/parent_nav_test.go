@@ -166,6 +166,7 @@ func TestParentShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.LimitRegionalOverride,
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride,
+		domain.GPUWorkload,
 	}
 	for _, c := range subCategories {
 		require.True(t, contextHasParent(keys.ResolveKeys(c, common.ListView)),
