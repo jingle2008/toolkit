@@ -141,6 +141,22 @@ func TestParentKey_DispatchesInListView(t *testing.T) {
 	require.Equal(t, domain.Tenant, m.category, "o should jump to the parent category")
 }
 
+func TestGPUWorkloadKeys(t *testing.T) {
+	t.Parallel()
+	km := keys.ResolveKeys(domain.GPUWorkload, common.ListView)
+	wantDescs := map[string]bool{"Parent": false, keys.SortPrefix + common.TenantCol: false, keys.SortPrefix + common.GpusCol: false}
+	for _, b := range km.Context {
+		if _, ok := wantDescs[b.Help().Desc]; ok {
+			wantDescs[b.Help().Desc] = true
+		}
+	}
+	for d, found := range wantDescs {
+		if !found {
+			t.Errorf("GPUWorkload list view missing binding %q", d)
+		}
+	}
+}
+
 func TestParentShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 	t.Parallel()
 

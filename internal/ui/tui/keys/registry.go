@@ -203,6 +203,11 @@ var (
 		key.WithKeys("F"),
 		key.WithHelp("<shift+f>", SortPrefix+common.FreeCol),
 	)
+	// SortGpus is a key binding for sorting by the "GPUs" column.
+	SortGpus = key.NewBinding(
+		key.WithKeys("G"),
+		key.WithHelp("<shift+g>", SortPrefix+common.GpusCol),
+	)
 	// SortAge is a key binding for sorting by the "Age" column.
 	SortAge = key.NewBinding(
 		key.WithKeys("A"),
@@ -264,6 +269,9 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	},
 	domain.GPUNode: {
 		common.ListView: {Parent, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
+	},
+	domain.GPUWorkload: {
+		common.ListView: {Parent, SortTenant, SortGpus, Refresh},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, Refresh, ToggleFaulty, Delete},

@@ -25,4 +25,6 @@ const (
 	TypeCol = "Type"
 	// VendorCol is the column name for "Vendor".
 	VendorCol = "Vendor"
+	// GpusCol is the column name for "GPUs".
+	GpusCol = "GPUs"
 )
