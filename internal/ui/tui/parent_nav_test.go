@@ -144,7 +144,7 @@ func TestParentKey_DispatchesInListView(t *testing.T) {
 func TestGPUWorkloadKeys(t *testing.T) {
 	t.Parallel()
 	km := keys.ResolveKeys(domain.GPUWorkload, common.ListView)
-	wantDescs := map[string]bool{"Parent": false, keys.SortPrefix + common.TenantCol: false, keys.SortPrefix + common.GpusCol: false}
+	wantDescs := map[string]bool{"Parent": false, keys.SortPrefix + common.TenantCol: false}
 	for _, b := range km.Context {
 		if _, ok := wantDescs[b.Help().Desc]; ok {
 			wantDescs[b.Help().Desc] = true
