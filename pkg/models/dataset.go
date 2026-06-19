@@ -21,6 +21,7 @@ type Dataset struct {
 	ServiceTenancies                  []ServiceTenancy
 	GPUPools                          []GPUPool
 	GPUNodeMap                        map[string][]GPUNode
+	GPUWorkloadMap                    map[string][]GPUWorkload
 	DedicatedAIClusterMap             map[string][]DedicatedAICluster
 }
 
@@ -75,6 +76,24 @@ func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
 		func(v *ImportedModel, t *Tenant) { v.Owner = t })
 }
 
+// SetGPUWorkloadMap stores the workload map (keyed by node) and resolves
+// each item's owning Tenant from its tenancy-id suffix. The node key is
+// preserved (workloads are grouped by node, not tenant).
+func (d *Dataset) SetGPUWorkloadMap(m map[string][]GPUWorkload) {
+	suffixMap := d.buildTenantIDSuffixMap()
+	for k, v := range m {
+		for i := range v {
+			if idx, ok := suffixMap[v[i].TenantID]; ok {
+				v[i].Owner = &d.Tenants[idx]
+			} else {
+				v[i].Owner = nil
+			}
+		}
+		m[k] = v
+	}
+	d.GPUWorkloadMap = m
+}
+
 // ResetRealmScopedFields resets all realm-scoped fields to nil.
 func (d *Dataset) ResetRealmScopedFields() {
 	d.LimitTenancyOverrideMap = nil
@@ -88,5 +107,6 @@ func (d *Dataset) ResetRealmScopedFields() {
 	d.ImportedModelMap = nil
 	d.GPUPools = nil
 	d.GPUNodeMap = nil
+	d.GPUWorkloadMap = nil
 	d.DedicatedAIClusterMap = nil
 }
