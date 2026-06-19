@@ -3,7 +3,9 @@ package k8s
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -24,12 +26,21 @@ type PodCache struct {
 
 func (c PodCache) getPodStats(ctx context.Context, namespace string) PodStats {
 	pods := c.byNS[namespace]
-	idlePods, totalPods := 0, len(pods)
+	idlePods, totalPods := 0, 0
 	componentMap := make(map[string]struct{})
 	modelNameMap := make(map[string]struct{})
 
 	logger := logging.FromContext(ctx)
 	for _, item := range pods {
+		// Only count pods actually scheduled onto a GPU node. The label
+		// selectors that populate the cache match workload intent, but a
+		// pod without the `nvidia.com/gpu: "true"` nodeSelector does not
+		// consume GPU and must not inflate the replica counts.
+		if !runsOnGPU(item) {
+			continue
+		}
+		totalPods++
+
 		labels := getLabels(item)
 		if labels[appLabel] == reservationLabel {
 			idlePods++
@@ -92,6 +103,19 @@ func getUniqeKey(logger logging.Logger, m map[string]struct{}, namespace string)
 	}
 
 	return keys[0]
+}
+
+// runsOnGPU reports whether any of the pod's containers requests an
+// nvidia.com/gpu resource, reusing the same accounting as
+// getGPUAllocations (calculatePodGPUs). Pods that request no GPU are
+// excluded from replica stats so TotalReplicas reflects only
+// GPU-consuming pods.
+func runsOnGPU(item *unstructured.Unstructured) bool {
+	var pod corev1.Pod
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &pod); err != nil {
+		return false
+	}
+	return calculatePodGPUs(&pod) > 0
 }
 
 // getLabels safely extracts labels from an unstructured pod.

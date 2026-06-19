@@ -43,21 +43,43 @@ func makeUnstructuredPod(labels, annos map[string]string, name, ns string) *unst
 	return &unstructured.Unstructured{Object: obj}
 }
 
+// withGPURequest gives a pod a single container requesting one
+// nvidia.com/gpu, mirroring how real GPU workloads declare GPU usage.
+func withGPURequest(p *unstructured.Unstructured) *unstructured.Unstructured {
+	containers := []any{
+		map[string]any{
+			"name": "main",
+			"resources": map[string]any{
+				"requests": map[string]any{
+					string(gpuProperty): "1",
+				},
+			},
+		},
+	}
+	_ = unstructured.SetNestedSlice(p.Object, containers, "spec", "containers")
+	return p
+}
+
 func TestGetPodStats(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	idle := makeUnstructuredPod(map[string]string{appLabel: reservationLabel}, nil, "idle", "ns1")
+	idle := withGPURequest(makeUnstructuredPod(map[string]string{appLabel: reservationLabel}, nil, "idle", "ns1"))
 	// workload pod with annotation
-	workAnn := makeUnstructuredPod(
+	workAnn := withGPURequest(makeUnstructuredPod(
 		map[string]string{servingLabelV1: "dummy"},
 		map[string]string{baseModelLabelV2: "m1"},
-		"w1", "ns1")
-	// workload pod missing model/component
-	bad := makeUnstructuredPod(map[string]string{}, nil, "bad", "ns1")
+		"w1", "ns1"))
+	// workload pod missing model/component (still requests GPU, counts)
+	bad := withGPURequest(makeUnstructuredPod(map[string]string{}, nil, "bad", "ns1"))
+	// serving pod that requests no GPU — excluded from the counts
+	nonGPU := makeUnstructuredPod(
+		map[string]string{servingLabelV1: "dummy"},
+		map[string]string{baseModelLabelV2: "m2"},
+		"non-gpu", "ns1")
 
 	cache := PodCache{byNS: map[string][]*unstructured.Unstructured{
-		"ns1": {idle, workAnn, bad},
+		"ns1": {idle, workAnn, bad, nonGPU},
 	}}
 	stats := cache.getPodStats(ctx, "ns1")
 	assert.Equal(t, 1, stats.IdlePods)
