@@ -112,6 +112,14 @@ var (
 		key.WithKeys("o"),
 		key.WithHelp("<o>", "Parent"),
 	)
+	// OpenMetrics opens the selected DAC's OCI Telemetry MQL dashboard
+	// in the browser. Bound to a plain letter (list view only) — no
+	// text-entry view is active for the DAC list, so it cannot collide
+	// with typing.
+	OpenMetrics = key.NewBinding(
+		key.WithKeys("m"),
+		key.WithHelp("<m>", "Open Metrics"),
+	)
 )
 
 var listModeKeys = []key.Binding{
@@ -269,7 +277,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Parent, SortTenant, SortAge, ToggleFaulty, Refresh},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, Refresh, ToggleFaulty, Delete},
+		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
 	},
 	domain.ImportedModel: {
 		common.ListView: {Parent, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, Refresh},
