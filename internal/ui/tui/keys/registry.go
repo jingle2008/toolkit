@@ -269,7 +269,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Owner, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, Refresh, ToggleFaulty, Delete},
 	},
 	domain.ImportedModel: {
-		common.ListView: {Owner, SortTenant, SortInternal, SortVendor, CopyTenant, EditTenant, Refresh},
+		common.ListView: {Owner, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, Refresh},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {Owner, SortTenant, SortRegions, CopyTenant},
