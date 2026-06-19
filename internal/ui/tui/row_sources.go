@@ -194,6 +194,8 @@ var rowSources = map[domain.Category]rowSource{
 		func(d *models.Dataset) []models.GPUPool { return d.GPUPools }),
 	domain.GPUNode: groupedSource(columns.GPUNodeColumns, domain.GPUPool,
 		func(d *models.Dataset) map[string][]models.GPUNode { return d.GPUNodeMap }),
+	domain.GPUWorkload: groupedSource(columns.GPUWorkloadColumns, domain.GPUNode,
+		func(d *models.Dataset) map[string][]models.GPUWorkload { return d.GPUWorkloadMap }),
 	domain.DedicatedAICluster: groupedSource(columns.DACColumns, domain.Tenant,
 		func(d *models.Dataset) map[string][]models.DedicatedAICluster { return d.DedicatedAIClusterMap }),
 }

@@ -117,6 +117,7 @@ func TestParentScope(t *testing.T) {
 		{"no parent", domain.Tenant, table.Row{"t1"}, domain.Scope{}, false},
 		{"grouped missing parent column", domain.DedicatedAICluster, table.Row{"dac1"}, domain.Scope{}, false},
 		{"empty row", domain.GPUNode, table.Row{}, domain.Scope{}, false},
+		{"gpu workload", domain.GPUWorkload, table.Row{"pod1", "node-a"}, domain.Scope{Category: domain.GPUNode, Name: "node-a"}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
