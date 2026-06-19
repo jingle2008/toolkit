@@ -68,6 +68,7 @@ func TestCSVSnapshotsExport(t *testing.T) {
 	for _, cat := range []domain.Category{
 		domain.DedicatedAICluster,
 		domain.ImportedModel,
+		domain.GPUWorkload,
 	} {
 		t.Run(cat.String(), func(t *testing.T) {
 			t.Parallel()
@@ -196,6 +197,10 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 		// ImportedModel; the k8s loader keys by dac.TenantID.
 		return map[string][]models.DedicatedAICluster{
 			"tenant-1": {{Name: "dac-1", TenantID: "tenant-1", Type: "HOSTING", ModelName: "cohere.command", UnitShape: "AI.LARGE", Size: 4, Age: "1d", Status: "ACTIVE"}},
+		}
+	case domain.GPUWorkload:
+		return map[string][]models.GPUWorkload{
+			"node-1": {{Name: "pod-1", Node: "node-1", TenantID: "tenant-1", Namespace: "ns1", Model: "gpt-oss-120b", Runtime: "vllm", GPUs: 2, Mode: "RawDeployment"}},
 		}
 	case domain.Alias:
 		cats := make([]domain.Category, 0, len(domain.Categories))
