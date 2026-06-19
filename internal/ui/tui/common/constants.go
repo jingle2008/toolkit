@@ -17,6 +17,8 @@ const (
 	SizeCol = "Size"
 	// FreeCol is the column name for "Free".
 	FreeCol = "Free"
+	// RestartsCol is the column name for "Restarts".
+	RestartsCol = "Restarts"
 	// AgeCol is the column name for "Age".
 	AgeCol = "Age"
 	// UsageCol is the column name for "Usage".

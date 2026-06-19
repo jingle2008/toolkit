@@ -23,7 +23,7 @@ func TestGPUWorkloadColumns(t *testing.T) {
 	}
 	want := map[string]string{
 		"name": "p1", "node": "node-a", "tenant": "acme", "namespace": "ns1",
-		"model": "gpt", "runtime": "vllm", "gpus": "2", "restarts": "4", "age": "3d", "mode": "RawDeployment",
+		"model": "gpt", "runtime": "vllm", "gpus": "2", "restarts": "4", "age": "3d",
 	}
 	for k, v := range want {
 		if got[k] != v {

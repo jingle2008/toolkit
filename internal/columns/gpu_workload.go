@@ -7,9 +7,10 @@ import (
 )
 
 // GPUWorkloadColumns is the canonical column set for domain.GPUWorkload.
-// 10 columns, ratios sum to 1.00. Node is the group key and MUST stay at
+// 9 columns, ratios sum to 1.00. Node is the group key and MUST stay at
 // index 1: itemKeyFrom/parentScope derive the scoped key and parent
-// (GPUNode) from row[1] for grouped categories.
+// (GPUNode) from row[1] for grouped categories. Mode (deploymentMode) is
+// dropped from the table as low-signal; it stays reachable via `-o json`.
 var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn[models.GPUWorkload]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.17, TruncateMiddle: true,
@@ -20,7 +21,7 @@ var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn
 		Render: func(k string, _ models.GPUWorkload) string { return k },
 	},
 	{
-		Title: "Tenant", Key: "tenant", Ratio: 0.13, TruncateMiddle: true,
+		Title: "Tenant", Key: "tenant", Ratio: 0.12, TruncateMiddle: true,
 		Render: func(_ string, w models.GPUWorkload) string { return w.TenantName() },
 		RenderForExport: func(realm, _ string, _ string, w models.GPUWorkload) string {
 			return w.TenancyOCID(realm)
@@ -31,11 +32,11 @@ var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn
 		Render: func(_ string, w models.GPUWorkload) string { return w.Namespace },
 	},
 	{
-		Title: "Model", Key: "model", Ratio: 0.11,
+		Title: "Model", Key: "model", Ratio: 0.13,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Model },
 	},
 	{
-		Title: "Runtime", Key: "runtime", Ratio: 0.11, TruncateMiddle: true,
+		Title: "Runtime", Key: "runtime", Ratio: 0.18,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Runtime },
 	},
 	{
@@ -43,15 +44,11 @@ var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn
 		Render: func(_ string, w models.GPUWorkload) string { return strconv.Itoa(w.GPUs) },
 	},
 	{
-		Title: "Restarts", Key: "restarts", Ratio: 0.05,
+		Title: "Restarts", Key: "restarts", Ratio: 0.07,
 		Render: func(_ string, w models.GPUWorkload) string { return strconv.Itoa(w.Restarts) },
 	},
 	{
 		Title: "Age", Key: "age", Ratio: 0.05,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Age },
-	},
-	{
-		Title: "Mode", Key: "mode", Ratio: 0.10,
-		Render: func(_ string, w models.GPUWorkload) string { return w.Mode },
 	},
 }}
