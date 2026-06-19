@@ -4,10 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"k8s.io/apimachinery/pkg/api/resource"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func gpuPod(name, node string, gpus int64, labels, annos map[string]string) *corev1.Pod {
@@ -51,5 +53,42 @@ func TestLoadGPUWorkloadsByNode(t *testing.T) {
 		if w.Name == "bare" && (w.Model != "" || w.Runtime != "" || w.GPUs != 1) {
 			t.Errorf("bare extraction wrong: %+v", w)
 		}
+	}
+}
+
+// TestLoadGPUWorkloadsByNode_Paginates verifies the loader follows the
+// Continue token and accumulates workloads across pages. The fake
+// clientset ignores Limit/Continue, so a reactor simulates a paged
+// response: page 1 carries a Continue token, page 2 clears it.
+func TestLoadGPUWorkloadsByNode_Paginates(t *testing.T) {
+	t.Parallel()
+
+	page1 := &corev1.PodList{
+		ListMeta: metav1.ListMeta{Continue: "next-page-token"},
+		Items:    []corev1.Pod{*gpuPod("p1", "node-a", 1, nil, nil)},
+	}
+	page2 := &corev1.PodList{
+		Items: []corev1.Pod{*gpuPod("p2", "node-b", 1, nil, nil)},
+	}
+
+	cs := fake.NewSimpleClientset()
+	calls := 0
+	cs.PrependReactor("list", "pods", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+		calls++
+		if calls == 1 {
+			return true, page1, nil
+		}
+		return true, page2, nil
+	})
+
+	got, err := LoadGPUWorkloadsByNode(context.Background(), cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 {
+		t.Fatalf("expected 2 paged List calls, got %d", calls)
+	}
+	if len(got["node-a"]) != 1 || len(got["node-b"]) != 1 {
+		t.Fatalf("expected one workload on each of node-a and node-b, got %v", got)
 	}
 }
