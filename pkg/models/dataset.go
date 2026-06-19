@@ -78,9 +78,11 @@ func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
 
 // SetGPUWorkloadMap stores the workload map (keyed by node) and resolves
 // each item's owning Tenant from its tenancy-id suffix. The node key is
-// preserved (workloads are grouped by node, not tenant).
+// preserved (workloads are grouped by node, not tenant). Allocates a fresh
+// map and does not reuse the caller's input.
 func (d *Dataset) SetGPUWorkloadMap(m map[string][]GPUWorkload) {
 	suffixMap := d.buildTenantIDSuffixMap()
+	out := make(map[string][]GPUWorkload, len(m))
 	for k, v := range m {
 		for i := range v {
 			if idx, ok := suffixMap[v[i].TenantID]; ok {
@@ -89,9 +91,9 @@ func (d *Dataset) SetGPUWorkloadMap(m map[string][]GPUWorkload) {
 				v[i].Owner = nil
 			}
 		}
-		m[k] = v
+		out[k] = v
 	}
-	d.GPUWorkloadMap = m
+	d.GPUWorkloadMap = out
 }
 
 // ResetRealmScopedFields resets all realm-scoped fields to nil.
