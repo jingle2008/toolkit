@@ -13,7 +13,7 @@ import (
 
 // TestGroupKeyAtRowIndex1 guards the load-bearing invariant that, for grouped
 // tenant-owned categories, the grouping key (tenant) renders at row[1].
-// itemKeyFrom ("view details") and ownerScope ("jump to owner") both read
+// itemKeyFrom ("view details") and parentScope ("jump to parent") both read
 // row[1] to recover the owning tenant — see internal/ui/tui/table_utils.go.
 //
 // Unlike the hand-built rows in owner_nav_test.go, this test renders rows from
@@ -63,12 +63,12 @@ func TestGroupKeyAtRowIndex1(t *testing.T) {
 			require.Len(t, rows, 1)
 			row := table.Row(rows[0])
 
-			// "jump to owner" must recover the owning tenant from row[1].
-			owner, ok := ownerScope(tc.category, row)
-			require.True(t, ok, "category should have an owner")
-			require.Equal(t, domain.Tenant, owner.Category)
-			require.Equal(t, tenant, owner.Name,
-				"ownerScope must read the tenant from row[1]; did a column move off index 1?")
+			// "jump to parent" must recover the parent tenant from row[1].
+			parent, ok := parentScope(tc.category, row)
+			require.True(t, ok, "category should have a parent")
+			require.Equal(t, domain.Tenant, parent.Category)
+			require.Equal(t, tenant, parent.Name,
+				"parentScope must read the tenant from row[1]; did a column move off index 1?")
 
 			// "view details" must build a scoped key of {tenant, name}.
 			key, ok := itemKeyFrom(tc.category, row).(models.ScopedItemKey)

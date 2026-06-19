@@ -192,22 +192,22 @@ func itemKeyFrom(category domain.Category, row table.Row) models.ItemKey {
 	return nil
 }
 
-// ownerScope derives the parent scope of a sub-category row so the user
+// parentScope derives the parent scope of a sub-category row so the user
 // can jump back to the parent without having drilled in from it.
 //
 // It only resolves a parent when the category has exactly one — an
 // unambiguous "the parent". Multi-parent categories (the tenancy
 // overrides, scoped by both a Tenant and a Definition) return ok=false:
 // there is no single parent to pick without a breadcrumb, which
-// jumpToOwner handles separately via the active scope. Top-level
+// jumpToParent handles separately via the active scope. Top-level
 // categories (no parent) also return ok=false.
 //
 // The parent's instance name lives in the rendered row, keyed on the
-// parent's type: grouped sub-categories (Tenant/GPUPool owners) carry
+// parent's type: grouped sub-categories (Tenant/GPUPool parents) carry
 // the parent key at row[1] (the same grouping key itemKeyFrom puts in
 // ScopedItemKey.Scope), while flat regional overrides are named after
 // their definition at row[0].
-func ownerScope(category domain.Category, row table.Row) (domain.Scope, bool) {
+func parentScope(category domain.Category, row table.Row) (domain.Scope, bool) {
 	parents := category.Parents()
 	if len(parents) != 1 {
 		return domain.Scope{}, false

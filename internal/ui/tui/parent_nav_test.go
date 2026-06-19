@@ -12,16 +12,16 @@ import (
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
-func contextHasOwner(km keys.KeyMap) bool {
+func contextHasParent(km keys.KeyMap) bool {
 	for _, b := range km.Context {
-		if b.Help().Desc == "Owner" {
+		if b.Help().Desc == "Parent" {
 			return true
 		}
 	}
 	return false
 }
 
-func TestJumpToOwner(t *testing.T) {
+func TestJumpToParent(t *testing.T) {
 	t.Parallel()
 
 	t.Run("drilled-in: uses the active scope and keeps it", func(t *testing.T) {
@@ -29,25 +29,25 @@ func TestJumpToOwner(t *testing.T) {
 		m.category = domain.DedicatedAICluster
 		m.scope = &domain.Scope{Category: domain.Tenant, Name: "tenant1"}
 
-		cmd := m.jumpToOwner()
+		cmd := m.jumpToParent()
 
 		require.NotNil(t, cmd, "should produce a navigation command")
-		require.Equal(t, domain.Tenant, m.category, "should land on the owner category")
-		require.NotNil(t, m.scope, "scope must persist so the owner row is re-selected")
+		require.Equal(t, domain.Tenant, m.category, "should land on the parent category")
+		require.NotNil(t, m.scope, "scope must persist so the parent row is re-selected")
 		require.Equal(t, "tenant1", m.scope.Name)
 	})
 
-	t.Run("no scope: derives the owner Tenant from the selected row", func(t *testing.T) {
+	t.Run("no scope: derives the parent Tenant from the selected row", func(t *testing.T) {
 		m := newTestModel(t)
 		m.category = domain.DedicatedAICluster
 		m.scope = nil
-		m.rawRows = []table.Row{{"dac1", "tenant1"}} // row[1] is the owning tenant
+		m.rawRows = []table.Row{{"dac1", "tenant1"}} // row[1] is the parent tenant
 
-		cmd := m.jumpToOwner()
+		cmd := m.jumpToParent()
 
 		require.NotNil(t, cmd)
 		require.Equal(t, domain.Tenant, m.category)
-		require.NotNil(t, m.scope, "scope is set so the owner row is auto-selected")
+		require.NotNil(t, m.scope, "scope is set so the parent row is auto-selected")
 		require.Equal(t, domain.Tenant, m.scope.Category)
 		require.Equal(t, "tenant1", m.scope.Name)
 	})
@@ -58,7 +58,7 @@ func TestJumpToOwner(t *testing.T) {
 		m.scope = nil
 		m.rawRows = []table.Row{{"some-limit", "us-region"}} // row[0] is the definition
 
-		cmd := m.jumpToOwner()
+		cmd := m.jumpToParent()
 
 		require.NotNil(t, cmd)
 		require.Equal(t, domain.LimitDefinition, m.category)
@@ -72,7 +72,7 @@ func TestJumpToOwner(t *testing.T) {
 		m.category = domain.LimitTenancyOverride
 		m.scope = &domain.Scope{Category: domain.LimitDefinition, Name: "some-limit"}
 
-		cmd := m.jumpToOwner()
+		cmd := m.jumpToParent()
 
 		require.NotNil(t, cmd)
 		require.Equal(t, domain.LimitDefinition, m.category)
@@ -86,19 +86,19 @@ func TestJumpToOwner(t *testing.T) {
 		m.category = domain.LimitTenancyOverride
 		m.scope = nil
 		m.rawRows = []table.Row{{"o1", "tenantX"}}
-		require.Nil(t, m.jumpToOwner())
+		require.Nil(t, m.jumpToParent())
 	})
 
-	t.Run("no-op when the category has no owner", func(t *testing.T) {
+	t.Run("no-op when the category has no parent", func(t *testing.T) {
 		m := newTestModel(t)
 		m.category = domain.Tenant
 		m.scope = nil
 		m.rawRows = []table.Row{{"tenant1"}}
-		require.Nil(t, m.jumpToOwner())
+		require.Nil(t, m.jumpToParent())
 	})
 }
 
-func TestOwnerScope(t *testing.T) {
+func TestParentScope(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
@@ -114,20 +114,20 @@ func TestOwnerScope(t *testing.T) {
 		{"limit tenancy override (ambiguous parent)", domain.LimitTenancyOverride, table.Row{"o1", "tenantX"}, domain.Scope{}, false},
 		{"gpu node", domain.GPUNode, table.Row{"node1", "poolA"}, domain.Scope{Category: domain.GPUPool, Name: "poolA"}, true},
 		{"regional override", domain.LimitRegionalOverride, table.Row{"lim1", "r1"}, domain.Scope{Category: domain.LimitDefinition, Name: "lim1"}, true},
-		{"no owner", domain.Tenant, table.Row{"t1"}, domain.Scope{}, false},
-		{"grouped missing owner column", domain.DedicatedAICluster, table.Row{"dac1"}, domain.Scope{}, false},
+		{"no parent", domain.Tenant, table.Row{"t1"}, domain.Scope{}, false},
+		{"grouped missing parent column", domain.DedicatedAICluster, table.Row{"dac1"}, domain.Scope{}, false},
 		{"empty row", domain.GPUNode, table.Row{}, domain.Scope{}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := ownerScope(tc.cat, tc.row)
+			got, ok := parentScope(tc.cat, tc.row)
 			require.Equal(t, tc.ok, ok)
 			require.Equal(t, tc.want, got)
 		})
 	}
 }
 
-func TestOwnerKey_DispatchesInListView(t *testing.T) {
+func TestParentKey_DispatchesInListView(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.category = domain.DedicatedAICluster
@@ -137,13 +137,13 @@ func TestOwnerKey_DispatchesInListView(t *testing.T) {
 	cmds := m.handleNormalKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
 
 	require.NotEmpty(t, cmds, "pressing o should dispatch a command")
-	require.Equal(t, domain.Tenant, m.category, "o should jump to the owner category")
+	require.Equal(t, domain.Tenant, m.category, "o should jump to the parent category")
 }
 
-func TestOwnerShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
+func TestParentShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 	t.Parallel()
 
-	// Every sub-category advertises the Owner shortcut in list view.
+	// Every sub-category advertises the Parent shortcut in list view.
 	subCategories := []domain.Category{
 		domain.DedicatedAICluster, domain.ImportedModel, domain.GPUNode,
 		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
@@ -151,16 +151,16 @@ func TestOwnerShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride,
 	}
 	for _, c := range subCategories {
-		require.True(t, contextHasOwner(keys.ResolveKeys(c, common.ListView)),
-			"%v should offer the Owner shortcut", c)
+		require.True(t, contextHasParent(keys.ResolveKeys(c, common.ListView)),
+			"%v should offer the Parent shortcut", c)
 		// ... but never in details view, where "o" is Copy Object.
-		require.False(t, contextHasOwner(keys.ResolveKeys(c, common.DetailsView)),
-			"%v should not advertise Owner in details view", c)
+		require.False(t, contextHasParent(keys.ResolveKeys(c, common.DetailsView)),
+			"%v should not advertise Parent in details view", c)
 	}
 
-	// Owner-less categories do not advertise it.
+	// Parentless categories do not advertise it.
 	for _, c := range []domain.Category{domain.Tenant, domain.BaseModel, domain.GPUPool} {
-		require.False(t, contextHasOwner(keys.ResolveKeys(c, common.ListView)),
-			"%v has no owner and should not offer the shortcut", c)
+		require.False(t, contextHasParent(keys.ResolveKeys(c, common.ListView)),
+			"%v has no parent and should not offer the shortcut", c)
 	}
 }
