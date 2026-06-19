@@ -35,6 +35,14 @@ func TestEncoder_ArrayIntBool(t *testing.T) {
 	assert.Equal(t, "|¢1»«÷", e.String()) // |¢1»«÷
 }
 
+func TestEncoder_StringReference(t *testing.T) {
+	t.Parallel()
+	var e Encoder
+	// a=0, foo=1, b=2; the repeated "foo" becomes a back-reference to index 1.
+	e.BeginObject().Key("a").Str("foo").Key("b").Str("foo").EndObject()
+	assert.Equal(t, "{¨a¨¨foo¨¨b¨ß1}", e.String()) // {¨a¨¨foo¨¨b¨ß1}
+}
+
 func TestEncoder_StrStripsDelimiter(t *testing.T) {
 	t.Parallel()
 	var e Encoder

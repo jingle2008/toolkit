@@ -30,14 +30,18 @@ const (
 	tokenTrue   = "»" // »  boolean true
 	tokenFalse  = "«" // «  boolean false
 	tokenArrEnd = "÷" // ÷  array end
+	tokenRef    = "ß" // ß  back-reference to a previously emitted string
 )
 
-// Encoder builds a Zipson payload. Strings are emitted in full (no
-// reference compression), which is still valid Zipson and decodes
-// correctly. Str defends the wire format by stripping the
-// string-delimiter rune (U+00A8) from values.
+// Encoder builds a Zipson payload. Strings are emitted in full the first
+// time (¨value¨) and registered in an ordered table; later repeats are
+// emitted as a back-reference (ß + base62 index) to shrink the payload.
+// Keys and values share one table, indexed from 0 — matching how a
+// Zipson decoder rebuilds the table as it reads ¨-delimited strings. Str
+// also strips any embedded string-delimiter rune (U+00A8) from values.
 type Encoder struct {
-	b strings.Builder
+	b    strings.Builder
+	refs map[string]int
 }
 
 // BeginObject writes the object-start token '{'.
@@ -52,14 +56,26 @@ func (e *Encoder) BeginArray() *Encoder { e.b.WriteByte('|'); return e }
 // EndArray writes the array-end token '÷'.
 func (e *Encoder) EndArray() *Encoder { e.b.WriteString(tokenArrEnd); return e }
 
-// Str writes a delimited Zipson string. Any embedded string-delimiter
-// rune (U+00A8) is stripped, since it would otherwise prematurely close
-// the string; no legitimate input (OCIDs, region ids, MQL queries)
-// contains it, so this is a defensive guard rather than a data transform.
+// Str writes a Zipson string. The first time a value is seen it is
+// emitted in full (¨value¨) and registered; subsequent repeats are
+// emitted as a back-reference (ß + base62 index). Any embedded
+// string-delimiter rune (U+00A8) is stripped first, since it would
+// otherwise prematurely close the string; no legitimate input (OCIDs,
+// region ids, MQL queries) contains it, so this is a defensive guard
+// rather than a data transform.
 func (e *Encoder) Str(s string) *Encoder {
 	if strings.Contains(s, tokenString) {
 		s = strings.ReplaceAll(s, tokenString, "")
 	}
+	if idx, ok := e.refs[s]; ok {
+		e.b.WriteString(tokenRef)
+		e.b.WriteString(base62(int64(idx)))
+		return e
+	}
+	if e.refs == nil {
+		e.refs = make(map[string]int)
+	}
+	e.refs[s] = len(e.refs)
 	e.b.WriteString(tokenString)
 	e.b.WriteString(s)
 	e.b.WriteString(tokenString)
