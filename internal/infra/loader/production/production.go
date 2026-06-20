@@ -220,11 +220,12 @@ func (Client) WatchGPUWorkloads(ctx context.Context, kubeCfg string, env models.
 
 // WatchDedicatedAIClusters establishes a watch on DAC CRs and GPU pods.
 func (Client) WatchDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
-	dyn, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	kubeCtx := env.KubeContext()
+	dyn, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, kubeCtx)
 	if err != nil {
 		return nil, err
 	}
-	cs, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
+	cs, err := k8s.NewClientsetFromKubeConfig(kubeCfg, kubeCtx)
 	if err != nil {
 		return nil, err
 	}

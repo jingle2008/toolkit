@@ -10,6 +10,5 @@ import (
 
 func TestClient_ImplementsWatcher(t *testing.T) {
 	t.Parallel()
-	var _ loader.Watcher = (*Client)(nil)
 	assert.Implements(t, (*loader.Watcher)(nil), &Client{})
 }
