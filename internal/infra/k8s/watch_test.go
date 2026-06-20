@@ -7,7 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 // openFake returns an opener that hands back the given FakeWatcher.
@@ -93,5 +99,64 @@ func TestWatchTrigger_StreamDeathClosesChannel(t *testing.T) {
 		assert.False(t, ok, "channel must close when an underlying stream dies")
 	case <-time.After(time.Second):
 		t.Fatal("trigger channel should close on stream death")
+	}
+}
+
+func TestWatchGPUNodes_FiresOnNodeEvent(t *testing.T) {
+	t.Parallel()
+	old := DebounceWindow
+	DebounceWindow = 50 * time.Millisecond
+	defer func() { DebounceWindow = old }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cs := fake.NewSimpleClientset()
+	trig, err := WatchGPUNodes(ctx, cs)
+	require.NoError(t, err)
+
+	// Creating a node produces an Added event on the Nodes watch.
+	_, err = cs.CoreV1().Nodes().Create(ctx, &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gpu-1",
+			Labels: map[string]string{"nvidia.com/gpu.present": "true"},
+		},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	select {
+	case <-trig:
+	case <-time.After(time.Second):
+		t.Fatal("expected a trigger tick after node create")
+	}
+}
+
+func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
+	t.Parallel()
+	old := DebounceWindow
+	DebounceWindow = 50 * time.Millisecond
+	defer func() { DebounceWindow = old }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	gvr := schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "clusterbasemodels"}
+	scheme := runtime.NewScheme()
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme,
+		map[schema.GroupVersionResource]string{
+			gvr: "ClusterBaseModelList",
+			{Group: "ome.io", Version: "v1beta1", Resource: "basemodels"}: "BaseModelList",
+		})
+
+	trig, err := WatchBaseModels(ctx, client)
+	require.NoError(t, err)
+
+	_, err = client.Resource(gvr).Create(ctx, newCBM("m1", nil, nil, nil, nil), metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	select {
+	case <-trig:
+	case <-time.After(time.Second):
+		t.Fatal("expected a trigger tick after CR create")
 	}
 }

@@ -5,7 +5,11 @@ import (
 	"sync"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 )
 
 // DebounceWindow is the coalescing window for watch triggers: events
@@ -127,4 +131,84 @@ func watchTrigger(
 	}()
 
 	return out, nil
+}
+
+// crWatchOpener returns an opener that watches all objects of one GVR.
+func crWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) func(context.Context) (watch.Interface, error) {
+	return func(ctx context.Context) (watch.Interface, error) {
+		return client.Resource(gvr).Watch(ctx, metav1.ListOptions{})
+	}
+}
+
+// gpuPodWatchOpeners returns one pod-watch opener per GPU pod label
+// selector, scoped to Running pods. This mirrors the bounded selectors
+// the allocation path lists with (gpuPodSelectors + runningPodSelector),
+// so the trigger reacts to the GPU pods that drive node allocation,
+// node issues, and DAC replica stats — without a cluster-wide pod
+// firehose. A GPU-consuming pod outside these selectors will not trigger
+// a reload until a watched resource also changes (acceptable for the
+// eventual-freshness target).
+func gpuPodWatchOpeners(clientset kubernetes.Interface) []func(context.Context) (watch.Interface, error) {
+	openers := make([]func(context.Context) (watch.Interface, error), 0, len(gpuPodSelectors))
+	for _, sel := range gpuPodSelectors {
+		sel := sel
+		openers = append(openers, func(ctx context.Context) (watch.Interface, error) {
+			return clientset.CoreV1().Pods("").Watch(ctx, metav1.ListOptions{
+				LabelSelector: sel,
+				FieldSelector: runningPodSelector,
+			})
+		})
+	}
+	return openers
+}
+
+var (
+	clusterBaseModelGVR = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "clusterbasemodels"}
+	baseModelGVR        = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "basemodels"}
+	dacV1GVR            = schema.GroupVersionResource{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}
+	dacV2GVR            = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}
+)
+
+// WatchBaseModels triggers on ClusterBaseModel CR changes.
+func WatchBaseModels(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {
+	return watchTrigger(ctx, DebounceWindow, crWatchOpener(client, clusterBaseModelGVR))
+}
+
+// WatchImportedModels triggers on namespaced BaseModel and
+// ClusterBaseModel CR changes (the two sources LoadImportedModels merges).
+func WatchImportedModels(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {
+	return watchTrigger(ctx, DebounceWindow,
+		crWatchOpener(client, baseModelGVR),
+		crWatchOpener(client, clusterBaseModelGVR),
+	)
+}
+
+// WatchGPUNodes triggers on Node changes plus GPU pod changes (pods
+// drive allocation and node issues).
+func WatchGPUNodes(ctx context.Context, clientset kubernetes.Interface) (<-chan struct{}, error) {
+	openers := []func(context.Context) (watch.Interface, error){
+		func(ctx context.Context) (watch.Interface, error) {
+			return clientset.CoreV1().Nodes().Watch(ctx, metav1.ListOptions{
+				LabelSelector: "nvidia.com/gpu.present=true",
+			})
+		},
+	}
+	openers = append(openers, gpuPodWatchOpeners(clientset)...)
+	return watchTrigger(ctx, DebounceWindow, openers...)
+}
+
+// WatchGPUWorkloads triggers on GPU pod changes.
+func WatchGPUWorkloads(ctx context.Context, clientset kubernetes.Interface) (<-chan struct{}, error) {
+	return watchTrigger(ctx, DebounceWindow, gpuPodWatchOpeners(clientset)...)
+}
+
+// WatchDedicatedAIClusters triggers on DAC CR changes (both API
+// versions) plus GPU pod changes (pods drive replica stats).
+func WatchDedicatedAIClusters(ctx context.Context, client dynamic.Interface, clientset kubernetes.Interface) (<-chan struct{}, error) {
+	openers := []func(context.Context) (watch.Interface, error){
+		crWatchOpener(client, dacV1GVR),
+		crWatchOpener(client, dacV2GVR),
+	}
+	openers = append(openers, gpuPodWatchOpeners(clientset)...)
+	return watchTrigger(ctx, DebounceWindow, openers...)
 }
