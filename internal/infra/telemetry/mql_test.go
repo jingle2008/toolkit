@@ -207,3 +207,12 @@ func TestMetricsURL_TextToAudioFiltered(t *testing.T) {
 	assert.Contains(t, z, `GenerativeAiService.audioSpeech.InputTokenLength[1m]{ResourceId = "openai.tts"}.grouping().sum()`)
 	assert.Contains(t, z, `GenerativeAiService.audioSpeech.ReasoningTokenLength[1m]{ResourceId = "openai.tts"}.grouping().sum()`)
 }
+
+func TestMetricQueries_FixedReturnsCopy(t *testing.T) {
+	t.Parallel()
+	first := metricQueries(CapabilityImageContentModeration, Filter{Key: FilterDacID, Value: "x"})
+	require.NotEmpty(t, first)
+	first[0] = "MUTATED"
+	second := metricQueries(CapabilityImageContentModeration, Filter{Key: FilterDacID, Value: "x"})
+	assert.NotEqual(t, "MUTATED", second[0], "metricQueries must not return the shared table slice")
+}

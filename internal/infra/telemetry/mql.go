@@ -115,7 +115,7 @@ func metricQueries(capability Capability, filter Filter) []string {
 		return nil
 	}
 	if shape.fixed != nil {
-		return shape.fixed
+		return append([]string(nil), shape.fixed...)
 	}
 	suffix := filter.suffix()
 	queries := make([]string, 0, len(shape.groups)*len(shape.kinds))
