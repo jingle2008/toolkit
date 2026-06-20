@@ -155,18 +155,15 @@ const metricsWindow = 7 * 24 * time.Hour
 // public base model — so we load only the one catalog we need.
 const importedModelNamePrefix = "amaaaaaa"
 
-// dacMetricsCatalogLoadedMsg carries a model catalog fetched while opening
-// a DAC's metrics dashboard back to the Update loop, where it is applied
-// to the dataset (so later BaseModel/ImportedModel navigation reuses it)
-// and then used to resolve the capability and open the link.
-type dacMetricsCatalogLoadedMsg struct {
+// openMetricsTriggerMsg is the second step of openDacMetrics's sequence:
+// it fires after the model catalog has been loaded and applied, so its
+// handler reads the now-populated dataset on the Update loop. gen pins it
+// to the load it followed.
+type openMetricsTriggerMsg struct {
 	ocid      string
 	modelName string
 	cat       domain.Category
-	base      []models.BaseModel
-	imported  map[string][]models.ImportedModel
 	gen       int
-	err       error
 }
 
 // openDacMetrics resolves the selected DAC's model capability and opens
@@ -193,8 +190,19 @@ func (m *Model) openDacMetrics(item any) tea.Cmd {
 	if m.catalogLoaded(cat) {
 		return m.launchMetrics(ocid, m.modelCapability(dac.ModelName))
 	}
+	// Load the catalog through the shared category loader (so it is cached
+	// for later navigation, exactly as a category load would), then fire
+	// the open trigger. tea.Sequence guarantees the catalog's *LoadedMsg is
+	// applied on the Update loop before the trigger message is handled —
+	// the same ordering Init relies on for tenant resolution — so the
+	// trigger's handler sees the populated dataset.
 	gen := m.bumpGen()
-	return tea.Batch(m.beginTask(), m.loadDacMetricsCatalogCmd(ocid, dac.ModelName, cat, gen))
+	return tea.Sequence(
+		tea.Batch(m.beginTask(), m.catalogLoadCmd(cat, gen)),
+		func() tea.Msg {
+			return openMetricsTriggerMsg{ocid: ocid, modelName: dac.ModelName, cat: cat, gen: gen}
+		},
+	)
 }
 
 // catalogLoaded reports whether the given model catalog is already present
@@ -220,45 +228,26 @@ func (m *Model) modelCapability(modelName string) telemetry.Capability {
 	return capabilityForModel(m.dataset.FindModelByName(modelName))
 }
 
-// loadDacMetricsCatalogCmd fetches one model catalog off the UI goroutine
-// and returns it to the Update loop for caching + capability resolution.
-func (m *Model) loadDacMetricsCatalogCmd(ocid, modelName string, cat domain.Category, gen int) tea.Cmd {
-	ld, kubeCfg, env, ctx := m.loader, m.kubeConfig, m.environment, m.loadCtx
-	return func() tea.Msg {
-		msg := dacMetricsCatalogLoadedMsg{ocid: ocid, modelName: modelName, cat: cat, gen: gen}
-		switch cat { //nolint:exhaustive // only the two model catalogs are loadable here
-		case domain.ImportedModel:
-			msg.imported, msg.err = ld.LoadImportedModels(ctx, kubeCfg, env)
-		default:
-			msg.base, msg.err = ld.LoadBaseModels(ctx, kubeCfg, env)
-		}
-		return msg
+// catalogLoadCmd returns the shared loader command for one model catalog;
+// its *LoadedMsg is applied by the normal handler, caching the catalog on
+// the dataset for later navigation.
+func (m *Model) catalogLoadCmd(cat domain.Category, gen int) tea.Cmd {
+	switch cat { //nolint:exhaustive // only the two model catalogs are loadable here
+	case domain.ImportedModel:
+		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	default:
+		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 }
 
-// handleDacMetricsCatalogLoaded applies the fetched catalog to the dataset
-// (so the BaseModel/ImportedModel categories reuse it) and opens the
-// dashboard. A stale generation is dropped (the user moved on); a load
-// error surfaces a toast and does not open the browser.
-func (m *Model) handleDacMetricsCatalogLoaded(msg dacMetricsCatalogLoadedMsg) tea.Cmd {
-	if msg.gen != m.gen {
-		m.endTask(true)
+// handleOpenMetricsTrigger opens the dashboard once its catalog load has
+// been applied. It declines when the generation is stale (the user
+// navigated) or the catalog still isn't loaded (the load failed or was
+// dropped — its own error toast already fired), so a possibly-wrong
+// dashboard never opens.
+func (m *Model) handleOpenMetricsTrigger(msg openMetricsTriggerMsg) tea.Cmd {
+	if msg.gen != m.gen || !m.catalogLoaded(msg.cat) {
 		return nil
-	}
-	if msg.err != nil {
-		m.endTask(false)
-		m.logger.Errorw("failed to load model catalog for metrics", "category", msg.cat, "err", msg.err)
-		return m.showToast("failed to open metrics: "+msg.err.Error(), toastError)
-	}
-	switch msg.cat { //nolint:exhaustive // only the two model catalogs are loadable here
-	case domain.ImportedModel:
-		total := 0
-		for _, v := range msg.imported {
-			total += len(v)
-		}
-		m.applyDataset(func(ds *models.Dataset) { ds.SetImportedModelMap(msg.imported) }, domain.ImportedModel, total)
-	default:
-		m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = msg.base }, domain.BaseModel, len(msg.base))
 	}
 	return m.launchMetrics(msg.ocid, m.modelCapability(msg.modelName))
 }

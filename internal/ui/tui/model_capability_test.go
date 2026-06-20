@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -104,36 +103,31 @@ func TestOpenDacMetrics_PrefixRoutesToImported(t *testing.T) {
 	assert.Equal(t, g0+1, m.gen, "imported catalog not loaded → load dispatched despite base being present")
 }
 
-func TestHandleDacMetricsCatalogLoaded_StaleGenDropped(t *testing.T) {
+func TestHandleOpenMetricsTrigger_StaleGenNoOpen(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
-	got := m.handleDacMetricsCatalogLoaded(dacMetricsCatalogLoadedMsg{
-		ocid: "o", modelName: "r", cat: domain.BaseModel,
-		base: []models.BaseModel{{Name: "r"}}, gen: m.gen + 1, // stale
+	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}}
+	got := m.handleOpenMetricsTrigger(openMetricsTriggerMsg{
+		ocid: "o", modelName: "r", cat: domain.BaseModel, gen: m.gen + 1, // stale (navigated)
 	})
-	assert.Nil(t, got, "stale load neither caches nor opens")
-	assert.Nil(t, m.dataset, "dataset untouched by a stale load")
+	assert.Nil(t, got, "stale generation does not open")
 }
 
-func TestHandleDacMetricsCatalogLoaded_ErrorToastsNoOpen(t *testing.T) {
+func TestHandleOpenMetricsTrigger_CatalogNotLoadedNoOpen(t *testing.T) {
 	t.Parallel()
-	m := makeTestModel()
-	got := m.handleDacMetricsCatalogLoaded(dacMetricsCatalogLoadedMsg{
-		ocid: "o", modelName: "r", cat: domain.BaseModel,
-		gen: m.gen, err: errors.New("boom"),
+	m := makeTestModel() // dataset nil → catalog load must have failed/dropped
+	got := m.handleOpenMetricsTrigger(openMetricsTriggerMsg{
+		ocid: "o", modelName: "r", cat: domain.BaseModel, gen: m.gen,
 	})
-	require.NotNil(t, got, "returns a toast command")
-	assert.Nil(t, m.dataset, "no dataset mutation on load error")
+	assert.Nil(t, got, "no open when the catalog isn't loaded (load failed)")
 }
 
-func TestHandleDacMetricsCatalogLoaded_CachesAndOpens(t *testing.T) {
+func TestHandleOpenMetricsTrigger_OpensWhenLoaded(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
-	got := m.handleDacMetricsCatalogLoaded(dacMetricsCatalogLoadedMsg{
-		ocid: "o", modelName: "r", cat: domain.BaseModel,
-		base: []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}, gen: m.gen,
+	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}}
+	got := m.handleOpenMetricsTrigger(openMetricsTriggerMsg{
+		ocid: "o", modelName: "r", cat: domain.BaseModel, gen: m.gen,
 	})
-	require.NotNil(t, got, "opens the dashboard")
-	require.NotNil(t, m.dataset)
-	assert.Len(t, m.dataset.BaseModels, 1, "catalog cached for later navigation")
+	require.NotNil(t, got, "opens the dashboard once the catalog is applied")
 }
