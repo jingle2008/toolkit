@@ -51,14 +51,11 @@ func TestMetricsURL(t *testing.T) {
 	assert.Equal(t, wantZipson, string(raw))
 }
 
-func TestMetricQueries_RerankAndEmbed(t *testing.T) {
+func TestMetricQueries_Rerank(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, []string{
 		`GenerativeAiService.rerankText.InputTokenLength[1m]{DacId = "` + testOCID + `"}.grouping().sum()`,
 	}, metricQueries(CapabilityTextRerank, Filter{Key: FilterDacID, Value: testOCID}))
-	assert.Equal(t, []string{
-		`GenerativeAiService.embedText.InputTokenLength[1m]{DacId = "` + testOCID + `"}.grouping().sum()`,
-	}, metricQueries(CapabilityTextEmbeddings, Filter{Key: FilterDacID, Value: testOCID}))
 }
 
 // decodeData extracts and decodes the Zipson payload from a MetricsURL.
@@ -81,13 +78,14 @@ func TestMetricsURL_RerankSingleQuery(t *testing.T) {
 	assert.NotContains(t, z, "chat.InputTokenLength")
 }
 
-func TestMetricsURL_EmbedSingleQuery(t *testing.T) {
+func TestMetricsURL_Embed(t *testing.T) {
 	t.Parallel()
 	got := MetricsURL(Filter{Key: FilterDacID, Value: testOCID}, CapabilityTextEmbeddings, "me-abudhabi-1",
 		"GenerativeAIService", "generative-ai-service-api-prod",
 		time.UnixMilli(1781787680652), time.UnixMilli(1781832733444))
 	z := decodeData(t, got)
 	assert.Contains(t, z, `GenerativeAiService.embedText.InputTokenLength[1m]{DacId = "`+testOCID+`"}.grouping().sum()`)
+	assert.Contains(t, z, `GenerativeAiService.embeddings.InputTokenLength[1m]{DacId = "`+testOCID+`"}.grouping().sum()`)
 	assert.NotContains(t, z, "chat.InputTokenLength")
 }
 
@@ -135,4 +133,77 @@ func TestMetricQueries_ImageContentModerationFixedUnfiltered(t *testing.T) {
 		`ImageContentModeration.Latency.ApplyGuardrails[1m].grouping().sum()`,
 	}
 	assert.Equal(t, want, metricQueries(CapabilityImageContentModeration, Filter{Key: FilterDacID, Value: "x"}))
+}
+
+func TestMetricQueries_TextToText(t *testing.T) {
+	t.Parallel()
+	f := Filter{Key: FilterResourceID, Value: "m"}
+	want := []string{
+		`GenerativeAiService.chatCompletions.InputTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
+		`GenerativeAiService.chatCompletions.OutputTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
+		`GenerativeAiService.chatCompletions.ReasoningTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
+		`GenerativeAiService.responses.InputTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
+		`GenerativeAiService.responses.OutputTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
+		`GenerativeAiService.responses.ReasoningTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
+	}
+	assert.Equal(t, want, metricQueries(CapabilityTextToText, f))
+}
+
+func TestMetricQueries_Embeddings(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, []string{
+		`GenerativeAiService.embedText.InputTokenLength[1m]{DacId = "x"}.grouping().sum()`,
+		`GenerativeAiService.embeddings.InputTokenLength[1m]{DacId = "x"}.grouping().sum()`,
+	}, metricQueries(CapabilityTextEmbeddings, Filter{Key: FilterDacID, Value: "x"}))
+}
+
+func TestMetricQueries_Modalities(t *testing.T) {
+	t.Parallel()
+	f := Filter{Key: FilterDacID, Value: "x"}
+	cases := map[Capability]string{
+		CapabilityTextToImage:      "imagesGenerations",
+		CapabilityImageTextToImage: "imagesEdits",
+		CapabilityTextToAudio:      "audioSpeech",
+		CapabilityAudioToText:      "audioTranscriptions",
+	}
+	for capability, group := range cases {
+		want := []string{
+			`GenerativeAiService.` + group + `.InputTokenLength[1m]{DacId = "x"}.grouping().sum()`,
+			`GenerativeAiService.` + group + `.OutputTokenLength[1m]{DacId = "x"}.grouping().sum()`,
+			`GenerativeAiService.` + group + `.ReasoningTokenLength[1m]{DacId = "x"}.grouping().sum()`,
+		}
+		assert.Equal(t, want, metricQueries(capability, f), "capability %d", capability)
+	}
+}
+
+func TestMetricQueries_UnsupportedReturnsNil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, metricQueries(CapabilityUnsupported, Filter{Key: FilterDacID, Value: "x"}))
+}
+
+func TestCapabilitySupportedAndFilterable(t *testing.T) {
+	t.Parallel()
+	for _, c := range []Capability{
+		CapabilityChat, CapabilityTextToText, CapabilityTextRerank, CapabilityTextEmbeddings,
+		CapabilityTextToImage, CapabilityImageTextToImage, CapabilityTextToAudio, CapabilityAudioToText,
+	} {
+		assert.True(t, c.Supported(), "supported %d", c)
+		assert.True(t, c.Filterable(), "filterable %d", c)
+	}
+	for _, c := range []Capability{CapabilityTextClassification, CapabilityImageContentModeration} {
+		assert.True(t, c.Supported(), "moderation supported %d", c)
+		assert.False(t, c.Filterable(), "moderation not filterable %d", c)
+	}
+	assert.False(t, CapabilityUnsupported.Supported())
+	assert.False(t, CapabilityUnsupported.Filterable())
+}
+
+func TestMetricsURL_TextToAudioFiltered(t *testing.T) {
+	t.Parallel()
+	got := MetricsURL(Filter{Key: FilterResourceID, Value: "openai.tts"}, CapabilityTextToAudio,
+		"me-abudhabi-1", "GenerativeAIService", "generative-ai-service-api-prod",
+		time.UnixMilli(1781787680652), time.UnixMilli(1781832733444))
+	z := decodeData(t, got)
+	assert.Contains(t, z, `GenerativeAiService.audioSpeech.InputTokenLength[1m]{ResourceId = "openai.tts"}.grouping().sum()`)
+	assert.Contains(t, z, `GenerativeAiService.audioSpeech.ReasoningTokenLength[1m]{ResourceId = "openai.tts"}.grouping().sum()`)
 }

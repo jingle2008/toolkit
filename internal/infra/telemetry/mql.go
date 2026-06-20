@@ -18,20 +18,23 @@ const Project = "GenerativeAIService"
 type Capability int
 
 const (
-	// CapabilityChat is the default — the chat/chatCompletions/responses
-	// token-length grid. Also the fallback for finetune / unresolved /
-	// unknown models.
+	// CapabilityChat is the default chat/chatCompletions/responses token-length
+	// grid. Also the fallback for finetune / unresolved / unknown models.
 	CapabilityChat Capability = iota
-	// CapabilityTextRerank is a single rerankText query.
 	CapabilityTextRerank
-	// CapabilityTextEmbeddings is a single embedText query.
 	CapabilityTextEmbeddings
-	// CapabilityTextClassification is the on-demand content-moderation
-	// invocation count. On-demand only; fixed, unfiltered query.
+	// CapabilityTextClassification and CapabilityImageContentModeration are
+	// fixed, unfiltered content-moderation query sets.
 	CapabilityTextClassification
-	// CapabilityImageContentModeration is the on-demand image-moderation
-	// latency pair. On-demand only; fixed, unfiltered queries.
 	CapabilityImageContentModeration
+	// Appended below (existing ordinals above are unchanged).
+	CapabilityTextToText
+	CapabilityTextToImage
+	CapabilityImageTextToImage
+	CapabilityTextToAudio
+	CapabilityAudioToText
+	// CapabilityUnsupported has no dashboard; callers must guard via Supported().
+	CapabilityUnsupported
 )
 
 // Filter dimension keys.
@@ -53,38 +56,75 @@ func (f Filter) suffix() string {
 	return `[1m]{` + f.Key + ` = "` + f.Value + `"}.grouping().sum()`
 }
 
-// metricGroups × metricKinds form the 3×3 chat token-length metric grid.
+// queryShape describes a capability's MQL queries: a token-length grid
+// (groups × kinds, filtered) or a fixed, unfiltered set.
+type queryShape struct {
+	groups []string // GenerativeAiService.<group>
+	kinds  []string // <kind>TokenLength
+	fixed  []string // verbatim, unfiltered; nil for token-length shapes
+}
+
 var (
-	metricGroups = []string{"chat", "chatCompletions", "responses"}
-	metricKinds  = []string{"Input", "Output", "Reasoning"}
+	tokenKinds = []string{"Input", "Output", "Reasoning"}
+	inputOnly  = []string{"Input"}
 )
 
+// capabilityShapes maps each supported capability to its query shape.
+// CapabilityUnsupported is intentionally absent (Supported() == false).
+var capabilityShapes = map[Capability]queryShape{
+	CapabilityChat:             {groups: []string{"chat", "chatCompletions", "responses"}, kinds: tokenKinds},
+	CapabilityTextToText:       {groups: []string{"chatCompletions", "responses"}, kinds: tokenKinds},
+	CapabilityTextRerank:       {groups: []string{"rerankText"}, kinds: inputOnly},
+	CapabilityTextEmbeddings:   {groups: []string{"embedText", "embeddings"}, kinds: inputOnly},
+	CapabilityTextToImage:      {groups: []string{"imagesGenerations"}, kinds: tokenKinds},
+	CapabilityImageTextToImage: {groups: []string{"imagesEdits"}, kinds: tokenKinds},
+	CapabilityTextToAudio:      {groups: []string{"audioSpeech"}, kinds: tokenKinds},
+	CapabilityAudioToText:      {groups: []string{"audioTranscriptions"}, kinds: tokenKinds},
+	CapabilityTextClassification: {fixed: []string{
+		`ContentModeration.TotalInvocation.Count[1m].grouping().sum()`,
+	}},
+	CapabilityImageContentModeration: {fixed: []string{
+		`ImageContentModeration.Latency.ChatInput[1m].grouping().sum()`,
+		`ImageContentModeration.Latency.ApplyGuardrails[1m].grouping().sum()`,
+	}},
+}
+
+// Supported reports whether the capability has a metric dashboard at all.
+// False for CapabilityUnsupported (and any capability without a shape).
+func (c Capability) Supported() bool {
+	_, ok := capabilityShapes[c]
+	return ok
+}
+
+// Filterable reports whether the capability's queries carry the DacId/
+// ResourceId filter (token-length grids). False for the fixed, unfiltered
+// moderation capabilities and for unsupported capabilities. Dedicated-mode
+// dashboards require a filterable capability (DacId scoping).
+func (c Capability) Filterable() bool {
+	shape, ok := capabilityShapes[c]
+	return ok && shape.fixed == nil
+}
+
 // metricQueries returns the MQL query strings for a capability and filter.
-// The content-moderation capabilities return fixed, unfiltered queries; the
-// others apply filter.suffix().
+// Fixed (moderation) shapes ignore the filter; token-length shapes apply
+// filter.suffix(). Returns nil for capabilities with no shape (Unsupported);
+// callers guard via Supported() before reaching this.
 func metricQueries(capability Capability, filter Filter) []string {
-	switch capability {
-	case CapabilityTextClassification:
-		return []string{`ContentModeration.TotalInvocation.Count[1m].grouping().sum()`}
-	case CapabilityImageContentModeration:
-		return []string{
-			`ImageContentModeration.Latency.ChatInput[1m].grouping().sum()`,
-			`ImageContentModeration.Latency.ApplyGuardrails[1m].grouping().sum()`,
-		}
-	case CapabilityTextRerank:
-		return []string{`GenerativeAiService.rerankText.InputTokenLength` + filter.suffix()}
-	case CapabilityTextEmbeddings:
-		return []string{`GenerativeAiService.embedText.InputTokenLength` + filter.suffix()}
-	default: // CapabilityChat
-		suffix := filter.suffix()
-		queries := make([]string, 0, len(metricGroups)*len(metricKinds))
-		for _, g := range metricGroups {
-			for _, k := range metricKinds {
-				queries = append(queries, `GenerativeAiService.`+g+`.`+k+`TokenLength`+suffix)
-			}
-		}
-		return queries
+	shape, ok := capabilityShapes[capability]
+	if !ok {
+		return nil
 	}
+	if shape.fixed != nil {
+		return shape.fixed
+	}
+	suffix := filter.suffix()
+	queries := make([]string, 0, len(shape.groups)*len(shape.kinds))
+	for _, g := range shape.groups {
+		for _, k := range shape.kinds {
+			queries = append(queries, `GenerativeAiService.`+g+`.`+k+`TokenLength`+suffix)
+		}
+	}
+	return queries
 }
 
 // MetricsURL builds the full OCI Telemetry MQL Explore URL: a Zipson
