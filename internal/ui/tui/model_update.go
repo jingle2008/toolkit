@@ -62,6 +62,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.showToast(fmt.Sprintf("failed to open portal: %v", msg.err), toastError)
 	case metricsOpenErrMsg:
 		return m, m.showToast(fmt.Sprintf("failed to open metrics: %v", msg.err), toastError)
+	case dacMetricsCatalogLoadedMsg:
+		return m, m.handleDacMetricsCatalogLoaded(msg)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil

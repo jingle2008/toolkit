@@ -149,21 +149,33 @@ type metricsOpenErrMsg struct{ err error }
 // metricsWindow is how far back the DAC metrics dashboard looks.
 const metricsWindow = 7 * 24 * time.Hour
 
-// pendingMetrics tracks a metrics-open request waiting on the model
-// catalogs to load. gen is the load generation it expects, so a later
-// unrelated load (e.g. category navigation) cannot resume it.
-type pendingMetrics struct {
+// importedModelNamePrefix is the OCID resource-id prefix carried by
+// tenant-owned imported and finetune model names. A DAC ModelName with
+// this prefix lives in the imported-model catalog; anything else is a
+// public base model — so we load only the one catalog we need.
+const importedModelNamePrefix = "amaaaaaa"
+
+// dacMetricsCatalogLoadedMsg carries a model catalog fetched while opening
+// a DAC's metrics dashboard back to the Update loop, where it is applied
+// to the dataset (so later BaseModel/ImportedModel navigation reuses it)
+// and then used to resolve the capability and open the link.
+type dacMetricsCatalogLoadedMsg struct {
 	ocid      string
 	modelName string
+	cat       domain.Category
+	base      []models.BaseModel
+	imported  map[string][]models.ImportedModel
 	gen       int
+	err       error
 }
 
 // openDacMetrics resolves the selected DAC's model capability and opens
-// the matching OCI Telemetry MQL dashboard. When the base/imported model
-// catalogs aren't loaded yet (the DAC list view loads neither), it kicks
-// off the same loads the BaseModel/ImportedModel categories use — so the
-// fetched data is cached for later navigation — and resumes the open once
-// they arrive. Non-DAC selections are a logged no-op.
+// the matching OCI Telemetry MQL dashboard. The ModelName picks the single
+// catalog to consult — imported/finetune names carry importedModelNamePrefix,
+// everything else is a base model. If that catalog is already loaded the
+// link opens immediately; otherwise the catalog is fetched (and cached on
+// the dataset for later navigation) before the link opens. Non-DAC
+// selections are a logged no-op.
 func (m *Model) openDacMetrics(item any) tea.Cmd {
 	dac, ok := item.(*models.DedicatedAICluster)
 	if !ok || dac == nil {
@@ -174,64 +186,81 @@ func (m *Model) openDacMetrics(item any) tea.Cmd {
 	if dac.ModelName == "" {
 		return m.launchMetrics(ocid, telemetry.CapabilityChat)
 	}
-	m.metricsPending = &pendingMetrics{ocid: ocid, modelName: dac.ModelName}
-	return m.advanceMetrics()
-}
-
-// advanceMetrics either resolves the pending DAC's capability from the
-// already-loaded catalogs and launches the dashboard, or dispatches the
-// next catalog load — base first, then imported only if the model isn't a
-// base model. Returns nil when nothing is pending.
-func (m *Model) advanceMetrics() tea.Cmd {
-	p := m.metricsPending
-	if p == nil {
-		return nil
+	cat := domain.BaseModel
+	if strings.HasPrefix(dac.ModelName, importedModelNamePrefix) {
+		cat = domain.ImportedModel
 	}
-	if m.dataset == nil || m.dataset.BaseModels == nil {
-		return m.loadCatalogForMetrics(domain.BaseModel)
+	if m.catalogLoaded(cat) {
+		return m.launchMetrics(ocid, m.modelCapability(dac.ModelName))
 	}
-	if model := (&models.Dataset{BaseModels: m.dataset.BaseModels}).FindModelByName(p.modelName); model != nil {
-		return m.launchPendingMetrics(capabilityForModel(model))
-	}
-	if m.dataset.ImportedModelMap == nil {
-		return m.loadCatalogForMetrics(domain.ImportedModel)
-	}
-	model := (&models.Dataset{ImportedModelMap: m.dataset.ImportedModelMap}).FindModelByName(p.modelName)
-	return m.launchPendingMetrics(capabilityForModel(model))
-}
-
-// loadCatalogForMetrics dispatches the shared loader for one model catalog
-// (populating m.dataset via the normal *LoadedMsg handlers) and records
-// the load generation on the pending request so resumeMetrics only
-// continues for this load.
-func (m *Model) loadCatalogForMetrics(cat domain.Category) tea.Cmd {
 	gen := m.bumpGen()
-	m.metricsPending.gen = gen
-	var load tea.Cmd
-	switch cat { //nolint:exhaustive // only the two model catalogs are loadable here
-	case domain.BaseModel:
-		load = loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	case domain.ImportedModel:
-		load = loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	}
-	return tea.Batch(m.beginTask(), load)
+	return tea.Batch(m.beginTask(), m.loadDacMetricsCatalogCmd(ocid, dac.ModelName, cat, gen))
 }
 
-// resumeMetrics continues a pending metrics-open after a catalog load, but
-// only for the generation the pending request is waiting on — so a load
-// triggered by navigation never resumes it.
-func (m *Model) resumeMetrics(gen int) tea.Cmd {
-	if m.metricsPending == nil || m.metricsPending.gen != gen {
+// catalogLoaded reports whether the given model catalog is already present
+// on the dataset (nil means "not loaded yet").
+func (m *Model) catalogLoaded(cat domain.Category) bool {
+	if m.dataset == nil {
+		return false
+	}
+	switch cat { //nolint:exhaustive // only the two model catalogs are relevant here
+	case domain.ImportedModel:
+		return m.dataset.ImportedModelMap != nil
+	default:
+		return m.dataset.BaseModels != nil
+	}
+}
+
+// modelCapability resolves a model name against the loaded dataset to its
+// metric capability (chat for unresolved / finetune / unrecognized).
+func (m *Model) modelCapability(modelName string) telemetry.Capability {
+	if m.dataset == nil {
+		return telemetry.CapabilityChat
+	}
+	return capabilityForModel(m.dataset.FindModelByName(modelName))
+}
+
+// loadDacMetricsCatalogCmd fetches one model catalog off the UI goroutine
+// and returns it to the Update loop for caching + capability resolution.
+func (m *Model) loadDacMetricsCatalogCmd(ocid, modelName string, cat domain.Category, gen int) tea.Cmd {
+	ld, kubeCfg, env, ctx := m.loader, m.kubeConfig, m.environment, m.loadCtx
+	return func() tea.Msg {
+		msg := dacMetricsCatalogLoadedMsg{ocid: ocid, modelName: modelName, cat: cat, gen: gen}
+		switch cat { //nolint:exhaustive // only the two model catalogs are loadable here
+		case domain.ImportedModel:
+			msg.imported, msg.err = ld.LoadImportedModels(ctx, kubeCfg, env)
+		default:
+			msg.base, msg.err = ld.LoadBaseModels(ctx, kubeCfg, env)
+		}
+		return msg
+	}
+}
+
+// handleDacMetricsCatalogLoaded applies the fetched catalog to the dataset
+// (so the BaseModel/ImportedModel categories reuse it) and opens the
+// dashboard. A stale generation is dropped (the user moved on); a load
+// error surfaces a toast and does not open the browser.
+func (m *Model) handleDacMetricsCatalogLoaded(msg dacMetricsCatalogLoadedMsg) tea.Cmd {
+	if msg.gen != m.gen {
+		m.endTask(true)
 		return nil
 	}
-	return m.advanceMetrics()
-}
-
-// launchPendingMetrics clears the pending request and opens the dashboard.
-func (m *Model) launchPendingMetrics(capability telemetry.Capability) tea.Cmd {
-	ocid := m.metricsPending.ocid
-	m.metricsPending = nil
-	return m.launchMetrics(ocid, capability)
+	if msg.err != nil {
+		m.endTask(false)
+		m.logger.Errorw("failed to load model catalog for metrics", "category", msg.cat, "err", msg.err)
+		return m.showToast("failed to open metrics: "+msg.err.Error(), toastError)
+	}
+	switch msg.cat { //nolint:exhaustive // only the two model catalogs are loadable here
+	case domain.ImportedModel:
+		total := 0
+		for _, v := range msg.imported {
+			total += len(v)
+		}
+		m.applyDataset(func(ds *models.Dataset) { ds.SetImportedModelMap(msg.imported) }, domain.ImportedModel, total)
+	default:
+		m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = msg.base }, domain.BaseModel, len(msg.base))
+	}
+	return m.launchMetrics(msg.ocid, m.modelCapability(msg.modelName))
 }
 
 // launchMetrics opens the dashboard URL in the browser off the UI

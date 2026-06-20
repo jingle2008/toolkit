@@ -374,32 +374,24 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 // `toolkit -c <lazy-cat>`, regression locked by
 // TestStartupHang_LazyCategory).
 
-// handleBaseModelsLoaded populates the base-model catalog and, if a DAC
-// metrics-open is waiting on this load generation, returns the command
-// that resumes it (otherwise nil).
-func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) tea.Cmd {
+func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
 	if gen != m.gen {
 		m.endTask(true)
-		return nil
+		return
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
-	return m.resumeMetrics(gen)
 }
 
-// handleImportedModelsLoaded populates the imported-model catalog and, if
-// a DAC metrics-open is waiting on this load generation, returns the
-// command that resumes it (otherwise nil).
-func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedModel, gen int) tea.Cmd {
+func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedModel, gen int) {
 	if gen != m.gen {
 		m.endTask(true)
-		return nil
+		return
 	}
 	total := 0
 	for _, v := range items {
 		total += len(v)
 	}
 	m.applyDataset(func(ds *models.Dataset) { ds.SetImportedModelMap(items) }, domain.ImportedModel, total)
-	return m.resumeMetrics(gen)
 }
 
 func (m *Model) handleGPUPoolsLoaded(items []models.GPUPool, gen int) tea.Cmd {

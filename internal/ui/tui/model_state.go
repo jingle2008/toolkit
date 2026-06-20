@@ -114,10 +114,6 @@ type Model struct {
 	// Tenant-metadata entry form state (EditTenantView).
 	editTenant *editTenantForm
 
-	// metricsPending holds a DAC metrics-open request that is waiting on
-	// the base/imported model catalogs to load (see openDacMetrics).
-	metricsPending *pendingMetrics
-
 	// Transient banner shown over the active view; auto-dismissed via tea.Tick.
 	toast    *toastState
 	toastSeq int

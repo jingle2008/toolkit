@@ -12,9 +12,9 @@ import tea "github.com/charmbracelet/bubbletea"
 func (m *Model) routeListLoadedMsg(msg tea.Msg) []tea.Cmd {
 	switch msg := msg.(type) {
 	case baseModelsLoadedMsg:
-		return []tea.Cmd{m.handleBaseModelsLoaded(msg.Items, msg.Gen)}
+		m.handleBaseModelsLoaded(msg.Items, msg.Gen)
 	case importedModelsLoadedMsg:
-		return []tea.Cmd{m.handleImportedModelsLoaded(msg.Items, msg.Gen)}
+		m.handleImportedModelsLoaded(msg.Items, msg.Gen)
 	case gpuPoolsLoadedMsg:
 		return []tea.Cmd{m.handleGPUPoolsLoaded(msg.Items, msg.Gen)}
 	case gpuNodesLoadedMsg:
