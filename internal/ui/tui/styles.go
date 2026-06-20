@@ -14,6 +14,8 @@ type Styles struct {
 	InfoKey      lipgloss.Style
 	InfoValue    lipgloss.Style
 
+	Live lipgloss.Style
+
 	// Help view styles
 	HelpBorder lipgloss.Style
 	HelpHeader lipgloss.Style
@@ -45,6 +47,10 @@ func DefaultStyles() Styles {
 		Background(lipgloss.Color("#A550DF")).
 		Align(lipgloss.Right)
 
+	live := statusNugget.
+		Background(lipgloss.Color("#2EA043")).
+		Bold(true)
+
 	statusText := lipgloss.NewStyle().Inherit(statusBar)
 	infoKey := lipgloss.NewStyle().Foreground(lipgloss.Color("208"))
 	infoValue := lipgloss.NewStyle().Width(30)
@@ -63,6 +69,7 @@ func DefaultStyles() Styles {
 		StatusBar:    statusBar,
 		Context:      context,
 		Stats:        stats,
+		Live:         live,
 		StatusText:   statusText,
 		InfoKey:      infoKey,
 		InfoValue:    infoValue,

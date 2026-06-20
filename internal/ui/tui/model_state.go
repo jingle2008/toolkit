@@ -71,6 +71,7 @@ type Model struct {
 	statusBarStyle lipgloss.Style
 	contextStyle   lipgloss.Style
 	statsStyle     lipgloss.Style
+	liveStyle      lipgloss.Style
 	statusText     lipgloss.Style
 	infoKeyStyle   lipgloss.Style
 	infoValueStyle lipgloss.Style
@@ -175,6 +176,7 @@ func setStyles(m *Model, s Styles) {
 	m.statusBarStyle = s.StatusBar
 	m.contextStyle = s.Context
 	m.statsStyle = s.Stats
+	m.liveStyle = s.Live
 	m.statusText = s.StatusText
 	m.infoKeyStyle = s.InfoKey
 	m.infoValueStyle = s.InfoValue

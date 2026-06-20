@@ -87,11 +87,16 @@ func (m *Model) statusView() string {
 		loadingCell = fmt.Sprintf(" %s %s ", m.loadingSpinner.View(), m.loadingTimer.View())
 	}
 
+	liveCell := ""
+	if m.watching {
+		liveCell = m.liveStyle.Render("● LIVE")
+	}
+
 	// Render-time width depends on the surrounding cells, so compute
 	// it here rather than in updateLayout. We deliberately operate on
 	// a copy of the textinput so View() stays pure — the original
 	// *m.textInput owned by the reducer is never mutated.
-	inputWidth := max(m.viewWidth-w(contextCell)-w(loadingCell)-w(statsCell)-
+	inputWidth := max(m.viewWidth-w(contextCell)-w(loadingCell)-w(liveCell)-w(statsCell)-
 		w(m.textInput.Prompt)-1, 0)
 	ti := *m.textInput
 	ti.Width = inputWidth
@@ -101,6 +106,7 @@ func (m *Model) statusView() string {
 		contextCell,
 		inputCell,
 		loadingCell,
+		liveCell,
 		statsCell,
 	)
 }
