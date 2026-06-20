@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,79 +34,88 @@ func TestCapabilityForModel(t *testing.T) {
 	}
 }
 
-// capLoader is a fakeLoader whose model-catalog loads are configurable,
-// so resolveCapability's lazy-load paths can be exercised.
-type capLoader struct {
-	fakeLoader
-	base        []models.BaseModel
-	baseErr     error
-	imported    map[string][]models.ImportedModel
-	importedErr error
-}
-
-func (f capLoader) LoadBaseModels(context.Context, string, models.Environment) ([]models.BaseModel, error) {
-	return f.base, f.baseErr
-}
-
-func (f capLoader) LoadImportedModels(context.Context, string, models.Environment) (map[string][]models.ImportedModel, error) {
-	return f.imported, f.importedErr
-}
-
-func TestResolveCapability(t *testing.T) {
+func TestOpenDacMetrics_NoModelLaunchesImmediately(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
-	env := models.Environment{}
-	boom := errors.New("boom")
-	rerankBase := []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}
-	embedImported := map[string][]models.ImportedModel{
+	m := makeTestModel()
+	cmd := m.openDacMetrics(&models.DedicatedAICluster{Name: "d"}) // no ModelName
+	require.NotNil(t, cmd)
+	assert.Nil(t, m.metricsPending, "no catalog wait when the DAC has no model")
+}
+
+func TestOpenDacMetrics_ResolvesFromLoadedBase(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}}
+	cmd := m.openDacMetrics(&models.DedicatedAICluster{Name: "d", ModelName: "r"})
+	require.NotNil(t, cmd, "launches immediately from the cached catalog")
+	assert.Nil(t, m.metricsPending, "resolved without waiting on a load")
+}
+
+func TestOpenDacMetrics_CatalogsNotLoadedDefers(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel() // m.dataset is nil → catalogs not loaded
+	cmd := m.openDacMetrics(&models.DedicatedAICluster{Name: "d", ModelName: "some-model"})
+	require.NotNil(t, cmd, "dispatches a catalog load")
+	require.NotNil(t, m.metricsPending, "open is deferred until catalogs load")
+	assert.Equal(t, "some-model", m.metricsPending.modelName)
+	assert.Equal(t, m.gen, m.metricsPending.gen, "pending keyed to the dispatched load generation")
+}
+
+func TestAdvanceMetrics_FallsBackToImported(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	// Base loaded but the model is absent, imported not loaded yet.
+	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{}}
+	m.metricsPending = &pendingMetrics{ocid: "o", modelName: "e"}
+
+	cmd := m.advanceMetrics()
+	require.NotNil(t, cmd, "dispatches the imported-model load")
+	require.NotNil(t, m.metricsPending, "still waiting")
+	assert.Equal(t, m.gen, m.metricsPending.gen)
+
+	// Imported now loaded and carries the model → resolves.
+	m.dataset.ImportedModelMap = map[string][]models.ImportedModel{
 		"t": {{BaseModel: models.BaseModel{Name: "e", Capabilities: []string{"TEXT_EMBEDDINGS"}}}},
 	}
+	cmd = m.advanceMetrics()
+	require.NotNil(t, cmd)
+	assert.Nil(t, m.metricsPending, "resolved from the imported catalog")
+}
 
-	t.Run("empty model name → chat, no load", func(t *testing.T) {
-		t.Parallel()
-		// A loader that would error proves no load happened.
-		got, err := resolveCapability(ctx, capLoader{baseErr: boom}, "", env, "", nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, telemetry.CapabilityChat, got)
-	})
+func TestResumeMetrics_GenGuard(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}}
+	m.metricsPending = &pendingMetrics{ocid: "o", modelName: "r", gen: 7}
 
-	t.Run("cached base hit → no load", func(t *testing.T) {
-		t.Parallel()
-		got, err := resolveCapability(ctx, capLoader{baseErr: boom}, "", env, "r", rerankBase, nil)
-		require.NoError(t, err)
-		assert.Equal(t, telemetry.CapabilityTextRerank, got)
-	})
+	// A load from a different generation (e.g. navigation) must not resume.
+	assert.Nil(t, m.resumeMetrics(6))
+	require.NotNil(t, m.metricsPending, "pending untouched by an unrelated load")
 
-	t.Run("base not cached → loads base", func(t *testing.T) {
-		t.Parallel()
-		got, err := resolveCapability(ctx, capLoader{base: rerankBase}, "", env, "r", nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, telemetry.CapabilityTextRerank, got)
-	})
+	// The matching generation resumes and resolves.
+	cmd := m.resumeMetrics(7)
+	require.NotNil(t, cmd)
+	assert.Nil(t, m.metricsPending)
+}
 
-	t.Run("base load fails → error", func(t *testing.T) {
-		t.Parallel()
-		_, err := resolveCapability(ctx, capLoader{baseErr: boom}, "", env, "r", nil, nil)
-		require.Error(t, err)
-	})
+func TestHandleBaseModelsLoaded_ResumesAndCaches(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	m.metricsPending = &pendingMetrics{ocid: "o", modelName: "r", gen: m.gen}
 
-	t.Run("not in base → loads imported", func(t *testing.T) {
-		t.Parallel()
-		got, err := resolveCapability(ctx, capLoader{base: []models.BaseModel{}, imported: embedImported}, "", env, "e", nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, telemetry.CapabilityTextEmbeddings, got)
-	})
+	cmd := m.handleBaseModelsLoaded([]models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}, m.gen)
+	require.NotNil(t, cmd, "populates the catalog and resumes the pending open")
+	assert.Nil(t, m.metricsPending, "resolved from the just-loaded base catalog")
+	require.NotNil(t, m.dataset)
+	assert.Len(t, m.dataset.BaseModels, 1, "catalog is cached for later navigation")
+}
 
-	t.Run("imported load fails → error", func(t *testing.T) {
-		t.Parallel()
-		_, err := resolveCapability(ctx, capLoader{base: []models.BaseModel{}, importedErr: boom}, "", env, "ghost", nil, nil)
-		require.Error(t, err)
-	})
+func TestHandleBaseModelsLoaded_StaleGenKeepsPending(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	m.metricsPending = &pendingMetrics{ocid: "o", modelName: "r", gen: m.gen}
 
-	t.Run("loaded cleanly but absent → chat", func(t *testing.T) {
-		t.Parallel()
-		got, err := resolveCapability(ctx, capLoader{base: []models.BaseModel{}, imported: map[string][]models.ImportedModel{}}, "", env, "ghost", nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, telemetry.CapabilityChat, got)
-	})
+	got := m.handleBaseModelsLoaded([]models.BaseModel{{Name: "r"}}, m.gen+1) // stale
+	assert.Nil(t, got, "stale load does not resume")
+	require.NotNil(t, m.metricsPending, "pending survives a stale load")
 }
