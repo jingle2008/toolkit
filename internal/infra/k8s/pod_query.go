@@ -17,6 +17,7 @@ import (
 
 const (
 	runningPodSelector = "status.phase=Running"
+	gpuNodeSelector    = "nvidia.com/gpu.present=true"
 	reservationLabel   = "reservation"
 	servingLabelV1     = "ome.oracle.com/inferenceservice"
 	servingLabelV2     = "ome.io/inferenceservice"

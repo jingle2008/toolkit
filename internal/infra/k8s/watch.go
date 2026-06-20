@@ -158,6 +158,9 @@ func coalesce(
 			timerC = nil
 			select {
 			case out <- struct{}{}:
+				// out is unbuffered: this send blocks until the consumer's
+				// waitForTrigger receives, so a coalesced tick is held (never
+				// dropped), unlike the raw event channel which intentionally coalesces.
 			case <-ctx.Done():
 				return
 			case <-done:
@@ -222,7 +225,7 @@ func WatchGPUNodes(ctx context.Context, clientset kubernetes.Interface) (<-chan 
 	openers := []func(context.Context) (watch.Interface, error){
 		func(ctx context.Context) (watch.Interface, error) {
 			return clientset.CoreV1().Nodes().Watch(ctx, metav1.ListOptions{
-				LabelSelector: "nvidia.com/gpu.present=true",
+				LabelSelector: gpuNodeSelector,
 			})
 		},
 	}

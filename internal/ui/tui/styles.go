@@ -10,11 +10,10 @@ type Styles struct {
 	StatusBar    lipgloss.Style
 	Context      lipgloss.Style
 	Stats        lipgloss.Style
+	Live         lipgloss.Style
 	StatusText   lipgloss.Style
 	InfoKey      lipgloss.Style
 	InfoValue    lipgloss.Style
-
-	Live lipgloss.Style
 
 	// Help view styles
 	HelpBorder lipgloss.Style
