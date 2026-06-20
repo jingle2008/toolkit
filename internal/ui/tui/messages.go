@@ -146,3 +146,32 @@ type propertyRegionalOverridesLoadedMsg struct {
 	Items []models.PropertyRegionalOverride
 	Gen   int
 }
+
+// watchStartedMsg signals that a category watch is live; Trigger yields
+// a value on each debounced cluster change.
+type watchStartedMsg struct {
+	Cat     domain.Category
+	Trigger <-chan struct{}
+	Gen     int
+}
+
+// watchTriggeredMsg signals one debounced change; the reducer re-runs
+// the category's loader and re-arms the listener.
+type watchTriggeredMsg struct {
+	Cat domain.Category
+	Gen int
+}
+
+// watchClosedMsg signals the trigger channel closed (ctx cancel or
+// stream death); the reducer falls back to a final one-shot load.
+type watchClosedMsg struct {
+	Cat domain.Category
+	Gen int
+}
+
+// watchUnavailableMsg signals watch setup failed or is unsupported; the
+// static load result stays on screen, no live indicator.
+type watchUnavailableMsg struct {
+	Cat domain.Category
+	Gen int
+}

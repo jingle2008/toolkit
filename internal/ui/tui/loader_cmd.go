@@ -124,3 +124,51 @@ func loadPropertyRegionalOverridesCmd(ctx context.Context, ld loader.Composite, 
 		return propertyRegionalOverridesLoadedMsg{Items: items, Gen: gen}
 	}
 }
+
+// startWatchCmd type-asserts the loader to loader.Watcher and starts the
+// watch for cat. On success it returns watchStartedMsg with the trigger
+// channel; if the loader doesn't support watching or setup fails, it
+// returns watchUnavailableMsg so the caller keeps the one-shot load
+// result with no live indicator.
+func startWatchCmd(ctx context.Context, ld loader.Composite, cat domain.Category, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+	return func() tea.Msg {
+		w, ok := ld.(loader.Watcher)
+		if !ok {
+			return watchUnavailableMsg{Cat: cat, Gen: gen}
+		}
+		var (
+			trigger <-chan struct{}
+			err     error
+		)
+		switch cat {
+		case domain.BaseModel:
+			trigger, err = w.WatchBaseModels(ctx, kubeCfg, env)
+		case domain.ImportedModel:
+			trigger, err = w.WatchImportedModels(ctx, kubeCfg, env)
+		case domain.GPUNode:
+			trigger, err = w.WatchGPUNodes(ctx, kubeCfg, env)
+		case domain.GPUWorkload:
+			trigger, err = w.WatchGPUWorkloads(ctx, kubeCfg, env)
+		case domain.DedicatedAICluster:
+			trigger, err = w.WatchDedicatedAIClusters(ctx, kubeCfg, env)
+		default:
+			return watchUnavailableMsg{Cat: cat, Gen: gen}
+		}
+		if err != nil {
+			return watchUnavailableMsg{Cat: cat, Gen: gen}
+		}
+		return watchStartedMsg{Cat: cat, Trigger: trigger, Gen: gen}
+	}
+}
+
+// waitForTriggerCmd blocks (in the tea runtime's goroutine) on one value
+// from the trigger channel: a tick → watchTriggeredMsg, a close →
+// watchClosedMsg.
+func waitForTriggerCmd(cat domain.Category, trigger <-chan struct{}, gen int) tea.Cmd {
+	return func() tea.Msg {
+		if _, ok := <-trigger; !ok {
+			return watchClosedMsg{Cat: cat, Gen: gen}
+		}
+		return watchTriggeredMsg{Cat: cat, Gen: gen}
+	}
+}
