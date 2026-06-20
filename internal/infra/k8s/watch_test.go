@@ -109,6 +109,7 @@ func TestWatchTrigger_StreamDeathClosesChannel(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates package-global DebounceWindow; must not run in parallel
 func TestWatchGPUNodes_FiresOnNodeEvent(t *testing.T) {
 	// Not parallel: this test writes the package-level DebounceWindow global.
 	old := DebounceWindow
@@ -138,6 +139,7 @@ func TestWatchGPUNodes_FiresOnNodeEvent(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // mutates package-global DebounceWindow; must not run in parallel
 func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
 	// Not parallel: this test writes the package-level DebounceWindow global.
 	old := DebounceWindow
@@ -172,6 +174,6 @@ func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
 	// Cancel after observing the tick, then drain until trig closes to let
 	// watchTrigger's internal goroutines finish cleanly.
 	cancel()
-	for range trig {
+	for range trig { //nolint:revive // intentional: drain until watchTrigger closes the channel
 	}
 }
