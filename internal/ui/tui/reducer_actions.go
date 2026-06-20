@@ -150,9 +150,13 @@ type metricsOpenErrMsg struct{ err error }
 const metricsWindow = 7 * 24 * time.Hour
 
 // importedModelNamePrefix is the OCID resource-id prefix carried by
-// tenant-owned imported and finetune model names. A DAC ModelName with
-// this prefix lives in the imported-model catalog; anything else is a
-// public base model — so we load only the one catalog we need.
+// tenant-owned imported and finetune model names; public base models use
+// human-readable names. A DAC ModelName with this prefix is resolved
+// against the imported-model catalog, anything else against the base
+// catalog — so we load only the one catalog we need. The invariant is the
+// naming convention (imported/finetune ModelNames are always OCID-form).
+// If it ever broke, the only fallout is a misroute that finds no match
+// and degrades safely to the chat dashboard.
 const importedModelNamePrefix = "amaaaaaa"
 
 // openMetricsTriggerMsg is the second step of openDacMetrics's sequence:
@@ -241,10 +245,13 @@ func (m *Model) catalogLoadCmd(cat domain.Category, gen int) tea.Cmd {
 }
 
 // handleOpenMetricsTrigger opens the dashboard once its catalog load has
-// been applied. It declines when the generation is stale (the user
-// navigated) or the catalog still isn't loaded (the load failed or was
-// dropped — its own error toast already fired), so a possibly-wrong
-// dashboard never opens.
+// been applied. It declines when the generation is stale — a later
+// category load (navigation/refresh) superseded this one — or the catalog
+// still isn't loaded, i.e. the load failed (its errMsg toast already
+// fired) or was stale-dropped (silent; the user moved on). It does not
+// track view-only navigation: a metrics open requested before, say,
+// entering the details view still completes, opening the dashboard for
+// the originally-selected DAC — the action the user asked for.
 func (m *Model) handleOpenMetricsTrigger(msg openMetricsTriggerMsg) tea.Cmd {
 	if msg.gen != m.gen || !m.catalogLoaded(msg.cat) {
 		return nil
