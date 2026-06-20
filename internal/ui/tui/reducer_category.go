@@ -73,14 +73,18 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	}
 
 	var (
-		cmd  tea.Cmd
-		cmds []tea.Cmd
+		cmd      tea.Cmd
+		watchCmd tea.Cmd
+		cmds     []tea.Cmd
 	)
 
 	m.newLoadContext()
 	if fn, ok := handlers[m.category]; ok {
 		gen := m.bumpGen()
 		cmd = fn(m, refresh, gen)
+		if m.category.NeedsKubeConfig() {
+			watchCmd = startWatchCmd(m.loadCtx, m.loader, m.category, m.kubeConfig, m.environment, gen)
+		}
 	} else if _, ok := tenancyOverrides[m.category]; ok {
 		gen := m.bumpGen()
 		cmd = m.handleTenancyOverridesGroup(gen)
@@ -89,6 +93,9 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		cmds = append(cmds, m.beginTask(), cmd)
 	} else {
 		cmds = append(cmds, refreshDataCmd())
+	}
+	if watchCmd != nil {
+		cmds = append(cmds, watchCmd)
 	}
 	return cmds
 }
@@ -127,21 +134,17 @@ func (m *Model) handlePropertyRegionalOverrideCategory(gen int) tea.Cmd {
 }
 
 func (m *Model) handleBaseModelCategory(refresh bool, gen int) tea.Cmd {
-	watch := startWatchCmd(m.loadCtx, m.loader, domain.BaseModel, m.kubeConfig, m.environment, gen)
 	if m.dataset == nil || m.dataset.BaseModels == nil || refresh {
-		return tea.Batch(loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen), watch)
+		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
-	// Cached: paint stays as-is, but still go live.
-	return watch
+	return nil
 }
 
 func (m *Model) handleImportedModelCategory(refresh bool, gen int) tea.Cmd {
-	watch := startWatchCmd(m.loadCtx, m.loader, domain.ImportedModel, m.kubeConfig, m.environment, gen)
 	if m.dataset == nil || m.dataset.ImportedModelMap == nil || refresh {
-		return tea.Batch(loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen), watch)
+		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
-	// Cached: paint stays as-is, but still go live.
-	return watch
+	return nil
 }
 
 func (m *Model) handleGPUPoolCategory(refresh bool, gen int) tea.Cmd {
@@ -152,30 +155,24 @@ func (m *Model) handleGPUPoolCategory(refresh bool, gen int) tea.Cmd {
 }
 
 func (m *Model) handleGPUNodeCategory(refresh bool, gen int) tea.Cmd {
-	watch := startWatchCmd(m.loadCtx, m.loader, domain.GPUNode, m.kubeConfig, m.environment, gen)
 	if m.dataset == nil || m.dataset.GPUNodeMap == nil || refresh {
-		return tea.Batch(loadGPUNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen), watch)
+		return loadGPUNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
-	// Cached: paint stays as-is, but still go live.
-	return watch
+	return nil
 }
 
 func (m *Model) handleGPUWorkloadCategory(refresh bool, gen int) tea.Cmd {
-	watch := startWatchCmd(m.loadCtx, m.loader, domain.GPUWorkload, m.kubeConfig, m.environment, gen)
 	if m.dataset == nil || m.dataset.GPUWorkloadMap == nil || refresh {
-		return tea.Batch(loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen), watch)
+		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
-	// Cached: paint stays as-is, but still go live.
-	return watch
+	return nil
 }
 
 func (m *Model) handleDedicatedAIClusterCategory(refresh bool, gen int) tea.Cmd {
-	watch := startWatchCmd(m.loadCtx, m.loader, domain.DedicatedAICluster, m.kubeConfig, m.environment, gen)
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
-		return tea.Batch(loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen), watch)
+		return loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
-	// Cached: paint stays as-is, but still go live.
-	return watch
+	return nil
 }
 
 // enterDetailView switches the model into detail view mode.
