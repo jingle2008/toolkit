@@ -101,7 +101,12 @@ pods (clientset).
 
 ### loader layer — `internal/infra/loader/interfaces.go` + production impl
 
-New interface, folded into `Composite`:
+New interface, kept as an **optional capability — NOT embedded in `Composite`**.
+Callers type-assert `ld.(loader.Watcher)` and fall back to a one-shot load when
+the assertion fails. This mirrors the existing `TenantMetadataWriter` pattern
+(interfaces.go:98-110), deliberately kept out of `Composite` so the many fake
+loaders in tests need not implement it; embedding `Watcher` would force five new
+methods onto every fake.
 
 ```go
 type Watcher interface {
