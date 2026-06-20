@@ -57,6 +57,44 @@ func TestHandleImportedModelsLoaded_GenMismatch(t *testing.T) {
 	}
 }
 
+// A background catalog load (e.g. resolving a DAC's metrics capability while
+// the DAC list is on screen) must cache its data without rebuilding the
+// current table, which would reset the cursor and clear the active filter.
+func TestApplyDataset_BackgroundLoadPreservesCurrentView(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.DedicatedAICluster
+	m.filter = "keep-me"
+
+	m.applyDataset(func(ds *models.Dataset) {
+		ds.BaseModels = []models.BaseModel{{Name: "bm1"}}
+	}, domain.BaseModel, 1)
+
+	if m.filter != "keep-me" {
+		t.Fatalf("background load cleared the active filter: %q", m.filter)
+	}
+	if len(m.dataset.BaseModels) != 1 {
+		t.Fatalf("background load did not cache the data: %#v", m.dataset.BaseModels)
+	}
+}
+
+// A load for the category currently on screen still refreshes the display
+// (which resets the filter) — the guard must not suppress that.
+func TestApplyDataset_CurrentCategoryLoadRefreshes(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.BaseModel
+	m.filter = "stale"
+
+	m.applyDataset(func(ds *models.Dataset) {
+		ds.BaseModels = []models.BaseModel{{Name: "bm1"}}
+	}, domain.BaseModel, 1)
+
+	if m.filter != "" {
+		t.Fatalf("current-category load did not refresh (filter still %q)", m.filter)
+	}
+}
+
 func TestHandleBaseModelsLoaded_GenMismatch(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
