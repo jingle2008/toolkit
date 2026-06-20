@@ -32,10 +32,12 @@ func TestWatchTrigger_CoalescesBurst(t *testing.T) {
 	require.NoError(t, err)
 
 	// A burst of three events within one window must collapse to one tick.
+	fed := make(chan struct{})
 	go func() {
 		fw.Add(nil)
 		fw.Modify(nil)
 		fw.Delete(nil)
+		close(fed)
 	}()
 
 	select {
@@ -51,6 +53,11 @@ func TestWatchTrigger_CoalescesBurst(t *testing.T) {
 		t.Fatal("burst should coalesce to a single tick")
 	case <-time.After(3 * window):
 	}
+
+	// Ensure the injection goroutine has fully completed before cancel()/teardown
+	// so that fw.Stop() (called by watchTrigger's stopper) cannot race with
+	// fw.Delete() (the last send in the goroutine above).
+	<-fed
 }
 
 func TestWatchTrigger_OpenerErrorStopsOthers(t *testing.T) {
@@ -103,7 +110,7 @@ func TestWatchTrigger_StreamDeathClosesChannel(t *testing.T) {
 }
 
 func TestWatchGPUNodes_FiresOnNodeEvent(t *testing.T) {
-	t.Parallel()
+	// Not parallel: this test writes the package-level DebounceWindow global.
 	old := DebounceWindow
 	DebounceWindow = 50 * time.Millisecond
 	defer func() { DebounceWindow = old }()
@@ -132,13 +139,14 @@ func TestWatchGPUNodes_FiresOnNodeEvent(t *testing.T) {
 }
 
 func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
-	t.Parallel()
+	// Not parallel: this test writes the package-level DebounceWindow global.
 	old := DebounceWindow
 	DebounceWindow = 50 * time.Millisecond
 	defer func() { DebounceWindow = old }()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// Do NOT defer cancel() here — we call it explicitly after observing the
+	// tick so that teardown (Stop) cannot race with the Create's internal send.
 
 	gvr := schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "clusterbasemodels"}
 	scheme := runtime.NewScheme()
@@ -157,6 +165,13 @@ func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
 	select {
 	case <-trig:
 	case <-time.After(time.Second):
+		cancel()
 		t.Fatal("expected a trigger tick after CR create")
+	}
+
+	// Cancel after observing the tick, then drain until trig closes to let
+	// watchTrigger's internal goroutines finish cleanly.
+	cancel()
+	for range trig {
 	}
 }
