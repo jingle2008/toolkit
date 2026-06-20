@@ -151,7 +151,6 @@ func crWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) fu
 func gpuPodWatchOpeners(clientset kubernetes.Interface) []func(context.Context) (watch.Interface, error) {
 	openers := make([]func(context.Context) (watch.Interface, error), 0, len(gpuPodSelectors))
 	for _, sel := range gpuPodSelectors {
-		sel := sel
 		openers = append(openers, func(ctx context.Context) (watch.Interface, error) {
 			return clientset.CoreV1().Pods("").Watch(ctx, metav1.ListOptions{
 				LabelSelector: sel,
