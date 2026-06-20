@@ -75,3 +75,24 @@ func TestHandleWatchUnavailable_ClearsWatchingWhenActive(t *testing.T) {
 	m.handleWatchUnavailable(watchUnavailableMsg{Cat: domain.GPUNode, Gen: 2})
 	assert.False(t, m.watching, "unavailable must clear the live indicator")
 }
+
+func TestHandleWatchClosed_StaleIgnored(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gen = 6
+	m.watching = true
+
+	cmd := m.handleWatchClosed(watchClosedMsg{Cat: domain.GPUNode, Gen: 3})
+	assert.Nil(t, cmd)
+	assert.True(t, m.watching, "stale watchClosedMsg must not clear the live indicator")
+}
+
+func TestHandleWatchUnavailable_StaleIgnored(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gen = 7
+	m.watching = true
+
+	m.handleWatchUnavailable(watchUnavailableMsg{Cat: domain.GPUNode, Gen: 4})
+	assert.True(t, m.watching, "stale watchUnavailableMsg must not clear the live indicator")
+}

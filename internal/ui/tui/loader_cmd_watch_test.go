@@ -77,6 +77,7 @@ func TestStartWatchCmd_UnsupportedEmitsUnavailable(t *testing.T) {
 	unavail, ok := msg.(watchUnavailableMsg)
 	require.True(t, ok, "expected watchUnavailableMsg, got %T", msg)
 	assert.Equal(t, 3, unavail.Gen)
+	assert.Equal(t, domain.GPUNode, unavail.Cat)
 }
 
 func TestWaitForTriggerCmd_TickEmitsTriggered(t *testing.T) {
@@ -96,6 +97,8 @@ func TestWaitForTriggerCmd_ClosedEmitsClosed(t *testing.T) {
 	close(trig)
 	cmd := waitForTriggerCmd(domain.GPUNode, trig, 9)
 	msg := cmd()
-	_, ok := msg.(watchClosedMsg)
+	closed, ok := msg.(watchClosedMsg)
 	require.True(t, ok, "expected watchClosedMsg, got %T", msg)
+	assert.Equal(t, domain.GPUNode, closed.Cat)
+	assert.Equal(t, 9, closed.Gen)
 }

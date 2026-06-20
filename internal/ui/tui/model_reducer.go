@@ -520,7 +520,8 @@ func (m *Model) handleWatchStarted(msg watchStartedMsg) tea.Cmd {
 }
 
 // handleWatchTriggered re-runs the category loader and re-arms the
-// listener so subsequent changes keep flowing.
+// listener so subsequent changes keep flowing. Stale-generation
+// messages (msg.Gen != m.gen) are ignored without side effects.
 func (m *Model) handleWatchTriggered(msg watchTriggeredMsg) tea.Cmd {
 	if msg.Gen != m.gen {
 		return nil
