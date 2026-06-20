@@ -37,29 +37,6 @@ func collectCmdsMsgTypes(t *testing.T, cmds []tea.Cmd) []string {
 	return types
 }
 
-// collectMsgTypes runs a (possibly batched) cmd and returns the message
-// types it produced. tea.Batch returns a BatchMsg of sub-commands.
-func collectMsgTypes(t *testing.T, cmd tea.Cmd) []string {
-	t.Helper()
-	if cmd == nil {
-		return nil
-	}
-	var types []string
-	msg := cmd()
-	switch m := msg.(type) {
-	case tea.BatchMsg:
-		for _, c := range m {
-			if c == nil {
-				continue
-			}
-			types = append(types, msgTypeName(c()))
-		}
-	default:
-		types = append(types, msgTypeName(msg))
-	}
-	return types
-}
-
 func msgTypeName(msg tea.Msg) string { return fmt.Sprintf("%T", msg) }
 func contains(s []string, v string) bool {
 	for _, x := range s {
@@ -117,15 +94,16 @@ func TestUpdateCategoryCore_GPUNode_Cached(t *testing.T) {
 	cmds := m.updateCategoryCore(domain.GPUNode)
 	require.NotEmpty(t, cmds)
 
-	// Run all cmds so messages are produced and pendingTasks can settle.
-	_ = collectCmdsMsgTypes(t, cmds)
+	// Run all cmds to produce messages. beginTask is only called during cmd
+	// execution for new load tasks; on the cached path it was never called,
+	// so pendingTasks stays 0.
+	types := collectCmdsMsgTypes(t, cmds)
 
 	// The handler returned nil → beginTask must NOT have been called.
 	assert.Equal(t, 0, m.pendingTasks,
 		"cached re-entry must not leak a pending task")
 
 	// Watch should still be started even when the load was skipped.
-	types := collectCmdsMsgTypes(t, cmds)
 	assert.True(t,
 		hasWatchLifecycle(types),
 		"expected a watch lifecycle message even on cached path, got %v", types)
