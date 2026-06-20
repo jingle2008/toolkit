@@ -61,76 +61,110 @@ func watchTrigger(
 		wg.Add(1)
 		go func(w watch.Interface) {
 			defer wg.Done()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-done:
-					return
-				case _, ok := <-w.ResultChan():
-					if !ok {
-						closeDone() // stream died
-						return
-					}
-					select {
-					case raw <- struct{}{}:
-					default: // a signal is already pending; coalesce
-					}
-				}
-			}
+			fanInWatcher(ctx, w, raw, done, closeDone)
 		}(w)
 	}
 
 	// stopped is closed after all watchers are stopped and fan-in goroutines exit.
 	stopped := make(chan struct{})
 
-	// Stop every watcher once ctx is cancelled or a stream dies.
-	go func() {
-		select {
-		case <-ctx.Done():
-		case <-done:
-		}
-		for _, w := range watchers {
-			w.Stop()
-		}
-		wg.Wait()
-		close(stopped)
-	}()
+	go stopWatchers(ctx, done, watchers, &wg, stopped)
 
 	out := make(chan struct{})
-	go func() {
-		// Wait for watchers to be stopped before closing out, so callers that
-		// check fw.IsStopped() immediately after receiving the closed channel
-		// observe consistent state.
-		defer func() {
-			<-stopped
-			close(out)
-		}()
-		var timerC <-chan time.Time
-		for {
+	go coalesce(ctx, window, raw, done, stopped, out)
+
+	return out, nil
+}
+
+// fanInWatcher forwards events from a single watcher into raw. It exits when
+// ctx is cancelled, done is closed, or the watcher's ResultChan closes (stream
+// death). On stream death it calls closeDone so the other goroutines shut down.
+func fanInWatcher(
+	ctx context.Context,
+	w watch.Interface,
+	raw chan<- struct{},
+	done <-chan struct{},
+	closeDone func(),
+) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-done:
+			return
+		case _, ok := <-w.ResultChan():
+			if !ok {
+				closeDone() // stream died
+				return
+			}
 			select {
+			case raw <- struct{}{}:
+			default: // a signal is already pending; coalesce
+			}
+		}
+	}
+}
+
+// stopWatchers waits for ctx cancellation or done, then stops all watchers,
+// waits for all fan-in goroutines to exit, and closes stopped.
+func stopWatchers(
+	ctx context.Context,
+	done <-chan struct{},
+	watchers []watch.Interface,
+	wg *sync.WaitGroup,
+	stopped chan<- struct{},
+) {
+	select {
+	case <-ctx.Done():
+	case <-done:
+	}
+	for _, w := range watchers {
+		w.Stop()
+	}
+	wg.Wait()
+	close(stopped)
+}
+
+// coalesce debounces raw signals into out using window. It exits the debounce
+// loop when ctx is cancelled or done is closed, then waits for stopped before
+// closing out so callers observe consistent shutdown state.
+func coalesce(
+	ctx context.Context,
+	window time.Duration,
+	raw <-chan struct{},
+	done <-chan struct{},
+	stopped <-chan struct{},
+	out chan<- struct{},
+) {
+	// Wait for watchers to be stopped before closing out, so callers that
+	// check fw.IsStopped() immediately after receiving the closed channel
+	// observe consistent state.
+	defer func() {
+		<-stopped
+		close(out)
+	}()
+	var timerC <-chan time.Time
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-done:
+			return
+		case <-raw:
+			if timerC == nil {
+				timerC = time.After(window)
+			}
+		case <-timerC:
+			timerC = nil
+			select {
+			case out <- struct{}{}:
 			case <-ctx.Done():
 				return
 			case <-done:
 				return
-			case <-raw:
-				if timerC == nil {
-					timerC = time.After(window)
-				}
-			case <-timerC:
-				timerC = nil
-				select {
-				case out <- struct{}{}:
-				case <-ctx.Done():
-					return
-				case <-done:
-					return
-				}
 			}
 		}
-	}()
-
-	return out, nil
+	}
 }
 
 // crWatchOpener returns an opener that watches all objects of one GVR.
