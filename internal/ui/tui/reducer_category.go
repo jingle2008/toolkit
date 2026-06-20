@@ -40,6 +40,8 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		m.sortColumn = common.NameCol
 		m.sortAsc = true
 		m.showFaulty = false
+		m.watching = false
+		m.watchTrigger = nil
 		// Switch the visible chrome to the destination immediately so
 		// the user sees what they navigated to (new headers, empty
 		// rows) instead of stale data under a mismatched label.

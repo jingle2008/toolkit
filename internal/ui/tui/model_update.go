@@ -69,6 +69,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case detailContentRenderedMsg:
 		return m, m.handleDetailContentRenderedMsg(msg)
+	case watchStartedMsg:
+		return m, m.handleWatchStarted(msg)
+	case watchTriggeredMsg:
+		return m, m.handleWatchTriggered(msg)
+	case watchClosedMsg:
+		return m, m.handleWatchClosed(msg)
+	case watchUnavailableMsg:
+		m.handleWatchUnavailable(msg)
+		return m, nil
 	default:
 		return m.delegateToActiveView(msg)
 	}

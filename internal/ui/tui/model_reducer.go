@@ -487,6 +487,82 @@ func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyReg
 	m.applyDataset(func(ds *models.Dataset) { ds.PropertyRegionalOverrides = items }, domain.PropertyRegionalOverride, len(items))
 }
 
+// reloadCategoryCmd returns the existing one-shot load command for a
+// watched category. Used both for the trigger-driven refresh and the
+// final reload when a watch dies. Returns nil for non-watched categories.
+func (m *Model) reloadCategoryCmd(cat domain.Category, gen int) tea.Cmd {
+	switch cat {
+	case domain.BaseModel:
+		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	case domain.ImportedModel:
+		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	case domain.GPUNode:
+		return loadGPUNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	case domain.GPUWorkload:
+		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	case domain.DedicatedAICluster:
+		return loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	default:
+		return nil
+	}
+}
+
+// handleWatchStarted marks the category live and arms the trigger
+// listener. A stale gen (the user already navigated away) is ignored;
+// the watch goroutine is already being torn down via loadCtx cancel.
+func (m *Model) handleWatchStarted(msg watchStartedMsg) tea.Cmd {
+	if msg.Gen != m.gen {
+		return nil
+	}
+	m.watching = true
+	m.watchTrigger = msg.Trigger
+	return waitForTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
+}
+
+// handleWatchTriggered re-runs the category loader and re-arms the
+// listener so subsequent changes keep flowing.
+func (m *Model) handleWatchTriggered(msg watchTriggeredMsg) tea.Cmd {
+	if msg.Gen != m.gen {
+		return nil
+	}
+	reload := m.reloadCategoryCmd(msg.Cat, msg.Gen)
+	if reload == nil {
+		return nil
+	}
+	return tea.Batch(m.beginTask(), reload, m.waitForTrigger(msg.Cat, msg.Gen))
+}
+
+// handleWatchClosed falls back to a final one-shot load and clears the
+// live indicator (no auto-reconnect).
+func (m *Model) handleWatchClosed(msg watchClosedMsg) tea.Cmd {
+	if msg.Gen != m.gen {
+		return nil
+	}
+	m.watching = false
+	reload := m.reloadCategoryCmd(msg.Cat, msg.Gen)
+	if reload == nil {
+		return nil
+	}
+	return tea.Batch(m.beginTask(), reload)
+}
+
+// handleWatchUnavailable records that no live watch is active. The
+// static load result remains on screen.
+func (m *Model) handleWatchUnavailable(msg watchUnavailableMsg) {
+	if msg.Gen != m.gen {
+		return
+	}
+	m.watching = false
+}
+
+// waitForTrigger re-arms the listener on the stored trigger channel.
+func (m *Model) waitForTrigger(cat domain.Category, gen int) tea.Cmd {
+	if m.watchTrigger == nil {
+		return nil
+	}
+	return waitForTriggerCmd(cat, m.watchTrigger, gen)
+}
+
 func (m *Model) sortTableByColumn(column string) tea.Cmd {
 	if m.sortColumn == column {
 		m.sortAsc = !m.sortAsc

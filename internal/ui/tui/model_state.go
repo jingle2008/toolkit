@@ -91,6 +91,15 @@ type Model struct {
 	// Message generation to guard against stale async responses
 	gen int
 
+	// watching is true while a live k8s watch is active for the current
+	// category; drives the status-bar live indicator. Reset on every
+	// category change and cleared on watch fallback.
+	watching bool
+
+	// watchTrigger is the active category's trigger channel; held so a
+	// watchTriggeredMsg can re-arm the listener on the same stream.
+	watchTrigger <-chan struct{}
+
 	// Table sorting state
 	sortColumn string
 	sortAsc    bool
