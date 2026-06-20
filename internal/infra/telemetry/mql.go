@@ -29,8 +29,6 @@ const (
 	CapabilityTextClassification
 	// CapabilityImageContentModeration is a fixed, unfiltered image content-moderation query set.
 	CapabilityImageContentModeration
-	// CapabilityTextToText is the text-to-text (LLM inference) metric set.
-	CapabilityTextToText
 	// CapabilityTextToImage is the text-to-image generation metric set.
 	CapabilityTextToImage
 	// CapabilityImageTextToImage is the image-conditioned image generation metric set.
@@ -83,7 +81,6 @@ var (
 // CapabilityUnsupported is intentionally absent (Supported() == false).
 var capabilityShapes = map[Capability]queryShape{
 	CapabilityChat:             {groups: []string{"chat", "chatCompletions", "responses"}, kinds: tokenKinds},
-	CapabilityTextToText:       {groups: []string{"chatCompletions", "responses"}, kinds: tokenKinds},
 	CapabilityTextRerank:       {groups: []string{"rerankText"}, kinds: inputOnly},
 	CapabilityTextEmbeddings:   {groups: []string{"embedText", "embeddings"}, kinds: inputOnly},
 	CapabilityTextToImage:      {groups: []string{"imagesGenerations"}, kinds: tokenKinds},

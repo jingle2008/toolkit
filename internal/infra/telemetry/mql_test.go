@@ -135,20 +135,6 @@ func TestMetricQueries_ImageContentModerationFixedUnfiltered(t *testing.T) {
 	assert.Equal(t, want, metricQueries(CapabilityImageContentModeration, Filter{Key: FilterDacID, Value: "x"}))
 }
 
-func TestMetricQueries_TextToText(t *testing.T) {
-	t.Parallel()
-	f := Filter{Key: FilterResourceID, Value: "m"}
-	want := []string{
-		`GenerativeAiService.chatCompletions.InputTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
-		`GenerativeAiService.chatCompletions.OutputTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
-		`GenerativeAiService.chatCompletions.ReasoningTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
-		`GenerativeAiService.responses.InputTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
-		`GenerativeAiService.responses.OutputTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
-		`GenerativeAiService.responses.ReasoningTokenLength[1m]{ResourceId = "m"}.grouping().sum()`,
-	}
-	assert.Equal(t, want, metricQueries(CapabilityTextToText, f))
-}
-
 func TestMetricQueries_Embeddings(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, []string{
@@ -184,7 +170,7 @@ func TestMetricQueries_UnsupportedReturnsNil(t *testing.T) {
 func TestCapabilitySupportedAndFilterable(t *testing.T) {
 	t.Parallel()
 	for _, c := range []Capability{
-		CapabilityChat, CapabilityTextToText, CapabilityTextRerank, CapabilityTextEmbeddings,
+		CapabilityChat, CapabilityTextRerank, CapabilityTextEmbeddings,
 		CapabilityTextToImage, CapabilityImageTextToImage, CapabilityTextToAudio, CapabilityAudioToText,
 	} {
 		assert.True(t, c.Supported(), "supported %d", c)

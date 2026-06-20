@@ -370,8 +370,8 @@ var capabilityPrecedence = []struct {
 	cap  telemetry.Capability
 }{
 	{models.CapabilityChat, telemetry.CapabilityChat},
-	{models.CapabilityTextToText, telemetry.CapabilityTextToText},
-	{models.CapabilityImageTextToText, telemetry.CapabilityTextToText},
+	{models.CapabilityTextToText, telemetry.CapabilityChat},
+	{models.CapabilityImageTextToText, telemetry.CapabilityChat},
 	{models.CapabilityTextRerank, telemetry.CapabilityTextRerank},
 	{models.CapabilityTextEmbeddings, telemetry.CapabilityTextEmbeddings},
 	{models.CapabilityEmbedding, telemetry.CapabilityTextEmbeddings},
