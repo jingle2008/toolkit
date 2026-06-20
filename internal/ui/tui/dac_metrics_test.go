@@ -15,7 +15,7 @@ import (
 func TestMetricsURL_Build(t *testing.T) {
 	t.Parallel()
 	env := models.Environment{Realm: "oc1", Region: "me-abudhabi-1", Type: "prod"}
-	got := metricsURL(env, telemetry.Filter{Key: telemetry.FilterDacId, Value: "ocid1.dac.oc1.me-abudhabi-1.x"}, telemetry.CapabilityChat, time.UnixMilli(1781832733444))
+	got := metricsURL(env, telemetry.Filter{Key: telemetry.FilterDacID, Value: "ocid1.dac.oc1.me-abudhabi-1.x"}, telemetry.CapabilityChat, time.UnixMilli(1781832733444))
 	require.True(t, strings.HasPrefix(got,
 		"https://devops.oci.oraclecorp.com/telemetry/mql/explore?data="),
 		"unexpected URL: %s", got)

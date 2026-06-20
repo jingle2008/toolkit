@@ -44,7 +44,7 @@ func TestResolveMetricsPlan_ImportedModelDedicated(t *testing.T) {
 	}
 	filter, capability, ok, reason := m.resolveMetricsPlan(im)
 	require.True(t, ok, reason)
-	assert.Equal(t, telemetry.FilterDacId, filter.Key)
+	assert.Equal(t, telemetry.FilterDacID, filter.Key)
 	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.me-abudhabi-1.amaaaaaadac1", filter.Value)
 	assert.Equal(t, telemetry.CapabilityTextRerank, capability)
 }
@@ -72,7 +72,7 @@ func TestResolveMetricsPlan_WorkloadDedicated(t *testing.T) {
 	w := &models.GPUWorkload{Name: "p", Namespace: "amaaaaaadac1", Model: "gpt"}
 	filter, capability, ok, reason := m.resolveMetricsPlan(w)
 	require.True(t, ok, reason)
-	assert.Equal(t, telemetry.FilterDacId, filter.Key)
+	assert.Equal(t, telemetry.FilterDacID, filter.Key)
 	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.me-abudhabi-1.amaaaaaadac1", filter.Value)
 	assert.Equal(t, telemetry.CapabilityChat, capability)
 }
@@ -83,7 +83,7 @@ func TestResolveMetricsPlan_WorkloadOnDemand(t *testing.T) {
 	w := &models.GPUWorkload{Name: "p", Namespace: "team-x", Model: "gpt"}
 	filter, capability, ok, reason := m.resolveMetricsPlan(w)
 	require.True(t, ok, reason)
-	assert.Equal(t, telemetry.FilterResourceId, filter.Key)
+	assert.Equal(t, telemetry.FilterResourceID, filter.Key)
 	assert.Equal(t, "openai.gpt-5.5", filter.Value)
 	assert.Equal(t, telemetry.CapabilityChat, capability)
 }
@@ -94,7 +94,8 @@ func TestResolveMetricsPlan_OnDemandClassification(t *testing.T) {
 	w := &models.GPUWorkload{Name: "p", Namespace: "team-x", Model: "mod"}
 	filter, capability, ok, reason := m.resolveMetricsPlan(w)
 	require.True(t, ok, reason)
-	assert.Equal(t, telemetry.FilterResourceId, filter.Key)
+	assert.Equal(t, telemetry.FilterResourceID, filter.Key)
+	assert.Equal(t, "openai.mod", filter.Value)
 	assert.Equal(t, telemetry.CapabilityTextClassification, capability)
 }
 
@@ -149,4 +150,6 @@ func TestFinishMetrics_UnresolvableShowsToast(t *testing.T) {
 	// GPUWorkload with empty Model → resolveMetricsPlan returns ok=false, reason="workload has no model"
 	cmd := m.finishMetrics(&models.GPUWorkload{Name: "p", Namespace: "amaaaaaadac1"})
 	assert.NotNil(t, cmd, "a toast cmd must be dispatched for unresolvable items with a reason")
+	require.NotNil(t, m.toast, "toast must be set after finishMetrics on unresolvable item")
+	assert.Equal(t, "workload has no model", m.toast.msg)
 }

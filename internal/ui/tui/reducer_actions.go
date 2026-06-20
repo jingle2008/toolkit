@@ -281,7 +281,7 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 		if it == nil {
 			return telemetry.Filter{}, 0, false, ""
 		}
-		filter := telemetry.Filter{Key: telemetry.FilterDacId, Value: it.OCID(realm, region)}
+		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: it.OCID(realm, region)}
 		if it.ModelName == "" {
 			return filter, telemetry.CapabilityChat, true, ""
 		}
@@ -294,7 +294,7 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 			return telemetry.Filter{}, 0, false, "imported model is not tied to a dedicated AI cluster"
 		}
 		ocid := models.DedicatedAICluster{Name: it.Namespace}.OCID(realm, region)
-		filter := telemetry.Filter{Key: telemetry.FilterDacId, Value: ocid}
+		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
 		return m.dedicatedPlan(filter, &it.BaseModel)
 	case *models.GPUWorkload:
 		if it == nil {
@@ -305,14 +305,14 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 		}
 		if strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
 			ocid := models.DedicatedAICluster{Name: it.Namespace}.OCID(realm, region)
-			filter := telemetry.Filter{Key: telemetry.FilterDacId, Value: ocid}
+			filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
 			return m.dedicatedPlan(filter, m.dataset.FindModelByName(it.Model))
 		}
 		bm := m.dataset.FindBaseModelByName(it.Model)
 		if bm == nil {
 			return telemetry.Filter{}, 0, false, "model not found in base catalog"
 		}
-		return telemetry.Filter{Key: telemetry.FilterResourceId, Value: bm.DisplayName}, capabilityForModel(bm), true, ""
+		return telemetry.Filter{Key: telemetry.FilterResourceID, Value: bm.DisplayName}, capabilityForModel(bm), true, ""
 	default:
 		return telemetry.Filter{}, 0, false, ""
 	}

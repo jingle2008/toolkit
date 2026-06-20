@@ -36,12 +36,12 @@ const (
 
 // Filter dimension keys.
 const (
-	FilterDacId      = "DacId"      //nolint:revive // API constant; renaming would break callers
-	FilterResourceId = "ResourceId" //nolint:revive // API constant; renaming would break callers
+	FilterDacID      = "DacId"
+	FilterResourceID = "ResourceId"
 )
 
 // Filter scopes capability-driven metric queries to one resource: Key is the
-// MQL dimension (FilterDacId or FilterResourceId), Value its value (a DAC
+// MQL dimension (FilterDacID or FilterResourceID), Value its value (a DAC
 // OCID or a model display name). The two content-moderation capabilities
 // ignore the filter — their queries are fixed and unfiltered.
 type Filter struct {
