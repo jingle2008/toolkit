@@ -39,3 +39,19 @@ func TestCapabilityConstants(t *testing.T) {
 	assert.Equal(t, "TEXT_CLASSIFICATION", CapabilityTextClassification)
 	assert.Equal(t, "IMAGE_CONTENT_MODERATION", CapabilityImageContentModeration)
 }
+
+func TestExpandedCapabilityConstants(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "TEXT_TO_TEXT", CapabilityTextToText)
+	assert.Equal(t, "IMAGE_TEXT_TO_TEXT", CapabilityImageTextToText)
+	assert.Equal(t, "EMBEDDING", CapabilityEmbedding)
+	assert.Equal(t, "TEXT_TO_IMAGE", CapabilityTextToImage)
+	assert.Equal(t, "IMAGE_TEXT_TO_IMAGE", CapabilityImageTextToImage)
+	assert.Equal(t, "TEXT_TO_AUDIO", CapabilityTextToAudio)
+	assert.Equal(t, "AUDIO_TO_TEXT", CapabilityAudioToText)
+	assert.Equal(t, "CONTENT_MODERATION", CapabilityContentModeration)
+	assert.Equal(t, "TEXT_GENERATION", CapabilityTextGeneration)
+	assert.Equal(t, "AUDIO_TO_AUDIO", CapabilityAudioToAudio)
+	assert.Equal(t, "REALTIME", CapabilityRealtime)
+	assert.Equal(t, "PROMPT_INJECTION_PROTECTION", CapabilityPromptInjectionProtection)
+}
