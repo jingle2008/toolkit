@@ -36,8 +36,8 @@ const (
 
 // Filter dimension keys.
 const (
-	FilterDacId      = "DacId"
-	FilterResourceId = "ResourceId"
+	FilterDacId      = "DacId"      //nolint:revive // API constant; renaming would break callers
+	FilterResourceId = "ResourceId" //nolint:revive // API constant; renaming would break callers
 )
 
 // Filter scopes capability-driven metric queries to one resource: Key is the

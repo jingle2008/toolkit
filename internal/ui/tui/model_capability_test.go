@@ -26,6 +26,11 @@ func TestCapabilityForModel(t *testing.T) {
 		// Precedence CHAT > RERANK > EMBED when several are present.
 		{"multi", &models.BaseModel{Capabilities: []string{"TEXT_EMBEDDINGS", "CHAT"}}, telemetry.CapabilityChat},
 		{"unknown", &models.BaseModel{Capabilities: []string{"SOMETHING_ELSE"}}, telemetry.CapabilityChat},
+		{"classification", &models.BaseModel{Capabilities: []string{"TEXT_CLASSIFICATION"}}, telemetry.CapabilityTextClassification},
+		{"imagemod", &models.BaseModel{Capabilities: []string{"IMAGE_CONTENT_MODERATION"}}, telemetry.CapabilityImageContentModeration},
+		{"chat-over-classification", &models.BaseModel{Capabilities: []string{"TEXT_CLASSIFICATION", "CHAT"}}, telemetry.CapabilityChat},
+		{"embed-over-classification", &models.BaseModel{Capabilities: []string{"TEXT_CLASSIFICATION", "TEXT_EMBEDDINGS"}}, telemetry.CapabilityTextEmbeddings},
+		{"classification-over-imagemod", &models.BaseModel{Capabilities: []string{"IMAGE_CONTENT_MODERATION", "TEXT_CLASSIFICATION"}}, telemetry.CapabilityTextClassification},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

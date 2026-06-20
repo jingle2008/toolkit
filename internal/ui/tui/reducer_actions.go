@@ -194,7 +194,15 @@ func (m *Model) metricsCatalog(item any) (domain.Category, bool) {
 			return domain.BaseModel, false
 		}
 		return modelCatalog(it.ModelName), true
-	default:
+	case *models.GPUWorkload:
+		if it == nil || it.Model == "" {
+			return domain.BaseModel, false
+		}
+		if strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
+			return modelCatalog(it.Model), true // dedicated
+		}
+		return domain.BaseModel, true // on-demand matches the base catalog
+	default: // *models.ImportedModel (capabilities inline) or unknown
 		return domain.BaseModel, false
 	}
 }
@@ -264,6 +272,8 @@ func (m *Model) finishMetrics(item any) tea.Cmd {
 // (unknown/nil item). Reads m.dataset, which is non-nil whenever a catalog
 // was required (guaranteed loaded before this runs). Task 4 adds the
 // ImportedModel and GPUWorkload cases.
+//
+//nolint:cyclop // per-item-type metrics resolution; the switch is the routing surface
 func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capability, bool, string) {
 	realm, region := m.environment.Realm, m.environment.Region
 	switch it := item.(type) {
@@ -276,6 +286,33 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 			return filter, telemetry.CapabilityChat, true, ""
 		}
 		return m.dedicatedPlan(filter, m.dataset.FindModelByName(it.ModelName))
+	case *models.ImportedModel:
+		if it == nil {
+			return telemetry.Filter{}, 0, false, ""
+		}
+		if !strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
+			return telemetry.Filter{}, 0, false, "imported model is not tied to a dedicated AI cluster"
+		}
+		ocid := models.DedicatedAICluster{Name: it.Namespace}.OCID(realm, region)
+		filter := telemetry.Filter{Key: telemetry.FilterDacId, Value: ocid}
+		return m.dedicatedPlan(filter, &it.BaseModel)
+	case *models.GPUWorkload:
+		if it == nil {
+			return telemetry.Filter{}, 0, false, ""
+		}
+		if it.Model == "" {
+			return telemetry.Filter{}, 0, false, "workload has no model"
+		}
+		if strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
+			ocid := models.DedicatedAICluster{Name: it.Namespace}.OCID(realm, region)
+			filter := telemetry.Filter{Key: telemetry.FilterDacId, Value: ocid}
+			return m.dedicatedPlan(filter, m.dataset.FindModelByName(it.Model))
+		}
+		bm := m.dataset.FindBaseModelByName(it.Model)
+		if bm == nil {
+			return telemetry.Filter{}, 0, false, "model not found in base catalog"
+		}
+		return telemetry.Filter{Key: telemetry.FilterResourceId, Value: bm.DisplayName}, capabilityForModel(bm), true, ""
 	default:
 		return telemetry.Filter{}, 0, false, ""
 	}
@@ -319,7 +356,8 @@ func metricsURL(env models.Environment, filter telemetry.Filter, capability tele
 
 // capabilityForModel maps a resolved model to its metric capability,
 // defaulting to chat for nil/finetune/unrecognized. Precedence:
-// CHAT > TEXT_RERANK > TEXT_EMBEDDINGS.
+// CHAT > TEXT_RERANK > TEXT_EMBEDDINGS > TEXT_CLASSIFICATION >
+// IMAGE_CONTENT_MODERATION.
 func capabilityForModel(model *models.BaseModel) telemetry.Capability {
 	if model == nil || model.Type == "Fine-tuning" {
 		return telemetry.CapabilityChat
@@ -331,6 +369,10 @@ func capabilityForModel(model *models.BaseModel) telemetry.Capability {
 		return telemetry.CapabilityTextRerank
 	case model.HasCapability(models.CapabilityTextEmbeddings):
 		return telemetry.CapabilityTextEmbeddings
+	case model.HasCapability(models.CapabilityTextClassification):
+		return telemetry.CapabilityTextClassification
+	case model.HasCapability(models.CapabilityImageContentModeration):
+		return telemetry.CapabilityImageContentModeration
 	default:
 		return telemetry.CapabilityChat
 	}

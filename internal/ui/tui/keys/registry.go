@@ -274,13 +274,13 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Parent, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.GPUWorkload: {
-		common.ListView: {Parent, SortTenant, SortAge, ToggleFaulty, Refresh},
+		common.ListView: {Parent, SortTenant, SortAge, OpenMetrics, ToggleFaulty, Refresh},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
 	},
 	domain.ImportedModel: {
-		common.ListView: {Parent, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, Refresh},
+		common.ListView: {Parent, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},
 	},
 	domain.LimitTenancyOverride: {
 		common.ListView: {Parent, SortTenant, SortRegions, CopyTenant},
