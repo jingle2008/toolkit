@@ -91,6 +91,23 @@ func TestMetricsURL_EmbedSingleQuery(t *testing.T) {
 	assert.NotContains(t, z, "chat.InputTokenLength")
 }
 
+func TestMetricsURL_ImageContentModerationUnfilteredRoundTrip(t *testing.T) {
+	t.Parallel()
+	// On-demand moderation: the ResourceId filter must be ignored, and both
+	// fixed queries must survive the Zipson encode + URL round-trip.
+	got := MetricsURL(Filter{Key: FilterResourceID, Value: "openai.mod"}, CapabilityImageContentModeration,
+		"me-abudhabi-1", "GenerativeAIService", "generative-ai-service-api-prod",
+		time.UnixMilli(1781787680652), time.UnixMilli(1781832733444))
+	z := decodeData(t, got)
+	assert.Contains(t, z, `ImageContentModeration.Latency.ChatInput[1m].grouping().sum()`)
+	assert.Contains(t, z, `ImageContentModeration.Latency.ApplyGuardrails[1m].grouping().sum()`)
+	// "GenerativeAiService" is the token-length metric prefix (note the lower
+	// "Ai"); it must not appear — distinct from the "GenerativeAIService"
+	// project value. And the filter dimension must be absent (unfiltered).
+	assert.NotContains(t, z, "GenerativeAiService", "no token-length queries for moderation")
+	assert.NotContains(t, z, "ResourceId", "moderation queries are unfiltered")
+}
+
 func TestMetricQueries_ResourceIdFilter(t *testing.T) {
 	t.Parallel()
 	f := Filter{Key: FilterResourceID, Value: "openai.gpt-5.5"}

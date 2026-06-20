@@ -279,7 +279,7 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 	switch it := item.(type) {
 	case *models.DedicatedAICluster:
 		if it == nil {
-			return telemetry.Filter{}, 0, false, ""
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 		}
 		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: it.OCID(realm, region)}
 		if it.ModelName == "" {
@@ -288,20 +288,20 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 		return m.dedicatedPlan(filter, m.dataset.FindModelByName(it.ModelName))
 	case *models.ImportedModel:
 		if it == nil {
-			return telemetry.Filter{}, 0, false, ""
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 		}
 		if !strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
-			return telemetry.Filter{}, 0, false, "imported model is not tied to a dedicated AI cluster"
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, "imported model is not tied to a dedicated AI cluster"
 		}
 		ocid := models.DedicatedAICluster{Name: it.Namespace}.OCID(realm, region)
 		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
 		return m.dedicatedPlan(filter, &it.BaseModel)
 	case *models.GPUWorkload:
 		if it == nil {
-			return telemetry.Filter{}, 0, false, ""
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 		}
 		if it.Model == "" {
-			return telemetry.Filter{}, 0, false, "workload has no model"
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, "workload has no model"
 		}
 		if strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
 			ocid := models.DedicatedAICluster{Name: it.Namespace}.OCID(realm, region)
@@ -310,24 +310,23 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 		}
 		bm := m.dataset.FindBaseModelByName(it.Model)
 		if bm == nil {
-			return telemetry.Filter{}, 0, false, "model not found in base catalog"
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, "model not found in base catalog"
 		}
 		return telemetry.Filter{Key: telemetry.FilterResourceID, Value: bm.DisplayName}, capabilityForModel(bm), true, ""
 	default:
-		return telemetry.Filter{}, 0, false, ""
+		return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 	}
 }
 
 // dedicatedPlan finalizes a DacId-filtered (dedicated-mode) plan. The two
 // on-demand-only capabilities are unreachable in dedicated mode: a model that
 // resolves to one yields a no-op error toast rather than a meaningless
-// dashboard. (capabilityForModel only returns those two once Task 4 extends
-// it; until then this switch's first case is inert.)
+// dashboard.
 func (m *Model) dedicatedPlan(filter telemetry.Filter, model *models.BaseModel) (telemetry.Filter, telemetry.Capability, bool, string) {
 	capability := capabilityForModel(model)
 	switch capability { //nolint:exhaustive // only the two on-demand caps are special-cased
 	case telemetry.CapabilityTextClassification, telemetry.CapabilityImageContentModeration:
-		return telemetry.Filter{}, 0, false, "metrics not available for this model"
+		return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not available for this model"
 	default:
 		return filter, capability, true, ""
 	}
