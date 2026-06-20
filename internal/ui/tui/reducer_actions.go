@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -9,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/telemetry"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -142,39 +145,71 @@ func (m *Model) selectedItem() any {
 	return findItem(m.dataset, m.category, itemKey)
 }
 
-// metricsOpenErrMsg reports a failure to launch the metrics dashboard.
+// metricsOpenErrMsg reports a failure to resolve the model capability or
+// launch the metrics dashboard.
 type metricsOpenErrMsg struct{ err error }
 
-// openDacMetrics builds the OCI Telemetry MQL dashboard URL for the
-// selected DedicatedAICluster and opens it in the browser, off the UI
-// goroutine. Non-DAC selections are a logged no-op. The fleet is derived
-// from the environment type (dev/preprod/prod); the window is the last
-// 7 days.
+// metricsWindow is how far back the DAC metrics dashboard looks.
+const metricsWindow = 7 * 24 * time.Hour
+
+// metricsResolveTimeout bounds the on-demand model-catalog loads done
+// while resolving a DAC's capability.
+const metricsResolveTimeout = 30 * time.Second
+
+// openDacMetrics resolves the selected DAC's model capability and opens
+// the matching OCI Telemetry MQL dashboard in the browser, off the UI
+// goroutine. Resolving the capability may lazily load the base/imported
+// model catalogs, because the DAC list view does not load them; a load
+// failure surfaces as an error toast and the browser is NOT opened, since
+// the dashboard could otherwise show the wrong metrics. Non-DAC
+// selections are a logged no-op.
 func (m *Model) openDacMetrics(item any) tea.Cmd {
 	dac, ok := item.(*models.DedicatedAICluster)
 	if !ok || dac == nil {
 		m.logger.Errorw("no dedicated AI cluster selected for metrics", "category", m.category)
 		return nil
 	}
-	target := m.dacMetricsURL(dac, time.Now())
+	// Snapshot inputs on the UI goroutine. Reusing already-loaded model
+	// catalogs avoids a fetch; we only hit the loader when they are nil.
+	var (
+		env       = m.environment
+		ocid      = dac.OCID(env.Realm, env.Region)
+		modelName = dac.ModelName
+		ld        = m.loader
+		kubeCfg   = m.kubeConfig
+		parent    = m.parentCtx
+		now       = time.Now()
+		base      []models.BaseModel
+		imported  map[string][]models.ImportedModel
+	)
+	if m.dataset != nil {
+		base = m.dataset.BaseModels
+		imported = m.dataset.ImportedModelMap
+	}
 	return func() tea.Msg {
-		if err := actions.OpenURL(target); err != nil {
+		if parent == nil {
+			parent = context.Background()
+		}
+		ctx, cancel := context.WithTimeout(parent, metricsResolveTimeout)
+		defer cancel()
+		capability, err := resolveCapability(ctx, ld, kubeCfg, env, modelName, base, imported)
+		if err != nil {
+			return metricsOpenErrMsg{err: err}
+		}
+		if err := actions.OpenURL(metricsURL(env, ocid, capability, now)); err != nil {
 			return metricsOpenErrMsg{err: err}
 		}
 		return nil
 	}
 }
 
-// dacMetricsURL builds the OCI Telemetry MQL dashboard URL for the DAC
-// from the current environment (realm/region/type), the model's
-// capability, and a 7-day window ending at now. Split out from
-// openDacMetrics so the URL construction is unit-testable without
-// launching a browser.
-func (m *Model) dacMetricsURL(dac *models.DedicatedAICluster, now time.Time) string {
-	ocid := dac.OCID(m.environment.Realm, m.environment.Region)
-	fleet := "generative-ai-service-api-" + m.environment.Type
-	return telemetry.MetricsURL(ocid, m.modelCapability(dac), m.environment.Region, telemetry.Project, fleet,
-		now.Add(-7*24*time.Hour), now)
+// metricsURL builds the OCI Telemetry MQL dashboard URL for a resolved
+// capability, from the environment (realm/region/type) and a window
+// ending at now. Pure; unit-testable without launching a browser.
+func metricsURL(env models.Environment, ocid string, capability telemetry.Capability, now time.Time) string {
+	fleet := "generative-ai-service-api-" + env.Type
+	return telemetry.MetricsURL(ocid, capability, env.Region, telemetry.Project, fleet,
+		now.Add(-metricsWindow), now)
 }
 
 // Model capability strings as they appear in BaseModel.Capabilities
@@ -185,17 +220,50 @@ const (
 	capabilityTextEmbed  = "TEXT_EMBEDDINGS"
 )
 
-// modelCapability decides which metric set the DAC's dashboard shows by
-// resolving the DAC's ModelName to its model and inspecting the model's
-// capability. It falls back to CapabilityChat when the DAC has no model,
-// the model can't be resolved, the model is a finetune (chat-only), or
-// the capability is unrecognized. When several capabilities are present
-// the precedence is CHAT > TEXT_RERANK > TEXT_EMBEDDINGS.
-func (m *Model) modelCapability(dac *models.DedicatedAICluster) telemetry.Capability {
-	if m.dataset == nil || dac.ModelName == "" {
-		return telemetry.CapabilityChat
+// resolveCapability resolves modelName to its metric capability, lazily
+// loading the base catalog and then the imported catalog only when the
+// caller did not already supply them (the DAC list view loads neither).
+// It returns an error only when a needed load fails — the caller then
+// declines to open a possibly-wrong dashboard. A model that loads
+// cleanly but isn't found, is a finetune, or has no recognized
+// capability resolves to CapabilityChat.
+func resolveCapability(
+	ctx context.Context,
+	ld loader.Composite,
+	kubeCfg string,
+	env models.Environment,
+	modelName string,
+	base []models.BaseModel,
+	imported map[string][]models.ImportedModel,
+) (telemetry.Capability, error) {
+	if modelName == "" {
+		return telemetry.CapabilityChat, nil
 	}
-	model := m.dataset.FindModelByName(dac.ModelName)
+	if base == nil {
+		loaded, err := ld.LoadBaseModels(ctx, kubeCfg, env)
+		if err != nil {
+			return telemetry.CapabilityChat, fmt.Errorf("loading base models: %w", err)
+		}
+		base = loaded
+	}
+	model := (&models.Dataset{BaseModels: base}).FindModelByName(modelName)
+	if model == nil {
+		if imported == nil {
+			loaded, err := ld.LoadImportedModels(ctx, kubeCfg, env)
+			if err != nil {
+				return telemetry.CapabilityChat, fmt.Errorf("loading imported models: %w", err)
+			}
+			imported = loaded
+		}
+		model = (&models.Dataset{ImportedModelMap: imported}).FindModelByName(modelName)
+	}
+	return capabilityForModel(model), nil
+}
+
+// capabilityForModel maps a resolved model to its metric capability,
+// defaulting to chat for nil/finetune/unrecognized. Precedence when
+// several capabilities are present: CHAT > TEXT_RERANK > TEXT_EMBEDDINGS.
+func capabilityForModel(model *models.BaseModel) telemetry.Capability {
 	if model == nil || model.Type == "Fine-tuning" {
 		return telemetry.CapabilityChat
 	}
