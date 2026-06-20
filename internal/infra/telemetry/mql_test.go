@@ -101,11 +101,13 @@ func TestMetricsURL_ImageContentModerationUnfilteredRoundTrip(t *testing.T) {
 	z := decodeData(t, got)
 	assert.Contains(t, z, `ImageContentModeration.Latency.ChatInput[1m].grouping().sum()`)
 	assert.Contains(t, z, `ImageContentModeration.Latency.ApplyGuardrails[1m].grouping().sum()`)
-	// "GenerativeAiService" is the token-length metric prefix (note the lower
-	// "Ai"); it must not appear — distinct from the "GenerativeAIService"
-	// project value. And the filter dimension must be absent (unfiltered).
-	assert.NotContains(t, z, "GenerativeAiService", "no token-length queries for moderation")
-	assert.NotContains(t, z, "ResourceId", "moderation queries are unfiltered")
+	// Each assertion proves one thing. First: no token-length metric leaked —
+	// its prefix "GenerativeAiService" (lower "Ai") is case-distinct from the
+	// "GenerativeAIService" project value, so this won't trip on the project.
+	// Second: the ResourceId filter key is absent — that alone confirms the
+	// moderation queries are unfiltered.
+	assert.NotContains(t, z, "GenerativeAiService", "no token-length metric prefix in moderation queries")
+	assert.NotContains(t, z, "ResourceId", "filter key absent — moderation queries are unfiltered")
 }
 
 func TestMetricQueries_ResourceIdFilter(t *testing.T) {
