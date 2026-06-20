@@ -280,14 +280,6 @@ func metricsURL(env models.Environment, ocid string, capability telemetry.Capabi
 		now.Add(-metricsWindow), now)
 }
 
-// Model capability strings as they appear in BaseModel.Capabilities
-// (sourced from the K8s CR's spec.modelCapabilities).
-const (
-	capabilityChat       = "CHAT"
-	capabilityTextRerank = "TEXT_RERANK"
-	capabilityTextEmbed  = "TEXT_EMBEDDINGS"
-)
-
 // capabilityForModel maps a resolved model to its metric capability,
 // defaulting to chat for nil/finetune/unrecognized. Precedence when
 // several capabilities are present: CHAT > TEXT_RERANK > TEXT_EMBEDDINGS.
@@ -296,11 +288,11 @@ func capabilityForModel(model *models.BaseModel) telemetry.Capability {
 		return telemetry.CapabilityChat
 	}
 	switch {
-	case model.HasCapability(capabilityChat):
+	case model.HasCapability(models.CapabilityChat):
 		return telemetry.CapabilityChat
-	case model.HasCapability(capabilityTextRerank):
+	case model.HasCapability(models.CapabilityTextRerank):
 		return telemetry.CapabilityTextRerank
-	case model.HasCapability(capabilityTextEmbed):
+	case model.HasCapability(models.CapabilityTextEmbeddings):
 		return telemetry.CapabilityTextEmbeddings
 	default:
 		return telemetry.CapabilityChat

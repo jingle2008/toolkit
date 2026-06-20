@@ -50,9 +50,19 @@ func (m BaseModel) GetName() string {
 	return m.Name
 }
 
+// Model capability values as they appear in BaseModel.Capabilities
+// (sourced from the K8s CR's spec.modelCapabilities). Canonical, exact,
+// case-sensitive strings — the single source of truth shared by every
+// consumer that matches on a capability.
+const (
+	CapabilityChat           = "CHAT"
+	CapabilityTextRerank     = "TEXT_RERANK"
+	CapabilityTextEmbeddings = "TEXT_EMBEDDINGS"
+)
+
 // HasCapability reports whether the model declares the given capability,
-// matched exactly against the values in Capabilities (e.g. "CHAT",
-// "TEXT_RERANK", "TEXT_EMBEDDINGS").
+// matched exactly against the values in Capabilities (e.g. CapabilityChat,
+// CapabilityTextRerank, CapabilityTextEmbeddings).
 func (m BaseModel) HasCapability(capability string) bool {
 	return slices.Contains(m.Capabilities, capability)
 }
