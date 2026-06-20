@@ -67,7 +67,11 @@ func (f Filter) suffix() string {
 type queryShape struct {
 	groups []string // GenerativeAiService.<group>
 	kinds  []string // <kind>TokenLength
-	fixed  []string // verbatim, unfiltered; nil for token-length shapes
+	// fixed holds verbatim, unfiltered queries. A non-nil fixed (even if
+	// empty) marks the shape as fixed/unfiltered and makes the capability
+	// non-Filterable; token-length shapes leave it nil and populate
+	// groups/kinds instead.
+	fixed []string
 }
 
 var (
