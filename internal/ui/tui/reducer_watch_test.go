@@ -67,11 +67,11 @@ func TestHandleWatchClosed_ClearsWatchingAndReloads(t *testing.T) {
 	require.NotNil(t, cmd, "closed watch issues one final reload")
 }
 
-func TestHandleWatchUnavailable_LeavesWatchingFalse(t *testing.T) {
+func TestHandleWatchUnavailable_ClearsWatchingWhenActive(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 2
-	m.watching = false
+	m.watching = true
 	m.handleWatchUnavailable(watchUnavailableMsg{Cat: domain.GPUNode, Gen: 2})
-	assert.False(t, m.watching)
+	assert.False(t, m.watching, "unavailable must clear the live indicator")
 }
