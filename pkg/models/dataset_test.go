@@ -3,6 +3,8 @@ package models
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildTenantIDSuffixMap(t *testing.T) {
@@ -171,4 +173,18 @@ func TestResetRealmScopedFields(t *testing.T) {
 		d.DedicatedAIClusterMap != nil {
 		t.Errorf("ResetRealmScopedFields did not nil all fields")
 	}
+}
+
+func TestFindBaseModelByName(t *testing.T) {
+	t.Parallel()
+	d := &Dataset{
+		BaseModels: []BaseModel{{Name: "base-a", DisplayName: "openai.gpt-5.5"}},
+		ImportedModelMap: map[string][]ImportedModel{
+			"t": {{BaseModel: BaseModel{Name: "imported-b"}}},
+		},
+	}
+	assert.Equal(t, "openai.gpt-5.5", d.FindBaseModelByName("base-a").DisplayName)
+	assert.Nil(t, d.FindBaseModelByName("imported-b"), "imported models are not in the base catalog")
+	assert.Nil(t, d.FindBaseModelByName("missing"))
+	assert.Nil(t, d.FindBaseModelByName(""))
 }

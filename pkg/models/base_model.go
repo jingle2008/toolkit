@@ -55,9 +55,11 @@ func (m BaseModel) GetName() string {
 // case-sensitive strings — the single source of truth shared by every
 // consumer that matches on a capability.
 const (
-	CapabilityChat           = "CHAT"
-	CapabilityTextRerank     = "TEXT_RERANK"
-	CapabilityTextEmbeddings = "TEXT_EMBEDDINGS"
+	CapabilityChat                   = "CHAT"
+	CapabilityTextRerank             = "TEXT_RERANK"
+	CapabilityTextEmbeddings         = "TEXT_EMBEDDINGS"
+	CapabilityTextClassification     = "TEXT_CLASSIFICATION"
+	CapabilityImageContentModeration = "IMAGE_CONTENT_MODERATION"
 )
 
 // HasCapability reports whether the model declares the given capability,

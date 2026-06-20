@@ -33,3 +33,9 @@ func TestDataset_FindModelByName(t *testing.T) {
 	assert.Nil(t, d.FindModelByName("nope"), "unknown name")
 	assert.Nil(t, d.FindModelByName(""), "empty name")
 }
+
+func TestCapabilityConstants(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "TEXT_CLASSIFICATION", CapabilityTextClassification)
+	assert.Equal(t, "IMAGE_CONTENT_MODERATION", CapabilityImageContentModeration)
+}

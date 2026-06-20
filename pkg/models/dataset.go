@@ -49,6 +49,22 @@ func (d *Dataset) FindModelByName(name string) *BaseModel {
 	return nil
 }
 
+// FindBaseModelByName returns the BaseModel whose Name matches name from the
+// shared BaseModels catalog only (imported models are excluded). Returns nil
+// on empty name or no match. Used to resolve an on-demand GPU workload's
+// model to the public base model whose display name scopes its metrics.
+func (d *Dataset) FindBaseModelByName(name string) *BaseModel {
+	if name == "" {
+		return nil
+	}
+	for i := range d.BaseModels {
+		if d.BaseModels[i].Name == name {
+			return &d.BaseModels[i]
+		}
+	}
+	return nil
+}
+
 // buildTenantIDSuffixMap builds a map from tenant ID suffix to tenant index.
 func (d *Dataset) buildTenantIDSuffixMap() map[string]int {
 	suffixMap := make(map[string]int)
