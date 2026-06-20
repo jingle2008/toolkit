@@ -177,3 +177,56 @@ func (l *Client) UpsertTenantMetadata(entry models.TenantMetadata) error {
 	l.metadata = next
 	return nil
 }
+
+// Compile-time guard: *Client must satisfy the optional Watcher
+// interface, kept out of Composite (see loader.Watcher docs).
+var _ loader.Watcher = (*Client)(nil)
+
+// WatchBaseModels establishes a watch on ClusterBaseModel CRs.
+func (Client) WatchBaseModels(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.WatchBaseModels(ctx, client)
+}
+
+// WatchImportedModels establishes a watch on the imported-model sources.
+func (Client) WatchImportedModels(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.WatchImportedModels(ctx, client)
+}
+
+// WatchGPUNodes establishes a watch on GPU nodes and GPU pods.
+func (Client) WatchGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
+	cs, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.WatchGPUNodes(ctx, cs)
+}
+
+// WatchGPUWorkloads establishes a watch on GPU pods.
+func (Client) WatchGPUWorkloads(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
+	cs, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.WatchGPUWorkloads(ctx, cs)
+}
+
+// WatchDedicatedAIClusters establishes a watch on DAC CRs and GPU pods.
+func (Client) WatchDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
+	dyn, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	cs, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.WatchDedicatedAIClusters(ctx, dyn, cs)
+}

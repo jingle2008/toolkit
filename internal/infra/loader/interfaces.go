@@ -108,3 +108,24 @@ type TenantMetadataWriter interface {
 	// persists it, creating the file if it does not exist.
 	UpsertTenantMetadata(entry models.TenantMetadata) error
 }
+
+/*
+Watcher is an OPTIONAL capability: establishing Kubernetes watches that
+emit a coalesced "reload now" signal for the k8s-backed categories. Like
+TenantMetadataWriter it is deliberately kept out of Composite so the many
+fake loaders used in tests need not implement it. Callers type-assert a
+Composite to this interface and fall back to a one-shot load when the
+assertion fails or a method returns an error.
+
+Each method returns a channel that yields one value whenever the
+category's underlying resources change (debounced). The caller owns ctx;
+cancelling it stops the watch and closes the channel. The channel also
+closes if the stream dies, which the caller treats as a fallback signal.
+*/
+type Watcher interface {
+	WatchBaseModels(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
+	WatchImportedModels(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
+	WatchGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
+	WatchGPUWorkloads(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
+	WatchDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
+}
