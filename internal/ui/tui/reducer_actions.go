@@ -166,12 +166,47 @@ func (m *Model) openDacMetrics(item any) tea.Cmd {
 }
 
 // dacMetricsURL builds the OCI Telemetry MQL dashboard URL for the DAC
-// from the current environment (realm/region/type) and a 7-day window
-// ending at now. Split out from openDacMetrics so the URL construction
-// is unit-testable without launching a browser.
+// from the current environment (realm/region/type), the model's
+// capability, and a 7-day window ending at now. Split out from
+// openDacMetrics so the URL construction is unit-testable without
+// launching a browser.
 func (m *Model) dacMetricsURL(dac *models.DedicatedAICluster, now time.Time) string {
 	ocid := dac.OCID(m.environment.Realm, m.environment.Region)
 	fleet := "generative-ai-service-api-" + m.environment.Type
-	return telemetry.MetricsURL(ocid, m.environment.Region, telemetry.Project, fleet,
+	return telemetry.MetricsURL(ocid, m.modelCapability(dac), m.environment.Region, telemetry.Project, fleet,
 		now.Add(-7*24*time.Hour), now)
+}
+
+// Model capability strings as they appear in BaseModel.Capabilities
+// (sourced from the K8s CR's spec.modelCapabilities).
+const (
+	capabilityChat       = "CHAT"
+	capabilityTextRerank = "TEXT_RERANK"
+	capabilityTextEmbed  = "TEXT_EMBEDDINGS"
+)
+
+// modelCapability decides which metric set the DAC's dashboard shows by
+// resolving the DAC's ModelName to its model and inspecting the model's
+// capability. It falls back to CapabilityChat when the DAC has no model,
+// the model can't be resolved, the model is a finetune (chat-only), or
+// the capability is unrecognized. When several capabilities are present
+// the precedence is CHAT > TEXT_RERANK > TEXT_EMBEDDINGS.
+func (m *Model) modelCapability(dac *models.DedicatedAICluster) telemetry.Capability {
+	if m.dataset == nil || dac.ModelName == "" {
+		return telemetry.CapabilityChat
+	}
+	model := m.dataset.FindModelByName(dac.ModelName)
+	if model == nil || model.Type == "Fine-tuning" {
+		return telemetry.CapabilityChat
+	}
+	switch {
+	case model.HasCapability(capabilityChat):
+		return telemetry.CapabilityChat
+	case model.HasCapability(capabilityTextRerank):
+		return telemetry.CapabilityTextRerank
+	case model.HasCapability(capabilityTextEmbed):
+		return telemetry.CapabilityTextEmbeddings
+	default:
+		return telemetry.CapabilityChat
+	}
 }

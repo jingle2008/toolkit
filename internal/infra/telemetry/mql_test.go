@@ -15,7 +15,7 @@ const testOCID = "ocid1.generativeaidedicatedaicluster.oc1.me-abudhabi-1.amaaaaa
 
 func TestMetricQueries(t *testing.T) {
 	t.Parallel()
-	got := metricQueries(testOCID)
+	got := metricQueries(testOCID, CapabilityChat)
 	want := []string{
 		`GenerativeAiService.chat.InputTokenLength[1m]{DacId = "` + testOCID + `"}.grouping().sum()`,
 		`GenerativeAiService.chat.OutputTokenLength[1m]{DacId = "` + testOCID + `"}.grouping().sum()`,
@@ -38,7 +38,7 @@ func TestMetricsURL(t *testing.T) {
 	t.Parallel()
 	start := time.UnixMilli(1781787680652)
 	end := time.UnixMilli(1781832733444)
-	got := MetricsURL(testOCID, "me-abudhabi-1", "GenerativeAIService", "generative-ai-service-api-prod", start, end)
+	got := MetricsURL(testOCID, CapabilityChat, "me-abudhabi-1", "GenerativeAIService", "generative-ai-service-api-prod", start, end)
 
 	const prefix = exploreBaseURL + "?data="
 	require.True(t, strings.HasPrefix(got, prefix), "URL prefix")
@@ -49,4 +49,44 @@ func TestMetricsURL(t *testing.T) {
 	raw, err := base64.StdEncoding.DecodeString(unescaped)
 	require.NoError(t, err)
 	assert.Equal(t, wantZipson, string(raw))
+}
+
+func TestMetricQueries_RerankAndEmbed(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, []string{
+		`GenerativeAiService.rerankText.InputTokenLength[1m]{DacId = "` + testOCID + `"}.grouping().sum()`,
+	}, metricQueries(testOCID, CapabilityTextRerank))
+	assert.Equal(t, []string{
+		`GenerativeAiService.embedText.InputTokenLength[1m]{DacId = "` + testOCID + `"}.grouping().sum()`,
+	}, metricQueries(testOCID, CapabilityTextEmbeddings))
+}
+
+// decodeData extracts and decodes the Zipson payload from a MetricsURL.
+func decodeData(t *testing.T, got string) string {
+	t.Helper()
+	unescaped, err := url.QueryUnescape(strings.TrimPrefix(got, exploreBaseURL+"?data="))
+	require.NoError(t, err)
+	raw, err := base64.StdEncoding.DecodeString(unescaped)
+	require.NoError(t, err)
+	return string(raw)
+}
+
+func TestMetricsURL_RerankSingleQuery(t *testing.T) {
+	t.Parallel()
+	got := MetricsURL(testOCID, CapabilityTextRerank, "me-abudhabi-1",
+		"GenerativeAIService", "generative-ai-service-api-prod",
+		time.UnixMilli(1781787680652), time.UnixMilli(1781832733444))
+	z := decodeData(t, got)
+	assert.Contains(t, z, `GenerativeAiService.rerankText.InputTokenLength[1m]{DacId = "`+testOCID+`"}.grouping().sum()`)
+	assert.NotContains(t, z, "chat.InputTokenLength")
+}
+
+func TestMetricsURL_EmbedSingleQuery(t *testing.T) {
+	t.Parallel()
+	got := MetricsURL(testOCID, CapabilityTextEmbeddings, "me-abudhabi-1",
+		"GenerativeAIService", "generative-ai-service-api-prod",
+		time.UnixMilli(1781787680652), time.UnixMilli(1781832733444))
+	z := decodeData(t, got)
+	assert.Contains(t, z, `GenerativeAiService.embedText.InputTokenLength[1m]{DacId = "`+testOCID+`"}.grouping().sum()`)
+	assert.NotContains(t, z, "chat.InputTokenLength")
 }

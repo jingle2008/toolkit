@@ -2,6 +2,7 @@
 package models
 
 import (
+	"slices"
 	"strings"
 )
 
@@ -47,6 +48,13 @@ type DACShape struct {
 // GetName returns the name of the base model.
 func (m BaseModel) GetName() string {
 	return m.Name
+}
+
+// HasCapability reports whether the model declares the given capability,
+// matched exactly against the values in Capabilities (e.g. "CHAT",
+// "TEXT_RERANK", "TEXT_EMBEDDINGS").
+func (m BaseModel) HasCapability(capability string) bool {
+	return slices.Contains(m.Capabilities, capability)
 }
 
 // DefaultDACShape returns the default DAC shape for the base model,

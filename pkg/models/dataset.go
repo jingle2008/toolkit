@@ -25,6 +25,30 @@ type Dataset struct {
 	DedicatedAIClusterMap             map[string][]DedicatedAICluster
 }
 
+// FindModelByName returns the BaseModel whose Name matches name, searching
+// the shared BaseModels catalog first and then every tenant's imported
+// models (ImportedModel embeds BaseModel). Returns nil when nothing
+// matches or name is empty. Used to resolve a DedicatedAICluster's
+// ModelName to the model whose capabilities drive its metrics dashboard.
+func (d *Dataset) FindModelByName(name string) *BaseModel {
+	if name == "" {
+		return nil
+	}
+	for i := range d.BaseModels {
+		if d.BaseModels[i].Name == name {
+			return &d.BaseModels[i]
+		}
+	}
+	for _, ims := range d.ImportedModelMap {
+		for i := range ims {
+			if ims[i].Name == name {
+				return &ims[i].BaseModel
+			}
+		}
+	}
+	return nil
+}
+
 // buildTenantIDSuffixMap builds a map from tenant ID suffix to tenant index.
 func (d *Dataset) buildTenantIDSuffixMap() map[string]int {
 	suffixMap := make(map[string]int)
