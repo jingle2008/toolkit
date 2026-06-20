@@ -51,7 +51,7 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.EditTenant):
 		return m.enterEditTenantView()
 	case key.Matches(msg, keys.OpenMetrics):
-		return m.openDacMetrics(item)
+		return m.openMetrics(item)
 	case key.Matches(msg, keys.Refresh):
 		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
 	case key.Matches(msg, keys.ToggleCordon):
@@ -146,71 +146,70 @@ func (m *Model) selectedItem() any {
 // metricsOpenErrMsg reports a failure to launch the metrics dashboard.
 type metricsOpenErrMsg struct{ err error }
 
-// metricsWindow is how far back the DAC metrics dashboard looks.
+// metricsWindow is how far back the metrics dashboard looks.
 const metricsWindow = 7 * 24 * time.Hour
 
 // importedModelNamePrefix is the OCID resource-id prefix carried by
-// tenant-owned imported and finetune model names; public base models use
-// human-readable names. A DAC ModelName with this prefix is resolved
-// against the imported-model catalog, anything else against the base
-// catalog — so we load only the one catalog we need. The invariant is the
-// naming convention (imported/finetune ModelNames are always OCID-form).
-// If it ever broke, the only fallout is a misroute that finds no match
-// and degrades safely to the chat dashboard.
+// tenant-owned imported/finetune model names and by DAC names. A model name
+// with this prefix resolves against the imported catalog, anything else
+// against the base catalog. A workload/imported-model namespace with this
+// prefix is a DAC name.
 const importedModelNamePrefix = "amaaaaaa"
 
-// openMetricsTriggerMsg is the second step of openDacMetrics's sequence:
-// it fires after the model catalog has been loaded and applied, so its
-// handler reads the now-populated dataset on the Update loop. gen pins it
-// to the load it followed.
+// openMetricsTriggerMsg is the second step of openMetrics's sequence: it
+// fires after the model catalog has been loaded and applied, so its handler
+// resolves the plan against the now-populated dataset on the Update loop. gen
+// pins it to the load it followed; item is the selection to resolve.
 type openMetricsTriggerMsg struct {
-	ocid      string
-	modelName string
-	cat       domain.Category
-	gen       int
+	item any
+	cat  domain.Category
+	gen  int
 }
 
-// openDacMetrics resolves the selected DAC's model capability and opens
-// the matching OCI Telemetry MQL dashboard. The ModelName picks the single
-// catalog to consult — imported/finetune names carry importedModelNamePrefix,
-// everything else is a base model. If that catalog is already loaded the
-// link opens immediately; otherwise the catalog is fetched (and cached on
-// the dataset for later navigation) before the link opens. Non-DAC
-// selections are a logged no-op.
-func (m *Model) openDacMetrics(item any) tea.Cmd {
-	dac, ok := item.(*models.DedicatedAICluster)
-	if !ok || dac == nil {
-		m.logger.Errorw("no dedicated AI cluster selected for metrics", "category", m.category)
-		return nil
+// openMetrics opens the OCI Telemetry MQL dashboard for the selected item
+// (DAC, ImportedModel, or GPUWorkload). If the plan needs a model catalog
+// that isn't loaded yet, the catalog is fetched (and cached for later
+// navigation) before the dashboard opens. Items that can't produce metrics
+// are a no-op or an error toast (resolveMetricsPlan).
+func (m *Model) openMetrics(item any) tea.Cmd {
+	cat, need := m.metricsCatalog(item)
+	if !need || m.catalogLoaded(cat) {
+		return m.finishMetrics(item)
 	}
-	ocid := dac.OCID(m.environment.Realm, m.environment.Region)
-	if dac.ModelName == "" {
-		return m.launchMetrics(ocid, telemetry.CapabilityChat)
-	}
-	cat := domain.BaseModel
-	if strings.HasPrefix(dac.ModelName, importedModelNamePrefix) {
-		cat = domain.ImportedModel
-	}
-	if m.catalogLoaded(cat) {
-		return m.launchMetrics(ocid, m.modelCapability(dac.ModelName))
-	}
-	// Load the catalog through the shared category loader (so it is cached
-	// for later navigation, exactly as a category load would), then fire
-	// the open trigger. tea.Sequence guarantees the catalog's *LoadedMsg is
-	// applied on the Update loop before the trigger message is handled —
-	// the same ordering Init relies on for tenant resolution — so the
-	// trigger's handler sees the populated dataset.
 	gen := m.bumpGen()
 	return tea.Sequence(
 		tea.Batch(m.beginTask(), m.catalogLoadCmd(cat, gen)),
-		func() tea.Msg {
-			return openMetricsTriggerMsg{ocid: ocid, modelName: dac.ModelName, cat: cat, gen: gen}
-		},
+		func() tea.Msg { return openMetricsTriggerMsg{item: item, cat: cat, gen: gen} },
 	)
 }
 
-// catalogLoaded reports whether the given model catalog is already present
-// on the dataset (nil means "not loaded yet").
+// metricsCatalog reports which model catalog must be loaded before the
+// item's plan can be resolved. need is false when no catalog is required
+// (DAC without a model) or the item can't produce metrics here (default).
+// Task 4 adds the ImportedModel and GPUWorkload cases.
+func (m *Model) metricsCatalog(item any) (domain.Category, bool) {
+	switch it := item.(type) {
+	case *models.DedicatedAICluster:
+		if it == nil || it.ModelName == "" {
+			return domain.BaseModel, false
+		}
+		return modelCatalog(it.ModelName), true
+	default:
+		return domain.BaseModel, false
+	}
+}
+
+// modelCatalog routes a model NAME to the catalog that holds it: imported/
+// finetune names carry importedModelNamePrefix, everything else is base.
+func modelCatalog(modelName string) domain.Category {
+	if strings.HasPrefix(modelName, importedModelNamePrefix) {
+		return domain.ImportedModel
+	}
+	return domain.BaseModel
+}
+
+// catalogLoaded reports whether the given model catalog is present on the
+// dataset (nil means not loaded yet).
 func (m *Model) catalogLoaded(cat domain.Category) bool {
 	if m.dataset == nil {
 		return false
@@ -223,18 +222,9 @@ func (m *Model) catalogLoaded(cat domain.Category) bool {
 	}
 }
 
-// modelCapability resolves a model name against the loaded dataset to its
-// metric capability (chat for unresolved / finetune / unrecognized).
-func (m *Model) modelCapability(modelName string) telemetry.Capability {
-	if m.dataset == nil {
-		return telemetry.CapabilityChat
-	}
-	return capabilityForModel(m.dataset.FindModelByName(modelName))
-}
-
-// catalogLoadCmd returns the shared loader command for one model catalog;
-// its *LoadedMsg is applied by the normal handler, caching the catalog on
-// the dataset for later navigation.
+// catalogLoadCmd returns the shared loader command for one model catalog; its
+// *LoadedMsg is applied by the normal handler, caching the catalog on the
+// dataset for later navigation.
 func (m *Model) catalogLoadCmd(cat domain.Category, gen int) tea.Cmd {
 	switch cat { //nolint:exhaustive // only the two model catalogs are loadable here
 	case domain.ImportedModel:
@@ -244,25 +234,72 @@ func (m *Model) catalogLoadCmd(cat domain.Category, gen int) tea.Cmd {
 	}
 }
 
-// handleOpenMetricsTrigger opens the dashboard once its catalog load has
-// been applied. It declines when the generation is stale — a later
-// category load (navigation/refresh) superseded this one — or the catalog
-// still isn't loaded, i.e. the load failed (its errMsg toast already
-// fired) or was stale-dropped (silent; the user moved on). It does not
-// track view-only navigation: a metrics open requested before, say,
-// entering the details view still completes, opening the dashboard for
-// the originally-selected DAC — the action the user asked for.
+// handleOpenMetricsTrigger resolves and opens the dashboard once the catalog
+// load has been applied. It declines on a stale generation (a later load
+// superseded this one) or when the catalog still isn't loaded (load failed —
+// its errMsg toast already fired — or was stale-dropped).
 func (m *Model) handleOpenMetricsTrigger(msg openMetricsTriggerMsg) tea.Cmd {
 	if msg.gen != m.gen || !m.catalogLoaded(msg.cat) {
 		return nil
 	}
-	return m.launchMetrics(msg.ocid, m.modelCapability(msg.modelName))
+	return m.finishMetrics(msg.item)
 }
 
-// launchMetrics opens the dashboard URL in the browser off the UI
-// goroutine, reporting a launch failure as an error toast.
-func (m *Model) launchMetrics(ocid string, capability telemetry.Capability) tea.Cmd {
-	target := metricsURL(m.environment, ocid, capability, time.Now())
+// finishMetrics resolves the item's plan and either launches the dashboard
+// or shows an error toast. A no-op item (empty reason) yields nil.
+func (m *Model) finishMetrics(item any) tea.Cmd {
+	filter, capability, ok, reason := m.resolveMetricsPlan(item)
+	if !ok {
+		if reason == "" {
+			return nil
+		}
+		return m.showToast(reason, toastError)
+	}
+	return m.launchMetrics(filter, capability)
+}
+
+// resolveMetricsPlan maps a selected item to its metrics plan: the MQL filter
+// and capability, plus ok/reason. ok=false with a non-empty reason is a
+// user-facing error toast; ok=false with empty reason is a silent no-op
+// (unknown/nil item). Reads m.dataset, which is non-nil whenever a catalog
+// was required (guaranteed loaded before this runs). Task 4 adds the
+// ImportedModel and GPUWorkload cases.
+func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capability, bool, string) {
+	realm, region := m.environment.Realm, m.environment.Region
+	switch it := item.(type) {
+	case *models.DedicatedAICluster:
+		if it == nil {
+			return telemetry.Filter{}, 0, false, ""
+		}
+		filter := telemetry.Filter{Key: telemetry.FilterDacId, Value: it.OCID(realm, region)}
+		if it.ModelName == "" {
+			return filter, telemetry.CapabilityChat, true, ""
+		}
+		return m.dedicatedPlan(filter, m.dataset.FindModelByName(it.ModelName))
+	default:
+		return telemetry.Filter{}, 0, false, ""
+	}
+}
+
+// dedicatedPlan finalizes a DacId-filtered (dedicated-mode) plan. The two
+// on-demand-only capabilities are unreachable in dedicated mode: a model that
+// resolves to one yields a no-op error toast rather than a meaningless
+// dashboard. (capabilityForModel only returns those two once Task 4 extends
+// it; until then this switch's first case is inert.)
+func (m *Model) dedicatedPlan(filter telemetry.Filter, model *models.BaseModel) (telemetry.Filter, telemetry.Capability, bool, string) {
+	capability := capabilityForModel(model)
+	switch capability { //nolint:exhaustive // only the two on-demand caps are special-cased
+	case telemetry.CapabilityTextClassification, telemetry.CapabilityImageContentModeration:
+		return telemetry.Filter{}, 0, false, "metrics not available for this model"
+	default:
+		return filter, capability, true, ""
+	}
+}
+
+// launchMetrics opens the dashboard URL in the browser off the UI goroutine,
+// reporting a launch failure as an error toast.
+func (m *Model) launchMetrics(filter telemetry.Filter, capability telemetry.Capability) tea.Cmd {
+	target := metricsURL(m.environment, filter, capability, time.Now())
 	return func() tea.Msg {
 		if err := actions.OpenURL(target); err != nil {
 			return metricsOpenErrMsg{err: err}
@@ -271,18 +308,18 @@ func (m *Model) launchMetrics(ocid string, capability telemetry.Capability) tea.
 	}
 }
 
-// metricsURL builds the OCI Telemetry MQL dashboard URL for a resolved
-// capability, from the environment (realm/region/type) and a window
-// ending at now. Pure; unit-testable without launching a browser.
-func metricsURL(env models.Environment, ocid string, capability telemetry.Capability, now time.Time) string {
+// metricsURL builds the OCI Telemetry MQL dashboard URL from the environment
+// (region/type), an MQL filter, a capability, and a window ending at now.
+// Pure; unit-testable without launching a browser.
+func metricsURL(env models.Environment, filter telemetry.Filter, capability telemetry.Capability, now time.Time) string {
 	fleet := "generative-ai-service-api-" + env.Type
-	return telemetry.MetricsURL(ocid, capability, env.Region, telemetry.Project, fleet,
+	return telemetry.MetricsURL(filter, capability, env.Region, telemetry.Project, fleet,
 		now.Add(-metricsWindow), now)
 }
 
 // capabilityForModel maps a resolved model to its metric capability,
-// defaulting to chat for nil/finetune/unrecognized. Precedence when
-// several capabilities are present: CHAT > TEXT_RERANK > TEXT_EMBEDDINGS.
+// defaulting to chat for nil/finetune/unrecognized. Precedence:
+// CHAT > TEXT_RERANK > TEXT_EMBEDDINGS.
 func capabilityForModel(model *models.BaseModel) telemetry.Capability {
 	if model == nil || model.Type == "Fine-tuning" {
 		return telemetry.CapabilityChat

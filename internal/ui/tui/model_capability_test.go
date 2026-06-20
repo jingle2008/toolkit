@@ -35,20 +35,6 @@ func TestCapabilityForModel(t *testing.T) {
 	}
 }
 
-func TestModelCapability(t *testing.T) {
-	t.Parallel()
-	m := makeTestModel()
-	assert.Equal(t, telemetry.CapabilityChat, m.modelCapability("anything"), "nil dataset → chat")
-
-	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{
-		{Name: "c", Capabilities: []string{"CHAT"}},
-		{Name: "r", Capabilities: []string{"TEXT_RERANK"}},
-	}}
-	assert.Equal(t, telemetry.CapabilityChat, m.modelCapability("c"))
-	assert.Equal(t, telemetry.CapabilityTextRerank, m.modelCapability("r"))
-	assert.Equal(t, telemetry.CapabilityChat, m.modelCapability("missing"))
-}
-
 func TestCatalogLoaded(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel() // dataset nil
@@ -67,7 +53,7 @@ func TestOpenDacMetrics_NoModelLaunchesImmediately(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	g0 := m.gen
-	cmd := m.openDacMetrics(&models.DedicatedAICluster{Name: "d"}) // no ModelName
+	cmd := m.openMetrics(&models.DedicatedAICluster{Name: "d"}) // no ModelName
 	require.NotNil(t, cmd)
 	assert.Equal(t, g0, m.gen, "no catalog load, so no generation bump")
 }
@@ -77,7 +63,7 @@ func TestOpenDacMetrics_CatalogLoadedResolvesNow(t *testing.T) {
 	m := makeTestModel()
 	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}}
 	g0 := m.gen
-	cmd := m.openDacMetrics(&models.DedicatedAICluster{Name: "d", ModelName: "r"})
+	cmd := m.openMetrics(&models.DedicatedAICluster{Name: "d", ModelName: "r"})
 	require.NotNil(t, cmd, "launches immediately from the cached base catalog")
 	assert.Equal(t, g0, m.gen, "no load dispatched when the catalog is present")
 }
@@ -86,7 +72,7 @@ func TestOpenDacMetrics_NotLoadedDispatchesLoad(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel() // dataset nil → base catalog not loaded
 	g0 := m.gen
-	cmd := m.openDacMetrics(&models.DedicatedAICluster{Name: "d", ModelName: "some-base-model"})
+	cmd := m.openMetrics(&models.DedicatedAICluster{Name: "d", ModelName: "some-base-model"})
 	require.NotNil(t, cmd, "dispatches a catalog load")
 	assert.Equal(t, g0+1, m.gen, "a load was dispatched under a fresh generation")
 }
@@ -98,7 +84,7 @@ func TestOpenDacMetrics_PrefixRoutesToImported(t *testing.T) {
 	// must consult the imported catalog, which is not loaded → dispatch.
 	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{}}
 	g0 := m.gen
-	cmd := m.openDacMetrics(&models.DedicatedAICluster{Name: "d", ModelName: "amaaaaaaxyz"})
+	cmd := m.openMetrics(&models.DedicatedAICluster{Name: "d", ModelName: "amaaaaaaxyz"})
 	require.NotNil(t, cmd)
 	assert.Equal(t, g0+1, m.gen, "imported catalog not loaded → load dispatched despite base being present")
 }
@@ -108,7 +94,7 @@ func TestHandleOpenMetricsTrigger_StaleGenNoOpen(t *testing.T) {
 	m := makeTestModel()
 	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}}
 	got := m.handleOpenMetricsTrigger(openMetricsTriggerMsg{
-		ocid: "o", modelName: "r", cat: domain.BaseModel, gen: m.gen + 1, // stale (navigated)
+		item: &models.DedicatedAICluster{Name: "d", ModelName: "r"}, cat: domain.BaseModel, gen: m.gen + 1,
 	})
 	assert.Nil(t, got, "stale generation does not open")
 }
@@ -117,9 +103,9 @@ func TestHandleOpenMetricsTrigger_CatalogNotLoadedNoOpen(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel() // dataset nil → catalog load must have failed/dropped
 	got := m.handleOpenMetricsTrigger(openMetricsTriggerMsg{
-		ocid: "o", modelName: "r", cat: domain.BaseModel, gen: m.gen,
+		item: &models.DedicatedAICluster{Name: "d", ModelName: "r"}, cat: domain.BaseModel, gen: m.gen,
 	})
-	assert.Nil(t, got, "no open when the catalog isn't loaded (load failed)")
+	assert.Nil(t, got, "no open when the catalog isn't loaded")
 }
 
 func TestHandleOpenMetricsTrigger_OpensWhenLoaded(t *testing.T) {
@@ -127,7 +113,7 @@ func TestHandleOpenMetricsTrigger_OpensWhenLoaded(t *testing.T) {
 	m := makeTestModel()
 	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{{Name: "r", Capabilities: []string{"TEXT_RERANK"}}}}
 	got := m.handleOpenMetricsTrigger(openMetricsTriggerMsg{
-		ocid: "o", modelName: "r", cat: domain.BaseModel, gen: m.gen,
+		item: &models.DedicatedAICluster{Name: "d", ModelName: "r"}, cat: domain.BaseModel, gen: m.gen,
 	})
 	require.NotNil(t, got, "opens the dashboard once the catalog is applied")
 }
