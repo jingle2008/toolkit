@@ -21,17 +21,23 @@ const (
 	// CapabilityChat is the default chat/chatCompletions/responses token-length
 	// grid. Also the fallback for finetune / unresolved / unknown models.
 	CapabilityChat Capability = iota
+	// CapabilityTextRerank is the text re-ranking metric set.
 	CapabilityTextRerank
+	// CapabilityTextEmbeddings is the text embeddings metric set.
 	CapabilityTextEmbeddings
-	// CapabilityTextClassification and CapabilityImageContentModeration are
-	// fixed, unfiltered content-moderation query sets.
+	// CapabilityTextClassification is a fixed, unfiltered text content-moderation query set.
 	CapabilityTextClassification
+	// CapabilityImageContentModeration is a fixed, unfiltered image content-moderation query set.
 	CapabilityImageContentModeration
-	// Appended below (existing ordinals above are unchanged).
+	// CapabilityTextToText is the text-to-text (LLM inference) metric set.
 	CapabilityTextToText
+	// CapabilityTextToImage is the text-to-image generation metric set.
 	CapabilityTextToImage
+	// CapabilityImageTextToImage is the image-conditioned image generation metric set.
 	CapabilityImageTextToImage
+	// CapabilityTextToAudio is the text-to-audio (TTS) metric set.
 	CapabilityTextToAudio
+	// CapabilityAudioToText is the audio-to-text (STT/transcription) metric set.
 	CapabilityAudioToText
 	// CapabilityUnsupported has no dashboard; callers must guard via Supported().
 	CapabilityUnsupported

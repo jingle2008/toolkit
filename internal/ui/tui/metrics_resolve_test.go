@@ -21,6 +21,8 @@ func newResolveModel(t *testing.T) *Model {
 		BaseModels: []models.BaseModel{
 			{Name: "gpt", DisplayName: "openai.gpt-5.5", Capabilities: []string{"CHAT"}},
 			{Name: "mod", DisplayName: "openai.mod", Capabilities: []string{"TEXT_CLASSIFICATION"}},
+			{Name: "gen", DisplayName: "openai.gen", Capabilities: []string{"TEXT_GENERATION"}},
+			{Name: "img", DisplayName: "openai.img", Capabilities: []string{"TEXT_TO_IMAGE"}},
 		},
 	}
 	return m
@@ -142,6 +144,46 @@ func TestKeys_OpenMetricsOnNewCategories(t *testing.T) {
 	for _, cat := range []domain.Category{domain.GPUWorkload, domain.ImportedModel, domain.DedicatedAICluster} {
 		assert.Contains(t, keyHelpDescs(cat), "Open Metrics", "category %v", cat)
 	}
+}
+
+func TestResolveMetricsPlan_UnsupportedOnDemand(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+	w := &models.GPUWorkload{Name: "p", Namespace: "team-x", Model: "gen"}
+	_, _, ok, reason := m.resolveMetricsPlan(w)
+	assert.False(t, ok)
+	assert.Equal(t, "metrics not supported for this model", reason)
+}
+
+func TestResolveMetricsPlan_UnsupportedDedicated(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+	// Dedicated workload whose model resolves to an unsupported capability.
+	w := &models.GPUWorkload{Name: "p", Namespace: "amaaaaaadac1", Model: "gen"}
+	_, _, ok, reason := m.resolveMetricsPlan(w)
+	assert.False(t, ok)
+	assert.Equal(t, "metrics not supported for this model", reason)
+}
+
+func TestResolveMetricsPlan_NewModalityOnDemand(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+	w := &models.GPUWorkload{Name: "p", Namespace: "team-x", Model: "img"}
+	filter, capability, ok, reason := m.resolveMetricsPlan(w)
+	require.True(t, ok, reason)
+	assert.Equal(t, telemetry.FilterResourceID, filter.Key)
+	assert.Equal(t, "openai.img", filter.Value)
+	assert.Equal(t, telemetry.CapabilityTextToImage, capability)
+}
+
+func TestResolveMetricsPlan_DedicatedModerationStillErrors(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+	// "mod" has TEXT_CLASSIFICATION (unfilterable) → dedicated mode rejects.
+	w := &models.GPUWorkload{Name: "p", Namespace: "amaaaaaadac1", Model: "mod"}
+	_, _, ok, reason := m.resolveMetricsPlan(w)
+	assert.False(t, ok)
+	assert.Equal(t, "metrics not available for this model in dedicated mode", reason)
 }
 
 func TestFinishMetrics_UnresolvableShowsToast(t *testing.T) {

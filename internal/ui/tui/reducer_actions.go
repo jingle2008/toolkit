@@ -312,21 +312,27 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 		if bm == nil {
 			return telemetry.Filter{}, telemetry.CapabilityChat, false, "model not found in base catalog"
 		}
-		return telemetry.Filter{Key: telemetry.FilterResourceID, Value: bm.DisplayName}, capabilityForModel(bm), true, ""
+		capability := capabilityForModel(bm)
+		if !capability.Supported() {
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not supported for this model"
+		}
+		return telemetry.Filter{Key: telemetry.FilterResourceID, Value: bm.DisplayName}, capability, true, ""
 	default:
 		return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 	}
 }
 
-// dedicatedPlan finalizes a DacId-filtered (dedicated-mode) plan. The two
-// on-demand-only capabilities are unreachable in dedicated mode: a model that
-// resolves to one yields a no-op error toast rather than a meaningless
-// dashboard.
+// dedicatedPlan finalizes a DacId-filtered (dedicated-mode) plan. A capability
+// with no dashboard at all is unsupported; an unfilterable capability (the
+// fixed, unfiltered moderation sets) cannot be DacId-scoped, so it has no
+// dedicated-mode dashboard. Either yields a no-op error toast.
 func (m *Model) dedicatedPlan(filter telemetry.Filter, model *models.BaseModel) (telemetry.Filter, telemetry.Capability, bool, string) {
 	capability := capabilityForModel(model)
-	switch capability { //nolint:exhaustive // only the two on-demand caps are special-cased
-	case telemetry.CapabilityTextClassification, telemetry.CapabilityImageContentModeration:
-		return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not available for this model"
+	switch {
+	case !capability.Supported():
+		return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not supported for this model"
+	case !capability.Filterable():
+		return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not available for this model in dedicated mode"
 	default:
 		return filter, capability, true, ""
 	}
@@ -353,26 +359,46 @@ func metricsURL(env models.Environment, filter telemetry.Filter, capability tele
 		now.Add(-metricsWindow), now)
 }
 
-// capabilityForModel maps a resolved model to its metric capability,
-// defaulting to chat for nil/finetune/unrecognized. Precedence:
-// CHAT > TEXT_RERANK > TEXT_EMBEDDINGS > TEXT_CLASSIFICATION >
-// IMAGE_CONTENT_MODERATION.
+// capabilityPrecedence maps a model-capability string to its telemetry
+// capability, in priority order: the first capability the model declares
+// wins. CHAT is highest; the four unsupported capabilities are last, so any
+// supported capability outranks them (a purely-unsupported model resolves to
+// CapabilityUnsupported). Synonyms (EMBEDDING, CONTENT_MODERATION,
+// IMAGE_TEXT_TO_TEXT) map to the same telemetry capability as their primary.
+var capabilityPrecedence = []struct {
+	flag string
+	cap  telemetry.Capability
+}{
+	{models.CapabilityChat, telemetry.CapabilityChat},
+	{models.CapabilityTextToText, telemetry.CapabilityTextToText},
+	{models.CapabilityImageTextToText, telemetry.CapabilityTextToText},
+	{models.CapabilityTextRerank, telemetry.CapabilityTextRerank},
+	{models.CapabilityTextEmbeddings, telemetry.CapabilityTextEmbeddings},
+	{models.CapabilityEmbedding, telemetry.CapabilityTextEmbeddings},
+	{models.CapabilityTextToImage, telemetry.CapabilityTextToImage},
+	{models.CapabilityImageTextToImage, telemetry.CapabilityImageTextToImage},
+	{models.CapabilityTextToAudio, telemetry.CapabilityTextToAudio},
+	{models.CapabilityAudioToText, telemetry.CapabilityAudioToText},
+	{models.CapabilityTextClassification, telemetry.CapabilityTextClassification},
+	{models.CapabilityContentModeration, telemetry.CapabilityTextClassification},
+	{models.CapabilityImageContentModeration, telemetry.CapabilityImageContentModeration},
+	{models.CapabilityTextGeneration, telemetry.CapabilityUnsupported},
+	{models.CapabilityAudioToAudio, telemetry.CapabilityUnsupported},
+	{models.CapabilityRealtime, telemetry.CapabilityUnsupported},
+	{models.CapabilityPromptInjectionProtection, telemetry.CapabilityUnsupported},
+}
+
+// capabilityForModel maps a resolved model to its metric capability via
+// capabilityPrecedence (first declared match wins). nil / finetune / a model
+// declaring no recognized capability fall back to CapabilityChat.
 func capabilityForModel(model *models.BaseModel) telemetry.Capability {
 	if model == nil || model.Type == "Fine-tuning" {
 		return telemetry.CapabilityChat
 	}
-	switch {
-	case model.HasCapability(models.CapabilityChat):
-		return telemetry.CapabilityChat
-	case model.HasCapability(models.CapabilityTextRerank):
-		return telemetry.CapabilityTextRerank
-	case model.HasCapability(models.CapabilityTextEmbeddings):
-		return telemetry.CapabilityTextEmbeddings
-	case model.HasCapability(models.CapabilityTextClassification):
-		return telemetry.CapabilityTextClassification
-	case model.HasCapability(models.CapabilityImageContentModeration):
-		return telemetry.CapabilityImageContentModeration
-	default:
-		return telemetry.CapabilityChat
+	for _, p := range capabilityPrecedence {
+		if model.HasCapability(p.flag) {
+			return p.cap
+		}
 	}
+	return telemetry.CapabilityChat
 }

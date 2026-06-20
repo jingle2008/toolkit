@@ -31,6 +31,17 @@ func TestCapabilityForModel(t *testing.T) {
 		{"chat-over-classification", &models.BaseModel{Capabilities: []string{"TEXT_CLASSIFICATION", "CHAT"}}, telemetry.CapabilityChat},
 		{"embed-over-classification", &models.BaseModel{Capabilities: []string{"TEXT_CLASSIFICATION", "TEXT_EMBEDDINGS"}}, telemetry.CapabilityTextEmbeddings},
 		{"classification-over-imagemod", &models.BaseModel{Capabilities: []string{"IMAGE_CONTENT_MODERATION", "TEXT_CLASSIFICATION"}}, telemetry.CapabilityTextClassification},
+		{"text_to_text", &models.BaseModel{Capabilities: []string{"TEXT_TO_TEXT"}}, telemetry.CapabilityTextToText},
+		{"image_text_to_text", &models.BaseModel{Capabilities: []string{"IMAGE_TEXT_TO_TEXT"}}, telemetry.CapabilityTextToText},
+		{"chat-over-t2t", &models.BaseModel{Capabilities: []string{"TEXT_TO_TEXT", "CHAT"}}, telemetry.CapabilityChat},
+		{"embedding-synonym", &models.BaseModel{Capabilities: []string{"EMBEDDING"}}, telemetry.CapabilityTextEmbeddings},
+		{"content-moderation-synonym", &models.BaseModel{Capabilities: []string{"CONTENT_MODERATION"}}, telemetry.CapabilityTextClassification},
+		{"text_to_image", &models.BaseModel{Capabilities: []string{"TEXT_TO_IMAGE"}}, telemetry.CapabilityTextToImage},
+		{"image_text_to_image", &models.BaseModel{Capabilities: []string{"IMAGE_TEXT_TO_IMAGE"}}, telemetry.CapabilityImageTextToImage},
+		{"text_to_audio", &models.BaseModel{Capabilities: []string{"TEXT_TO_AUDIO"}}, telemetry.CapabilityTextToAudio},
+		{"audio_to_text", &models.BaseModel{Capabilities: []string{"AUDIO_TO_TEXT"}}, telemetry.CapabilityAudioToText},
+		{"unsupported-only", &models.BaseModel{Capabilities: []string{"REALTIME"}}, telemetry.CapabilityUnsupported},
+		{"supported-wins", &models.BaseModel{Capabilities: []string{"TEXT_GENERATION", "CHAT"}}, telemetry.CapabilityChat},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
