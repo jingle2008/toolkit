@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func TestHandleWatchStarted_SetsWatchingAndArms(t *testing.T) {
@@ -95,4 +96,34 @@ func TestHandleWatchUnavailable_StaleIgnored(t *testing.T) {
 
 	m.handleWatchUnavailable(watchUnavailableMsg{Cat: domain.GPUNode, Gen: 4})
 	assert.True(t, m.watching, "stale watchUnavailableMsg must not clear the live indicator")
+}
+
+// A live-watch reload of the on-screen category preserves the active filter and
+// the selected row — it does not behave like a navigation.
+func TestLiveReload_PreservesFilterAndSelection(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gen = 1
+	m.category = domain.BaseModel
+	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{
+		{Name: "bm1"}, {Name: "bm2"}, {Name: "bm3"},
+	}}
+	m.refreshDisplay()
+	m.table.SetCursor(1) // select bm2
+	// "bm" matches all three items so the table stays populated while we
+	// verify the filter string is not cleared by the reload.
+	m.filter = "bm"
+
+	// Simulate the data landing from a watch-triggered reload (same gen, same
+	// category) via the typed loaded-handler the reload command resolves to.
+	m.handleBaseModelsLoaded([]models.BaseModel{
+		{Name: "bm1"}, {Name: "bm2"}, {Name: "bm3"},
+	}, 1)
+
+	if m.filter != "bm" {
+		t.Fatalf("live reload cleared the filter: %q", m.filter)
+	}
+	if got := m.selectedRawRow(); len(got) == 0 || got[0] != "bm2" {
+		t.Fatalf("live reload lost the selection: %v", got)
+	}
 }
