@@ -10,8 +10,26 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// errMsg is a message containing an error.
-type errMsg error
+// errMsg is a failed-load message tagged with the generation that issued the
+// load, so a superseded load's error can be dropped (the user navigated on).
+// Gen 0 is the always-apply sentinel (the foundational Init load) and is
+// never dropped — mirroring dataMsg/the typed loaded messages.
+type errMsg struct {
+	err error
+	Gen int
+}
+
+// Error implements error so errMsg can carry the failure to the toast and so
+// errors.Is reaches the wrapped cause (e.g. context.Canceled) via Unwrap.
+func (e errMsg) Error() string {
+	if e.err == nil {
+		return ""
+	}
+	return e.err.Error()
+}
+
+// Unwrap exposes the wrapped error for errors.Is/As.
+func (e errMsg) Unwrap() error { return e.err }
 
 // dataMsg is a message containing generic data and a generation id to avoid stale updates.
 type dataMsg struct {

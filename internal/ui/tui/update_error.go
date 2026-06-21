@@ -15,7 +15,19 @@ transient toast over the restored view — so the user can keep
 navigating instead of being trapped.
 */
 func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
-	err := error(msg)
+	err := msg.err
+
+	// Drop errors from a superseded load: the user has navigated on, so the
+	// old category's failure is no longer relevant to show. Gen 0 is the
+	// always-apply sentinel (the foundational Init load) and is never dropped.
+	// endTask still runs to keep pendingTasks balanced.
+	if msg.Gen != 0 && msg.Gen != m.gen {
+		if m.logger != nil {
+			m.logger.Debugw("dropping stale load error", "msgGen", msg.Gen, "gen", m.gen, "error", err)
+		}
+		m.endTask(false)
+		return nil
+	}
 
 	// A canceled in-flight load is the expected result of navigating away
 	// (newLoadContext cancels loadCtx) or quitting — not a failure. Drop it

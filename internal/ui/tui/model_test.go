@@ -267,7 +267,7 @@ func TestProcessDataAndErrorMsg(t *testing.T) {
 	// handleDataMsg with map[string][]models.DedicatedAICluster
 	m.handleDataMsg(dataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
 	// Update with errorMsg
-	m.Update(errMsg(nil))
+	m.Update(errMsg{})
 }
 
 func TestModelUpdateBranches(t *testing.T) {
@@ -282,7 +282,7 @@ func TestModelUpdateBranches(t *testing.T) {
 	// Simulate filterMsg
 	m.Update(filterMsg("tenant1"))
 	// Simulate errMsg
-	m.Update(errMsg(nil))
+	m.Update(errMsg{})
 }
 
 func TestCenterTextReturnsCenteredText(t *testing.T) {

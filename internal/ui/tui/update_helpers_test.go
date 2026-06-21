@@ -123,7 +123,7 @@ func Test_Update_ErrMsgEmitsToast(t *testing.T) {
 	)
 	require.NoError(t, err)
 	m.viewMode = common.LoadingView
-	_, cmd := m.Update(errMsg(errors.New("fail")))
+	_, cmd := m.Update(errMsg{err: errors.New("fail")})
 	require.NotNil(t, cmd, "errMsg should return a tea.Cmd (toast auto-dismiss tick)")
 	require.NotNil(t, m.toast, "errMsg should set an error toast")
 	require.Equal(t, "fail", m.toast.msg)

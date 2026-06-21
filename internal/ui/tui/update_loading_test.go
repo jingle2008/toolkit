@@ -33,7 +33,7 @@ func TestUpdate_ErrMsgRoutesToToast(t *testing.T) {
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
 	m.logger = &fakeLogger{}
-	_, cmd := m.Update(errMsg(fakeErrMsg("fail")))
+	_, cmd := m.Update(errMsg{err: fakeErrMsg("fail")})
 	if m.toast == nil || m.toast.msg != "fail" || m.toast.sev != toastError {
 		t.Errorf("expected error toast with msg 'fail', got %+v", m.toast)
 	}

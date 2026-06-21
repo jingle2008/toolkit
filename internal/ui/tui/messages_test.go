@@ -10,8 +10,8 @@ import (
 func TestErrMsg(t *testing.T) {
 	t.Parallel()
 	err := errors.New("fail")
-	msg := errMsg(err)
-	assert.Equal(t, err, msg)
+	msg := errMsg{err: err}
+	assert.Equal(t, err, msg.err)
 }
 
 func TestDataMsg(t *testing.T) {

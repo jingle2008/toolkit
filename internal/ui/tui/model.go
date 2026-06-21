@@ -27,7 +27,8 @@ func (m *Model) loadData() []tea.Cmd {
 		func() tea.Msg {
 			dataset, err := m.loader.LoadDataset(m.loadCtx, m.repoPath, m.environment)
 			if err != nil {
-				return errMsg(err)
+				// Gen 0: the foundational Init load; never stale-dropped.
+				return errMsg{err: err}
 			}
 			// Gen 0 is the always-apply sentinel (see handleDataMsg). This
 			// foundational load is issued exactly once from Init and must
