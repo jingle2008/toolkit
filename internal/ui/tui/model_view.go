@@ -184,6 +184,8 @@ func (m *Model) renderActiveView() string {
 		return m.centered(m.exportView())
 	case common.EditTenantView:
 		return m.centered(m.editTenantView())
+	case common.LogView:
+		return m.logView()
 	default:
 		return ""
 	}

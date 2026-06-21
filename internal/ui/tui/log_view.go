@@ -3,9 +3,13 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
@@ -75,7 +79,7 @@ func (m *Model) renderLogEntries(width int) string {
 // refreshes the viewport from the latest ring snapshot each render and,
 // while the user is at the bottom, keeps the newest line in view
 // (auto-follow). Scrolling up leaves the offset alone (pause).
-func (m *Model) logView() string { //nolint:unused // called from Update in Task 6
+func (m *Model) logView() string {
 	width := m.viewWidth
 	bodyHeight := m.viewHeight - 2 // title + hint lines
 	if bodyHeight < 1 {
@@ -98,4 +102,42 @@ func (m *Model) logView() string { //nolint:unused // called from Update in Task
 	hint := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).
 		Render("↑↓/pgup/pgdn scroll · end follow · home top · ` close")
 	return lipgloss.JoinVertical(lipgloss.Left, title, m.logViewport.View(), hint)
+}
+
+// logTickMsg drives periodic re-renders of the log overlay so the live
+// tail updates even while the app is otherwise idle.
+type logTickMsg struct{}
+
+const logRefreshInterval = 400 * time.Millisecond
+
+// logTickCmd schedules the next log-overlay refresh.
+func logTickCmd() tea.Cmd {
+	return tea.Tick(logRefreshInterval, func(time.Time) tea.Msg { return logTickMsg{} })
+}
+
+// updateLogView handles input while the log overlay is open: close keys,
+// quit, the home/end follow controls (the viewport keymap lacks them),
+// and otherwise forwards scrolling to the viewport.
+func (m *Model) updateLogView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok {
+		switch {
+		case key.Matches(km, keys.ToggleLog, keys.Back):
+			m.viewMode = m.logReturnView
+			return m, nil
+		case key.Matches(km, keys.Quit):
+			m.cancelInFlight()
+			return m, tea.Quit
+		}
+		switch km.String() {
+		case "end":
+			m.logViewport.GotoBottom()
+			return m, nil
+		case "home":
+			m.logViewport.SetYOffset(0)
+			return m, nil
+		}
+	}
+	vp, cmd := m.logViewport.Update(msg)
+	m.logViewport = &vp
+	return m, cmd
 }

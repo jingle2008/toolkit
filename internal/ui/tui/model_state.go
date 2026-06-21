@@ -127,7 +127,7 @@ type Model struct {
 	// Log overlay state.
 	logStore      *logging.RingSink
 	logViewport   *viewport.Model
-	logReturnView common.ViewMode //nolint:unused // view to restore when the log overlay closes (wired in a later task)
+	logReturnView common.ViewMode // view to restore when the log overlay closes
 
 	// Transient banner shown over the active view; auto-dismissed via tea.Tick.
 	toast    *toastState

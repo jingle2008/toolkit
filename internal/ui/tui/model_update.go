@@ -6,11 +6,13 @@ package tui
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/stopwatch"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
 /*
@@ -32,6 +34,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// status-bar loading nugget keeps animating while the user
 		// stays in ListView/DetailsView during a load.
 		return m, m.handleSpinnerTickMsg(msg)
+	case logTickMsg:
+		if m.viewMode == common.LogView {
+			return m, logTickCmd()
+		}
+		return m, nil
 	case stopwatch.TickMsg, stopwatch.StartStopMsg, stopwatch.ResetMsg:
 		return m, m.handleStopwatchMsg(msg)
 	// Data / loaded messages: routed at the top so a load completing
@@ -91,7 +98,27 @@ func (m *Model) onResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// interceptToggleLog checks whether msg is the ToggleLog key pressed from a
+// view that supports the overlay. If so it transitions to LogView, records the
+// return view, and arms the live-refresh tick. Returns (model, cmd, true) on
+// intercept, (m, nil, false) otherwise.
+func (m *Model) interceptToggleLog(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
+	km, ok := msg.(tea.KeyMsg)
+	if !ok || !key.Matches(km, keys.ToggleLog) {
+		return m, nil, false
+	}
+	if m.viewMode != common.ListView && m.viewMode != common.DetailsView {
+		return m, nil, false
+	}
+	m.logReturnView = m.viewMode
+	m.viewMode = common.LogView
+	return m, logTickCmd(), true
+}
+
 func (m *Model) delegateToActiveView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if model, cmd, intercepted := m.interceptToggleLog(msg); intercepted {
+		return model, cmd
+	}
 	switch m.viewMode {
 	case common.HelpView:
 		return m.updateHelpView(msg)
@@ -105,6 +132,8 @@ func (m *Model) delegateToActiveView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateExportView(msg)
 	case common.EditTenantView:
 		return m.updateEditTenantView(msg)
+	case common.LogView:
+		return m.updateLogView(msg)
 	}
 	return m, nil
 }
