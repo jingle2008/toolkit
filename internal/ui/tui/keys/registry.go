@@ -34,12 +34,17 @@ var (
 		key.WithKeys("c"),
 		key.WithHelp("<c>", "Copy"),
 	)
+	ToggleLog = key.NewBinding(
+		key.WithKeys("`"),
+		key.WithHelp("<`>", "Toggle Log"),
+	)
 )
 
 var globalKeys = []key.Binding{
 	Help,
 	ViewDetails,
 	CopyName,
+	ToggleLog,
 	Back,
 	Quit,
 }

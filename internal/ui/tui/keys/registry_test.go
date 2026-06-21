@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -62,4 +63,18 @@ func TestResolveKeys_GlobalAndContext(t *testing.T) {
 	km3 := ResolveKeys(domain.Tenant, common.ListView)
 	assert.NotNil(t, km3.Global)
 	assert.NotEmpty(t, km3.Context)
+}
+
+func TestToggleLogInGlobalKeys(t *testing.T) {
+	t.Parallel()
+	km := ResolveKeys(domain.Tenant, common.ListView)
+	found := false
+	for _, b := range km.Global {
+		if key.Matches(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'`'}}, b) {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("backtick (ToggleLog) not present in global keys")
+	}
 }
