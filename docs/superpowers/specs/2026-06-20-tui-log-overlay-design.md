@@ -82,8 +82,10 @@ func (r *RingSink) Sync() error               // no-op
 
 - Capacity is fixed at **1000** entries (bounded memory; ~oldest dropped on overflow).
 - `WithFields` returns a lightweight wrapper that records into the same underlying ring
-  with the accumulated fields prepended to each entry — so the root correlation fields
-  (`cmd`, `version`) appear on captured entries too.
+  with the accumulated fields prepended to each entry. This exists primarily to satisfy
+  the `Tee.WithFields` fan-out contract. The TUI wiring tees the **raw** ring (see below),
+  so on-screen entries omit the always-`cmd=tui` / `version` correlation prefix — less
+  per-line noise; the file log still carries it.
 - `DebugEnabled()` returns `true` so debug breadcrumbs are captured regardless of the
   file level.
 
@@ -104,18 +106,32 @@ func NewTee(loggers ...Logger) Logger
 `internal/cli/root.go` (`NewRootCmd` RunE → the TUI path) is the **only** place that
 builds the tee. `get`, `mcp`, and `mutate` keep the file-only logger.
 
+`NewRootCmd` RunE keeps building the file logger and applying correlation fields exactly
+as today. The ring + tee are constructed inside `runToolkit` (the TUI-only function),
+which already receives that `logger` and is where `WithContext` + `NewModel` happen:
+
 ```go
-fileLogger, err := initLogger(cfg)          // existing
+// RunE (unchanged):
+fileLogger, err := initLogger(cfg)
+logger := fileLogger.WithFields("cmd", "tui", "version", version)
+defer logger.Sync()
+// ... runToolkit(ctx, logger, cfg, version)
+
+// inside runToolkit, before the existing WithContext:
 ring := logging.NewRingSink(1000)
-logger := logging.NewTee(fileLogger, ring)  // replaces the bare fileLogger
-logger = logger.WithFields("cmd", "tui", "version", version) // existing correlation
-// ... ctx = logging.WithContext(ctx, logger) as today
+logger = logging.NewTee(logger, ring)   // file + in-memory ring
+ctx = logging.WithContext(ctx, logger)
+// ...
 model, err := tui.NewModel(
     /* ...existing options... */
     tui.WithLogger(logger),
     tui.WithLogStore(ring),  // NEW
 )
 ```
+
+`logger.Sync()` in RunE syncs the file logger (the ring's `Sync` is a no-op); the tee
+created in `runToolkit` is not separately synced, which is fine — only the file backend
+buffers.
 
 `internal/ui/tui/options.go`: add `WithLogStore(*logging.RingSink) ModelOption` that sets
 `m.logStore`.
