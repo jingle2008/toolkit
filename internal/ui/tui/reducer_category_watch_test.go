@@ -53,6 +53,25 @@ func hasWatchLifecycle(types []string) bool {
 	return contains(types, "tui.watchStartedMsg") || contains(types, "tui.watchUnavailableMsg")
 }
 
+// TestUpdateCategoryCore_NavigationClearsFilter asserts that navigating to a
+// different category resets the active filter and the filter input.
+func TestUpdateCategoryCore_NavigationClearsFilter(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.Environment
+	m.filter = "stale"
+	m.textInput.SetValue("stale")
+
+	_ = m.updateCategoryCore(domain.GPUNode)
+
+	if m.filter != "" {
+		t.Fatalf("navigation did not clear filter: %q", m.filter)
+	}
+	if m.textInput.Value() != "" {
+		t.Fatalf("navigation did not reset input: %q", m.textInput.Value())
+	}
+}
+
 // TestUpdateCategoryCore_GPUNode_CacheMiss asserts that entering GPUNode with
 // no cached data starts both a load command and a watch command.
 func TestUpdateCategoryCore_GPUNode_CacheMiss(t *testing.T) {

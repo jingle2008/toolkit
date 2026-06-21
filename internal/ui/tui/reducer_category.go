@@ -42,6 +42,11 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		m.showFaulty = false
 		m.watching = false
 		m.watchTrigger = nil
+		// Filtering and cursor position are view state tied to the category
+		// being browsed. Clear the filter here, on navigation, so an in-place
+		// data refresh (refreshDisplay) can preserve it for the same category.
+		m.filter = ""
+		m.textInput.Reset()
 		// Switch the visible chrome to the destination immediately so
 		// the user sees what they navigated to (new headers, empty
 		// rows) instead of stale data under a mismatched label.
