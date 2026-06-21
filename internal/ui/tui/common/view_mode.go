@@ -16,6 +16,8 @@ const (
 	ExportView
 	// EditTenantView is the view mode for the tenant-metadata entry form.
 	EditTenantView
+	// LogView is the full-screen log overlay.
+	LogView
 )
 
 // String returns the string representation of the ViewMode.
@@ -33,6 +35,8 @@ func (v ViewMode) String() string {
 		return "Export"
 	case EditTenantView:
 		return "EditTenant"
+	case LogView:
+		return "Log"
 	default:
 		return "Unknown"
 	}

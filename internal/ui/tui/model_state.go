@@ -124,6 +124,11 @@ type Model struct {
 	// Tenant-metadata entry form state (EditTenantView).
 	editTenant *editTenantForm
 
+	// Log overlay state.
+	logStore      *logging.RingSink
+	logViewport   *viewport.Model
+	logReturnView common.ViewMode //nolint:unused // view to restore when the log overlay closes (wired in a later task)
+
 	// Transient banner shown over the active view; auto-dismissed via tea.Tick.
 	toast    *toastState
 	toastSeq int
@@ -261,6 +266,10 @@ func setDefaults(m *Model) {
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("62"))
 		m.viewport = &vp
+	}
+	if m.logViewport == nil {
+		lvp := viewport.New(20, 20)
+		m.logViewport = &lvp
 	}
 	if m.help == nil {
 		keyStyle := lipgloss.NewStyle().

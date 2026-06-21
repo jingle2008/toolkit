@@ -52,6 +52,7 @@ func TestViewModeString(t *testing.T) {
 		{HelpView, "Help"},
 		{ExportView, "Export"},
 		{EditTenantView, "EditTenant"},
+		{LogView, "Log"},
 		{ViewMode(99), "Unknown"},
 	}
 	for _, tt := range tests {

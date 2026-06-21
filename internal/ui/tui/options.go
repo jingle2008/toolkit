@@ -77,6 +77,13 @@ func WithLogger(logger logging.Logger) ModelOption {
 	}
 }
 
+// WithLogStore sets the in-memory log ring the log overlay renders from.
+func WithLogStore(s *logging.RingSink) ModelOption {
+	return func(m *Model) {
+		m.logStore = s
+	}
+}
+
 // WithFilter sets a starting filter before Init().
 func WithFilter(filter string) ModelOption {
 	return func(m *Model) {

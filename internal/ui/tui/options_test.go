@@ -10,6 +10,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -86,4 +87,12 @@ func TestWithVersion(t *testing.T) {
 	opt := WithVersion("v1.2.3")
 	opt(m)
 	assert.Equal(t, "v1.2.3", m.version)
+}
+
+func TestWithLogStore(t *testing.T) {
+	t.Parallel()
+	ring := logging.NewRingSink(8)
+	m := &Model{}
+	WithLogStore(ring)(m)
+	assert.Same(t, ring, m.logStore)
 }
