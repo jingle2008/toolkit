@@ -259,14 +259,19 @@ func (m *Model) selectedRawRow() table.Row {
 	return m.rawRows[idx]
 }
 
-// indexOfRow returns the index of the first row whose Name cell (column 0)
-// equals name, or -1 when name is empty or no row matches.
-func indexOfRow(rows []table.Row, name string) int {
-	if name == "" {
+// indexOfItemKey returns the index of the first row whose per-category item
+// key equals key, or -1 when key is nil or no row matches. Identity is the
+// itemKeyFrom key — the bare Name cell for flat categories, but
+// ScopedItemKey{Scope: row[1], Name: row[0]} for scoped ones — so a reload
+// re-homes onto the same item even when several visible rows share a Name.
+// itemKeyFrom only ever yields a string, a ScopedItemKey, or nil (all
+// comparable), so the == comparison is panic-safe.
+func indexOfItemKey(rows []table.Row, category domain.Category, key models.ItemKey) int {
+	if key == nil {
 		return -1
 	}
 	for i, r := range rows {
-		if len(r) > 0 && r[0] == name {
+		if itemKeyFrom(category, r) == key {
 			return i
 		}
 	}

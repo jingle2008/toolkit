@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -307,6 +308,38 @@ func TestApplyRows_ClampsWhenSelectedRowDisappears(t *testing.T) {
 	c := m.table.Cursor()
 	if c < 0 || c >= len(m.table.Rows()) {
 		t.Fatalf("cursor out of range after reload: %d (rows=%d)", c, len(m.table.Rows()))
+	}
+}
+
+// For scoped categories (e.g. ImportedModel), the Name cell alone is not a
+// unique row key — itemKeyFrom keys these on ScopedItemKey{Scope: row[1],
+// Name: row[0]}. A reload must re-home the cursor onto the same item by its
+// full key, not jump to the first row that merely shares the Name.
+func TestApplyRows_PreservesSelectedRow_DuplicateNamesScopedCategory(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.ImportedModel
+
+	// Two rows share the Name "modelA" but live under different scopes
+	// (row[1]): the user selects the second one.
+	rows := []table.Row{
+		{"modelA", "tenant1"},
+		{"modelA", "tenant2"},
+	}
+	m.applyRows(rows, tableStats{}, true)
+	m.table.SetCursor(1) // select (modelA, tenant2)
+
+	// Reload with the same rows. Matching on row[0] alone would re-home onto
+	// index 0 (the first "modelA" = tenant1); matching on the item key keeps
+	// the cursor on (modelA, tenant2).
+	m.applyRows([]table.Row{
+		{"modelA", "tenant1"},
+		{"modelA", "tenant2"},
+	}, tableStats{}, true)
+
+	got := m.selectedRawRow()
+	if len(got) < 2 || got[1] != "tenant2" {
+		t.Fatalf("reload re-homed onto the wrong same-named row: got %v, want scope tenant2", got)
 	}
 }
 

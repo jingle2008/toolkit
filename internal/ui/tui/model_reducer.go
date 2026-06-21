@@ -94,16 +94,17 @@ func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
 
 func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	// Capture the prior selection before m.rawRows is replaced below, so an
-	// in-place reload can re-home the cursor onto the same row by identity.
+	// in-place reload can re-home the cursor onto the same item by identity.
+	// Identity is the per-category item key (itemKeyFrom), not the bare Name
+	// cell, so scoped categories whose rows can share a Name (e.g.
+	// ImportedModel keyed on {Scope, Name}) re-home onto the right row.
 	// After a navigation the table was blanked (applyRows(nil, ..., false)),
-	// so there is no prior selection and prevName stays "" — the cursor then
+	// so there is no prior selection and prevKey stays nil — the cursor then
 	// falls through to findContextIndex (scope/environment), preserving the
 	// pre-existing navigation behavior.
-	var prevName string
+	var prevKey models.ItemKey
 	if autoSelect {
-		if r := m.selectedRawRow(); len(r) > 0 {
-			prevName = r[0]
-		}
+		prevKey = itemKeyFrom(m.category, m.selectedRawRow())
 	}
 
 	m.stats = stats
@@ -112,7 +113,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
-		idx := indexOfRow(rows, prevName)
+		idx := indexOfItemKey(rows, m.category, prevKey)
 		if idx < 0 {
 			idx = m.findContextIndex(rows)
 		}
