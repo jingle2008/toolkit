@@ -379,12 +379,12 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 	// Only rebuild the visible table when the load is for the category
 	// currently on screen. A background load for another category — e.g. a
 	// model catalog fetched to resolve a DAC's metrics capability while the
-	// DAC list is showing — must not refresh the current table: that resets
-	// the cursor to the first row and clears any active filter. The data is
-	// still cached on the dataset above, so it's ready when the user later
-	// navigates to that category. Every genuine navigation load sets
-	// m.category to the destination before dispatching (updateCategoryCore),
-	// so this guard is a no-op for them.
+	// DAC list is showing — must not refresh the current table: it would
+	// recompute rows for the wrong category and disturb the visible cursor.
+	// The data is still cached on the dataset above, so it's ready when the
+	// user later navigates to that category. Every genuine navigation load
+	// sets m.category to the destination before dispatching
+	// (updateCategoryCore), so this guard is a no-op for them.
 	if category == m.category {
 		m.refreshDisplay()
 	}
