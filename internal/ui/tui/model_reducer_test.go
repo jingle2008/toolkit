@@ -269,6 +269,47 @@ func TestSortTableByColumn_Toggles(t *testing.T) {
 	}
 }
 
+// A same-category reload keeps the cursor on the row the user had selected,
+// matched by its Name cell, even when its index shifts.
+func TestApplyRows_PreservesSelectedRowAcrossReload(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.BaseModel
+	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{
+		{Name: "bm1"}, {Name: "bm2"}, {Name: "bm3"},
+	}}
+	m.refreshDisplay()   // populate columns + rows
+	m.table.SetCursor(1) // select bm2
+
+	m.refreshDisplay() // simulate an in-place reload of the same category
+
+	got := m.selectedRawRow()
+	if len(got) == 0 || got[0] != "bm2" {
+		t.Fatalf("cursor not preserved on reload: %v", got)
+	}
+}
+
+// When the previously-selected row is gone after a reload, the cursor clamps to
+// a valid index instead of pointing past the end.
+func TestApplyRows_ClampsWhenSelectedRowDisappears(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.BaseModel
+	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{
+		{Name: "bm1"}, {Name: "bm2"}, {Name: "bm3"},
+	}}
+	m.refreshDisplay()
+	m.table.SetCursor(1) // select bm2
+
+	m.dataset.BaseModels = []models.BaseModel{{Name: "bm1"}, {Name: "bm3"}}
+	m.refreshDisplay() // bm2 no longer present
+
+	c := m.table.Cursor()
+	if c < 0 || c >= len(m.table.Rows()) {
+		t.Fatalf("cursor out of range after reload: %d (rows=%d)", c, len(m.table.Rows()))
+	}
+}
+
 func TestOpContext(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)

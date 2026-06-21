@@ -93,13 +93,29 @@ func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
 }
 
 func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
+	// Capture the prior selection before m.rawRows is replaced below, so an
+	// in-place reload can re-home the cursor onto the same row by identity.
+	// After a navigation the table was blanked (applyRows(nil, ..., false)),
+	// so there is no prior selection and prevName stays "" — the cursor then
+	// falls through to findContextIndex (scope/environment), preserving the
+	// pre-existing navigation behavior.
+	var prevName string
+	if autoSelect {
+		if r := m.selectedRawRow(); len(r) > 0 {
+			prevName = r[0]
+		}
+	}
+
 	m.stats = stats
 	m.rawRows = cloneRows(rows)
 	m.applyMiddleTruncation(rows)
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
-		idx := m.findContextIndex(rows)
+		idx := indexOfRow(rows, prevName)
+		if idx < 0 {
+			idx = m.findContextIndex(rows)
+		}
 		if idx >= 0 {
 			// SetCursor moves the cursor and render window but leaves the
 			// viewport's scroll offset untouched, so a target beyond the

@@ -48,6 +48,12 @@ func TestApplyRows_AutoSelect_ScrollsTargetFullyIntoView(t *testing.T) {
 		m.category = domain.Tenant
 		m.scope = &domain.Scope{Category: domain.Tenant, Name: tc.name}
 
+		// Simulate real navigation: a category switch first blanks the table
+		// via applyRows(nil, ..., false), clearing rawRows so that the
+		// subsequent autoSelect call has no prior selection and falls through
+		// to findContextIndex (scope). Without this blank step the cursor from
+		// the previous iteration would be mistaken for a preserved selection.
+		m.applyRows(nil, nil, false)
 		m.applyRows(rows, nil, true)
 
 		require.Equal(t, tc.want, m.table.Cursor(),

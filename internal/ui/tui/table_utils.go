@@ -259,6 +259,20 @@ func (m *Model) selectedRawRow() table.Row {
 	return m.rawRows[idx]
 }
 
+// indexOfRow returns the index of the first row whose Name cell (column 0)
+// equals name, or -1 when name is empty or no row matches.
+func indexOfRow(rows []table.Row, name string) int {
+	if name == "" {
+		return -1
+	}
+	for i, r := range rows {
+		if len(r) > 0 && r[0] == name {
+			return i
+		}
+	}
+	return -1
+}
+
 // findItem looks up the item identified by (category, key) in the
 // dataset. Returns nil for keys that have no matching item, for
 // categories that have no rowSource entry, and for categories whose
