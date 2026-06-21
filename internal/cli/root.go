@@ -158,6 +158,12 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 	repoPath := cfg.RepoPath
 	kubeConfig := cfg.KubeConfig
 
+	// Capture the log stream in memory (all levels) so the TUI's log
+	// overlay can render it live, while the file logger keeps writing.
+	// The ring is teed raw, so on-screen lines omit the cmd/version
+	// correlation prefix the file log carries.
+	ring := logging.NewRingSink(1000)
+	logger = logging.NewTee(logger, ring)
 	ctx = logging.WithContext(ctx, logger)
 	logger.Infow("starting toolkit",
 		"repo", repoPath,
@@ -183,6 +189,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithEnvironment(env),
 		tui.WithCategory(category),
 		tui.WithLogger(logger),
+		tui.WithLogStore(ring),
 		tui.WithContext(ctx),
 		tui.WithLoader(production.New(ctx, cfg.MetadataFile)),
 		tui.WithFilter(cfg.Filter),
