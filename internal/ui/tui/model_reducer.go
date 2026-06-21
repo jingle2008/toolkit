@@ -561,7 +561,7 @@ func (m *Model) handleWatchTriggered(msg watchTriggeredMsg) tea.Cmd {
 		m.logger.Debugw("watch triggered ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
 		return nil
 	}
-	m.logger.Infow("watch triggered", "category", msg.Cat, "gen", msg.Gen)
+	m.logger.Debugw("watch triggered", "category", msg.Cat, "gen", msg.Gen)
 	reload := m.reloadCategoryCmd(msg.Cat, msg.Gen)
 	if reload == nil {
 		return nil

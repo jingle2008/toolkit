@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -106,6 +107,73 @@ func TestWatchTrigger_StreamDeathClosesChannel(t *testing.T) {
 		assert.False(t, ok, "channel must close when an underlying stream dies")
 	case <-time.After(time.Second):
 		t.Fatal("trigger channel should close on stream death")
+	}
+}
+
+// TestDurableOpener_ReconnectsOnStreamClose is the regression guard for the
+// dropped live indicator: a durableOpener's watcher must NOT terminate when
+// the underlying stream closes (the routine idle/proxy cut). RetryWatcher
+// should reconnect — open a fresh underlying watch — and keep delivering
+// events on the same channel. (RetryWatcher's restart delay is ~1s, so this
+// test is intentionally not instant.)
+//
+//nolint:paralleltest // real-time RetryWatcher restart delay; keep serial for stable timing
+func TestDurableOpener_ReconnectsOnStreamClose(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var mu sync.Mutex
+	var fakes []*watch.FakeWatcher
+	getFake := func(i int) *watch.FakeWatcher {
+		mu.Lock()
+		defer mu.Unlock()
+		if i >= len(fakes) {
+			return nil
+		}
+		return fakes[i]
+	}
+	waitForFake := func(n int) *watch.FakeWatcher {
+		t.Helper()
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			if fw := getFake(n - 1); fw != nil {
+				return fw
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		t.Fatalf("underlying watch #%d was never opened (no reconnect)", n)
+		return nil
+	}
+
+	opener := durableOpener(
+		func(context.Context) (string, error) { return "1", nil },
+		func(context.Context, metav1.ListOptions) (watch.Interface, error) {
+			fw := watch.NewFake()
+			mu.Lock()
+			fakes = append(fakes, fw)
+			mu.Unlock()
+			return fw, nil
+		},
+	)
+
+	w, err := opener(ctx)
+	require.NoError(t, err)
+	defer w.Stop()
+
+	first := waitForFake(1)
+	first.Stop() // simulate the API server / proxy closing the idle stream
+
+	// RetryWatcher must open a SECOND underlying watch (reconnect).
+	second := waitForFake(2)
+
+	// An event on the reconnected stream must still reach the consumer, and
+	// the channel must not have closed.
+	go second.Add(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"}})
+	select {
+	case _, ok := <-w.ResultChan():
+		require.True(t, ok, "watcher channel must stay open across reconnect")
+	case <-time.After(3 * time.Second):
+		t.Fatal("expected an event after reconnect")
 	}
 }
 

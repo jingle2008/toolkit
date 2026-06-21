@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	watchtools "k8s.io/client-go/tools/watch"
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
@@ -99,11 +100,14 @@ func fanInWatcher(
 			return
 		case _, ok := <-w.ResultChan():
 			if !ok {
-				// DIAGNOSTIC: the API server / proxy closed the watch stream.
-				// This is the path that drops the live indicator with no
-				// reconnect (handleWatchClosed). Logged loud to confirm.
-				logging.FromContext(ctx).Warnw("watch stream closed by server (ResultChan closed); live watch will drop")
-				closeDone() // stream died
+				// The watcher's channel closed. With the RetryWatcher-backed
+				// openers this no longer happens on routine server-side closes
+				// (those auto-reconnect); reaching here means RetryWatcher gave
+				// up on an unrecoverable error (e.g. 410 Expired) or was
+				// stopped. Treat it as a fallback signal: the live indicator
+				// drops and the caller does a final one-shot reload.
+				logging.FromContext(ctx).Warnw("watch ended (retry exhausted or stopped); live watch will drop")
+				closeDone()
 				return
 			}
 			select {
@@ -179,11 +183,51 @@ func coalesce(
 	}
 }
 
-// crWatchOpener returns an opener that watches all objects of one GVR.
-func crWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) func(context.Context) (watch.Interface, error) {
+// watcherFunc adapts a plain watch function to cache.WatcherWithContext, the
+// interface RetryWatcher reconnects through. RetryWatcher passes its
+// lifecycle context and the resume resourceVersion (in opts) on each
+// (re)connect; the func re-applies any caller selectors on top.
+type watcherFunc func(context.Context, metav1.ListOptions) (watch.Interface, error)
+
+func (f watcherFunc) WatchWithContext(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+	return f(ctx, opts)
+}
+
+// durableOpener builds an opener whose watch survives transient stream
+// closes — idle timeouts, proxy/LB cuts, API-server connection resets. It
+// first lists for the collection's current resourceVersion (so the watch
+// starts "from now": no initial ADDED replay), then returns a RetryWatcher
+// that resumes from the last-seen resourceVersion whenever the stream
+// closes. The watcher's channel only closes on ctx cancel or an
+// unrecoverable error (e.g. 410 Expired) — not on the routine server-side
+// closes that previously dropped the live indicator.
+func durableOpener(
+	listRV func(context.Context) (string, error),
+	watchFn func(context.Context, metav1.ListOptions) (watch.Interface, error),
+) func(context.Context) (watch.Interface, error) {
 	return func(ctx context.Context) (watch.Interface, error) {
-		return client.Resource(gvr).Watch(ctx, metav1.ListOptions{})
+		rv, err := listRV(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return watchtools.NewRetryWatcherWithContext(ctx, rv, watcherFunc(watchFn))
 	}
+}
+
+// crWatchOpener returns a durable opener that watches all objects of one GVR.
+func crWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) func(context.Context) (watch.Interface, error) {
+	return durableOpener(
+		func(ctx context.Context) (string, error) {
+			l, err := client.Resource(gvr).List(ctx, metav1.ListOptions{Limit: 1})
+			if err != nil {
+				return "", err
+			}
+			return l.GetResourceVersion(), nil
+		},
+		func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+			return client.Resource(gvr).Watch(ctx, opts)
+		},
+	)
 }
 
 // gpuPodWatchOpeners returns one pod-watch opener per GPU pod label
@@ -197,12 +241,24 @@ func crWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) fu
 func gpuPodWatchOpeners(clientset kubernetes.Interface) []func(context.Context) (watch.Interface, error) {
 	openers := make([]func(context.Context) (watch.Interface, error), 0, len(gpuPodSelectors))
 	for _, sel := range gpuPodSelectors {
-		openers = append(openers, func(ctx context.Context) (watch.Interface, error) {
-			return clientset.CoreV1().Pods("").Watch(ctx, metav1.ListOptions{
-				LabelSelector: sel,
-				FieldSelector: runningPodSelector,
-			})
-		})
+		openers = append(openers, durableOpener(
+			func(ctx context.Context) (string, error) {
+				l, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+					LabelSelector: sel,
+					FieldSelector: runningPodSelector,
+					Limit:         1,
+				})
+				if err != nil {
+					return "", err
+				}
+				return l.ResourceVersion, nil
+			},
+			func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+				opts.LabelSelector = sel
+				opts.FieldSelector = runningPodSelector
+				return clientset.CoreV1().Pods("").Watch(ctx, opts)
+			},
+		))
 	}
 	return openers
 }
@@ -231,13 +287,23 @@ func WatchImportedModels(ctx context.Context, client dynamic.Interface) (<-chan 
 // WatchGPUNodes triggers on Node changes plus GPU pod changes (pods
 // drive allocation and node issues).
 func WatchGPUNodes(ctx context.Context, clientset kubernetes.Interface) (<-chan struct{}, error) {
-	openers := []func(context.Context) (watch.Interface, error){
-		func(ctx context.Context) (watch.Interface, error) {
-			return clientset.CoreV1().Nodes().Watch(ctx, metav1.ListOptions{
+	nodeOpener := durableOpener(
+		func(ctx context.Context) (string, error) {
+			l, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{
 				LabelSelector: gpuNodeSelector,
+				Limit:         1,
 			})
+			if err != nil {
+				return "", err
+			}
+			return l.ResourceVersion, nil
 		},
-	}
+		func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+			opts.LabelSelector = gpuNodeSelector
+			return clientset.CoreV1().Nodes().Watch(ctx, opts)
+		},
+	)
+	openers := []func(context.Context) (watch.Interface, error){nodeOpener}
 	openers = append(openers, gpuPodWatchOpeners(clientset)...)
 	return watchTrigger(ctx, DebounceWindow, openers...)
 }
