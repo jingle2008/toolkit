@@ -30,6 +30,30 @@ func TestUpdateExportView_ExitAndQuit(t *testing.T) {
 	}
 }
 
+// Quitting from the export popup must cancel in-flight loads, like every
+// other view's Quit handler — otherwise a load running when the user quits
+// from the popup is left uncancelled during teardown.
+func TestUpdateExportView_QuitCancelsInFlight(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.viewMode = common.ExportView
+	m.lastViewMode = common.ListView
+
+	canceled := false
+	m.loadCancel = func() { canceled = true }
+
+	_, cmd := m.updateExportView(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keys.Quit.Keys()[0])})
+	if !canceled {
+		t.Fatal("quit from export view did not cancel in-flight tasks")
+	}
+	if cmd == nil {
+		t.Fatal("expected quit cmd")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Fatal("expected quit message")
+	}
+}
+
 func TestUpdateExportView_EscDismisses(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)

@@ -31,6 +31,7 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewMode = m.lastViewMode
 			return m, nil
 		case key.Matches(keyMsg, keys.Quit):
+			m.cancelInFlight()
 			return m, tea.Quit
 		}
 	}
