@@ -262,10 +262,14 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 			continue
 		}
 
-		logger.Infow("cannot resolve local value",
-			"local", key,
-			"value", value.GoString(),
-		)
+		// value.GoString() formats the whole cty value — only pay for it
+		// when debug logging is actually enabled.
+		if logger.DebugEnabled() {
+			logger.Debugw("cannot resolve local value",
+				"local", key,
+				"value", value.GoString(),
+			)
+		}
 	}
 
 	return localObject.AsValueMap(), nil
@@ -402,6 +406,9 @@ func LoadGPUPools(ctx context.Context, repoPath string, env models.Environment) 
 		}
 		gpuPools = append(gpuPools, pools...)
 	}
+
+	logger.Debugw("loaded gpu pools",
+		"pools", len(gpuPools), "sources", len(sources), "failed_sources", len(errs))
 
 	switch {
 	case len(errs) == 0:

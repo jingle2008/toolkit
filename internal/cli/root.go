@@ -104,6 +104,10 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 		if err != nil {
 			return err
 		}
+		// Tag every line in the shared log file with the originating
+		// command + build, so concurrent tui/cli/mcp sessions writing the
+		// same file stay distinguishable.
+		logger = logger.WithFields("cmd", "tui", "version", version)
 		defer func() {
 			_ = logger.Sync()
 		}()

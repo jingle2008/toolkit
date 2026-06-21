@@ -9,6 +9,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -150,5 +151,7 @@ func LoadGPUNodesByPool(ctx context.Context, clientset kubernetes.Interface) (ma
 	for _, node := range nodes {
 		result[node.NodePool] = append(result[node.NodePool], node)
 	}
+	logging.FromContext(ctx).Debugw("loaded gpu nodes",
+		"nodes", len(nodes), "pools", len(result))
 	return result, nil
 }

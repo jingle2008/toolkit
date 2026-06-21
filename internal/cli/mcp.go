@@ -67,6 +67,7 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		if err != nil {
 			return err
 		}
+		logger = logger.WithFields("cmd", "mcp", "version", version)
 		defer func() { _ = logger.Sync() }()
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

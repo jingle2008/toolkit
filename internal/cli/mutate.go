@@ -113,6 +113,7 @@ func withMutationSetup(
 	if err != nil {
 		return err
 	}
+	logger = logger.WithFields("cmd", "mutate")
 	defer func() { _ = logger.Sync() }()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

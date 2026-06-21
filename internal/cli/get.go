@@ -144,6 +144,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		if err != nil {
 			return err
 		}
+		logger = logger.WithFields("cmd", "get")
 		defer func() { _ = logger.Sync() }()
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

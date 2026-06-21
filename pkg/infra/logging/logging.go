@@ -39,6 +39,13 @@ type zapLogger struct {
 
 /*
 slogLogger is an adapter that wraps a slog.Logger to implement Logger.
+
+The log methods call slog with context.Background() rather than the
+caller's context: the Logger interface is intentionally context-free
+(the zap backend needs no context) and the JSON handler installed by
+NewFileLoggerWithLevel does not read context. If a context-aware slog
+handler (e.g. one that extracts trace IDs) is ever introduced, switch to
+threading the caller's context through instead of context.Background().
 */
 type slogLogger struct {
 	s     *slog.Logger
@@ -167,13 +174,12 @@ func parseZapLevel(level string, debug bool) zapcore.Level {
 	switch l {
 	case "debug":
 		return zapcore.DebugLevel
-	case "info", "":
-		if l == "" {
-			if debug {
-				return zapcore.DebugLevel
-			}
-			return zapcore.InfoLevel
+	case "": // unset: follow the debug flag
+		if debug {
+			return zapcore.DebugLevel
 		}
+		return zapcore.InfoLevel
+	case "info":
 		return zapcore.InfoLevel
 	case "warn", "warning":
 		return zapcore.WarnLevel
@@ -189,13 +195,12 @@ func parseSlogLevel(level string, debug bool) slog.Level {
 	switch l {
 	case "debug":
 		return slog.LevelDebug
-	case "info", "":
-		if l == "" {
-			if debug {
-				return slog.LevelDebug
-			}
-			return slog.LevelInfo
+	case "": // unset: follow the debug flag
+		if debug {
+			return slog.LevelDebug
 		}
+		return slog.LevelInfo
+	case "info":
 		return slog.LevelInfo
 	case "warn", "warning":
 		return slog.LevelWarn

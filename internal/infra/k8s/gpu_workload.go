@@ -7,6 +7,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -27,6 +28,7 @@ const gpuWorkloadPageSize = 500
 // accumulated across the Continue token rather than in a single response.
 func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface) (map[string][]models.GPUWorkload, error) {
 	result := make(map[string][]models.GPUWorkload)
+	total := 0
 	cont := ""
 	for {
 		page, err := clientset.CoreV1().Pods("").List(ctx, v1.ListOptions{
@@ -77,11 +79,14 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 				Mode:      annos["ome.io/deploymentMode"],
 			}
 			result[pod.Spec.NodeName] = append(result[pod.Spec.NodeName], w)
+			total++
 		}
 		cont = page.Continue
 		if cont == "" {
 			break
 		}
 	}
+	logging.FromContext(ctx).Debugw("loaded gpu workloads",
+		"workloads", total, "nodes", len(result))
 	return result, nil
 }
