@@ -343,6 +343,78 @@ func TestApplyRows_PreservesSelectedRow_DuplicateNamesScopedCategory(t *testing.
 	}
 }
 
+// scopedTruncatedModel returns a model set up as ImportedModel with two
+// narrow, middle-truncated key columns (Name + Tenant) — the layout that
+// makes the displayed rows differ from their un-truncated identity.
+func scopedTruncatedModel(t *testing.T) *Model {
+	t.Helper()
+	m := newTestModel(t)
+	m.category = domain.ImportedModel
+	m.headers = []header{
+		{text: "Name", truncateMiddle: true},
+		{text: "Tenant", truncateMiddle: true},
+	}
+	table.WithColumns([]table.Column{
+		{Title: "Name", Width: 7},
+		{Title: "Tenant", Width: 7},
+	})(m.table)
+	return m
+}
+
+// The reload identity match must run against m.rawRows (un-truncated), not the
+// `rows` slice that applyMiddleTruncation has already shortened. With the key
+// cells truncated, comparing the displayed cells against the un-truncated
+// prevKey would miss and drop the cursor to the top. Same offset → fast path.
+func TestApplyRows_FastPath_TruncatedKeyColumns(t *testing.T) {
+	t.Parallel()
+	m := scopedTruncatedModel(t)
+
+	const longName = "imported-model-very-long-name"
+	m.applyRows([]table.Row{
+		{longName, "tenant-aaaaaaaaaaaaaaaa"},
+		{longName, "tenant-bbbbbbbbbbbbbbbb"},
+	}, tableStats{}, true)
+	m.table.SetCursor(1) // select (longName, tenant-b…)
+
+	// Reload, same order: the item is still at offset 1 (fast path).
+	m.applyRows([]table.Row{
+		{longName, "tenant-aaaaaaaaaaaaaaaa"},
+		{longName, "tenant-bbbbbbbbbbbbbbbb"},
+	}, tableStats{}, true)
+
+	got := m.selectedRawRow()
+	if m.table.Cursor() != 1 || len(got) < 2 || got[1] != "tenant-bbbbbbbbbbbbbbbb" {
+		t.Fatalf("truncated-key reload lost the selection: cursor=%d got=%v", m.table.Cursor(), got)
+	}
+}
+
+// When the selected item moves to a new offset, the fast path misses and the
+// scan (also over m.rawRows) must still find it by identity — even with the
+// key cells truncated.
+func TestApplyRows_FallbackScan_AfterReorder_TruncatedKeyColumns(t *testing.T) {
+	t.Parallel()
+	m := scopedTruncatedModel(t)
+
+	const longName = "imported-model-very-long-name"
+	m.applyRows([]table.Row{
+		{longName, "tenant-aaaaaaaaaaaaaaaa"},
+		{longName, "tenant-bbbbbbbbbbbbbbbb"},
+	}, tableStats{}, true)
+	m.table.SetCursor(1) // select (longName, tenant-b…)
+
+	// Reload with the rows swapped: tenant-b is now at offset 0, so the fast
+	// path at offset 1 misses and the scan must relocate it.
+	m.applyRows([]table.Row{
+		{longName, "tenant-bbbbbbbbbbbbbbbb"},
+		{longName, "tenant-aaaaaaaaaaaaaaaa"},
+	}, tableStats{}, true)
+
+	got := m.selectedRawRow()
+	if m.table.Cursor() != 0 || len(got) < 2 || got[1] != "tenant-bbbbbbbbbbbbbbbb" {
+		t.Fatalf("reorder reload did not follow the item: cursor=%d got=%v", m.table.Cursor(), got)
+	}
+}
+
 func TestOpContext(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)

@@ -98,12 +98,15 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	// Identity is the per-category item key (itemKeyFrom), not the bare Name
 	// cell, so scoped categories whose rows can share a Name (e.g.
 	// ImportedModel keyed on {Scope, Name}) re-home onto the right row.
+	// prevIdx is the selection's offset, used for the fast path below.
 	// After a navigation the table was blanked (applyRows(nil, ..., false)),
 	// so there is no prior selection and prevKey stays nil — the cursor then
 	// falls through to findContextIndex (scope/environment), preserving the
 	// pre-existing navigation behavior.
 	var prevKey models.ItemKey
+	prevIdx := -1
 	if autoSelect {
+		prevIdx = m.table.Cursor()
 		prevKey = itemKeyFrom(m.category, m.selectedRawRow())
 	}
 
@@ -113,7 +116,19 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
-		idx := indexOfItemKey(rows, m.category, prevKey)
+		// Match identity against m.rawRows, not the just-truncated `rows`:
+		// applyMiddleTruncation may have shortened the key cells (Name/Tenant
+		// for scoped categories), which would defeat the key comparison.
+		idx := -1
+		// Fast path: if the selected item still sits at its previous offset,
+		// skip the scan. Reloads usually preserve order, so this hits often.
+		if prevKey != nil && prevIdx >= 0 && prevIdx < len(m.rawRows) &&
+			itemKeyFrom(m.category, m.rawRows[prevIdx]) == prevKey {
+			idx = prevIdx
+		}
+		if idx < 0 {
+			idx = indexOfItemKey(m.rawRows, m.category, prevKey)
+		}
 		if idx < 0 {
 			idx = m.findContextIndex(rows)
 		}
