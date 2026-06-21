@@ -293,10 +293,10 @@ func (m *Model) updateLayout(w, h int) {
 	}
 }
 
-// refreshDisplay resets filters and updates columns and rows.
+// refreshDisplay re-renders columns and rows for the current category,
+// preserving the active filter and the user's selected row. The filter is
+// cleared only on category navigation (updateCategoryCore).
 func (m *Model) refreshDisplay() {
-	m.filter = ""
-	m.textInput.Reset()
 	m.updateColumns()
 	m.updateRows(true)
 }

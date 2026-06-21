@@ -78,20 +78,24 @@ func TestApplyDataset_BackgroundLoadPreservesCurrentView(t *testing.T) {
 	}
 }
 
-// A load for the category currently on screen still refreshes the display
-// (which resets the filter) — the guard must not suppress that.
-func TestApplyDataset_CurrentCategoryLoadRefreshes(t *testing.T) {
+// A load for the category currently on screen refreshes the rows but PRESERVES
+// the active filter — only category navigation clears it (see
+// TestUpdateCategoryCore_NavigationClearsFilter).
+func TestApplyDataset_CurrentCategoryLoadPreservesFilter(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.category = domain.BaseModel
-	m.filter = "stale"
+	m.filter = "keep"
 
 	m.applyDataset(func(ds *models.Dataset) {
 		ds.BaseModels = []models.BaseModel{{Name: "bm1"}}
 	}, domain.BaseModel, 1)
 
-	if m.filter != "" {
-		t.Fatalf("current-category load did not refresh (filter still %q)", m.filter)
+	if m.filter != "keep" {
+		t.Fatalf("current-category load cleared the filter: %q", m.filter)
+	}
+	if len(m.dataset.BaseModels) != 1 {
+		t.Fatalf("current-category load did not apply data: %#v", m.dataset.BaseModels)
 	}
 }
 
@@ -215,7 +219,9 @@ func TestHandleRegionalOverridesLoaded(t *testing.T) {
 	}
 }
 
-func TestApplyDataset_ResetsFilter(t *testing.T) {
+// A same-category data load must preserve the active filter; the filter is
+// cleared only on category navigation (updateCategoryCore).
+func TestApplyDataset_PreservesFilter(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 1
@@ -226,8 +232,8 @@ func TestApplyDataset_ResetsFilter(t *testing.T) {
 		ds.Tenants = []models.Tenant{{Name: "tenant1"}}
 	}, domain.Tenant, 1)
 
-	if m.filter != "" {
-		t.Fatalf("expected filter reset, got %q", m.filter)
+	if m.filter != "old" {
+		t.Fatalf("same-category load cleared the filter: got %q, want %q", m.filter, "old")
 	}
 }
 
