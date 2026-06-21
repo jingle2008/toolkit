@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 // DebounceWindow is the coalescing window for watch triggers: events
@@ -56,6 +58,8 @@ func watchTrigger(
 	// goroutine never blocks while the coalescer is mid-timer).
 	raw := make(chan struct{}, 1)
 
+	logging.FromContext(ctx).Infow("watch established", "watchers", len(watchers))
+
 	var wg sync.WaitGroup
 	for _, w := range watchers {
 		wg.Add(1)
@@ -89,11 +93,16 @@ func fanInWatcher(
 	for {
 		select {
 		case <-ctx.Done():
+			logging.FromContext(ctx).Debugw("watch fan-in stopped: context canceled")
 			return
 		case <-done:
 			return
 		case _, ok := <-w.ResultChan():
 			if !ok {
+				// DIAGNOSTIC: the API server / proxy closed the watch stream.
+				// This is the path that drops the live indicator with no
+				// reconnect (handleWatchClosed). Logged loud to confirm.
+				logging.FromContext(ctx).Warnw("watch stream closed by server (ResultChan closed); live watch will drop")
 				closeDone() // stream died
 				return
 			}
