@@ -19,6 +19,7 @@ type fakeLogger struct{}
 
 func (fakeLogger) Debugw(string, ...any)            {}
 func (fakeLogger) Infow(string, ...any)             {}
+func (fakeLogger) Warnw(string, ...any)             {}
 func (fakeLogger) Errorw(string, ...any)            {}
 func (fakeLogger) WithFields(...any) logging.Logger { return fakeLogger{} }
 func (fakeLogger) DebugEnabled() bool               { return false }

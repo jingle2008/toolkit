@@ -395,7 +395,7 @@ func LoadGPUPools(ctx context.Context, repoPath string, env models.Environment) 
 	for _, s := range sources {
 		pools, err := loadGPUPools(ctx, s.dir, s.localName, s.isOkeManaged, env)
 		if err != nil {
-			logger.Errorw("skipping unresolved GPUPool source",
+			logger.Warnw("skipping unresolved GPUPool source",
 				"dir", s.dir, "local", s.localName, "error", err)
 			errs = append(errs, fmt.Errorf("%s: %w", s.localName, err))
 			continue

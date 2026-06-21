@@ -61,7 +61,7 @@ func GPUPool(ctx context.Context, ld loader.Composite, repoPath, kubeConfig stri
 		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {
 			return nil, fmt.Errorf("load gpu pools: %w", err)
 		}
-		logging.FromContext(ctx).Infow("gpu pools loaded with partial failures", "error", err)
+		logging.FromContext(ctx).Warnw("gpu pools loaded with partial failures", "error", err)
 	}
 
 	idx := -1

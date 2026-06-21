@@ -54,7 +54,7 @@ func (c PodCache) getPodStats(ctx context.Context, namespace string) PodStats {
 		} else if modelName, ok := labels[baseModelLabelV1]; ok {
 			modelNameMap[modelName] = struct{}{}
 		} else {
-			logger.Errorw("workload pod without base model annotation/label",
+			logger.Warnw("workload pod without base model annotation/label",
 				"pod", item.GetName(), "namespace", item.GetNamespace())
 		}
 
@@ -65,7 +65,7 @@ func (c PodCache) getPodStats(ctx context.Context, namespace string) PodStats {
 		} else if _, ok := labels[trainingLabelV2]; ok {
 			componentMap[trainingLabelV2] = struct{}{}
 		} else {
-			logger.Errorw("workload pod without serving/training label",
+			logger.Warnw("workload pod without serving/training label",
 				"pod", item.GetName(), "namespace", item.GetNamespace())
 		}
 	}
@@ -98,7 +98,7 @@ func getUniqeKey(logger logging.Logger, m map[string]struct{}, namespace string)
 	}
 
 	if len(keys) > 1 {
-		logger.Errorw("multiple configs found on workload pods in namespace",
+		logger.Warnw("multiple configs found on workload pods in namespace",
 			"values", keys, "namespace", namespace)
 		return ""
 	}

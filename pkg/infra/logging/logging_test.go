@@ -10,12 +10,13 @@ import (
 )
 
 type fakeLogger struct {
-	debugs, infos, errors int
-	fields                []any
+	debugs, infos, warns, errors int
+	fields                       []any
 }
 
 func (f *fakeLogger) Debugw(_ string, _ ...any) { f.debugs++ }
 func (f *fakeLogger) Infow(_ string, _ ...any)  { f.infos++ }
+func (f *fakeLogger) Warnw(_ string, _ ...any)  { f.warns++ }
 func (f *fakeLogger) Errorw(_ string, _ ...any) { f.errors++ }
 func (f *fakeLogger) WithFields(kv ...any) Logger {
 	f.fields = append(f.fields, kv...)
@@ -41,6 +42,7 @@ func TestLoggerFromCtxReturnsNopIfNoneSet(t *testing.T) {
 	got := FromContext(ctx)
 	got.Debugw("should not panic")
 	got.Infow("should not panic")
+	got.Warnw("should not panic")
 	got.Errorw("should not panic")
 	got2 := got.WithFields("foo", "bar")
 	if got2 == nil {
@@ -67,6 +69,7 @@ func TestZapLoggerImplementsLogger(t *testing.T) {
 	}
 	z.Debugw("debug", "k", "v")
 	z.Infow("info", "k", "v")
+	z.Warnw("warn", "k", "v")
 	z.Errorw("error", "k", "v")
 	z2 := z.WithFields("foo", "bar")
 	if z2 == nil {
@@ -120,6 +123,7 @@ func TestNewNoOpLogger(t *testing.T) {
 	}
 	l.Debugw("should not panic")
 	l.Infow("should not panic")
+	l.Warnw("should not panic")
 	l.Errorw("should not panic")
 	l2 := l.WithFields("foo", "bar")
 	if l2 == nil {
@@ -189,6 +193,7 @@ func TestNewSlogLogger(t *testing.T) {
 	}
 	l.Infow("info", "k", "v")
 	l.Debugw("debug", "k", "v")
+	l.Warnw("warn", "k", "v")
 	l.Errorw("error", "k", "v")
 	if err := l.Sync(); err != nil {
 		t.Errorf("Sync should return nil for slogLogger")

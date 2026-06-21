@@ -282,6 +282,7 @@ func emitCategory(
 			// the per-source failures on stderr so scripts and LLM
 			// consumers know the result is incomplete, then proceed.
 			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
+				logging.FromContext(ctx).Warnw("load gpu pools: partial failure", "error", partial)
 				fmt.Fprintf(os.Stderr, "warning: load gpu pools: %s\n", partial.Error())
 			} else {
 				return fmt.Errorf("load gpu pools: %w", err)
@@ -292,6 +293,7 @@ func emitCategory(
 		// failure so an offline / no-OCI-auth session still prints the
 		// Terraform-derived columns.
 		if err := resolve.EnrichGPUPools(ctx, items, cfg.KubeConfig, env); err != nil {
+			logging.FromContext(ctx).Warnw("gpu pool enrichment incomplete", "error", err)
 			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", err)
 		}
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GPUPool, env, selected)

@@ -163,7 +163,7 @@ func waitForWorkRequest(
 			wrReq := generativeai.GetWorkRequestRequest{WorkRequestId: workRequestID}
 			wrResp, err := client.GetWorkRequest(ctx, wrReq)
 			if err != nil {
-				logger.Infow("failed to get work request status", "level", "warn", "workRequestId", *workRequestID, "err", err)
+				logger.Warnw("failed to get work request status", "workRequestId", *workRequestID, "error", err)
 				continue
 			}
 			status := string(wrResp.Status)

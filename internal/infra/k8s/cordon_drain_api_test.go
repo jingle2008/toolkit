@@ -56,6 +56,8 @@ func (m *mockLogger) DebugEnabled() bool {
 
 func (m *mockLogger) Debugw(_ string, _ ...any) {}
 
+func (m *mockLogger) Warnw(_ string, _ ...any) {}
+
 func (m *mockLogger) Errorw(_ string, _ ...any) {}
 
 func (m *mockLogger) Sync() error { return nil }

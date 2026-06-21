@@ -21,6 +21,7 @@ type dummyLogger struct{}
 func (dummyLogger) Errorw(string, ...any)            {}
 func (dummyLogger) Debugw(string, ...any)            {}
 func (dummyLogger) Infow(string, ...any)             {}
+func (dummyLogger) Warnw(string, ...any)             {}
 func (dummyLogger) Sync() error                      { return nil }
 func (dummyLogger) WithFields(...any) logging.Logger { return dummyLogger{} }
 func (dummyLogger) DebugEnabled() bool               { return false }

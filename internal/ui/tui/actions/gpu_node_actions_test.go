@@ -19,6 +19,7 @@ type testLogger struct {
 }
 
 func (f *testLogger) Infow(msg string, _ ...any)       { f.Infos = append(f.Infos, msg) }
+func (f *testLogger) Warnw(string, ...any)             {}
 func (f *testLogger) Errorw(msg string, _ ...any)      { f.Errors = append(f.Errors, msg) }
 func (f *testLogger) Debugw(string, ...any)            {}
 func (f *testLogger) Sync() error                      { return nil }

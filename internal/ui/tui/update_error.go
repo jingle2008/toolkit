@@ -16,7 +16,7 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	// Without this the only trace of a failed load lives in the banner
 	// for 8s, then nothing.
 	if m.logger != nil {
-		m.logger.Errorw("data load failed", "category", m.category, "err", error(msg))
+		m.logger.Errorw("data load failed", "category", m.category, "error", error(msg))
 	}
 	m.endTask(false)
 	return m.showToast(msg.Error(), toastError)

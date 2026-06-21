@@ -34,6 +34,7 @@ func (f *fakeLogger) Errorw(msg string, _ ...any) {
 }
 func (f *fakeLogger) Debugw(string, ...any)            {}
 func (f *fakeLogger) Infow(string, ...any)             {}
+func (f *fakeLogger) Warnw(string, ...any)             {}
 func (f *fakeLogger) Sync() error                      { return nil }
 func (f *fakeLogger) WithFields(...any) logging.Logger { return f }
 func (f *fakeLogger) DebugEnabled() bool               { return false }

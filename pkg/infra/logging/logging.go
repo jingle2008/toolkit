@@ -22,6 +22,7 @@ to switch between zap and slog backends as needed.
 type Logger interface {
 	Debugw(msg string, kv ...any)
 	Infow(msg string, kv ...any)
+	Warnw(msg string, kv ...any)
 	Errorw(msg string, kv ...any)
 	WithFields(kv ...any) Logger
 	DebugEnabled() bool
@@ -52,6 +53,10 @@ func (l *zapLogger) Infow(msg string, kv ...any) {
 	l.s.Infow(msg, kv...)
 }
 
+func (l *zapLogger) Warnw(msg string, kv ...any) {
+	l.s.Warnw(msg, kv...)
+}
+
 func (l *zapLogger) Errorw(msg string, kv ...any) {
 	l.s.Errorw(msg, kv...)
 }
@@ -79,6 +84,10 @@ func (l *slogLogger) Debugw(msg string, kv ...any) {
 
 func (l *slogLogger) Infow(msg string, kv ...any) {
 	l.s.Log(context.Background(), slog.LevelInfo, msg, kv...)
+}
+
+func (l *slogLogger) Warnw(msg string, kv ...any) {
+	l.s.Log(context.Background(), slog.LevelWarn, msg, kv...)
 }
 
 func (l *slogLogger) Errorw(msg string, kv ...any) {
@@ -285,6 +294,7 @@ type noopLogger struct{}
 
 func (noopLogger) Debugw(string, ...any)    {}
 func (noopLogger) Infow(string, ...any)     {}
+func (noopLogger) Warnw(string, ...any)     {}
 func (noopLogger) Errorw(string, ...any)    {}
 func (noopLogger) WithFields(...any) Logger { return noopLogger{} }
 func (noopLogger) DebugEnabled() bool       { return false }
