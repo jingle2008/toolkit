@@ -129,3 +129,21 @@ type Watcher interface {
 	WatchGPUWorkloads(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
 	WatchDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
 }
+
+/*
+RepoWatcher is an OPTIONAL capability: establishing a filesystem watch on the
+repo working tree that emits a coalesced "reload now" signal, making
+repo-backed categories live the way Watcher makes k8s-backed categories live.
+Like Watcher and TenantMetadataWriter it is deliberately kept out of Composite
+so the many fake loaders used in tests need not implement it. Callers
+type-assert a Composite to this interface and fall back to a static load when
+the assertion fails or the method returns an error.
+
+The returned channel yields one value whenever any non-hidden file under
+repoPath changes (debounced). The caller owns ctx; cancelling it stops the
+watch and closes the channel. The channel also closes if the watcher dies,
+which the caller treats as a fallback signal.
+*/
+type RepoWatcher interface {
+	WatchRepo(ctx context.Context, repoPath string) (<-chan struct{}, error)
+}

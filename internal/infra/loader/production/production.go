@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/jingle2008/toolkit/internal/configloader"
+	"github.com/jingle2008/toolkit/internal/infra/fswatch"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
@@ -230,4 +231,15 @@ func (Client) WatchDedicatedAIClusters(ctx context.Context, kubeCfg string, env 
 		return nil, err
 	}
 	return k8s.WatchDedicatedAIClusters(ctx, dyn, cs)
+}
+
+// Compile-time guard: *Client must satisfy the optional RepoWatcher
+// interface, kept out of Composite (see loader.RepoWatcher docs).
+var _ loader.RepoWatcher = (*Client)(nil)
+
+// WatchRepo establishes a debounced filesystem watch on the repo working tree.
+// It reuses k8s.DebounceWindow so repo and k8s watches coalesce on the same
+// cadence.
+func (Client) WatchRepo(ctx context.Context, repoPath string) (<-chan struct{}, error) {
+	return fswatch.Watch(ctx, repoPath, k8s.DebounceWindow)
 }
