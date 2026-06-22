@@ -38,6 +38,8 @@ type confirmOverlay struct {
 // requestConfirm opens the confirmation modal for a destructive action,
 // capturing the current view so dismissConfirm can restore it. It returns
 // nil: opening the modal issues no command.
+//
+//nolint:unparam // returns nil so destructive-action handlers can `return m.requestConfirm(...)`
 func (m *Model) requestConfirm(c confirmOverlay) tea.Cmd {
 	c.returnView = m.viewMode
 	m.confirm = c
@@ -50,6 +52,18 @@ func (m *Model) requestConfirm(c confirmOverlay) tea.Cmd {
 func (m *Model) dismissConfirm() {
 	m.viewMode = m.confirm.returnView
 	m.confirm = confirmOverlay{}
+}
+
+// decide maps a pressed key string to confirm/cancel intent for this
+// overlay's tier. Recoverable: y/Y confirm; n/N/esc cancel. Irreversible:
+// only Y confirms; y/n/N/esc cancel (lowercase y never destroys state).
+func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
+	switch c.tier {
+	case tierIrreversible:
+		return s == "Y", s == "y" || s == "n" || s == "N" || s == "esc"
+	default: // tierRecoverable
+		return s == "y" || s == "Y", s == "n" || s == "N" || s == "esc"
+	}
 }
 
 // updateConfirmView resolves a keypress while the confirmation modal is
@@ -66,18 +80,13 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cancelInFlight()
 		return m, tea.Quit
 	}
-
-	s := km.String()
-	confirmed := s == "Y" || (m.confirm.tier == tierRecoverable && s == "y")
-	if confirmed {
+	confirm, cancel := m.confirm.decide(km.String())
+	if confirm {
 		run := m.confirm.run
 		m.dismissConfirm()
 		return m, run()
 	}
-
-	cancelled := s == "n" || s == "N" || s == "esc" ||
-		(m.confirm.tier == tierIrreversible && s == "y")
-	if cancelled {
+	if cancel {
 		m.dismissConfirm()
 	}
 	return m, nil
