@@ -24,8 +24,7 @@ Emits filterApplyMsg with a gen so only the most recent tick applies.
 */
 func DebounceFilter(m *Model) tea.Cmd {
 	val := strings.ToLower(m.textInput.Value())
-	m.gens.filter++
-	gen := m.gens.filter
+	gen := m.gens.nextFilter()
 	return tea.Tick(100*time.Millisecond, func(_ time.Time) tea.Msg {
 		return filterApplyMsg{Value: val, Gen: gen}
 	})

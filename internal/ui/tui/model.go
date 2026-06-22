@@ -11,10 +11,9 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 
-// bumpGen increments the generation counter and returns the new value.
+// bumpGen increments the message generation counter and returns the new value.
 func (m *Model) bumpGen() int {
-	m.gens.msg++
-	return m.gens.msg
+	return m.gens.nextMsg()
 }
 
 // loadData loads the dataset for the current model.

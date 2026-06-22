@@ -60,14 +60,13 @@ updateRows updates the table rows based on the current model state.
 Now also sets m.stats from computeTableRows.
 */
 func (m *Model) updateRows(autoSelect bool) {
-	m.gens.rows++
+	m.gens.nextRows()
 	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.filter, m.sortColumn, m.sortAsc, m.showFaulty)
 	m.applyRows(rows, stats, autoSelect)
 }
 
 func (m *Model) updateRowsAsync() tea.Cmd {
-	m.gens.rows++
-	gen := m.gens.rows
+	gen := m.gens.nextRows()
 	dataset := m.dataset
 	category := m.category
 	scope := m.scope

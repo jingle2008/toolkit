@@ -92,7 +92,7 @@ func (m *Model) handleSetFilterMsg(msg setFilterMsg) tea.Cmd {
 	m.textInput.SetValue(val)
 	normalized := strings.ToLower(val)
 	// Invalidate any pending debounce tick that may be in-flight.
-	m.gens.filter++
+	m.gens.nextFilter()
 	return func() tea.Msg {
 		return filterMsg(normalized)
 	}

@@ -78,6 +78,15 @@ type genCounters struct {
 	detail int
 }
 
+// next* advance a counter and return the new generation in one step, so a
+// caller cannot accidentally capture a stale value or bump without
+// capturing. Called as a statement (ignoring the result) they serve as a
+// pure "invalidate in-flight work" bump.
+func (g *genCounters) nextMsg() int    { g.msg++; return g.msg }
+func (g *genCounters) nextFilter() int { g.filter++; return g.filter }
+func (g *genCounters) nextRows() int   { g.rows++; return g.rows }
+func (g *genCounters) nextDetail() int { g.detail++; return g.detail }
+
 /*
 Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.

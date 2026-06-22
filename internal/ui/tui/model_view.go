@@ -127,8 +127,7 @@ func (m *Model) updateContentAsync() tea.Cmd {
 		return nil
 	}
 
-	m.gens.detail++
-	gen := m.gens.detail
+	gen := m.gens.nextDetail()
 	item := findItem(m.dataset, m.category, m.selectedKey)
 	width := m.detailRenderWidth()
 	renderer := m.renderer
