@@ -18,12 +18,13 @@
 9. [Sorting](#sorting)
 10. [Detail View](#detail-view)
 11. [Infrastructure Operations](#infrastructure-operations)
-12. [Exporting Data](#exporting-data)
-13. [Clipboard Integration](#clipboard-integration)
-14. [Keyboard Reference](#keyboard-reference)
-15. [Shell Completion](#shell-completion)
-16. [Logging & Debugging](#logging--debugging)
-17. [Subcommands](#subcommands)
+12. [Live Updates](#live-updates)
+13. [Exporting Data](#exporting-data)
+14. [Clipboard Integration](#clipboard-integration)
+15. [Keyboard Reference](#keyboard-reference)
+16. [Shell Completion](#shell-completion)
+17. [Logging & Debugging](#logging--debugging)
+18. [Subcommands](#subcommands)
 
 ---
 
@@ -168,7 +169,7 @@ The interface has four zones:
 |------|-------------|
 | **Category tabs** (top) | Navigate between data categories with `Tab` / `Shift+Tab` |
 | **Table** (center) | Scrollable, sortable, filterable data rows |
-| **Status bar** | Shows current filter text and aggregate statistics |
+| **Status bar** | Shows current filter text, aggregate statistics, and a `● LIVE` indicator when the current category is updating automatically (see [Live Updates](#live-updates)) |
 | **Key hints** (bottom) | Context-sensitive reminder of available keys |
 
 ---
@@ -452,9 +453,48 @@ read-only cluster-derived categories:
 | BaseModel | `r` | Reload base models from the cluster |
 | ImportedModel | `r` | Reload tenant-imported models from the cluster |
 
+Most categories also update on their own — see [Live Updates](#live-updates).
+`r` remains useful to force an immediate reload and to recover a watch that
+has dropped.
+
 ### Faulty item tracking
 
 Several categories support a **faulty toggle** (`Ctrl+Z`). When enabled, only items that are in a faulty state are shown. The status bar displays counts like `Faulty: 2, Healthy: 10`.
+
+---
+
+## Live Updates
+
+Toolkit keeps the current view fresh automatically. When the category on
+screen is being watched, the status bar shows a `● LIVE` indicator. Updates
+are **debounced** (~5 s): a burst of changes collapses into a single reload,
+and reloads **preserve your active filter and selected row**.
+
+There are two independent watch mechanisms:
+
+| Source | Categories | Triggers on |
+|--------|-----------|-------------|
+| **Cluster watch** (Kubernetes) | BaseModel, ImportedModel, GPUNode, GPUWorkload, DedicatedAICluster | Changes to the watched cluster resources (requires a working kubeconfig) |
+| **Working-tree watch** (local files) | Tenants, Definitions, Overrides, Environments, Service Tenancies, Model Artifacts, GPU Pools, Aliases | Saving any file under the repo path (`.git` and dotfiles are ignored) |
+
+So editing a config file in your repo, or a change landing in the cluster,
+shows up on screen within a few seconds without pressing a key.
+
+**Notes:**
+
+- **No credentials / unreadable repo:** if a watch can't be established it
+  simply doesn't run — the data still loads once and `r` reloads on demand.
+  No `● LIVE` indicator is shown.
+- **Switching environments** keeps live updates working: the working-tree
+  watch continues and the cluster watch re-establishes for the new
+  environment as you navigate.
+- **Recovering a dropped watch:** the working-tree watch has no
+  auto-reconnect. If it drops (rare — e.g. a filesystem error), press `r` to
+  re-establish it.
+- **Not watched:** the optional external metadata file
+  (`metadata-file`, default `~/.config/toolkit/metadata.yaml`) lives outside
+  the repo and is read at startup. Tenant metadata you edit in-app updates
+  immediately; external edits to that file require a restart.
 
 ---
 

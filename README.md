@@ -18,8 +18,9 @@ It targets day-to-day DevOps & development automation: querying Kubernetes, pars
 | Area           | Packages                        | Notes |
 | -------------- | ------------------------------- | ----- |
 | **CLI core**   | `internal/cli`                  | Cobra-based, flags auto-generated |
-| **Interactive TUI** | `internal/ui/tui`             | Sort/search/filter large tabular datasets |
+| **Interactive TUI** | `internal/ui/tui`             | Sort/search/filter large tabular datasets; **live updates** (`● LIVE`) as cluster and config change |
 | **Infrastructure loaders** | `internal/infra/k8s`, `internal/infra/terraform` | Uniform abstraction for K8s & TF |
+| **Live watches** | `internal/infra/k8s` (cluster), `internal/infra/fswatch` (repo working tree) | Debounced triggers reload the view automatically; preserves filter & cursor |
 | **Config loading & validation** | `internal/config`, `internal/configloader` | JSON / YAML with defaulting & schema checks |
 | **Collections helpers** | `internal/collections` | Generic filter/sort with predicates |
 | **Encoding helpers** | `internal/encoding/jsonutil` | Fast JSON pointer traversal |
