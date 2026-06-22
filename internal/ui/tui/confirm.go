@@ -1,6 +1,9 @@
 package tui
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -156,4 +159,25 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.dismissConfirm()
 	}
 	return m, nil
+}
+
+// confirmView renders the confirmation modal body. The irreversible tier
+// leads with a DESTRUCTIVE banner, shows the warning line, and asks for a
+// capital Y; the recoverable tier is a plain y/N prompt.
+func (m *Model) confirmView() string {
+	c := m.confirm
+	var b strings.Builder
+	if c.tier == tierIrreversible {
+		b.WriteString("⚠ DESTRUCTIVE\n\n")
+		fmt.Fprintf(&b, "%s %s  %s\n", c.action, c.kind, c.target)
+		if c.warning != "" {
+			fmt.Fprintf(&b, "%s\n", c.warning)
+		}
+		b.WriteString("\nPress Y to confirm   n/esc cancel")
+		return b.String()
+	}
+	fmt.Fprintf(&b, "Confirm %s\n\n", strings.ToLower(c.action))
+	fmt.Fprintf(&b, "%s %s  %s ?\n", c.action, c.kind, c.target)
+	b.WriteString("\n[y] confirm   [n/esc] cancel")
+	return b.String()
 }

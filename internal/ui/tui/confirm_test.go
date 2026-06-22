@@ -195,3 +195,29 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 		})
 	}
 }
+
+func TestConfirmView_RecoverableRender(t *testing.T) {
+	t.Parallel()
+	m := newConfirmTestModel(t)
+	m.confirm = confirmOverlay{tier: tierRecoverable, action: "Drain", kind: "node", target: "gpu-1"}
+	out := m.confirmView()
+	assert.Contains(t, out, "Drain")
+	assert.Contains(t, out, "gpu-1")
+	assert.Contains(t, out, "[y]")
+	assert.NotContains(t, out, "DESTRUCTIVE")
+}
+
+func TestConfirmView_IrreversibleRender(t *testing.T) {
+	t.Parallel()
+	m := newConfirmTestModel(t)
+	m.confirm = confirmOverlay{
+		tier: tierIrreversible, action: "Terminate", kind: "node",
+		target: "gpu-1", warning: "Boot volume destroyed. Cannot undo.",
+	}
+	out := m.confirmView()
+	assert.Contains(t, out, "DESTRUCTIVE")
+	assert.Contains(t, out, "Terminate")
+	assert.Contains(t, out, "gpu-1")
+	assert.Contains(t, out, "Boot volume destroyed. Cannot undo.")
+	assert.Contains(t, out, "Press Y")
+}
