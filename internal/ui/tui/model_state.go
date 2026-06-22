@@ -92,36 +92,36 @@ Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
 */
 type Model struct {
-	pendingTasks   int
-	logger         logging.Logger
-	parentCtx      context.Context //nolint:containedctx // stored to manage lifecycle across async loads
-	loadCtx        context.Context //nolint:containedctx // stored to manage lifecycle across async loads
-	loadCancel     context.CancelFunc
-	repoPath       string
-	environment    models.Environment
-	viewHeight     int
-	viewWidth      int
-	dataset        *models.Dataset
-	table          *table.Model
-	styles         table.Styles
-	category       domain.Category
-	headers        []header
-	editTarget     common.EditTarget
-	inputMode      common.InputMode
-	textInput      *textinput.Model
-	filter         string
-	initialFilter  string
-	viewMode       common.ViewMode
-	lastViewMode   common.ViewMode // for toggling help view
-	selectedKey    models.ItemKey
-	viewport       *viewport.Model
-	renderer       view.Renderer
-	loader         loader.Composite
-	scope          *domain.Scope // selected scope (parent context for current category)
-	keys           keys.KeyMap
-	help           *help.Model
-	kubeConfig     string
-	version        string
+	pendingTasks  int
+	logger        logging.Logger
+	parentCtx     context.Context //nolint:containedctx // stored to manage lifecycle across async loads
+	loadCtx       context.Context //nolint:containedctx // stored to manage lifecycle across async loads
+	loadCancel    context.CancelFunc
+	repoPath      string
+	environment   models.Environment
+	viewHeight    int
+	viewWidth     int
+	dataset       *models.Dataset
+	table         *table.Model
+	styles        table.Styles
+	category      domain.Category
+	headers       []header
+	editTarget    common.EditTarget
+	inputMode     common.InputMode
+	textInput     *textinput.Model
+	filter        string
+	initialFilter string
+	viewMode      common.ViewMode
+	lastViewMode  common.ViewMode // for toggling help view
+	selectedKey   models.ItemKey
+	viewport      *viewport.Model
+	renderer      view.Renderer
+	loader        loader.Composite
+	scope         *domain.Scope // selected scope (parent context for current category)
+	keys          keys.KeyMap
+	help          *help.Model
+	kubeConfig    string
+	version       string
 	// theme holds the app-level lipgloss styles (status bar, info pane,
 	// help view). Set once via setStyles; see the Styles struct in styles.go.
 	theme Styles
