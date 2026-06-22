@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
+	cgotesting "k8s.io/client-go/testing"
 )
 
 // openFake returns an opener that hands back the given FakeWatcher.
@@ -174,6 +175,102 @@ func TestDurableOpener_ReconnectsOnStreamClose(t *testing.T) {
 		require.True(t, ok, "watcher channel must stay open across reconnect")
 	case <-time.After(3 * time.Second):
 		t.Fatal("expected an event after reconnect")
+	}
+}
+
+// TestDurableOpener_WatchesFromListedResourceVersion guards the "start from
+// now" contract: durableOpener must list for the current resourceVersion and
+// resume the watch from it, so reconnecting never replays the whole collection
+// as ADDED events. If the RV threading broke, the watch would receive an empty
+// ResourceVersion and replay everything.
+//
+//nolint:paralleltest // RetryWatcher opens the watch from a background goroutine
+func TestDurableOpener_WatchesFromListedResourceVersion(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	gotRV := make(chan string, 1)
+	opener := durableOpener(
+		func(context.Context) (string, error) { return "12345", nil },
+		func(_ context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+			select {
+			case gotRV <- opts.ResourceVersion:
+			default:
+			}
+			return watch.NewFake(), nil
+		},
+	)
+	w, err := opener(ctx)
+	require.NoError(t, err)
+	defer w.Stop()
+
+	select {
+	case rv := <-gotRV:
+		assert.Equal(t, "12345", rv, "watch must resume from the resourceVersion returned by the initial list")
+	case <-time.After(2 * time.Second):
+		t.Fatal("watch was never opened")
+	}
+}
+
+// TestWatchGPUNodes_AppliesSelectors guards selector propagation: the node
+// watch must carry the GPU node label selector, and every pod watch must carry
+// one bounded GPU pod label selector plus the Running field selector. A
+// refactor dropping `opts.LabelSelector = sel` would silently turn these into a
+// cluster-wide firehose — this test fails if that happens.
+//
+//nolint:paralleltest // RetryWatcher opens watches from background goroutines
+func TestWatchGPUNodes_AppliesSelectors(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cs := fake.NewSimpleClientset()
+
+	nodeSel := make(chan string, 1)
+	cs.PrependWatchReactor("nodes", func(action cgotesting.Action) (bool, watch.Interface, error) {
+		r := action.(cgotesting.WatchAction).GetWatchRestrictions()
+		select {
+		case nodeSel <- r.Labels.String():
+		default:
+		}
+		return true, watch.NewFake(), nil
+	})
+
+	var mu sync.Mutex
+	type podRestriction struct{ labels, fields string }
+	var podRs []podRestriction
+	cs.PrependWatchReactor("pods", func(action cgotesting.Action) (bool, watch.Interface, error) {
+		r := action.(cgotesting.WatchAction).GetWatchRestrictions()
+		mu.Lock()
+		podRs = append(podRs, podRestriction{r.Labels.String(), r.Fields.String()})
+		mu.Unlock()
+		return true, watch.NewFake(), nil
+	})
+
+	_, err := WatchGPUNodes(ctx, cs)
+	require.NoError(t, err)
+
+	select {
+	case got := <-nodeSel:
+		assert.Equal(t, gpuNodeSelector, got, "node watch must carry the GPU node label selector")
+	case <-time.After(2 * time.Second):
+		t.Fatal("nodes watch never opened")
+	}
+
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(podRs) >= len(gpuPodSelectors)
+	}, 2*time.Second, 10*time.Millisecond, "expected one pod watch per GPU pod selector")
+
+	mu.Lock()
+	defer mu.Unlock()
+	wantLabels := make(map[string]bool, len(gpuPodSelectors))
+	for _, s := range gpuPodSelectors {
+		wantLabels[s] = true
+	}
+	for _, r := range podRs {
+		assert.Equal(t, runningPodSelector, r.fields, "pod watch must be scoped to Running pods")
+		assert.Truef(t, wantLabels[r.labels], "pod watch label selector %q is not one of the bounded gpuPodSelectors", r.labels)
 	}
 }
 

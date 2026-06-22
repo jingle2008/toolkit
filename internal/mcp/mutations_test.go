@@ -53,6 +53,87 @@ func TestIntegration_MutationTool_RequiresConfirm(t *testing.T) {
 	}
 }
 
+// stubAllMutationSeams points every mutation action/resolver seam at a stub
+// that records invocation, so a refusal test can prove no action ran. Returns
+// a pointer to the shared "called" flag and a restore func.
+func stubAllMutationSeams() (*bool, func()) {
+	called := false
+	mark := func() { called = true }
+
+	oCordon, oDrain := mcpSetCordonFn, mcpDrainNodeFn
+	oResolveNode, oReset, oTerm := mcpResolveGPUNodeFn, mcpSoftResetFn, mcpTerminateFn
+	oResolvePool, oInc, oDelDAC := mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn
+
+	mcpSetCordonFn = func(context.Context, string, string, string, bool) (bool, error) { mark(); return true, nil }
+	mcpDrainNodeFn = func(context.Context, string, string, string) error { mark(); return nil }
+	mcpResolveGPUNodeFn = func(_ context.Context, _ *Server, _ models.Environment, name, ocid string) (*models.GPUNode, error) {
+		mark()
+		return &models.GPUNode{Name: name, ID: ocid}, nil
+	}
+	mcpSoftResetFn = func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error { mark(); return nil }
+	mcpTerminateFn = func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error { mark(); return nil }
+	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GPUPool, error) {
+		mark()
+		return &models.GPUPool{Name: name, ID: "ocid1.pool", Size: 1}, nil
+	}
+	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, models.Environment, logging.Logger) error { mark(); return nil }
+	mcpDeleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+		mark()
+		return nil
+	}
+
+	return &called, func() {
+		mcpSetCordonFn, mcpDrainNodeFn = oCordon, oDrain
+		mcpResolveGPUNodeFn, mcpSoftResetFn, mcpTerminateFn = oResolveNode, oReset, oTerm
+		mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn = oResolvePool, oInc, oDelDAC
+	}
+}
+
+// Every mutation tool — not just cordon_node — must refuse without acting when
+// confirm is omitted. Guards the server-wide safety contract against a new
+// mutation tool being added that forgets the confirm gate.
+func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	t.Cleanup(cancel)
+
+	calledPtr, restore := stubAllMutationSeams()
+	t.Cleanup(restore)
+
+	tools := []struct {
+		name string
+		args map[string]any
+	}{
+		{"cordon_node", map[string]any{"node": "node-a"}},
+		{"uncordon_node", map[string]any{"node": "node-a"}},
+		{"drain_node", map[string]any{"node": "node-a"}},
+		{"reboot_node", map[string]any{"node": "node-a"}},
+		{"terminate_node", map[string]any{"node": "node-a"}},
+		{"scale_gpu_pool", map[string]any{"name": "pool-a"}},
+		{"delete_dac", map[string]any{"name": "dac-a"}},
+	}
+
+	for _, tc := range tools {
+		t.Run(tc.name, func(t *testing.T) {
+			*calledPtr = false
+			rec := &recorder{}
+			clientSess := newTestPair(ctx, t, stubLoader{}, rec)
+
+			res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+				Name:      tc.name,
+				Arguments: tc.args, // confirm omitted → must refuse
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res)
+			assert.True(t, res.IsError, "%s must refuse when confirm omitted", tc.name)
+			assert.False(t, *calledPtr, "%s must not invoke its action when confirm omitted", tc.name)
+
+			msgs := waitForMsgs(t, rec)
+			body, _ := msgs[0].Data.(string)
+			assert.Contains(t, body, "refused", "%s should emit a refusal notification", tc.name)
+		})
+	}
+}
+
 func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
