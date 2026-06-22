@@ -101,6 +101,11 @@ type Model struct {
 	// watchTriggeredMsg can re-arm the listener on the same stream.
 	watchTrigger <-chan struct{}
 
+	// repoTrigger is the live working-tree trigger channel; nil when the
+	// repo watch is unavailable. repoWatching is true while it is established.
+	repoTrigger  <-chan struct{}
+	repoWatching bool
+
 	// Table sorting state
 	sortColumn string
 	sortAsc    bool
@@ -317,6 +322,15 @@ func (m *Model) cancelInFlight() {
 			m.logger.Infow("canceled in-flight tasks")
 		}
 	}
+}
+
+// sessionCtx returns the session-scoped context (survives navigation, cancels
+// on shutdown) used by the always-on repo watch and its background reloads.
+func (m *Model) sessionCtx() context.Context {
+	if m.parentCtx == nil {
+		return context.Background()
+	}
+	return m.parentCtx
 }
 
 // opCtx returns a 30s-timeout context for a one-shot action (cordon,

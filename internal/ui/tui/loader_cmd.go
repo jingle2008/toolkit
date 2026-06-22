@@ -172,3 +172,59 @@ func waitForTriggerCmd(cat domain.Category, trigger <-chan struct{}, gen int) te
 		return watchTriggeredMsg{Cat: cat, Gen: gen}
 	}
 }
+
+// startRepoWatchCmd type-asserts the loader to loader.RepoWatcher and starts
+// the working-tree watch on the session context. On success it returns
+// repoWatchStartedMsg; if the loader doesn't support watching or setup fails,
+// it returns repoWatchClosedMsg so the app runs static with no live indicator.
+func startRepoWatchCmd(ctx context.Context, ld loader.Composite, repoPath string) tea.Cmd {
+	return func() tea.Msg {
+		rw, ok := ld.(loader.RepoWatcher)
+		if !ok {
+			return repoWatchClosedMsg{}
+		}
+		trigger, err := rw.WatchRepo(ctx, repoPath)
+		if err != nil {
+			return repoWatchClosedMsg{}
+		}
+		return repoWatchStartedMsg{Trigger: trigger}
+	}
+}
+
+// waitForRepoTriggerCmd blocks on one value from the repo trigger: a tick →
+// repoWatchTriggeredMsg, a close → repoWatchClosedMsg.
+func waitForRepoTriggerCmd(trigger <-chan struct{}) tea.Cmd {
+	return func() tea.Msg {
+		if _, ok := <-trigger; !ok {
+			return repoWatchClosedMsg{}
+		}
+		return repoWatchTriggeredMsg{}
+	}
+}
+
+// reloadDatasetCmd re-runs LoadDataset on the session context and returns
+// datasetReloadedMsg. On error it logs at warn and returns nil — a background
+// refresh must not raise a toast or disturb the loading state.
+func reloadDatasetCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, logger logging.Logger) tea.Cmd {
+	return func() tea.Msg {
+		ds, err := ld.LoadDataset(ctx, repoPath, env)
+		if err != nil {
+			logger.Warnw("background dataset reload failed; keeping current data", "error", err)
+			return nil
+		}
+		return datasetReloadedMsg{Dataset: ds}
+	}
+}
+
+// reloadGPUPoolsCmd re-runs LoadGPUPools on the session context and returns
+// gpuPoolsReloadedMsg. Like reloadDatasetCmd it is quiet on error.
+func reloadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, logger logging.Logger) tea.Cmd {
+	return func() tea.Msg {
+		items, err := ld.LoadGPUPools(ctx, repoPath, env)
+		if err != nil {
+			logger.Warnw("background GPU pool reload failed; keeping current data", "error", err)
+			return nil
+		}
+		return gpuPoolsReloadedMsg{Items: items}
+	}
+}

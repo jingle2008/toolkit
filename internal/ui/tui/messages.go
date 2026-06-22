@@ -193,3 +193,24 @@ type watchUnavailableMsg struct {
 	Cat domain.Category
 	Gen int
 }
+
+// --- repo (working-tree) watch: session-scoped, no Gen/Cat. ---
+
+// repoWatchStartedMsg signals the working-tree watch is live.
+type repoWatchStartedMsg struct{ Trigger <-chan struct{} }
+
+// repoWatchTriggeredMsg signals one debounced working-tree change; the reducer
+// issues quiet background reloads and re-arms the listener.
+type repoWatchTriggeredMsg struct{}
+
+// repoWatchClosedMsg signals the working-tree watch is unavailable or died;
+// the live repo indicator drops. No auto-reconnect.
+type repoWatchClosedMsg struct{}
+
+// datasetReloadedMsg carries a freshly loaded dataset to be merged into the
+// in-memory one (repo-owned fields only; live k8s fields preserved).
+type datasetReloadedMsg struct{ Dataset *models.Dataset }
+
+// gpuPoolsReloadedMsg carries freshly loaded GPU pools (repo-sourced via their
+// own loader, not LoadDataset) to refresh the cached pool list.
+type gpuPoolsReloadedMsg struct{ Items []models.GPUPool }
