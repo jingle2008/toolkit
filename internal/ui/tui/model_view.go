@@ -163,7 +163,7 @@ func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea
 // layout twice per toast-set/dismiss.
 func (m *Model) View() string {
 	body := m.renderActiveView()
-	if m.toast == nil {
+	if m.toasts.active == nil {
 		return body
 	}
 	return lipgloss.JoinVertical(lipgloss.Left, body, m.renderToast(m.viewWidth))

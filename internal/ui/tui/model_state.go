@@ -53,6 +53,14 @@ type logOverlay struct {
 	returnView common.ViewMode
 }
 
+// toastManager holds the transient banner shown over the active view.
+// active is nil when no toast is showing; seq is a monotonic id source
+// that persists across toasts so toastExpireMsg can match the latest one.
+type toastManager struct {
+	active *toastState
+	seq    int
+}
+
 /*
 Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
@@ -135,9 +143,9 @@ type Model struct {
 	// log holds the log-overlay state. See the logOverlay type.
 	log logOverlay
 
-	// Transient banner shown over the active view; auto-dismissed via tea.Tick.
-	toast    *toastState
-	toastSeq int
+	// toasts holds the transient banner shown over the active view. See
+	// the toastManager type.
+	toasts toastManager
 }
 
 /*

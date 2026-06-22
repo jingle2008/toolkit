@@ -131,9 +131,9 @@ func TestUpdateContent_Error(t *testing.T) {
 	require.True(t, ok)
 	toastCmd := m.handleDetailContentRenderedMsg(msg)
 	require.NotNil(t, toastCmd, "render error should emit a toast cmd")
-	require.NotNil(t, m.toast)
-	assert.Contains(t, m.toast.msg, "render failed")
-	assert.Equal(t, toastError, m.toast.sev)
+	require.NotNil(t, m.toasts.active)
+	assert.Contains(t, m.toasts.active.msg, "render failed")
+	assert.Equal(t, toastError, m.toasts.active.sev)
 }
 
 type errRenderer struct{}

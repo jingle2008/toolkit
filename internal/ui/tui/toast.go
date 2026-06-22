@@ -35,26 +35,26 @@ type toastState struct {
 type toastExpireMsg struct{ id int }
 
 func (m *Model) showToast(msg string, sev toastSeverity) tea.Cmd {
-	m.toastSeq++
-	id := m.toastSeq
-	m.toast = &toastState{msg: msg, sev: sev, id: id}
+	m.toasts.seq++
+	id := m.toasts.seq
+	m.toasts.active = &toastState{msg: msg, sev: sev, id: id}
 	return tea.Tick(toastTTL, func(time.Time) tea.Msg {
 		return toastExpireMsg{id: id}
 	})
 }
 
 func (m *Model) handleToastExpireMsg(msg toastExpireMsg) {
-	if m.toast != nil && m.toast.id == msg.id {
-		m.toast = nil
+	if m.toasts.active != nil && m.toasts.active.id == msg.id {
+		m.toasts.active = nil
 	}
 }
 
 func (m *Model) renderToast(width int) string {
-	if m.toast == nil || width <= 0 {
+	if m.toasts.active == nil || width <= 0 {
 		return ""
 	}
 	var style lipgloss.Style
-	switch m.toast.sev {
+	switch m.toasts.active.sev {
 	case toastError:
 		style = lipgloss.NewStyle().
 			Background(lipgloss.Color("160")).
@@ -72,5 +72,5 @@ func (m *Model) renderToast(width int) string {
 	style = style.Padding(0, 1).Width(width)
 	// Width(width) includes padding; truncate the message to avoid
 	// lipgloss soft-wrapping into a multi-line banner.
-	return style.Render(truncateString(m.toast.msg, width-2))
+	return style.Render(truncateString(m.toasts.active.msg, width-2))
 }

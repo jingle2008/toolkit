@@ -9,13 +9,13 @@ func TestShowToast_SetsStateAndReturnsCmd(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	cmd := m.showToast("boom", toastError)
-	if m.toast == nil {
+	if m.toasts.active == nil {
 		t.Fatal("expected toast to be set")
 	}
-	if m.toast.msg != "boom" || m.toast.sev != toastError {
-		t.Errorf("unexpected toast state: %+v", m.toast)
+	if m.toasts.active.msg != "boom" || m.toasts.active.sev != toastError {
+		t.Errorf("unexpected toast state: %+v", m.toasts.active)
 	}
-	if m.toast.id == 0 {
+	if m.toasts.active.id == 0 {
 		t.Error("expected non-zero toast id")
 	}
 	if cmd == nil {
@@ -27,10 +27,10 @@ func TestShowToast_MonotonicIDs(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	_ = m.showToast("first", toastError)
-	first := m.toast.id
+	first := m.toasts.active.id
 	_ = m.showToast("second", toastInfo)
-	if m.toast.id <= first {
-		t.Errorf("expected newer toast to have a higher id, got %d after %d", m.toast.id, first)
+	if m.toasts.active.id <= first {
+		t.Errorf("expected newer toast to have a higher id, got %d after %d", m.toasts.active.id, first)
 	}
 }
 
@@ -38,10 +38,10 @@ func TestHandleToastExpireMsg_ClearsMatching(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	_ = m.showToast("boom", toastError)
-	id := m.toast.id
+	id := m.toasts.active.id
 	m.handleToastExpireMsg(toastExpireMsg{id: id})
-	if m.toast != nil {
-		t.Errorf("expected toast cleared, still got %+v", m.toast)
+	if m.toasts.active != nil {
+		t.Errorf("expected toast cleared, still got %+v", m.toasts.active)
 	}
 }
 
@@ -49,14 +49,14 @@ func TestHandleToastExpireMsg_IgnoresStaleID(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	_ = m.showToast("first", toastError)
-	stale := m.toast.id
+	stale := m.toasts.active.id
 	_ = m.showToast("second", toastError) // bumps seq, replaces toast
 	m.handleToastExpireMsg(toastExpireMsg{id: stale})
-	if m.toast == nil {
+	if m.toasts.active == nil {
 		t.Fatal("expected newer toast to survive a stale expiry")
 	}
-	if m.toast.msg != "second" {
-		t.Errorf("unexpected toast after stale expiry: %+v", m.toast)
+	if m.toasts.active.msg != "second" {
+		t.Errorf("unexpected toast after stale expiry: %+v", m.toasts.active)
 	}
 }
 
