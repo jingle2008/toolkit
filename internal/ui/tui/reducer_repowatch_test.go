@@ -27,6 +27,25 @@ func TestHandleRepoWatchClosed_ClearsWatching(t *testing.T) {
 	require.False(t, m.repoWatching)
 }
 
+// maybeStartRepoWatchCmd re-arms only when the repo watch is down, so manual
+// refresh can recover a dropped watch without spawning a duplicate when one is
+// already live.
+func TestMaybeStartRepoWatchCmd_OnlyWhenDown(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+
+	m.repoWatching = true
+	require.Nil(t, m.maybeStartRepoWatchCmd(), "must not re-arm while the watch is live")
+
+	m.repoWatching = false
+	cmd := m.maybeStartRepoWatchCmd()
+	require.NotNil(t, cmd, "must return a start command when the watch is down")
+	// newTestModel's loader doesn't implement RepoWatcher, so the start command
+	// resolves to repoWatchClosedMsg — confirming it is the repo-watch starter.
+	_, ok := cmd().(repoWatchClosedMsg)
+	require.True(t, ok, "re-arm command must be the repo-watch start")
+}
+
 func TestHandleRepoWatchTriggered_ReturnsBatch(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)

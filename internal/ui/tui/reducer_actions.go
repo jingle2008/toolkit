@@ -53,7 +53,7 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.OpenMetrics):
 		return m.openMetrics(item)
 	case key.Matches(msg, keys.Refresh):
-		return tea.Sequence(m.updateCategoryNoHist(m.category)...)
+		return m.handleRefresh()
 	case key.Matches(msg, keys.ToggleCordon):
 		return m.cordonNode(item, itemKey)
 	case key.Matches(msg, keys.DrainNode):
@@ -66,6 +66,17 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 		return m.scaleUpGPUPool(item, itemKey)
 	}
 	return nil
+}
+
+// handleRefresh reloads the current category (re-establishing its k8s watch)
+// and, since the repo watch has no auto-reconnect, recovers it too when it has
+// dropped.
+func (m *Model) handleRefresh() tea.Cmd {
+	cmds := m.updateCategoryNoHist(m.category)
+	if c := m.maybeStartRepoWatchCmd(); c != nil {
+		cmds = append(cmds, c)
+	}
+	return tea.Sequence(cmds...)
 }
 
 func (m *Model) copyTenantID(item any) tea.Cmd {

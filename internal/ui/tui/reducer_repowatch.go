@@ -32,10 +32,26 @@ func (m *Model) handleRepoWatchTriggered() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// handleRepoWatchClosed clears the live repo indicator. No auto-reconnect.
+// handleRepoWatchClosed clears the live repo indicator. No auto-reconnect;
+// the watch is re-established only by an explicit manual refresh (see
+// maybeStartRepoWatchCmd).
 func (m *Model) handleRepoWatchClosed() {
 	m.repoWatching = false
 	m.logger.Warnw("repo watch closed; live repo indicator dropped")
+}
+
+// maybeStartRepoWatchCmd returns a command to (re)establish the repo
+// working-tree watch when it is not currently active, else nil. The repo watch
+// is session-scoped and started once in Init; if it drops (stream error) there
+// is no auto-reconnect, so manual refresh uses this to recover it. The
+// !repoWatching guard prevents starting a second watcher when one is already
+// live (a redundant start during the brief Init→started window is harmless:
+// both watchers are parented on the session context and stop at shutdown).
+func (m *Model) maybeStartRepoWatchCmd() tea.Cmd {
+	if m.repoWatching {
+		return nil
+	}
+	return startRepoWatchCmd(m.sessionCtx(), m.loader, m.repoPath)
 }
 
 // handleDatasetReloaded merges the freshly loaded repo-owned data into the
