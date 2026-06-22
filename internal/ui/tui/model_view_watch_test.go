@@ -14,9 +14,9 @@ func TestStatusView_ShowsLiveIndicatorWhenWatching(t *testing.T) {
 	m.viewHeight = 40
 	m.updateLayout(m.viewWidth, m.viewHeight)
 
-	m.k8sWatching = false
+	m.watch.k8sActive = false
 	off := m.statusView()
-	m.k8sWatching = true
+	m.watch.k8sActive = true
 	on := m.statusView()
 
 	assert.NotEqual(t, off, on, "live indicator must change the status bar")

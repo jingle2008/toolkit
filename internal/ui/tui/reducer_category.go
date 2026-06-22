@@ -40,8 +40,8 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		m.sortColumn = common.NameCol
 		m.sortAsc = true
 		m.showFaulty = false
-		m.k8sWatching = false
-		m.k8sWatchTrigger = nil
+		m.watch.k8sActive = false
+		m.watch.k8sTrigger = nil
 		// Filtering and cursor position are view state tied to the category
 		// being browsed. Clear the filter here, on navigation, so an in-place
 		// data refresh (refreshDisplay) can preserve it for the same category.

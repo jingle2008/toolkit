@@ -9,8 +9,8 @@ import (
 // handleRepoWatchStarted records the live working-tree watch and arms the
 // listener. Session-scoped: not gen-gated.
 func (m *Model) handleRepoWatchStarted(msg repoWatchStartedMsg) tea.Cmd {
-	m.repoWatching = true
-	m.repoTrigger = msg.Trigger
+	m.watch.repoActive = true
+	m.watch.repoTrigger = msg.Trigger
 	m.logger.Infow("repo watch started")
 	return waitForRepoTriggerCmd(msg.Trigger)
 }
@@ -26,8 +26,8 @@ func (m *Model) handleRepoWatchTriggered() tea.Cmd {
 	if m.dataset != nil && m.dataset.GPUPools != nil {
 		cmds = append(cmds, reloadGPUPoolsCmd(m.sessionCtx(), m.loader, m.repoPath, m.environment, m.logger))
 	}
-	if m.repoTrigger != nil {
-		cmds = append(cmds, waitForRepoTriggerCmd(m.repoTrigger))
+	if m.watch.repoTrigger != nil {
+		cmds = append(cmds, waitForRepoTriggerCmd(m.watch.repoTrigger))
 	}
 	return tea.Batch(cmds...)
 }
@@ -36,7 +36,7 @@ func (m *Model) handleRepoWatchTriggered() tea.Cmd {
 // the watch is re-established only by an explicit manual refresh (see
 // maybeStartRepoWatchCmd).
 func (m *Model) handleRepoWatchClosed() {
-	m.repoWatching = false
+	m.watch.repoActive = false
 	m.logger.Warnw("repo watch closed; live repo indicator dropped")
 }
 
@@ -48,7 +48,7 @@ func (m *Model) handleRepoWatchClosed() {
 // live (a redundant start during the brief Init→started window is harmless:
 // both watchers are parented on the session context and stop at shutdown).
 func (m *Model) maybeStartRepoWatchCmd() tea.Cmd {
-	if m.repoWatching {
+	if m.watch.repoActive {
 		return nil
 	}
 	return startRepoWatchCmd(m.sessionCtx(), m.loader, m.repoPath)

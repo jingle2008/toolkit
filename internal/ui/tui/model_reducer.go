@@ -547,8 +547,8 @@ func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
 		m.logger.Debugw("watch started ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
 		return nil
 	}
-	m.k8sWatching = true
-	m.k8sWatchTrigger = msg.Trigger
+	m.watch.k8sActive = true
+	m.watch.k8sTrigger = msg.Trigger
 	m.logger.Infow("watch started", "category", msg.Cat, "gen", msg.Gen)
 	return waitForK8sTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
 }
@@ -576,7 +576,7 @@ func (m *Model) handleK8sWatchClosed(msg k8sWatchClosedMsg) tea.Cmd {
 		m.logger.Debugw("watch closed ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
 		return nil
 	}
-	m.k8sWatching = false
+	m.watch.k8sActive = false
 	m.logger.Infow("watch closed — clearing live indicator (no reconnect)", "category", msg.Cat, "gen", msg.Gen)
 	reload := m.reloadCategoryCmd(msg.Cat, msg.Gen)
 	if reload == nil {
@@ -592,16 +592,16 @@ func (m *Model) handleK8sWatchUnavailable(msg k8sWatchUnavailableMsg) {
 		m.logger.Debugw("watch unavailable ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
 		return
 	}
-	m.k8sWatching = false
+	m.watch.k8sActive = false
 	m.logger.Infow("watch unavailable (no live watch)", "category", msg.Cat, "gen", msg.Gen)
 }
 
 // waitForK8sTrigger re-arms the listener on the stored trigger channel.
 func (m *Model) waitForK8sTrigger(cat domain.Category, gen int) tea.Cmd {
-	if m.k8sWatchTrigger == nil {
+	if m.watch.k8sTrigger == nil {
 		return nil
 	}
-	return waitForK8sTriggerCmd(cat, m.k8sWatchTrigger, gen)
+	return waitForK8sTriggerCmd(cat, m.watch.k8sTrigger, gen)
 }
 
 func (m *Model) sortTableByColumn(column string) tea.Cmd {

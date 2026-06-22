@@ -15,16 +15,16 @@ func TestHandleRepoWatchStarted_SetsWatchingAndArms(t *testing.T) {
 	m := newTestModel(t)
 	ch := make(chan struct{})
 	cmd := m.handleRepoWatchStarted(repoWatchStartedMsg{Trigger: ch})
-	require.True(t, m.repoWatching)
+	require.True(t, m.watch.repoActive)
 	require.NotNil(t, cmd, "must return a re-arm command")
 }
 
 func TestHandleRepoWatchClosed_ClearsWatching(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.repoWatching = true
+	m.watch.repoActive = true
 	m.handleRepoWatchClosed()
-	require.False(t, m.repoWatching)
+	require.False(t, m.watch.repoActive)
 }
 
 // maybeStartRepoWatchCmd re-arms only when the repo watch is down, so manual
@@ -34,10 +34,10 @@ func TestMaybeStartRepoWatchCmd_OnlyWhenDown(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 
-	m.repoWatching = true
+	m.watch.repoActive = true
 	require.Nil(t, m.maybeStartRepoWatchCmd(), "must not re-arm while the watch is live")
 
-	m.repoWatching = false
+	m.watch.repoActive = false
 	cmd := m.maybeStartRepoWatchCmd()
 	require.NotNil(t, cmd, "must return a start command when the watch is down")
 	// newTestModel's loader doesn't implement RepoWatcher, so the start command
@@ -50,7 +50,7 @@ func TestHandleRepoWatchTriggered_ReturnsBatch(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.dataset = &models.Dataset{GPUPools: []models.GPUPool{{Name: "p1"}}}
-	m.repoTrigger = make(chan struct{})
+	m.watch.repoTrigger = make(chan struct{})
 	cmd := m.handleRepoWatchTriggered()
 	require.NotNil(t, cmd, "trigger must produce reload + re-arm commands")
 }
@@ -101,11 +101,11 @@ func TestLiveIndicator_ShowsOnRepoCategory(t *testing.T) {
 	m := newTestModel(t)
 	m.viewWidth, m.viewHeight = 100, 20
 	m.category = domain.Tenant // repo-backed: NeedsKubeConfig() == false
-	m.repoWatching = true
+	m.watch.repoActive = true
 	require.True(t, strings.Contains(m.View(), "LIVE"),
 		"a repo-backed category with repoWatching must show the live indicator")
 
-	m.repoWatching = false
+	m.watch.repoActive = false
 	require.False(t, strings.Contains(m.View(), "LIVE"),
 		"no indicator when the repo watch is not established")
 }

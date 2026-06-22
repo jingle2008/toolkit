@@ -28,6 +28,23 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
+// watchState holds the live-update state for the two watches that drive
+// the status-bar "● LIVE" indicator and trigger background reloads.
+type watchState struct {
+	// k8sActive is true while a live k8s watch is active for the current
+	// category. Reset on every category change and cleared on watch fallback.
+	k8sActive bool
+
+	// k8sTrigger is the active category's trigger channel; held so a
+	// k8sWatchTriggeredMsg can re-arm the listener on the same stream.
+	k8sTrigger <-chan struct{}
+
+	// repoTrigger is the live working-tree trigger channel; nil when the
+	// repo watch is unavailable. repoActive is true while it is established.
+	repoTrigger <-chan struct{}
+	repoActive  bool
+}
+
 /*
 Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
@@ -80,19 +97,9 @@ type Model struct {
 	// Message generation to guard against stale async responses
 	gen int
 
-	// k8sWatching is true while a live k8s watch is active for the current
-	// category; drives the status-bar live indicator. Reset on every
-	// category change and cleared on watch fallback.
-	k8sWatching bool
-
-	// k8sWatchTrigger is the active category's trigger channel; held so a
-	// k8sWatchTriggeredMsg can re-arm the listener on the same stream.
-	k8sWatchTrigger <-chan struct{}
-
-	// repoTrigger is the live working-tree trigger channel; nil when the
-	// repo watch is unavailable. repoWatching is true while it is established.
-	repoTrigger  <-chan struct{}
-	repoWatching bool
+	// watch holds live-update state for the k8s cluster watch and the
+	// repo working-tree watch. See the watchState type.
+	watch watchState
 
 	// Table sorting state
 	sortColumn string
