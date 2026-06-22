@@ -258,7 +258,7 @@ func (m *Model) catalogLoadCmd(cat domain.Category, gen int) tea.Cmd {
 // superseded this one) or when the catalog still isn't loaded (load failed —
 // its errMsg toast already fired — or was stale-dropped).
 func (m *Model) handleOpenMetricsTrigger(msg openMetricsTriggerMsg) tea.Cmd {
-	if msg.gen != m.gen || !m.catalogLoaded(msg.cat) {
+	if msg.gen != m.gens.msg || !m.catalogLoaded(msg.cat) {
 		return nil
 	}
 	return m.finishMetrics(msg.item)

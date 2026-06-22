@@ -61,6 +61,23 @@ type toastManager struct {
 	seq    int
 }
 
+// genCounters holds monotonic generation counters used to discard stale
+// async responses. The invariant: before dispatching async work, the
+// relevant counter is bumped and its value captured in the outgoing
+// command; when the result arrives it carries that captured generation,
+// and the handler drops it unless it still matches the current counter.
+// Each counter guards an independent pipeline:
+//   - msg:    category loads and live-watch messages (the main dataset)
+//   - filter: list filtering
+//   - rows:   table-row recomputation
+//   - detail: detail-view rendering
+type genCounters struct {
+	msg    int
+	filter int
+	rows   int
+	detail int
+}
+
 /*
 Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
@@ -85,9 +102,6 @@ type Model struct {
 	textInput      *textinput.Model
 	filter         string
 	initialFilter  string
-	filterGen      int
-	rowsGen        int
-	detailGen      int
 	viewMode       common.ViewMode
 	lastViewMode   common.ViewMode // for toggling help view
 	selectedKey    models.ItemKey
@@ -110,8 +124,9 @@ type Model struct {
 	// Stopwatch for loading duration
 	loadingTimer *stopwatch.Model
 
-	// Message generation to guard against stale async responses
-	gen int
+	// gens holds the generation counters that guard against stale async
+	// responses. See the genCounters type.
+	gens genCounters
 
 	// watch holds live-update state for the k8s cluster watch and the
 	// repo working-tree watch. See the watchState type.

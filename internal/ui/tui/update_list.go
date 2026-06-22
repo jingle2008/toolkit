@@ -92,7 +92,7 @@ func (m *Model) handleSetFilterMsg(msg setFilterMsg) tea.Cmd {
 	m.textInput.SetValue(val)
 	normalized := strings.ToLower(val)
 	// Invalidate any pending debounce tick that may be in-flight.
-	m.filterGen++
+	m.gens.filter++
 	return func() tea.Msg {
 		return filterMsg(normalized)
 	}
@@ -100,7 +100,7 @@ func (m *Model) handleSetFilterMsg(msg setFilterMsg) tea.Cmd {
 
 func (m *Model) handleFilterApplyMsg(msg filterApplyMsg) tea.Cmd {
 	// Only apply if this tick corresponds to the most recent debounce
-	if msg.Gen == m.filterGen {
+	if msg.Gen == m.gens.filter {
 		return filterTableAsync(m, msg.Value)
 	}
 	return nil

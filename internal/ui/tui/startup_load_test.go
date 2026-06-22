@@ -43,7 +43,7 @@ func TestStartupLazyCategory_KeepsFullDataset(t *testing.T) {
 
 	// Simulate the lazy-category load that Init issues next: it bumps the
 	// generation well past anything the dataset load could have carried.
-	m.gen = 5
+	m.gens.msg = 5
 
 	// The dataset must still be applied (not dropped as stale), so the
 	// definitions are present and `ld` would render.

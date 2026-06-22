@@ -15,7 +15,7 @@ import (
 func TestHandleBaseModelsLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 	items := []models.BaseModel{{Name: "bm1"}}
 
 	m.handleBaseModelsLoaded(items, 1)
@@ -27,7 +27,7 @@ func TestHandleBaseModelsLoaded(t *testing.T) {
 func TestHandleImportedModelsLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 	items := map[string][]models.ImportedModel{
 		"ocid1.tenancy.x": {{BaseModel: models.BaseModel{Name: "im1"}, Namespace: "team-x", TenantID: "ocid1.tenancy.x"}},
 	}
@@ -45,7 +45,7 @@ func TestHandleImportedModelsLoaded(t *testing.T) {
 func TestHandleImportedModelsLoaded_GenMismatch(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 2
+	m.gens.msg = 2
 	m.dataset.ImportedModelMap = map[string][]models.ImportedModel{
 		"ocid1.tenancy.x": {{BaseModel: models.BaseModel{Name: "old"}, Namespace: "team-x", TenantID: "ocid1.tenancy.x"}},
 	}
@@ -104,7 +104,7 @@ func TestApplyDataset_CurrentCategoryLoadPreservesFilter(t *testing.T) {
 func TestHandleBaseModelsLoaded_GenMismatch(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 2
+	m.gens.msg = 2
 	m.dataset.BaseModels = []models.BaseModel{{Name: "old"}}
 
 	m.handleBaseModelsLoaded([]models.BaseModel{{Name: "new"}}, 1)
@@ -116,7 +116,7 @@ func TestHandleBaseModelsLoaded_GenMismatch(t *testing.T) {
 func TestHandleGPUPoolsLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 	items := []models.GPUPool{{Name: "pool1"}}
 
 	cmd := m.handleGPUPoolsLoaded(items, 1)
@@ -131,7 +131,7 @@ func TestHandleGPUPoolsLoaded(t *testing.T) {
 func TestHandleGPUNodesLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 	items := map[string][]models.GPUNode{"pool": {{Name: "node1"}}}
 
 	m.handleGPUNodesLoaded(items, 1)
@@ -145,7 +145,7 @@ func TestHandleGPUWorkloadsLoaded(t *testing.T) {
 	m := newTestModel(t)
 	m.dataset = &models.Dataset{}
 	items := map[string][]models.GPUWorkload{"node-a": {{Name: "p1", Node: "node-a"}}}
-	m.handleGPUWorkloadsLoaded(items, m.gen)
+	m.handleGPUWorkloadsLoaded(items, m.gens.msg)
 	if got := m.dataset.GPUWorkloadMap["node-a"]; len(got) != 1 || got[0].Name != "p1" {
 		t.Fatalf("GPUWorkloadMap not applied: %+v", m.dataset.GPUWorkloadMap)
 	}
@@ -154,7 +154,7 @@ func TestHandleGPUWorkloadsLoaded(t *testing.T) {
 func TestHandleDedicatedAIClustersLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 	items := map[string][]models.DedicatedAICluster{
 		"id1": {{Name: "cluster1"}},
 	}
@@ -168,7 +168,7 @@ func TestHandleDedicatedAIClustersLoaded(t *testing.T) {
 func TestHandleTenancyOverridesLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 	group := models.TenancyOverrideGroup{
 		Tenants: []models.Tenant{{Name: "tenant-x"}},
 		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
@@ -200,7 +200,7 @@ func TestHandleTenancyOverridesLoaded(t *testing.T) {
 func TestHandleRegionalOverridesLoaded(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 
 	limitOverrides := []models.LimitRegionalOverride{{Name: "l1"}}
 	consoleOverrides := []models.ConsolePropertyRegionalOverride{{Name: "c1"}}
@@ -226,7 +226,7 @@ func TestHandleRegionalOverridesLoaded(t *testing.T) {
 func TestApplyDataset_PreservesFilter(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 	m.filter = "old"
 	m.category = domain.Tenant
 

@@ -21,9 +21,9 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	// old category's failure is no longer relevant to show. Gen 0 is the
 	// always-apply sentinel (the foundational Init load) and is never dropped.
 	// endTask still runs to keep pendingTasks balanced.
-	if msg.Gen != 0 && msg.Gen != m.gen {
+	if msg.Gen != 0 && msg.Gen != m.gens.msg {
 		if m.logger != nil {
-			m.logger.Debugw("dropping stale load error", "msgGen", msg.Gen, "gen", m.gen, "error", err)
+			m.logger.Debugw("dropping stale load error", "msgGen", msg.Gen, "gen", m.gens.msg, "error", err)
 		}
 		m.endTask(false)
 		return nil

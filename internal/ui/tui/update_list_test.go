@@ -44,7 +44,7 @@ func TestHandleFilterApplyMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.filter = "old"
-	m.filterGen = 2
+	m.gens.filter = 2
 
 	m.handleFilterApplyMsg(filterApplyMsg{Value: "new", Gen: 1})
 	if m.filter != "old" {

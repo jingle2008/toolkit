@@ -60,14 +60,14 @@ updateRows updates the table rows based on the current model state.
 Now also sets m.stats from computeTableRows.
 */
 func (m *Model) updateRows(autoSelect bool) {
-	m.rowsGen++
+	m.gens.rows++
 	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.filter, m.sortColumn, m.sortAsc, m.showFaulty)
 	m.applyRows(rows, stats, autoSelect)
 }
 
 func (m *Model) updateRowsAsync() tea.Cmd {
-	m.rowsGen++
-	gen := m.rowsGen
+	m.gens.rows++
+	gen := m.gens.rows
 	dataset := m.dataset
 	category := m.category
 	scope := m.scope
@@ -86,7 +86,7 @@ func (m *Model) updateRowsAsync() tea.Cmd {
 }
 
 func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
-	if msg.Gen != m.rowsGen {
+	if msg.Gen != m.gens.rows {
 		return
 	}
 	m.applyRows(msg.Rows, msg.Stats, true)
@@ -343,7 +343,7 @@ func (m *Model) handleDataMsg(msg dataMsg) tea.Cmd {
 	// load started, so the task must end to keep pendingTasks balanced.
 	// Without this, a stale drop leaves the model permanently in
 	// LoadingView — startup hang regression on `toolkit -c <lazy-cat>`.
-	if msg.Gen != 0 && msg.Gen != m.gen {
+	if msg.Gen != 0 && msg.Gen != m.gens.msg {
 		m.endTask(true)
 		return nil
 	}
@@ -418,7 +418,7 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 // TestStartupHang_LazyCategory).
 
 func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -426,7 +426,7 @@ func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
 }
 
 func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedModel, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -438,7 +438,7 @@ func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedMod
 }
 
 func (m *Model) handleGPUPoolsLoaded(items []models.GPUPool, gen int) tea.Cmd {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return nil
 	}
@@ -447,7 +447,7 @@ func (m *Model) handleGPUPoolsLoaded(items []models.GPUPool, gen int) tea.Cmd {
 }
 
 func (m *Model) handleGPUNodesLoaded(items map[string][]models.GPUNode, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -459,7 +459,7 @@ func (m *Model) handleGPUNodesLoaded(items map[string][]models.GPUNode, gen int)
 }
 
 func (m *Model) handleGPUWorkloadsLoaded(items map[string][]models.GPUWorkload, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -471,7 +471,7 @@ func (m *Model) handleGPUWorkloadsLoaded(items map[string][]models.GPUWorkload, 
 }
 
 func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -483,7 +483,7 @@ func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.Dedica
 }
 
 func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -496,7 +496,7 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 }
 
 func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -504,7 +504,7 @@ func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalO
 }
 
 func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -512,7 +512,7 @@ func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.Cons
 }
 
 func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride, gen int) {
-	if gen != m.gen {
+	if gen != m.gens.msg {
 		m.endTask(true)
 		return
 	}
@@ -543,8 +543,8 @@ func (m *Model) reloadCategoryCmd(cat domain.Category, gen int) tea.Cmd {
 // listener. A stale gen (the user already navigated away) is ignored;
 // the watch goroutine is already being torn down via loadCtx cancel.
 func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
-	if msg.Gen != m.gen {
-		m.logger.Debugw("watch started ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
+	if msg.Gen != m.gens.msg {
+		m.logger.Debugw("watch started ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
 	m.watch.k8sActive = true
@@ -555,10 +555,10 @@ func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
 
 // handleK8sWatchTriggered re-runs the category loader and re-arms the
 // listener so subsequent changes keep flowing. Stale-generation
-// messages (msg.Gen != m.gen) are ignored without side effects.
+// messages (msg.Gen != m.gens.msg) are ignored without side effects.
 func (m *Model) handleK8sWatchTriggered(msg k8sWatchTriggeredMsg) tea.Cmd {
-	if msg.Gen != m.gen {
-		m.logger.Debugw("watch triggered ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
+	if msg.Gen != m.gens.msg {
+		m.logger.Debugw("watch triggered ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
 	m.logger.Debugw("watch triggered", "category", msg.Cat, "gen", msg.Gen)
@@ -572,8 +572,8 @@ func (m *Model) handleK8sWatchTriggered(msg k8sWatchTriggeredMsg) tea.Cmd {
 // handleK8sWatchClosed falls back to a final one-shot load and clears the
 // live indicator (no auto-reconnect).
 func (m *Model) handleK8sWatchClosed(msg k8sWatchClosedMsg) tea.Cmd {
-	if msg.Gen != m.gen {
-		m.logger.Debugw("watch closed ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
+	if msg.Gen != m.gens.msg {
+		m.logger.Debugw("watch closed ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
 	m.watch.k8sActive = false
@@ -588,8 +588,8 @@ func (m *Model) handleK8sWatchClosed(msg k8sWatchClosedMsg) tea.Cmd {
 // handleK8sWatchUnavailable records that no live watch is active. The
 // static load result remains on screen.
 func (m *Model) handleK8sWatchUnavailable(msg k8sWatchUnavailableMsg) {
-	if msg.Gen != m.gen {
-		m.logger.Debugw("watch unavailable ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
+	if msg.Gen != m.gens.msg {
+		m.logger.Debugw("watch unavailable ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return
 	}
 	m.watch.k8sActive = false

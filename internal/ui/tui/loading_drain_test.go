@@ -39,9 +39,9 @@ func TestStartupHang_LazyCategory(t *testing.T) {
 	// generation has since advanced to 2. Each beginTask increments
 	// pendingTasks; the first also flips the view to LoadingView.
 	_ = m.beginTask()
-	m.gen = 1
+	m.gens.msg = 1
 	_ = m.beginTask()
-	m.gen = 2
+	m.gens.msg = 2
 
 	if m.pendingTasks != 2 {
 		t.Fatalf("pendingTasks after two beginTasks = %d, want 2", m.pendingTasks)
@@ -102,7 +102,7 @@ func TestLoadedMsg_ArrivesDuringDetailsView(t *testing.T) {
 	// completed load takes. The top-level switch must route to the
 	// typed handler, not delegateToActiveView(DetailsView) which
 	// would silently drop it.
-	m.gen = 1
+	m.gens.msg = 1
 	loaded := importedModelsLoadedMsg{
 		Items: map[string][]models.ImportedModel{"acme": nil},
 		Gen:   1,

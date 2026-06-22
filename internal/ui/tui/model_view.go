@@ -127,8 +127,8 @@ func (m *Model) updateContentAsync() tea.Cmd {
 		return nil
 	}
 
-	m.detailGen++
-	gen := m.detailGen
+	m.gens.detail++
+	gen := m.gens.detail
 	item := findItem(m.dataset, m.category, m.selectedKey)
 	width := m.detailRenderWidth()
 	renderer := m.renderer
@@ -144,7 +144,7 @@ func (m *Model) updateContentAsync() tea.Cmd {
 }
 
 func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea.Cmd {
-	if msg.Gen != m.detailGen || m.viewMode != common.DetailsView {
+	if msg.Gen != m.gens.detail || m.viewMode != common.DetailsView {
 		return nil
 	}
 	if msg.Err != nil {

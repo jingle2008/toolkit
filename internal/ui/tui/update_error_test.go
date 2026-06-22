@@ -16,7 +16,7 @@ import (
 func TestHandleErrMsg_CanceledLoadIsDropped(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 2
+	m.gens.msg = 2
 	m.pendingTasks = 1
 
 	msg := errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUNode, context.Canceled), Gen: 2}
@@ -38,7 +38,7 @@ func TestHandleErrMsg_CanceledLoadIsDropped(t *testing.T) {
 func TestHandleErrMsg_StaleGenIsDropped(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 5
+	m.gens.msg = 5
 	m.pendingTasks = 1
 
 	msg := errMsg{err: errors.New("boom"), Gen: 3} // from an older load
@@ -59,7 +59,7 @@ func TestHandleErrMsg_StaleGenIsDropped(t *testing.T) {
 func TestHandleErrMsg_RealErrorShowsToast(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 2
+	m.gens.msg = 2
 	m.pendingTasks = 1
 
 	msg := errMsg{err: errors.New("boom"), Gen: 2}
@@ -81,13 +81,13 @@ func TestHandleErrMsg_RealErrorShowsToast(t *testing.T) {
 func TestHandleErrMsg_Gen0SentinelAlwaysShows(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 7
+	m.gens.msg = 7
 	m.pendingTasks = 1
 
 	msg := errMsg{err: errors.New("init failed")} // Gen 0
 	cmd := m.handleErrMsg(msg)
 
 	if cmd == nil || m.toasts.active == nil {
-		t.Fatalf("gen-0 error must surface a toast even at gen %d", m.gen)
+		t.Fatalf("gen-0 error must surface a toast even at gen %d", m.gens.msg)
 	}
 }

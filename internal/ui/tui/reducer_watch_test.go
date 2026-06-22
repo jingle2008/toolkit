@@ -13,7 +13,7 @@ import (
 func TestHandleWatchStarted_SetsWatchingAndArms(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t) // existing TUI test constructor
-	m.gen = 4
+	m.gens.msg = 4
 	m.category = domain.GPUNode
 	trig := make(chan struct{}, 1)
 
@@ -25,7 +25,7 @@ func TestHandleWatchStarted_SetsWatchingAndArms(t *testing.T) {
 func TestHandleWatchStarted_StaleIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 5
+	m.gens.msg = 5
 	trig := make(chan struct{}, 1)
 
 	cmd := m.handleK8sWatchStarted(k8sWatchStartedMsg{Cat: domain.GPUNode, Trigger: trig, Gen: 2})
@@ -36,7 +36,7 @@ func TestHandleWatchStarted_StaleIgnored(t *testing.T) {
 func TestHandleWatchTriggered_ReloadsAndRearms(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 3
+	m.gens.msg = 3
 	m.category = domain.GPUNode
 	m.newLoadContext()
 	// Store a trigger channel so waitForTrigger can re-arm
@@ -50,7 +50,7 @@ func TestHandleWatchTriggered_ReloadsAndRearms(t *testing.T) {
 func TestHandleWatchTriggered_StaleIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 8
+	m.gens.msg = 8
 	cmd := m.handleK8sWatchTriggered(k8sWatchTriggeredMsg{Cat: domain.GPUNode, Gen: 1})
 	assert.Nil(t, cmd)
 }
@@ -58,7 +58,7 @@ func TestHandleWatchTriggered_StaleIgnored(t *testing.T) {
 func TestHandleWatchClosed_ClearsWatchingAndReloads(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 2
+	m.gens.msg = 2
 	m.category = domain.GPUNode
 	m.watch.k8sActive = true
 	m.newLoadContext()
@@ -71,7 +71,7 @@ func TestHandleWatchClosed_ClearsWatchingAndReloads(t *testing.T) {
 func TestHandleWatchUnavailable_ClearsWatchingWhenActive(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 2
+	m.gens.msg = 2
 	m.watch.k8sActive = true
 	m.handleK8sWatchUnavailable(k8sWatchUnavailableMsg{Cat: domain.GPUNode, Gen: 2})
 	assert.False(t, m.watch.k8sActive, "unavailable must clear the live indicator")
@@ -80,7 +80,7 @@ func TestHandleWatchUnavailable_ClearsWatchingWhenActive(t *testing.T) {
 func TestHandleWatchClosed_StaleIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 6
+	m.gens.msg = 6
 	m.watch.k8sActive = true
 
 	cmd := m.handleK8sWatchClosed(k8sWatchClosedMsg{Cat: domain.GPUNode, Gen: 3})
@@ -91,7 +91,7 @@ func TestHandleWatchClosed_StaleIgnored(t *testing.T) {
 func TestHandleWatchUnavailable_StaleIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 7
+	m.gens.msg = 7
 	m.watch.k8sActive = true
 
 	m.handleK8sWatchUnavailable(k8sWatchUnavailableMsg{Cat: domain.GPUNode, Gen: 4})
@@ -103,7 +103,7 @@ func TestHandleWatchUnavailable_StaleIgnored(t *testing.T) {
 func TestLiveReload_PreservesFilterAndSelection(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.gen = 1
+	m.gens.msg = 1
 	m.category = domain.BaseModel
 	m.dataset = &models.Dataset{BaseModels: []models.BaseModel{
 		{Name: "bm1"}, {Name: "bm2"}, {Name: "bm3"},

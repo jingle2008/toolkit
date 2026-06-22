@@ -13,8 +13,8 @@ import (
 
 // bumpGen increments the generation counter and returns the new value.
 func (m *Model) bumpGen() int {
-	m.gen++
-	return m.gen
+	m.gens.msg++
+	return m.gens.msg
 }
 
 // loadData loads the dataset for the current model.
