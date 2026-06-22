@@ -417,77 +417,57 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 // `toolkit -c <lazy-cat>`, regression locked by
 // TestStartupHang_LazyCategory).
 
-func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
+// applyLoaded drops a stale load — one whose captured gen no longer
+// matches the current generation — and otherwise applies the dataset
+// mutation. The stale path still calls endTask to keep pendingTasks
+// balanced (see the note above). Returns false when the load was stale.
+func (m *Model) applyLoaded(gen int, mut func(*models.Dataset), cat domain.Category, count int) bool {
 	if gen != m.gens.msg {
 		m.endTask(true)
-		return
+		return false
 	}
-	m.applyDataset(func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
+	m.applyDataset(mut, cat, count)
+	return true
+}
+
+// mapLen returns the total number of values across a map of slices.
+func mapLen[K comparable, V any](m map[K][]V) int {
+	n := 0
+	for _, v := range m {
+		n += len(v)
+	}
+	return n
+}
+
+func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
 }
 
 func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedModel, gen int) {
-	if gen != m.gens.msg {
-		m.endTask(true)
-		return
-	}
-	total := 0
-	for _, v := range items {
-		total += len(v)
-	}
-	m.applyDataset(func(ds *models.Dataset) { ds.SetImportedModelMap(items) }, domain.ImportedModel, total)
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetImportedModelMap(items) }, domain.ImportedModel, mapLen(items))
 }
 
 func (m *Model) handleGPUPoolsLoaded(items []models.GPUPool, gen int) tea.Cmd {
-	if gen != m.gens.msg {
-		m.endTask(true)
+	if !m.applyLoaded(gen, func(ds *models.Dataset) { ds.GPUPools = items }, domain.GPUPool, len(items)) {
 		return nil
 	}
-	m.applyDataset(func(ds *models.Dataset) { ds.GPUPools = items }, domain.GPUPool, len(items))
 	return m.updateGPUPoolState()
 }
 
 func (m *Model) handleGPUNodesLoaded(items map[string][]models.GPUNode, gen int) {
-	if gen != m.gens.msg {
-		m.endTask(true)
-		return
-	}
-	total := 0
-	for _, v := range items {
-		total += len(v)
-	}
-	m.applyDataset(func(ds *models.Dataset) { ds.GPUNodeMap = items }, domain.GPUNode, total)
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.GPUNodeMap = items }, domain.GPUNode, mapLen(items))
 }
 
 func (m *Model) handleGPUWorkloadsLoaded(items map[string][]models.GPUWorkload, gen int) {
-	if gen != m.gens.msg {
-		m.endTask(true)
-		return
-	}
-	total := 0
-	for _, v := range items {
-		total += len(v)
-	}
-	m.applyDataset(func(ds *models.Dataset) { ds.SetGPUWorkloadMap(items) }, domain.GPUWorkload, total)
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetGPUWorkloadMap(items) }, domain.GPUWorkload, mapLen(items))
 }
 
 func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {
-	if gen != m.gens.msg {
-		m.endTask(true)
-		return
-	}
-	total := 0
-	for _, v := range items {
-		total += len(v)
-	}
-	m.applyDataset(func(ds *models.Dataset) { ds.SetDedicatedAIClusterMap(items) }, domain.DedicatedAICluster, total)
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetDedicatedAIClusterMap(items) }, domain.DedicatedAICluster, mapLen(items))
 }
 
 func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) {
-	if gen != m.gens.msg {
-		m.endTask(true)
-		return
-	}
-	m.applyDataset(func(ds *models.Dataset) {
+	m.applyLoaded(gen, func(ds *models.Dataset) {
 		ds.Tenants = group.Tenants
 		ds.LimitTenancyOverrideMap = group.LimitTenancyOverrideMap
 		ds.ConsolePropertyTenancyOverrideMap = group.ConsolePropertyTenancyOverrideMap
@@ -496,27 +476,15 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 }
 
 func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) {
-	if gen != m.gens.msg {
-		m.endTask(true)
-		return
-	}
-	m.applyDataset(func(ds *models.Dataset) { ds.LimitRegionalOverrides = items }, domain.LimitRegionalOverride, len(items))
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.LimitRegionalOverrides = items }, domain.LimitRegionalOverride, len(items))
 }
 
 func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride, gen int) {
-	if gen != m.gens.msg {
-		m.endTask(true)
-		return
-	}
-	m.applyDataset(func(ds *models.Dataset) { ds.ConsolePropertyRegionalOverrides = items }, domain.ConsolePropertyRegionalOverride, len(items))
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.ConsolePropertyRegionalOverrides = items }, domain.ConsolePropertyRegionalOverride, len(items))
 }
 
 func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride, gen int) {
-	if gen != m.gens.msg {
-		m.endTask(true)
-		return
-	}
-	m.applyDataset(func(ds *models.Dataset) { ds.PropertyRegionalOverrides = items }, domain.PropertyRegionalOverride, len(items))
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.PropertyRegionalOverrides = items }, domain.PropertyRegionalOverride, len(items))
 }
 
 // reloadCategoryCmd returns the existing one-shot load command for a
