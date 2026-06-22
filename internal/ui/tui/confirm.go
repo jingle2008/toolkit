@@ -32,3 +32,20 @@ type confirmOverlay struct {
 	returnView common.ViewMode
 	run        func() tea.Cmd
 }
+
+// requestConfirm opens the confirmation modal for a destructive action,
+// capturing the current view so dismissConfirm can restore it. It returns
+// nil: opening the modal issues no command.
+func (m *Model) requestConfirm(c confirmOverlay) tea.Cmd {
+	c.returnView = m.viewMode
+	m.confirm = c
+	m.viewMode = common.ConfirmView
+	return nil
+}
+
+// dismissConfirm closes the modal, restoring the prior view and clearing
+// the pending overlay.
+func (m *Model) dismissConfirm() {
+	m.viewMode = m.confirm.returnView
+	m.confirm = confirmOverlay{}
+}
