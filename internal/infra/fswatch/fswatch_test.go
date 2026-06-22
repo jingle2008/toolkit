@@ -39,7 +39,7 @@ func TestWatch_RecursiveNewSubdir(t *testing.T) {
 
 	sub := filepath.Join(dir, "sub")
 	require.NoError(t, os.Mkdir(sub, 0o750)) //nolint:gosec // test helper; 0o750 is fine for temp dirs
-	<-trig                                    // drain the trigger caused by creating the directory
+	<-trig                                   // drain the trigger caused by creating the directory
 
 	require.NoError(t, os.WriteFile(filepath.Join(sub, "b.yaml"), []byte("y"), 0o600)) //nolint:gosec // test helper; 0o600 is fine for temp files
 	select {
