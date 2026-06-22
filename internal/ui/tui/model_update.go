@@ -85,6 +85,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case watchUnavailableMsg:
 		m.handleWatchUnavailable(msg)
 		return m, nil
+	case repoWatchStartedMsg:
+		return m, m.handleRepoWatchStarted(msg)
+	case repoWatchTriggeredMsg:
+		return m, m.handleRepoWatchTriggered()
+	case repoWatchClosedMsg:
+		m.handleRepoWatchClosed()
+		return m, nil
+	case datasetReloadedMsg:
+		m.handleDatasetReloaded(msg)
+		return m, nil
+	case gpuPoolsReloadedMsg:
+		return m, m.handleGPUPoolsReloaded(msg)
 	default:
 		return m.delegateToActiveView(msg)
 	}

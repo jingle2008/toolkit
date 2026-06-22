@@ -70,5 +70,10 @@ func (m *Model) Init() tea.Cmd {
 	}
 
 	cmds = append(cmds, setFilter(m.initialFilter))
-	return tea.Sequence(cmds...)
+	// Establish the always-on working-tree watch in parallel with the initial
+	// load, on the session context so navigation never cancels it.
+	return tea.Batch(
+		tea.Sequence(cmds...),
+		startRepoWatchCmd(m.sessionCtx(), m.loader, m.repoPath),
+	)
 }
