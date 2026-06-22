@@ -12,6 +12,7 @@ build:
 	go install -trimpath -ldflags "-s -w -X main.version=$(VERSION)" ./cmd/...
 
 lint:
+	golangci-lint config verify
 	golangci-lint run ./...
 
 vet:
@@ -59,15 +60,21 @@ cover-check:
 	go test ./... -race -shuffle=on -count=1 -covermode=atomic -coverprofile=coverage.out
 	go tool cover -func=coverage.out | awk '/total:/ {if ($$3+0 < 80) {print "Coverage below 80%"; exit 1}}'
 
-LINT_VERSION ?= v2.3.1
+# Keep these in sync with the module pins in go.mod (single source of truth):
+#   golangci-lint -> github.com/golangci/golangci-lint/v2
+#   gofumpt       -> mvdan.cc/gofumpt
+#   goimports     -> golang.org/x/tools
+LINT_VERSION ?= v2.12.2
+GOFUMPT_VERSION ?= v0.10.0
+GOIMPORTS_VERSION ?= v0.46.0
 
 install-lint:
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(LINT_VERSION)
 
 setup:
 	$(MAKE) install-lint
-	go install mvdan.cc/gofumpt@v0.6.0
-	go install golang.org/x/tools/cmd/goimports@v0.28.0
+	go install mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
+	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 
 ci: fmt-check goimports-check lint vet cover-check
 
