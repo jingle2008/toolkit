@@ -64,7 +64,7 @@ func addRecursive(w *fsnotify.Watcher, root string) error {
 // run consumes fsnotify events, adds newly created directories on the fly,
 // ignores hidden paths, debounces into out, and tears everything down on ctx
 // cancel or backend error.
-func run(ctx context.Context, w *fsnotify.Watcher, root string, window time.Duration, out chan<- struct{}) {
+func run(ctx context.Context, w *fsnotify.Watcher, root string, window time.Duration, out chan<- struct{}) { //nolint:cyclop // event-select loop; splitting it would obscure the debounce/watch lifecycle without reducing real complexity
 	defer close(out)
 	defer func() { _ = w.Close() }()
 

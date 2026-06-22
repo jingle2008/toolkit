@@ -7,6 +7,7 @@ import (
 )
 
 func TestDataset_MergeReloadedRepoData_PreservesK8sFields(t *testing.T) {
+	t.Parallel()
 	d := &Dataset{
 		Tenants:    []Tenant{{Name: "old"}},
 		BaseModels: []BaseModel{{Name: "bm1"}},

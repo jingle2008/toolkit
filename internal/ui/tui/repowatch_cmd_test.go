@@ -24,6 +24,7 @@ func (f repoWatchLoader) WatchRepo(context.Context, string) (<-chan struct{}, er
 }
 
 func TestStartRepoWatchCmd_Started(t *testing.T) {
+	t.Parallel()
 	ch := make(chan struct{})
 	cmd := startRepoWatchCmd(context.Background(), repoWatchLoader{trigger: ch}, "/repo")
 	msg := cmd()
@@ -33,6 +34,7 @@ func TestStartRepoWatchCmd_Started(t *testing.T) {
 }
 
 func TestStartRepoWatchCmd_NotAWatcher(t *testing.T) {
+	t.Parallel()
 	// fakeLoader (defined in the package's existing tests) does not implement
 	// RepoWatcher.
 	cmd := startRepoWatchCmd(context.Background(), fakeLoader{}, "/repo")
@@ -41,12 +43,14 @@ func TestStartRepoWatchCmd_NotAWatcher(t *testing.T) {
 }
 
 func TestStartRepoWatchCmd_SetupError(t *testing.T) {
+	t.Parallel()
 	cmd := startRepoWatchCmd(context.Background(), repoWatchLoader{err: errors.New("nope")}, "/repo")
 	_, ok := cmd().(repoWatchClosedMsg)
 	require.True(t, ok, "a WatchRepo error must yield repoWatchClosedMsg")
 }
 
 func TestWaitForRepoTriggerCmd_TickAndClose(t *testing.T) {
+	t.Parallel()
 	ch := make(chan struct{}, 1)
 	ch <- struct{}{}
 	_, ok := waitForRepoTriggerCmd(ch)().(repoWatchTriggeredMsg)
@@ -59,6 +63,7 @@ func TestWaitForRepoTriggerCmd_TickAndClose(t *testing.T) {
 }
 
 func TestReloadDatasetCmd_SuccessAndError(t *testing.T) {
+	t.Parallel()
 	ds := &models.Dataset{Tenants: []models.Tenant{{Name: "t"}}}
 	okLoader := fakeLoader{dataset: ds}
 	msg := reloadDatasetCmd(context.Background(), okLoader, "/repo", models.Environment{}, logging.NewNoOpLogger())()
