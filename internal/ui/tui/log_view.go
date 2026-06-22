@@ -62,10 +62,10 @@ func formatLogEntry(e logging.Entry) string {
 // long unbroken tokens like OCIDs hard-broken) so the whole line is readable
 // rather than clipped with an ellipsis.
 func (m *Model) renderLogEntries(width int) string {
-	if m.logStore == nil {
+	if m.log.store == nil {
 		return "(log store unavailable)"
 	}
-	entries := m.logStore.Snapshot()
+	entries := m.log.store.Snapshot()
 	if len(entries) == 0 {
 		return "(no log entries yet)"
 	}
@@ -91,13 +91,13 @@ func (m *Model) logView() string {
 	if bodyHeight < 1 {
 		bodyHeight = 1
 	}
-	m.logViewport.Width = width
-	m.logViewport.Height = bodyHeight
+	m.log.viewport.Width = width
+	m.log.viewport.Height = bodyHeight
 
-	follow := m.logViewport.AtBottom()
-	m.logViewport.SetContent(m.renderLogEntries(width))
+	follow := m.log.viewport.AtBottom()
+	m.log.viewport.SetContent(m.renderLogEntries(width))
 	if follow {
-		m.logViewport.GotoBottom()
+		m.log.viewport.GotoBottom()
 	}
 
 	// Highlighted, full-width title bar — also the visual separator between
@@ -105,7 +105,7 @@ func (m *Model) logView() string {
 	// while following the tail, amber when paused (scrolled up).
 	state := "following"
 	barColor := lipgloss.Color("24") // teal: live tail
-	if !m.logViewport.AtBottom() {
+	if !m.log.viewport.AtBottom() {
 		state = "PAUSED"
 		barColor = lipgloss.Color("130") // amber: paused
 	}
@@ -117,7 +117,7 @@ func (m *Model) logView() string {
 		Render(fmt.Sprintf("LOG — %s", state))
 	hint := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).
 		Render("↑↓/pgup/pgdn scroll · end follow · home top · ` close")
-	return lipgloss.JoinVertical(lipgloss.Left, title, m.logViewport.View(), hint)
+	return lipgloss.JoinVertical(lipgloss.Left, title, m.log.viewport.View(), hint)
 }
 
 // logTickMsg drives periodic re-renders of the log overlay so the live
@@ -138,7 +138,7 @@ func (m *Model) updateLogView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if km, ok := msg.(tea.KeyMsg); ok {
 		switch {
 		case key.Matches(km, keys.ToggleLog, keys.Back):
-			m.viewMode = m.logReturnView
+			m.viewMode = m.log.returnView
 			return m, nil
 		case key.Matches(km, keys.Quit):
 			m.cancelInFlight()
@@ -146,14 +146,14 @@ func (m *Model) updateLogView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch km.String() {
 		case "end":
-			m.logViewport.GotoBottom()
+			m.log.viewport.GotoBottom()
 			return m, nil
 		case "home":
-			m.logViewport.SetYOffset(0)
+			m.log.viewport.SetYOffset(0)
 			return m, nil
 		}
 	}
-	vp, cmd := m.logViewport.Update(msg)
-	m.logViewport = &vp
+	vp, cmd := m.log.viewport.Update(msg)
+	m.log.viewport = &vp
 	return m, cmd
 }

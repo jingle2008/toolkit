@@ -45,6 +45,14 @@ type watchState struct {
 	repoActive  bool
 }
 
+// logOverlay holds the state for the log-viewer overlay (toggled with the
+// log keybinding); returnView restores the prior view when it closes.
+type logOverlay struct {
+	store      *logging.RingSink
+	viewport   *viewport.Model
+	returnView common.ViewMode
+}
+
 /*
 Model represents the main TUI model for the toolkit application.
 It manages state, events, and rendering for the Bubble Tea UI.
@@ -124,10 +132,8 @@ type Model struct {
 	// Tenant-metadata entry form state (EditTenantView).
 	editTenant *editTenantForm
 
-	// Log overlay state.
-	logStore      *logging.RingSink
-	logViewport   *viewport.Model
-	logReturnView common.ViewMode // view to restore when the log overlay closes
+	// log holds the log-overlay state. See the logOverlay type.
+	log logOverlay
 
 	// Transient banner shown over the active view; auto-dismissed via tea.Tick.
 	toast    *toastState
@@ -253,9 +259,9 @@ func setDefaults(m *Model) {
 			BorderForeground(lipgloss.Color("62"))
 		m.viewport = &vp
 	}
-	if m.logViewport == nil {
+	if m.log.viewport == nil {
 		lvp := viewport.New(20, 20)
-		m.logViewport = &lvp
+		m.log.viewport = &lvp
 	}
 	if m.help == nil {
 		keyStyle := lipgloss.NewStyle().

@@ -94,5 +94,5 @@ func TestWithLogStore(t *testing.T) {
 	ring := logging.NewRingSink(8)
 	m := &Model{}
 	WithLogStore(ring)(m)
-	assert.Same(t, ring, m.logStore)
+	assert.Same(t, ring, m.log.store)
 }

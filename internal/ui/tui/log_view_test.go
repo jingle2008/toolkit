@@ -27,7 +27,7 @@ func TestFormatLogEntry(t *testing.T) {
 
 func TestRenderLogEntries_Empty(t *testing.T) {
 	t.Parallel()
-	m := &Model{logStore: logging.NewRingSink(4)}
+	m := &Model{log: logOverlay{store: logging.NewRingSink(4)}}
 	assert.Contains(t, m.renderLogEntries(80), "no log entries")
 }
 
@@ -42,7 +42,7 @@ func TestRenderLogEntries_OrdersOldestToNewest(t *testing.T) {
 	ring := logging.NewRingSink(8)
 	ring.Infow("first")
 	ring.Errorw("second")
-	m := &Model{logStore: ring}
+	m := &Model{log: logOverlay{store: ring}}
 	out := m.renderLogEntries(120)
 	assert.Less(t, strings.Index(out, "first"), strings.Index(out, "second"))
 	assert.Contains(t, out, "ERROR")
@@ -55,7 +55,7 @@ func TestRenderLogEntries_WrapsInsteadOfTruncating(t *testing.T) {
 	ring := logging.NewRingSink(4)
 	long := strings.Repeat("x", 100) // one unbroken token, no color (Info)
 	ring.Infow(long)
-	m := &Model{logStore: ring}
+	m := &Model{log: logOverlay{store: ring}}
 
 	out := m.renderLogEntries(40)
 
@@ -89,7 +89,7 @@ func TestLogOverlay_ToggleFromList(t *testing.T) {
 	m.viewMode = common.ListView
 	_, cmd := m.Update(backtick)
 	assert.Equal(t, common.LogView, m.viewMode)
-	assert.Equal(t, common.ListView, m.logReturnView)
+	assert.Equal(t, common.ListView, m.log.returnView)
 	assert.NotNil(t, cmd) // live-refresh tick started
 	// Toggle again closes back to the originating view.
 	_, _ = m.Update(backtick)

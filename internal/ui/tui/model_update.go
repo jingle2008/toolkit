@@ -122,7 +122,7 @@ func (m *Model) interceptToggleLog(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	if m.viewMode != common.ListView && m.viewMode != common.DetailsView {
 		return m, nil, false
 	}
-	m.logReturnView = m.viewMode
+	m.log.returnView = m.viewMode
 	m.viewMode = common.LogView
 	return m, logTickCmd(), true
 }
