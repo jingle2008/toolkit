@@ -1,9 +1,11 @@
 package tui
 
 import (
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
 // confirmTier classifies a destructive action by blast radius, which
@@ -48,4 +50,35 @@ func (m *Model) requestConfirm(c confirmOverlay) tea.Cmd {
 func (m *Model) dismissConfirm() {
 	m.viewMode = m.confirm.returnView
 	m.confirm = confirmOverlay{}
+}
+
+// updateConfirmView resolves a keypress while the confirmation modal is
+// open. Recoverable actions confirm on y/Y; irreversible actions require an
+// explicit capital Y. n/esc cancel; for irreversible, a lowercase y also
+// cancels (so muscle-memory never destroys state). Any other key is
+// swallowed so the modal stays put. ctrl+c always quits.
+func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	km, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return m, nil
+	}
+	if key.Matches(km, keys.Quit) {
+		m.cancelInFlight()
+		return m, tea.Quit
+	}
+
+	s := km.String()
+	confirmed := s == "Y" || (m.confirm.tier == tierRecoverable && s == "y")
+	if confirmed {
+		run := m.confirm.run
+		m.dismissConfirm()
+		return m, run()
+	}
+
+	cancelled := s == "n" || s == "N" || s == "esc" ||
+		(m.confirm.tier == tierIrreversible && s == "y")
+	if cancelled {
+		m.dismissConfirm()
+	}
+	return m, nil
 }

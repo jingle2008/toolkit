@@ -60,3 +60,90 @@ func TestDismissConfirm_RestoresViewAndClears(t *testing.T) {
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, confirmOverlay{}, m.confirm, "overlay must be cleared")
 }
+
+// armConfirm puts the model into ConfirmView with a run thunk that records
+// whether it fired, returning a pointer to that flag.
+func armConfirm(m *Model, tier confirmTier) *bool {
+	ran := false
+	m.confirm = confirmOverlay{
+		tier:       tier,
+		action:     "Delete",
+		kind:       "DAC",
+		target:     "dac-1",
+		returnView: common.ListView,
+		run:        func() tea.Cmd { ran = true; return nil },
+	}
+	m.viewMode = common.ConfirmView
+	return &ran
+}
+
+func keyMsg(s string) tea.KeyMsg {
+	if s == "esc" {
+		return tea.KeyMsg{Type: tea.KeyEsc}
+	}
+	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+}
+
+func TestUpdateConfirmView_Recoverable(t *testing.T) {
+	t.Parallel()
+	t.Run("y confirms and dismisses", func(t *testing.T) {
+		t.Parallel()
+		m := newConfirmTestModel(t)
+		ran := armConfirm(m, tierRecoverable)
+		_, _ = m.updateConfirmView(keyMsg("y"))
+		assert.True(t, *ran, "y must run the action")
+		assert.Equal(t, common.ListView, m.viewMode)
+	})
+	t.Run("n cancels without running", func(t *testing.T) {
+		t.Parallel()
+		m := newConfirmTestModel(t)
+		ran := armConfirm(m, tierRecoverable)
+		_, _ = m.updateConfirmView(keyMsg("n"))
+		assert.False(t, *ran, "n must not run the action")
+		assert.Equal(t, common.ListView, m.viewMode)
+	})
+	t.Run("esc cancels", func(t *testing.T) {
+		t.Parallel()
+		m := newConfirmTestModel(t)
+		ran := armConfirm(m, tierRecoverable)
+		_, _ = m.updateConfirmView(keyMsg("esc"))
+		assert.False(t, *ran)
+		assert.Equal(t, common.ListView, m.viewMode)
+	})
+	t.Run("unrelated key is swallowed", func(t *testing.T) {
+		t.Parallel()
+		m := newConfirmTestModel(t)
+		ran := armConfirm(m, tierRecoverable)
+		_, _ = m.updateConfirmView(keyMsg("x"))
+		assert.False(t, *ran)
+		assert.Equal(t, common.ConfirmView, m.viewMode, "stays in modal")
+	})
+}
+
+func TestUpdateConfirmView_Irreversible(t *testing.T) {
+	t.Parallel()
+	t.Run("capital Y confirms", func(t *testing.T) {
+		t.Parallel()
+		m := newConfirmTestModel(t)
+		ran := armConfirm(m, tierIrreversible)
+		_, _ = m.updateConfirmView(keyMsg("Y"))
+		assert.True(t, *ran)
+		assert.Equal(t, common.ListView, m.viewMode)
+	})
+	t.Run("lowercase y cancels (does not run)", func(t *testing.T) {
+		t.Parallel()
+		m := newConfirmTestModel(t)
+		ran := armConfirm(m, tierIrreversible)
+		_, _ = m.updateConfirmView(keyMsg("y"))
+		assert.False(t, *ran, "lowercase y must not run an irreversible action")
+		assert.Equal(t, common.ListView, m.viewMode, "lowercase y cancels the modal")
+	})
+}
+
+func TestUpdateConfirmView_CtrlCQuits(t *testing.T) {
+	t.Parallel()
+	m := newConfirmTestModel(t)
+	armConfirm(m, tierIrreversible)
+	_, cmd := m.updateConfirmView(tea.KeyMsg{Type: tea.KeyCtrlC})
+	require.NotNil(t, cmd, "ctrl+c must return a command (tea.Quit)")
+}

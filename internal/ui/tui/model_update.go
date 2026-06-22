@@ -146,6 +146,8 @@ func (m *Model) delegateToActiveView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateEditTenantView(msg)
 	case common.LogView:
 		return m.updateLogView(msg)
+	case common.ConfirmView:
+		return m.updateConfirmView(msg)
 	}
 	return m, nil
 }
