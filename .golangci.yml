@@ -1,10 +1,11 @@
-version: 2
-# golangci-lint configuration
+version: "2"
+# golangci-lint configuration (schema v2)
 # - paralleltest: enforces t.Parallel() in tests; use //nolint:paralleltest with justification for serial tests
 # See CONTRIBUTING.md for test best practices.
 
 run:
   timeout: 3m
+
 linters:
   enable:
     - govet
@@ -30,25 +31,10 @@ linters:
     - errorlint
     - containedctx
     - whitespace
-  presets:
-    - bugs
-  severity:
-    errcheck: warning
-    gocritic: warning
-issues:
-  exclude-use-default: false
-
-linters-settings:
-  cyclop:
-    max-complexity: 13
-  prealloc:
-    simple: true
-  revive:
-    ignore-generated-header: true
-    severity: warning
-  contextcheck:
-    # Warn if context.Context is not the first arg in exported funcs
-    # (default is true)
-    check-exported: true
-    check-unexported: false
-    allow-context-arg-in-structs: false
+  settings:
+    cyclop:
+      max-complexity: 13
+    prealloc:
+      simple: true
+    revive:
+      severity: warning
