@@ -57,12 +57,12 @@ func TestStartWatchCmd_SuccessEmitsStarted(t *testing.T) {
 	t.Parallel()
 	trig := make(chan struct{}, 1)
 	ld := &watchableLoader{trigger: trig}
-	cmd := startWatchCmd(context.Background(), ld, domain.GPUNode, "kc", models.Environment{}, 7)
+	cmd := startK8sWatchCmd(context.Background(), ld, domain.GPUNode, "kc", models.Environment{}, 7)
 	require.NotNil(t, cmd)
 
 	msg := cmd()
-	started, ok := msg.(watchStartedMsg)
-	require.True(t, ok, "expected watchStartedMsg, got %T", msg)
+	started, ok := msg.(k8sWatchStartedMsg)
+	require.True(t, ok, "expected k8sWatchStartedMsg, got %T", msg)
 	assert.Equal(t, domain.GPUNode, started.Cat)
 	assert.Equal(t, 7, started.Gen)
 	assert.NotNil(t, started.Trigger)
@@ -72,10 +72,10 @@ func TestStartWatchCmd_UnsupportedEmitsUnavailable(t *testing.T) {
 	t.Parallel()
 	// fakeLoader implements Composite but NOT loader.Watcher.
 	ld := fakeLoader{}
-	cmd := startWatchCmd(context.Background(), ld, domain.GPUNode, "kc", models.Environment{}, 3)
+	cmd := startK8sWatchCmd(context.Background(), ld, domain.GPUNode, "kc", models.Environment{}, 3)
 	msg := cmd()
-	unavail, ok := msg.(watchUnavailableMsg)
-	require.True(t, ok, "expected watchUnavailableMsg, got %T", msg)
+	unavail, ok := msg.(k8sWatchUnavailableMsg)
+	require.True(t, ok, "expected k8sWatchUnavailableMsg, got %T", msg)
 	assert.Equal(t, 3, unavail.Gen)
 	assert.Equal(t, domain.GPUNode, unavail.Cat)
 }
@@ -84,10 +84,10 @@ func TestWaitForTriggerCmd_TickEmitsTriggered(t *testing.T) {
 	t.Parallel()
 	trig := make(chan struct{}, 1)
 	trig <- struct{}{}
-	cmd := waitForTriggerCmd(domain.GPUNode, trig, 5)
+	cmd := waitForK8sTriggerCmd(domain.GPUNode, trig, 5)
 	msg := cmd()
-	triggered, ok := msg.(watchTriggeredMsg)
-	require.True(t, ok, "expected watchTriggeredMsg, got %T", msg)
+	triggered, ok := msg.(k8sWatchTriggeredMsg)
+	require.True(t, ok, "expected k8sWatchTriggeredMsg, got %T", msg)
 	assert.Equal(t, 5, triggered.Gen)
 }
 
@@ -95,10 +95,10 @@ func TestWaitForTriggerCmd_ClosedEmitsClosed(t *testing.T) {
 	t.Parallel()
 	trig := make(chan struct{})
 	close(trig)
-	cmd := waitForTriggerCmd(domain.GPUNode, trig, 9)
+	cmd := waitForK8sTriggerCmd(domain.GPUNode, trig, 9)
 	msg := cmd()
-	closed, ok := msg.(watchClosedMsg)
-	require.True(t, ok, "expected watchClosedMsg, got %T", msg)
+	closed, ok := msg.(k8sWatchClosedMsg)
+	require.True(t, ok, "expected k8sWatchClosedMsg, got %T", msg)
 	assert.Equal(t, domain.GPUNode, closed.Cat)
 	assert.Equal(t, 9, closed.Gen)
 }

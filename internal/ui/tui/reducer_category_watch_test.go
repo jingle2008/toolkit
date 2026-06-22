@@ -47,10 +47,10 @@ func contains(s []string, v string) bool {
 	return false
 }
 
-// hasWatchLifecycle returns true if the slice contains a watchStartedMsg or
-// watchUnavailableMsg type string.
+// hasWatchLifecycle returns true if the slice contains a k8sWatchStartedMsg or
+// k8sWatchUnavailableMsg type string.
 func hasWatchLifecycle(types []string) bool {
-	return contains(types, "tui.watchStartedMsg") || contains(types, "tui.watchUnavailableMsg")
+	return contains(types, "tui.k8sWatchStartedMsg") || contains(types, "tui.k8sWatchUnavailableMsg")
 }
 
 // TestUpdateCategoryCore_NavigationClearsFilter asserts that navigating to a

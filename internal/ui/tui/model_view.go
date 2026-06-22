@@ -88,9 +88,9 @@ func (m *Model) statusView() string {
 	}
 
 	liveCell := ""
-	// k8s categories: live while their watch is established (m.watching).
+	// k8s categories: live while their watch is established (m.k8sWatching).
 	// repo categories: live while the always-on working-tree watch runs.
-	if m.watching || (m.repoWatching && !m.category.NeedsKubeConfig()) {
+	if m.k8sWatching || (m.repoWatching && !m.category.NeedsKubeConfig()) {
 		liveCell = m.liveStyle.Render("● LIVE")
 	}
 

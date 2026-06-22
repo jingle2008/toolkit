@@ -125,16 +125,16 @@ func loadPropertyRegionalOverridesCmd(ctx context.Context, ld loader.Composite, 
 	}
 }
 
-// startWatchCmd type-asserts the loader to loader.Watcher and starts the
-// watch for cat. On success it returns watchStartedMsg with the trigger
+// startK8sWatchCmd type-asserts the loader to loader.Watcher and starts the
+// watch for cat. On success it returns k8sWatchStartedMsg with the trigger
 // channel; if the loader doesn't support watching or setup fails, it
-// returns watchUnavailableMsg so the caller keeps the one-shot load
+// returns k8sWatchUnavailableMsg so the caller keeps the one-shot load
 // result with no live indicator.
-func startWatchCmd(ctx context.Context, ld loader.Composite, cat domain.Category, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+func startK8sWatchCmd(ctx context.Context, ld loader.Composite, cat domain.Category, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		w, ok := ld.(loader.Watcher)
 		if !ok {
-			return watchUnavailableMsg{Cat: cat, Gen: gen}
+			return k8sWatchUnavailableMsg{Cat: cat, Gen: gen}
 		}
 		var (
 			trigger <-chan struct{}
@@ -152,24 +152,24 @@ func startWatchCmd(ctx context.Context, ld loader.Composite, cat domain.Category
 		case domain.DedicatedAICluster:
 			trigger, err = w.WatchDedicatedAIClusters(ctx, kubeCfg, env)
 		default:
-			return watchUnavailableMsg{Cat: cat, Gen: gen}
+			return k8sWatchUnavailableMsg{Cat: cat, Gen: gen}
 		}
 		if err != nil {
-			return watchUnavailableMsg{Cat: cat, Gen: gen}
+			return k8sWatchUnavailableMsg{Cat: cat, Gen: gen}
 		}
-		return watchStartedMsg{Cat: cat, Trigger: trigger, Gen: gen}
+		return k8sWatchStartedMsg{Cat: cat, Trigger: trigger, Gen: gen}
 	}
 }
 
-// waitForTriggerCmd blocks (in the tea runtime's goroutine) on one value
-// from the trigger channel: a tick → watchTriggeredMsg, a close →
-// watchClosedMsg.
-func waitForTriggerCmd(cat domain.Category, trigger <-chan struct{}, gen int) tea.Cmd {
+// waitForK8sTriggerCmd blocks (in the tea runtime's goroutine) on one value
+// from the trigger channel: a tick → k8sWatchTriggeredMsg, a close →
+// k8sWatchClosedMsg.
+func waitForK8sTriggerCmd(cat domain.Category, trigger <-chan struct{}, gen int) tea.Cmd {
 	return func() tea.Msg {
 		if _, ok := <-trigger; !ok {
-			return watchClosedMsg{Cat: cat, Gen: gen}
+			return k8sWatchClosedMsg{Cat: cat, Gen: gen}
 		}
-		return watchTriggeredMsg{Cat: cat, Gen: gen}
+		return k8sWatchTriggeredMsg{Cat: cat, Gen: gen}
 	}
 }
 

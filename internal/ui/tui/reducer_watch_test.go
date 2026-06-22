@@ -17,8 +17,8 @@ func TestHandleWatchStarted_SetsWatchingAndArms(t *testing.T) {
 	m.category = domain.GPUNode
 	trig := make(chan struct{}, 1)
 
-	cmd := m.handleWatchStarted(watchStartedMsg{Cat: domain.GPUNode, Trigger: trig, Gen: 4})
-	assert.True(t, m.watching)
+	cmd := m.handleK8sWatchStarted(k8sWatchStartedMsg{Cat: domain.GPUNode, Trigger: trig, Gen: 4})
+	assert.True(t, m.k8sWatching)
 	require.NotNil(t, cmd, "must re-arm the trigger listener")
 }
 
@@ -28,8 +28,8 @@ func TestHandleWatchStarted_StaleIgnored(t *testing.T) {
 	m.gen = 5
 	trig := make(chan struct{}, 1)
 
-	cmd := m.handleWatchStarted(watchStartedMsg{Cat: domain.GPUNode, Trigger: trig, Gen: 2})
-	assert.False(t, m.watching, "stale watchStartedMsg must not enable watching")
+	cmd := m.handleK8sWatchStarted(k8sWatchStartedMsg{Cat: domain.GPUNode, Trigger: trig, Gen: 2})
+	assert.False(t, m.k8sWatching, "stale k8sWatchStartedMsg must not enable watching")
 	assert.Nil(t, cmd)
 }
 
@@ -41,9 +41,9 @@ func TestHandleWatchTriggered_ReloadsAndRearms(t *testing.T) {
 	m.newLoadContext()
 	// Store a trigger channel so waitForTrigger can re-arm
 	trig := make(chan struct{}, 1)
-	m.watchTrigger = trig
+	m.k8sWatchTrigger = trig
 
-	cmd := m.handleWatchTriggered(watchTriggeredMsg{Cat: domain.GPUNode, Gen: 3})
+	cmd := m.handleK8sWatchTriggered(k8sWatchTriggeredMsg{Cat: domain.GPUNode, Gen: 3})
 	require.NotNil(t, cmd, "trigger must produce reload + re-arm cmds")
 }
 
@@ -51,7 +51,7 @@ func TestHandleWatchTriggered_StaleIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 8
-	cmd := m.handleWatchTriggered(watchTriggeredMsg{Cat: domain.GPUNode, Gen: 1})
+	cmd := m.handleK8sWatchTriggered(k8sWatchTriggeredMsg{Cat: domain.GPUNode, Gen: 1})
 	assert.Nil(t, cmd)
 }
 
@@ -60,11 +60,11 @@ func TestHandleWatchClosed_ClearsWatchingAndReloads(t *testing.T) {
 	m := newTestModel(t)
 	m.gen = 2
 	m.category = domain.GPUNode
-	m.watching = true
+	m.k8sWatching = true
 	m.newLoadContext()
 
-	cmd := m.handleWatchClosed(watchClosedMsg{Cat: domain.GPUNode, Gen: 2})
-	assert.False(t, m.watching, "closed watch clears the live indicator")
+	cmd := m.handleK8sWatchClosed(k8sWatchClosedMsg{Cat: domain.GPUNode, Gen: 2})
+	assert.False(t, m.k8sWatching, "closed watch clears the live indicator")
 	require.NotNil(t, cmd, "closed watch issues one final reload")
 }
 
@@ -72,30 +72,30 @@ func TestHandleWatchUnavailable_ClearsWatchingWhenActive(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 2
-	m.watching = true
-	m.handleWatchUnavailable(watchUnavailableMsg{Cat: domain.GPUNode, Gen: 2})
-	assert.False(t, m.watching, "unavailable must clear the live indicator")
+	m.k8sWatching = true
+	m.handleK8sWatchUnavailable(k8sWatchUnavailableMsg{Cat: domain.GPUNode, Gen: 2})
+	assert.False(t, m.k8sWatching, "unavailable must clear the live indicator")
 }
 
 func TestHandleWatchClosed_StaleIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 6
-	m.watching = true
+	m.k8sWatching = true
 
-	cmd := m.handleWatchClosed(watchClosedMsg{Cat: domain.GPUNode, Gen: 3})
+	cmd := m.handleK8sWatchClosed(k8sWatchClosedMsg{Cat: domain.GPUNode, Gen: 3})
 	assert.Nil(t, cmd)
-	assert.True(t, m.watching, "stale watchClosedMsg must not clear the live indicator")
+	assert.True(t, m.k8sWatching, "stale k8sWatchClosedMsg must not clear the live indicator")
 }
 
 func TestHandleWatchUnavailable_StaleIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.gen = 7
-	m.watching = true
+	m.k8sWatching = true
 
-	m.handleWatchUnavailable(watchUnavailableMsg{Cat: domain.GPUNode, Gen: 4})
-	assert.True(t, m.watching, "stale watchUnavailableMsg must not clear the live indicator")
+	m.handleK8sWatchUnavailable(k8sWatchUnavailableMsg{Cat: domain.GPUNode, Gen: 4})
+	assert.True(t, m.k8sWatching, "stale k8sWatchUnavailableMsg must not clear the live indicator")
 }
 
 // A live-watch reload of the on-screen category preserves the active filter and

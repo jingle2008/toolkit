@@ -76,14 +76,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case detailContentRenderedMsg:
 		return m, m.handleDetailContentRenderedMsg(msg)
-	case watchStartedMsg:
-		return m, m.handleWatchStarted(msg)
-	case watchTriggeredMsg:
-		return m, m.handleWatchTriggered(msg)
-	case watchClosedMsg:
-		return m, m.handleWatchClosed(msg)
-	case watchUnavailableMsg:
-		m.handleWatchUnavailable(msg)
+	case k8sWatchStartedMsg:
+		return m, m.handleK8sWatchStarted(msg)
+	case k8sWatchTriggeredMsg:
+		return m, m.handleK8sWatchTriggered(msg)
+	case k8sWatchClosedMsg:
+		return m, m.handleK8sWatchClosed(msg)
+	case k8sWatchUnavailableMsg:
+		m.handleK8sWatchUnavailable(msg)
 		return m, nil
 	case repoWatchStartedMsg:
 		return m, m.handleRepoWatchStarted(msg)

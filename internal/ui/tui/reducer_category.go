@@ -40,8 +40,8 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		m.sortColumn = common.NameCol
 		m.sortAsc = true
 		m.showFaulty = false
-		m.watching = false
-		m.watchTrigger = nil
+		m.k8sWatching = false
+		m.k8sWatchTrigger = nil
 		// Filtering and cursor position are view state tied to the category
 		// being browsed. Clear the filter here, on navigation, so an in-place
 		// data refresh (refreshDisplay) can preserve it for the same category.
@@ -88,7 +88,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		gen := m.bumpGen()
 		cmd = fn(m, refresh, gen)
 		if m.category.NeedsKubeConfig() {
-			watchCmd = startWatchCmd(m.loadCtx, m.loader, m.category, m.kubeConfig, m.environment, gen)
+			watchCmd = startK8sWatchCmd(m.loadCtx, m.loader, m.category, m.kubeConfig, m.environment, gen)
 		}
 	} else if _, ok := tenancyOverrides[m.category]; ok {
 		gen := m.bumpGen()

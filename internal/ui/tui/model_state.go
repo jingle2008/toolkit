@@ -92,14 +92,14 @@ type Model struct {
 	// Message generation to guard against stale async responses
 	gen int
 
-	// watching is true while a live k8s watch is active for the current
+	// k8sWatching is true while a live k8s watch is active for the current
 	// category; drives the status-bar live indicator. Reset on every
 	// category change and cleared on watch fallback.
-	watching bool
+	k8sWatching bool
 
-	// watchTrigger is the active category's trigger channel; held so a
-	// watchTriggeredMsg can re-arm the listener on the same stream.
-	watchTrigger <-chan struct{}
+	// k8sWatchTrigger is the active category's trigger channel; held so a
+	// k8sWatchTriggeredMsg can re-arm the listener on the same stream.
+	k8sWatchTrigger <-chan struct{}
 
 	// repoTrigger is the live working-tree trigger channel; nil when the
 	// repo watch is unavailable. repoWatching is true while it is established.

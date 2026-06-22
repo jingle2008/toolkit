@@ -539,24 +539,24 @@ func (m *Model) reloadCategoryCmd(cat domain.Category, gen int) tea.Cmd {
 	}
 }
 
-// handleWatchStarted marks the category live and arms the trigger
+// handleK8sWatchStarted marks the category live and arms the trigger
 // listener. A stale gen (the user already navigated away) is ignored;
 // the watch goroutine is already being torn down via loadCtx cancel.
-func (m *Model) handleWatchStarted(msg watchStartedMsg) tea.Cmd {
+func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
 	if msg.Gen != m.gen {
 		m.logger.Debugw("watch started ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
 		return nil
 	}
-	m.watching = true
-	m.watchTrigger = msg.Trigger
+	m.k8sWatching = true
+	m.k8sWatchTrigger = msg.Trigger
 	m.logger.Infow("watch started", "category", msg.Cat, "gen", msg.Gen)
-	return waitForTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
+	return waitForK8sTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
 }
 
-// handleWatchTriggered re-runs the category loader and re-arms the
+// handleK8sWatchTriggered re-runs the category loader and re-arms the
 // listener so subsequent changes keep flowing. Stale-generation
 // messages (msg.Gen != m.gen) are ignored without side effects.
-func (m *Model) handleWatchTriggered(msg watchTriggeredMsg) tea.Cmd {
+func (m *Model) handleK8sWatchTriggered(msg k8sWatchTriggeredMsg) tea.Cmd {
 	if msg.Gen != m.gen {
 		m.logger.Debugw("watch triggered ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
 		return nil
@@ -566,17 +566,17 @@ func (m *Model) handleWatchTriggered(msg watchTriggeredMsg) tea.Cmd {
 	if reload == nil {
 		return nil
 	}
-	return tea.Batch(m.beginTask(), reload, m.waitForTrigger(msg.Cat, msg.Gen))
+	return tea.Batch(m.beginTask(), reload, m.waitForK8sTrigger(msg.Cat, msg.Gen))
 }
 
-// handleWatchClosed falls back to a final one-shot load and clears the
+// handleK8sWatchClosed falls back to a final one-shot load and clears the
 // live indicator (no auto-reconnect).
-func (m *Model) handleWatchClosed(msg watchClosedMsg) tea.Cmd {
+func (m *Model) handleK8sWatchClosed(msg k8sWatchClosedMsg) tea.Cmd {
 	if msg.Gen != m.gen {
 		m.logger.Debugw("watch closed ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
 		return nil
 	}
-	m.watching = false
+	m.k8sWatching = false
 	m.logger.Infow("watch closed — clearing live indicator (no reconnect)", "category", msg.Cat, "gen", msg.Gen)
 	reload := m.reloadCategoryCmd(msg.Cat, msg.Gen)
 	if reload == nil {
@@ -585,23 +585,23 @@ func (m *Model) handleWatchClosed(msg watchClosedMsg) tea.Cmd {
 	return tea.Batch(m.beginTask(), reload)
 }
 
-// handleWatchUnavailable records that no live watch is active. The
+// handleK8sWatchUnavailable records that no live watch is active. The
 // static load result remains on screen.
-func (m *Model) handleWatchUnavailable(msg watchUnavailableMsg) {
+func (m *Model) handleK8sWatchUnavailable(msg k8sWatchUnavailableMsg) {
 	if msg.Gen != m.gen {
 		m.logger.Debugw("watch unavailable ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gen)
 		return
 	}
-	m.watching = false
+	m.k8sWatching = false
 	m.logger.Infow("watch unavailable (no live watch)", "category", msg.Cat, "gen", msg.Gen)
 }
 
-// waitForTrigger re-arms the listener on the stored trigger channel.
-func (m *Model) waitForTrigger(cat domain.Category, gen int) tea.Cmd {
-	if m.watchTrigger == nil {
+// waitForK8sTrigger re-arms the listener on the stored trigger channel.
+func (m *Model) waitForK8sTrigger(cat domain.Category, gen int) tea.Cmd {
+	if m.k8sWatchTrigger == nil {
 		return nil
 	}
-	return waitForTriggerCmd(cat, m.watchTrigger, gen)
+	return waitForK8sTriggerCmd(cat, m.k8sWatchTrigger, gen)
 }
 
 func (m *Model) sortTableByColumn(column string) tea.Cmd {
