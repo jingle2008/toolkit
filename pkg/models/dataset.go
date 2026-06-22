@@ -152,3 +152,21 @@ func (d *Dataset) ResetRealmScopedFields() {
 	d.GPUWorkloadMap = nil
 	d.DedicatedAIClusterMap = nil
 }
+
+// MergeReloadedRepoData copies the repo-owned fields from fresh into d while
+// preserving the lazily-loaded, k8s-backed fields already present in d
+// (BaseModels, ImportedModelMap, GPUPools, GPUNodeMap, GPUWorkloadMap,
+// DedicatedAIClusterMap). It is used when a working-tree change triggers a
+// dataset reload: LoadDataset repopulates only the repo-owned fields, so a
+// wholesale assignment would wipe live k8s data. New repo-owned fields added
+// to Dataset are carried across automatically; only the small, stable set of
+// k8s fields is enumerated here.
+func (d *Dataset) MergeReloadedRepoData(fresh *Dataset) {
+	fresh.BaseModels = d.BaseModels
+	fresh.ImportedModelMap = d.ImportedModelMap
+	fresh.GPUPools = d.GPUPools
+	fresh.GPUNodeMap = d.GPUNodeMap
+	fresh.GPUWorkloadMap = d.GPUWorkloadMap
+	fresh.DedicatedAIClusterMap = d.DedicatedAIClusterMap
+	*d = *fresh
+}
