@@ -57,8 +57,10 @@ func formatLogEntry(e logging.Entry) string {
 	return b.String()
 }
 
-// renderLogEntries builds the overlay body: one color-coded, width-
-// truncated line per entry, oldest first.
+// renderLogEntries builds the overlay body: one color-coded entry per
+// record, oldest first. Entries wider than the view wrap (word-wrap, with
+// long unbroken tokens like OCIDs hard-broken) so the whole line is readable
+// rather than clipped with an ellipsis.
 func (m *Model) renderLogEntries(width int) string {
 	if m.logStore == nil {
 		return "(log store unavailable)"
@@ -69,7 +71,11 @@ func (m *Model) renderLogEntries(width int) string {
 	}
 	lines := make([]string, len(entries))
 	for i, e := range entries {
-		lines[i] = levelStyle(e.Level).Render(truncateString(formatLogEntry(e), width))
+		style := levelStyle(e.Level)
+		if width > 0 {
+			style = style.Width(width) // wrap to the view width
+		}
+		lines[i] = style.Render(formatLogEntry(e))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -94,11 +100,21 @@ func (m *Model) logView() string {
 		m.logViewport.GotoBottom()
 	}
 
+	// Highlighted, full-width title bar — also the visual separator between
+	// the header and the scrolling body. The bar color tracks state: teal
+	// while following the tail, amber when paused (scrolled up).
 	state := "following"
+	barColor := lipgloss.Color("24") // teal: live tail
 	if !m.logViewport.AtBottom() {
 		state = "PAUSED"
+		barColor = lipgloss.Color("130") // amber: paused
 	}
-	title := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("LOG — %s", state))
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("231")).
+		Background(barColor).
+		Width(width).
+		Render(fmt.Sprintf("LOG — %s", state))
 	hint := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).
 		Render("↑↓/pgup/pgdn scroll · end follow · home top · ` close")
 	return lipgloss.JoinVertical(lipgloss.Left, title, m.logViewport.View(), hint)

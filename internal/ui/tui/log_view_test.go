@@ -48,6 +48,22 @@ func TestRenderLogEntries_OrdersOldestToNewest(t *testing.T) {
 	assert.Contains(t, out, "ERROR")
 }
 
+// A log entry wider than the view wraps to multiple lines instead of being
+// truncated with an ellipsis — the whole message stays readable.
+func TestRenderLogEntries_WrapsInsteadOfTruncating(t *testing.T) {
+	t.Parallel()
+	ring := logging.NewRingSink(4)
+	long := strings.Repeat("x", 100) // one unbroken token, no color (Info)
+	ring.Infow(long)
+	m := &Model{logStore: ring}
+
+	out := m.renderLogEntries(40)
+
+	assert.NotContains(t, out, "…", "entries should wrap, not truncate with an ellipsis")
+	assert.Contains(t, out, "\n", "a 100-char entry must wrap to multiple lines at width 40")
+	assert.GreaterOrEqual(t, strings.Count(out, "x"), 100, "the full message must survive wrapping")
+}
+
 func newLogModel(t *testing.T, ring *logging.RingSink) *Model {
 	t.Helper()
 	m, err := NewModel(
