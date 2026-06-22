@@ -4,8 +4,10 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // confirmTier classifies a destructive action by blast radius, which
@@ -63,6 +65,70 @@ func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
 		return s == "Y", s == "y" || s == "n" || s == "N" || s == "esc"
 	default: // tierRecoverable
 		return s == "y" || s == "Y", s == "n" || s == "N" || s == "esc"
+	}
+}
+
+// confirmDelete builds the irreversible overlay for the Delete key. The
+// action label and warning depend on the category: a DAC is deleted, a GPU
+// node's backing instance is terminated. run re-resolves nothing extra —
+// deleteItem already re-finds its target by key at execution time.
+func (m *Model) confirmDelete(itemKey models.ItemKey) confirmOverlay {
+	c := confirmOverlay{
+		tier:   tierIrreversible,
+		target: itemKeyString(itemKey),
+		run:    func() tea.Cmd { return m.deleteItem(itemKey) },
+	}
+	switch m.category {
+	case domain.GPUNode:
+		c.action, c.kind = "Terminate", "node"
+		c.warning = "Boot volume destroyed. Cannot undo."
+	default: // DedicatedAICluster
+		c.action, c.kind = "Delete", "DAC"
+		c.warning = "This is irreversible."
+	}
+	return c
+}
+
+// confirmCordon builds the recoverable overlay for the cordon toggle. The
+// run thunk re-resolves the item by key at confirm time so a background
+// reload cannot leave it acting on a stale row.
+func (m *Model) confirmCordon(itemKey models.ItemKey) confirmOverlay {
+	return confirmOverlay{
+		tier:   tierRecoverable,
+		action: "Toggle cordon",
+		kind:   "node",
+		target: itemKeyString(itemKey),
+		run:    func() tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey) },
+	}
+}
+
+func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
+	return confirmOverlay{
+		tier:   tierRecoverable,
+		action: "Drain",
+		kind:   "node",
+		target: itemKeyString(itemKey),
+		run:    func() tea.Cmd { return m.drainNode(findItem(m.dataset, m.category, itemKey), itemKey) },
+	}
+}
+
+func (m *Model) confirmReboot(itemKey models.ItemKey) confirmOverlay {
+	return confirmOverlay{
+		tier:   tierRecoverable,
+		action: "Reboot",
+		kind:   "node",
+		target: itemKeyString(itemKey),
+		run:    func() tea.Cmd { return m.rebootNode(findItem(m.dataset, m.category, itemKey), itemKey) },
+	}
+}
+
+func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
+	return confirmOverlay{
+		tier:   tierRecoverable,
+		action: "Scale up",
+		kind:   "GPU pool",
+		target: itemKeyString(itemKey),
+		run:    func() tea.Cmd { return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey) },
 	}
 }
 

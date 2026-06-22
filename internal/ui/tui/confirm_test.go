@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
-
-	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
 func TestConfirmView_String(t *testing.T) {
@@ -146,4 +146,52 @@ func TestUpdateConfirmView_CtrlCQuits(t *testing.T) {
 	armConfirm(m, tierIrreversible)
 	_, cmd := m.updateConfirmView(tea.KeyMsg{Type: tea.KeyCtrlC})
 	require.NotNil(t, cmd, "ctrl+c must return a command (tea.Quit)")
+}
+
+func TestConfirmDelete_TierByCategory(t *testing.T) {
+	t.Parallel()
+	key := models.ScopedItemKey{Scope: "tenant1", Name: "dac-1"}
+
+	m := newConfirmTestModel(t)
+	m.category = domain.DedicatedAICluster
+	dac := m.confirmDelete(key)
+	assert.Equal(t, tierIrreversible, dac.tier)
+	assert.Equal(t, "Delete", dac.action)
+	assert.Equal(t, "DAC", dac.kind)
+	assert.Equal(t, itemKeyString(key), dac.target)
+	assert.NotEmpty(t, dac.warning)
+	assert.NotNil(t, dac.run)
+
+	m.category = domain.GPUNode
+	node := m.confirmDelete(key)
+	assert.Equal(t, tierIrreversible, node.tier)
+	assert.Equal(t, "Terminate", node.action)
+	assert.Equal(t, "node", node.kind)
+}
+
+func TestConfirmRecoverableBuilders(t *testing.T) {
+	t.Parallel()
+	key := models.ScopedItemKey{Scope: "pool1", Name: "gpu-1"}
+	m := newConfirmTestModel(t)
+
+	for _, tc := range []struct {
+		name   string
+		got    confirmOverlay
+		action string
+		kind   string
+	}{
+		{"cordon", m.confirmCordon(key), "Toggle cordon", "node"},
+		{"drain", m.confirmDrain(key), "Drain", "node"},
+		{"reboot", m.confirmReboot(key), "Reboot", "node"},
+		{"scale", m.confirmScale(key), "Scale up", "GPU pool"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tierRecoverable, tc.got.tier)
+			assert.Equal(t, tc.action, tc.got.action)
+			assert.Equal(t, tc.kind, tc.got.kind)
+			assert.Empty(t, tc.got.warning, "recoverable actions carry no warning line")
+			assert.NotNil(t, tc.got.run)
+		})
+	}
 }
