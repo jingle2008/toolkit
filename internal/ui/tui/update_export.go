@@ -68,7 +68,7 @@ func (m *Model) exportView() string {
 	s.WriteString("\n\nPick an export path:\n\n")
 	s.WriteString(m.dirPicker.View() + "\n")
 	s.WriteString(m.exportHelpView())
-	return m.helpBorder.Width(m.viewWidth * 4 / 5).Render(s.String())
+	return m.theme.HelpBorder.Width(m.viewWidth * 4 / 5).Render(s.String())
 }
 
 func (m *Model) exportHelpView() string {

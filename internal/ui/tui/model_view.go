@@ -30,9 +30,9 @@ func (m *Model) infoView() string {
 	}
 
 	content := lipgloss.JoinHorizontal(lipgloss.Top,
-		m.infoKeyStyle.Render(strings.Join(keys, "\n")),
+		m.theme.InfoKey.Render(strings.Join(keys, "\n")),
 		" ",
-		m.infoValueStyle.Render(strings.Join(values, "\n")),
+		m.theme.InfoValue.Render(strings.Join(values, "\n")),
 	)
 
 	return content
@@ -61,7 +61,7 @@ func (m *Model) statusView() string {
 
 	maxCtx := m.viewWidth / 3
 	ctx := truncateString(m.contextString(), maxCtx)
-	contextCell := m.contextStyle.Render(ctx)
+	contextCell := m.theme.Context.Render(ctx)
 
 	statsText := strings.Builder{}
 	if m.stats != nil {
@@ -80,7 +80,7 @@ func (m *Model) statusView() string {
 		}
 	}
 	statsText.WriteString(fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
-	statsCell := m.statsStyle.Render(statsText.String())
+	statsCell := m.theme.Stats.Render(statsText.String())
 
 	loadingCell := ""
 	if m.pendingTasks > 0 {
@@ -91,7 +91,7 @@ func (m *Model) statusView() string {
 	// k8s categories: live while their watch is established (m.k8sWatching).
 	// repo categories: live while the always-on working-tree watch runs.
 	if m.k8sWatching || (m.repoWatching && !m.category.NeedsKubeConfig()) {
-		liveCell = m.liveStyle.Render("● LIVE")
+		liveCell = m.theme.Live.Render("● LIVE")
 	}
 
 	// Render-time width depends on the surrounding cells, so compute
@@ -179,7 +179,7 @@ func (m *Model) renderActiveView() string {
 	case common.HelpView:
 		return m.centered(m.fullHelpView())
 	case common.ListView:
-		return m.frame(m.baseStyle.Render(m.table.View()))
+		return m.frame(m.theme.Base.Render(m.table.View()))
 	case common.DetailsView:
 		return m.frame(m.viewport.View())
 	case common.ExportView:
@@ -201,7 +201,7 @@ func (m *Model) centered(msg string) string {
 // frame builds the common header + status frame and injects main.
 func (m *Model) frame(main string) string {
 	helpView := m.help.View(m.keys)
-	infoView := m.infoValueStyle.Render(m.infoView())
+	infoView := m.theme.InfoValue.Render(m.infoView())
 	header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
 	status := m.statusView()
 	return lipgloss.JoinVertical(lipgloss.Left, header, status, main)
@@ -217,14 +217,14 @@ func (m *Model) fullHelpView() string {
 
 	renderRow := func(k, d string) {
 		fmt.Fprintf(&b, "  %s%s\n",
-			m.helpKey.Render(fmt.Sprintf("%-*s", keyCol, k)),
-			m.helpDesc.Render(d))
+			m.theme.HelpKey.Render(fmt.Sprintf("%-*s", keyCol, k)),
+			m.theme.HelpDesc.Render(d))
 	}
 	renderSection := func(title string, bind []key.Binding) {
 		if len(bind) == 0 {
 			return
 		}
-		fmt.Fprintln(&b, m.helpHeader.Render(title))
+		fmt.Fprintln(&b, m.theme.HelpHeader.Render(title))
 		for _, bb := range bind {
 			h := bb.Help()
 			if h.Key == "" && h.Desc == "" {
@@ -245,7 +245,7 @@ func (m *Model) fullHelpView() string {
 	case common.LoadingView, common.HelpView, common.ExportView, common.EditTenantView:
 		// No additional sections for these view modes
 	}
-	return m.helpBorder.Width(m.viewWidth / 2).Render(b.String())
+	return m.theme.HelpBorder.Width(m.viewWidth / 2).Render(b.String())
 }
 
 func (m *Model) tableBinding() []key.Binding {

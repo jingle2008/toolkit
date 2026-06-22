@@ -87,9 +87,9 @@ func TestTruncateString(t *testing.T) {
 func TestStatusView(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
-	m.contextStyle = lipgloss.NewStyle()
-	m.statsStyle = lipgloss.NewStyle()
-	m.statusText = lipgloss.NewStyle()
+	m.theme.Context = lipgloss.NewStyle()
+	m.theme.Stats = lipgloss.NewStyle()
+	m.theme.StatusText = lipgloss.NewStyle()
 	m.textInput.SetValue("input")
 	out := m.statusView()
 	assert.Contains(t, out, "input")
@@ -154,7 +154,7 @@ func TestView_LoadingView(t *testing.T) {
 func TestStatusView_LoadingNugget(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
-	m.statsStyle = lipgloss.NewStyle()
+	m.theme.Stats = lipgloss.NewStyle()
 	m.pendingTasks = 1
 	out := m.statusView()
 	// The stopwatch renders elapsed time; pendingTasks>0 means the

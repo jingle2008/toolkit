@@ -66,22 +66,10 @@ type Model struct {
 	help           *help.Model
 	kubeConfig     string
 	version        string
-	baseStyle      lipgloss.Style
-	statusNugget   lipgloss.Style
-	statusBarStyle lipgloss.Style
-	contextStyle   lipgloss.Style
-	statsStyle     lipgloss.Style
-	liveStyle      lipgloss.Style
-	statusText     lipgloss.Style
-	infoKeyStyle   lipgloss.Style
-	infoValueStyle lipgloss.Style
-	stats          tableStats
-
-	// Help view styles
-	helpBorder lipgloss.Style
-	helpHeader lipgloss.Style
-	helpKey    lipgloss.Style
-	helpDesc   lipgloss.Style
+	// theme holds the app-level lipgloss styles (status bar, info pane,
+	// help view). Set once via setStyles; see the Styles struct in styles.go.
+	theme Styles
+	stats tableStats
 
 	// Spinner for loading screen
 	loadingSpinner *spinner.Model
@@ -179,23 +167,9 @@ func initStyles(m *Model) {
 	setStyles(m, DefaultStyles())
 }
 
-// setStyles applies a Styles set to the model's style fields.
+// setStyles applies a Styles set to the model's theme.
 func setStyles(m *Model, s Styles) {
-	m.baseStyle = s.Base
-	m.statusNugget = s.StatusNugget
-	m.statusBarStyle = s.StatusBar
-	m.contextStyle = s.Context
-	m.statsStyle = s.Stats
-	m.liveStyle = s.Live
-	m.statusText = s.StatusText
-	m.infoKeyStyle = s.InfoKey
-	m.infoValueStyle = s.InfoValue
-
-	// Help view styles
-	m.helpBorder = s.HelpBorder
-	m.helpHeader = s.HelpHeader
-	m.helpKey = s.HelpKey
-	m.helpDesc = s.HelpDesc
+	m.theme = s
 }
 
 // applyOptions applies all ModelOption functions to the model.

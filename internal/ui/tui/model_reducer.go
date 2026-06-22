@@ -302,7 +302,7 @@ func (m *Model) updateLayout(w, h int) {
 	if m.viewMode == common.DetailsView {
 		borderStyle = m.viewport.Style.GetBorderStyle()
 	} else {
-		borderStyle = m.baseStyle.GetBorderStyle()
+		borderStyle = m.theme.Base.GetBorderStyle()
 	}
 	borderWidth := borderStyle.GetLeftSize() + borderStyle.GetRightSize()
 	borderHeight := borderStyle.GetTopSize() + borderStyle.GetBottomSize()

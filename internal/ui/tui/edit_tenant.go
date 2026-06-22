@@ -381,7 +381,7 @@ func (m *Model) editTenantView() string {
 		"",
 		m.help.ShortHelpView([]key.Binding{keys.Confirm, keys.OpenPortal, keys.Back}),
 	}
-	return m.helpBorder.Width(m.viewWidth * 3 / 5).Render(strings.Join(lines, "\n"))
+	return m.theme.HelpBorder.Width(m.viewWidth * 3 / 5).Render(strings.Join(lines, "\n"))
 }
 
 // metadataPath returns the configured metadata file path for display,
