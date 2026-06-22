@@ -55,15 +55,15 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.Refresh):
 		return m.handleRefresh()
 	case key.Matches(msg, keys.ToggleCordon):
-		return m.cordonNode(item, itemKey)
+		return m.requestConfirm(m.confirmCordon(itemKey))
 	case key.Matches(msg, keys.DrainNode):
-		return m.drainNode(item, itemKey)
+		return m.requestConfirm(m.confirmDrain(itemKey))
 	case key.Matches(msg, keys.Delete):
-		return m.deleteItem(itemKey)
+		return m.requestConfirm(m.confirmDelete(itemKey))
 	case key.Matches(msg, keys.RebootNode):
-		return m.rebootNode(item, itemKey)
+		return m.requestConfirm(m.confirmReboot(itemKey))
 	case key.Matches(msg, keys.ScaleUp):
-		return m.scaleUpGPUPool(item, itemKey)
+		return m.requestConfirm(m.confirmScale(itemKey))
 	}
 	return nil
 }
