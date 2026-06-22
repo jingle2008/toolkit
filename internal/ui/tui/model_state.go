@@ -113,6 +113,7 @@ type Model struct {
 	initialFilter string
 	viewMode      common.ViewMode
 	lastViewMode  common.ViewMode // for toggling help view
+	confirm       confirmOverlay  // destructive-action confirmation modal state
 	selectedKey   models.ItemKey
 	viewport      *viewport.Model
 	renderer      view.Renderer

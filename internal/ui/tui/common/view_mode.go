@@ -18,6 +18,8 @@ const (
 	EditTenantView
 	// LogView is the full-screen log overlay.
 	LogView
+	// ConfirmView is the modal that gates destructive actions.
+	ConfirmView
 )
 
 // String returns the string representation of the ViewMode.
@@ -37,6 +39,8 @@ func (v ViewMode) String() string {
 		return "EditTenant"
 	case LogView:
 		return "Log"
+	case ConfirmView:
+		return "Confirm"
 	default:
 		return "Unknown"
 	}
