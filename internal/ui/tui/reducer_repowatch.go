@@ -39,8 +39,11 @@ func (m *Model) handleRepoWatchClosed() {
 }
 
 // handleDatasetReloaded merges the freshly loaded repo-owned data into the
-// in-memory dataset (preserving live k8s fields) and refreshes the view,
-// preserving the active filter and selected-row cursor.
+// in-memory dataset (preserving live k8s fields). When the on-screen category
+// is repo-backed it refreshes the view, preserving the active filter and
+// selected-row cursor; when a k8s-backed category is showing, the merge cannot
+// have changed its visible rows, so the recompute is skipped (the merged data
+// is still cached for when the user navigates to a repo category).
 func (m *Model) handleDatasetReloaded(msg datasetReloadedMsg) {
 	if msg.Dataset == nil {
 		return
@@ -50,7 +53,9 @@ func (m *Model) handleDatasetReloaded(msg datasetReloadedMsg) {
 	} else {
 		m.dataset.MergeReloadedRepoData(msg.Dataset)
 	}
-	m.refreshDisplay()
+	if !m.category.NeedsKubeConfig() {
+		m.refreshDisplay()
+	}
 }
 
 // handleGPUPoolsReloaded refreshes the cached GPU pool list and re-runs the

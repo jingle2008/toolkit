@@ -50,6 +50,25 @@ func TestHandleDatasetReloaded_MergesPreservingK8s(t *testing.T) {
 	require.Len(t, m.dataset.BaseModels, 1, "k8s field preserved")
 }
 
+// On a k8s-backed category the visible table is not recomputed (the merge
+// cannot have changed its rows), but the reloaded repo data must still be
+// merged into the cached dataset so it is fresh when the user navigates to a
+// repo category.
+func TestHandleDatasetReloaded_CachesMergeOnK8sCategory(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.BaseModel // k8s-backed: NeedsKubeConfig() == true
+	m.dataset = &models.Dataset{
+		Tenants:    []models.Tenant{{Name: "old"}},
+		BaseModels: []models.BaseModel{{Name: "bm1"}},
+	}
+	m.handleDatasetReloaded(datasetReloadedMsg{Dataset: &models.Dataset{
+		Tenants: []models.Tenant{{Name: "new"}},
+	}})
+	require.Equal(t, "new", m.dataset.Tenants[0].Name, "merge still applied while on a k8s category")
+	require.Len(t, m.dataset.BaseModels, 1, "k8s field preserved")
+}
+
 func TestHandleDatasetReloaded_NilDatasetIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
