@@ -33,6 +33,13 @@ var DebounceWindow = 5 * time.Second
 //
 // If any opener returns an error, all already-opened watchers are
 // stopped and the error is returned with no channel.
+// stopAll stops every watcher in the slice.
+func stopAll(watchers []watch.Interface) {
+	for _, w := range watchers {
+		w.Stop()
+	}
+}
+
 func watchTrigger(
 	ctx context.Context,
 	window time.Duration,
@@ -42,9 +49,7 @@ func watchTrigger(
 	for _, open := range openers {
 		w, err := open(ctx)
 		if err != nil {
-			for _, prev := range watchers {
-				prev.Stop()
-			}
+			stopAll(watchers)
 			return nil, err
 		}
 		watchers = append(watchers, w)
@@ -131,9 +136,7 @@ func stopWatchers(
 	case <-ctx.Done():
 	case <-done:
 	}
-	for _, w := range watchers {
-		w.Stop()
-	}
+	stopAll(watchers)
 	wg.Wait()
 	close(stopped)
 }
