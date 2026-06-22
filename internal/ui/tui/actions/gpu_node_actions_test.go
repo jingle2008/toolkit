@@ -250,5 +250,36 @@ func TestPopulateGPUPools(t *testing.T) {
 	require.Contains(t, err.Error(), "reqid")
 }
 
+// Finding #5: instance-pool summaries with nil DisplayName/Id/Size must be
+// skipped rather than panic during enrichment; valid summaries still apply.
+func TestPopulateGPUPools_NilSummaryFields(t *testing.T) {
+	orig := newComputeMgmtClient
+	defer func() { newComputeMgmtClient = orig }()
+	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
+		return &fakeMgmtClient{
+			ListInstancePoolsFunc: func(_ context.Context, _ core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error) {
+				return core.ListInstancePoolsResponse{
+					Items: []core.InstancePoolSummary{
+						{DisplayName: nil, Id: strPtr("idnil"), Size: intPtr(1), LifecycleState: "RUNNING"},
+						{DisplayName: strPtr("p1"), Id: nil, Size: nil, LifecycleState: "RUNNING"},
+						{DisplayName: strPtr("p2"), Id: strPtr("id2"), Size: intPtr(4), LifecycleState: "RUNNING"},
+					},
+				}, nil
+			},
+		}, nil
+	}
+
+	pools := []models.GPUPool{{Name: "p1"}, {Name: "p2"}}
+	err := PopulateGPUPools(context.Background(), pools, makeEnv(), "comp")
+	require.NoError(t, err)
+
+	// p1's summary had nil Id/Size → skipped, stays NONEXIST.
+	require.Equal(t, "NONEXIST", pools[0].Status)
+	// p2's summary was complete → enriched.
+	require.Equal(t, "id2", pools[1].ID)
+	require.Equal(t, 4, pools[1].ActualSize)
+	require.Equal(t, "RUNNING", pools[1].Status)
+}
+
 func strPtr(s string) *string { return &s }
 func intPtr(i int) *int       { return &i }

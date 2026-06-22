@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,10 @@ type fakeGenAI struct {
 	DeleteDedicatedResp       generativeai.DeleteDedicatedAiClusterResponse
 	GetWorkRequestResp        generativeai.GetWorkRequestResponse
 	Err                       error
+	// DeleteDedicatedErr, when set, fails only the DeleteDedicatedAiCluster
+	// call (Err fails every call), letting tests exercise the delete path
+	// after Get/ListEndpoints succeed.
+	DeleteDedicatedErr error
 }
 
 func TestDeleteDedicatedAICluster_Success(t *testing.T) {
@@ -82,6 +87,9 @@ func (f *fakeGenAI) GetDedicatedAiCluster(_ context.Context, _ generativeai.GetD
 }
 
 func (f *fakeGenAI) DeleteDedicatedAiCluster(_ context.Context, _ generativeai.DeleteDedicatedAiClusterRequest) (generativeai.DeleteDedicatedAiClusterResponse, error) {
+	if f.DeleteDedicatedErr != nil {
+		return f.DeleteDedicatedResp, f.DeleteDedicatedErr
+	}
 	return f.DeleteDedicatedResp, f.Err
 }
 
@@ -113,4 +121,91 @@ func TestDeleteDedicatedAICluster_ClientError(t *testing.T) {
 	err := DeleteDedicatedAICluster(context.Background(), dac, env, logger)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create GenerativeAI client")
+}
+
+// validClusterFake returns a fake whose Get/ListEndpoints succeed, so tests can
+// drive the delete path. ListEndpoints is empty by default (no endpoint work).
+func validClusterFake() *fakeGenAI {
+	clusterID := "ocid1.dedicatedaicluster.oc1..example"
+	return &fakeGenAI{
+		GetDedicatedAiClusterResp: generativeai.GetDedicatedAiClusterResponse{
+			DedicatedAiCluster: generativeai.DedicatedAiCluster{
+				Id:            &clusterID,
+				CompartmentId: func() *string { s := "compartment"; return &s }(),
+				DisplayName:   func() *string { s := "test-dac"; return &s }(),
+			},
+		},
+	}
+}
+
+// Finding #2: a delete failure with a partial (nil OpcRequestId) response must
+// surface a controlled error, not panic dereferencing the nil pointer.
+func TestDeleteDedicatedAICluster_DeleteError_NilOpcRequestId(t *testing.T) {
+	origNewGenAIClient := newGenAIClient
+	defer func() { newGenAIClient = origNewGenAIClient }()
+
+	fakeClient := validClusterFake()
+	fakeClient.DeleteDedicatedErr = errors.New("boom")
+	// DeleteDedicatedResp left zero-valued → OpcRequestId is nil.
+	newGenAIClient = func(_ models.Environment) (genAI, error) { return fakeClient, nil }
+
+	dac := &models.DedicatedAICluster{}
+	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
+	err := DeleteDedicatedAICluster(context.Background(), dac, env, &fakeLogger{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to delete DedicatedAICluster")
+	assert.Contains(t, err.Error(), "boom")
+}
+
+// Finding #2: a delete response missing OpcWorkRequestId must yield a controlled
+// error immediately, not deref nil in waitForWorkRequest nor poll until timeout.
+func TestDeleteDedicatedAICluster_NilWorkRequestID(t *testing.T) {
+	origNewGenAIClient := newGenAIClient
+	defer func() { newGenAIClient = origNewGenAIClient }()
+
+	fakeClient := validClusterFake()
+	opcReqID := "req-123"
+	fakeClient.DeleteDedicatedResp = generativeai.DeleteDedicatedAiClusterResponse{
+		OpcRequestId: &opcReqID, // OpcWorkRequestId intentionally nil
+	}
+	newGenAIClient = func(_ models.Environment) (genAI, error) { return fakeClient, nil }
+
+	// Bound the call so a regression (polling a nil work request forever) fails
+	// fast as a timeout rather than hanging the suite.
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	dac := &models.DedicatedAICluster{}
+	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
+	err := DeleteDedicatedAICluster(ctx, dac, env, &fakeLogger{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "work request id is nil")
+}
+
+// Finding #3: an endpoint summary with a nil DedicatedAiClusterId must be
+// skipped, not panic the whole deletion before the cluster delete runs.
+func TestDeleteDedicatedAICluster_NilEndpointClusterID_Skipped(t *testing.T) {
+	origNewGenAIClient := newGenAIClient
+	defer func() { newGenAIClient = origNewGenAIClient }()
+
+	fakeClient := validClusterFake()
+	epID := "ocid1.endpoint.oc1..ep"
+	fakeClient.ListEndpointsResp = generativeai.ListEndpointsResponse{
+		EndpointCollection: generativeai.EndpointCollection{
+			Items: []generativeai.EndpointSummary{
+				{Id: &epID, DedicatedAiClusterId: nil}, // malformed: must be skipped
+			},
+		},
+	}
+	// Stop at the cluster-delete call to prove we got past the endpoint loop.
+	opcReqID := "req-123"
+	fakeClient.DeleteDedicatedResp = generativeai.DeleteDedicatedAiClusterResponse{OpcRequestId: &opcReqID}
+	fakeClient.DeleteDedicatedErr = errors.New("reached-delete")
+	newGenAIClient = func(_ models.Environment) (genAI, error) { return fakeClient, nil }
+
+	dac := &models.DedicatedAICluster{}
+	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
+	err := DeleteDedicatedAICluster(context.Background(), dac, env, &fakeLogger{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "reached-delete")
 }

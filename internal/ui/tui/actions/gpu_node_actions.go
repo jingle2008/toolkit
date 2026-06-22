@@ -147,11 +147,8 @@ func PopulateGPUPools(
 	}
 	resp, err := mgmtClient.ListInstancePools(ctx, req)
 	if err != nil {
-		reqID := ""
-		if resp.OpcRequestId != nil {
-			reqID = *resp.OpcRequestId
-		}
-		return fmt.Errorf("failed to list instance pools: %w, request id: %s", err, reqID)
+		return fmt.Errorf("failed to list instance pools: %w, request id: %s",
+			err, derefOr(resp.OpcRequestId, ""))
 	}
 
 	gpuPoolMap := make(map[string]*models.GPUPool)
@@ -160,12 +157,22 @@ func PopulateGPUPools(
 		gpuPools[i].Status = "NONEXIST"
 	}
 
-	for _, summary := range resp.Items {
+	applyInstancePoolSummaries(gpuPoolMap, resp.Items)
+	return nil
+}
+
+// applyInstancePoolSummaries enriches matching pools from instance-pool
+// summaries, skipping any summary missing a field it reads so a partial OCI
+// response can never panic enrichment.
+func applyInstancePoolSummaries(gpuPoolMap map[string]*models.GPUPool, summaries []core.InstancePoolSummary) {
+	for _, summary := range summaries {
+		if summary.DisplayName == nil || summary.Id == nil || summary.Size == nil {
+			continue
+		}
 		if pool, ok := gpuPoolMap[*summary.DisplayName]; ok {
 			pool.ID = *summary.Id
 			pool.ActualSize = *summary.Size
 			pool.Status = string(summary.LifecycleState)
 		}
 	}
-	return nil
 }

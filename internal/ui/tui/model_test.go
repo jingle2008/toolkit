@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -455,6 +456,54 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	// getCurrentItem should return the pointer to bm
 	got := m.selectedItem()
 	require.Equal(t, &bm, got)
+}
+
+// Finding #4 / category-drift guard: every kube-backed category must be in
+// lazyLoadedCategories. The base LoadDataset carries no cluster data, so a
+// kube-backed category absent from this set never loads on direct
+// `toolkit -c <cat>` startup (no navigation event fires to trigger it).
+func TestLazyLoadedCategories_CoversKubeBacked(t *testing.T) {
+	t.Parallel()
+	for _, c := range domain.Categories {
+		if !c.NeedsKubeConfig() {
+			continue
+		}
+		_, ok := lazyLoadedCategories[c]
+		assert.Truef(t, ok, "kube-backed category %s must be in lazyLoadedCategories so it loads on direct startup", c)
+	}
+}
+
+// Finding #6: DAC deletion is a multi-minute workflow with its own internal
+// timeout. It must use longOpCtx (no 30s cap), not opCtx, or the parent ctx
+// cancels mid-workflow after endpoint deletion succeeds but before the cluster
+// delete/polling finishes.
+func TestLongOpCtx_NoShortCapAndCancelsOnShutdown(t *testing.T) {
+	t.Parallel()
+	parent, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m, err := NewModel(
+		WithRepoPath("repo"),
+		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
+		WithLoader(fakeLoader{}),
+		WithLogger(logging.NewNoOpLogger()),
+		WithContext(parent),
+	)
+	require.NoError(t, err)
+
+	longCtx := m.longOpCtx()
+	_, hasDeadline := longCtx.Deadline()
+	assert.False(t, hasDeadline, "long-op ctx must not impose the 30s one-shot deadline")
+
+	// Sanity: opCtx still caps one-shot actions (cordon/drain/scale) at ~30s.
+	opCtx, opCancel := m.opCtx()
+	defer opCancel()
+	dl, ok := opCtx.Deadline()
+	require.True(t, ok)
+	assert.WithinDuration(t, time.Now().Add(30*time.Second), dl, 2*time.Second)
+
+	// But long-op ctx still cancels on app shutdown.
+	cancel()
+	assert.Error(t, longCtx.Err())
 }
 
 func TestModel_Init(t *testing.T) {

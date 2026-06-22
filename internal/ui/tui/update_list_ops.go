@@ -41,8 +41,10 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	dac.Status = "Deleting"
 	m.updateRows(false)
 	return func() tea.Msg {
-		ctx, cancel := m.opCtx()
-		defer cancel()
+		// DAC deletion is a multi-minute workflow with its own internal
+		// timeout; use longOpCtx so the 30s one-shot cap doesn't cancel it
+		// after endpoint deletion but before the cluster delete completes.
+		ctx := m.longOpCtx()
 		if err := actions.DeleteDedicatedAICluster(ctx, dac, m.environment, m.logger); err != nil {
 			return deleteErrMsg{
 				err:       err,

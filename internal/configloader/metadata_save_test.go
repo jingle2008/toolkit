@@ -1,6 +1,7 @@
 package configloader
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -40,6 +41,33 @@ func TestSaveMetadata_JSONRoundTrip(t *testing.T) {
 	require.Len(t, got.Tenants, 1)
 	require.NotNil(t, got.Tenants[0].Name)
 	require.Equal(t, "beta", *got.Tenants[0].Name)
+}
+
+// Finding #8: SaveMetadata must be atomic — if the new content cannot be
+// written, the existing file is left intact rather than truncated/corrupted.
+func TestSaveMetadata_AtomicPreservesOnWriteFailure(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("read-only directory permissions are not enforced for root")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "metadata.json")
+	orig := &models.Metadata{Tenants: []models.TenantMetadata{{ID: "id-orig"}}}
+	require.NoError(t, SaveMetadata(path, orig))
+
+	// Make the directory unwritable: a new (temp) file cannot be created, so an
+	// atomic save must fail without disturbing the already-written file.
+	require.NoError(t, os.Chmod(dir, 0o500))       //nolint:gosec // G302: read-only dir is the point of the test; dirs need the exec bit
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) }) //nolint:gosec // G302: restoring dir perms so TempDir cleanup can remove it
+
+	updated := &models.Metadata{Tenants: []models.TenantMetadata{{ID: "id-updated"}}}
+	require.Error(t, SaveMetadata(path, updated))
+
+	// Original content must survive untouched.
+	got, err := LoadMetadata(path)
+	require.NoError(t, err)
+	require.Len(t, got.Tenants, 1)
+	require.Equal(t, "id-orig", got.Tenants[0].ID)
 }
 
 func TestSaveMetadata_UnsupportedExt(t *testing.T) {

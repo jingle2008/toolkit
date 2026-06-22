@@ -57,6 +57,7 @@ var lazyLoadedCategories = map[domain.Category]struct{}{
 	domain.ImportedModel:      {},
 	domain.GPUPool:            {},
 	domain.GPUNode:            {},
+	domain.GPUWorkload:        {},
 	domain.DedicatedAICluster: {},
 }
 

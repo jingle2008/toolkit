@@ -5,6 +5,7 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,6 +28,15 @@ type genAI interface {
 
 var newGenAIClient = func(env models.Environment) (genAI, error) {
 	return oci.NewGenAIClient(env)
+}
+
+// derefOr returns *p when p is non-nil, otherwise fallback. It guards against
+// partial OCI SDK responses that leave pointer fields nil.
+func derefOr[T any](p *T, fallback T) T {
+	if p == nil {
+		return fallback
+	}
+	return *p
 }
 
 /*
@@ -61,7 +71,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 	delResp, err := client.DeleteDedicatedAiCluster(ctx, delReq)
 	if err != nil {
 		return fmt.Errorf("failed to delete DedicatedAICluster: %w, request id: %s",
-			err, *delResp.OpcRequestId)
+			err, derefOr(delResp.OpcRequestId, "unknown"))
 	}
 
 	// Poll work request status before returning
@@ -98,7 +108,9 @@ func deleteEndpointsInDAC(
 	g, gctx := errgroup.WithContext(ctx)
 
 	for _, item := range listResp.Items {
-		if *item.DedicatedAiClusterId != *dac.Id {
+		// Skip malformed summaries: a nil cluster id on either side can never
+		// match, and dereferencing it would crash the whole deletion.
+		if item.DedicatedAiClusterId == nil || dac.Id == nil || *item.DedicatedAiClusterId != *dac.Id {
 			continue
 		}
 
@@ -151,6 +163,10 @@ func waitForWorkRequest(
 	workRequestID *string,
 	logger logging.Logger,
 ) error {
+	if workRequestID == nil {
+		return errors.New("work request id is nil")
+	}
+
 	const interval = 5 * time.Second
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()

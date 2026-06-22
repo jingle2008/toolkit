@@ -363,3 +363,11 @@ func (m *Model) opCtx() (context.Context, context.CancelFunc) {
 	}
 	return context.WithTimeout(parent, 30*time.Second)
 }
+
+// longOpCtx returns the context for a long-running workflow (e.g. DAC deletion,
+// which deletes endpoints then polls a work request for minutes). It imposes no
+// 30s cap — the workflow's own internal timeout governs duration — but still
+// cancels on TUI shutdown and survives navigation/refresh.
+func (m *Model) longOpCtx() context.Context {
+	return m.sessionCtx()
+}

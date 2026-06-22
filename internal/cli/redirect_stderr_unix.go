@@ -22,7 +22,10 @@ import (
 // inherit the redirected fd. unix.Dup3-based on linux/arm64,
 // dup2-based on darwin and the other unix targets.
 func redirectStderr(path string) (func(), error) {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644) //nolint:gosec // path is the user-configured log-file location (cfg.LogFile + ".stderr"); user choice is the design.
+	// 0600: the sink can capture exec auth-plugin output and panic stacks, so
+	// keep it private rather than world-readable, consistent with metadata/config.
+	//nolint:gosec // G304: path is the user-configured log-file location (cfg.LogFile + ".stderr").
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open stderr sink %q: %w", path, err)
 	}
