@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -430,4 +431,20 @@ func TestOpContext(t *testing.T) {
 	if remaining <= 0 {
 		t.Fatal("expected deadline in the future")
 	}
+}
+
+// handleDataMsg owns only the foundational dataset load and the refresh
+// signal; per-category data flows through the typed *LoadedMsg handlers.
+// Feeding it per-category data must NOT mutate the dataset.
+func TestHandleDataMsg_IgnoresPerCategoryPayload(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset = &models.Dataset{}
+
+	m.handleDataMsg(dataMsg{Data: []models.GPUPool{{Name: "p1"}}})
+	require.Empty(t, m.dataset.GPUPools, "per-category payload must not be applied by handleDataMsg")
+
+	ds := &models.Dataset{}
+	m.handleDataMsg(dataMsg{Data: ds})
+	require.Same(t, ds, m.dataset, "foundational *models.Dataset payload must still be applied")
 }

@@ -333,10 +333,7 @@ func (m *Model) refreshDisplay() {
 }
 
 // handleDataMsg updates the model's dataset based on the incoming dataMsg.
-//
-//nolint:cyclop // multi-shape dataMsg router; the typed loaded-message handlers below cover per-category loads, but the Dataset / TenancyOverrideGroup shapes still flow through here.
-func (m *Model) handleDataMsg(msg dataMsg) tea.Cmd {
-	var cmd tea.Cmd
+func (m *Model) handleDataMsg(msg dataMsg) {
 	// Drop stale responses based on generation token (allow zero-value Gen).
 	// Still endTask: the matching beginTask was already issued when the
 	// load started, so the task must end to keep pendingTasks balanced.
@@ -344,35 +341,19 @@ func (m *Model) handleDataMsg(msg dataMsg) tea.Cmd {
 	// LoadingView — startup hang regression on `toolkit -c <lazy-cat>`.
 	if msg.Gen != 0 && msg.Gen != m.gens.msg {
 		m.endTask(true)
-		return nil
+		return
 	}
-	switch data := msg.Data.(type) {
-	case *models.Dataset:
-		m.dataset = data
-	case []models.BaseModel:
-		m.dataset.BaseModels = data
-	case map[string][]models.ImportedModel:
-		m.dataset.SetImportedModelMap(data)
-	case []models.GPUPool:
-		m.dataset.GPUPools = data
-		cmd = m.updateGPUPoolState()
-	case map[string][]models.GPUNode:
-		m.dataset.GPUNodeMap = data
-	case map[string][]models.DedicatedAICluster:
-		m.dataset.SetDedicatedAIClusterMap(data)
-	case models.TenancyOverrideGroup:
-		m.dataset.Tenants = data.Tenants
-		m.dataset.LimitTenancyOverrideMap = data.LimitTenancyOverrideMap
-		m.dataset.ConsolePropertyTenancyOverrideMap = data.ConsolePropertyTenancyOverrideMap
-		m.dataset.PropertyTenancyOverrideMap = data.PropertyTenancyOverrideMap
+	// dataMsg has two live roles: the foundational dataset load
+	// (*models.Dataset) and a nil-payload refresh signal (refreshDataCmd).
+	// Per-category data is owned solely by the typed *LoadedMsg handlers.
+	if ds, ok := msg.Data.(*models.Dataset); ok {
+		m.dataset = ds
 	}
-
 	if msg.Data != nil {
 		m.endTask(true)
 		m.logger.Infow("data loaded", "category", m.category, "pendingTasks", m.pendingTasks)
 	}
 	m.refreshDisplay()
-	return cmd
 }
 
 /*

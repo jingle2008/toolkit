@@ -47,9 +47,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// pendingTasks would stay elevated and the inline spinner would
 	// tick forever.
 	case dataMsg:
-		return m, m.handleDataMsg(msg)
+		m.handleDataMsg(msg)
+		return m, nil
 	case datasetLoadedMsg:
-		return m, m.handleDataMsg(dataMsg{Data: msg.Dataset, Gen: msg.Gen})
+		m.handleDataMsg(dataMsg{Data: msg.Dataset, Gen: msg.Gen})
+		return m, nil
 	case baseModelsLoadedMsg, importedModelsLoadedMsg, gpuPoolsLoadedMsg,
 		gpuNodesLoadedMsg, gpuWorkloadsLoadedMsg, dedicatedAIClustersLoadedMsg, tenancyOverridesLoadedMsg,
 		limitRegionalOverridesLoadedMsg, consolePropertyRegionalOverridesLoadedMsg,

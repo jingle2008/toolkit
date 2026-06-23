@@ -257,16 +257,14 @@ func TestEditModeTransitions(t *testing.T) {
 func TestProcessDataAndErrorMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	// handleDataMsg with *models.Dataset
+	// handleDataMsg with the foundational dataset and the nil refresh signal.
 	m.handleDataMsg(dataMsg{Data: m.dataset})
-	// handleDataMsg with map[string]*models.BaseModel
-	m.handleDataMsg(dataMsg{Data: map[string]*models.BaseModel{"bm": {}}})
-	// handleDataMsg with []models.GPUPool
-	m.handleDataMsg(dataMsg{Data: []models.GPUPool{{}}})
-	// handleDataMsg with map[string][]models.GPUNode
-	m.handleDataMsg(dataMsg{Data: map[string][]models.GPUNode{"pool": {}}})
-	// handleDataMsg with map[string][]models.DedicatedAICluster
-	m.handleDataMsg(dataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
+	m.handleDataMsg(dataMsg{})
+	// Per-category data now flows through the typed handlers.
+	m.handleBaseModelsLoaded([]models.BaseModel{{}}, m.gens.msg)
+	m.handleGPUPoolsLoaded([]models.GPUPool{{}}, m.gens.msg)
+	m.handleGPUNodesLoaded(map[string][]models.GPUNode{"pool": {}}, m.gens.msg)
+	m.handleDedicatedAIClustersLoaded(map[string][]models.DedicatedAICluster{"tenant": {}}, m.gens.msg)
 	// Update with errorMsg
 	m.Update(errMsg{})
 }
