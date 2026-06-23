@@ -27,6 +27,29 @@ func (m *Model) updateCategoryNoHist(category domain.Category) []tea.Cmd {
 	return m.updateCategoryCore(category)
 }
 
+// handlerFn loads/refreshes one category. Package-scoped so drift guards can
+// assert coverage and so the map isn't rebuilt on every navigation.
+type handlerFn func(*Model, bool, int) tea.Cmd
+
+var categoryHandlers = map[domain.Category]handlerFn{
+	domain.BaseModel:                       func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleBaseModelCategory(refresh, gen) },
+	domain.ImportedModel:                   func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleImportedModelCategory(refresh, gen) },
+	domain.GPUPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUPoolCategory(refresh, gen) },
+	domain.GPUNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUNodeCategory(refresh, gen) },
+	domain.GPUWorkload:                     func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUWorkloadCategory(refresh, gen) },
+	domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
+	domain.LimitRegionalOverride:           func(m *Model, _ bool, gen int) tea.Cmd { return m.handleLimitRegionalOverrideCategory(gen) },
+	domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool, gen int) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory(gen) },
+	domain.PropertyRegionalOverride:        func(m *Model, _ bool, gen int) tea.Cmd { return m.handlePropertyRegionalOverrideCategory(gen) },
+}
+
+var tenancyOverrideCategories = map[domain.Category]struct{}{
+	domain.Tenant:                         {},
+	domain.LimitTenancyOverride:           {},
+	domain.ConsolePropertyTenancyOverride: {},
+	domain.PropertyTenancyOverride:        {},
+}
+
 /*
 updateCategoryCore contains the shared logic for changing category.
 */
@@ -55,28 +78,6 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		m.applyRows(nil, nil, false)
 	}
 
-	// Dispatch table for category handlers
-	type handlerFn func(*Model, bool, int) tea.Cmd
-	handlers := map[domain.Category]handlerFn{
-		domain.BaseModel:                       func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleBaseModelCategory(refresh, gen) },
-		domain.ImportedModel:                   func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleImportedModelCategory(refresh, gen) },
-		domain.GPUPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUPoolCategory(refresh, gen) },
-		domain.GPUNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUNodeCategory(refresh, gen) },
-		domain.GPUWorkload:                     func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUWorkloadCategory(refresh, gen) },
-		domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
-		domain.LimitRegionalOverride:           func(m *Model, _ bool, gen int) tea.Cmd { return m.handleLimitRegionalOverrideCategory(gen) },
-		domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool, gen int) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory(gen) },
-		domain.PropertyRegionalOverride:        func(m *Model, _ bool, gen int) tea.Cmd { return m.handlePropertyRegionalOverrideCategory(gen) },
-	}
-
-	// Grouped handler for tenancy overrides
-	tenancyOverrides := map[domain.Category]struct{}{
-		domain.Tenant:                         {},
-		domain.LimitTenancyOverride:           {},
-		domain.ConsolePropertyTenancyOverride: {},
-		domain.PropertyTenancyOverride:        {},
-	}
-
 	var (
 		cmd      tea.Cmd
 		watchCmd tea.Cmd
@@ -84,13 +85,13 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	)
 
 	m.newLoadContext()
-	if fn, ok := handlers[m.category]; ok {
+	if fn, ok := categoryHandlers[m.category]; ok {
 		gen := m.bumpGen()
 		cmd = fn(m, refresh, gen)
 		if m.category.NeedsKubeConfig() {
 			watchCmd = startK8sWatchCmd(m.loadCtx, m.loader, m.category, m.kubeConfig, m.environment, gen)
 		}
-	} else if _, ok := tenancyOverrides[m.category]; ok {
+	} else if _, ok := tenancyOverrideCategories[m.category]; ok {
 		gen := m.bumpGen()
 		cmd = m.handleTenancyOverridesGroup(gen)
 	}

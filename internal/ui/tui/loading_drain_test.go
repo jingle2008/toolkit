@@ -54,7 +54,7 @@ func TestStartupHang_LazyCategory(t *testing.T) {
 	// still call endTask so the matching beginTasks balance out. Tests
 	// the drop path without needing a fully wired-up Model (the success
 	// path requires textInput / table state that's out of scope here).
-	_ = m.handleDataMsg(dataMsg{Data: &models.Dataset{}, Gen: 1})
+	m.handleDataMsg(dataMsg{Data: &models.Dataset{}, Gen: 1})
 
 	if m.pendingTasks != 1 {
 		t.Errorf("after stale drop: pendingTasks = %d, want 1 (stale drops must still endTask)", m.pendingTasks)

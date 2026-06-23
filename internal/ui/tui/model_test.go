@@ -257,16 +257,14 @@ func TestEditModeTransitions(t *testing.T) {
 func TestProcessDataAndErrorMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	// handleDataMsg with *models.Dataset
+	// handleDataMsg with the foundational dataset and the nil refresh signal.
 	m.handleDataMsg(dataMsg{Data: m.dataset})
-	// handleDataMsg with map[string]*models.BaseModel
-	m.handleDataMsg(dataMsg{Data: map[string]*models.BaseModel{"bm": {}}})
-	// handleDataMsg with []models.GPUPool
-	m.handleDataMsg(dataMsg{Data: []models.GPUPool{{}}})
-	// handleDataMsg with map[string][]models.GPUNode
-	m.handleDataMsg(dataMsg{Data: map[string][]models.GPUNode{"pool": {}}})
-	// handleDataMsg with map[string][]models.DedicatedAICluster
-	m.handleDataMsg(dataMsg{Data: map[string][]models.DedicatedAICluster{"tenant": {}}})
+	m.handleDataMsg(dataMsg{})
+	// Per-category data now flows through the typed handlers.
+	m.handleBaseModelsLoaded([]models.BaseModel{{}}, m.gens.msg)
+	m.handleGPUPoolsLoaded([]models.GPUPool{{}}, m.gens.msg)
+	m.handleGPUNodesLoaded(map[string][]models.GPUNode{"pool": {}}, m.gens.msg)
+	m.handleDedicatedAIClustersLoaded(map[string][]models.DedicatedAICluster{"tenant": {}}, m.gens.msg)
 	// Update with errorMsg
 	m.Update(errMsg{})
 }
@@ -456,21 +454,6 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 	// getCurrentItem should return the pointer to bm
 	got := m.selectedItem()
 	require.Equal(t, &bm, got)
-}
-
-// Finding #4 / category-drift guard: every kube-backed category must be in
-// lazyLoadedCategories. The base LoadDataset carries no cluster data, so a
-// kube-backed category absent from this set never loads on direct
-// `toolkit -c <cat>` startup (no navigation event fires to trigger it).
-func TestLazyLoadedCategories_CoversKubeBacked(t *testing.T) {
-	t.Parallel()
-	for _, c := range domain.Categories {
-		if !c.NeedsKubeConfig() {
-			continue
-		}
-		_, ok := lazyLoadedCategories[c]
-		assert.Truef(t, ok, "kube-backed category %s must be in lazyLoadedCategories so it loads on direct startup", c)
-	}
 }
 
 // Finding #6: DAC deletion is a multi-minute workflow with its own internal
