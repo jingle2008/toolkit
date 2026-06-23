@@ -38,7 +38,7 @@ already know the instance OCID.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			needsKube := ocid == ""
-			return withMutationSetup(cfgFile, needsKube, false, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			return withMutationSetup(cfgFile, needsKube, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action:             "terminate",
 					Kind:               "node",

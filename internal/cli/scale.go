@@ -43,7 +43,7 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			return withMutationSetup(cfgFile, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			return withMutationSetup(cfgFile, true, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action:  "scale",
 					Kind:    "gpu_pool",

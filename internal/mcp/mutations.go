@@ -2,11 +2,14 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -30,6 +33,13 @@ var (
 	}
 	mcpResolveGPUPoolFn = func(ctx context.Context, s *Server, env models.Environment, name string) (*models.GPUPool, error) {
 		return resolve.GPUPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
+	}
+	mcpUpsertTenantFn = func(s *Server, entry models.TenantMetadata) error {
+		writer, ok := s.loader.(loader.TenantMetadataWriter)
+		if !ok {
+			return errors.New("loader does not support writing metadata")
+		}
+		return writer.UpsertTenantMetadata(entry)
 	}
 )
 
@@ -160,6 +170,14 @@ type deleteDACInput struct {
 	envOverride
 }
 
+type setTenantInput struct {
+	OCID       string `json:"ocid" jsonschema:"the full tenancy OCID (the metadata entry key); must start with ocid1.tenancy."`
+	Name       string `json:"name" jsonschema:"friendly tenant name (required)"`
+	IsInternal *bool  `json:"is_internal,omitempty" jsonschema:"mark tenant internal; defaults to true when omitted"`
+	Note       string `json:"note,omitempty" jsonschema:"optional free-form note"`
+	confirmGate
+}
+
 // --- Handlers -----------------------------------------------------
 
 // handleMutation is the shared entry point for every mutating tool:
@@ -239,6 +257,29 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 	})
 }
 
+func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, in setTenantInput) (*sdk.CallToolResult, mutationResult, error) {
+	if strings.TrimSpace(in.Name) == "" {
+		return failTool[mutationResult](ctx, req, "set tenant", errors.New("name is required"))
+	}
+	if !strings.HasPrefix(in.OCID, "ocid1.tenancy.") {
+		return failTool[mutationResult](ctx, req, "set tenant",
+			fmt.Errorf("invalid tenancy OCID %q: must start with \"ocid1.tenancy.\"", in.OCID))
+	}
+	internal := true
+	if in.IsInternal != nil {
+		internal = *in.IsInternal
+	}
+	name := in.Name
+	entry := models.TenantMetadata{ID: in.OCID, Name: &name, IsInternal: &internal}
+	if in.Note != "" {
+		note := in.Note
+		entry.Note = &note
+	}
+	return s.runMutationTool(ctx, req, "set", "tenant", in.OCID, in.Confirm, func() error {
+		return mcpUpsertTenantFn(s, entry)
+	})
+}
+
 // --- Registration -------------------------------------------------
 
 // mutationToolFooter is appended to every mutation tool's description.
@@ -297,4 +338,11 @@ func registerMutationTools(s *Server) {
 		Name:        "delete_dac",
 		Description: "Delete a dedicated AI cluster and its endpoints (synchronous, polls the work request). DESTRUCTIVE." + mutationToolFooter,
 	}, s.handleDeleteDAC)
+
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name: "set_tenant",
+		Description: "Create or update a tenancy's metadata (name / internal flag / note), keyed by full tenancy OCID in the global metadata file." +
+			" Mutating: requires confirm=true to execute, otherwise refuses without acting." +
+			" Not env-scoped: env_type/env_region/env_realm do not apply.",
+	}, s.handleSetTenant)
 }

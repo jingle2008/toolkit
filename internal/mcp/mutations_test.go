@@ -63,6 +63,7 @@ func stubAllMutationSeams() (*bool, func()) {
 	oCordon, oDrain := mcpSetCordonFn, mcpDrainNodeFn
 	oResolveNode, oReset, oTerm := mcpResolveGPUNodeFn, mcpSoftResetFn, mcpTerminateFn
 	oResolvePool, oInc, oDelDAC := mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn
+	oUpsert := mcpUpsertTenantFn
 
 	mcpSetCordonFn = func(context.Context, string, string, string, bool) (bool, error) { mark(); return true, nil }
 	mcpDrainNodeFn = func(context.Context, string, string, string) error { mark(); return nil }
@@ -81,11 +82,13 @@ func stubAllMutationSeams() (*bool, func()) {
 		mark()
 		return nil
 	}
+	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error { mark(); return nil }
 
 	return &called, func() {
 		mcpSetCordonFn, mcpDrainNodeFn = oCordon, oDrain
 		mcpResolveGPUNodeFn, mcpSoftResetFn, mcpTerminateFn = oResolveNode, oReset, oTerm
 		mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn = oResolvePool, oInc, oDelDAC
+		mcpUpsertTenantFn = oUpsert
 	}
 }
 
@@ -110,6 +113,7 @@ func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
 		{"terminate_node", map[string]any{"node": "node-a"}},
 		{"scale_gpu_pool", map[string]any{"name": "pool-a"}},
 		{"delete_dac", map[string]any{"name": "dac-a"}},
+		{"set_tenant", map[string]any{"ocid": "ocid1.tenancy.oc1..aaaa", "name": "Acme"}},
 	}
 
 	for _, tc := range tools {
@@ -603,7 +607,114 @@ func TestIntegration_MutationTools_RegisteredInListTools(t *testing.T) {
 		"cordon_node", "uncordon_node", "drain_node",
 		"reboot_node", "terminate_node",
 		"scale_gpu_pool", "delete_dac",
+		"set_tenant",
 	} {
 		assert.True(t, got[name], "tools/list missing mutation tool %q", name)
 	}
+}
+
+func TestIntegration_SetTenantTool_ConfirmTrueExecutes(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	var got models.TenantMetadata
+	orig := mcpUpsertTenantFn
+	defer func() { mcpUpsertTenantFn = orig }()
+	mcpUpsertTenantFn = func(_ *Server, e models.TenantMetadata) error {
+		got = e
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name: "set_tenant",
+		Arguments: map[string]any{
+			"ocid":    "ocid1.tenancy.oc1..aaaa",
+			"name":    "Acme",
+			"confirm": true,
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.False(t, res.IsError)
+	if got.ID != "ocid1.tenancy.oc1..aaaa" || got.Name == nil || *got.Name != "Acme" {
+		t.Errorf("unexpected entry: %+v", got)
+	}
+	if got.IsInternal == nil || *got.IsInternal != true {
+		t.Errorf("IsInternal should default true, got %v", got.IsInternal)
+	}
+	msgs := waitForMsgs(t, rec)
+	body, _ := msgs[0].Data.(string)
+	assert.Contains(t, body, "set tenant/ocid1.tenancy.oc1..aaaa: OK")
+}
+
+func TestIntegration_SetTenantTool_RejectsBadOCID(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	orig := mcpUpsertTenantFn
+	defer func() { mcpUpsertTenantFn = orig }()
+	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error {
+		t.Fatal("must not write for bad OCID")
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "set_tenant",
+		Arguments: map[string]any{"ocid": "nope", "name": "Acme", "confirm": true},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.True(t, res.IsError, "bad OCID must error")
+}
+
+func TestIntegration_SetTenantTool_RejectsBadOCID_WithoutConfirm(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	orig := mcpUpsertTenantFn
+	defer func() { mcpUpsertTenantFn = orig }()
+	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error {
+		t.Fatal("must not write for bad OCID even without confirm")
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "set_tenant",
+		Arguments: map[string]any{"ocid": "nope", "name": "Acme"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.True(t, res.IsError, "bad OCID must error even without confirm")
+}
+
+func TestIntegration_SetTenantTool_RequiresName(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	orig := mcpUpsertTenantFn
+	defer func() { mcpUpsertTenantFn = orig }()
+	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error {
+		t.Fatal("must not write when name missing")
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "set_tenant",
+		Arguments: map[string]any{"ocid": "ocid1.tenancy.oc1..aaaa", "confirm": true},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.True(t, res.IsError, "missing name must error")
 }

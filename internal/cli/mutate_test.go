@@ -6,6 +6,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/jingle2008/toolkit/internal/config"
 )
 
 func TestConfirmAction(t *testing.T) {
@@ -184,6 +186,24 @@ func TestRunMutation_PerformError(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "OK") {
 		t.Errorf("must not print OK on perform error, got: %q", out.String())
+	}
+}
+
+//nolint:paralleltest // viper global state
+func TestValidateMutationConfig_NeedsEnvFalse_SkipsEnvTriple(t *testing.T) {
+	// No env type/region/realm set, but needsEnv=false → must pass.
+	cfg := config.Config{}
+	if err := validateMutationConfig(cfg, false, false, false); err != nil {
+		t.Fatalf("needsEnv=false should not require env triple, got: %v", err)
+	}
+}
+
+func TestValidateMutationConfig_NeedsEnvTrue_RequiresEnvTriple(t *testing.T) {
+	t.Parallel()
+	cfg := config.Config{}
+	err := validateMutationConfig(cfg, false, false, true)
+	if err == nil {
+		t.Fatal("needsEnv=true with empty env must error")
 	}
 }
 
