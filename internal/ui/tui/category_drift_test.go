@@ -109,38 +109,19 @@ func TestItemKeyFrom_NonNilForEveryCategory(t *testing.T) {
 	}
 }
 
-// parentScope must resolve for every scoped (child) category.
-// Note: parentScope only resolves when there is exactly one parent AND that
-// parent type is handled in its switch (Tenant, GPUPool, GPUNode,
-// LimitDefinition, ConsolePropertyDefinition, PropertyDefinition).
-// ModelArtifact (parent=BaseModel) and the multi-parent tenancy overrides are
-// intentionally excluded from the ok=true assertion; the test instead
-// accounts for all scoped categories so a new one cannot slip in unnoticed.
 func TestParentScope_ResolvesForScopedCategories(t *testing.T) {
 	t.Parallel()
 	row := table.Row{"a", "b", "c", "d"}
 	for _, c := range domain.Categories {
-		if len(c.Parents()) == 0 {
+		// parentScope resolves a parent only for single-parent categories:
+		// multi-parent categories (the tenancy overrides) can't disambiguate,
+		// and categories with no parent have no scope. Every single-parent
+		// category MUST resolve — a new one whose parent is not handled in
+		// parentScope's switch fails here, surfacing the drift.
+		if len(c.Parents()) != 1 {
 			continue
 		}
-		// Call parentScope for every scoped category to confirm it does not
-		// panic. Categories with a single handled parent must resolve ok=true;
-		// multi-parent categories and ModelArtifact (whose parent BaseModel is
-		// not yet in the switch) are documented below and may return ok=false.
 		_, ok := parentScope(c, row)
-		switch c {
-		case domain.LimitRegionalOverride,
-			domain.ConsolePropertyRegionalOverride,
-			domain.PropertyRegionalOverride,
-			domain.ImportedModel,
-			domain.DedicatedAICluster,
-			domain.GPUNode,
-			domain.GPUWorkload:
-			// Single parent, handled in parentScope switch — must resolve.
-			assert.Truef(t, ok, "parentScope must resolve a parent for scoped category %s", c)
-		default:
-			// Multi-parent or unhandled parent (e.g. ModelArtifact→BaseModel):
-			// parentScope intentionally returns ok=false; just ensure no panic.
-		}
+		assert.Truef(t, ok, "parentScope must resolve single-parent category %s (parent %s)", c, c.Parents()[0])
 	}
 }
