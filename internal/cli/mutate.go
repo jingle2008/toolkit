@@ -58,19 +58,21 @@ var resolveGPUPoolFn = func(ctx context.Context, cfg config.Config, env models.E
 //     flag" case isn't reachable in normal use.
 //   - needsRepo=true  → mutations sourced from Terraform (scale). The
 //     repo path has no default and must be supplied.
-func validateMutationConfig(cfg config.Config, needsKube, needsRepo bool) error {
+func validateMutationConfig(cfg config.Config, needsKube, needsRepo, needsEnv bool) error {
 	var missing []string
 	if needsRepo && cfg.RepoPath == "" {
 		missing = append(missing, "--repo-path")
 	}
-	if cfg.EnvType == "" {
-		missing = append(missing, "--env-type")
-	}
-	if cfg.EnvRegion == "" {
-		missing = append(missing, "--env-region")
-	}
-	if cfg.EnvRealm == "" {
-		missing = append(missing, "--env-realm")
+	if needsEnv {
+		if cfg.EnvType == "" {
+			missing = append(missing, "--env-type")
+		}
+		if cfg.EnvRegion == "" {
+			missing = append(missing, "--env-region")
+		}
+		if cfg.EnvRealm == "" {
+			missing = append(missing, "--env-realm")
+		}
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf(
@@ -89,14 +91,19 @@ func validateMutationConfig(cfg config.Config, needsKube, needsRepo bool) error 
 
 // withMutationSetup runs the standard prelude every mutation
 // subcommand shares — read the config file, unmarshal, validate per
-// needsKube/needsRepo, init the logger (deferred Sync), wire a
+// needsKube/needsRepo/needsEnv, init the logger (deferred Sync), wire a
 // signal-cancellable context with the logger attached, and build the
 // Environment triple — then invokes fn with the resolved cfg / env /
 // ctx. Keeps the setup uniform so individual subcommands focus only
 // on flag parsing and their perform closure.
+//
+// needsEnv=false is used by tenant-metadata mutations (Task 2) that
+// are keyed by OCID and need no env triple; existing callers pass true.
+//
+//nolint:unparam // needsEnv will receive false once the set-tenant command (Task 2) is added
 func withMutationSetup(
 	cfgFile *string,
-	needsKube, needsRepo bool,
+	needsKube, needsRepo, needsEnv bool,
 	fn func(ctx context.Context, cfg config.Config, env models.Environment) error,
 ) error {
 	if err := readConfigFile(cfgFile); err != nil {
@@ -106,7 +113,7 @@ func withMutationSetup(
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return fmt.Errorf("unmarshal config: %w", err)
 	}
-	if err := validateMutationConfig(cfg, needsKube, needsRepo); err != nil {
+	if err := validateMutationConfig(cfg, needsKube, needsRepo, needsEnv); err != nil {
 		return err
 	}
 	logger, err := initLogger(cfg)

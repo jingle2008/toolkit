@@ -38,7 +38,7 @@ deliberately disabled to prevent reflex "y" answers.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			return withMutationSetup(cfgFile, false, false, func(ctx context.Context, _ config.Config, env models.Environment) error {
+			return withMutationSetup(cfgFile, false, false, true, func(ctx context.Context, _ config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action:             "delete",
 					Kind:               "dac",
