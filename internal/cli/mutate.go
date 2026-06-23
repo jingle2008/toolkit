@@ -96,11 +96,6 @@ func validateMutationConfig(cfg config.Config, needsKube, needsRepo, needsEnv bo
 // Environment triple — then invokes fn with the resolved cfg / env /
 // ctx. Keeps the setup uniform so individual subcommands focus only
 // on flag parsing and their perform closure.
-//
-// needsEnv=false is used by tenant-metadata mutations (Task 2) that
-// are keyed by OCID and need no env triple; existing callers pass true.
-//
-//nolint:unparam // needsEnv will receive false once the set-tenant command (Task 2) is added
 func withMutationSetup(
 	cfgFile *string,
 	needsKube, needsRepo, needsEnv bool,

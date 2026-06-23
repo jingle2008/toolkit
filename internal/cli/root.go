@@ -73,6 +73,7 @@ metadata-file: "" # Optional path to a YAML or JSON file with additional metadat
 	addScaleCommand(rootCmd, &cfgFile)
 	addDeleteCommand(rootCmd, &cfgFile)
 	addTerminateCommand(rootCmd, &cfgFile)
+	addSetCommand(rootCmd, &cfgFile)
 
 	// Bind persistent flags once so Viper can read them.
 	_ = viper.BindPFlags(rootCmd.PersistentFlags())
