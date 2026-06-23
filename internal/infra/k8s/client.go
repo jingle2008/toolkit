@@ -38,7 +38,8 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	loadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig}
 	overrides := &clientcmd.ConfigOverrides{CurrentContext: ctx}
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		loadingRules, overrides).ClientConfig()
+		loadingRules, overrides,
+	).ClientConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load kubeconfig: %w", err)
 	}

@@ -29,7 +29,8 @@ func (m *Model) infoView() string {
 		m.version,
 	}
 
-	content := lipgloss.JoinHorizontal(lipgloss.Top,
+	content := lipgloss.JoinHorizontal(
+		lipgloss.Top,
 		m.theme.InfoKey.Render(strings.Join(keys, "\n")),
 		" ",
 		m.theme.InfoValue.Render(strings.Join(values, "\n")),
@@ -104,7 +105,8 @@ func (m *Model) statusView() string {
 	ti.Width = inputWidth
 	inputCell := ti.View()
 
-	return lipgloss.JoinHorizontal(lipgloss.Top,
+	return lipgloss.JoinHorizontal(
+		lipgloss.Top,
 		contextCell,
 		inputCell,
 		loadingCell,

@@ -176,7 +176,8 @@ func runMutation(
 
 	if plan.DryRun {
 		_, _ = fmt.Fprintf(out, "DRY-RUN: would %s\n", desc)
-		logger.Infow("mutation",
+		logger.Infow(
+			"mutation",
 			"action", plan.Action,
 			"kind", plan.Kind,
 			"target", plan.Target,
@@ -201,7 +202,8 @@ func runMutation(
 		}
 	}
 
-	logger.Infow("mutation",
+	logger.Infow(
+		"mutation",
 		"action", plan.Action,
 		"kind", plan.Kind,
 		"target", plan.Target,
@@ -210,7 +212,8 @@ func runMutation(
 		"phase", "begin",
 	)
 	if err := perform(ctx); err != nil {
-		logger.Errorw("mutation",
+		logger.Errorw(
+			"mutation",
 			"action", plan.Action,
 			"kind", plan.Kind,
 			"target", plan.Target,
@@ -220,7 +223,8 @@ func runMutation(
 		)
 		return err
 	}
-	logger.Infow("mutation",
+	logger.Infow(
+		"mutation",
 		"action", plan.Action,
 		"kind", plan.Kind,
 		"target", plan.Target,

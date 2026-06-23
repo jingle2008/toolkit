@@ -69,14 +69,16 @@ func TestGetPodStats(t *testing.T) {
 	workAnn := withGPURequest(makeUnstructuredPod(
 		map[string]string{servingLabelV1: "dummy"},
 		map[string]string{baseModelLabelV2: "m1"},
-		"w1"))
+		"w1",
+	))
 	// workload pod missing model/component (still requests GPU, counts)
 	bad := withGPURequest(makeUnstructuredPod(map[string]string{}, nil, "bad"))
 	// serving pod that requests no GPU — excluded from the counts
 	nonGPU := makeUnstructuredPod(
 		map[string]string{servingLabelV1: "dummy"},
 		map[string]string{baseModelLabelV2: "m2"},
-		"non-gpu")
+		"non-gpu",
+	)
 
 	cache := PodCache{byNS: map[string][]*unstructured.Unstructured{
 		"ns1": {idle, workAnn, bad, nonGPU},

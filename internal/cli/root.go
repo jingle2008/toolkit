@@ -165,7 +165,8 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 	ring := logging.NewRingSink(1000)
 	logger = logging.NewTee(logger, ring)
 	ctx = logging.WithContext(ctx, logger)
-	logger.Infow("starting toolkit",
+	logger.Infow(
+		"starting toolkit",
 		"repo", repoPath,
 		"env", env,
 		"category", category,
