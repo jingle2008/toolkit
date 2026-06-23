@@ -5,6 +5,10 @@
 - **Parallelization:**  
   Add `t.Parallel()` at the top of all independent test functions to enable concurrent execution and faster feedback. For table-driven tests, use sub-tests with `t.Run(...)` and call `t.Parallel()` inside each sub-test.
 
+- **Serial tests & package seams:**  
+  Prefer `t.Parallel()`, but some tests are intentionally serial and that is acceptable. Two causes exist in this codebase: (1) package-global function-pointer seams (e.g. `newGenAIClient`, `mcpSetCordonFn`, `resolveGPUPoolFn`) that tests swap to inject fakes — use the `swap(&fn, fake)()` helper with its deferred restore; (2) the global Viper/Cobra singleton, which CLI tests mutate via `viper.Reset()` / `t.Setenv`. When a test mutates shared global state, mark it `//nolint:paralleltest` with a one-line justification (e.g. `// mutates the package-global X seam`).  
+  New code should prefer **dependency injection** (constructor params or struct fields) over adding new package-global seams, so the set of serial tests does not grow. Migrating the existing seams to injected dependencies — to let those tests run in parallel — is a known, consciously-deferred improvement (review finding #4); it was scoped out as low-ROI relative to its blast radius.
+
 - **Coverage Enforcement:**  
   The project enforces a minimum code coverage threshold. Use `make cover-check` to verify that coverage is at least 80%. Pull requests that drop coverage below this threshold should be updated with additional tests.
 
