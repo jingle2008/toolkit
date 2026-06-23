@@ -600,7 +600,8 @@ func (m *Model) endTask(success bool) {
 	}
 	if m.pendingTasks == 0 {
 		elapsed := m.loadingTimer.Elapsed().String()
-		m.logger.Infow("data load completed",
+		m.logger.Infow(
+			"data load completed",
 			"category", m.category,
 			"success", success,
 			"elapsed", elapsed,

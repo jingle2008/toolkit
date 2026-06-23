@@ -255,7 +255,8 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 
 		value, diags := attr.Expr.Value(&context)
 		if diags.HasErrors() {
-			logger.Errorw("cannot resolve local",
+			logger.Errorw(
+				"cannot resolve local",
 				"local", key,
 				"errors", diags.Errs(),
 			)
@@ -265,7 +266,8 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 		// value.GoString() formats the whole cty value — only pay for it
 		// when debug logging is actually enabled.
 		if logger.DebugEnabled() {
-			logger.Debugw("cannot resolve local value",
+			logger.Debugw(
+				"cannot resolve local value",
 				"local", key,
 				"value", value.GoString(),
 			)

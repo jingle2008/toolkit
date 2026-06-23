@@ -51,7 +51,8 @@ func (s *Server) effectiveMutationEnv(action, kind, target string, in envOverrid
 	startup := s.envFor(envOverride{})
 	if !s.cfg.MutationEnvOverrideAllowed {
 		if in.EnvType != "" || in.EnvRegion != "" || in.EnvRealm != "" {
-			s.logger.Infow("mutation env_override ignored (server disallows)",
+			s.logger.Infow(
+				"mutation env_override ignored (server disallows)",
 				"action", action, "kind", kind, "target", target, "surface", "mcp",
 				"requested_env_type", in.EnvType,
 				"requested_env_region", in.EnvRegion,
@@ -62,7 +63,8 @@ func (s *Server) effectiveMutationEnv(action, kind, target string, in envOverrid
 	}
 	effective := s.envFor(in)
 	if effective != startup {
-		s.logger.Infow("mutation env override active (deviation from startup)",
+		s.logger.Infow(
+			"mutation env override active (deviation from startup)",
 			"level", "warn",
 			"action", action, "kind", kind, "target", target, "surface", "mcp",
 			"startup_realm", startup.Realm, "effective_realm", effective.Realm,
@@ -83,7 +85,8 @@ func (s *Server) effectiveMutationEnv(action, kind, target string, in envOverrid
 // marshals into StructuredContent + auto-emits as TextContent.
 func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, action, kind, target string, confirm bool, perform func() error) (*sdk.CallToolResult, mutationResult, error) {
 	if !confirm {
-		s.logger.Infow("mutation",
+		s.logger.Infow(
+			"mutation",
 			"action", action, "kind", kind, "target", target, "surface", "mcp",
 			"phase", "refused",
 		)
@@ -93,19 +96,22 @@ func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, 
 			fmt.Errorf("mutating tool requires confirm=true (target %s/%s)", kind, target))
 	}
 
-	s.logger.Infow("mutation",
+	s.logger.Infow(
+		"mutation",
 		"action", action, "kind", kind, "target", target, "surface", "mcp",
 		"phase", "begin",
 	)
 	if err := perform(); err != nil {
-		s.logger.Errorw("mutation",
+		s.logger.Errorw(
+			"mutation",
 			"action", action, "kind", kind, "target", target, "surface", "mcp",
 			"phase", "failed",
 			"error", err,
 		)
 		return failTool[mutationResult](ctx, req, action+" "+kind+"/"+target, err)
 	}
-	s.logger.Infow("mutation",
+	s.logger.Infow(
+		"mutation",
 		"action", action, "kind", kind, "target", target, "surface", "mcp",
 		"phase", "done",
 	)

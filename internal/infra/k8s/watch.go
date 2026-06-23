@@ -281,7 +281,8 @@ func WatchBaseModels(ctx context.Context, client dynamic.Interface) (<-chan stru
 // WatchImportedModels triggers on namespaced BaseModel and
 // ClusterBaseModel CR changes (the two sources LoadImportedModels merges).
 func WatchImportedModels(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {
-	return watchTrigger(ctx, DebounceWindow,
+	return watchTrigger(
+		ctx, DebounceWindow,
 		crWatchOpener(client, baseModelGVR),
 		crWatchOpener(client, clusterBaseModelGVR),
 	)

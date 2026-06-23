@@ -64,7 +64,8 @@ func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 		}
 		podIssueMap[p.Spec.NodeName] = append(
 			podIssueMap[p.Spec.NodeName],
-			fmt.Sprintf("pod %s: %s", p.Name, getPodReason(&p)))
+			fmt.Sprintf("pod %s: %s", p.Name, getPodReason(&p)),
+		)
 	}
 
 	gpuNodes := make([]models.GPUNode, 0, len(nodes.Items))
