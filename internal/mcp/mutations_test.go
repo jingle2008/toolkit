@@ -673,6 +673,29 @@ func TestIntegration_SetTenantTool_RejectsBadOCID(t *testing.T) {
 	assert.True(t, res.IsError, "bad OCID must error")
 }
 
+func TestIntegration_SetTenantTool_RejectsBadOCID_WithoutConfirm(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	orig := mcpUpsertTenantFn
+	defer func() { mcpUpsertTenantFn = orig }()
+	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error {
+		t.Fatal("must not write for bad OCID even without confirm")
+		return nil
+	}
+
+	rec := &recorder{}
+	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "set_tenant",
+		Arguments: map[string]any{"ocid": "nope", "name": "Acme"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.True(t, res.IsError, "bad OCID must error even without confirm")
+}
+
 func TestIntegration_SetTenantTool_RequiresName(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
