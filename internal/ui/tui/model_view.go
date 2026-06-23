@@ -80,7 +80,7 @@ func (m *Model) statusView() string {
 			statsText.WriteString(" ")
 		}
 	}
-	statsText.WriteString(fmt.Sprintf("[%d/%d]", m.table.Cursor()+1, len(m.table.Rows())))
+	fmt.Fprintf(&statsText, "[%d/%d]", m.table.Cursor()+1, len(m.table.Rows()))
 	statsCell := m.theme.Stats.Render(statsText.String())
 
 	loadingCell := ""

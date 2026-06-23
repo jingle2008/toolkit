@@ -186,6 +186,9 @@ func itemKeyFrom(category domain.Category, row table.Row) models.ItemKey {
 		// the ModelArtifactMap's parent BaseModel key — see
 		// columns/model_artifact.go. Treating it as a scoped key
 		// disambiguates artifacts that share a Name across BaseModels.
+		if len(row) < 2 {
+			return nil
+		}
 		return models.ScopedItemKey{Scope: row[1], Name: row[0]}
 	case domain.CategoryUnknown:
 		// exhaustive
