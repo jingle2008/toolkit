@@ -379,6 +379,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"terminate_node",
 		"scale_gpu_pool",
 		"delete_dac",
+		"set_tenant",
 	}
 	for _, name := range want {
 		assert.True(t, got[name], "tools/list missing %q (got %d tools total)", name, len(listRes.Tools))
