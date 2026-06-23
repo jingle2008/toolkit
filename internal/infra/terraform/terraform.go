@@ -330,7 +330,7 @@ func getServiceTenancy(object cty.Value, realm string) *models.ServiceTenancy {
 		case "home_region":
 			result.HomeRegion = value.AsString()
 		case "regions":
-			var regions []string
+			regions := make([]string, 0, len(value.AsValueSlice()))
 			for _, region := range value.AsValueSlice() {
 				regions = append(regions, region.AsString())
 			}

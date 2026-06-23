@@ -307,7 +307,8 @@ func WatchGPUNodes(ctx context.Context, clientset kubernetes.Interface) (<-chan 
 			return clientset.CoreV1().Nodes().Watch(ctx, opts)
 		},
 	)
-	openers := []func(context.Context) (watch.Interface, error){nodeOpener}
+	openers := make([]func(context.Context) (watch.Interface, error), 0, 1+len(gpuPodSelectors))
+	openers = append(openers, nodeOpener)
 	openers = append(openers, gpuPodWatchOpeners(clientset)...)
 	return watchTrigger(ctx, DebounceWindow, openers...)
 }
@@ -320,10 +321,8 @@ func WatchGPUWorkloads(ctx context.Context, clientset kubernetes.Interface) (<-c
 // WatchDedicatedAIClusters triggers on DAC CR changes (both API
 // versions) plus GPU pod changes (pods drive replica stats).
 func WatchDedicatedAIClusters(ctx context.Context, client dynamic.Interface, clientset kubernetes.Interface) (<-chan struct{}, error) {
-	openers := []func(context.Context) (watch.Interface, error){
-		crWatchOpener(client, dacV1GVR),
-		crWatchOpener(client, dacV2GVR),
-	}
+	openers := make([]func(context.Context) (watch.Interface, error), 0, 2+len(gpuPodSelectors))
+	openers = append(openers, crWatchOpener(client, dacV1GVR), crWatchOpener(client, dacV2GVR))
 	openers = append(openers, gpuPodWatchOpeners(clientset)...)
 	return watchTrigger(ctx, DebounceWindow, openers...)
 }
