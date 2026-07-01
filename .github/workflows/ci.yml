@@ -12,9 +12,9 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.26"
       - name: Setup dev tools
@@ -25,7 +25,7 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out
@@ -35,9 +35,9 @@ jobs:
     if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.26"
       - name: Setup dev tools
@@ -57,15 +57,15 @@ jobs:
     # are CI-only and tested for real by .github/workflows/release.yml.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # GoReleaser needs full history for changelog
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - name: GoReleaser snapshot
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
           args: release --snapshot --clean --skip=publish,sign,sbom
