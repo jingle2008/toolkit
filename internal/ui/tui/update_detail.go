@@ -12,6 +12,14 @@ import (
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
+// Clipboard seams — overrideable in tests so the copy/paste paths can be
+// exercised without touching the developer's real clipboard. Mirrors
+// actions.clipboardWriteAll.
+var (
+	clipboardWriteAll = clipboard.WriteAll
+	clipboardReadAll  = clipboard.ReadAll
+)
+
 func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -50,7 +58,7 @@ func (m *Model) copyItemJSON(item any) tea.Cmd {
 			m.logger.Errorw("failed to convert item to JSON", "error", err)
 			return nil
 		}
-		if err := clipboard.WriteAll(content); err != nil {
+		if err := clipboardWriteAll(content); err != nil {
 			m.logger.Errorw("failed to copy JSON to clipboard", "error", err)
 		}
 		return nil

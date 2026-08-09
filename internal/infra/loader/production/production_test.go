@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/configloader"
@@ -99,6 +100,33 @@ func TestLoadBaseModels_Error(t *testing.T) {
 	if err == nil {
 		t.Error("LoadBaseModels with bad path: want error, got nil")
 	}
+}
+
+func TestLoadImportedModels_Error(t *testing.T) {
+	t.Parallel()
+	ldr := New(context.Background(), "")
+	got, err := ldr.LoadImportedModels(context.Background(), "/nonexistent/kubeconfig", models.Environment{})
+	require.Error(t, err, "LoadImportedModels with bad kubeconfig: want error")
+	assert.Nil(t, got)
+}
+
+func TestLoadGPUWorkloadsByNode_Error(t *testing.T) {
+	t.Parallel()
+	ldr := New(context.Background(), "")
+	got, err := ldr.LoadGPUWorkloadsByNode(context.Background(), "/nonexistent/kubeconfig", models.Environment{})
+	require.Error(t, err, "LoadGPUWorkloadsByNode with bad kubeconfig: want error")
+	assert.Nil(t, got)
+}
+
+func TestMetadataPath(t *testing.T) {
+	t.Parallel()
+	// New returns loader.Composite, so reach MetadataPath through the
+	// concrete type the way the doctor command does.
+	c := New(context.Background(), "/tmp/meta.yaml").(*Client) //nolint:errcheck,forcetypeassert // New always returns *Client
+	assert.Equal(t, "/tmp/meta.yaml", c.MetadataPath())
+
+	empty := New(context.Background(), "").(*Client) //nolint:errcheck,forcetypeassert // New always returns *Client
+	assert.Equal(t, "", empty.MetadataPath())
 }
 
 func TestLoadGPUPools_Error(t *testing.T) {

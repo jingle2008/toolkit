@@ -6,7 +6,6 @@ package tui
 import (
 	"strings"
 
-	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -172,7 +171,7 @@ func (m *Model) enterExportView() []tea.Cmd {
 
 func (*Model) pasteFilter() tea.Cmd {
 	return func() tea.Msg {
-		clip, err := clipboard.ReadAll()
+		clip, err := clipboardReadAll()
 		if err != nil {
 			return nil
 		}
