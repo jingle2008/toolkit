@@ -196,8 +196,8 @@ The interface has four zones:
 
 | Alias | Category |
 |-------|----------|
-| `t` / `tenant` | Tenant |
-| `l` / `ld` | LimitDefinition |
+| `t` | Tenant |
+| `ld` | LimitDefinition |
 | `cpd` | ConsolePropertyDefinition |
 | `pd` | PropertyDefinition |
 | `lto` | LimitTenancyOverride |
@@ -207,13 +207,19 @@ The interface has four zones:
 | `cpro` | ConsolePropertyRegionalOverride |
 | `pro` | PropertyRegionalOverride |
 | `bm` | BaseModel |
-| `im` / `importedmodel` | ImportedModel |
+| `im` | ImportedModel |
 | `ma` | ModelArtifact |
-| `e` / `env` | Environment |
+| `e` | Environment |
 | `st` | ServiceTenancy |
-| `gp` | GPUPool |
-| `gn` | GPUNode |
-| `dac` | DedicatedAICluster |
+| `gp` / `gpup` | GPUPool |
+| `gn` / `gpun` | GPUNode |
+| `gw` / `gpuw` | GPUWorkload |
+| `dac` / `daic` | DedicatedAICluster |
+| `a` | Alias |
+
+Every category additionally accepts its **full name, lowercased** — `tenant`,
+`limitdefinition`, `gpuworkload`, `dedicatedaicluster`, and so on. Run
+`toolkit get alias` for the authoritative list, or enable shell completion.
 
 ### History navigation
 
@@ -235,6 +241,7 @@ Some categories are **parent scopes** — pressing `Enter` on a row zooms in to 
 | ConsolePropertyDefinition | ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride |
 | PropertyDefinition | PropertyTenancyOverride, PropertyRegionalOverride |
 | GPUPool | GPUNode |
+| GPUNode | GPUWorkload |
 
 Press `Esc` to exit the scoped context and return to the parent.
 
@@ -242,7 +249,7 @@ Press `Esc` to exit the scoped context and return to the parent.
 
 ## Categories
 
-Toolkit organises data into 18 categories:
+Toolkit organises data into 20 categories:
 
 ### Core Infrastructure
 
@@ -285,7 +292,14 @@ Toolkit organises data into 18 categories:
 | **ModelArtifact** | Model artifact versions |
 | **GPUPool** | OCI GPU instance pools; supports scaling |
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
+| **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters |
+
+### Meta
+
+| Category | Description |
+|----------|-------------|
+| **Alias** | Index of every category and its aliases; reachable with `Ctrl+A` or `:alias` |
 
 ---
 
@@ -347,12 +361,16 @@ you can see at a glance which columns the keys below will reach.
 | GPUNode | `Shift+F` | Free |
 | GPUNode | `Shift+T` | Type |
 | GPUNode | `Shift+A` | Age |
+| GPUWorkload | `Shift+T` | Tenant |
+| GPUWorkload | `Shift+A` | Age |
 | DedicatedAICluster | `Shift+T` | Tenant |
 | DedicatedAICluster | `Shift+I` | Internal |
 | DedicatedAICluster | `Shift+U` | Usage |
 | DedicatedAICluster | `Shift+S` | Size |
 | DedicatedAICluster | `Shift+A` | Age |
 | ImportedModel | `Shift+T` | Tenant |
+| ImportedModel | `Shift+S` | Size |
+| ImportedModel | `Shift+C` | Context |
 | ImportedModel | `Shift+V` | Vendor |
 | LimitTenancyOverride | `Shift+T` | Tenant |
 | LimitTenancyOverride | `Shift+R` | Regions |
@@ -506,7 +524,17 @@ Press `e` in any list view to open the **Export CSV** dialog.
 2. Select or type a filename ending in `.csv`.
 3. Press `Enter` to confirm.
 
-The exported CSV reflects the **current filter and sort state** — what you see is what you get.
+The exported CSV reflects the **current filter** and the faulty-toggle state. Two
+things deliberately differ from what's on screen:
+
+- **The interactive sort is not preserved.** Rows are written in the dataset's
+  natural order, not the order `Shift+N` / `Shift+T` / … put them in.
+- **OCID columns are expanded.** Where the table shows a shortened OCID suffix
+  (the Name and Tenant columns on DedicatedAICluster / ImportedModel, and Tenant
+  on GPUWorkload), the CSV carries the fully-qualified OCID so the file is ready
+  for downstream OCI tooling.
+
+`toolkit get <category> -o csv` produces the same bytes for the same filter.
 
 ---
 
