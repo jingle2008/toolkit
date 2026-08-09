@@ -1,43 +1,25 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **toolkit** (5735 symbols, 18433 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **toolkit**. Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
-## Always Do
+<!-- gitnexus:end -->
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+<!-- Hand-maintained: keep below the gitnexus markers so `npx gitnexus analyze` can't overwrite it. -->
+
+## Using GitNexus
+
+Impact analysis is a judgment call, not a blanket requirement.
+
+- **Run `gitnexus_impact({target: "symbolName", direction: "upstream"})` before non-trivial edits** — renames, splits, moves, functions with >3 callers, or anything touching a shared helper. Report the blast radius (direct callers, affected processes, risk level) to the user.
+- **Run `gitnexus_detect_changes()` before commits that touch 3+ files of behavioral code**, to verify the change only affects expected symbols and execution flows.
+- **Skip both** for docs/CHANGELOG edits, style fixes, one-line string changes, test-only edits, formatting/import cleanups, and functions with 0–1 callers where the blast radius is obvious from a 10-second read.
+- **Interpret HIGH/CRITICAL as positional, not dangerous.** Risk labels track call-graph fan-out, so a behavior-preserving refactor of a central symbol scores HIGH while still being low risk. Judge by what the change actually does; verify via unchanged signatures plus the invariant-locking tests. Report the label, but frame it as positional.
+- Indirect calls through function-typed package variables (the `*Fn` test seams in `internal/resolve/`) are invisible to the call graph — fall back to grep when tracing through a seam.
 
 ## Never Do
 
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/toolkit/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/toolkit/clusters` | All functional areas |
-| `gitnexus://repo/toolkit/processes` | All execution flows |
-| `gitnexus://repo/toolkit/process/{name}` | Step-by-step execution trace |
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
+- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis without saying why the change is safe.
+- NEVER rename symbols with find-and-replace — use `gitnexus_rename`, which understands the call graph.
