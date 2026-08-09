@@ -1,0 +1,9 @@
+# GitNexus auto-filters some directory names as build artifacts. `output` is
+# one of them, which silently excluded internal/cli/output/ — a real source
+# package (the `toolkit get` renderers) — from the graph: 0 nodes indexed even
+# on `analyze --force`. Negate it so the package is indexed.
+#
+# Verify after changing this:
+#   npx gitnexus cypher -r toolkit \
+#     "MATCH (n) WHERE n.filePath STARTS WITH 'internal/cli/output' RETURN count(n)"
+!internal/cli/output/
