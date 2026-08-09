@@ -31,7 +31,7 @@ func callList(t *testing.T, name string, args map[string]any) *sdk.CallToolResul
 	rec := &recorder{}
 	sess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := sess.CallTool(ctx, &sdk.CallToolParams{Name: name, Arguments: args})
+	res, err := callTool(ctx, sess, &sdk.CallToolParams{Name: name, Arguments: args})
 	require.NoError(t, err, "tools/call: %s", name)
 	require.NotNil(t, res)
 	assert.False(t, res.IsError, "%s should not error with stubLoader: %+v", name, res)
@@ -87,7 +87,7 @@ func assertGroupedItem(
 	rec := &recorder{}
 	sess := newTestPair(ctx, t, ld, rec)
 
-	res, err := sess.CallTool(ctx, &sdk.CallToolParams{Name: toolName})
+	res, err := callTool(ctx, sess, &sdk.CallToolParams{Name: toolName})
 	require.NoError(t, err)
 	require.False(t, res.IsError)
 
@@ -227,7 +227,7 @@ func TestList_GPUNodes_LimitCapsAcrossGroups(t *testing.T) {
 	rec := &recorder{}
 	sess := newTestPair(ctx, t, loader, rec)
 
-	res, err := sess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, sess, &sdk.CallToolParams{
 		Name:      "list_gpu_nodes",
 		Arguments: map[string]any{"limit": 3},
 	})
@@ -268,7 +268,7 @@ func TestList_GPUNodes_Limit_ZeroAndOverflow(t *testing.T) {
 		rec := &recorder{}
 		sess := newTestPair(ctx, t, loader, rec)
 
-		res, err := sess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_nodes", Arguments: args})
+		res, err := callTool(ctx, sess, &sdk.CallToolParams{Name: "list_gpu_nodes", Arguments: args})
 		require.NoError(t, err)
 		require.False(t, res.IsError)
 		scBytes, err := json.Marshal(res.StructuredContent)
@@ -323,7 +323,7 @@ func TestList_Definitions_UnknownKind(t *testing.T) {
 	rec := &recorder{}
 	sess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := sess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, sess, &sdk.CallToolParams{
 		Name:      "list_definitions",
 		Arguments: map[string]any{"kind": "bogus"},
 	})

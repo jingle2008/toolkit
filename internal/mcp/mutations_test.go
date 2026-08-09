@@ -34,7 +34,7 @@ func TestIntegration_MutationTool_RequiresConfirm(t *testing.T) {
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
 	// confirm omitted (default false) → refused
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name:      "cordon_node",
 		Arguments: map[string]any{"node": "node-a"},
 	})
@@ -122,7 +122,7 @@ func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
 			rec := &recorder{}
 			clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-			res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+			res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 				Name:      tc.name,
 				Arguments: tc.args, // confirm omitted → must refuse
 			})
@@ -156,7 +156,7 @@ func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name:      "cordon_node",
 		Arguments: map[string]any{"node": "node-a", "confirm": true},
 	})
@@ -223,7 +223,7 @@ func TestIntegration_UncordonTool_PassesWantFalse(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	_, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name:      "uncordon_node",
 		Arguments: map[string]any{"node": "node-a", "confirm": true},
 	})
@@ -248,7 +248,7 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "terminate_node",
 		Arguments: map[string]any{
 			"node":    "node-a",
@@ -278,7 +278,7 @@ func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "reboot_node",
 		Arguments: map[string]any{
 			"node":    "node-a",
@@ -321,7 +321,7 @@ func TestIntegration_ScaleGPUPoolTool_ConfirmTrueExecutes(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "scale_gpu_pool",
 		Arguments: map[string]any{
 			"name":    "pool-a",
@@ -352,7 +352,7 @@ func TestIntegration_ScaleGPUPoolTool_ResolverError(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "scale_gpu_pool",
 		Arguments: map[string]any{
 			"name":    "pool-x",
@@ -384,7 +384,7 @@ func TestIntegration_MutationTool_HonorsEnvOverride_WhenAllowed(t *testing.T) {
 		c.MutationEnvOverrideAllowed = true
 	})
 
-	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	_, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "delete_dac",
 		Arguments: map[string]any{
 			"name":       "dac-x",
@@ -417,7 +417,7 @@ func TestIntegration_MutationTool_IgnoresEnvOverride_WhenDisallowed(t *testing.T
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec) // flag NOT set
 
-	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	_, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "delete_dac",
 		Arguments: map[string]any{
 			"name":       "dac-x",
@@ -460,7 +460,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 		c.MutationEnvOverrideAllowed = true
 	})
 
-	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	_, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "reboot_node",
 		Arguments: map[string]any{
 			"node":      "node-a",
@@ -481,7 +481,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 		gotActionEnv = env
 		return nil
 	}
-	_, err = clientSess.CallTool(ctx, &sdk.CallToolParams{
+	_, err = callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "terminate_node",
 		Arguments: map[string]any{
 			"node":      "node-a",
@@ -508,7 +508,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 		gotActionEnv = env
 		return nil
 	}
-	_, err = clientSess.CallTool(ctx, &sdk.CallToolParams{
+	_, err = callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "scale_gpu_pool",
 		Arguments: map[string]any{
 			"name":      "pool-a",
@@ -536,7 +536,7 @@ func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "delete_dac",
 		Arguments: map[string]any{
 			"name":    "dac-x",
@@ -567,7 +567,7 @@ func TestIntegration_MutationTool_PerformErrorPropagates(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name:      "drain_node",
 		Arguments: map[string]any{"node": "node-a", "confirm": true},
 	})
@@ -628,7 +628,7 @@ func TestIntegration_SetTenantTool_ConfirmTrueExecutes(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name: "set_tenant",
 		Arguments: map[string]any{
 			"ocid":    "ocid1.tenancy.oc1..aaaa",
@@ -664,7 +664,7 @@ func TestIntegration_SetTenantTool_RejectsBadOCID(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name:      "set_tenant",
 		Arguments: map[string]any{"ocid": "nope", "name": "Acme", "confirm": true},
 	})
@@ -687,7 +687,7 @@ func TestIntegration_SetTenantTool_RejectsBadOCID_WithoutConfirm(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name:      "set_tenant",
 		Arguments: map[string]any{"ocid": "nope", "name": "Acme"},
 	})
@@ -710,7 +710,7 @@ func TestIntegration_SetTenantTool_RequiresName(t *testing.T) {
 	rec := &recorder{}
 	clientSess := newTestPair(ctx, t, stubLoader{}, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{
 		Name:      "set_tenant",
 		Arguments: map[string]any{"ocid": "ocid1.tenancy.oc1..aaaa", "confirm": true},
 	})

@@ -177,6 +177,16 @@ func mutationSuccess(action, kind, target string) (*sdk.CallToolResult, mutation
 // notification failure must not mask the tool's primary response (or
 // error). A nil session — possible if a handler is invoked outside a
 // live transport — silently no-ops.
+//
+// Note that under protocol >= 2026-07-28 the client controls the level
+// per request via _meta (SEP-2575); a client that sends no level gets no
+// notifications, which is spec-correct rather than a bug here.
+//
+// MCP logging is deprecated as of protocol 2026-07-28 (SEP-2577) but
+// remains functional for at least twelve months. Migrating off it (to
+// stderr for STDIO servers, or OpenTelemetry) is a separate change.
+//
+//nolint:staticcheck // SA1019: deliberate use of the deprecated-but-live logging feature; see note above
 func notify(ctx context.Context, sess *sdk.ServerSession, level sdk.LoggingLevel, msg string) {
 	if sess == nil {
 		return

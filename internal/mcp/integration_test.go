@@ -109,9 +109,15 @@ func (l fixedGPUPoolsLoader) LoadGPUPools(context.Context, string, models.Enviro
 }
 
 // recorder collects notifications/message frames the server emits.
+//
+// The SDK's logging types are deprecated as of protocol 2026-07-28
+// (SEP-2577) but stay functional for at least twelve months, and
+// internal/mcp still emits notifications/message via notify(). These
+// tests must therefore keep speaking the deprecated types; the
+// staticcheck suppressions below go away when notify() migrates.
 type recorder struct {
 	mu   sync.Mutex
-	msgs []*sdk.LoggingMessageParams
+	msgs []*sdk.LoggingMessageParams //nolint:staticcheck // SA1019: pins the deprecated-but-live logging feature notify() uses
 }
 
 func (r *recorder) record(_ context.Context, req *sdk.LoggingMessageRequest) {
@@ -120,6 +126,7 @@ func (r *recorder) record(_ context.Context, req *sdk.LoggingMessageRequest) {
 	r.msgs = append(r.msgs, req.Params)
 }
 
+//nolint:staticcheck // SA1019: see recorder — deprecated logging types are still the wire format
 func (r *recorder) snapshot() []*sdk.LoggingMessageParams {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -159,15 +166,40 @@ func newTestPair(ctx context.Context, t *testing.T, ld loader.Composite, rec *re
 	require.NoError(t, err, "client.Connect")
 	t.Cleanup(func() { _ = clientSess.Close() })
 
-	// Server gates Log on this — without a level set, notifications drop silently.
-	require.NoError(t, clientSess.SetLoggingLevel(ctx, &sdk.SetLoggingLevelParams{Level: "debug"}))
+	// No logging/setLevel here: this SDK negotiates 2026-07-28, where the
+	// level is per-request and a session-wide level is ignored. callTool
+	// carries it instead.
 	return clientSess
+}
+
+// callTool issues a tools/call that opts into server log notifications.
+//
+// Under protocol >= 2026-07-28 (SEP-2575) the logging level is
+// per-request: the server re-derives it from every request's _meta, and
+// an absent value suppresses notifications/message entirely. That
+// overwrite also clears whatever logging/setLevel put in session state,
+// so a session-wide level is not enough — a call whose notifications we
+// intend to assert on must carry the level itself.
+//
+// Every test in this package records notifications, so all tool calls go
+// through here; otherwise a later test asserting on the recorder would
+// silently see zero frames.
+func callTool(ctx context.Context, sess *sdk.ClientSession, params *sdk.CallToolParams) (*sdk.CallToolResult, error) {
+	if params.Meta == nil {
+		params.Meta = sdk.Meta{}
+	}
+	// Plain string rather than sdk.LoggingLevel: Meta is map[string]any and
+	// the server JSON-decodes the value, so the untyped form avoids taking a
+	// dependency on the deprecated logging types here.
+	params.Meta[sdk.MetaKeyLogLevel] = "debug" //nolint:staticcheck // SA1019: see recorder
+	return sess.CallTool(ctx, params)
 }
 
 // waitForMsgs polls the recorder until at least one message has
 // arrived or the deadline expires. Notification delivery on the
 // in-memory transport is asynchronous to the tool response, so we
 // can't synchronously assert right after CallTool returns.
+//nolint:staticcheck // SA1019: see recorder — deprecated logging types are still the wire format
 func waitForMsgs(t *testing.T, rec *recorder) []*sdk.LoggingMessageParams {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
@@ -191,7 +223,7 @@ func TestIntegration_NotifiesOnHandlerError(t *testing.T) {
 	ld := errBaseModelsLoader{err: errors.New("kube unreachable")}
 	clientSess := newTestPair(ctx, t, ld, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_base_models"})
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{Name: "list_base_models"})
 	// The SDK surfaces tool handler errors via CallToolResult.IsError,
 	// not a Go error from CallTool itself.
 	require.NoError(t, err, "tools/call transport error")
@@ -201,7 +233,7 @@ func TestIntegration_NotifiesOnHandlerError(t *testing.T) {
 	msgs := waitForMsgs(t, rec)
 	require.NotEmpty(t, msgs)
 	got := msgs[0]
-	assert.Equal(t, sdk.LoggingLevel("error"), got.Level, "expected error-level notification")
+	assert.Equal(t, "error", string(got.Level), "expected error-level notification")
 	assert.Equal(t, "toolkit", got.Logger)
 	body, ok := got.Data.(string)
 	require.True(t, ok, "Data should be a string, got %T", got.Data)
@@ -222,14 +254,14 @@ func TestIntegration_NotifiesOnPartialLoad(t *testing.T) {
 	ld := partialGPUPoolsLoader{err: partial}
 	clientSess := newTestPair(ctx, t, ld, rec)
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{Name: "list_gpu_pools"})
 	require.NoError(t, err, "tools/call transport error")
 	require.NotNil(t, res)
 	assert.False(t, res.IsError, "partial-load should not fail the tool call")
 
 	msgs := waitForMsgs(t, rec)
 	got := msgs[0]
-	assert.Equal(t, sdk.LoggingLevel("warning"), got.Level)
+	assert.Equal(t, "warning", string(got.Level))
 	body, ok := got.Data.(string)
 	require.True(t, ok, "Data should be a string, got %T", got.Data)
 	assert.Contains(t, body, "load gpu pools")
@@ -263,7 +295,7 @@ func TestIntegration_NotifiesOnGPUPoolEnrichmentFailure(t *testing.T) {
 		c.KubeConfig = "/dev/null/no-such-kubeconfig"
 	})
 
-	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
+	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{Name: "list_gpu_pools"})
 	require.NoError(t, err, "tools/call transport error")
 	require.NotNil(t, res)
 	assert.False(t, res.IsError, "enrichment failure must not fail the tool call")
@@ -299,7 +331,7 @@ func TestIntegration_NotifiesOnGPUPoolEnrichmentFailure(t *testing.T) {
 	require.NotEmpty(t, msgs)
 	foundNotify := false
 	for _, m := range msgs {
-		if m.Level != sdk.LoggingLevel("warning") {
+		if string(m.Level) != "warning" {
 			continue
 		}
 		body, ok := m.Data.(string)
@@ -389,7 +421,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 	// tools/call list_aliases — exercises the JSON-RPC framing and
 	// asserts the listResult envelope shape end-to-end. list_aliases
 	// doesn't touch the loader, so the stub is irrelevant here.
-	callRes, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_aliases"})
+	callRes, err := callTool(ctx, clientSess, &sdk.CallToolParams{Name: "list_aliases"})
 	require.NoError(t, err, "tools/call list_aliases")
 	require.NotNil(t, callRes)
 	require.Len(t, callRes.Content, 1, "expected exactly one content block")
