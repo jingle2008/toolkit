@@ -33,7 +33,7 @@ func TestParsePercent(t *testing.T) {
 		{in: "37%", want: 37},
 		{in: "0%", want: 0},
 		{in: "100%", want: 100},
-		{in: " 50", want: 50, /* suffix is optional */},
+		{in: " 50", want: 50 /* suffix is optional */},
 		// Padding on either side of the value or the "%" must not defeat
 		// the suffix strip.
 		{in: " 50% ", want: 50},
