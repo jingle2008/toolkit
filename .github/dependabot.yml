@@ -13,3 +13,22 @@ updates:
     ignore:
       - dependency-name: "golang.org/x/tools"
         update-types: ["version-update:semver-major"]
+
+  # Without this, action versions only get bumped when someone notices a
+  # deprecation warning in a run log — which is how codeql-action sat on
+  # v3 from October 2025 until it started warning about Node 20.
+  #
+  # prefix "ci" (not "deps") is deliberate: release-drafter categorizes by
+  # label, and its autolabeler derives labels from the PR title's
+  # conventional-commit prefix, so "ci: bump ..." lands these under
+  # "🏗 Build & CI" and resolves to a patch bump.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "automerge"
