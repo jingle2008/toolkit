@@ -3,11 +3,22 @@
 
 This project is indexed by GitNexus as **toolkit**. Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze --embeddings --skip-agents-md` in terminal first (see Reindexing below).
 
 <!-- gitnexus:end -->
 
 <!-- Hand-maintained: keep below the gitnexus markers so `npx gitnexus analyze` can't overwrite it. -->
+
+## Reindexing
+
+Always reindex with `npx gitnexus analyze --embeddings --skip-agents-md`.
+
+Without `--skip-agents-md`, analyze rewrites everything between the
+`gitnexus:start`/`end` markers above, re-expanding the trimmed boilerplate into
+stock "MUST run impact analysis before editing any symbol" rules. Those don't
+delete the calibration below — they contradict it, and they sit *above* it, so
+an agent reading top-down hits the absolutes first. Drop `--embeddings` only if
+you want to stop maintaining semantic search.
 
 ## Using GitNexus
 
