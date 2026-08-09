@@ -34,10 +34,11 @@ func TestParsePercent(t *testing.T) {
 		{in: "0%", want: 0},
 		{in: "100%", want: 100},
 		{in: " 50", want: 50, /* suffix is optional */},
-		// TrimSuffix runs before TrimSpace, so a trailing space defeats the
-		// "%" strip. Harmless in practice — cells are formatted "%.0f%%"
-		// with no padding — but pinned so the ordering isn't changed blindly.
-		{in: " 50% ", wantErr: true},
+		// Padding on either side of the value or the "%" must not defeat
+		// the suffix strip.
+		{in: " 50% ", want: 50},
+		{in: "50 %", want: 50},
+		{in: "\t50%\n", want: 50},
 		// .5 rounds up, matching the "%.0f" the model formats with.
 		{in: "66.5%", want: 67},
 		{in: "66.4%", want: 66},

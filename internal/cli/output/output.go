@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -63,11 +64,11 @@ type Options struct {
 }
 
 // WriteJSON emits items as a single JSON value (typically an array).
-// A nil items value emits "[]" so pipelines like `| jq '.[]'` never
-// see a null document.
+// A nil or empty collection emits "[]" (or "{}" for a map) so pipelines
+// like `| jq '.[]'` never see a null document.
 func WriteJSON(w io.Writer, items any, opts Options) error {
-	if items == nil {
-		_, err := io.WriteString(w, "[]\n")
+	if literal, ok := emptyCollectionLiteral(items); ok {
+		_, err := io.WriteString(w, literal+"\n")
 		return err
 	}
 	enc := json.NewEncoder(w)
@@ -75,6 +76,38 @@ func WriteJSON(w io.Writer, items any, opts Options) error {
 		enc.SetIndent("", "  ")
 	}
 	return enc.Encode(items)
+}
+
+// emptyCollectionLiteral reports the literal to substitute for a value the
+// encoders would otherwise render as "null", and whether items is one.
+//
+// An untyped nil is the obvious case, but the one that actually bites is
+// a *typed* nil slice: filtering with no matches yields []T(nil), which
+// is a non-nil `any`, so a plain `items == nil` check misses it and the
+// encoder emits "null". That breaks `| jq '.[]'` for the ordinary
+// "filter matched nothing" result — exactly what WriteJSON promises not
+// to do.
+//
+// Only slices and maps are normalized. A nil pointer or a struct is left
+// alone: "null" is the honest encoding for a missing object, and callers
+// passing a struct view (e.g. `toolkit config -o json`) want an object,
+// not an array.
+func emptyCollectionLiteral(items any) (string, bool) {
+	if items == nil {
+		return "[]", true
+	}
+	switch v := reflect.ValueOf(items); v.Kind() {
+	case reflect.Slice:
+		if v.IsNil() {
+			return "[]", true
+		}
+	case reflect.Map:
+		if v.IsNil() {
+			return "{}", true
+		}
+	default:
+	}
+	return "", false
 }
 
 // WriteJSONL emits one JSON object per line. items must be a slice
@@ -112,6 +145,13 @@ func WriteJSONL(w io.Writer, items any, _ Options) error {
 // effect (sigs.k8s.io/yaml has no indent knob; its default
 // formatting is already human-readable).
 func WriteYAML(w io.Writer, items any, _ Options) error {
+	// Same nil-collection normalization as WriteJSON, so `-o yaml` and
+	// `-o json` agree on how an empty result looks. "[]" and "{}" are
+	// valid YAML flow-style empties.
+	if literal, ok := emptyCollectionLiteral(items); ok {
+		_, err := io.WriteString(w, literal+"\n")
+		return err
+	}
 	out, err := yaml.Marshal(items)
 	if err != nil {
 		return err

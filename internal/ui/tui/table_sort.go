@@ -135,7 +135,13 @@ func hasIntHeader(set map[string]struct{}, header string) bool {
 }
 
 // parsePercent parses a string like "37%" as int64 (rounded), returns 0 on error.
+//
+// Whitespace is trimmed before the "%" is stripped and again after, so
+// padded cells (" 37% ", "37 %") parse the same as "37%". Trimming only
+// after the suffix strip would leave the "%" attached whenever the value
+// had a trailing space, and ParseFloat would reject it.
 func parsePercent(s string) (int64, error) {
+	s = strings.TrimSpace(s)
 	s = strings.TrimSpace(strings.TrimSuffix(s, "%"))
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {

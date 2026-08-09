@@ -48,6 +48,63 @@ func TestWriteJSON_NilEmitsArray(t *testing.T) {
 	assert.Equal(t, "[]\n", buf.String())
 }
 
+func TestWriteJSON_TypedNilSliceEmitsArray(t *testing.T) {
+	t.Parallel()
+	// The case that actually reaches this in practice: a filter matched
+	// nothing, so the caller hands over []T(nil) — a non-nil `any` that
+	// encoding/json would render as "null", breaking `| jq '.[]'`.
+	type item struct {
+		Name string `json:"name"`
+	}
+	var nilSlice []item
+
+	var buf bytes.Buffer
+	require.NoError(t, WriteJSON(&buf, nilSlice, Options{}))
+	assert.Equal(t, "[]", strings.TrimSpace(buf.String()))
+}
+
+func TestWriteJSON_EmptyNonNilSliceEmitsArray(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	require.NoError(t, WriteJSON(&buf, []string{}, Options{}))
+	assert.Equal(t, "[]", strings.TrimSpace(buf.String()))
+}
+
+func TestWriteJSON_TypedNilMapEmitsObject(t *testing.T) {
+	t.Parallel()
+	var nilMap map[string][]string
+
+	// A map's empty form is an object, not an array.
+	var buf bytes.Buffer
+	require.NoError(t, WriteJSON(&buf, nilMap, Options{}))
+	assert.Equal(t, "{}", strings.TrimSpace(buf.String()))
+}
+
+func TestWriteJSON_StructIsNotNormalized(t *testing.T) {
+	t.Parallel()
+	// `toolkit config -o json` passes a struct view and wants an object;
+	// normalizing that to "[]" would corrupt it.
+	type view struct {
+		RepoPath string `json:"repo_path"`
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, WriteJSON(&buf, view{RepoPath: "/tmp"}, Options{}))
+	assert.JSONEq(t, `{"repo_path":"/tmp"}`, buf.String())
+}
+
+func TestWriteJSON_NilPointerStillNull(t *testing.T) {
+	t.Parallel()
+	// "null" is the honest encoding for a missing object — only nil
+	// collections are normalized.
+	type view struct{}
+	var p *view
+
+	var buf bytes.Buffer
+	require.NoError(t, WriteJSON(&buf, p, Options{}))
+	assert.Equal(t, "null", strings.TrimSpace(buf.String()))
+}
+
 func TestWriteJSON_Pretty(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
@@ -245,6 +302,32 @@ func TestWriteJSON_WriteError(t *testing.T) {
 	// non-nil goes through the encoder.
 	err = WriteJSON(failWriter{err: sentinel}, []string{"a"}, Options{})
 	require.ErrorIs(t, err, sentinel)
+}
+
+func TestWriteYAML_NilCollectionsMatchJSON(t *testing.T) {
+	t.Parallel()
+	type item struct {
+		Name string `json:"name"`
+	}
+	var nilSlice []item
+	var nilMap map[string][]item
+
+	// -o yaml and -o json must agree on how an empty result looks;
+	// yaml.Marshal on its own would emit "null" here.
+	var buf bytes.Buffer
+	require.NoError(t, WriteYAML(&buf, nilSlice, Options{}))
+	assert.Equal(t, "[]", strings.TrimSpace(buf.String()))
+
+	buf.Reset()
+	require.NoError(t, WriteYAML(&buf, nilMap, Options{}))
+	assert.Equal(t, "{}", strings.TrimSpace(buf.String()))
+}
+
+func TestWriteYAML_StructStillMarshals(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	require.NoError(t, WriteYAML(&buf, map[string]string{"name": "a"}, Options{}))
+	assert.Contains(t, buf.String(), "name: a", "non-nil values must still go through yaml.Marshal")
 }
 
 func TestWriteYAML_MarshalError(t *testing.T) {

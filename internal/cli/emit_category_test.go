@@ -239,15 +239,10 @@ func TestEmitCategory_FilterMatchingNothing(t *testing.T) {
 		output.Options{Format: output.FormatJSON}, nil)
 	require.NoError(t, err, "an empty result is not an error")
 
-	// Pins current behavior: "null", not "[]".
-	//
-	// output.WriteJSON documents that a nil items value emits "[]" so
-	// `| jq '.[]'` never sees a null document, but its `items == nil`
-	// check only catches an untyped nil. FilterSlice returns a typed nil
-	// slice ([]models.BaseModel(nil)), which is a non-nil `any`, so the
-	// encoder emits null and the guard never fires. Change this assertion
-	// deliberately if that guard is ever widened.
-	assert.Equal(t, "null", strings.TrimSpace(buf.String()))
+	// FilterSlice returns a typed nil slice here, which encoding/json
+	// would render as "null" and break `| jq '.[]'`. WriteJSON normalizes
+	// it to an empty array instead.
+	assert.Equal(t, "[]", strings.TrimSpace(buf.String()))
 }
 
 func TestEmitCategory_LimitTruncates(t *testing.T) {
