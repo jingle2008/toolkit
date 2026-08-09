@@ -9,6 +9,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -31,6 +32,25 @@ func TestEnvFor_DefaultsThenOverrides(t *testing.T) {
 	// Partial overrides — only env_type changes.
 	got = s.envFor(envOverride{EnvType: "preprod"})
 	assert.Equal(t, models.Environment{Type: "preprod", Region: "us-ashburn-1", Realm: "oc1"}, got)
+}
+
+func TestEnvFor_NormalizesOverrides(t *testing.T) {
+	t.Parallel()
+	s := &Server{
+		cfg:    config.Config{EnvType: "dev", EnvRegion: "us-ashburn-1", EnvRealm: "oc1"},
+		logger: logging.NewNoOpLogger(),
+	}
+
+	// An agent handing us the forms that appear in tickets and dashboards.
+	got := s.envFor(envOverride{EnvType: "ppe", EnvRegion: "phx"})
+	assert.Equal(t, models.Environment{Type: "preprod", Region: "us-phoenix-1", Realm: "oc1"}, got)
+
+	// An unresolvable code passes through rather than erroring: envFor has
+	// no error return, and LoadDataset rejects the unknown env downstream.
+	// This fails closed — regionByShortName is an exact lookup, so a bad
+	// code can never silently become a different real region.
+	got = s.envFor(envOverride{EnvRegion: "zzz"})
+	assert.Equal(t, "zzz", got.Region, "unresolvable code must pass through untouched")
 }
 
 func TestJsonResult_EnvelopeShape(t *testing.T) {

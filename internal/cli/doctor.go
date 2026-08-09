@@ -91,6 +91,14 @@ func runDoctor(w io.Writer, cfgFile, format string) error {
 
 	var cfg config.Config
 	unmarshalErr := viper.Unmarshal(&cfg)
+	// Doctor reports rather than aborts, so an unresolvable region code
+	// rides the same channel as a schema error: checkConfigSchema is
+	// already "the config loads and is usable", which this is part of.
+	// cfg keeps its raw values on failure, which is what the remaining
+	// path checks want to show anyway.
+	if unmarshalErr == nil {
+		unmarshalErr = cfg.Normalize()
+	}
 	results := collectChecks(cfgFile, cfg, unmarshalErr)
 
 	switch normalized {

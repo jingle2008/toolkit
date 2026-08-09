@@ -73,8 +73,8 @@ func (s *Server) Run(ctx context.Context) error {
 // region scoped data. All three fields are optional; empty means
 // "use the value supplied at server startup".
 type envOverride struct {
-	EnvType   string `json:"env_type,omitempty" jsonschema:"override startup env_type (dev/preprod/prod/...)"`
-	EnvRegion string `json:"env_region,omitempty" jsonschema:"override startup env_region (e.g. us-ashburn-1)"`
+	EnvType   string `json:"env_type,omitempty" jsonschema:"override startup env_type (dev/preprod/prod/...); ppe is accepted as an alias for preprod"`
+	EnvRegion string `json:"env_region,omitempty" jsonschema:"override startup env_region: either a full identifier (us-ashburn-1) or a 3-letter code (iad)"`
 	EnvRealm  string `json:"env_realm,omitempty" jsonschema:"override startup env_realm (e.g. oc1)"`
 }
 
@@ -87,10 +87,22 @@ func (s *Server) envFor(in envOverride) models.Environment {
 		Realm:  s.cfg.EnvRealm,
 	}
 	if in.EnvType != "" {
-		env.Type = in.EnvType
+		env.Type = models.ResolveEnvType(in.EnvType)
 	}
 	if in.EnvRegion != "" {
 		env.Region = in.EnvRegion
+		// envFor has no error return (15 call sites in tools.go), so an
+		// unresolvable code is passed through and left for LoadDataset to
+		// reject with "environment is not valid or in the list". That fails
+		// closed: regionByShortName is an exact lookup, so a bad code can
+		// never resolve to a *different* real region — the worst case is a
+		// rejected call with a vaguer message than the CLI would give.
+		if r, err := models.ResolveRegion(in.EnvRegion); err != nil {
+			s.logger.Warnw("unresolvable env_region override; passing through",
+				"env_region", in.EnvRegion, "error", err)
+		} else {
+			env.Region = string(r)
+		}
 	}
 	if in.EnvRealm != "" {
 		env.Realm = in.EnvRealm

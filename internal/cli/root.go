@@ -100,11 +100,16 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 		if err := viper.Unmarshal(&cfg); err != nil {
 			return fmt.Errorf("unmarshal config: %w", err)
 		}
+		rawType, rawRegion := cfg.EnvType, cfg.EnvRegion
+		if err := cfg.Normalize(); err != nil {
+			return err
+		}
 
 		logger, err := initLogger(cfg)
 		if err != nil {
 			return err
 		}
+		logEnvAliases(logger, rawType, rawRegion, cfg)
 		// Tag every line in the shared log file with the originating
 		// command + build, so concurrent tui/cli/mcp sessions writing the
 		// same file stay distinguishable.

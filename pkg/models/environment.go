@@ -2,7 +2,29 @@ package models
 
 import (
 	"fmt"
+	"strings"
 )
+
+/*
+ResolveEnvType canonicalizes a user-supplied environment type.
+
+The input is lowercased and trimmed, and "ppe" resolves to "preprod" —
+the spelling the shep_targets data uses, and therefore the only one
+that matches during environment validation. The opposite direction
+already exists on the way out: KubeContext and the GenAI endpoint
+prefix both rewrite "preprod" to "ppe".
+
+Anything else is returned as-is. Unlike regions there is no closed set
+to check against: valid types are whatever the repo's shep_targets
+entries declare, so an unknown type is left for the loader to reject.
+*/
+func ResolveEnvType(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	if v == "ppe" {
+		return "preprod"
+	}
+	return v
+}
 
 // Environment represents a deployment environment.
 type Environment struct {

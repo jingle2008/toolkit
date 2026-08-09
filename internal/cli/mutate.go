@@ -108,6 +108,10 @@ func withMutationSetup(
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return fmt.Errorf("unmarshal config: %w", err)
 	}
+	rawType, rawRegion := cfg.EnvType, cfg.EnvRegion
+	if err := cfg.Normalize(); err != nil {
+		return err
+	}
 	if err := validateMutationConfig(cfg, needsKube, needsRepo, needsEnv); err != nil {
 		return err
 	}
@@ -117,6 +121,9 @@ func withMutationSetup(
 	}
 	logger = logger.WithFields("cmd", "mutate")
 	defer func() { _ = logger.Sync() }()
+	// Mutations act on whatever env this resolves to, so the expansion
+	// belongs in the audit trail alongside the action itself.
+	logEnvAliases(logger, rawType, rawRegion, cfg)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

@@ -6,6 +6,36 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestResolveEnvType(t *testing.T) {
+	t.Parallel()
+	cases := map[string]string{
+		"ppe":     "preprod",
+		"PPE":     "preprod",
+		"  ppe  ": "preprod",
+		// Canonical and unknown values pass through untouched — valid
+		// types are whatever shep_targets declares, so there's no closed
+		// set to validate against here.
+		"preprod": "preprod",
+		"dev":     "dev",
+		" PROD ":  "prod",
+		"weird":   "weird",
+		"":        "",
+	}
+	for in, want := range cases {
+		assert.Equal(t, want, ResolveEnvType(in), "input %q", in)
+	}
+}
+
+// TestResolveEnvType_RoundTripsWithKubeContext pins the two directions
+// against each other: ppe is the accepted input spelling, preprod is
+// the canonical form, and KubeContext renders it back as ppe.
+func TestResolveEnvType_RoundTripsWithKubeContext(t *testing.T) {
+	t.Parallel()
+	env := Environment{Type: ResolveEnvType("ppe"), Region: "us-phoenix-1", Realm: "oc1"}
+	assert.Equal(t, "preprod", env.Type)
+	assert.Equal(t, "dp-ppe-phx", env.KubeContext())
+}
+
 func TestEnvironment_GettersAndEquals(t *testing.T) {
 	t.Parallel()
 	env := Environment{

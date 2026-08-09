@@ -51,6 +51,10 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		if err := viper.Unmarshal(&cfg); err != nil {
 			return fmt.Errorf("unmarshal config: %w", err)
 		}
+		rawType, rawRegion := cfg.EnvType, cfg.EnvRegion
+		if err := cfg.Normalize(); err != nil {
+			return err
+		}
 		// MCP needs at minimum RepoPath + the env triple to load data.
 		// KubeConfig is only required for cluster-derived tools; per-tool
 		// failures there surface to the MCP client as tool errors.
@@ -69,6 +73,7 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		}
 		logger = logger.WithFields("cmd", "mcp", "version", version)
 		defer func() { _ = logger.Sync() }()
+		logEnvAliases(logger, rawType, rawRegion, cfg)
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()

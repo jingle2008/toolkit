@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/viper"
 )
 
 func TestRootCmd_HelpOutput(t *testing.T) {
@@ -110,6 +112,29 @@ func TestEnvShorthands(t *testing.T) {
 		if f.Name != tc.want {
 			t.Errorf("-%s maps to %q, want %q", tc.short, f.Name, tc.want)
 		}
+	}
+}
+
+// TestEnvAliasesResolveOnGetPath proves Normalize actually runs on a
+// real CLI path, and runs *before* the required-setting checks: with a
+// bad region code and no repo-path, the code error is the one that
+// surfaces. If Normalize were wired after validateGetConfig, the user
+// would fix repo-path first and only then discover the typo.
+func TestEnvAliasesResolveOnGetPath(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"get", "tenant", "--env-region", "zzz"})
+	cmd.SetOut(new(bytes.Buffer))
+	cmd.SetErr(new(bytes.Buffer))
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected an error for --env-region zzz")
+	}
+	if !strings.Contains(err.Error(), "unknown region code") {
+		t.Errorf("want the region-code error, got: %v", err)
 	}
 }
 

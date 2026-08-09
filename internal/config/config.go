@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	domain "github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // Config holds configuration for the toolkit CLI application.
@@ -31,6 +32,36 @@ type Config struct {
 	// OCI credentials decide the maximum blast radius — not the
 	// operator's startup-env choice.
 	MutationEnvOverrideAllowed bool `mapstructure:"mutation-env-override-allowed"`
+}
+
+/*
+Normalize canonicalizes the user-supplied env values in place: short
+region codes expand to full OCI region identifiers ("phx" ->
+"us-phoenix-1") and "ppe" becomes "preprod". Case is folded, so "PHX"
+and "PPE" resolve too.
+
+Empty values are left empty rather than resolved, so the
+required-setting errors in Validate and validateLoaderConfig still
+name the missing flag instead of reporting an unknown region code for
+a value the user never supplied.
+
+Call this immediately after unmarshalling and before constructing a
+models.Environment. EnvRegion reaches the OCI SDK and OCID
+construction verbatim, so a short code that survives normalization
+produces a wrong endpoint and wrong OCIDs rather than a clean failure.
+*/
+func (c *Config) Normalize() error {
+	if c.EnvType != "" {
+		c.EnvType = models.ResolveEnvType(c.EnvType)
+	}
+	if c.EnvRegion != "" {
+		r, err := models.ResolveRegion(c.EnvRegion)
+		if err != nil {
+			return fmt.Errorf("config: --env-region: %w", err)
+		}
+		c.EnvRegion = string(r)
+	}
+	return nil
 }
 
 /*

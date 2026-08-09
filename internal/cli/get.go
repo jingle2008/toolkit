@@ -132,6 +132,10 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		if err := viper.Unmarshal(&cfg); err != nil {
 			return fmt.Errorf("unmarshal config: %w", err)
 		}
+		rawType, rawRegion := cfg.EnvType, cfg.EnvRegion
+		if err := cfg.Normalize(); err != nil {
+			return err
+		}
 		if err := validateGetConfig(cfg, cat); err != nil {
 			return err
 		}
@@ -146,6 +150,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		}
 		logger = logger.WithFields("cmd", "get")
 		defer func() { _ = logger.Sync() }()
+		logEnvAliases(logger, rawType, rawRegion, cfg)
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()

@@ -117,8 +117,8 @@ toolkit --help                # all global flags
 | ---- | ------- | ----------- |
 | `--config` | `~/.config/toolkit/config.yaml` | Path to config file (YAML or JSON) |
 | `--repo-path` |  | Path to the repository |
-| `--env-type, -t` |  | Environment type (e.g. dev, prod) |
-| `--env-region, -r` |  | Environment region |
+| `--env-type, -t` |  | Environment type (e.g. dev, prod); `ppe` is accepted for `preprod` |
+| `--env-region, -r` |  | Environment region — full identifier (`us-phoenix-1`) or 3-letter code (`phx`) |
 | `--env-realm, -m` |  | Environment realm |
 | `--category, -c` |  | Category to display |
 | `--filter, -f` |  | Initial filter for current category |

@@ -125,6 +125,8 @@ func writeConfigValidation(w io.Writer, cfgFile, format string, pretty bool) err
 	)
 	if err := viper.Unmarshal(&cfg); err != nil {
 		validErr = fmt.Errorf("unmarshal config: %w", err)
+	} else if err := cfg.Normalize(); err != nil {
+		validErr = err
 	} else if err := cfg.Validate(); err != nil {
 		validErr = err
 	}
