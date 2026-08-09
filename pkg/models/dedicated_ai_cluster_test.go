@@ -19,6 +19,68 @@ func TestDedicatedAICluster_Getters(t *testing.T) {
 	assert.ElementsMatch(t, []string{"cluster1", "A100", "shapeA", "Ready", "tenant1", "", "", "", "", ""}, cluster.FilterableFields())
 }
 
+func TestDedicatedAICluster_OwnerState(t *testing.T) {
+	t.Parallel()
+	var noOwner DedicatedAICluster
+	assert.Equal(t, "", noOwner.OwnerState())
+
+	internal := DedicatedAICluster{Owner: &Tenant{IsInternal: true}}
+	assert.Equal(t, "true", internal.OwnerState())
+
+	external := DedicatedAICluster{Owner: &Tenant{IsInternal: false}}
+	assert.Equal(t, "false", external.OwnerState())
+}
+
+func TestDedicatedAICluster_Usage(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		total int
+		idle  int
+		want  string
+	}{
+		{name: "no replicas", total: 0, idle: 0, want: ""},
+		{name: "negative total", total: -1, idle: 0, want: ""},
+		{name: "fully idle", total: 4, idle: 4, want: "0%"},
+		{name: "fully used", total: 4, idle: 0, want: "100%"},
+		{name: "half used", total: 4, idle: 2, want: "50%"},
+		{name: "rounded", total: 3, idle: 1, want: "67%"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			dac := DedicatedAICluster{TotalReplicas: c.total, IdleReplicas: c.idle}
+			assert.Equal(t, c.want, dac.Usage())
+		})
+	}
+}
+
+func TestDedicatedAICluster_IsFaulty(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		status string
+		want   bool
+	}{
+		{status: "", want: false},
+		{status: "Ready", want: false},
+		{status: "active", want: false},
+		{status: "fail", want: true},
+		{status: "failed", want: true},
+		{status: "FAILED", want: true},
+		{status: "Fail", want: true},
+		{status: "failing", want: false},
+	}
+
+	for _, c := range cases {
+		t.Run(c.status, func(t *testing.T) {
+			t.Parallel()
+			dac := DedicatedAICluster{Status: c.status}
+			assert.Equal(t, c.want, dac.IsFaulty())
+		})
+	}
+}
+
 func TestDedicatedAICluster_GetIDAndTenantID(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

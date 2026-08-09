@@ -22,4 +22,5 @@ func TestServiceTenancy_Getters(t *testing.T) {
 		{Type: "dev", Region: "us-ashburn-1", Realm: "oc1"},
 	}
 	assert.Equal(t, expectedEnvs, st.Environments())
+	assert.False(t, st.IsFaulty())
 }

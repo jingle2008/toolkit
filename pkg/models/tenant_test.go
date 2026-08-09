@@ -30,3 +30,11 @@ func TestTenant_Getters(t *testing.T) {
 	}
 	assert.Equal(t, "", tenant3.GetTenantID())
 }
+
+func TestTenant_IsFaulty(t *testing.T) {
+	t.Parallel()
+	// Multiple IDs on one tenant is the fault condition.
+	assert.False(t, Tenant{Name: "a"}.IsFaulty())
+	assert.False(t, Tenant{Name: "a", IDs: []string{"id1"}}.IsFaulty())
+	assert.True(t, Tenant{Name: "a", IDs: []string{"id1", "id2"}}.IsFaulty())
+}

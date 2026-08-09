@@ -26,3 +26,11 @@ func TestGPUPool_Getters(t *testing.T) {
 	}
 	assert.Equal(t, 16, pool2.GPUs())
 }
+
+func TestGPUPool_IsFaulty(t *testing.T) {
+	t.Parallel()
+	// Faulty when the actual size has drifted from the desired size.
+	assert.False(t, GPUPool{Size: 2, ActualSize: 2}.IsFaulty())
+	assert.True(t, GPUPool{Size: 2, ActualSize: 1}.IsFaulty())
+	assert.True(t, GPUPool{Size: 2, ActualSize: 3}.IsFaulty())
+}

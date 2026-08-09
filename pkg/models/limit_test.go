@@ -45,6 +45,23 @@ func TestLimitTenancyOverride_Getters(t *testing.T) {
 	assert.Contains(t, lto.FilterableFields(), "CPU")
 }
 
+func TestLimitTenancyOverride_SetTenantName(t *testing.T) {
+	t.Parallel()
+	lto := LimitTenancyOverride{
+		LimitRegionalOverride: LimitRegionalOverride{
+			Name:    "CPU",
+			Regions: []string{"us-phoenix-1"},
+		},
+		TenantID: "tenantX",
+	}
+
+	lto.SetTenantName("acme")
+	assert.Equal(t, "acme", lto.TenantName)
+	assert.ElementsMatch(t,
+		[]string{"us-phoenix-1", "CPU", "acme", "tenantX"},
+		lto.FilterableFields())
+}
+
 func TestLimitRegionalOverride_FilterableFields_And_IsFaulty(t *testing.T) {
 	t.Parallel()
 	lro := LimitRegionalOverride{

@@ -17,6 +17,30 @@ func TestConsolePropertyDefinition_Getters(t *testing.T) {
 	assert.Equal(t, "desc1", cpd.GetDescription())
 	assert.Equal(t, "val1", cpd.GetValue())
 	assert.ElementsMatch(t, []string{"cpd1", "desc1"}, cpd.FilterableFields())
+	assert.False(t, cpd.IsFaulty())
+}
+
+func TestConsolePropertyRegionalOverride_GetValue_NoValues(t *testing.T) {
+	t.Parallel()
+	cpro := ConsolePropertyRegionalOverride{Name: "cpro1"}
+	assert.Equal(t, "", cpro.GetValue())
+}
+
+func TestConsolePropertyTenancyOverride_SetTenantName(t *testing.T) {
+	t.Parallel()
+	cpto := ConsolePropertyTenancyOverride{
+		TenantID: "tenantX",
+		ConsolePropertyRegionalOverride: ConsolePropertyRegionalOverride{
+			Name:    "cpro1",
+			Regions: []string{"us-phoenix-1"},
+		},
+	}
+
+	cpto.SetTenantName("acme")
+	assert.Equal(t, "acme", cpto.TenantName)
+	assert.ElementsMatch(t,
+		[]string{"us-phoenix-1", "cpro1", "acme", "tenantX"},
+		cpto.FilterableFields())
 }
 
 func TestConsolePropertyRegionalOverride_Getters(t *testing.T) {

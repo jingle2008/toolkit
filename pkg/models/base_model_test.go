@@ -118,6 +118,7 @@ func TestBaseModel_GetFilterableFields(t *testing.T) {
 		Runtime:      "r",
 	}
 	fields := bm.FilterableFields()
+	assert.Equal(t, "n", bm.GetName())
 	assert.Contains(t, fields, "capA")
 	assert.Contains(t, fields, "capB")
 	assert.Contains(t, fields, "n")
@@ -125,6 +126,27 @@ func TestBaseModel_GetFilterableFields(t *testing.T) {
 	assert.Contains(t, fields, "s")
 	assert.Contains(t, fields, "t")
 	assert.Contains(t, fields, "r")
+	// No default shape: the shape slot is empty rather than absent.
+	assert.Contains(t, fields, "")
+}
+
+func TestBaseModel_GetFilterableFields_DefaultShape(t *testing.T) {
+	t.Parallel()
+	bm := BaseModel{
+		Name:       "n",
+		StorageURI: "oci://bucket/key",
+		DACShapeConfigs: &DACShapeConfigs{
+			CompatibleDACShapes: []DACShape{
+				{Name: "SMALL", QuotaUnit: 1, Default: false},
+				{Name: "LARGE", QuotaUnit: 4, Default: true},
+			},
+		},
+	}
+	fields := bm.FilterableFields()
+	// The default shape's name is the one that becomes filterable.
+	assert.Contains(t, fields, "LARGE")
+	assert.NotContains(t, fields, "SMALL")
+	assert.Contains(t, fields, "oci://bucket/key")
 }
 
 func TestDACShapeConfigs_Empty(t *testing.T) {
