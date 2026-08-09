@@ -145,7 +145,7 @@ func toAnySlice[T any](items []T) []any {
 func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Tenant], error) {
 	grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.Tenant]](ctx, req, "load tenants", err)
+		return failTool[listResult[models.Tenant]]("load tenants", err)
 	}
 	return listFlatResult(grp.Tenants, in.Filter, in.Limit, nil)
 }
@@ -153,7 +153,7 @@ func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest
 func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.BaseModel], error) {
 	items, err := s.loader.LoadBaseModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.BaseModel]](ctx, req, "load base models", err)
+		return failTool[listResult[models.BaseModel]]("load base models", err)
 	}
 	return listFlatResult(items, in.Filter, in.Limit, nil)
 }
@@ -161,7 +161,7 @@ func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequ
 func (s *Server) handleListImportedModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ImportedModel], error) {
 	grouped, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.ImportedModel]](ctx, req, "load imported models", err)
+		return failTool[listResult[models.ImportedModel]]("load imported models", err)
 	}
 	// Each item carries its own `tenantId` field, mirroring DAC's
 	// post-wrapper-drop shape — no group key needs to be injected.
@@ -173,19 +173,26 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 	items, err := s.loader.LoadGPUPools(ctx, s.cfg.RepoPath, env)
 	warnings := warningsFromPartial(err)
 	if err != nil && len(warnings) == 0 {
-		return failTool[listResult[models.GPUPool]](ctx, req, "load gpu pools", err)
+		return failTool[listResult[models.GPUPool]]("load gpu pools", err)
 	}
+	// The client sees these via listResult.Warnings; the log line is for
+	// operators reading cfg.LogFile, matching what mutations already do.
 	if len(warnings) > 0 {
-		notify(ctx, req.Session, "warning",
-			fmt.Sprintf("load gpu pools: %d source(s) returned partial results: %s",
-				len(warnings), strings.Join(warnings, "; ")))
+		s.logger.Warnw(
+			"load gpu pools", "surface", "mcp",
+			"phase", "partial", "sources", len(warnings),
+			"warnings", strings.Join(warnings, "; "),
+		)
 	}
 	// Enrich ActualSize / Status from OCI's ListInstancePools (same
 	// step the TUI runs after load). Degrades to a warning if the K8s
 	// or OCI call fails so callers still get Terraform-derived data.
 	if err := resolve.EnrichGPUPools(ctx, items, s.cfg.KubeConfig, env); err != nil {
 		warnings = append(warnings, "enrichment incomplete: "+err.Error())
-		notify(ctx, req.Session, "warning", "gpu pool enrichment incomplete: "+err.Error())
+		s.logger.Warnw(
+			"load gpu pools", "surface", "mcp",
+			"phase", "enrichment", "error", err,
+		)
 	}
 	return listFlatResult(items, in.Filter, in.Limit, warnings)
 }
@@ -193,7 +200,7 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUNode], error) {
 	grouped, err := s.loader.LoadGPUNodesByPool(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.GPUNode]](ctx, req, "load gpu nodes", err)
+		return failTool[listResult[models.GPUNode]]("load gpu nodes", err)
 	}
 	// No wrapper: GPUNode.NodePool (JSON `poolName`) already carries
 	// the group key. Wrapping would duplicate.
@@ -203,7 +210,7 @@ func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolReques
 func (s *Server) handleListGPUWorkloads(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUWorkload], error) {
 	grouped, err := s.loader.LoadGPUWorkloadsByNode(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.GPUWorkload]](ctx, req, "load gpu workloads", err)
+		return failTool[listResult[models.GPUWorkload]]("load gpu workloads", err)
 	}
 	// No wrapper: GPUWorkload.Node (JSON `node`) already carries the
 	// group key. Wrapping would duplicate.
@@ -213,7 +220,7 @@ func (s *Server) handleListGPUWorkloads(ctx context.Context, req *sdk.CallToolRe
 func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.DedicatedAICluster], error) {
 	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.DedicatedAICluster]](ctx, req, "load dedicated AI clusters", err)
+		return failTool[listResult[models.DedicatedAICluster]]("load dedicated AI clusters", err)
 	}
 	// No wrapper: the loader keys this map by dac.TenantID
 	// (internal/infra/k8s/dac.go:157), which is already the flat
@@ -224,7 +231,7 @@ func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, i
 func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Environment], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.Environment]](ctx, req, "load dataset", err)
+		return failTool[listResult[models.Environment]]("load dataset", err)
 	}
 	return listFlatResult(dataset.Environments, in.Filter, in.Limit, nil)
 }
@@ -232,7 +239,7 @@ func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRe
 func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ServiceTenancy], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.ServiceTenancy]](ctx, req, "load dataset", err)
+		return failTool[listResult[models.ServiceTenancy]]("load dataset", err)
 	}
 	return listFlatResult(dataset.ServiceTenancies, in.Filter, in.Limit, nil)
 }
@@ -240,7 +247,7 @@ func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallTo
 func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ModelArtifact], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.ModelArtifact]](ctx, req, "load dataset", err)
+		return failTool[listResult[models.ModelArtifact]]("load dataset", err)
 	}
 	// No wrapper: ModelArtifact.ModelName (JSON `model_name`) already
 	// carries the group key.
@@ -250,7 +257,7 @@ func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallTool
 func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[any]](ctx, req, "load dataset", err)
+		return failTool[listResult[any]]("load dataset", err)
 	}
 	switch in.Kind {
 	case "limit":
@@ -263,7 +270,7 @@ func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolReq
 		items := collections.FilterSlice(dataset.PropertyDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
 		return jsonResult(collections.TruncateSlice(toAnySlice(items), in.Limit), nil)
 	default:
-		return failTool[listResult[any]](ctx, req, "list_definitions",
+		return failTool[listResult[any]]("list_definitions",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }
@@ -271,7 +278,7 @@ func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolReq
 func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
 	grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[any]](ctx, req, "load tenancy override group", err)
+		return failTool[listResult[any]]("load tenancy override group", err)
 	}
 	switch in.Kind {
 	case "limit":
@@ -284,7 +291,7 @@ func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallTo
 		flat := output.Flatten(collections.FilterMapOrAll(grp.PropertyTenancyOverrideMap, normFilter(in.Filter)))
 		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
 	default:
-		return failTool[listResult[any]](ctx, req, "list_tenancy_overrides",
+		return failTool[listResult[any]]("list_tenancy_overrides",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }
@@ -295,26 +302,26 @@ func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallT
 	case "limit":
 		items, err := s.loader.LoadLimitRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return failTool[listResult[any]](ctx, req, "load limit regional overrides", err)
+			return failTool[listResult[any]]("load limit regional overrides", err)
 		}
 		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
 		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
 	case "console_property":
 		items, err := s.loader.LoadConsolePropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return failTool[listResult[any]](ctx, req, "load console property regional overrides", err)
+			return failTool[listResult[any]]("load console property regional overrides", err)
 		}
 		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
 		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
 	case "property":
 		items, err := s.loader.LoadPropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
-			return failTool[listResult[any]](ctx, req, "load property regional overrides", err)
+			return failTool[listResult[any]]("load property regional overrides", err)
 		}
 		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
 		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
 	default:
-		return failTool[listResult[any]](ctx, req, "list_regional_overrides",
+		return failTool[listResult[any]]("list_regional_overrides",
 			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
 	}
 }

@@ -246,7 +246,7 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 
 Every read tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments.
 
-**Mutation tools** — gated on `confirm: true`. The same safety model as the CLI: failures surface via `notifications/message`, every call writes to the audit log:
+**Mutation tools** — gated on `confirm: true`. The same safety model as the CLI: failures surface as a tool error (`isError` plus the underlying cause), every call writes to the audit log:
 
 | Tool | Effect |
 | ---- | ------ |

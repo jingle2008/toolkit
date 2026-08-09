@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- **The MCP server no longer emits `notifications/message` frames.** MCP's logging feature is deprecated as of protocol version 2026-07-28 ([SEP-2577](https://modelcontextprotocol.io/seps/2577-deprecate-roots-sampling-and-logging)), and every message the server sent on that channel was already delivered in-band by the tool response: loader warnings and incomplete GPU-pool enrichment via the `warnings` envelope field, handler failures and `confirm=true` refusals as a tool error (`isError` plus the cause), and mutation success as the `mutationResult` payload (`status`/`action`/`kind`/`target`). Clients reading the response — the documented contract — see no change. Clients that only listened for `notifications/message` should read the response instead. The two GPU-pool warnings now also write to `cfg.LogFile`, matching what mutations already did.
+
+### Fixed
+- **MCP notification assertions broke under `go-sdk` 1.7.0.** The bump negotiates protocol 2026-07-28, which makes the logging level per-request via `_meta` (SEP-2575) instead of session-wide via `logging/setLevel`. The server re-derives the level from every request, so a request without one silently suppressed all frames and 19 tests timed out. Superseded by the removal above.
+
+### Internal
+- `failTool`, `runMutationTool`, and `handleMutation` no longer take `ctx`/`req` — they only needed them to reach the session for notifications.
+- `pkg/models` is at 100% statement coverage (was 86.6%); six model files were below 80%, the lowest at 42.9%.
+
 ## [0.7.1] - 2026-05-27
 
 ### Fixed

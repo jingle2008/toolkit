@@ -172,45 +172,21 @@ func mutationSuccess(action, kind, target string) (*sdk.CallToolResult, mutation
 	}, nil
 }
 
-// notify emits a notifications/message to the connected MCP client.
-// Best-effort: errors from Log are intentionally swallowed because a
-// notification failure must not mask the tool's primary response (or
-// error). A nil session — possible if a handler is invoked outside a
-// live transport — silently no-ops.
+// failTool wraps a handler's fatal error path. `what` is the human
+// label (e.g. "load gpu pools"); err is the underlying cause. The
+// wrapped error is what the SDK turns into CallToolResult.IsError plus
+// a message, which is the client's channel for the failure.
 //
-// Note that under protocol >= 2026-07-28 the client controls the level
-// per request via _meta (SEP-2575); a client that sends no level gets no
-// notifications, which is spec-correct rather than a bug here.
-//
-// MCP logging is deprecated as of protocol 2026-07-28 (SEP-2577) but
-// remains functional for at least twelve months. Migrating off it (to
-// stderr for STDIO servers, or OpenTelemetry) is a separate change.
-//
-//nolint:staticcheck // SA1019: deliberate use of the deprecated-but-live logging feature; see note above
-func notify(ctx context.Context, sess *sdk.ServerSession, level sdk.LoggingLevel, msg string) {
-	if sess == nil {
-		return
-	}
-	_ = sess.Log(ctx, &sdk.LoggingMessageParams{
-		Level:  level,
-		Logger: "toolkit",
-		Data:   msg,
-	})
-}
-
-// failTool wraps a handler's fatal error path: it emits a
-// notifications/message at "error" level so MCP clients can show the
-// failure live (the tool error itself is also returned and surfaces as
-// a tool-call failure in the response). `what` is the human label
-// (e.g. "load gpu pools"); err is the underlying cause.
+// This used to also emit a notifications/message at "error" level. That
+// was redundant with the returned error and rode on the MCP logging
+// feature deprecated by SEP-2577, so it was dropped.
 //
 // Generic over Out so the same helper covers list and mutation handlers
 // without each caller having to spell out a typed zero. Callers supply
 // the Out type at the call site, e.g. `failTool[listResult[Tenant]](...)`.
 //
 //nolint:unparam // signature pinned by ToolHandlerFor[In, Out] — *CallToolResult is always nil on the failure path but must be in the tuple
-func failTool[Out any](ctx context.Context, req *sdk.CallToolRequest, what string, err error) (*sdk.CallToolResult, Out, error) {
-	notify(ctx, req.Session, "error", fmt.Sprintf("%s: %v", what, err))
+func failTool[Out any](what string, err error) (*sdk.CallToolResult, Out, error) {
 	var zero Out
 	return nil, zero, fmt.Errorf("%s: %w", what, err)
 }

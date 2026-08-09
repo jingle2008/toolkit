@@ -141,7 +141,7 @@ If you've wired MCP per Recipe 1, ask the agent:
 
 > Drain gpu-node-42, reboot it, and re-enable scheduling once it's back. Don't do anything until I say "confirm".
 
-The agent will call `cordon_node`, `drain_node`, etc. — but each call requires `confirm: true`. Without it, the call refuses, logs the refusal, and returns a notification. You can preview the plan before authorizing the destructive set.
+The agent will call `cordon_node`, `drain_node`, etc. — but each call requires `confirm: true`. Without it, the call refuses, logs the refusal, and returns an error explaining that `confirm=true` is required. You can preview the plan before authorizing the destructive set.
 
 ---
 

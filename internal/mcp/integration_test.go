@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -85,7 +85,7 @@ func (l errBaseModelsLoader) LoadBaseModels(context.Context, string, models.Envi
 
 // partialGPUPoolsLoader makes LoadGPUPools return a *terraform.PartialLoadError
 // so we can exercise the partial-success path in handleListGPUPools
-// (tool call still succeeds; a warning notification is emitted).
+// (tool call still succeeds; the envelope carries a warning).
 type partialGPUPoolsLoader struct {
 	stubLoader
 	err *terraform.PartialLoadError
@@ -108,34 +108,7 @@ func (l fixedGPUPoolsLoader) LoadGPUPools(context.Context, string, models.Enviro
 	return l.pools, nil
 }
 
-// recorder collects notifications/message frames the server emits.
-//
-// The SDK's logging types are deprecated as of protocol 2026-07-28
-// (SEP-2577) but stay functional for at least twelve months, and
-// internal/mcp still emits notifications/message via notify(). These
-// tests must therefore keep speaking the deprecated types; the
-// staticcheck suppressions below go away when notify() migrates.
-type recorder struct {
-	mu   sync.Mutex
-	msgs []*sdk.LoggingMessageParams //nolint:staticcheck // SA1019: pins the deprecated-but-live logging feature notify() uses
-}
-
-func (r *recorder) record(_ context.Context, req *sdk.LoggingMessageRequest) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.msgs = append(r.msgs, req.Params)
-}
-
-//nolint:staticcheck // SA1019: see recorder — deprecated logging types are still the wire format
-func (r *recorder) snapshot() []*sdk.LoggingMessageParams {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	out := make([]*sdk.LoggingMessageParams, len(r.msgs))
-	copy(out, r.msgs)
-	return out
-}
-
-func newTestPair(ctx context.Context, t *testing.T, ld loader.Composite, rec *recorder, opts ...func(*config.Config)) *sdk.ClientSession {
+func newTestPair(ctx context.Context, t *testing.T, ld loader.Composite, opts ...func(*config.Config)) *sdk.ClientSession {
 	t.Helper()
 	cfg := config.Config{
 		RepoPath:  "/dev/null",
@@ -160,134 +133,111 @@ func newTestPair(ctx context.Context, t *testing.T, ld loader.Composite, rec *re
 
 	client := sdk.NewClient(
 		&sdk.Implementation{Name: "test-client", Version: "v0"},
-		&sdk.ClientOptions{LoggingMessageHandler: rec.record},
+		nil,
 	)
 	clientSess, err := client.Connect(ctx, clientT, nil)
 	require.NoError(t, err, "client.Connect")
 	t.Cleanup(func() { _ = clientSess.Close() })
 
-	// No logging/setLevel here: this SDK negotiates 2026-07-28, where the
-	// level is per-request and a session-wide level is ignored. callTool
-	// carries it instead.
 	return clientSess
 }
 
-// callTool issues a tools/call that opts into server log notifications.
+// resultText joins the text blocks of a tool result.
 //
-// Under protocol >= 2026-07-28 (SEP-2575) the logging level is
-// per-request: the server re-derives it from every request's _meta, and
-// an absent value suppresses notifications/message entirely. That
-// overwrite also clears whatever logging/setLevel put in session state,
-// so a session-wide level is not enough — a call whose notifications we
-// intend to assert on must carry the level itself.
-//
-// Every test in this package records notifications, so all tool calls go
-// through here; otherwise a later test asserting on the recorder would
-// silently see zero frames.
-func callTool(ctx context.Context, sess *sdk.ClientSession, params *sdk.CallToolParams) (*sdk.CallToolResult, error) {
-	if params.Meta == nil {
-		params.Meta = sdk.Meta{}
-	}
-	// Plain string rather than sdk.LoggingLevel: Meta is map[string]any and
-	// the server JSON-decodes the value, so the untyped form avoids taking a
-	// dependency on the deprecated logging types here.
-	params.Meta[sdk.MetaKeyLogLevel] = "debug" //nolint:staticcheck // SA1019: see recorder
-	return sess.CallTool(ctx, params)
-}
-
-// waitForMsgs polls the recorder until at least one message has
-// arrived or the deadline expires. Notification delivery on the
-// in-memory transport is asynchronous to the tool response, so we
-// can't synchronously assert right after CallTool returns.
-//nolint:staticcheck // SA1019: see recorder — deprecated logging types are still the wire format
-func waitForMsgs(t *testing.T, rec *recorder) []*sdk.LoggingMessageParams {
+// It is how a client reads both a failure — the SDK renders a handler's
+// returned error as TextContent alongside IsError — and the auto-emitted
+// text form of a structured result. Since notify() was removed (SEP-2577
+// deprecated the MCP logging channel it rode on), this and
+// StructuredContent are the only places a message can surface, which
+// makes them the right thing to assert against.
+func resultText(t *testing.T, res *sdk.CallToolResult) string {
 	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		got := rec.snapshot()
-		if len(got) >= 1 {
-			return got
+	var sb strings.Builder
+	for _, c := range res.Content {
+		if tc, ok := c.(*sdk.TextContent); ok {
+			sb.WriteString(tc.Text)
+			sb.WriteString("\n")
 		}
-		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatalf("expected ≥1 notifications, got %d", len(rec.snapshot()))
-	return nil
+	return sb.String()
 }
 
-func TestIntegration_NotifiesOnHandlerError(t *testing.T) {
+// structured round-trips a result's StructuredContent through JSON so
+// tests can interrogate it as a plain map regardless of the concrete
+// envelope type.
+func structured(t *testing.T, res *sdk.CallToolResult) map[string]any {
+	t.Helper()
+	require.NotNil(t, res.StructuredContent, "StructuredContent should be populated")
+	b, err := json.Marshal(res.StructuredContent)
+	require.NoError(t, err)
+	var m map[string]any
+	require.NoError(t, json.Unmarshal(b, &m))
+	return m
+}
+
+func TestIntegration_SurfacesHandlerError(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	rec := &recorder{}
 	ld := errBaseModelsLoader{err: errors.New("kube unreachable")}
-	clientSess := newTestPair(ctx, t, ld, rec)
+	clientSess := newTestPair(ctx, t, ld)
 
-	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{Name: "list_base_models"})
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_base_models"})
 	// The SDK surfaces tool handler errors via CallToolResult.IsError,
 	// not a Go error from CallTool itself.
 	require.NoError(t, err, "tools/call transport error")
 	require.NotNil(t, res)
 	assert.True(t, res.IsError, "expected IsError=true on tool failure")
 
-	msgs := waitForMsgs(t, rec)
-	require.NotEmpty(t, msgs)
-	got := msgs[0]
-	assert.Equal(t, "error", string(got.Level), "expected error-level notification")
-	assert.Equal(t, "toolkit", got.Logger)
-	body, ok := got.Data.(string)
-	require.True(t, ok, "Data should be a string, got %T", got.Data)
+	// failTool's label and the underlying cause must both reach the
+	// client. This is the whole error channel now that notify() is gone.
+	body := resultText(t, res)
 	assert.Contains(t, body, "load base models")
 	assert.Contains(t, body, "kube unreachable")
 }
 
-func TestIntegration_NotifiesOnPartialLoad(t *testing.T) {
+func TestIntegration_WarnsOnPartialLoad(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	rec := &recorder{}
 	partial := &terraform.PartialLoadError{
 		Source: "GPUPools",
 		Errs:   []error{errors.New("oke nodepools dir missing")},
 	}
 	ld := partialGPUPoolsLoader{err: partial}
-	clientSess := newTestPair(ctx, t, ld, rec)
+	clientSess := newTestPair(ctx, t, ld)
 
-	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{Name: "list_gpu_pools"})
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
 	require.NoError(t, err, "tools/call transport error")
 	require.NotNil(t, res)
 	assert.False(t, res.IsError, "partial-load should not fail the tool call")
 
-	msgs := waitForMsgs(t, rec)
-	got := msgs[0]
-	assert.Equal(t, "warning", string(got.Level))
-	body, ok := got.Data.(string)
-	require.True(t, ok, "Data should be a string, got %T", got.Data)
-	assert.Contains(t, body, "load gpu pools")
-	assert.True(t, strings.Contains(body, "oke nodepools dir missing"),
-		"warning body should include the per-source error: %q", body)
+	// The per-source error reaches the client through the envelope's
+	// warnings field.
+	warnings := structured(t, res)["warnings"]
+	require.NotNil(t, warnings, "partial load must populate warnings")
+	assert.Contains(t, fmt.Sprint(warnings), "oke nodepools dir missing")
 }
 
-// TestIntegration_NotifiesOnGPUPoolEnrichmentFailure pins the
-// enrichment branch in handleListGPUPools (TUI parity step). With a
-// non-empty pool slice and a deliberately bad kubeconfig path,
-// resolve.EnrichGPUPools must fail at the CompartmentID step, surface
-// the warning both in the listResult.warnings envelope field AND as a
-// notifications/message frame, and still return the Terraform-derived
-// pool (no IsError). Regression bait: a future drop of the `notify`
-// call, a missed append to warnings, or a re-introduction of
-// fail-on-enrichment will all break this test.
-func TestIntegration_NotifiesOnGPUPoolEnrichmentFailure(t *testing.T) {
+// TestIntegration_WarnsOnGPUPoolEnrichmentFailure pins the enrichment
+// branch in handleListGPUPools (TUI parity step). With a non-empty pool
+// slice and a deliberately bad kubeconfig path, resolve.EnrichGPUPools
+// must fail at the CompartmentID step, surface the warning in the
+// listResult.warnings envelope field, and still return the
+// Terraform-derived pool (no IsError). Regression bait: a missed append
+// to warnings or a re-introduction of fail-on-enrichment will both break
+// this test.
+func TestIntegration_WarnsOnGPUPoolEnrichmentFailure(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	rec := &recorder{}
 	ld := fixedGPUPoolsLoader{pools: []models.GPUPool{
 		{Name: "p1", Shape: "BM.GPU", Status: "...", Size: 8},
 	}}
-	clientSess := newTestPair(ctx, t, ld, rec, func(c *config.Config) {
+	clientSess := newTestPair(ctx, t, ld, func(c *config.Config) {
 		// ExplicitPath kubeconfig that can't be loaded → CompartmentID
 		// fails at the clientcmd step, mirroring an offline / no-kube
 		// host. We deliberately don't swap the resolve seams because
@@ -295,7 +245,7 @@ func TestIntegration_NotifiesOnGPUPoolEnrichmentFailure(t *testing.T) {
 		c.KubeConfig = "/dev/null/no-such-kubeconfig"
 	})
 
-	res, err := callTool(ctx, clientSess, &sdk.CallToolParams{Name: "list_gpu_pools"})
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
 	require.NoError(t, err, "tools/call transport error")
 	require.NotNil(t, res)
 	assert.False(t, res.IsError, "enrichment failure must not fail the tool call")
@@ -316,7 +266,7 @@ func TestIntegration_NotifiesOnGPUPoolEnrichmentFailure(t *testing.T) {
 	assert.Equal(t, "p1", env.Items[0]["name"])
 	assert.Equal(t, "...", env.Items[0]["status"], "placeholder status must survive enrichment failure")
 
-	// Warning must land in BOTH the envelope and as a notification.
+	// The envelope is the client's channel for the warning.
 	require.NotEmpty(t, env.Warnings, "warnings envelope must include enrichment-incomplete entry")
 	foundWarn := false
 	for _, w := range env.Warnings {
@@ -326,21 +276,6 @@ func TestIntegration_NotifiesOnGPUPoolEnrichmentFailure(t *testing.T) {
 		}
 	}
 	assert.True(t, foundWarn, "warnings should include 'enrichment incomplete' entry: %v", env.Warnings)
-
-	msgs := waitForMsgs(t, rec)
-	require.NotEmpty(t, msgs)
-	foundNotify := false
-	for _, m := range msgs {
-		if string(m.Level) != "warning" {
-			continue
-		}
-		body, ok := m.Data.(string)
-		if ok && strings.Contains(body, "gpu pool enrichment incomplete") {
-			foundNotify = true
-			break
-		}
-	}
-	assert.True(t, foundNotify, "notification with enrichment-incomplete body must be emitted: %+v", msgs)
 }
 
 // TestIntegration_ToolsListAndCall wires NewServer against a stub
@@ -421,7 +356,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 	// tools/call list_aliases — exercises the JSON-RPC framing and
 	// asserts the listResult envelope shape end-to-end. list_aliases
 	// doesn't touch the loader, so the stub is irrelevant here.
-	callRes, err := callTool(ctx, clientSess, &sdk.CallToolParams{Name: "list_aliases"})
+	callRes, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_aliases"})
 	require.NoError(t, err, "tools/call list_aliases")
 	require.NotNil(t, callRes)
 	require.Len(t, callRes.Content, 1, "expected exactly one content block")

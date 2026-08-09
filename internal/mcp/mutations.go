@@ -46,8 +46,8 @@ var (
 // confirmGate is embedded in every mutating tool's input. The field
 // is OPTIONAL at the JSON-Schema level (omitempty) so the SDK passes
 // the call to the handler even when confirm is missing — that way we
-// can audit-log the attempt and emit a notifications/message
-// explaining the contract. Only confirm=true triggers execution.
+// can audit-log the attempt and return an error explaining the
+// contract. Only confirm=true triggers execution.
 type confirmGate struct {
 	Confirm bool `json:"confirm,omitempty" jsonschema:"set true to execute; otherwise the tool refuses without acting"`
 }
@@ -86,23 +86,26 @@ func (s *Server) effectiveMutationEnv(action, kind, target string, in envOverrid
 }
 
 // runMutationTool wraps the entire MCP mutation flow: refuse if
-// confirm is false, audit-log begin/refused/failed/done, emit a
-// notifications/message at the right level, and return the standard
-// envelope on success.
+// confirm is false, audit-log begin/refused/failed/done, and return the
+// standard envelope on success.
 //
 // Mirrors cli.runMutation but adapted to the MCP response shape —
 // no stdout/prompt; success becomes a mutationResult that the SDK
-// marshals into StructuredContent + auto-emits as TextContent.
-func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, action, kind, target string, confirm bool, perform func() error) (*sdk.CallToolResult, mutationResult, error) {
+// marshals into StructuredContent + auto-emits as TextContent. The
+// refusal and failure paths return an error, which the SDK renders as
+// IsError plus text.
+//
+// Takes no ctx/req: `perform` closes over whatever it needs from the
+// call site, and nothing here talks to the session any more now that
+// the notifications/message emission is gone.
+func (s *Server) runMutationTool(action, kind, target string, confirm bool, perform func() error) (*sdk.CallToolResult, mutationResult, error) {
 	if !confirm {
 		s.logger.Infow(
 			"mutation",
 			"action", action, "kind", kind, "target", target, "surface", "mcp",
 			"phase", "refused",
 		)
-		notify(ctx, req.Session, "info",
-			fmt.Sprintf("%s %s/%s refused: set confirm=true to execute", action, kind, target))
-		return failTool[mutationResult](ctx, req, action,
+		return failTool[mutationResult](action,
 			fmt.Errorf("mutating tool requires confirm=true (target %s/%s)", kind, target))
 	}
 
@@ -118,15 +121,13 @@ func (s *Server) runMutationTool(ctx context.Context, req *sdk.CallToolRequest, 
 			"phase", "failed",
 			"error", err,
 		)
-		return failTool[mutationResult](ctx, req, action+" "+kind+"/"+target, err)
+		return failTool[mutationResult](action+" "+kind+"/"+target, err)
 	}
 	s.logger.Infow(
 		"mutation",
 		"action", action, "kind", kind, "target", target, "surface", "mcp",
 		"phase", "done",
 	)
-	notify(ctx, req.Session, "info",
-		fmt.Sprintf("%s %s/%s: OK", action, kind, target))
 	return mutationSuccess(action, kind, target)
 }
 
@@ -183,45 +184,43 @@ type setTenantInput struct {
 // handleMutation is the shared entry point for every mutating tool:
 // derive the effective env (audit-logging any override), then dispatch
 // through runMutationTool which enforces the confirm gate and emits the
-// standard audit-log / notification / response envelope. Handlers
-// supply only the action/kind/target labels plus the env-scoped perform
-// closure.
+// standard audit-log plus response envelope. Handlers supply only the
+// action/kind/target labels plus the env-scoped perform closure, which
+// closes over the handler's own ctx.
 func (s *Server) handleMutation(
-	ctx context.Context,
-	req *sdk.CallToolRequest,
 	action, kind, target string,
 	confirm bool,
 	override envOverride,
 	perform func(env models.Environment) error,
 ) (*sdk.CallToolResult, mutationResult, error) {
 	env := s.effectiveMutationEnv(action, kind, target, override)
-	return s.runMutationTool(ctx, req, action, kind, target, confirm, func() error {
+	return s.runMutationTool(action, kind, target, confirm, func() error {
 		return perform(env)
 	})
 }
 
 func (s *Server) handleCordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation(ctx, req, "cordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
+	return s.handleMutation("cordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node, true)
 		return err
 	})
 }
 
 func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolRequest, in cordonNodeInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation(ctx, req, "uncordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
+	return s.handleMutation("uncordon", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node, false)
 		return err
 	})
 }
 
 func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation(ctx, req, "drain", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
+	return s.handleMutation("drain", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		return mcpDrainNodeFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
 	})
 }
 
 func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest, in rebootNodeInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation(ctx, req, "reboot", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
+	return s.handleMutation("reboot", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		node, err := mcpResolveGPUNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
 			return err
@@ -231,7 +230,7 @@ func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest,
 }
 
 func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolRequest, in terminateNodeInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation(ctx, req, "terminate", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
+	return s.handleMutation("terminate", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		node, err := mcpResolveGPUNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
 			return err
@@ -241,7 +240,7 @@ func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolReque
 }
 
 func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGPUPoolInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation(ctx, req, "scale", "gpu_pool", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
+	return s.handleMutation("scale", "gpu_pool", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
 		pool, err := mcpResolveGPUPoolFn(ctx, s, env, in.Name)
 		if err != nil {
 			return err
@@ -251,7 +250,7 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 }
 
 func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, in deleteDACInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation(ctx, req, "delete", "dac", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
+	return s.handleMutation("delete", "dac", in.Name, in.Confirm, in.envOverride, func(env models.Environment) error {
 		dac := &models.DedicatedAICluster{Name: in.Name}
 		return mcpDeleteDACFn(ctx, dac, env, logging.FromContext(ctx))
 	})
@@ -259,10 +258,10 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 
 func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, in setTenantInput) (*sdk.CallToolResult, mutationResult, error) {
 	if strings.TrimSpace(in.Name) == "" {
-		return failTool[mutationResult](ctx, req, "set tenant", errors.New("name is required"))
+		return failTool[mutationResult]("set tenant", errors.New("name is required"))
 	}
 	if !strings.HasPrefix(in.OCID, "ocid1.tenancy.") {
-		return failTool[mutationResult](ctx, req, "set tenant",
+		return failTool[mutationResult]("set tenant",
 			fmt.Errorf("invalid tenancy OCID %q: must start with \"ocid1.tenancy.\"", in.OCID))
 	}
 	internal := true
@@ -275,7 +274,7 @@ func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, 
 		note := in.Note
 		entry.Note = &note
 	}
-	return s.runMutationTool(ctx, req, "set", "tenant", in.OCID, in.Confirm, func() error {
+	return s.runMutationTool("set", "tenant", in.OCID, in.Confirm, func() error {
 		return mcpUpsertTenantFn(s, entry)
 	})
 }
