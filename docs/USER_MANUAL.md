@@ -114,9 +114,9 @@ All flags can be set in the config file or passed directly on the command line. 
 |-----------------|--------------------|--------------------------------------|----------|----------------------------------------------|
 | `repo-path`     | `--repo-path`      | —                                    | Yes      | Path to Terraform / config repository        |
 | `kubeconfig`    | `--kubeconfig`     | `~/.kube/config`                     | No       | Path to kubeconfig file                      |
-| `env-type`      | `--env-type`       | —                                    | Yes      | Environment type (`dev`, `prod`, …)          |
-| `env-region`    | `--env-region`     | —                                    | Yes      | Cloud region (e.g. `us-phoenix-1`)           |
-| `env-realm`     | `--env-realm`      | —                                    | Yes      | Cloud realm (e.g. `oc1`)                     |
+| `env-type`      | `-t / --env-type`  | —                                    | Yes      | Environment type (`dev`, `prod`, …)          |
+| `env-region`    | `-r / --env-region` | —                                   | Yes      | Cloud region (e.g. `us-phoenix-1`)           |
+| `env-realm`     | `-m / --env-realm` | —                                    | Yes      | Cloud realm (e.g. `oc1`)                     |
 | `category`      | `-c / --category`  | —                                    | Yes      | Initial data category to display             |
 | `filter`        | `-f / --filter`    | `""`                                 | No       | Pre-applied filter on startup                |
 | `metadata-file` | `--metadata-file`  | `~/.config/toolkit/metadata.yaml`    | No       | Optional extra metadata file                 |

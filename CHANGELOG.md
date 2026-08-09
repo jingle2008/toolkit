@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **Single-letter shorthands for the three env-targeting global flags**: `-t` (`--env-type`), `-r` (`--env-region`), `-m` (`--env-realm`). They are persistent, so they work on every subcommand — `toolkit -m oc1 -r us-ashburn-1 get tenant -o tsv`. Realm takes `-m` (real**m**) rather than `-R` deliberately: no two flags that decide the blast radius of `drain`/`terminate` should differ only by a shift key. The long forms and the `env-type` / `env-region` / `env-realm` config keys are unchanged.
+
 ### Changed
 - **The MCP server no longer emits `notifications/message` frames.** MCP's logging feature is deprecated as of protocol version 2026-07-28 ([SEP-2577](https://modelcontextprotocol.io/seps/2577-deprecate-roots-sampling-and-logging)), and every message the server sent on that channel was already delivered in-band by the tool response: loader warnings and incomplete GPU-pool enrichment via the `warnings` envelope field, handler failures and `confirm=true` refusals as a tool error (`isError` plus the cause), and mutation success as the `mutationResult` payload (`status`/`action`/`kind`/`target`). Clients reading the response — the documented contract — see no change. Clients that only listened for `notifications/message` should read the response instead. The two GPU-pool warnings now also write to `cfg.LogFile`, matching what mutations already did.
 

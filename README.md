@@ -117,9 +117,9 @@ toolkit --help                # all global flags
 | ---- | ------- | ----------- |
 | `--config` | `~/.config/toolkit/config.yaml` | Path to config file (YAML or JSON) |
 | `--repo-path` |  | Path to the repository |
-| `--env-type` |  | Environment type (e.g. dev, prod) |
-| `--env-region` |  | Environment region |
-| `--env-realm` |  | Environment realm |
+| `--env-type, -t` |  | Environment type (e.g. dev, prod) |
+| `--env-region, -r` |  | Environment region |
+| `--env-realm, -m` |  | Environment realm |
 | `--category, -c` |  | Category to display |
 | `--filter, -f` |  | Initial filter for current category |
 | `--metadata-file` | `~/.config/toolkit/metadata.yaml` | Optional additional metadata file |

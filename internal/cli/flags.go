@@ -10,9 +10,12 @@ import (
 func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, defaultConfig, defaultMetadata string) {
 	rootCmd.PersistentFlags().StringVar(cfgFile, "config", defaultConfig, "Path to config file (YAML or JSON)")
 	rootCmd.PersistentFlags().String("repo-path", "", "Path to the repository")
-	rootCmd.PersistentFlags().String("env-type", "", "Environment type (e.g. dev, prod)")
-	rootCmd.PersistentFlags().String("env-region", "", "Environment region")
-	rootCmd.PersistentFlags().String("env-realm", "", "Environment realm")
+	// Shorthands: -t/-r/-m. Realm gets -m rather than -R so no two
+	// env-targeting flags differ only by shift — a slipped shift key on
+	// these decides which realm the mutating subcommands hit.
+	rootCmd.PersistentFlags().StringP("env-type", "t", "", "Environment type (e.g. dev, prod)")
+	rootCmd.PersistentFlags().StringP("env-region", "r", "", "Environment region")
+	rootCmd.PersistentFlags().StringP("env-realm", "m", "", "Environment realm")
 	rootCmd.PersistentFlags().StringP("category", "c", "", "Category to display")
 	_ = rootCmd.RegisterFlagCompletionFunc("category", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return domain.Aliases, cobra.ShellCompDirectiveNoFileComp

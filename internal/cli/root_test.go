@@ -88,6 +88,31 @@ func TestDefaultFlags(t *testing.T) {
 	}
 }
 
+// TestEnvShorthands pins the single-letter shorthands for the three
+// env-targeting flags. These letters select which realm/region/type the
+// mutating subcommands act on, so a future reassignment must be
+// deliberate — and because pflag keys shorthands in one map shared with
+// every subcommand's local flags, this also fails loudly if a new
+// subcommand flag steals one of the letters.
+func TestEnvShorthands(t *testing.T) {
+	cmd := NewRootCmd("vtest")
+	tests := []struct{ short, want string }{
+		{"t", "env-type"},
+		{"r", "env-region"},
+		{"m", "env-realm"},
+	}
+	for _, tc := range tests {
+		f := cmd.PersistentFlags().ShorthandLookup(tc.short)
+		if f == nil {
+			t.Errorf("-%s is not registered", tc.short)
+			continue
+		}
+		if f.Name != tc.want {
+			t.Errorf("-%s maps to %q, want %q", tc.short, f.Name, tc.want)
+		}
+	}
+}
+
 func TestVersionCommand(t *testing.T) {
 	cmd := NewRootCmd("vtest")
 	buf := new(bytes.Buffer)
