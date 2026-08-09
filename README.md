@@ -338,7 +338,8 @@ go test ./...
 ## Developer Workflow
 
 - One-time setup: `make setup` (installs golangci-lint, gofumpt, goimports)
-- Optional: enable git hooks with pre-commit: `pre-commit install`
+- Optional: enable git hooks with pre-commit (both hook types — govulncheck runs on pre-push):
+  `pre-commit install --hook-type pre-commit --hook-type pre-push`
 - Run `make ci` before pushing to ensure code passes lint and tests.
 - Use `make lint` to check for style and static analysis issues.
 - Use `make test` for a full race-enabled test run.

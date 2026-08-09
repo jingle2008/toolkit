@@ -1,35 +1,67 @@
+# Every hook is `local` / `language: system` and invokes the tool that
+# `make setup` installs. Tool versions therefore live in exactly one place —
+# the Makefile (LINT_VERSION / GOFUMPT_VERSION / GOIMPORTS_VERSION), which
+# tracks the module pins in go.mod. Pinning `rev:` values here as well would
+# reintroduce a third source of truth that silently drifts out of sync.
+#
+# Prerequisite: run `make setup` once, then install BOTH hook types:
+#   pre-commit install --hook-type pre-commit --hook-type pre-push
+# Plain `pre-commit install` wires up pre-commit only, which would silently
+# skip govulncheck (the sole pre-push hook — see the note on it below).
+#
+# See CONTRIBUTING.md; `make ci` runs the same checks over the whole module.
+
+# `pre-push` (rather than the removed `push`) as a stage name requires 3.2.0+.
+minimum_pre_commit_version: '3.2.0'
+
 repos:
-  - repo: https://github.com/mvdan/gofumpt
-    rev: v0.6.0
-    hooks:
-      - id: gofumpt
-        args: ["-w"]
   - repo: local
     hooks:
+      - id: gofumpt
+        name: gofumpt
+        entry: gofumpt -w
+        language: system
+        types: [go]
+
+      - id: goimports
+        name: goimports
+        entry: goimports -w -local github.com/jingle2008/toolkit
+        language: system
+        types: [go]
+
       - id: go-vet
         name: go vet
         entry: go vet ./...
         language: system
         types: [go]
+        pass_filenames: false
+
+      - id: golangci-lint-config-verify
+        name: golangci-lint config verify
+        entry: golangci-lint config verify
+        language: system
+        files: '^\.golangci\.(yml|yaml)$'
+        pass_filenames: false
+
+      - id: golangci-lint
+        name: golangci-lint
+        # Module-wide rather than --new-from-rev: .golangci.yml enables
+        # whole-program linters (unused, dupl) that report incorrectly when
+        # only the changed files are analysed. `revive` runs from here too,
+        # so no separate revive hook is needed.
+        entry: golangci-lint run ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+
       - id: govulncheck
         name: govulncheck
-        entry: govulncheck ./...
+        # pre-push, not pre-commit: this builds govulncheck and fetches the
+        # vulnerability database, which is far too slow to pay on every commit.
+        # Mirrors .github/workflows/ci.yml. `go run` avoids a separate install
+        # step, since `make setup` does not provide govulncheck.
+        entry: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
         language: system
         types: [go]
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.64.8
-    hooks:
-      - id: golangci-lint
-        args: ["run"]
-  - repo: local
-    hooks:
-      - id: goimports
-        name: goimports
-        entry: goimports -w -local github.com/jingle2008/toolkit .
-        language: system
-        types: [go]
-  - repo: https://github.com/mgechev/revive
-    rev: v1.3.7
-    hooks:
-      - id: revive
-        args: ["-config=.revive.toml", "-formatter=stylish", "./..."]
+        pass_filenames: false
+        stages: [pre-push]

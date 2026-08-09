@@ -28,7 +28,12 @@
   gofumpt -w .
   goimports -w -local github.com/jingle2008/toolkit .
   ```
-  Consider enabling pre-commit hooks: `pre-commit install`, or run `make ci` before pushing to ensure formatting, lint, and tests pass.
+  Consider enabling pre-commit hooks — install both hook types, since
+  govulncheck is wired to pre-push (too slow to run per commit):
+  ```
+  pre-commit install --hook-type pre-commit --hook-type pre-push
+  ```
+  Either way, run `make ci` before pushing to ensure formatting, lint, and tests pass.
 
 - **Benchmarks:**  
   Add micro-benchmarks for performance-sensitive code using `func BenchmarkXxx(b *testing.B)`. Run `go test -bench ./...` to execute benchmarks. Use `benchstat` to compare results and catch regressions.
