@@ -2,6 +2,7 @@ package tui
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -132,5 +133,46 @@ func TestSortByAgeAndSize(t *testing.T) {
 	sortRows(rows, headers, "Size", false)
 	if rows[0][0] != "baz" || rows[2][0] != "bar" {
 		t.Errorf("sortRows by Size desc failed: got %v", rows)
+	}
+}
+
+// TestSortByGPUs pins numeric ordering for the GPU-count column. Under
+// the default string sort these order 1, 16, 2, 32, 4, 8 — plausible
+// enough at a glance to be missed, which is why it's pinned rather
+// than left to the generic sort test.
+func TestSortByGPUs(t *testing.T) {
+	t.Parallel()
+	rows := []table.Row{
+		{"a", "8"},
+		{"b", "16"},
+		{"c", "2"},
+		{"d", "32"},
+	}
+	headers := []header{{text: "Name"}, {text: "GPUs"}}
+
+	sortRows(rows, headers, "GPUs", true)
+	got := []string{rows[0][1], rows[1][1], rows[2][1], rows[3][1]}
+	if want := []string{"2", "8", "16", "32"}; !slices.Equal(got, want) {
+		t.Errorf("GPUs asc = %v, want %v", got, want)
+	}
+
+	sortRows(rows, headers, "GPUs", false)
+	got = []string{rows[0][1], rows[1][1], rows[2][1], rows[3][1]}
+	if want := []string{"32", "16", "8", "2"}; !slices.Equal(got, want) {
+		t.Errorf("GPUs desc = %v, want %v", got, want)
+	}
+}
+
+// A runtime declaring neither a GPU limit nor a request renders an
+// empty cell; it must sort as zero rather than landing between "1" and
+// "2" the way a string compare would put it.
+func TestSortByGPUs_BlankSortsAsZero(t *testing.T) {
+	t.Parallel()
+	rows := []table.Row{{"a", "4"}, {"b", ""}, {"c", "1"}}
+	headers := []header{{text: "Name"}, {text: "GPUs"}}
+
+	sortRows(rows, headers, "GPUs", true)
+	if rows[0][0] != "b" {
+		t.Errorf("blank should sort first ascending, got %v", rows)
 	}
 }

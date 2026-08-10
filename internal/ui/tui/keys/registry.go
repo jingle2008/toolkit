@@ -221,6 +221,13 @@ var (
 		key.WithKeys("A"),
 		key.WithHelp("<shift+a>", SortPrefix+common.AgeCol),
 	)
+	// SortGPUs is a key binding for sorting by the "GPUs" column. Shared
+	// by every category with a GPU-count column: ServingRuntime,
+	// GPUPool and GPUWorkload all title theirs "GPUs".
+	SortGPUs = key.NewBinding(
+		key.WithKeys("G"),
+		key.WithHelp("<shift+g>", SortPrefix+common.GpusCol),
+	)
 	// SortUsage is a key binding for sorting by the "Usage" column.
 	SortUsage = key.NewBinding(
 		key.WithKeys("U"),
@@ -273,13 +280,16 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortValue},
 	},
 	domain.GPUPool: {
-		common.ListView: {SortSize, ToggleFaulty, ScaleUp, Refresh},
+		common.ListView: {SortSize, SortGPUs, ToggleFaulty, ScaleUp, Refresh},
 	},
 	domain.GPUNode: {
 		common.ListView: {Parent, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.GPUWorkload: {
-		common.ListView: {Parent, SortTenant, SortAge, OpenMetrics, ToggleFaulty, Refresh},
+		common.ListView: {Parent, SortTenant, SortGPUs, SortAge, OpenMetrics, ToggleFaulty, Refresh},
+	},
+	domain.ServingRuntime: {
+		common.ListView: {SortGPUs, ToggleFaulty, Refresh},
 	},
 	domain.DedicatedAICluster: {
 		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},

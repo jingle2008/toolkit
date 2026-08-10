@@ -23,6 +23,12 @@ func sortRows(rows []table.Row, headers []header, sortColumn string, asc bool) {
 	intCols := map[string]struct{}{
 		common.FreeCol:    {},
 		common.ContextCol: {},
+		// GPU counts are plain integers on all three categories that
+		// carry them. Without this they fall to sortByString and order
+		// 1, 16, 2, 32, 4, 8. Blank cells parse as 0 and sort with the
+		// smallest, matching how the other numeric sorts treat values
+		// they can't parse.
+		common.GpusCol: {},
 	}
 
 	switch {

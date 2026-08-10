@@ -165,7 +165,11 @@ var ServingRuntimeColumns = Set[models.ServingRuntime]{Columns: []Column[models.
 		Render: servingRuntimeCPUMem,
 	},
 	{
-		Title: "GPU", Key: "gpu", Ratio: 0.05,
+		// "GPUs" rather than "GPU" so the single SortGPUs binding covers
+		// this column as well as GPUPool's and GPUWorkload's — sort
+		// bindings match on column title, so a divergent title here
+		// would leave the key silently doing nothing.
+		Title: "GPUs", Key: "gpus", Ratio: 0.05,
 		Render: servingRuntimeGPU,
 	},
 	{

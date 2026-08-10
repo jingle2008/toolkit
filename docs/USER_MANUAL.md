@@ -360,10 +360,12 @@ you can see at a glance which columns the keys below will reach.
 | ConsolePropertyDefinition | `Shift+V` | Value |
 | PropertyDefinition | `Shift+V` | Value |
 | GPUPool | `Shift+S` | Size |
+| GPUPool | `Shift+G` | GPUs |
 | GPUNode | `Shift+F` | Free |
 | GPUNode | `Shift+T` | Type |
 | GPUNode | `Shift+A` | Age |
 | GPUWorkload | `Shift+T` | Tenant |
+| GPUWorkload | `Shift+G` | GPUs |
 | GPUWorkload | `Shift+A` | Age |
 | DedicatedAICluster | `Shift+T` | Tenant |
 | DedicatedAICluster | `Shift+I` | Internal |
@@ -373,6 +375,7 @@ you can see at a glance which columns the keys below will reach.
 | ImportedModel | `Shift+T` | Tenant |
 | ImportedModel | `Shift+S` | Size |
 | ImportedModel | `Shift+C` | Context |
+| ServingRuntime | `Shift+G` | GPUs |
 | ImportedModel | `Shift+V` | Vendor |
 | LimitTenancyOverride | `Shift+T` | Tenant |
 | LimitTenancyOverride | `Shift+R` | Regions |
