@@ -170,6 +170,24 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 			Type: "TEXT", Version: "1.0", Status: "ACTIVE",
 			DisplayName: "Command R", ParameterSize: "35B", MaxTokens: 4096,
 		}}
+	case domain.ServingRuntime:
+		// Mirrors the shape of a real ClusterServingRuntime: many
+		// accelerator classes spanning a few GPU families (so the
+		// snapshot pins the family collapse and the count), a
+		// registry-qualified image (pins the host/org strip), and both
+		// size-range bounds.
+		return []models.ServingRuntime{{
+			Name: "srt-gemma-2-2b-it",
+			AcceleratorClasses: []string{
+				"nvidia-a100-80gb-1", "nvidia-a100-80gb-8",
+				"nvidia-h100-1", "nvidia-h100-8", "nvidia-a10-2",
+			},
+			InstanceTypes: []string{"BM.GPU.A100-v2.8", "BM.GPU.H100.8"},
+			Image:         "us-chicago-1.ocir.io/idlsnvn0f2is/official-sgl:v0.4.10.post2.6e6f9c7-cu126",
+			ModelSizeMin:  "1.8B", ModelSizeMax: "2.8B",
+			CPULimit: "10", MemoryLimit: "30Gi", GPULimit: "1",
+			Disabled: false, AutoSelect: true,
+		}}
 	case domain.ImportedModel:
 		// TenantID matches the map key — that's what the k8s loader
 		// produces (tenancy-id label value drives both grouping and

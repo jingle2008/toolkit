@@ -24,6 +24,15 @@ type BaseModelLoader interface {
 }
 
 /*
+ServingRuntimeLoader defines an interface for loading OME
+ClusterServingRuntime CRs.
+*/
+type ServingRuntimeLoader interface {
+	// LoadServingRuntimes loads cluster serving runtimes from the given kube config and environment.
+	LoadServingRuntimes(ctx context.Context, kubeCfg string, env models.Environment) ([]models.ServingRuntime, error)
+}
+
+/*
 ImportedModelLoader defines an interface for loading tenant-imported
 models (namespaced BaseModel CRs + ClusterBaseModel CRs with a
 `tenancy-id` label).
@@ -86,6 +95,7 @@ Composite is a composite interface that embeds all loader interfaces.
 type Composite interface {
 	DatasetLoader
 	BaseModelLoader
+	ServingRuntimeLoader
 	ImportedModelLoader
 	GPUPoolLoader
 	GPUNodeLoader
@@ -128,6 +138,7 @@ type Watcher interface {
 	WatchGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
 	WatchGPUWorkloads(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
 	WatchDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
+	WatchServingRuntimes(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
 }
 
 /*

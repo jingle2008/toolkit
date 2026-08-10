@@ -25,6 +25,13 @@ func (w *watchableLoader) WatchBaseModels(_ context.Context, _ string, _ models.
 	return w.trigger, nil
 }
 
+func (w *watchableLoader) WatchServingRuntimes(_ context.Context, _ string, _ models.Environment) (<-chan struct{}, error) {
+	if w.err != nil {
+		return nil, w.err
+	}
+	return w.trigger, nil
+}
+
 func (w *watchableLoader) WatchImportedModels(_ context.Context, _ string, _ models.Environment) (<-chan struct{}, error) {
 	if w.err != nil {
 		return nil, w.err

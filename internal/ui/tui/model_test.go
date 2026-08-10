@@ -34,6 +34,10 @@ func (f fakeLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environ
 	return []models.BaseModel{}, nil
 }
 
+func (f fakeLoader) LoadServingRuntimes(_ context.Context, _ string, _ models.Environment) ([]models.ServingRuntime, error) {
+	return []models.ServingRuntime{}, nil
+}
+
 func (f fakeLoader) LoadImportedModels(_ context.Context, _ string, _ models.Environment) (map[string][]models.ImportedModel, error) {
 	return map[string][]models.ImportedModel{}, nil
 }

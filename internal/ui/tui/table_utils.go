@@ -177,7 +177,7 @@ func itemKeyFrom(category domain.Category, row table.Row) models.ItemKey {
 	case domain.Tenant, domain.LimitDefinition, domain.Environment, domain.ServiceTenancy,
 		domain.ConsolePropertyDefinition, domain.PropertyDefinition, domain.GPUPool,
 		domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride,
-		domain.PropertyRegionalOverride, domain.Alias, domain.BaseModel:
+		domain.PropertyRegionalOverride, domain.Alias, domain.BaseModel, domain.ServingRuntime:
 		return row[0]
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.GPUNode, domain.DedicatedAICluster,

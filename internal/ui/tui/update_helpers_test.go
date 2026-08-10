@@ -38,6 +38,10 @@ func (dummyLoader) LoadBaseModels(_ context.Context, _ string, _ models.Environm
 	return nil, errDummy
 }
 
+func (dummyLoader) LoadServingRuntimes(_ context.Context, _ string, _ models.Environment) ([]models.ServingRuntime, error) {
+	return nil, errDummy
+}
+
 func (dummyLoader) LoadImportedModels(_ context.Context, _ string, _ models.Environment) (map[string][]models.ImportedModel, error) {
 	return nil, errDummy
 }

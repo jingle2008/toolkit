@@ -62,6 +62,10 @@ const (
 	GPUWorkload
 	// DedicatedAICluster is a category for dedicated AI clusters.
 	DedicatedAICluster
+	// ServingRuntime is a category for OME ClusterServingRuntime CRs —
+	// the cluster-scoped templates describing how a class of models is
+	// served (hardware constraints, container image, resource caps).
+	ServingRuntime
 	// Alias is a category for reporting all aliases.
 	Alias
 )
@@ -186,7 +190,7 @@ func (e Category) IsFaulty() bool {
 // rest come from the on-disk repo.
 func (e Category) NeedsKubeConfig() bool {
 	switch e { //nolint:exhaustive
-	case BaseModel, ImportedModel, GPUNode, DedicatedAICluster, GPUWorkload:
+	case BaseModel, ImportedModel, GPUNode, DedicatedAICluster, GPUWorkload, ServingRuntime:
 		return true
 	}
 	return false

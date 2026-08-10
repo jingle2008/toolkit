@@ -45,6 +45,13 @@ func (l emitLoader) LoadBaseModels(context.Context, string, models.Environment) 
 	return []models.BaseModel{{Name: "bm-a", Status: "Ready"}}, nil
 }
 
+func (l emitLoader) LoadServingRuntimes(context.Context, string, models.Environment) ([]models.ServingRuntime, error) {
+	if l.err != nil {
+		return nil, l.err
+	}
+	return []models.ServingRuntime{{Name: "sr-a", Image: "reg/org/img:v1"}}, nil
+}
+
 func (l emitLoader) LoadImportedModels(context.Context, string, models.Environment) (map[string][]models.ImportedModel, error) {
 	if l.err != nil {
 		return nil, l.err

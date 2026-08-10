@@ -271,7 +271,14 @@ var (
 	baseModelGVR        = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "basemodels"}
 	dacV1GVR            = schema.GroupVersionResource{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}
 	dacV2GVR            = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}
+
+	clusterServingRuntimeGVR = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "clusterservingruntimes"}
 )
+
+// WatchServingRuntimes triggers on ClusterServingRuntime CR changes.
+func WatchServingRuntimes(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {
+	return watchTrigger(ctx, DebounceWindow, crWatchOpener(client, clusterServingRuntimeGVR))
+}
 
 // WatchBaseModels triggers on ClusterBaseModel CR changes.
 func WatchBaseModels(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {

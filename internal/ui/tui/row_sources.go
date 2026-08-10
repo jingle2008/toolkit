@@ -182,6 +182,8 @@ var rowSources = map[domain.Category]rowSource{
 		func(d *models.Dataset) []models.PropertyRegionalOverride { return d.PropertyRegionalOverrides }),
 	domain.BaseModel: flatSource(columns.BaseModelColumns,
 		func(d *models.Dataset) []models.BaseModel { return d.BaseModels }),
+	domain.ServingRuntime: flatSource(columns.ServingRuntimeColumns,
+		func(d *models.Dataset) []models.ServingRuntime { return d.ServingRuntimes }),
 	domain.ImportedModel: groupedSource(columns.ImportedModelColumns, domain.Tenant,
 		func(d *models.Dataset) map[string][]models.ImportedModel { return d.ImportedModelMap }),
 	domain.ModelArtifact: groupedSource(columns.ModelArtifactColumns, domain.BaseModel,

@@ -27,6 +27,16 @@ func loadBaseModelsCmd(ctx context.Context, ld loader.Composite, kubeCfg string,
 	}
 }
 
+func loadServingRuntimesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+	return func() tea.Msg {
+		items, err := ld.LoadServingRuntimes(ctx, kubeCfg, env)
+		if err != nil {
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ServingRuntime, err), Gen: gen}
+		}
+		return servingRuntimesLoadedMsg{Items: items, Gen: gen}
+	}
+}
+
 func loadImportedModelsCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		grouped, err := ld.LoadImportedModels(ctx, kubeCfg, env)
@@ -143,6 +153,8 @@ func startK8sWatchCmd(ctx context.Context, ld loader.Composite, cat domain.Categ
 		switch cat {
 		case domain.BaseModel:
 			trigger, err = w.WatchBaseModels(ctx, kubeCfg, env)
+		case domain.ServingRuntime:
+			trigger, err = w.WatchServingRuntimes(ctx, kubeCfg, env)
 		case domain.ImportedModel:
 			trigger, err = w.WatchImportedModels(ctx, kubeCfg, env)
 		case domain.GPUNode:

@@ -30,6 +30,7 @@ func TestNeedsKubeConfig_EveryCategoryAccountedFor(t *testing.T) {
 		GPUNode:                         true,
 		GPUWorkload:                     true,
 		DedicatedAICluster:              true,
+		ServingRuntime:                  true,
 		Alias:                           false,
 	}
 	require.Len(t, want, len(Categories), "every category must have an expected NeedsKubeConfig value")

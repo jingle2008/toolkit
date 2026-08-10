@@ -65,6 +65,7 @@ var registry = map[domain.Category]registryEntry{
 	domain.LimitDefinition:                 newFlatEntry(LimitDefinitionColumns),
 	domain.LimitRegionalOverride:           newFlatEntry(LimitRegionalOverrideColumns),
 	domain.BaseModel:                       newFlatEntry(BaseModelColumns),
+	domain.ServingRuntime:                  newFlatEntry(ServingRuntimeColumns),
 	domain.GPUPool:                         newFlatEntry(GPUPoolColumns),
 	domain.ConsolePropertyDefinition:       newFlatEntry(ConsolePropertyDefinitionColumns),
 	domain.PropertyDefinition:              newFlatEntry(PropertyDefinitionColumns),

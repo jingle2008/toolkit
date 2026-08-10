@@ -55,6 +55,11 @@ func registerTools(s *Server) {
 	}, s.handleListBaseModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "list_serving_runtimes",
+		Description: "List OME ClusterServingRuntime CRs — the cluster-scoped templates that define how a class of models is served. Returns ServingRuntime objects {name, acceleratorClasses, instanceTypes, image, modelSizeMin, modelSizeMax, cpuLimit, memoryLimit, gpuLimit, disabled, autoSelect}. `acceleratorClasses` (e.g. \"nvidia-h100-8\", family plus tensor-parallel size) and `instanceTypes` (e.g. \"BM.GPU.H100.8\", from the required node affinity) are both optional and may both be absent. `image` and the limits come from the ome-container, preferring spec.engineConfig.runner over spec.containers. `autoSelect` is true when any supportedModelFormats entry sets it. Namespaced ServingRuntime CRs are not included. Supports `limit` (max items after filter; 0 = unlimited).",
+	}, s.handleListServingRuntimes)
+
+	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_imported_models",
 		Description: "List tenant-imported models as a flat array (same shape as `list_dacs`); the owning tenant is preserved on each item as `tenantId`. Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label. Every item carries a non-empty `tenantId` — the label value, or `\"UNKNOWN_TENANCY\"` for orphans (namespaced CRs missing the label, treated as a config error). `namespace` (K8s scope) is orthogonal: empty for cluster-scoped CRs, non-empty for namespaced CRs; a namespaced CR may still carry an arbitrary `tenancy-id` label that the label authoritatively defines. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListImportedModels)
@@ -154,6 +159,14 @@ func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequ
 	items, err := s.loader.LoadBaseModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[models.BaseModel]]("load base models", err)
+	}
+	return listFlatResult(items, in.Filter, in.Limit, nil)
+}
+
+func (s *Server) handleListServingRuntimes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ServingRuntime], error) {
+	items, err := s.loader.LoadServingRuntimes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	if err != nil {
+		return failTool[listResult[models.ServingRuntime]]("load serving runtimes", err)
 	}
 	return listFlatResult(items, in.Filter, in.Limit, nil)
 }

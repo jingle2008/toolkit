@@ -120,6 +120,11 @@ type baseModelsLoadedMsg struct {
 	Gen   int
 }
 
+type servingRuntimesLoadedMsg struct {
+	Items []models.ServingRuntime
+	Gen   int
+}
+
 type importedModelsLoadedMsg struct {
 	Items map[string][]models.ImportedModel
 	Gen   int

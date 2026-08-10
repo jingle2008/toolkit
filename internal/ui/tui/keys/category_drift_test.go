@@ -15,6 +15,9 @@ var noContextKeys = map[domain.Category]struct{}{
 	domain.LimitDefinition: {},
 	domain.ModelArtifact:   {},
 	domain.Alias:           {},
+	// ServingRuntime sorts by Name (the global default) and has no
+	// scope to jump to, so there's no per-category binding worth a key.
+	domain.ServingRuntime: {},
 }
 
 func TestCatContext_EveryCategoryAccountedFor(t *testing.T) {

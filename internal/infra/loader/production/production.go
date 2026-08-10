@@ -78,6 +78,18 @@ func (Client) LoadBaseModels(ctx context.Context, kubeCfg string, env models.Env
 	return k8s.LoadBaseModels(ctx, client)
 }
 
+/*
+LoadServingRuntimes loads ClusterServingRuntime CRs from the cluster
+using the provided kubeconfig and environment.
+*/
+func (Client) LoadServingRuntimes(ctx context.Context, kubeCfg string, env models.Environment) ([]models.ServingRuntime, error) {
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.LoadServingRuntimes(ctx, client)
+}
+
 // LoadImportedModels loads tenant-imported models from the cluster
 // (namespaced BaseModel CRs + ClusterBaseModel CRs with a
 // `tenancy-id` label) grouped by raw TenantID, using the provided
@@ -190,6 +202,15 @@ func (Client) WatchBaseModels(ctx context.Context, kubeCfg string, env models.En
 		return nil, err
 	}
 	return k8s.WatchBaseModels(ctx, client)
+}
+
+// WatchServingRuntimes establishes a watch on ClusterServingRuntime CRs.
+func (Client) WatchServingRuntimes(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.WatchServingRuntimes(ctx, client)
 }
 
 // WatchImportedModels establishes a watch on the imported-model sources.

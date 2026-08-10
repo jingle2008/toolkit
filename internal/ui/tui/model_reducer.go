@@ -423,6 +423,10 @@ func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
 	m.applyLoaded(gen, func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
 }
 
+func (m *Model) handleServingRuntimesLoaded(items []models.ServingRuntime, gen int) {
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.ServingRuntimes = items }, domain.ServingRuntime, len(items))
+}
+
 func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedModel, gen int) {
 	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetImportedModelMap(items) }, domain.ImportedModel, mapLen(items))
 }
@@ -474,6 +478,8 @@ func (m *Model) reloadCategoryCmd(cat domain.Category, gen int) tea.Cmd {
 	switch cat {
 	case domain.BaseModel:
 		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	case domain.ServingRuntime:
+		return loadServingRuntimesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	case domain.ImportedModel:
 		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	case domain.GPUNode:

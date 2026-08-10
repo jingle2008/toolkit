@@ -233,6 +233,7 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | ---- | ----------- |
 | `list_tenants` | Tenants in the configured realm |
 | `list_base_models` | Base models from the cluster |
+| `list_serving_runtimes` | OME ClusterServingRuntime CRs (hardware, image, limits) |
 | `list_gpu_pools` | GPU pools (partial-load warnings surfaced) |
 | `list_gpu_nodes` | GPU nodes (flat, with `pool` field) |
 | `list_dacs` | Dedicated AI clusters (flat, with `tenant` field) |

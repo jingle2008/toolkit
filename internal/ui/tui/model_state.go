@@ -150,7 +150,9 @@ type Model struct {
 	history    []domain.Category // chronological list of visited categories
 	historyIdx int               // index of the current position in history
 
-	// Show only faulty items in list view (Tenant, GPUNode, DedicatedAICluster)
+	// Show only faulty items in list view (Tenant, GPUNode,
+	// DedicatedAICluster, ServingRuntime — any category whose model
+	// reports IsFaulty; the gate itself is category-agnostic)
 	showFaulty bool
 
 	// rawRows mirrors m.table.Rows() pre-truncation so itemKeyFrom can

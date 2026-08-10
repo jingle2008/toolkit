@@ -215,6 +215,7 @@ The interface has four zones:
 | `gn` / `gpun` | GPUNode |
 | `gw` / `gpuw` | GPUWorkload |
 | `dac` / `daic` | DedicatedAICluster |
+| `sr` | ServingRuntime |
 | `a` | Alias |
 
 Every category additionally accepts its **full name, lowercased** — `tenant`,
@@ -294,6 +295,7 @@ Toolkit organises data into 20 categories:
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
 | **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters |
+| **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty |
 
 ### Meta
 
@@ -492,7 +494,7 @@ There are two independent watch mechanisms:
 
 | Source | Categories | Triggers on |
 |--------|-----------|-------------|
-| **Cluster watch** (Kubernetes) | BaseModel, ImportedModel, GPUNode, GPUWorkload, DedicatedAICluster | Changes to the watched cluster resources (requires a working kubeconfig) |
+| **Cluster watch** (Kubernetes) | BaseModel, ImportedModel, GPUNode, GPUWorkload, DedicatedAICluster, ServingRuntime | Changes to the watched cluster resources (requires a working kubeconfig) |
 | **Working-tree watch** (local files) | Tenants, Definitions, Overrides, Environments, Service Tenancies, Model Artifacts, GPU Pools, Aliases | Saving any file under the repo path (`.git` and dotfiles are ignored) |
 
 So editing a config file in your repo, or a change landing in the cluster,

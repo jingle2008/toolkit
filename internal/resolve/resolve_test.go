@@ -39,6 +39,10 @@ func (l stubLoader) LoadBaseModels(context.Context, string, models.Environment) 
 	return nil, nil
 }
 
+func (l stubLoader) LoadServingRuntimes(context.Context, string, models.Environment) ([]models.ServingRuntime, error) {
+	return nil, nil
+}
+
 func (l stubLoader) LoadGPUPools(context.Context, string, models.Environment) ([]models.GPUPool, error) {
 	return l.pools, l.poolsErr
 }

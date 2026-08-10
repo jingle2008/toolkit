@@ -80,6 +80,7 @@ var noStatsCategories = map[domain.Category]struct{}{
 	domain.ConsolePropertyRegionalOverride: {},
 	domain.PropertyRegionalOverride:        {},
 	domain.BaseModel:                       {},
+	domain.ServingRuntime:                  {},
 	domain.ImportedModel:                   {},
 	domain.ModelArtifact:                   {},
 	domain.Environment:                     {},

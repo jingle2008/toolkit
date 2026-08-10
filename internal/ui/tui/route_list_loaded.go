@@ -13,6 +13,8 @@ func (m *Model) routeListLoadedMsg(msg tea.Msg) []tea.Cmd {
 	switch msg := msg.(type) {
 	case baseModelsLoadedMsg:
 		m.handleBaseModelsLoaded(msg.Items, msg.Gen)
+	case servingRuntimesLoadedMsg:
+		m.handleServingRuntimesLoaded(msg.Items, msg.Gen)
 	case importedModelsLoadedMsg:
 		m.handleImportedModelsLoaded(msg.Items, msg.Gen)
 	case gpuPoolsLoadedMsg:

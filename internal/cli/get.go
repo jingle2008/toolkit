@@ -268,10 +268,10 @@ func emitCategory(
 		return writeAliases(w, filter, limit, opts, selected)
 	case domain.BaseModel:
 		items, err := ld.LoadBaseModels(ctx, cfg.KubeConfig, env)
-		if err != nil {
-			return fmt.Errorf("load base models: %w", err)
-		}
-		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.BaseModel, env, selected)
+		return emitFlat(w, items, err, "base models", filter, limit, opts, domain.BaseModel, env, selected)
+	case domain.ServingRuntime:
+		items, err := ld.LoadServingRuntimes(ctx, cfg.KubeConfig, env)
+		return emitFlat(w, items, err, "serving runtimes", filter, limit, opts, domain.ServingRuntime, env, selected)
 	case domain.ImportedModel:
 		grouped, err := ld.LoadImportedModels(ctx, cfg.KubeConfig, env)
 		if err != nil {
@@ -378,6 +378,32 @@ type writer interface {
 // ImportedModel Name/Tenant today) emit fully-qualified OCIDs instead
 // of raw suffixes. Table output keeps the display-mode Render to
 // preserve column-width headroom.
+/*
+emitFlat handles the load-error check, filter and write for an
+ungrouped category, so each case in emitCategory stays a single
+expression. Taking loadErr as a parameter rather than checking at the
+call site is what keeps the branch out of emitCategory — that switch is
+already at the cognitive-complexity ceiling, and every flat category
+added to it would otherwise cost another branch.
+*/
+func emitFlat[T models.NamedFilterable](
+	w writer,
+	items []T,
+	loadErr error,
+	what string,
+	filter string,
+	limit int,
+	opts output.Options,
+	cat domain.Category,
+	env models.Environment,
+	selected []string,
+) error {
+	if loadErr != nil {
+		return fmt.Errorf("load %s: %w", what, loadErr)
+	}
+	return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, cat, env, selected)
+}
+
 func writeSlice[T any](w writer, items []T, limit int, opts output.Options, cat domain.Category, env models.Environment, selected []string) error {
 	items = collections.TruncateSlice(items, limit)
 	switch opts.Format {

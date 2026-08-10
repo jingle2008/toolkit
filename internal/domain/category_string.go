@@ -28,12 +28,13 @@ func _() {
 	_ = x[GPUNode-17]
 	_ = x[GPUWorkload-18]
 	_ = x[DedicatedAICluster-19]
-	_ = x[Alias-20]
+	_ = x[ServingRuntime-20]
+	_ = x[Alias-21]
 }
 
-const _Category_name = "CategoryUnknownTenantLimitDefinitionConsolePropertyDefinitionPropertyDefinitionLimitTenancyOverrideConsolePropertyTenancyOverridePropertyTenancyOverrideLimitRegionalOverrideConsolePropertyRegionalOverridePropertyRegionalOverrideBaseModelImportedModelModelArtifactEnvironmentServiceTenancyGPUPoolGPUNodeGPUWorkloadDedicatedAIClusterAlias"
+const _Category_name = "CategoryUnknownTenantLimitDefinitionConsolePropertyDefinitionPropertyDefinitionLimitTenancyOverrideConsolePropertyTenancyOverridePropertyTenancyOverrideLimitRegionalOverrideConsolePropertyRegionalOverridePropertyRegionalOverrideBaseModelImportedModelModelArtifactEnvironmentServiceTenancyGPUPoolGPUNodeGPUWorkloadDedicatedAIClusterServingRuntimeAlias"
 
-var _Category_index = [...]uint16{0, 15, 21, 36, 61, 79, 99, 129, 152, 173, 204, 228, 237, 250, 263, 274, 288, 295, 302, 313, 331, 336}
+var _Category_index = [...]uint16{0, 15, 21, 36, 61, 79, 99, 129, 152, 173, 204, 228, 237, 250, 263, 274, 288, 295, 302, 313, 331, 345, 350}
 
 func (i Category) String() string {
 	if i < 0 || i >= Category(len(_Category_index)-1) {

@@ -33,6 +33,7 @@ type handlerFn func(*Model, bool, int) tea.Cmd
 
 var categoryHandlers = map[domain.Category]handlerFn{
 	domain.BaseModel:                       func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleBaseModelCategory(refresh, gen) },
+	domain.ServingRuntime:                  func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleServingRuntimeCategory(refresh, gen) },
 	domain.ImportedModel:                   func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleImportedModelCategory(refresh, gen) },
 	domain.GPUPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUPoolCategory(refresh, gen) },
 	domain.GPUNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUNodeCategory(refresh, gen) },
@@ -142,6 +143,13 @@ func (m *Model) handlePropertyRegionalOverrideCategory(gen int) tea.Cmd {
 func (m *Model) handleBaseModelCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.BaseModels == nil || refresh {
 		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	}
+	return nil
+}
+
+func (m *Model) handleServingRuntimeCategory(refresh bool, gen int) tea.Cmd {
+	if m.dataset == nil || m.dataset.ServingRuntimes == nil || refresh {
+		return loadServingRuntimesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }
