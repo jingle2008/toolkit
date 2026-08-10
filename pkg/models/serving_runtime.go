@@ -39,6 +39,16 @@ type ServingRuntime struct {
 	MemoryLimit string `json:"memoryLimit,omitempty"`
 	GPULimit    string `json:"gpuLimit,omitempty"`
 
+	// CPURequest, MemoryRequest and GPURequest are the same entries from
+	// resources.requests. Kept separate rather than folded into the
+	// Limit fields: a request is a scheduling floor and a limit is a
+	// cap, and reporting one under the other's name would be wrong.
+	// Many runtimes cap only the GPU and express cpu/memory as requests
+	// alone, which is why the table falls back to these.
+	CPURequest    string `json:"cpuRequest,omitempty"`
+	MemoryRequest string `json:"memoryRequest,omitempty"`
+	GPURequest    string `json:"gpuRequest,omitempty"`
+
 	// Disabled mirrors spec.disabled.
 	Disabled bool `json:"disabled"`
 	// AutoSelect is true when any spec.supportedModelFormats entry sets

@@ -81,8 +81,32 @@ func TestServingRuntimeSizeRange(t *testing.T) {
 
 func TestServingRuntimeCPUMem(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, "10 / 30Gi", servingRuntimeCPUMem(models.ServingRuntime{CPULimit: "10", MemoryLimit: "30Gi"}))
+
+	// Limits win outright and carry no marker.
+	assert.Equal(t, "10 / 30Gi", servingRuntimeCPUMem(models.ServingRuntime{
+		CPULimit: "10", MemoryLimit: "30Gi",
+		CPURequest: "16", MemoryRequest: "120Gi",
+	}))
+
+	// The common real shape: only the GPU is capped, cpu/memory are
+	// requests. Marked, because a floor isn't a cap.
+	assert.Equal(t, "req: 16 / 120Gi", servingRuntimeCPUMem(models.ServingRuntime{
+		CPURequest: "16", MemoryRequest: "120Gi",
+	}))
+
+	// Mixed sources report as requests — the weaker of the two claims.
+	assert.Equal(t, "req: 10 / 120Gi", servingRuntimeCPUMem(models.ServingRuntime{
+		CPULimit: "10", MemoryRequest: "120Gi",
+	}))
+
 	assert.Empty(t, servingRuntimeCPUMem(models.ServingRuntime{}))
+}
+
+func TestServingRuntimeGPU(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "8", servingRuntimeGPU(models.ServingRuntime{GPULimit: "8", GPURequest: "2"}))
+	assert.Equal(t, "2", servingRuntimeGPU(models.ServingRuntime{GPURequest: "2"}))
+	assert.Empty(t, servingRuntimeGPU(models.ServingRuntime{}))
 }
 
 // The Set contract: ratios must sum to 1.00 and keys must be unique.

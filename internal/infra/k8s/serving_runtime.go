@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -52,9 +53,12 @@ func parseServingRuntime(ctx context.Context, obj *unstructured.Unstructured) mo
 
 	runner := runnerContainer(spec, engine)
 	image, _, _ := unstructured.NestedString(runner, "image")
-	cpu, _, _ := unstructured.NestedString(runner, "resources", "limits", "cpu")
-	memory, _, _ := unstructured.NestedString(runner, "resources", "limits", "memory")
-	gpu, _, _ := unstructured.NestedString(runner, "resources", "limits", "nvidia.com/gpu")
+	cpu := nestedQuantity(runner, "resources", "limits", "cpu")
+	memory := nestedQuantity(runner, "resources", "limits", "memory")
+	gpu := nestedQuantity(runner, "resources", "limits", "nvidia.com/gpu")
+	cpuReq := nestedQuantity(runner, "resources", "requests", "cpu")
+	memoryReq := nestedQuantity(runner, "resources", "requests", "memory")
+	gpuReq := nestedQuantity(runner, "resources", "requests", "nvidia.com/gpu")
 
 	rt := models.ServingRuntime{
 		Name:               obj.GetName(),
@@ -66,6 +70,9 @@ func parseServingRuntime(ctx context.Context, obj *unstructured.Unstructured) mo
 		CPULimit:           cpu,
 		MemoryLimit:        memory,
 		GPULimit:           gpu,
+		CPURequest:         cpuReq,
+		MemoryRequest:      memoryReq,
+		GPURequest:         gpuReq,
 		Disabled:           disabled,
 		AutoSelect:         anyAutoSelect(spec),
 	}
@@ -187,6 +194,38 @@ func logRunnerDivergence(ctx context.Context, name string, spec, engine map[stri
 			logging.FromContext(ctx).Debugw("serving runtime image differs between engineConfig and spec",
 				"runtime", name, "engineConfig", engineImage, "spec", img, "using", chosen)
 		}
+	}
+}
+
+/*
+nestedQuantity reads a Kubernetes resource quantity as a string.
+
+Quantities are not consistently typed on the wire: the same field is a
+JSON string when it carries a unit ("80Gi", "500m") and a bare number
+when it doesn't (cpu: 10, nvidia.com/gpu: 1). Across this fleet every
+`cpu` is a number and `nvidia.com/gpu` is a number about seven times
+out of eight, so reading these with NestedString silently yields ""
+for most rows — a blank cell that reads as "unset" rather than as
+"we failed to parse it".
+
+Integers are formatted without a decimal point so "10" doesn't become
+"10.000000"; the unstructured converter yields int64 for whole numbers
+but float64 is handled too, since a fractional cpu (0.5) is legal.
+*/
+func nestedQuantity(root map[string]any, fields ...string) string {
+	v, found, err := unstructured.NestedFieldNoCopy(root, fields...)
+	if !found || err != nil {
+		return ""
+	}
+	switch q := v.(type) {
+	case string:
+		return q
+	case int64:
+		return strconv.FormatInt(q, 10)
+	case float64:
+		return strconv.FormatFloat(q, 'g', -1, 64)
+	default:
+		return ""
 	}
 }
 

@@ -52,7 +52,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case datasetLoadedMsg:
 		m.handleDataMsg(dataMsg{Data: msg.Dataset, Gen: msg.Gen})
 		return m, nil
-	case baseModelsLoadedMsg, importedModelsLoadedMsg, gpuPoolsLoadedMsg,
+	case baseModelsLoadedMsg, servingRuntimesLoadedMsg, importedModelsLoadedMsg, gpuPoolsLoadedMsg,
 		gpuNodesLoadedMsg, gpuWorkloadsLoadedMsg, dedicatedAIClustersLoadedMsg, tenancyOverridesLoadedMsg,
 		limitRegionalOverridesLoadedMsg, consolePropertyRegionalOverridesLoadedMsg,
 		propertyRegionalOverridesLoadedMsg:

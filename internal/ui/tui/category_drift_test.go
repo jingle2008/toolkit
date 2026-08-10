@@ -65,6 +65,42 @@ func TestStartK8sWatchCmd_CoversKubeBacked(t *testing.T) {
 	}
 }
 
+/*
+TestUpdate_RoutesEveryKubeBackedLoadedMsg guards the second dispatch
+list.
+
+Update enumerates the loaded-message types it forwards to
+routeListLoadedMsg. A type missing from that list isn't a compile
+error and isn't caught by routeListLoadedMsg's own switch — the
+message is simply dropped, so applyLoaded never runs, endTask never
+fires, pendingTasks stays elevated, and the spinner ticks forever.
+That's exactly how ServingRuntime shipped broken.
+
+Rather than a hand-maintained list (which is the thing that drifted),
+this drives each category's real load command, takes the message it
+actually produces, and asserts Update drains the task.
+*/
+func TestUpdate_RoutesEveryKubeBackedLoadedMsg(t *testing.T) {
+	t.Parallel()
+	for _, cat := range kubeBackedCategories() {
+		t.Run(cat.String(), func(t *testing.T) {
+			t.Parallel()
+			m := newTestModel(t)
+			cmd := m.reloadCategoryCmd(cat, m.gens.msg)
+			require.NotNilf(t, cmd, "%s must have a load command", cat)
+
+			msg := cmd()
+			require.NotNilf(t, msg, "%s load command must produce a message", cat)
+
+			m.pendingTasks = 1
+			m.Update(msg)
+			assert.Zerof(t, m.pendingTasks,
+				"%s: Update dropped %T — add it to the dispatch list in model_update.go",
+				cat, msg)
+		})
+	}
+}
+
 // noStatsCategories are intentionally without aggregate stat columns. A new
 // category must be added here OR to statsColumns — never silently neither.
 // Keep in sync with statsColumns (table_utils.go).

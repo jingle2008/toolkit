@@ -97,13 +97,45 @@ func servingRuntimeSizeRange(r models.ServingRuntime) string {
 	return ""
 }
 
-// servingRuntimeCPUMem pairs the two limits that are almost always read
-// together, freeing a column for the GPU count.
+/*
+servingRuntimeCPUMem pairs the two quantities that are almost always
+read together, freeing a column for the GPU count.
+
+Limits win, with requests as the fallback: many runtimes cap only the
+GPU and express cpu/memory as requests alone, so limits-only would
+leave the cell blank for a sizeable share of a real fleet. A `req:`
+marker flags a fallback value, because a scheduling floor and a cap
+are different promises and a bare number would imply the stricter one.
+The marker appears if either half fell back — mixed rows are reported
+as requests, the weaker claim.
+*/
 func servingRuntimeCPUMem(r models.ServingRuntime) string {
-	if r.CPULimit == "" && r.MemoryLimit == "" {
+	cpu, cpuFromReq := orRequest(r.CPULimit, r.CPURequest)
+	mem, memFromReq := orRequest(r.MemoryLimit, r.MemoryRequest)
+	if cpu == "" && mem == "" {
 		return ""
 	}
-	return r.CPULimit + " / " + r.MemoryLimit
+	if cpuFromReq || memFromReq {
+		return "req: " + cpu + " / " + mem
+	}
+	return cpu + " / " + mem
+}
+
+// servingRuntimeGPU falls back the same way, unmarked: the column is
+// too narrow for a marker, and in practice the GPU is the one resource
+// runtimes almost always cap explicitly.
+func servingRuntimeGPU(r models.ServingRuntime) string {
+	gpu, _ := orRequest(r.GPULimit, r.GPURequest)
+	return gpu
+}
+
+// orRequest returns the limit when set, otherwise the request, and
+// reports whether it fell back.
+func orRequest(limit, request string) (string, bool) {
+	if limit != "" {
+		return limit, false
+	}
+	return request, request != ""
 }
 
 // ServingRuntimeColumns is the canonical column set for
@@ -134,7 +166,7 @@ var ServingRuntimeColumns = Set[models.ServingRuntime]{Columns: []Column[models.
 	},
 	{
 		Title: "GPU", Key: "gpu", Ratio: 0.05,
-		Render: func(r models.ServingRuntime) string { return r.GPULimit },
+		Render: servingRuntimeGPU,
 	},
 	{
 		Title: "Auto-Select", Key: "auto-select", Ratio: 0.05,

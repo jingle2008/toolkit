@@ -169,6 +169,79 @@ spec:
 	assert.Equal(t, "4", got.GPULimit)
 }
 
+/*
+Resource quantities arrive as JSON numbers as often as strings — in
+this fleet every `cpu` is a number and `nvidia.com/gpu` usually is —
+and reading them with NestedString silently produced "" rather than
+failing. The original fixture quoted every quantity, so the tests
+agreed with each other and disagreed with the cluster. This pins the
+unquoted forms.
+*/
+func TestParseServingRuntime_NumericQuantities(t *testing.T) {
+	t.Parallel()
+	src := `
+metadata:
+  name: srt
+spec:
+  engineConfig:
+    runner:
+      name: ome-container
+      image: reg/org/img:v1
+      resources:
+        limits:
+          cpu: 10
+          memory: 80Gi
+          nvidia.com/gpu: 1
+`
+	got := parseServingRuntime(context.Background(), parseYAML(t, src))
+	assert.Equal(t, "10", got.CPULimit, "integer cpu must not render as empty or 10.000000")
+	assert.Equal(t, "80Gi", got.MemoryLimit)
+	assert.Equal(t, "1", got.GPULimit)
+}
+
+// The shape most of this fleet actually uses: only the GPU is capped,
+// cpu and memory appear as requests. Both sets must be captured so the
+// table can fall back without mislabelling a request as a limit.
+func TestParseServingRuntime_RequestsCapturedSeparately(t *testing.T) {
+	t.Parallel()
+	src := `
+metadata:
+  name: srt
+spec:
+  engineConfig:
+    runner:
+      resources:
+        limits:
+          nvidia.com/gpu: "2"
+        requests:
+          cpu: 16
+          memory: 120Gi
+          nvidia.com/gpu: "2"
+`
+	got := parseServingRuntime(context.Background(), parseYAML(t, src))
+	assert.Equal(t, "2", got.GPULimit)
+	assert.Empty(t, got.CPULimit, "a request must not be reported as a limit")
+	assert.Empty(t, got.MemoryLimit)
+	assert.Equal(t, "16", got.CPURequest)
+	assert.Equal(t, "120Gi", got.MemoryRequest)
+	assert.Equal(t, "2", got.GPURequest)
+}
+
+func TestParseServingRuntime_FractionalCPU(t *testing.T) {
+	t.Parallel()
+	src := `
+metadata:
+  name: srt
+spec:
+  engineConfig:
+    runner:
+      resources:
+        limits: {cpu: 0.5}
+`
+	got := parseServingRuntime(context.Background(), parseYAML(t, src))
+	assert.Equal(t, "0.5", got.CPULimit)
+}
+
 func TestParseServingRuntime_OptionalFieldsAbsent(t *testing.T) {
 	t.Parallel()
 	got := parseServingRuntime(context.Background(), parseYAML(t, "metadata:\n  name: bare\nspec: {}\n"))
