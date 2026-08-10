@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
@@ -51,33 +52,167 @@ func parseServingRuntime(ctx context.Context, obj *unstructured.Unstructured) mo
 	sizeMin, _, _ := unstructured.NestedString(spec, "modelSizeRange", "min")
 	sizeMax, _, _ := unstructured.NestedString(spec, "modelSizeRange", "max")
 
-	runner := runnerContainer(spec, engine)
-	image, _, _ := unstructured.NestedString(runner, "image")
-	cpu := nestedQuantity(runner, "resources", "limits", "cpu")
-	memory := nestedQuantity(runner, "resources", "limits", "memory")
-	gpu := nestedQuantity(runner, "resources", "limits", "nvidia.com/gpu")
-	cpuReq := nestedQuantity(runner, "resources", "requests", "cpu")
-	memoryReq := nestedQuantity(runner, "resources", "requests", "memory")
-	gpuReq := nestedQuantity(runner, "resources", "requests", "nvidia.com/gpu")
+	res := runtimeResources(ctx, obj.GetName(), spec, engine)
 
 	rt := models.ServingRuntime{
 		Name:               obj.GetName(),
 		AcceleratorClasses: accelerators,
 		InstanceTypes:      instanceTypesFrom(ctx, spec, engine),
-		Image:              image,
+		Image:              res.image,
 		ModelSizeMin:       sizeMin,
 		ModelSizeMax:       sizeMax,
-		CPULimit:           cpu,
-		MemoryLimit:        memory,
-		GPULimit:           gpu,
-		CPURequest:         cpuReq,
-		MemoryRequest:      memoryReq,
-		GPURequest:         gpuReq,
+		CPULimit:           res.cpuLimit,
+		MemoryLimit:        res.memLimit,
+		GPULimit:           res.gpuLimit,
+		CPURequest:         res.cpuRequest,
+		MemoryRequest:      res.memRequest,
+		GPURequest:         res.gpuRequest,
+		NodeCount:          res.nodes,
 		Disabled:           disabled,
 		AutoSelect:         anyAutoSelect(spec),
 	}
-	logRunnerDivergence(ctx, obj.GetName(), spec, engine, image)
+	logRunnerDivergence(ctx, obj.GetName(), spec, engine, res.image)
 	return rt
+}
+
+// resourceSet is the per-runtime resource picture: the image that
+// serves it, the totals across every pod it occupies, and how many
+// pods that is.
+type resourceSet struct {
+	image                              string
+	cpuLimit, memLimit, gpuLimit       string
+	cpuRequest, memRequest, gpuRequest string
+	nodes                              int
+}
+
+/*
+runtimeResources resolves the image and resource totals for a runtime.
+
+Two shapes exist. The ordinary one has a single container —
+engineConfig.runner, or the ome-container in spec.containers — and its
+resources are the runtime's resources.
+
+A multi-node runtime instead has engineConfig.leader and
+engineConfig.worker, each with their own container, and worker.size
+says how many workers there are. Its resources are the *sum* across
+leader + worker×size, because the operator question is what it costs
+to serve the model, not what one pod of it costs. Summing goes through
+resource.Quantity so units are handled and the result is canonical
+(512Gi + 512Gi renders as 1Ti, not 1024Gi).
+*/
+func runtimeResources(ctx context.Context, name string, spec, engine map[string]any) resourceSet {
+	if leader, worker, ok := leaderWorker(engine); ok {
+		return sumLeaderWorker(ctx, name, leader, worker)
+	}
+	runner := runnerContainer(spec, engine)
+	image, _, _ := unstructured.NestedString(runner, "image")
+	return resourceSet{
+		image:      image,
+		cpuLimit:   nestedQuantity(runner, "resources", "limits", "cpu"),
+		memLimit:   nestedQuantity(runner, "resources", "limits", "memory"),
+		gpuLimit:   nestedQuantity(runner, "resources", "limits", "nvidia.com/gpu"),
+		cpuRequest: nestedQuantity(runner, "resources", "requests", "cpu"),
+		memRequest: nestedQuantity(runner, "resources", "requests", "memory"),
+		gpuRequest: nestedQuantity(runner, "resources", "requests", "nvidia.com/gpu"),
+		nodes:      1,
+	}
+}
+
+// leaderWorker returns the multi-node role containers, if this is a
+// multi-node runtime. A runtime with engineConfig.runner is not, even
+// if it also carries leader/worker.
+func leaderWorker(engine map[string]any) (leader, worker map[string]any, ok bool) {
+	if _, found, _ := unstructured.NestedMap(engine, "runner"); found {
+		return nil, nil, false
+	}
+	leader, hasLeader, _ := unstructured.NestedMap(engine, "leader")
+	worker, hasWorker, _ := unstructured.NestedMap(engine, "worker")
+	return leader, worker, hasLeader || hasWorker
+}
+
+func sumLeaderWorker(ctx context.Context, name string, leader, worker map[string]any) resourceSet {
+	leaderRunner, _, _ := unstructured.NestedMap(leader, "runner")
+	workerRunner, _, _ := unstructured.NestedMap(worker, "runner")
+
+	// A worker stanza with no explicit size still describes one worker;
+	// treating a missing size as zero would silently halve the total.
+	// nestedCount rather than NestedInt64 because the number's Go type
+	// depends on the decoder — the API server's yields int64, a
+	// YAML-parsed fixture yields float64, and NestedInt64 rejects the
+	// latter by returning not-found.
+	workers := 1
+	if n, found := nestedCount(worker, "size"); found {
+		workers = n
+	}
+	if workerRunner == nil {
+		workers = 0
+	}
+
+	leaders := 0
+	if leaderRunner != nil {
+		leaders = 1
+	}
+
+	out := resourceSet{nodes: leaders + workers}
+	out.image, _, _ = unstructured.NestedString(leaderRunner, "image")
+	if out.image == "" {
+		out.image, _, _ = unstructured.NestedString(workerRunner, "image")
+	} else if wImg, _, _ := unstructured.NestedString(workerRunner, "image"); wImg != "" && wImg != out.image {
+		logging.FromContext(ctx).Debugw("multi-node runtime leader and worker images differ",
+			"runtime", name, "leader", out.image, "worker", wImg, "using", out.image)
+	}
+
+	for _, field := range []struct {
+		kind string
+		key  string
+		dst  *string
+	}{
+		{"limits", "cpu", &out.cpuLimit},
+		{"limits", "memory", &out.memLimit},
+		{"limits", "nvidia.com/gpu", &out.gpuLimit},
+		{"requests", "cpu", &out.cpuRequest},
+		{"requests", "memory", &out.memRequest},
+		{"requests", "nvidia.com/gpu", &out.gpuRequest},
+	} {
+		*field.dst = sumQuantities(
+			nestedQuantity(leaderRunner, "resources", field.kind, field.key), leaders,
+			nestedQuantity(workerRunner, "resources", field.kind, field.key), workers,
+		)
+	}
+	return out
+}
+
+/*
+sumQuantities returns leader*leaderN + worker*workerN as a canonical
+quantity string, or "" when neither side declares the resource.
+
+An unparseable quantity is skipped rather than zeroed: reporting a
+smaller total than reality would understate what the runtime costs,
+which is the more damaging direction to be wrong in.
+*/
+func sumQuantities(leaderVal string, leaderN int, workerVal string, workerN int) string {
+	total := resource.Quantity{}
+	any := false
+	for _, side := range []struct {
+		val string
+		n   int
+	}{{leaderVal, leaderN}, {workerVal, workerN}} {
+		if side.val == "" || side.n <= 0 {
+			continue
+		}
+		q, err := resource.ParseQuantity(side.val)
+		if err != nil {
+			continue
+		}
+		for i := 0; i < side.n; i++ {
+			total.Add(q)
+		}
+		any = true
+	}
+	if !any {
+		return ""
+	}
+	return total.String()
 }
 
 /*
@@ -226,6 +361,23 @@ func nestedQuantity(root map[string]any, fields ...string) string {
 		return strconv.FormatFloat(q, 'g', -1, 64)
 	default:
 		return ""
+	}
+}
+
+// nestedCount reads an integer field that may have decoded as either
+// int64 or float64 depending on the decoder in play.
+func nestedCount(root map[string]any, fields ...string) (int, bool) {
+	v, found, err := unstructured.NestedFieldNoCopy(root, fields...)
+	if !found || err != nil {
+		return 0, false
+	}
+	switch n := v.(type) {
+	case int64:
+		return int(n), true
+	case float64:
+		return int(n), true
+	default:
+		return 0, false
 	}
 }
 

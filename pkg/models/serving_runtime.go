@@ -49,6 +49,13 @@ type ServingRuntime struct {
 	MemoryRequest string `json:"memoryRequest,omitempty"`
 	GPURequest    string `json:"gpuRequest,omitempty"`
 
+	// NodeCount is how many pods one instance of this runtime occupies:
+	// 1 for the ordinary single-container shape, leader + worker.size
+	// for a multi-node runtime. The resource fields above are totals
+	// across all of them, since what an operator needs to know is what
+	// it costs to serve the model, not what one pod of it costs.
+	NodeCount int `json:"nodeCount,omitempty"`
+
 	// Disabled mirrors spec.disabled.
 	Disabled bool `json:"disabled"`
 	// AutoSelect is true when any spec.supportedModelFormats entry sets

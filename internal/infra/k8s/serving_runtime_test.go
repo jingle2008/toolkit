@@ -98,9 +98,97 @@ func TestParseServingRuntime_Sample(t *testing.T) {
 		CPULimit:      "10",
 		MemoryLimit:   "30Gi",
 		GPULimit:      "1",
+		NodeCount:     1,
 		Disabled:      false,
 		AutoSelect:    true,
 	}, got)
+}
+
+/*
+Multi-node runtimes have no engineConfig.runner: they carry leader and
+worker stanzas, each with its own container, plus worker.size. The
+resources reported are the total across leader + worker×size, because
+what an operator needs is the cost of serving the model, not the cost
+of one of its pods.
+*/
+func TestParseServingRuntime_MultiNodeSumsLeaderAndWorkers(t *testing.T) {
+	t.Parallel()
+	src := `
+metadata:
+  name: vllm-multi
+spec:
+  engineConfig:
+    leader:
+      runner:
+        name: ome-container
+        image: reg/org/vllm:v1
+        resources:
+          limits: {cpu: 64, memory: 512Gi, nvidia.com/gpu: 8}
+    worker:
+      size: 3
+      runner:
+        name: ome-container
+        image: reg/org/vllm:v1
+        resources:
+          limits: {cpu: 64, memory: 512Gi, nvidia.com/gpu: 8}
+`
+	got := parseServingRuntime(context.Background(), parseYAML(t, src))
+
+	assert.Equal(t, 4, got.NodeCount, "1 leader + 3 workers")
+	assert.Equal(t, "256", got.CPULimit, "64 x 4")
+	assert.Equal(t, "2Ti", got.MemoryLimit, "512Gi x 4, canonicalised")
+	assert.Equal(t, "32", got.GPULimit, "8 x 4")
+	assert.Equal(t, "reg/org/vllm:v1", got.Image)
+}
+
+// worker.size is what makes the sum right; without it the total would
+// silently report a single worker's worth.
+func TestParseServingRuntime_MultiNodeDefaultsWorkerSizeToOne(t *testing.T) {
+	t.Parallel()
+	src := `
+metadata:
+  name: vllm-multi
+spec:
+  engineConfig:
+    leader:
+      runner:
+        image: reg/org/vllm:v1
+        resources:
+          limits: {nvidia.com/gpu: 8}
+    worker:
+      runner:
+        image: reg/org/vllm:v1
+        resources:
+          limits: {nvidia.com/gpu: 8}
+`
+	got := parseServingRuntime(context.Background(), parseYAML(t, src))
+	assert.Equal(t, 2, got.NodeCount)
+	assert.Equal(t, "16", got.GPULimit)
+}
+
+// engineConfig.runner takes precedence: a runtime with a runner is not
+// multi-node even if leader/worker keys are also present.
+func TestParseServingRuntime_RunnerBeatsLeaderWorker(t *testing.T) {
+	t.Parallel()
+	src := `
+metadata:
+  name: srt
+spec:
+  engineConfig:
+    runner:
+      image: reg/org/single:v1
+      resources:
+        limits: {nvidia.com/gpu: 2}
+    leader:
+      runner:
+        image: reg/org/leader:v1
+        resources:
+          limits: {nvidia.com/gpu: 8}
+`
+	got := parseServingRuntime(context.Background(), parseYAML(t, src))
+	assert.Equal(t, "reg/org/single:v1", got.Image)
+	assert.Equal(t, "2", got.GPULimit)
+	assert.Equal(t, 1, got.NodeCount)
 }
 
 // engineConfig wins when the two sources disagree — the rule the whole
