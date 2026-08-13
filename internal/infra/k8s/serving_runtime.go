@@ -52,7 +52,7 @@ func parseServingRuntime(ctx context.Context, obj *unstructured.Unstructured) mo
 	sizeMin, _, _ := unstructured.NestedString(spec, "modelSizeRange", "min")
 	sizeMax, _, _ := unstructured.NestedString(spec, "modelSizeRange", "max")
 
-	res := runtimeResources(ctx, obj.GetName(), spec, engine)
+	res := runtimeResources(spec, engine)
 
 	rt := models.ServingRuntime{
 		Name:               obj.GetName(),
@@ -100,9 +100,9 @@ to serve the model, not what one pod of it costs. Summing goes through
 resource.Quantity so units are handled and the result is canonical
 (512Gi + 512Gi renders as 1Ti, not 1024Gi).
 */
-func runtimeResources(ctx context.Context, name string, spec, engine map[string]any) resourceSet {
+func runtimeResources(spec, engine map[string]any) resourceSet {
 	if leader, worker, ok := leaderWorker(engine); ok {
-		return sumLeaderWorker(ctx, name, leader, worker)
+		return sumLeaderWorker(leader, worker)
 	}
 	runner := runnerContainer(spec, engine)
 	image, _, _ := unstructured.NestedString(runner, "image")
@@ -130,7 +130,7 @@ func leaderWorker(engine map[string]any) (leader, worker map[string]any, ok bool
 	return leader, worker, hasLeader || hasWorker
 }
 
-func sumLeaderWorker(ctx context.Context, name string, leader, worker map[string]any) resourceSet {
+func sumLeaderWorker(leader, worker map[string]any) resourceSet {
 	leaderRunner, _, _ := unstructured.NestedMap(leader, "runner")
 	workerRunner, _, _ := unstructured.NestedMap(worker, "runner")
 
@@ -153,13 +153,17 @@ func sumLeaderWorker(ctx context.Context, name string, leader, worker map[string
 		leaders = 1
 	}
 
+	// Leader and worker run the same image on every multi-node runtime
+	// across both indexed clusters, so the leader's is taken as the
+	// runtime's. The worker is only consulted when the leader has no
+	// image at all. There is deliberately no divergence check here: the
+	// equivalent one for engineConfig vs top-level spec earns its place
+	// because four runtimes actually disagree, whereas leader/worker
+	// never have, so a check would be untested speculation.
 	out := resourceSet{nodes: leaders + workers}
 	out.image, _, _ = unstructured.NestedString(leaderRunner, "image")
 	if out.image == "" {
 		out.image, _, _ = unstructured.NestedString(workerRunner, "image")
-	} else if wImg, _, _ := unstructured.NestedString(workerRunner, "image"); wImg != "" && wImg != out.image {
-		logging.FromContext(ctx).Debugw("multi-node runtime leader and worker images differ",
-			"runtime", name, "leader", out.image, "worker", wImg, "using", out.image)
 	}
 
 	for _, field := range []struct {
