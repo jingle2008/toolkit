@@ -422,6 +422,49 @@ locals {
 	assert.Empty(t, tenancies)
 }
 
+func TestLoadServiceTenancies_NonTenancyLocals(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	subdir := shepTargetsDir(t, dir)
+	// Mirrors the real shep_targets module: tenancy objects mixed with
+	// helper locals (for-expressions over other locals, function calls,
+	// plain lookup maps) that must be skipped, not fail the load.
+	tf := `
+locals {
+  tenancy_name_mapping = {
+    oc1_dev = "generativeaidev"
+  }
+
+  oc1_dev = {
+    tenancy_name = "generativeaidev"
+    home_region  = "us-ashburn-1"
+    regions      = ["us-ashburn-1", "us-phoenix-1"]
+    environment  = "dev"
+    extra_tagged_regions = toset(["us-phoenix-1"])
+  }
+
+  rollout_regions_by_target = {
+    dev = ["us-ashburn-1"]
+  }
+
+  enabled_regions_by_target = {
+    for target, regions in local.rollout_regions_by_target :
+    target => [for r in regions : r if contains(local.oc1_dev.regions, r)]
+  }
+
+  unresolvable = var.no_such_variable
+}
+`
+	writeTfFile(t, subdir, "locals.tf", tf)
+
+	tenancies, err := LoadServiceTenancies(context.Background(), dir)
+	require.NoError(t, err)
+	require.Len(t, tenancies, 1)
+	assert.Equal(t, "generativeaidev", tenancies[0].Name)
+	assert.Equal(t, "oc1", tenancies[0].Realm)
+	assert.Equal(t, []string{"us-ashburn-1", "us-phoenix-1"}, tenancies[0].Regions)
+}
+
 func TestLoadServiceTenancies_InvalidHCL(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

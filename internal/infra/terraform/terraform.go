@@ -51,6 +51,9 @@ var localFuncMap = map[string]function.Function{
 	"keys":     stdlib.KeysFunc,
 	"flatten":  stdlib.FlattenFunc,
 	"distinct": stdlib.DistinctFunc,
+	"toset":    stdlib.MakeToFunc(cty.Set(cty.DynamicPseudoType)),
+	"tolist":   stdlib.MakeToFunc(cty.List(cty.DynamicPseudoType)),
+	"tomap":    stdlib.MakeToFunc(cty.Map(cty.DynamicPseudoType)),
 }
 
 func getLocalAttributesDI(
@@ -151,11 +154,81 @@ func getVariableDefaults(ctx context.Context, dirPath string) (map[string]cty.Va
 
 func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 	valueMap := object.AsValueMap()
+	if valueMap == nil { // AsValueMap returns nil for an empty object
+		valueMap = make(map[string]cty.Value, 1)
+	}
 	valueMap[key] = value
 	return cty.ObjectVal(valueMap)
 }
 
-func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environment) (map[string]cty.Value, error) { //nolint:cyclop
+// resolveLocals iteratively evaluates locals attributes against evalCtx,
+// merging each newly-known value into evalCtx's `local` object so later
+// passes can resolve attributes that reference earlier ones (in any
+// declaration order). It mutates `attributes`, deleting every entry it
+// resolves; whatever remains afterwards could not be evaluated. Returns
+// the final `local` object.
+func resolveLocals(
+	ctx context.Context,
+	evalCtx *hcl.EvalContext,
+	localObject cty.Value,
+	attributes hclsyntax.Attributes,
+) cty.Value {
+	keys := make([]string, 0, len(attributes))
+	for key := range attributes {
+		keys = append(keys, key)
+	}
+
+	// Evaluate attributes with the fewest references first so simple
+	// literals land before the expressions that depend on them.
+	slices.SortFunc(keys, func(a, b string) int {
+		vi := len(attributes[a].Expr.Variables())
+		vj := len(attributes[b].Expr.Variables())
+		return cmp.Compare(vi, vj)
+	})
+
+	const maxIterations = 100
+	progress := true
+	iterations := 0
+	for len(attributes) > 0 && progress && iterations < maxIterations {
+		knownKeys := make(map[string]struct{})
+		for _, key := range keys {
+			attr, ok := attributes[key]
+			if !ok {
+				continue
+			}
+
+			value, diags := attr.Expr.Value(evalCtx)
+			if diags.HasErrors() {
+				continue
+			}
+
+			if value.IsWhollyKnown() {
+				localObject = mergeObject(localObject, key, value)
+				evalCtx.Variables[localKey] = localObject
+				knownKeys[key] = struct{}{}
+			}
+		}
+
+		progress = len(knownKeys) > 0
+		for key := range knownKeys {
+			delete(attributes, key)
+		}
+		iterations++
+	}
+	if iterations == maxIterations && len(attributes) > 0 {
+		unresolved := make([]string, 0, len(attributes))
+		for key := range attributes {
+			unresolved = append(unresolved, key)
+		}
+		logging.FromContext(ctx).Errorw(
+			"max iterations reached while resolving locals; possible cyclic dependency",
+			"unresolved", unresolved,
+		)
+	}
+	return localObject
+}
+
+func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environment) (map[string]cty.Value, error) {
 	logger := logging.FromContext(ctx)
 	attributes, err := LoadLocalAttributes(ctx, dirPath)
 	if err != nil {
@@ -203,49 +276,7 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 		Functions: localFuncMap,
 	}
 
-	keys := make([]string, 0, len(attributes))
-	for key := range attributes {
-		keys = append(keys, key)
-	}
-
-	slices.SortFunc(keys, func(a, b string) int {
-		vi := len(attributes[a].Expr.Variables())
-		vj := len(attributes[b].Expr.Variables())
-		return cmp.Compare(vi, vj)
-	})
-
-	const maxIterations = 100
-	progress := true
-	iterations := 0
-	for len(attributes) > 0 && progress && iterations < maxIterations {
-		knownKeys := make(map[string]struct{})
-		for _, key := range keys {
-			attr, ok := attributes[key]
-			if !ok {
-				continue
-			}
-
-			value, diags := attr.Expr.Value(&context)
-			if diags.HasErrors() {
-				continue
-			}
-
-			if value.IsWhollyKnown() {
-				localObject = mergeObject(localObject, key, value)
-				context.Variables[localKey] = localObject
-				knownKeys[key] = struct{}{}
-			}
-		}
-
-		progress = len(knownKeys) > 0
-		for key := range knownKeys {
-			delete(attributes, key)
-		}
-		iterations++
-	}
-	if iterations == maxIterations && len(attributes) > 0 {
-		logger.Errorw("max iterations reached while resolving locals; possible cyclic dependency", "unresolved", keys)
-	}
+	localObject = resolveLocals(ctx, &context, localObject, attributes)
 
 	for key := range attributes {
 		attr, ok := attributes[key]
@@ -278,28 +309,42 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 }
 
 // LoadServiceTenancies loads ServiceTenancy objects from the given repository path.
+//
+// The shep_targets locals block mixes tenancy definitions with unrelated
+// helper locals (region-group lists, rollout maps built from for-expressions,
+// etc.), so tenancies are recognized structurally — any resolved object with
+// a string `tenancy_name` attribute — rather than by name. Locals that cannot
+// be resolved (e.g. ones referencing variables without defaults) are logged
+// and skipped instead of failing the whole load.
 func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.ServiceTenancy, error) {
+	logger := logging.FromContext(ctx)
 	dirPath := filepath.Join(repoPath, "shared_modules/shep_targets")
 	attributes, err := LoadLocalAttributes(ctx, dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse attributes: %w", err)
 	}
 
+	varDefaults, _ := getVariableDefaults(ctx, dirPath)
+	evalCtx := hcl.EvalContext{
+		Variables: map[string]cty.Value{
+			localKey: cty.EmptyObjectVal,
+			varKey:   cty.ObjectVal(varDefaults),
+		},
+		Functions: localFuncMap,
+	}
+	localObject := resolveLocals(ctx, &evalCtx, cty.EmptyObjectVal, attributes)
+	for key := range attributes {
+		logger.Warnw("skipping unresolved shep_targets local", "local", key)
+	}
+
 	tenancyMap := make(map[string]*models.ServiceTenancy)
 
-	for key, attribute := range attributes {
-		if key == "tenancy_name_mapping" ||
-			strings.HasPrefix(key, "group_") ||
-			key == "region_groups" {
+	for key, value := range localObject.AsValueMap() {
+		if !isTenancyValue(value) {
 			continue
 		}
 
 		realm := strings.Split(key, "_")[0]
-		value, diags := attribute.Expr.Value(nil)
-		if diags.HasErrors() {
-			return nil, errors.New(diags.Error())
-		}
-
 		tenancy := getServiceTenancy(value, realm)
 		fullName := fmt.Sprintf("%s-%s", tenancy.Realm, tenancy.Name)
 		if t, ok := tenancyMap[fullName]; ok {
@@ -316,6 +361,17 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 	}
 
 	return tenancies, nil
+}
+
+// isTenancyValue reports whether a resolved local looks like a tenancy
+// definition: an object/map with a string `tenancy_name` attribute.
+func isTenancyValue(value cty.Value) bool {
+	t := value.Type()
+	if !t.IsObjectType() && !t.IsMapType() {
+		return false
+	}
+	name, ok := value.AsValueMap()["tenancy_name"]
+	return ok && name.Type() == cty.String
 }
 
 func getServiceTenancy(object cty.Value, realm string) *models.ServiceTenancy {
