@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
+	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -113,8 +114,38 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, ca
 		}))
 }
 
+// listDACProfilePodCounts returns pods-per-unit for each
+// DedicatedAIClusterProfile, keyed by profile name. A DAC's spec.count
+// is a pod count; dividing by the profile's spec.count converts it to
+// profile units.
+func listDACProfilePodCounts(ctx context.Context, client dynamic.Interface) (map[string]int, error) {
+	gvr := schema.GroupVersionResource{
+		Group:    "ome.io",
+		Version:  "v1beta1",
+		Resource: "dedicatedaiclusterprofiles",
+	}
+	list, err := client.Resource(gvr).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	podCounts := make(map[string]int, len(list.Items))
+	for _, item := range list.Items {
+		count, found, _ := unstructured.NestedInt64(item.Object, "spec", "count")
+		if found && count > 0 {
+			podCounts[item.GetName()] = int(count)
+		}
+	}
+	return podCounts, nil
+}
+
 // listDedicatedAIClustersV2 fetches DedicatedAIClusters from v1beta1 CRD
 func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, cache PodCache) ([]models.DedicatedAICluster, error) {
+	logger := logging.FromContext(ctx)
+	profilePodCounts, err := listDACProfilePodCounts(ctx, client)
+	if err != nil {
+		logger.Warnw("failed to list DAC profiles; Size falls back to pod count", "error", err)
+	}
+
 	gvr := schema.GroupVersionResource{
 		Group:    "ome.io",
 		Version:  "v1beta1",
@@ -124,8 +155,19 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 		func(spec map[string]any, stats PodStats, dac *models.DedicatedAICluster) {
 			dac.Profile, _ = spec["profile"].(string)
 			count, _ := spec["count"].(int64)
-			dac.Size = int(count)
 			dac.Type = stats.Type
+
+			// spec.count is the DAC's pod count; Size reports profile
+			// units, so convert via the profile's pods-per-unit
+			// (rounding up: a partial unit still occupies capacity).
+			podsPerUnit, ok := profilePodCounts[dac.Profile]
+			if !ok {
+				logger.Warnw("DAC profile not found; Size falls back to pod count",
+					"dac", dac.Name, "profile", dac.Profile)
+				dac.Size = int(count)
+				return
+			}
+			dac.Size = int((count + int64(podsPerUnit) - 1) / int64(podsPerUnit))
 		}))
 }
 
