@@ -12,7 +12,7 @@ require (
 	github.com/golangci/golangci-lint/v2 v2.13.2
 	github.com/hashicorp/hcl/v2 v2.25.0
 	github.com/mattn/go-runewidth v0.0.29
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/oracle/oci-go-sdk/v65 v65.124.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
