@@ -24,7 +24,7 @@ require (
 	golang.org/x/sys v0.48.0
 	golang.org/x/tools v0.50.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	k8s.io/api v0.37.0
+	k8s.io/api v0.37.1
 	k8s.io/apimachinery v0.37.1
 	k8s.io/client-go v0.37.0
 	k8s.io/kubectl v0.37.0
