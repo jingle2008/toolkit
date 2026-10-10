@@ -20,7 +20,7 @@ require (
 	github.com/zclconf/go-cty v1.19.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
 	golang.org/x/sys v0.48.0
 	golang.org/x/tools v0.50.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
