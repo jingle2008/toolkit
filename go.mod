@@ -2,6 +2,8 @@ module github.com/jingle2008/toolkit
 
 go 1.26.1
 
+toolchain go1.26.9
+
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/charmbracelet/bubbles v1.0.0

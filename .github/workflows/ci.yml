@@ -16,8 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.26"
-          check-latest: true
+          go-version-file: go.mod
       - name: Setup dev tools
         run: make setup
       - name: Lint, test, coverage threshold
@@ -40,8 +39,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.26"
-          check-latest: true
+          go-version-file: go.mod
       - name: Setup dev tools
         run: make setup
       - name: Lint, test, coverage threshold
@@ -65,8 +63,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.26"
-          check-latest: true
+          go-version-file: go.mod
       - name: GoReleaser snapshot
         uses: goreleaser/goreleaser-action@v7
         with:
