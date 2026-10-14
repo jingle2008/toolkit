@@ -62,6 +62,10 @@ func (dummyLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ models
 	return nil, errDummy
 }
 
+func (dummyLoader) LoadInferenceServices(_ context.Context, _ string, _ models.Environment) (map[string][]models.InferenceService, error) {
+	return nil, errDummy
+}
+
 func (dummyLoader) LoadTenancyOverrideGroup(_ context.Context, _ string, _ models.Environment) (models.TenancyOverrideGroup, error) {
 	return models.TenancyOverrideGroup{}, errDummy
 }

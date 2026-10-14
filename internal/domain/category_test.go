@@ -32,6 +32,8 @@ func TestCategory_String(t *testing.T) {
 		{GPUNode, "GPUNode"},
 		{GPUWorkload, "GPUWorkload"},
 		{DedicatedAICluster, "DedicatedAICluster"},
+		{InferenceService, "InferenceService"},
+		{ServingRuntime, "ServingRuntime"},
 		{Category(99), "Category(99)"},
 	}
 	for _, tt := range tests {
@@ -46,11 +48,12 @@ func TestCategory_IsScope(t *testing.T) {
 	t.Parallel()
 	scopeCases := []Category{
 		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GPUPool, GPUNode,
+		DedicatedAICluster,
 	}
 	nonScopeCases := []Category{
 		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
 		ConsolePropertyRegionalOverride, PropertyRegionalOverride, ModelArtifact,
-		Environment, ServiceTenancy, DedicatedAICluster,
+		Environment, ServiceTenancy, InferenceService, ServingRuntime,
 	}
 	for _, c := range scopeCases {
 		t.Run("scope_"+c.String(), func(t *testing.T) {
@@ -79,6 +82,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},
 		{GPUPool, []Category{GPUNode}},
 		{GPUNode, []Category{GPUWorkload}},
+		{DedicatedAICluster, []Category{InferenceService}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.scope.String(), func(t *testing.T) {
@@ -102,6 +106,7 @@ func TestCategory_Parents(t *testing.T) {
 		{ImportedModel, []Category{Tenant}},
 		{GPUNode, []Category{GPUPool}},
 		{GPUWorkload, []Category{GPUNode}},
+		{InferenceService, []Category{DedicatedAICluster}},
 		{LimitRegionalOverride, []Category{LimitDefinition}},
 		{ConsolePropertyRegionalOverride, []Category{ConsolePropertyDefinition}},
 		{PropertyRegionalOverride, []Category{PropertyDefinition}},
@@ -220,4 +225,11 @@ func TestCategory_GPUWorkload(t *testing.T) {
 	c, err := ParseCategory("gw")
 	require.NoError(t, err)
 	assert.Equal(t, GPUWorkload, c)
+}
+
+func TestParseCategory_InferenceServiceShortAlias(t *testing.T) {
+	t.Parallel()
+	cat, err := ParseCategory("is")
+	require.NoError(t, err)
+	assert.Equal(t, InferenceService, cat)
 }

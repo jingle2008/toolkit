@@ -60,6 +60,7 @@ var lazyLoadedCategories = map[domain.Category]struct{}{
 	domain.GPUNode:            {},
 	domain.GPUWorkload:        {},
 	domain.DedicatedAICluster: {},
+	domain.InferenceService:   {},
 }
 
 // Init implements the tea.Model interface and initializes the model.

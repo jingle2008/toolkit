@@ -53,7 +53,7 @@ func TestCSVSnapshots(t *testing.T) {
 
 // TestCSVSnapshotsExport pins the export-mode CSV output for the
 // categories that declare RenderForExport closures (DAC, ImportedModel,
-// GPUWorkload today). Drives columns.RenderTableForExport with a fixed realm +
+// GPUWorkload, InferenceService today). Drives columns.RenderTableForExport with a fixed realm +
 // region so the fully-qualified OCID format is recorded explicitly
 // and any regression in RenderForExport — for either of those columns
 // or any future addition — fails this test at the snapshot level.
@@ -69,6 +69,7 @@ func TestCSVSnapshotsExport(t *testing.T) {
 		domain.DedicatedAICluster,
 		domain.ImportedModel,
 		domain.GPUWorkload,
+		domain.InferenceService,
 	} {
 		t.Run(cat.String(), func(t *testing.T) {
 			t.Parallel()
@@ -219,6 +220,11 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 	case domain.GPUWorkload:
 		return map[string][]models.GPUWorkload{
 			"node-1": {{Name: "pod-1", Node: "node-1", TenantID: "tenant-1", Namespace: "ns1", Model: "gpt-oss-120b", Runtime: "vllm", GPUs: 2, Restarts: 0, Age: "3d", Mode: "RawDeployment"}},
+		}
+	case domain.InferenceService:
+		return map[string][]models.InferenceService{
+			"amaaaaaa-dac-1": {{Name: "is-1", Namespace: "amaaaaaa-dac-1", Type: models.InferenceServiceDedicated, TenantID: "tenant-1", Model: "amaaaaaa-model-1", ImportedModel: true, Runtime: "vllm", MinReplicas: 1, MaxReplicas: 2, Ready: "True", Age: "3d"}},
+			"embed-v4":       {{Name: "embed-v4", Namespace: "embed-v4", Type: models.InferenceServiceOnDemand, Model: "embed-v4", MinReplicas: 2, MaxReplicas: 4, Ready: "False", Age: "10d"}},
 		}
 	case domain.Alias:
 		cats := make([]domain.Category, 0, len(domain.Categories))

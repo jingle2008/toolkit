@@ -25,6 +25,8 @@ func (m *Model) routeListLoadedMsg(msg tea.Msg) []tea.Cmd {
 		m.handleGPUWorkloadsLoaded(msg.Items, msg.Gen)
 	case dedicatedAIClustersLoadedMsg:
 		m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen)
+	case inferenceServicesLoadedMsg:
+		m.handleInferenceServicesLoaded(msg.Items, msg.Gen)
 	case tenancyOverridesLoadedMsg:
 		m.handleTenancyOverridesLoaded(msg.Group, msg.Gen)
 	case limitRegionalOverridesLoadedMsg:

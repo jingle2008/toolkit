@@ -166,6 +166,36 @@ func TestApplyTenantSave_ResolvesBothMapsInMemory(t *testing.T) {
 	require.Equal(t, "acme", imm[0].Owner.Name)
 }
 
+// TestApplyTenantSave_ResolvesNonTenantKeyedMaps covers the maps grouped by
+// something other than the tenant: GPUWorkload (node) and InferenceService
+// (namespace) keep their keys and gain the resolved Owner.
+func TestApplyTenantSave_ResolvesNonTenantKeyedMaps(t *testing.T) {
+	t.Parallel()
+
+	m := makeTestModel()
+	m.category = domain.GPUWorkload
+	m.dataset = &models.Dataset{
+		GPUWorkloadMap: map[string][]models.GPUWorkload{
+			"node-a": {{Name: "pod1", Node: "node-a", TenantID: "abc"}},
+		},
+		InferenceServiceMap: map[string][]models.InferenceService{
+			"amaaaaaadac1": {{Name: "e1", Namespace: "amaaaaaadac1", TenantID: "abc"}},
+		},
+	}
+
+	m.applyTenantSave(models.TenantMetadata{ID: "ocid1.tenancy.oc1..abc", Name: strp("acme")})
+
+	gw := m.dataset.GPUWorkloadMap["node-a"]
+	require.Len(t, gw, 1)
+	require.NotNil(t, gw[0].Owner)
+	require.Equal(t, "acme", gw[0].TenantName())
+
+	is := m.dataset.InferenceServiceMap["amaaaaaadac1"]
+	require.Len(t, is, 1)
+	require.NotNil(t, is[0].Owner)
+	require.Equal(t, "acme", is[0].TenantName())
+}
+
 // TestApplyTenantSave_NilMapsSafe ensures a not-yet-loaded category map
 // is skipped without panicking; Tenants still gains the entry.
 func TestApplyTenantSave_NilMapsSafe(t *testing.T) {

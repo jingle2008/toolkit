@@ -124,6 +124,7 @@ func TestParentScope(t *testing.T) {
 		{"grouped missing parent column", domain.DedicatedAICluster, table.Row{"dac1"}, domain.Scope{}, false},
 		{"empty row", domain.GPUNode, table.Row{}, domain.Scope{}, false},
 		{"gpu workload", domain.GPUWorkload, table.Row{"pod1", "node-a"}, domain.Scope{Category: domain.GPUNode, Name: "node-a"}, true},
+		{"inference service", domain.InferenceService, table.Row{"is1", "dac1"}, domain.Scope{Category: domain.DedicatedAICluster, Name: "dac1"}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -173,7 +174,7 @@ func TestParentShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 		domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride,
 		domain.PropertyTenancyOverride, domain.LimitRegionalOverride,
 		domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride,
-		domain.GPUWorkload,
+		domain.GPUWorkload, domain.InferenceService,
 	}
 	for _, c := range subCategories {
 		require.True(t, contextHasParent(keys.ResolveKeys(c, common.ListView)),
@@ -188,4 +189,18 @@ func TestParentShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 		require.False(t, contextHasParent(keys.ResolveKeys(c, common.ListView)),
 			"%v has no parent and should not offer the shortcut", c)
 	}
+}
+
+func TestEnterOnDAC_DrillsIntoInferenceServices(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.DedicatedAICluster
+	m.rawRows = []table.Row{{"dac1", "tenant1"}}
+	m.table.SetRows(m.rawRows)
+	m.table.SetCursor(0)
+
+	_ = m.enterContext()
+
+	require.Equal(t, domain.InferenceService, m.category)
+	require.Equal(t, &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac1"}, m.scope)
 }

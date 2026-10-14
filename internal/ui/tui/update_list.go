@@ -194,21 +194,29 @@ func (m *Model) enterHelpView() {
 }
 
 func (m *Model) handleNextCategory() tea.Cmd {
-	next := int(m.category) + 1
-	if next > int(domain.DedicatedAICluster) {
-		next = int(domain.Tenant)
-	}
-	category := domain.Category(next)
-	return tea.Sequence(m.updateCategory(category)...)
+	return tea.Sequence(m.updateCategory(nextCategory(m.category))...)
 }
 
 func (m *Model) handlePrevCategory() tea.Cmd {
-	prev := int(m.category) - 1
-	if prev < int(domain.Tenant) {
-		prev = int(domain.DedicatedAICluster)
+	return tea.Sequence(m.updateCategory(prevCategory(m.category))...)
+}
+
+// nextCategory is the Tab target from c: the following data category,
+// wrapping from domain.LastDataCategory back to Tenant. Alias sits outside
+// the cycle; Tab from it re-enters at Tenant.
+func nextCategory(c domain.Category) domain.Category {
+	if c < domain.Tenant || c >= domain.LastDataCategory {
+		return domain.Tenant
 	}
-	category := domain.Category(prev)
-	return tea.Sequence(m.updateCategory(category)...)
+	return c + 1
+}
+
+// prevCategory is the Shift-Tab target from c, the inverse of nextCategory.
+func prevCategory(c domain.Category) domain.Category {
+	if c <= domain.Tenant || c > domain.LastDataCategory {
+		return domain.LastDataCategory
+	}
+	return c - 1
 }
 
 // handleEditKeys processes key events in Edit mode.

@@ -73,6 +73,11 @@ type DedicatedAIClusterLoader interface {
 	LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error)
 }
 
+// InferenceServiceLoader loads OME InferenceService CRs grouped by namespace.
+type InferenceServiceLoader interface {
+	LoadInferenceServices(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.InferenceService, error)
+}
+
 /*
 TenancyOverrideLoader defines methods for loading tenancy override maps.
 */
@@ -101,6 +106,7 @@ type Composite interface {
 	GPUNodeLoader
 	GPUWorkloadLoader
 	DedicatedAIClusterLoader
+	InferenceServiceLoader
 	TenancyOverrideLoader
 	RegionalOverrideLoader
 }
@@ -139,6 +145,7 @@ type Watcher interface {
 	WatchGPUWorkloads(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
 	WatchDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
 	WatchServingRuntimes(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
+	WatchInferenceServices(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error)
 }
 
 /*

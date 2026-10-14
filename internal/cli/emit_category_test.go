@@ -84,6 +84,15 @@ func (l emitLoader) LoadGPUWorkloadsByNode(context.Context, string, models.Envir
 	return map[string][]models.GPUWorkload{"node-a": {{Name: "wl-a"}}}, nil
 }
 
+func (l emitLoader) LoadInferenceServices(context.Context, string, models.Environment) (map[string][]models.InferenceService, error) {
+	if l.err != nil {
+		return nil, l.err
+	}
+	return map[string][]models.InferenceService{
+		"ns1": {{Name: "is-a", Namespace: "ns1", Type: models.InferenceServiceDedicated, TenantID: "t1", Ready: "True"}},
+	}, nil
+}
+
 func (l emitLoader) LoadDedicatedAIClusters(context.Context, string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
 	if l.err != nil {
 		return nil, l.err

@@ -128,6 +128,23 @@ func TestSetGPUWorkloadMap_ResolvesOwnerKeepsNodeKey(t *testing.T) {
 	}
 }
 
+func TestSetInferenceServiceMap_ResolvesOwnerKeepsNamespaceKey(t *testing.T) {
+	t.Parallel()
+	d := &Dataset{
+		Tenants: []Tenant{{Name: "acme", IDs: []string{"ocid1.tenancy.oc1..suffix1"}}},
+	}
+	d.SetInferenceServiceMap(map[string][]InferenceService{
+		"amaaaaaadac1": {{Name: "e1", Namespace: "amaaaaaadac1", TenantID: "suffix1"}},
+		"embed-v4":     {{Name: "embed-v4", Namespace: "embed-v4"}},
+	})
+	if got := d.InferenceServiceMap["amaaaaaadac1"]; len(got) != 1 || got[0].Owner == nil || got[0].Owner.Name != "acme" {
+		t.Fatalf("owner not resolved under namespace key: %v", d.InferenceServiceMap)
+	}
+	if got := d.InferenceServiceMap["embed-v4"]; len(got) != 1 || got[0].Owner != nil {
+		t.Errorf("on-demand endpoint should have no owner: %+v", got)
+	}
+}
+
 func keys[V any](m map[string]V) []string {
 	out := make([]string, 0, len(m))
 	for k := range m {

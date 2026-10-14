@@ -327,6 +327,14 @@ func emitCategory(
 		// by dac.TenantID (internal/infra/k8s/dac.go:157), which is
 		// already the flat `tenantId` field on each value.
 		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.DedicatedAICluster, env, selected)
+	case domain.InferenceService:
+		grouped, err := ld.LoadInferenceServices(ctx, cfg.KubeConfig, env)
+		if err != nil {
+			return fmt.Errorf("load inference services: %w", err)
+		}
+		// No top-level `namespace` injection: InferenceService.Namespace
+		// already carries the group key.
+		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.InferenceService, env, selected)
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
 		domain.ConsolePropertyTenancyOverride,

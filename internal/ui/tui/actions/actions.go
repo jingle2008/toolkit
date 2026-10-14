@@ -44,7 +44,13 @@ func CopyTenantID(item any, env models.Environment, logger logging.Logger) {
 	}
 
 	if r, ok := item.(models.RealmedTenancyID); ok {
-		if err := clipboardWriteAll(r.TenancyOCID(env.Realm)); err != nil {
+		ocid := r.TenancyOCID(env.Realm)
+		if ocid == "" {
+			// e.g. an on-demand InferenceService, which has no tenant.
+			logger.Infow("selected item has no tenant ID to copy")
+			return
+		}
+		if err := clipboardWriteAll(ocid); err != nil {
 			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
 		}
 	} else if to, ok := item.(models.TenancyOverride); ok {

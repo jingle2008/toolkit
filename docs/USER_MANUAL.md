@@ -215,6 +215,7 @@ The interface has four zones:
 | `gn` / `gpun` | GPUNode |
 | `gw` / `gpuw` | GPUWorkload |
 | `dac` / `daic` | DedicatedAICluster |
+| `is` | InferenceService |
 | `sr` | ServingRuntime |
 | `a` | Alias |
 
@@ -243,14 +244,17 @@ Some categories are **parent scopes** — pressing `Enter` on a row zooms in to 
 | PropertyDefinition | PropertyTenancyOverride, PropertyRegionalOverride |
 | GPUPool | GPUNode |
 | GPUNode | GPUWorkload |
+| DedicatedAICluster | InferenceService |
 
-Press `Esc` to exit the scoped context and return to the parent.
+Press `Esc` to exit the scoped context and return to the parent. On a parent
+scope, `Enter` drills in rather than opening details; use `y` to view a row's
+details instead.
 
 ---
 
 ## Categories
 
-Toolkit organises data into 20 categories:
+Toolkit organises data into 22 categories:
 
 ### Core Infrastructure
 
@@ -294,7 +298,8 @@ Toolkit organises data into 20 categories:
 | **GPUPool** | OCI GPU instance pools; supports scaling |
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
 | **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode |
-| **DedicatedAICluster** | OCI Dedicated AI Clusters |
+| **DedicatedAICluster** | OCI Dedicated AI Clusters; press `Enter` to see the inference services running on one |
+| **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). A `*` after the model marks a tenant-imported (namespaced `BaseModel`) model. **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty |
 | **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty |
 
 ### Meta
@@ -372,6 +377,8 @@ you can see at a glance which columns the keys below will reach.
 | DedicatedAICluster | `Shift+U` | Usage |
 | DedicatedAICluster | `Shift+S` | Size |
 | DedicatedAICluster | `Shift+A` | Age |
+| InferenceService | `Shift+T` | Tenant |
+| InferenceService | `Shift+A` | Age |
 | ImportedModel | `Shift+T` | Tenant |
 | ImportedModel | `Shift+S` | Size |
 | ImportedModel | `Shift+C` | Context |
@@ -497,7 +504,7 @@ There are two independent watch mechanisms:
 
 | Source | Categories | Triggers on |
 |--------|-----------|-------------|
-| **Cluster watch** (Kubernetes) | BaseModel, ImportedModel, GPUNode, GPUWorkload, DedicatedAICluster, ServingRuntime | Changes to the watched cluster resources (requires a working kubeconfig) |
+| **Cluster watch** (Kubernetes) | BaseModel, ImportedModel, GPUNode, GPUWorkload, DedicatedAICluster, InferenceService, ServingRuntime | Changes to the watched cluster resources (requires a working kubeconfig) |
 | **Working-tree watch** (local files) | Tenants, Definitions, Overrides, Environments, Service Tenancies, Model Artifacts, GPU Pools, Aliases | Saving any file under the repo path (`.git` and dotfiles are ignored) |
 
 So editing a config file in your repo, or a change landing in the cluster,
@@ -536,7 +543,7 @@ things deliberately differ from what's on screen:
   natural order, not the order `Shift+N` / `Shift+T` / … put them in.
 - **OCID columns are expanded.** Where the table shows a shortened OCID suffix
   (the Name and Tenant columns on DedicatedAICluster / ImportedModel, and Tenant
-  on GPUWorkload), the CSV carries the fully-qualified OCID so the file is ready
+  on GPUWorkload / InferenceService), the CSV carries the fully-qualified OCID so the file is ready
   for downstream OCI tooling.
 
 `toolkit get <category> -o csv` produces the same bytes for the same filter.

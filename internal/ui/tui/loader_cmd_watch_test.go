@@ -53,6 +53,13 @@ func (w *watchableLoader) WatchGPUWorkloads(_ context.Context, _ string, _ model
 	return w.trigger, nil
 }
 
+func (w *watchableLoader) WatchInferenceServices(_ context.Context, _ string, _ models.Environment) (<-chan struct{}, error) {
+	if w.err != nil {
+		return nil, w.err
+	}
+	return w.trigger, nil
+}
+
 func (w *watchableLoader) WatchDedicatedAIClusters(_ context.Context, _ string, _ models.Environment) (<-chan struct{}, error) {
 	if w.err != nil {
 		return nil, w.err

@@ -58,6 +58,10 @@ func (f fakeLoader) LoadDedicatedAIClusters(_ context.Context, _ string, _ model
 	return map[string][]models.DedicatedAICluster{}, nil
 }
 
+func (f fakeLoader) LoadInferenceServices(_ context.Context, _ string, _ models.Environment) (map[string][]models.InferenceService, error) {
+	return map[string][]models.InferenceService{}, nil
+}
+
 // TenancyOverrideLoader stubs
 func (f fakeLoader) LoadLimitTenancyOverrides(_ context.Context, _ string, _ models.Environment) (map[string][]models.LimitTenancyOverride, error) {
 	return map[string][]models.LimitTenancyOverride{}, nil

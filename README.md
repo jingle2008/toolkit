@@ -237,6 +237,7 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | `list_gpu_pools` | GPU pools (partial-load warnings surfaced) |
 | `list_gpu_nodes` | GPU nodes (flat, with `pool` field) |
 | `list_dacs` | Dedicated AI clusters (flat, with `tenant` field) |
+| `list_inference_services` | OME InferenceService CRs (flat, with `namespace` and `type` fields) |
 | `list_environments` | All known toolkit environments |
 | `list_service_tenancies` | Service tenancies from the repo |
 | `list_model_artifacts` | Model artifacts (flat, with `model` field) |

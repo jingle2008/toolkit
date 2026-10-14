@@ -62,6 +62,11 @@ const (
 	GPUWorkload
 	// DedicatedAICluster is a category for dedicated AI clusters.
 	DedicatedAICluster
+	// InferenceService is a category for OME InferenceService CRs — the
+	// serving endpoints. Scoped by DedicatedAICluster (grouped by
+	// namespace, which is the DAC ID for dedicated endpoints):
+	// Tenant → DedicatedAICluster → InferenceService.
+	InferenceService
 	// ServingRuntime is a category for OME ClusterServingRuntime CRs —
 	// the cluster-scoped templates describing how a class of models is
 	// served (hardware constraints, container image, resource caps).
@@ -74,6 +79,13 @@ const (
 NOTE: Category iteration should use the explicit range [Tenant, Alias].
 Do not rely on a sentinel value.
 */
+
+// LastDataCategory is the last category that lists data rows — every
+// category in [Tenant, LastDataCategory] is one, and Alias (the meta
+// list of category aliases) is the only one after it. Category cycling
+// in the TUI walks this range, so new data categories must be declared
+// before Alias.
+const LastDataCategory = Alias - 1
 
 // IsScopeOf returns true if the receiver is a scope of the given category.
 func (e Category) IsScopeOf(o Category) bool {
@@ -119,6 +131,8 @@ func (e Category) ScopedCategories() []Category {
 		return []Category{GPUNode}
 	case GPUNode:
 		return []Category{GPUWorkload}
+	case DedicatedAICluster:
+		return []Category{InferenceService}
 	default:
 		return nil
 	}
@@ -190,7 +204,7 @@ func (e Category) IsFaulty() bool {
 // rest come from the on-disk repo.
 func (e Category) NeedsKubeConfig() bool {
 	switch e { //nolint:exhaustive
-	case BaseModel, ImportedModel, GPUNode, DedicatedAICluster, GPUWorkload, ServingRuntime:
+	case BaseModel, ImportedModel, GPUNode, DedicatedAICluster, GPUWorkload, InferenceService, ServingRuntime:
 		return true
 	}
 	return false
