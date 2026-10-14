@@ -267,13 +267,7 @@ func (m *Model) enterContext() tea.Cmd {
 			return nil
 		}
 		if !m.environment.Equals(*envPtr) {
-			m.environment = *envPtr
-			m.dataset.ResetRealmScopedFields()
-			m.k8sVersion = ""
-			return tea.Batch(
-				tea.Sequence(m.updateCategory(domain.Tenant)...),
-				fetchKubeVersionCmd(m.kubeConfig, m.environment.KubeContext()),
-			)
+			return m.switchEnvironment(*envPtr, domain.Tenant)
 		}
 	case m.category == domain.Alias:
 		if cat, _ := domain.ParseCategory(target); cat != m.category {

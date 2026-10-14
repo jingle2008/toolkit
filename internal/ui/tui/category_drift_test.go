@@ -162,3 +162,15 @@ func TestParentScope_ResolvesForScopedCategories(t *testing.T) {
 		assert.Truef(t, ok, "parentScope must resolve single-parent category %s (parent %s)", c, c.Parents()[0])
 	}
 }
+
+// Environment-scoped categories are exactly those an environment switch
+// reloads: the ones with a load handler or in the tenancy-override group.
+func TestEnvironmentScopedCategories_MatchLoadHandlers(t *testing.T) {
+	t.Parallel()
+	for _, c := range domain.Categories {
+		_, handled := categoryHandlers[c]
+		_, tenancy := tenancyOverrideCategories[c]
+		assert.Equalf(t, handled || tenancy, c.IsEnvironmentScoped(),
+			"%s: IsEnvironmentScoped disagrees with categoryHandlers/tenancyOverrideCategories", c)
+	}
+}

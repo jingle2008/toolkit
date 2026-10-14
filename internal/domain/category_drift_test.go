@@ -41,6 +41,40 @@ func TestNeedsKubeConfig_EveryCategoryAccountedFor(t *testing.T) {
 	}
 }
 
+// Every category's environment dependence must be a deliberate, listed choice.
+func TestIsEnvironmentScoped_EveryCategoryAccountedFor(t *testing.T) {
+	t.Parallel()
+	want := map[Category]bool{
+		Tenant:                          true,
+		LimitDefinition:                 false,
+		ConsolePropertyDefinition:       false,
+		PropertyDefinition:              false,
+		LimitTenancyOverride:            true,
+		ConsolePropertyTenancyOverride:  true,
+		PropertyTenancyOverride:         true,
+		LimitRegionalOverride:           true,
+		ConsolePropertyRegionalOverride: true,
+		PropertyRegionalOverride:        true,
+		BaseModel:                       true,
+		ImportedModel:                   true,
+		ModelArtifact:                   false,
+		Environment:                     false,
+		ServiceTenancy:                  false,
+		GPUPool:                         true,
+		GPUNode:                         true,
+		GPUWorkload:                     true,
+		DedicatedAICluster:              true,
+		ServingRuntime:                  true,
+		Alias:                           false,
+	}
+	require.Len(t, want, len(Categories), "every category must have an expected IsEnvironmentScoped value")
+	for _, c := range Categories {
+		exp, ok := want[c]
+		require.Truef(t, ok, "no expected IsEnvironmentScoped value for %s", c)
+		assert.Equalf(t, exp, c.IsEnvironmentScoped(), "IsEnvironmentScoped mismatch for %s", c)
+	}
+}
+
 // Scope graph must be internally consistent: every child lists its parent back.
 func TestScopeGraph_RoundTrips(t *testing.T) {
 	t.Parallel()

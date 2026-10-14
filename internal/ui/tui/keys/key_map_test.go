@@ -66,3 +66,26 @@ func TestHelpAndQuit(t *testing.T) {
 		t.Error("Quit() did not return quit key")
 	}
 }
+
+func TestFullHelp_QuickSwitchLeadsInSlotOrder(t *testing.T) {
+	t.Parallel()
+	km := KeyMap{
+		Global: []key.Binding{
+			key.NewBinding(key.WithKeys("a"), key.WithHelp("<a>", "Alpha")),
+		},
+		QuickSwitch: []key.Binding{
+			key.NewBinding(key.WithKeys("0"), key.WithHelp("<0>", "dp-dev-phx")),
+			key.NewBinding(key.WithKeys("2"), key.WithHelp("<2>", "dp-dev-iad")),
+		},
+	}
+	full := km.FullHelp()
+	if len(full) != 2 {
+		t.Fatalf("FullHelp() = %d columns, want 2", len(full))
+	}
+	if got := full[0][1].Help().Desc; got != "dp-dev-iad" {
+		t.Errorf("quick-switch column reordered: second entry = %q", got)
+	}
+	if got := full[1][0].Help().Desc; got != "Alpha" {
+		t.Errorf("second column = %q, want Alpha", got)
+	}
+}

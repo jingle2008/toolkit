@@ -82,6 +82,11 @@ var (
 )
 
 var (
+	// QuickSwitch matches the recent-context slot keys; the slot is the
+	// pressed digit. Per-slot help entries are built by the model.
+	QuickSwitch = key.NewBinding(
+		key.WithKeys("0", "1", "2", "3", "4", "5"),
+	)
 	// BackHist is a key binding for navigating back in history.
 	BackHist = key.NewBinding(
 		key.WithKeys("["),

@@ -196,6 +196,21 @@ func (e Category) NeedsKubeConfig() bool {
 	return false
 }
 
+// IsEnvironmentScoped reports whether this category's rows depend on the
+// selected environment (realm/region or kube context), so switching
+// environments reloads it. The rest are environment-independent.
+func (e Category) IsEnvironmentScoped() bool {
+	if e.NeedsKubeConfig() {
+		return true
+	}
+	switch e { //nolint:exhaustive
+	case Tenant, LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
+		LimitRegionalOverride, ConsolePropertyRegionalOverride, PropertyRegionalOverride, GPUPool:
+		return true
+	}
+	return false
+}
+
 // uppercaseLetters returns the concatenated uppercase-letter glyphs
 // of s (e.g. "DedicatedAICluster" → "DAIC"). Used by Aliases to
 // build a short-form alias from a category name. Not the linguistic

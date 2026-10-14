@@ -13,6 +13,10 @@ type KeyMap struct {
 	Global  []key.Binding // always active
 	Mode    []key.Binding // active for current UI mode
 	Context []key.Binding // category-specific and mode-specific (optional)
+	// QuickSwitch holds one binding per occupied recent-context slot, in
+	// slot order. Filled at render time by the model; ResolveKeys leaves
+	// it empty.
+	QuickSwitch []key.Binding
 }
 
 // ShortHelp returns a short list of key bindings for help display.
@@ -42,6 +46,8 @@ func (k KeyMap) SortableColumns() map[string]bool {
 }
 
 // FullHelp returns a full list of key bindings for help display, chunked per category.
+// QuickSwitch bindings, when present, form their own leading column in slot
+// order instead of joining the alphabetical sort.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	cat := slices.Concat(k.Global, k.Mode, k.Context)
 	// skip sort keys
@@ -53,6 +59,9 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	})
 
 	rows := [][]key.Binding{}
+	if len(k.QuickSwitch) > 0 {
+		rows = append(rows, k.QuickSwitch)
+	}
 	for chunk := range slices.Chunk(cat, 6) {
 		rows = append(rows, chunk)
 	}

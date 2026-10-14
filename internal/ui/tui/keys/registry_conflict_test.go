@@ -38,6 +38,7 @@ func TestNoKeyConflictsPerCategoryAndMode(t *testing.T) {
 			check("Global", km.Global)
 			check("Mode", km.Mode)
 			check("Context", km.Context)
+			check("QuickSwitch", []key.Binding{QuickSwitch})
 		}
 	}
 }
