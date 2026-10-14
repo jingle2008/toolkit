@@ -58,13 +58,27 @@ func sortByAge(rows []table.Row, colIdx int, asc bool) {
 
 func sortByInt(rows []table.Row, colIdx int, asc bool) {
 	slices.SortFunc(rows, func(a, b table.Row) int {
-		av, _ := strconv.ParseInt(a[colIdx], 10, 64)
-		bv, _ := strconv.ParseInt(b[colIdx], 10, 64)
+		av := parseCount(a[colIdx])
+		bv := parseCount(b[colIdx])
 		if asc {
 			return int(av - bv)
 		}
 		return int(bv - av)
 	})
+}
+
+// parseCount parses an integer cell, including the "8×2" per-node ×
+// nodes form ServingRuntime's GPUs column uses, which counts as the
+// product — the total is what ranks one runtime as bigger than another.
+// Unparseable cells are 0.
+func parseCount(s string) int64 {
+	if perNode, nodes, ok := strings.Cut(s, "×"); ok {
+		p, _ := strconv.ParseInt(perNode, 10, 64)
+		n, _ := strconv.ParseInt(nodes, 10, 64)
+		return p * n
+	}
+	v, _ := strconv.ParseInt(s, 10, 64)
+	return v
 }
 
 func sortByPercent(rows []table.Row, colIdx int, asc bool) {

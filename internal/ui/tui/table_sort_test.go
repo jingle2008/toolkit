@@ -35,6 +35,18 @@ func TestSortByInt(t *testing.T) {
 	}
 }
 
+// ServingRuntime's "8×2" GPU cells rank by their total, between the
+// plain counts either side of it.
+func TestSortByInt_PerNodeTimesNodes(t *testing.T) {
+	t.Parallel()
+	rows := []table.Row{{"a", "8×2"}, {"b", "32"}, {"c", "8"}, {"d", ""}}
+	sortByInt(rows, 1, true)
+	want := []table.Row{{"d", ""}, {"c", "8"}, {"a", "8×2"}, {"b", "32"}}
+	if !reflect.DeepEqual(rows, want) {
+		t.Errorf("sortByInt asc failed: got %v, want %v", rows, want)
+	}
+}
+
 func TestSortByPercent(t *testing.T) {
 	t.Parallel()
 	rows := []table.Row{
