@@ -7,6 +7,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/recentenv"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -88,6 +89,15 @@ func WithLogStore(s *logging.RingSink) ModelOption {
 func WithFilter(filter string) ModelOption {
 	return func(m *Model) {
 		m.initialFilter = filter
+	}
+}
+
+// WithRecentEnvs sets the recently used environments behind the quick-switch
+// keys and the file they are persisted to. An empty path disables saving.
+func WithRecentEnvs(list *recentenv.List, path string) ModelOption {
+	return func(m *Model) {
+		m.recentEnvs = list
+		m.recentEnvsPath = path
 	}
 }
 

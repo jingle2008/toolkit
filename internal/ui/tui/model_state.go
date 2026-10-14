@@ -21,6 +21,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
@@ -146,6 +147,12 @@ type Model struct {
 	// Table sorting state
 	sortColumn string
 	sortAsc    bool
+
+	// recentEnvs holds the environments bound to the 0–5 quick-switch
+	// keys; recentEnvsPath is where they persist ("" disables saving).
+	recentEnvs     *recentenv.List
+	recentEnvsPath string
+	recentSaver    recentSaver
 
 	// Category navigation history
 	history    []domain.Category // chronological list of visited categories
@@ -298,6 +305,9 @@ func setDefaults(m *Model) {
 	if m.log.viewport == nil {
 		lvp := viewport.New(20, 20)
 		m.log.viewport = &lvp
+	}
+	if m.recentEnvs == nil {
+		m.recentEnvs = &recentenv.List{}
 	}
 	if m.help == nil {
 		keyStyle := lipgloss.NewStyle().

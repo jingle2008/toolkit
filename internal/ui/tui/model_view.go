@@ -208,7 +208,9 @@ func (m *Model) centered(msg string) string {
 
 // frame builds the common header + status frame and injects main.
 func (m *Model) frame(main string) string {
-	helpView := m.help.View(m.keys)
+	km := m.keys
+	km.QuickSwitch = m.quickSwitchBindings(m.viewMode)
+	helpView := m.help.View(km)
 	infoView := m.theme.InfoValue.Render(m.infoView())
 	header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
 	status := m.statusView()
@@ -242,6 +244,7 @@ func (m *Model) fullHelpView() string {
 		}
 		b.WriteString("\n")
 	}
+	renderSection("Quick Switch", m.quickSwitchBindings(m.lastViewMode))
 	renderSection("Resource Actions", m.keys.Context)
 	renderSection(fmt.Sprintf("%s View Actions", m.lastViewMode), m.keys.Mode)
 	renderSection("General Actions", m.keys.Global)

@@ -20,6 +20,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
+	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -190,6 +191,15 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 	}
 	defer restoreStderr()
 
+	// Quick-switch history lives next to the default config, independent
+	// of --config. A broken file only costs the history, never the launch.
+	home, _ := os.UserHomeDir()
+	recentPath := filepath.Join(home, ".config", "toolkit", "state.yaml")
+	recent, err := recentenv.Load(recentPath)
+	if err != nil {
+		logger.Warnw("failed to load recent contexts", "path", recentPath, "error", err)
+	}
+
 	model, err := tui.NewModel(
 		tui.WithRepoPath(repoPath),
 		tui.WithKubeConfig(kubeConfig),
@@ -201,6 +211,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithLoader(production.New(ctx, cfg.MetadataFile)),
 		tui.WithFilter(cfg.Filter),
 		tui.WithVersion(version),
+		tui.WithRecentEnvs(recent, recentPath),
 	)
 	if err != nil {
 		logger.Errorw("failed to create toolkit model", "error", err)
