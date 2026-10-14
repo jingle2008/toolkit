@@ -171,6 +171,13 @@ var (
 		key.WithKeys("R"),
 		key.WithHelp("<shift+r>", "Reboot Node"),
 	)
+	// RestartService is a key binding for rolling-restarting an
+	// InferenceService. It shares "R" with RebootNode; the two never
+	// appear in the same category context.
+	RestartService = key.NewBinding(
+		key.WithKeys("R"),
+		key.WithHelp("<shift+r>", "Restart"),
+	)
 	// ToggleCordon is a key binding for cordoning a node in the GPU node list.
 	ToggleCordon = key.NewBinding(
 		key.WithKeys("C"),
@@ -300,7 +307,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
 	},
 	domain.InferenceService: {
-		common.ListView: {Parent, SortTenant, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh},
+		common.ListView: {Parent, SortTenant, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh, RestartService},
 	},
 	domain.ImportedModel: {
 		common.ListView: {Parent, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},

@@ -60,6 +60,10 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 		return m.requestConfirm(m.confirmDrain(itemKey))
 	case key.Matches(msg, keys.Delete):
 		return m.requestConfirm(m.confirmDelete(itemKey))
+	// RestartService shares "R" with RebootNode, so it must be
+	// category-guarded and checked first.
+	case m.category == domain.InferenceService && key.Matches(msg, keys.RestartService):
+		return m.requestConfirm(m.confirmRestart(itemKey, item))
 	case key.Matches(msg, keys.RebootNode):
 		return m.requestConfirm(m.confirmReboot(itemKey))
 	case key.Matches(msg, keys.ScaleUp):

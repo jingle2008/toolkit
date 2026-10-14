@@ -71,6 +71,7 @@ metadata-file: "" # Optional path to a YAML or JSON file with additional metadat
 	addUncordonCommand(rootCmd, &cfgFile)
 	addDrainCommand(rootCmd, &cfgFile)
 	addRebootCommand(rootCmd, &cfgFile)
+	addRestartCommand(rootCmd, &cfgFile)
 	addScaleCommand(rootCmd, &cfgFile)
 	addDeleteCommand(rootCmd, &cfgFile)
 	addTerminateCommand(rootCmd, &cfgFile)

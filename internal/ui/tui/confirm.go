@@ -125,6 +125,23 @@ func (m *Model) confirmReboot(itemKey models.ItemKey) confirmOverlay {
 	}
 }
 
+// confirmRestart builds the recoverable overlay for an InferenceService
+// rolling restart. The warning surfaces the current Ready state so the
+// operator sees whether the endpoint is healthy before disrupting it.
+func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay {
+	c := confirmOverlay{
+		tier:   tierRecoverable,
+		action: "Restart",
+		kind:   "InferenceService",
+		target: itemKeyString(itemKey),
+		run:    func() tea.Cmd { return m.restartInferenceService(findItem(m.dataset, m.category, itemKey), itemKey) },
+	}
+	if svc, ok := item.(*models.InferenceService); ok && svc != nil {
+		c.warning = "Ready: " + svc.Ready
+	}
+	return c
+}
+
 func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
 	return confirmOverlay{
 		tier:   tierRecoverable,
@@ -178,6 +195,9 @@ func (m *Model) confirmView() string {
 	}
 	fmt.Fprintf(&b, "Confirm %s\n\n", strings.ToLower(c.action))
 	fmt.Fprintf(&b, "%s %s  %s ?\n", c.action, c.kind, c.target)
+	if c.warning != "" {
+		fmt.Fprintf(&b, "%s\n", c.warning)
+	}
 	b.WriteString("\n[y] confirm   [n/esc] cancel")
 	return b.String()
 }
