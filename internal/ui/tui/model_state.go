@@ -123,6 +123,7 @@ type Model struct {
 	help          *help.Model
 	kubeConfig    string
 	version       string
+	k8sVersion    string // API server version for the current kube context; "" until fetched
 	// theme holds the app-level lipgloss styles (status bar, info pane,
 	// help view). Set once via setStyles; see the Styles struct in styles.go.
 	theme Styles

@@ -219,3 +219,10 @@ type datasetReloadedMsg struct{ Dataset *models.Dataset }
 // gpuPoolsReloadedMsg carries freshly loaded GPU pools (repo-sourced via their
 // own loader, not LoadDataset) to refresh the cached pool list.
 type gpuPoolsReloadedMsg struct{ Items []models.GPUPool }
+
+// kubeVersionMsg carries the API server version for Context. Ignored if the
+// active environment's kube context has since changed.
+type kubeVersionMsg struct {
+	Context string
+	Version string
+}

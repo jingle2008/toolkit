@@ -53,7 +53,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	})
 
 	rows := [][]key.Binding{}
-	for chunk := range slices.Chunk(cat, 5) {
+	for chunk := range slices.Chunk(cat, 6) {
 		rows = append(rows, chunk)
 	}
 	return rows
