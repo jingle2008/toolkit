@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -238,5 +239,17 @@ func reloadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string
 			return nil
 		}
 		return gpuPoolsReloadedMsg{Items: items}
+	}
+}
+
+// fetchKubeVersionCmd queries the API server version for kubeCtx. Failures
+// render as "n/a" rather than a toast — the header is informational only.
+func fetchKubeVersionCmd(kubeConfig, kubeCtx string) tea.Cmd {
+	return func() tea.Msg {
+		v, err := k8s.ServerVersion(kubeConfig, kubeCtx)
+		if err != nil || v == "" {
+			v = "n/a"
+		}
+		return kubeVersionMsg{Context: kubeCtx, Version: v}
 	}
 }

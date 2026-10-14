@@ -125,3 +125,19 @@ func NewDynamicClientFromKubeConfig(kubeconfig, ctx string) (dynamic.Interface, 
 	}
 	return NewDynamicClient(config)
 }
+
+/*
+ServerVersion returns the API server's git version (e.g. "v1.30.1") for the
+given kubeconfig context. Bounded by RequestTimeout via NewConfig.
+*/
+func ServerVersion(kubeconfig, ctx string) (string, error) {
+	clientset, err := NewClientsetFromKubeConfig(kubeconfig, ctx)
+	if err != nil {
+		return "", err
+	}
+	info, err := clientset.Discovery().ServerVersion()
+	if err != nil {
+		return "", fmt.Errorf("failed to get server version: %w", err)
+	}
+	return info.GitVersion, nil
+}

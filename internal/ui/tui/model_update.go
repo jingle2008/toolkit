@@ -99,9 +99,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case gpuPoolsReloadedMsg:
 		return m, m.handleGPUPoolsReloaded(msg)
+	case kubeVersionMsg:
+		m.handleKubeVersionMsg(msg)
+		return m, nil
 	default:
 		return m.delegateToActiveView(msg)
 	}
+}
+
+// handleKubeVersionMsg records the server version and re-runs layout, since
+// the info column's width (and thus the help bubble's budget) may change.
+func (m *Model) handleKubeVersionMsg(msg kubeVersionMsg) {
+	if msg.Context != m.environment.KubeContext() {
+		return
+	}
+	m.k8sVersion = msg.Version
+	m.updateLayout(m.viewWidth, m.viewHeight)
 }
 
 func (m *Model) onResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {

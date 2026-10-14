@@ -63,6 +63,21 @@ func TestInfoView(t *testing.T) {
 	out := m.infoView()
 	assert.Contains(t, out, "Realm:")
 	assert.Contains(t, out, "oc1")
+	assert.Contains(t, out, "K8s:")
+	assert.Equal(t, 6, lipgloss.Height(out))
+}
+
+func TestHandleKubeVersionMsg(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	assert.Contains(t, m.infoView(), "…", "placeholder before fetch")
+
+	m.handleKubeVersionMsg(kubeVersionMsg{Context: "stale-ctx", Version: "v1.0.0"})
+	assert.Empty(t, m.k8sVersion, "stale context must be ignored")
+
+	m.handleKubeVersionMsg(kubeVersionMsg{Context: m.environment.KubeContext(), Version: "v1.30.1"})
+	assert.Equal(t, "v1.30.1", m.k8sVersion)
+	assert.Contains(t, m.infoView(), "v1.30.1")
 }
 
 func TestContextString(t *testing.T) {

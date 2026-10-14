@@ -20,12 +20,17 @@ import (
 )
 
 func (m *Model) infoView() string {
-	keys := []string{"Realm:", "Type:", "Region:", "Context:", "Version:"}
+	k8sVersion := m.k8sVersion
+	if k8sVersion == "" {
+		k8sVersion = "…"
+	}
+	keys := []string{"Realm:", "Type:", "Region:", "Context:", "K8s:", "Version:"}
 	values := []string{
 		m.environment.Realm,
 		m.environment.Type,
 		m.environment.Region,
 		m.environment.KubeContext(),
+		k8sVersion,
 		m.version,
 	}
 

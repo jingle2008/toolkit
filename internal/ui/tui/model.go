@@ -76,5 +76,6 @@ func (m *Model) Init() tea.Cmd {
 	return tea.Batch(
 		tea.Sequence(cmds...),
 		startRepoWatchCmd(m.sessionCtx(), m.loader, m.repoPath),
+		fetchKubeVersionCmd(m.kubeConfig, m.environment.KubeContext()),
 	)
 }
