@@ -450,6 +450,10 @@ func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.Dedica
 	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetDedicatedAIClusterMap(items) }, domain.DedicatedAICluster, mapLen(items))
 }
 
+func (m *Model) handleInferenceServicesLoaded(items map[string][]models.InferenceService, gen int) {
+	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetInferenceServiceMap(items) }, domain.InferenceService, mapLen(items))
+}
+
 func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) {
 	m.applyLoaded(gen, func(ds *models.Dataset) {
 		ds.Tenants = group.Tenants
@@ -488,6 +492,8 @@ func (m *Model) reloadCategoryCmd(cat domain.Category, gen int) tea.Cmd {
 		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	case domain.DedicatedAICluster:
 		return loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	case domain.InferenceService:
+		return loadInferenceServicesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	default:
 		return nil
 	}

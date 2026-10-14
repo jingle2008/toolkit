@@ -200,4 +200,6 @@ var rowSources = map[domain.Category]rowSource{
 		func(d *models.Dataset) map[string][]models.GPUWorkload { return d.GPUWorkloadMap }),
 	domain.DedicatedAICluster: groupedSource(columns.DACColumns, domain.Tenant,
 		func(d *models.Dataset) map[string][]models.DedicatedAICluster { return d.DedicatedAIClusterMap }),
+	domain.InferenceService: groupedSource(columns.InferenceServiceColumns, domain.DedicatedAICluster,
+		func(d *models.Dataset) map[string][]models.InferenceService { return d.InferenceServiceMap }),
 }

@@ -96,6 +96,16 @@ func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Composite, kubeCf
 	}
 }
 
+func loadInferenceServicesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
+	return func() tea.Msg {
+		items, err := ld.LoadInferenceServices(ctx, kubeCfg, env)
+		if err != nil {
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.InferenceService, err), Gen: gen}
+		}
+		return inferenceServicesLoadedMsg{Items: items, Gen: gen}
+	}
+}
+
 func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
 		group, err := ld.LoadTenancyOverrideGroup(ctx, repoPath, env)
@@ -164,6 +174,8 @@ func startK8sWatchCmd(ctx context.Context, ld loader.Composite, cat domain.Categ
 			trigger, err = w.WatchGPUWorkloads(ctx, kubeCfg, env)
 		case domain.DedicatedAICluster:
 			trigger, err = w.WatchDedicatedAIClusters(ctx, kubeCfg, env)
+		case domain.InferenceService:
+			trigger, err = w.WatchInferenceServices(ctx, kubeCfg, env)
 		default:
 			return k8sWatchUnavailableMsg{Cat: cat, Gen: gen}
 		}

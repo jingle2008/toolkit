@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -106,6 +107,7 @@ func TestUpdate_RoutesEveryKubeBackedLoadedMsg(t *testing.T) {
 // Keep in sync with statsColumns (table_utils.go).
 var noStatsCategories = map[domain.Category]struct{}{
 	domain.Tenant:                          {},
+	domain.InferenceService:                {},
 	domain.LimitDefinition:                 {},
 	domain.ConsolePropertyDefinition:       {},
 	domain.PropertyDefinition:              {},
@@ -173,4 +175,44 @@ func TestEnvironmentScopedCategories_MatchLoadHandlers(t *testing.T) {
 		assert.Equalf(t, handled || tenancy, c.IsEnvironmentScoped(),
 			"%s: IsEnvironmentScoped disagrees with categoryHandlers/tenancyOverrideCategories", c)
 	}
+}
+
+// Tab must visit every data category exactly once before wrapping, and
+// Shift-Tab must walk the same cycle backwards. Alias is the only category
+// outside the cycle. Guards against the cycle bound lagging the enum (it
+// once stopped at DedicatedAICluster and skipped ServingRuntime).
+func TestCategoryCycle_VisitsEveryDataCategory(t *testing.T) {
+	t.Parallel()
+	var want []domain.Category
+	for _, c := range domain.Categories {
+		if c != domain.Alias {
+			want = append(want, c)
+		}
+	}
+
+	var forward []domain.Category
+	c := domain.Tenant
+	for range len(domain.Categories) + 1 {
+		forward = append(forward, c)
+		c = nextCategory(c)
+		if c == domain.Tenant {
+			break
+		}
+	}
+	assert.Equal(t, want, forward, "Tab cycle")
+
+	var backward []domain.Category
+	c = domain.LastDataCategory
+	for range len(domain.Categories) + 1 {
+		backward = append(backward, c)
+		c = prevCategory(c)
+		if c == domain.LastDataCategory {
+			break
+		}
+	}
+	slices.Reverse(backward)
+	assert.Equal(t, want, backward, "Shift-Tab cycle")
+
+	assert.Equal(t, domain.Tenant, nextCategory(domain.Alias), "Tab from Alias re-enters the cycle")
+	assert.Equal(t, domain.LastDataCategory, prevCategory(domain.Alias), "Shift-Tab from Alias re-enters the cycle")
 }

@@ -195,3 +195,40 @@ func TestFinishMetrics_UnresolvableShowsToast(t *testing.T) {
 	require.NotNil(t, m.toasts.active, "toast must be set after finishMetrics on unresolvable item")
 	assert.Equal(t, "workload has no model", m.toasts.active.msg)
 }
+
+func TestResolveMetricsPlan_InferenceService(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+
+	dedicated := &models.InferenceService{Name: "e", Namespace: "amaaaaaadac1", Type: models.InferenceServiceDedicated, Model: "gpt"}
+	filter, capability, ok, reason := m.resolveMetricsPlan(dedicated)
+	require.True(t, ok, reason)
+	assert.Equal(t, telemetry.FilterDacID, filter.Key)
+	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.me-abudhabi-1.amaaaaaadac1", filter.Value)
+	assert.Equal(t, telemetry.CapabilityChat, capability)
+
+	onDemand := &models.InferenceService{Name: "gpt", Namespace: "gpt", Type: models.InferenceServiceOnDemand, Model: "gpt"}
+	filter, _, ok, reason = m.resolveMetricsPlan(onDemand)
+	require.True(t, ok, reason)
+	assert.Equal(t, telemetry.FilterResourceID, filter.Key)
+	assert.Equal(t, "openai.gpt-5.5", filter.Value)
+
+	_, _, ok, reason = m.resolveMetricsPlan(&models.InferenceService{Name: "e", Type: models.InferenceServiceDedicated})
+	assert.False(t, ok)
+	assert.NotEmpty(t, reason)
+}
+
+func TestMetricsCatalog_InferenceService(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+	cat, need := m.metricsCatalog(&models.InferenceService{Type: models.InferenceServiceOnDemand, Model: "gpt"})
+	assert.True(t, need)
+	assert.Equal(t, domain.BaseModel, cat)
+
+	cat, need = m.metricsCatalog(&models.InferenceService{Type: models.InferenceServiceDedicated, Model: "amaaaaaaimp"})
+	assert.True(t, need)
+	assert.Equal(t, domain.ImportedModel, cat)
+
+	_, need = m.metricsCatalog(&models.InferenceService{Type: models.InferenceServiceDedicated})
+	assert.False(t, need, "no model, no catalog")
+}

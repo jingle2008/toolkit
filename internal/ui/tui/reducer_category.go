@@ -39,6 +39,7 @@ var categoryHandlers = map[domain.Category]handlerFn{
 	domain.GPUNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUNodeCategory(refresh, gen) },
 	domain.GPUWorkload:                     func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUWorkloadCategory(refresh, gen) },
 	domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
+	domain.InferenceService:                func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleInferenceServiceCategory(refresh, gen) },
 	domain.LimitRegionalOverride:           func(m *Model, _ bool, gen int) tea.Cmd { return m.handleLimitRegionalOverrideCategory(gen) },
 	domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool, gen int) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory(gen) },
 	domain.PropertyRegionalOverride:        func(m *Model, _ bool, gen int) tea.Cmd { return m.handlePropertyRegionalOverrideCategory(gen) },
@@ -185,6 +186,13 @@ func (m *Model) handleGPUWorkloadCategory(refresh bool, gen int) tea.Cmd {
 func (m *Model) handleDedicatedAIClusterCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
 		return loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	}
+	return nil
+}
+
+func (m *Model) handleInferenceServiceCategory(refresh bool, gen int) tea.Cmd {
+	if m.dataset == nil || m.dataset.InferenceServiceMap == nil || refresh {
+		return loadInferenceServicesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }

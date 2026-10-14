@@ -24,6 +24,7 @@ type Dataset struct {
 	GPUNodeMap                        map[string][]GPUNode
 	GPUWorkloadMap                    map[string][]GPUWorkload
 	DedicatedAIClusterMap             map[string][]DedicatedAICluster
+	InferenceServiceMap               map[string][]InferenceService
 }
 
 // FindModelByName returns the BaseModel whose Name matches name, searching
@@ -122,19 +123,39 @@ func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
 // preserved (workloads are grouped by node, not tenant). Allocates a fresh
 // map and does not reuse the caller's input.
 func (d *Dataset) SetGPUWorkloadMap(m map[string][]GPUWorkload) {
+	d.GPUWorkloadMap = resolveOwnersInPlace(d, m,
+		func(v *GPUWorkload) string { return v.TenantID },
+		func(v *GPUWorkload, t *Tenant) { v.Owner = t })
+}
+
+// SetInferenceServiceMap stores the inference service map (keyed by
+// namespace) and resolves each item's owning Tenant from its tenancy-id
+// suffix. The namespace key is preserved. Allocates a fresh map and does
+// not reuse the caller's input.
+func (d *Dataset) SetInferenceServiceMap(m map[string][]InferenceService) {
+	d.InferenceServiceMap = resolveOwnersInPlace(d, m,
+		func(v *InferenceService) string { return v.TenantID },
+		func(v *InferenceService, t *Tenant) { v.Owner = t })
+}
+
+// resolveOwnersInPlace is the non-re-keying counterpart of
+// resolveTenantOwnedMap, for maps grouped by something other than the
+// tenant: each item's owner is resolved from its own tenant ID (nil when
+// unmatched) and the original keys are kept.
+func resolveOwnersInPlace[T any](d *Dataset, m map[string][]T, tenantID func(*T) string, setOwner func(*T, *Tenant)) map[string][]T {
 	suffixMap := d.buildTenantIDSuffixMap()
-	out := make(map[string][]GPUWorkload, len(m))
+	out := make(map[string][]T, len(m))
 	for k, v := range m {
 		for i := range v {
-			if idx, ok := suffixMap[v[i].TenantID]; ok {
-				v[i].Owner = &d.Tenants[idx]
-			} else {
-				v[i].Owner = nil
+			var tenant *Tenant
+			if idx, ok := suffixMap[tenantID(&v[i])]; ok {
+				tenant = &d.Tenants[idx]
 			}
+			setOwner(&v[i], tenant)
 		}
 		out[k] = v
 	}
-	d.GPUWorkloadMap = out
+	return out
 }
 
 // ResetRealmScopedFields resets all realm-scoped fields to nil.
@@ -147,27 +168,32 @@ func (d *Dataset) ResetRealmScopedFields() {
 	d.ConsolePropertyRegionalOverrides = nil
 	d.PropertyRegionalOverrides = nil
 	d.BaseModels = nil
+	d.ServingRuntimes = nil
 	d.ImportedModelMap = nil
 	d.GPUPools = nil
 	d.GPUNodeMap = nil
 	d.GPUWorkloadMap = nil
 	d.DedicatedAIClusterMap = nil
+	d.InferenceServiceMap = nil
 }
 
 // MergeReloadedRepoData copies the repo-owned fields from fresh into d while
 // preserving the lazily-loaded, k8s-backed fields already present in d
-// (BaseModels, ImportedModelMap, GPUPools, GPUNodeMap, GPUWorkloadMap,
-// DedicatedAIClusterMap). It is used when a working-tree change triggers a
-// dataset reload: LoadDataset repopulates only the repo-owned fields, so a
-// wholesale assignment would wipe live k8s data. New repo-owned fields added
-// to Dataset are carried across automatically; only the small, stable set of
-// k8s fields is enumerated here.
+// (BaseModels, ServingRuntimes, ImportedModelMap, GPUPools, GPUNodeMap,
+// GPUWorkloadMap, DedicatedAIClusterMap, InferenceServiceMap). It is used
+// when a working-tree change triggers a dataset reload: LoadDataset
+// repopulates only the repo-owned fields, so a wholesale assignment would
+// wipe live k8s data. New repo-owned fields added to Dataset are carried
+// across automatically; only the small, stable set of k8s fields is
+// enumerated here (TestDataset_LiveFieldsDriftGuard keeps it complete).
 func (d *Dataset) MergeReloadedRepoData(fresh *Dataset) {
 	fresh.BaseModels = d.BaseModels
+	fresh.ServingRuntimes = d.ServingRuntimes
 	fresh.ImportedModelMap = d.ImportedModelMap
 	fresh.GPUPools = d.GPUPools
 	fresh.GPUNodeMap = d.GPUNodeMap
 	fresh.GPUWorkloadMap = d.GPUWorkloadMap
 	fresh.DedicatedAIClusterMap = d.DedicatedAIClusterMap
+	fresh.InferenceServiceMap = d.InferenceServiceMap
 	*d = *fresh
 }

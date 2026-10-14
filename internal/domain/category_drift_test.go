@@ -30,6 +30,7 @@ func TestNeedsKubeConfig_EveryCategoryAccountedFor(t *testing.T) {
 		GPUNode:                         true,
 		GPUWorkload:                     true,
 		DedicatedAICluster:              true,
+		InferenceService:                true,
 		ServingRuntime:                  true,
 		Alias:                           false,
 	}
@@ -64,6 +65,7 @@ func TestIsEnvironmentScoped_EveryCategoryAccountedFor(t *testing.T) {
 		GPUNode:                         true,
 		GPUWorkload:                     true,
 		DedicatedAICluster:              true,
+		InferenceService:                true,
 		ServingRuntime:                  true,
 		Alias:                           false,
 	}

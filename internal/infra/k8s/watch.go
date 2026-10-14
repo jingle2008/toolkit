@@ -273,7 +273,13 @@ var (
 	dacV2GVR            = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}
 
 	clusterServingRuntimeGVR = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "clusterservingruntimes"}
+	inferenceServiceGVR      = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "inferenceservices"}
 )
+
+// WatchInferenceServices triggers on InferenceService CR changes.
+func WatchInferenceServices(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {
+	return watchTrigger(ctx, DebounceWindow, crWatchOpener(client, inferenceServiceGVR))
+}
 
 // WatchServingRuntimes triggers on ClusterServingRuntime CR changes.
 func WatchServingRuntimes(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {

@@ -299,6 +299,9 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.DedicatedAICluster: {
 		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
 	},
+	domain.InferenceService: {
+		common.ListView: {Parent, SortTenant, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh},
+	},
 	domain.ImportedModel: {
 		common.ListView: {Parent, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},
 	},

@@ -150,6 +150,11 @@ type dedicatedAIClustersLoadedMsg struct {
 	Gen   int
 }
 
+type inferenceServicesLoadedMsg struct {
+	Items map[string][]models.InferenceService
+	Gen   int
+}
+
 type tenancyOverridesLoadedMsg struct {
 	Group models.TenancyOverrideGroup
 	Gen   int

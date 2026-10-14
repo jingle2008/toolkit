@@ -16,7 +16,8 @@ import (
 // details") and parentScope ("jump to parent") both read row[1] to recover the
 // parent's key — see internal/ui/tui/table_utils.go. Each case names the
 // parent category so categories grouped by different parents (Tenant for
-// ImportedModel/DAC, GPUNode for GPUWorkload) share one guard.
+// ImportedModel/DAC, GPUNode for GPUWorkload, DedicatedAICluster for InferenceService) share one
+// guard.
 //
 // Unlike the hand-built rows in parent_nav_test.go, this test renders rows from
 // the REAL column sets via columns.RenderTable, so reordering a column set
@@ -63,6 +64,14 @@ func TestGroupKeyAtRowIndex1(t *testing.T) {
 			parentCat: domain.GPUNode,
 			items: map[string][]models.GPUWorkload{
 				groupKey: {{Name: name, Namespace: other, Model: other, Runtime: other, Mode: other}},
+			},
+		},
+		{
+			name:      "InferenceService",
+			category:  domain.InferenceService,
+			parentCat: domain.DedicatedAICluster,
+			items: map[string][]models.InferenceService{
+				groupKey: {{Name: name, Namespace: other, Type: other, Model: other, Runtime: other}},
 			},
 		},
 	}

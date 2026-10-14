@@ -59,6 +59,10 @@ func (l stubLoader) LoadDedicatedAIClusters(context.Context, string, models.Envi
 	return nil, nil //nolint:nilnil // empty-map test stub; resolve tests never read this
 }
 
+func (l stubLoader) LoadInferenceServices(context.Context, string, models.Environment) (map[string][]models.InferenceService, error) {
+	return nil, nil //nolint:nilnil // empty-map test stub; resolve tests never read this
+}
+
 func (l stubLoader) LoadTenancyOverrideGroup(context.Context, string, models.Environment) (models.TenancyOverrideGroup, error) {
 	return models.TenancyOverrideGroup{}, nil
 }

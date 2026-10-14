@@ -74,6 +74,7 @@ var registry = map[domain.Category]registryEntry{
 	domain.GPUNode:                         newGroupedEntry(GPUNodeColumns),
 	domain.GPUWorkload:                     newGroupedEntry(GPUWorkloadColumns),
 	domain.DedicatedAICluster:              newGroupedEntry(DACColumns),
+	domain.InferenceService:                newGroupedEntry(InferenceServiceColumns),
 	domain.ImportedModel:                   newGroupedEntry(ImportedModelColumns),
 	domain.ModelArtifact:                   newGroupedEntry(ModelArtifactColumns),
 	domain.LimitTenancyOverride:            newGroupedEntry(LimitTenancyOverrideColumns),

@@ -292,6 +292,10 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 // category) so a tenant owning resources in both resolves everywhere at
 // once. Each item retains its raw TenantID after the earlier name-keying,
 // so the suffix-keyed raw map is reconstructed from what's already loaded.
+// The GPUWorkload and InferenceService maps are keyed by node/namespace,
+// so their owners are re-resolved in place. Every map is re-resolved even
+// when its owners don't change: upsertTenantByID may reallocate
+// ds.Tenants, which would leave Owner pointers into the old array.
 //
 // If the form is ever extended to edit RESOLVED tenants, this assumption
 // breaks (a rename could affect override-map display) and a fuller
@@ -309,6 +313,12 @@ func (m *Model) applyTenantSave(entry models.TenantMetadata) {
 	if ds.ImportedModelMap != nil {
 		ds.SetImportedModelMap(rawByTenantID(ds.ImportedModelMap,
 			func(i models.ImportedModel) string { return i.TenantID }))
+	}
+	if ds.GPUWorkloadMap != nil {
+		ds.SetGPUWorkloadMap(ds.GPUWorkloadMap)
+	}
+	if ds.InferenceServiceMap != nil {
+		ds.SetInferenceServiceMap(ds.InferenceServiceMap)
 	}
 	m.refreshDisplay()
 }

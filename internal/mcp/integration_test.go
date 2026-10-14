@@ -59,6 +59,10 @@ func (stubLoader) LoadDedicatedAIClusters(context.Context, string, models.Enviro
 	return nil, nil //nolint:nilnil // empty-map test stub; integration tests never read this
 }
 
+func (stubLoader) LoadInferenceServices(context.Context, string, models.Environment) (map[string][]models.InferenceService, error) {
+	return nil, nil //nolint:nilnil // empty-map test stub; integration tests never read this
+}
+
 func (stubLoader) LoadTenancyOverrideGroup(context.Context, string, models.Environment) (models.TenancyOverrideGroup, error) {
 	return models.TenancyOverrideGroup{}, nil
 }
@@ -336,6 +340,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"list_gpu_nodes",
 		"list_gpu_workloads",
 		"list_dacs",
+		"list_inference_services",
 		"list_environments",
 		"list_service_tenancies",
 		"list_model_artifacts",

@@ -178,7 +178,7 @@ type openMetricsTriggerMsg struct {
 }
 
 // openMetrics opens the OCI Telemetry MQL dashboard for the selected item
-// (DAC, ImportedModel, or GPUWorkload). If the plan needs a model catalog
+// (DAC, ImportedModel, GPUWorkload, or InferenceService). If the plan needs a model catalog
 // that isn't loaded yet, the catalog is fetched (and cached for later
 // navigation) before the dashboard opens. Items that can't produce metrics
 // are a no-op or an error toast (resolveMetricsPlan).
@@ -206,15 +206,31 @@ func (m *Model) metricsCatalog(item any) (domain.Category, bool) {
 		}
 		return modelCatalog(it.ModelName), true
 	case *models.GPUWorkload:
-		if it == nil || it.Model == "" {
+		if it == nil {
 			return domain.BaseModel, false
 		}
-		if strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
-			return modelCatalog(it.Model), true // dedicated
+		return servingCatalog(strings.HasPrefix(it.Namespace, importedModelNamePrefix), it.Model)
+	case *models.InferenceService:
+		if it == nil {
+			return domain.BaseModel, false
 		}
-		return domain.BaseModel, true // on-demand matches the base catalog
+		return servingCatalog(it.IsDedicated(), it.Model)
 	default: // *models.ImportedModel (capabilities inline) or unknown
 		return domain.BaseModel, false
+	}
+}
+
+// servingCatalog is metricsCatalog for a serving pod or endpoint: a
+// dedicated one resolves its model by name, an on-demand one against the
+// base catalog. No model means no metrics, so no catalog.
+func servingCatalog(dedicated bool, model string) (domain.Category, bool) {
+	switch {
+	case model == "":
+		return domain.BaseModel, false
+	case dedicated:
+		return modelCatalog(model), true
+	default:
+		return domain.BaseModel, true
 	}
 }
 
@@ -314,23 +330,38 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 		if it.Model == "" {
 			return telemetry.Filter{}, telemetry.CapabilityChat, false, "workload has no model"
 		}
-		if strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
-			ocid := models.DedicatedAICluster{Name: it.Namespace}.OCID(realm, region)
-			filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
-			return m.dedicatedPlan(filter, m.dataset.FindModelByName(it.Model))
+		return m.servingPlan(strings.HasPrefix(it.Namespace, importedModelNamePrefix), it.Namespace, it.Model)
+	case *models.InferenceService:
+		if it == nil {
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 		}
-		bm := m.dataset.FindBaseModelByName(it.Model)
-		if bm == nil {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, "model not found in base catalog"
+		if it.Model == "" {
+			return telemetry.Filter{}, telemetry.CapabilityChat, false, "inference service has no model"
 		}
-		capability := capabilityForModel(bm)
-		if !capability.Supported() {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not supported for this model"
-		}
-		return telemetry.Filter{Key: telemetry.FilterResourceID, Value: bm.DisplayName}, capability, true, ""
+		return m.servingPlan(it.IsDedicated(), it.Namespace, it.Model)
 	default:
 		return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 	}
+}
+
+// servingPlan resolves the plan for a serving pod or endpoint with a model.
+// A dedicated one lives in its DAC's namespace, so it is DacId-scoped; an
+// on-demand one is scoped by its base model's display name.
+func (m *Model) servingPlan(dedicated bool, namespace, model string) (telemetry.Filter, telemetry.Capability, bool, string) {
+	if dedicated {
+		ocid := models.DedicatedAICluster{Name: namespace}.OCID(m.environment.Realm, m.environment.Region)
+		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
+		return m.dedicatedPlan(filter, m.dataset.FindModelByName(model))
+	}
+	bm := m.dataset.FindBaseModelByName(model)
+	if bm == nil {
+		return telemetry.Filter{}, telemetry.CapabilityChat, false, "model not found in base catalog"
+	}
+	capability := capabilityForModel(bm)
+	if !capability.Supported() {
+		return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not supported for this model"
+	}
+	return telemetry.Filter{Key: telemetry.FilterResourceID, Value: bm.DisplayName}, capability, true, ""
 }
 
 // dedicatedPlan finalizes a DacId-filtered (dedicated-mode) plan. A capability

@@ -85,6 +85,11 @@ func registerTools(s *Server) {
 	}, s.handleListDACs)
 
 	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "list_inference_services",
+		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the model ref is a namespaced BaseModel. `ready` is the Ready condition status (True/False/Unknown). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+	}, s.handleListInferenceServices)
+
+	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_environments",
 		Description: "List all known toolkit environments (type/region/realm tuples). No env_override needed; returns all envs visible to the configured repo. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListEnvironments)
@@ -238,6 +243,16 @@ func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, i
 	// No wrapper: the loader keys this map by dac.TenantID
 	// (internal/infra/k8s/dac.go:157), which is already the flat
 	// `tenantId` field on each value. Wrapping would duplicate.
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
+}
+
+func (s *Server) handleListInferenceServices(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.InferenceService], error) {
+	grouped, err := s.loader.LoadInferenceServices(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	if err != nil {
+		return failTool[listResult[models.InferenceService]]("load inference services", err)
+	}
+	// No wrapper: InferenceService.Namespace (JSON `namespace`) already
+	// carries the group key. Wrapping would duplicate.
 	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 

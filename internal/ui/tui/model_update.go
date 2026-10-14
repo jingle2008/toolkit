@@ -53,7 +53,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleDataMsg(dataMsg{Data: msg.Dataset, Gen: msg.Gen})
 		return m, m.pruneRecentEnvs()
 	case baseModelsLoadedMsg, servingRuntimesLoadedMsg, importedModelsLoadedMsg, gpuPoolsLoadedMsg,
-		gpuNodesLoadedMsg, gpuWorkloadsLoadedMsg, dedicatedAIClustersLoadedMsg, tenancyOverridesLoadedMsg,
+		gpuNodesLoadedMsg, gpuWorkloadsLoadedMsg, dedicatedAIClustersLoadedMsg, inferenceServicesLoadedMsg, tenancyOverridesLoadedMsg,
 		limitRegionalOverridesLoadedMsg, consolePropertyRegionalOverridesLoadedMsg,
 		propertyRegionalOverridesLoadedMsg:
 		return m, tea.Batch(m.routeListLoadedMsg(msg)...)

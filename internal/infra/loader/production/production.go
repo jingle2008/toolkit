@@ -134,6 +134,15 @@ func (Client) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env m
 	return k8s.LoadDedicatedAIClusters(ctx, client)
 }
 
+// LoadInferenceServices loads InferenceService CRs grouped by namespace.
+func (Client) LoadInferenceServices(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.InferenceService, error) {
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.LoadInferenceServices(ctx, client)
+}
+
 // LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.
 func (l Client) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
 	return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, l.metadata)
@@ -211,6 +220,15 @@ func (Client) WatchServingRuntimes(ctx context.Context, kubeCfg string, env mode
 		return nil, err
 	}
 	return k8s.WatchServingRuntimes(ctx, client)
+}
+
+// WatchInferenceServices establishes a watch on InferenceService CRs.
+func (Client) WatchInferenceServices(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
+	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	if err != nil {
+		return nil, err
+	}
+	return k8s.WatchInferenceServices(ctx, client)
 }
 
 // WatchImportedModels establishes a watch on the imported-model sources.
