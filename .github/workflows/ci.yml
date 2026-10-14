@@ -65,7 +65,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: "1.26"
+          check-latest: true
       - name: GoReleaser snapshot
         uses: goreleaser/goreleaser-action@v7
         with:
