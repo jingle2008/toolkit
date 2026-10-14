@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: "1.26"
+          check-latest: true
       - name: Setup dev tools
         run: make setup
       - name: Lint, test, coverage threshold
@@ -40,6 +41,7 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: "1.26"
+          check-latest: true
       - name: Setup dev tools
         run: make setup
       - name: Lint, test, coverage threshold
