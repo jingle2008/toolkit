@@ -182,7 +182,9 @@ var rowSources = map[domain.Category]rowSource{
 		func(d *models.Dataset) []models.PropertyRegionalOverride { return d.PropertyRegionalOverrides }),
 	domain.BaseModel: flatSource(columns.BaseModelColumns,
 		func(d *models.Dataset) []models.BaseModel { return d.BaseModels }),
-	domain.ServingRuntime: flatSource(columns.ServingRuntimeColumns,
+	// The TUI renders its own slimmer ServingRuntime set; the CLI keeps
+	// the full ServingRuntimeColumns via the columns registry.
+	domain.ServingRuntime: flatSource(columns.ServingRuntimeTUIColumns,
 		func(d *models.Dataset) []models.ServingRuntime { return d.ServingRuntimes }),
 	domain.ImportedModel: groupedSource(columns.ImportedModelColumns, domain.Tenant,
 		func(d *models.Dataset) map[string][]models.ImportedModel { return d.ImportedModelMap }),

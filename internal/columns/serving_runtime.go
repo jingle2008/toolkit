@@ -2,44 +2,11 @@ package columns
 
 import (
 	"fmt"
-	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/jingle2008/toolkit/pkg/models"
 )
-
-// tpSuffix matches the trailing tensor-parallel size on an accelerator
-// class ("nvidia-a100-80gb-4" -> "-4"), which is what distinguishes the
-// variants of one GPU family from each other.
-var tpSuffix = regexp.MustCompile(`-\d+$`)
-
-/*
-acceleratorFamilies collapses accelerator classes to their distinct GPU
-families, in first-seen order.
-
-"nvidia-a100-80gb-1", "nvidia-a100-80gb-4" and "nvidia-a100-80gb-8" all
-describe the same hardware at different tensor-parallel sizes, so a
-cell listing all nineteen answers "which GPUs" far worse than a cell
-listing five. Values that don't match the nvidia-<family>-<tp> shape
-pass through whole rather than being dropped — an unfamiliar naming
-scheme should look odd, not vanish.
-*/
-func acceleratorFamilies(classes []string) []string {
-	seen := make(map[string]struct{}, len(classes))
-	families := make([]string, 0, len(classes))
-	for _, c := range classes {
-		f := tpSuffix.ReplaceAllString(strings.TrimPrefix(c, "nvidia-"), "")
-		if f == "" {
-			continue
-		}
-		if _, dup := seen[f]; dup {
-			continue
-		}
-		seen[f] = struct{}{}
-		families = append(families, f)
-	}
-	return families
-}
 
 /*
 servingRuntimeHardware renders the merged hardware constraint.
@@ -54,8 +21,7 @@ scheduling in different ways.
 */
 func servingRuntimeHardware(r models.ServingRuntime) string {
 	if len(r.AcceleratorClasses) > 0 {
-		families := acceleratorFamilies(r.AcceleratorClasses)
-		return fmt.Sprintf("ac: %s (%d)", strings.Join(families, ", "), len(r.AcceleratorClasses))
+		return fmt.Sprintf("ac: %s (%d)", strings.Join(r.GPUFamilies(), ", "), len(r.AcceleratorClasses))
 	}
 	if len(r.InstanceTypes) > 0 {
 		return "it: " + strings.Join(r.InstanceTypes, ", ")
@@ -179,5 +145,68 @@ var ServingRuntimeColumns = Set[models.ServingRuntime]{Columns: []Column[models.
 	{
 		Title: "Disabled", Key: "disabled", Ratio: 0.04,
 		Render: func(r models.ServingRuntime) string { return fmt.Sprint(r.Disabled) },
+	},
+}}
+
+/*
+servingRuntimeGPUPerNode renders the GPU count as per-node × nodes for
+multi-node runtimes ("8×2"), and as the plain count otherwise.
+
+The stored value is a total across all pods, which for a multi-node
+runtime reads as one impossibly large node; placement needs the
+per-node figure. Totals that don't divide evenly (heterogeneous leader
+and workers) or don't parse stay as the raw total rather than
+misreporting either half.
+*/
+func servingRuntimeGPUPerNode(r models.ServingRuntime) string {
+	total := servingRuntimeGPU(r)
+	if r.NodeCount <= 1 {
+		return total
+	}
+	n, err := strconv.Atoi(total)
+	if err != nil || n%r.NodeCount != 0 {
+		return total
+	}
+	return fmt.Sprintf("%d×%d", n/r.NodeCount, r.NodeCount)
+}
+
+/*
+ServingRuntimeTUIColumns is the TUI's slimmer view of a ServingRuntime,
+built for scanning placement (Hardware, GPUs) and rollout (Image), with Status in place of
+the CLI's Auto-Select and Disabled columns.
+
+It is a separate Set rather than a filter over ServingRuntimeColumns
+because the cells differ too, not just the column list, and the CLI's
+`toolkit get` output and --columns keys must not change underneath
+scripts. Size range and cpu/memory remain in the detail view's JSON.
+5 columns, ratios sum to 1.00, sized so a 120-column terminal shows
+typical rows untruncated.
+*/
+var ServingRuntimeTUIColumns = Set[models.ServingRuntime]{Columns: []Column[models.ServingRuntime]{
+	{
+		Title: "Name", Key: "name", Ratio: 0.26,
+		Render: func(r models.ServingRuntime) string { return r.Name },
+	},
+	{
+		Title: "Hardware", Key: "hardware", Ratio: 0.27, TruncateMiddle: true,
+		// GPU families only, normalized across both constraint kinds; the
+		// raw lists stay in the detail view.
+		Render: func(r models.ServingRuntime) string { return strings.Join(r.GPUFamilies(), ", ") },
+	},
+	{
+		// Title kept as "GPUs" for the shared SortGPUs binding, as above;
+		// 0.07 is the least that fits "GPUs ↕" at 120 columns.
+		Title: "GPUs", Key: "gpus", Ratio: 0.07,
+		Render: servingRuntimeGPUPerNode,
+	},
+	{
+		Title: "Image", Key: "image", Ratio: 0.29, TruncateMiddle: true,
+		Render: servingRuntimeImage,
+	},
+	{
+		// Status folds spec.disabled and autoSelect into one word; see
+		// models.ServingRuntime.Status.
+		Title: "Status", Key: "status", Ratio: 0.11,
+		Render: models.ServingRuntime.Status,
 	},
 }}

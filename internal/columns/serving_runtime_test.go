@@ -8,36 +8,6 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-func TestAcceleratorFamilies(t *testing.T) {
-	t.Parallel()
-	cases := map[string]struct {
-		in   []string
-		want []string
-	}{
-		"collapses tp variants": {
-			[]string{"nvidia-a100-80gb-1", "nvidia-a100-80gb-4", "nvidia-a100-80gb-8"},
-			[]string{"a100-80gb"},
-		},
-		"preserves first-seen order across families": {
-			[]string{"nvidia-h200-8", "nvidia-a10-1", "nvidia-h200-1", "nvidia-a10-4"},
-			[]string{"h200", "a10"},
-		},
-		// An unfamiliar naming scheme should look odd in the cell, not
-		// silently disappear from it.
-		"unmatched values pass through whole": {
-			[]string{"amd-mi300x", "nvidia-h100-8"},
-			[]string{"amd-mi300x", "h100"},
-		},
-		"empty": {nil, []string{}},
-	}
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			assert.Equal(t, tc.want, acceleratorFamilies(tc.in))
-		})
-	}
-}
-
 func TestServingRuntimeHardware(t *testing.T) {
 	t.Parallel()
 
@@ -135,4 +105,32 @@ func TestServingRuntime_FilterableFieldsIncludeRawValues(t *testing.T) {
 	assert.Contains(t, r.FilterableFields(), "nvidia-h100-8")
 	assert.Contains(t, r.FilterableFields(), "BM.GPU.H100.8")
 	assert.Contains(t, r.FilterableFields(), "us-chicago-1.ocir.io/org/official-sgl:v1")
+}
+
+func TestServingRuntimeGPUPerNode(t *testing.T) {
+	t.Parallel()
+	cases := map[string]struct {
+		in   models.ServingRuntime
+		want string
+	}{
+		"single node":         {models.ServingRuntime{GPULimit: "8", NodeCount: 1}, "8"},
+		"node count unset":    {models.ServingRuntime{GPULimit: "4"}, "4"},
+		"multi node":          {models.ServingRuntime{GPULimit: "16", NodeCount: 2}, "8×2"},
+		"uneven stays total":  {models.ServingRuntime{GPULimit: "9", NodeCount: 2}, "9"},
+		"unparseable":         {models.ServingRuntime{GPULimit: "1k", NodeCount: 2}, "1k"},
+		"no gpu, multi node":  {models.ServingRuntime{NodeCount: 2}, ""},
+		"request as fallback": {models.ServingRuntime{GPURequest: "24", NodeCount: 3}, "8×3"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tc.want, servingRuntimeGPUPerNode(tc.in))
+		})
+	}
+}
+
+func TestServingRuntimeTUIColumns_SetContract(t *testing.T) {
+	t.Parallel()
+	assert.InDelta(t, 1.0, ServingRuntimeTUIColumns.RatioSum(), 0.0001)
+	assert.Equal(t, []string{"Name", "Hardware", "GPUs", "Image", "Status"}, ServingRuntimeTUIColumns.Titles())
 }

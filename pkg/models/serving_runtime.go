@@ -1,5 +1,10 @@
 package models
 
+import (
+	"regexp"
+	"strings"
+)
+
 /*
 ServingRuntime represents an OME ClusterServingRuntime CR — the
 cluster-scoped template describing how a class of models is served:
@@ -75,20 +80,111 @@ FilterableFields returns the fields the fuzzy filter matches against.
 The raw accelerator classes and instance types are included even though
 the Hardware column renders a collapsed form, so filtering on a
 tensor-parallel variant ("h100-8") or on a registry host still finds
-the row whose cell shows neither.
+the row whose cell shows neither. GPU families are included for the
+reverse case — a row whose cell shows "a100-40gb" mapped from an
+instance type — and Status so "live", "off" and "disabled" are
+searchable.
 */
 func (r ServingRuntime) FilterableFields() []string {
-	fields := make([]string, 0, len(r.AcceleratorClasses)+len(r.InstanceTypes)+4)
-	fields = append(fields, r.Name, r.Image, r.ModelSizeMin, r.ModelSizeMax)
+	families := r.GPUFamilies()
+	fields := make([]string, 0, len(r.AcceleratorClasses)+len(r.InstanceTypes)+len(families)+5)
+	fields = append(fields, r.Name, r.Image, r.ModelSizeMin, r.ModelSizeMax, r.Status())
 	fields = append(fields, r.AcceleratorClasses...)
 	fields = append(fields, r.InstanceTypes...)
+	fields = append(fields, families...)
 	return fields
 }
 
 // IsFaulty reports a disabled runtime as faulty so the TUI's
-// faulty-only filter and row styling surface it. A disabled runtime
+// faulty-only filter surfaces it. A disabled runtime
 // serves nothing, which is what an operator scanning for problems
 // wants to see.
 func (r ServingRuntime) IsFaulty() bool {
 	return r.Disabled
+}
+
+/*
+Status folds the two runtime flags into one word: "disabled" when
+spec.disabled is set (it wins — a disabled runtime is never selected,
+auto or not), "off" when auto-select is off, and "live" otherwise.
+Every row gets a word rather than a blank normal case so that each
+state, "live" included, can be filtered on.
+*/
+func (r ServingRuntime) Status() string {
+	switch {
+	case r.Disabled:
+		return "disabled"
+	case !r.AutoSelect:
+		return "off"
+	}
+	return "live"
+}
+
+// tpSuffix matches the trailing tensor-parallel size on an accelerator
+// class ("nvidia-a100-80gb-4" -> "-4"), which is what distinguishes the
+// variants of one GPU family from each other.
+var tpSuffix = regexp.MustCompile(`-\d+$`)
+
+/*
+shapeFamilies maps OCI GPU shapes to the same family names accelerator
+classes collapse to, so both constraint kinds read alike. Hand-
+maintained: shape names don't encode the GPU consistently (BM.GPU4.8
+and BM.GPU.B4.8 are both A100 40GB), so no pattern can derive them.
+*/
+var shapeFamilies = map[string]string{
+	"BM.GPU.A10.4":     "a10",
+	"BM.GPU4.8":        "a100-40gb",
+	"BM.GPU.B4.8":      "a100-40gb",
+	"BM.GPU.A100-v2.8": "a100-80gb",
+	"BM.GPU.H100.8":    "h100",
+	"BM.GPU.H200-NC.8": "h200",
+	"BM.GPU.B200.8":    "b200",
+}
+
+/*
+GPUFamilies returns the distinct GPU families this runtime may land on,
+in first-seen order.
+
+Accelerator classes win when present, as they do in the Hardware
+column: "nvidia-a100-80gb-1" and "nvidia-a100-80gb-8" describe the same
+hardware at different tensor-parallel sizes, so they collapse to
+"a100-80gb". Otherwise instance types map through shapeFamilies. Values
+that match neither scheme pass through whole rather than being dropped
+— an unfamiliar naming scheme should look odd, not vanish.
+
+It lives on the model rather than in the column package so
+FilterableFields can include it: a row showing "a100-40gb" mapped from
+BM.GPU4.8 must be findable by the name it shows.
+*/
+func (r ServingRuntime) GPUFamilies() []string {
+	if len(r.AcceleratorClasses) > 0 {
+		return distinct(r.AcceleratorClasses, func(c string) string {
+			return tpSuffix.ReplaceAllString(strings.TrimPrefix(c, "nvidia-"), "")
+		})
+	}
+	return distinct(r.InstanceTypes, func(s string) string {
+		if f, ok := shapeFamilies[s]; ok {
+			return f
+		}
+		return s
+	})
+}
+
+// distinct maps values through family and de-duplicates the results in
+// first-seen order, skipping empties.
+func distinct(values []string, family func(string) string) []string {
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		f := family(v)
+		if f == "" {
+			continue
+		}
+		if _, dup := seen[f]; dup {
+			continue
+		}
+		seen[f] = struct{}{}
+		out = append(out, f)
+	}
+	return out
 }
