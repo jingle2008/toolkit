@@ -28,6 +28,8 @@ var (
 	mcpTerminateFn        = actions.TerminateInstance
 	mcpIncreasePoolSizeFn = actions.IncreasePoolSize
 	mcpDeleteDACFn        = actions.DeleteDedicatedAICluster
+	mcpResolveISVCFn      = k8s.ResolveInferenceService
+	mcpRestartISVCFn      = k8s.RestartInferenceService
 	mcpResolveGPUNodeFn   = func(ctx context.Context, s *Server, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 		return resolve.GPUNode(ctx, s.loader, s.cfg.KubeConfig, env, name, ocid)
 	}
@@ -171,6 +173,13 @@ type deleteDACInput struct {
 	envOverride
 }
 
+type restartInferenceServiceInput struct {
+	Name      string `json:"name" jsonschema:"the InferenceService name (same as list_inference_services shows)"`
+	Namespace string `json:"namespace,omitempty" jsonschema:"the InferenceService namespace; omit to search all namespaces (the name must then be unique)"`
+	confirmGate
+	envOverride
+}
+
 type setTenantInput struct {
 	OCID       string `json:"ocid" jsonschema:"the full tenancy OCID (the metadata entry key); must start with ocid1.tenancy."`
 	Name       string `json:"name" jsonschema:"friendly tenant name (required)"`
@@ -256,6 +265,20 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 	})
 }
 
+func (s *Server) handleRestartInferenceService(ctx context.Context, req *sdk.CallToolRequest, in restartInferenceServiceInput) (*sdk.CallToolResult, mutationResult, error) {
+	target := in.Name
+	if in.Namespace != "" {
+		target = in.Namespace + "/" + in.Name
+	}
+	return s.handleMutation("restart", "inference_service", target, in.Confirm, in.envOverride, func(env models.Environment) error {
+		ns, err := mcpResolveISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Namespace, in.Name)
+		if err != nil {
+			return err
+		}
+		return mcpRestartISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), ns, in.Name)
+	})
+}
+
 func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, in setTenantInput) (*sdk.CallToolResult, mutationResult, error) {
 	if strings.TrimSpace(in.Name) == "" {
 		return failTool[mutationResult]("set tenant", errors.New("name is required"))
@@ -283,13 +306,13 @@ func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, 
 
 // mutationToolFooter is appended to every mutation tool's description.
 // Centralized so the env-override semantics stay in sync across all
-// seven tools whenever the policy is revisited.
+// env-scoped tools whenever the policy is revisited.
 const mutationToolFooter = " Mutating: requires confirm=true to execute, otherwise refuses without acting." +
 	" Accepts env_type/env_region/env_realm, but per-call overrides take effect ONLY if the server" +
 	" was started with --mutation_env_override_allowed. By default override fields are ignored" +
 	" (audit-logged at info) and the startup env is used."
 
-// registerMutationTools adds the seven mutating tools. Each requires
+// registerMutationTools adds the mutating tools. Each requires
 // confirm=true at the input level; the tool description tells the
 // agent explicitly so the contract is discoverable without running
 // the tool to see the refusal.
@@ -337,6 +360,12 @@ func registerMutationTools(s *Server) {
 		Name:        "delete_dac",
 		Description: "Delete a dedicated AI cluster and its endpoints (synchronous, polls the work request). DESTRUCTIVE." + mutationToolFooter,
 	}, s.handleDeleteDAC)
+
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name: "restart_inference_service",
+		Description: "Trigger a rolling restart of an OME InferenceService by bumping its restartedAt annotation. Fire-and-forget." +
+			" Omit namespace to search all namespaces; an ambiguous name is refused." + mutationToolFooter,
+	}, s.handleRestartInferenceService)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name: "set_tenant",

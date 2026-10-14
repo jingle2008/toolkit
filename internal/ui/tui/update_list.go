@@ -62,6 +62,8 @@ func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
 		m.handleDrainNodeResultMsg(msg)
 	case rebootNodeResultMsg:
 		m.handleRebootNodeResultMsg(msg)
+	case restartServiceResultMsg:
+		return []tea.Cmd{m.handleRestartServiceResultMsg(msg)}
 	}
 	return nil
 }

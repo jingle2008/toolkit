@@ -78,6 +78,7 @@ func stubAllMutationSeams() (*bool, func()) {
 	oResolveNode, oReset, oTerm := mcpResolveGPUNodeFn, mcpSoftResetFn, mcpTerminateFn
 	oResolvePool, oInc, oDelDAC := mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn
 	oUpsert := mcpUpsertTenantFn
+	oResolveISVC, oRestartISVC := mcpResolveISVCFn, mcpRestartISVCFn
 
 	mcpSetCordonFn = func(context.Context, string, string, string, bool) (bool, error) { mark(); return true, nil }
 	mcpDrainNodeFn = func(context.Context, string, string, string) error { mark(); return nil }
@@ -97,12 +98,15 @@ func stubAllMutationSeams() (*bool, func()) {
 		return nil
 	}
 	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error { mark(); return nil }
+	mcpResolveISVCFn = func(_ context.Context, _, _, namespace, _ string) (string, error) { mark(); return namespace, nil }
+	mcpRestartISVCFn = func(context.Context, string, string, string, string) error { mark(); return nil }
 
 	return &called, func() {
 		mcpSetCordonFn, mcpDrainNodeFn = oCordon, oDrain
 		mcpResolveGPUNodeFn, mcpSoftResetFn, mcpTerminateFn = oResolveNode, oReset, oTerm
 		mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn = oResolvePool, oInc, oDelDAC
 		mcpUpsertTenantFn = oUpsert
+		mcpResolveISVCFn, mcpRestartISVCFn = oResolveISVC, oRestartISVC
 	}
 }
 
@@ -127,6 +131,7 @@ func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
 		{"terminate_node", map[string]any{"node": "node-a"}},
 		{"scale_gpu_pool", map[string]any{"name": "pool-a"}},
 		{"delete_dac", map[string]any{"name": "dac-a"}},
+		{"restart_inference_service", map[string]any{"name": "isvc-a"}},
 		{"set_tenant", map[string]any{"ocid": "ocid1.tenancy.oc1..aaaa", "name": "Acme"}},
 	}
 
@@ -587,7 +592,7 @@ func TestIntegration_MutationTools_RegisteredInListTools(t *testing.T) {
 		"cordon_node", "uncordon_node", "drain_node",
 		"reboot_node", "terminate_node",
 		"scale_gpu_pool", "delete_dac",
-		"set_tenant",
+		"restart_inference_service", "set_tenant",
 	} {
 		assert.True(t, got[name], "tools/list missing mutation tool %q", name)
 	}
@@ -691,4 +696,73 @@ func TestIntegration_SetTenantTool_RequiresName(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	assert.True(t, res.IsError, "missing name must error")
+}
+
+func TestIntegration_RestartInferenceService_ResolvesThenPatches(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	oResolve, oRestart := mcpResolveISVCFn, mcpRestartISVCFn
+	t.Cleanup(func() { mcpResolveISVCFn, mcpRestartISVCFn = oResolve, oRestart })
+
+	var gotLookupNS, patchedNS, patchedName string
+	mcpResolveISVCFn = func(_ context.Context, _, _, namespace, _ string) (string, error) {
+		gotLookupNS = namespace
+		return "ns-resolved", nil
+	}
+	mcpRestartISVCFn = func(_ context.Context, _, _, namespace, name string) error {
+		patchedNS, patchedName = namespace, name
+		return nil
+	}
+
+	clientSess := newTestPair(ctx, t, stubLoader{})
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "restart_inference_service",
+		Arguments: map[string]any{"name": "isvc-a", "confirm": true},
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError, "expected success: %s", resultText(t, res))
+	assert.Empty(t, gotLookupNS, "omitted namespace searches all namespaces")
+	assert.Equal(t, "ns-resolved", patchedNS)
+	assert.Equal(t, "isvc-a", patchedName)
+	assertMutationOK(t, res, "restart", "inference_service", "isvc-a")
+
+	// An explicit namespace is passed through and labels the target.
+	res, err = clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "restart_inference_service",
+		Arguments: map[string]any{"name": "isvc-a", "namespace": "ns-x", "confirm": true},
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError)
+	assert.Equal(t, "ns-x", gotLookupNS)
+	assertMutationOK(t, res, "restart", "inference_service", "ns-x/isvc-a")
+}
+
+func TestIntegration_RestartInferenceService_ResolveErrorSkipsPatch(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	oResolve, oRestart := mcpResolveISVCFn, mcpRestartISVCFn
+	t.Cleanup(func() { mcpResolveISVCFn, mcpRestartISVCFn = oResolve, oRestart })
+
+	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) {
+		return "", errors.New(`InferenceService "isvc-a" exists in multiple namespaces (a, b); specify a namespace`)
+	}
+	patched := false
+	mcpRestartISVCFn = func(context.Context, string, string, string, string) error {
+		patched = true
+		return nil
+	}
+
+	clientSess := newTestPair(ctx, t, stubLoader{})
+
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "restart_inference_service",
+		Arguments: map[string]any{"name": "isvc-a", "confirm": true},
+	})
+	require.NoError(t, err)
+	assert.True(t, res.IsError)
+	assert.False(t, patched, "ambiguous name must not be patched")
+	assert.Contains(t, resultText(t, res), "multiple namespaces")
 }

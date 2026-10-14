@@ -1,12 +1,18 @@
 package tui
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
+
+// restartInferenceServiceFn is the seam tests use to fake the restart patch.
+var restartInferenceServiceFn = k8s.RestartInferenceService
 
 /*
 deleteItem handles the generic delete action based on the current category.
@@ -208,6 +214,34 @@ func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) {
 	if m.category == domain.GPUNode {
 		m.updateRows(false)
 	}
+}
+
+// restartInferenceService stamps the selected InferenceService's
+// restartedAt annotation. Fire-and-forget: the k8s watch picks up the
+// resulting rollout, so the result only needs a toast.
+func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cmd {
+	svc, ok := item.(*models.InferenceService)
+	if !ok || svc == nil {
+		m.logger.Errorw("unsupported item type for restart operation", "item", item)
+		return nil
+	}
+	m.logger.Infow("action started", "action", "restartInferenceService", "service", itemKeyString(itemKey))
+	namespace, name := svc.Namespace, svc.Name
+	return func() tea.Msg {
+		ctx, cancel := m.opCtx()
+		defer cancel()
+		err := restartInferenceServiceFn(ctx, m.kubeConfig, m.environment.KubeContext(), namespace, name)
+		return restartServiceResultMsg{key: itemKey, err: err}
+	}
+}
+
+func (m *Model) handleRestartServiceResultMsg(msg restartServiceResultMsg) tea.Cmd {
+	target := itemKeyString(msg.key)
+	if msg.err != nil {
+		m.logger.Errorw("failed to restart inference service", "key", msg.key, "error", msg.err)
+		return m.showToast(fmt.Sprintf("restart %s failed: %v", target, msg.err), toastError)
+	}
+	return m.showToast("restart requested for "+target, toastInfo)
 }
 
 func (m *Model) handleRebootNodeResultMsg(msg rebootNodeResultMsg) {

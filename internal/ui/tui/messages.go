@@ -109,6 +109,11 @@ type rebootNodeResultMsg struct {
 	err error
 }
 
+type restartServiceResultMsg struct {
+	key models.ItemKey
+	err error
+}
+
 type exportDoneMsg struct{}
 
 type exportErrMsg struct {
