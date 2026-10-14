@@ -9,12 +9,14 @@ import (
 func TestDataset_MergeReloadedRepoData_PreservesK8sFields(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{
-		Tenants:    []Tenant{{Name: "old"}},
-		BaseModels: []BaseModel{{Name: "bm1"}},
-		GPUPools:   []GPUPool{{Name: "p1"}},
-		GPUNodeMap: map[string][]GPUNode{"p1": {{Name: "n1"}}},
+		Tenants:         []Tenant{{Name: "old"}},
+		BaseModels:      []BaseModel{{Name: "bm1"}},
+		ServingRuntimes: []ServingRuntime{{Name: "sr1"}},
+		GPUPools:        []GPUPool{{Name: "p1"}},
+		GPUNodeMap:      map[string][]GPUNode{"p1": {{Name: "n1"}}},
 	}
 	bm := d.BaseModels
+	srs := d.ServingRuntimes
 	pools := d.GPUPools
 	nodes := d.GPUNodeMap
 
@@ -33,6 +35,7 @@ func TestDataset_MergeReloadedRepoData_PreservesK8sFields(t *testing.T) {
 
 	// Lazily-loaded k8s fields are preserved untouched.
 	require.Equal(t, bm, d.BaseModels)
+	require.Equal(t, srs, d.ServingRuntimes)
 	require.Equal(t, pools, d.GPUPools)
 	require.Equal(t, nodes, d.GPUNodeMap)
 }

@@ -151,6 +151,7 @@ func TestResetRealmScopedFields(t *testing.T) {
 		ConsolePropertyRegionalOverrides:  []ConsolePropertyRegionalOverride{{}},
 		PropertyRegionalOverrides:         []PropertyRegionalOverride{{}},
 		BaseModels:                        []BaseModel{},
+		ServingRuntimes:                   []ServingRuntime{{}},
 		ImportedModelMap:                  map[string][]ImportedModel{"x": nil},
 		GPUPools:                          []GPUPool{{}},
 		GPUNodeMap:                        map[string][]GPUNode{"x": nil},
@@ -166,6 +167,7 @@ func TestResetRealmScopedFields(t *testing.T) {
 		d.ConsolePropertyRegionalOverrides != nil ||
 		d.PropertyRegionalOverrides != nil ||
 		d.BaseModels != nil ||
+		d.ServingRuntimes != nil ||
 		d.ImportedModelMap != nil ||
 		d.GPUPools != nil ||
 		d.GPUNodeMap != nil ||
