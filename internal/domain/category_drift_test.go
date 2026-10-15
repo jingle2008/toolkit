@@ -106,3 +106,60 @@ func TestAliases_UniqueAndRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+// The relation registry must be well-formed: every endpoint is a data
+// category, nothing relates to itself, no edge is declared twice, and
+// the Contains graph is acyclic (drill-in and the parent jump must
+// terminate).
+func TestRelations_WellFormed(t *testing.T) {
+	t.Parallel()
+	seen := make(map[Relation]bool)
+	for _, r := range Relations() {
+		for _, c := range []Category{r.Parent, r.Child} {
+			assert.Truef(t, c >= Tenant && c <= LastDataCategory, "%v: endpoint %v is not a data category", r, c)
+		}
+		assert.NotEqualf(t, r.Parent, r.Child, "%v relates a category to itself", r)
+		assert.Equalf(t, Contains, r.Kind, "%v: unknown kind", r)
+		assert.Falsef(t, seen[r], "%v declared twice", r)
+		seen[r] = true
+	}
+
+	// Depth-first search for a cycle through Contains children.
+	const (
+		unvisited = iota
+		visiting
+		done
+	)
+	state := make(map[Category]int)
+	var visit func(c Category, path []Category)
+	visit = func(c Category, path []Category) {
+		switch state[c] {
+		case visiting:
+			t.Errorf("Contains cycle: %v → %v", path, c)
+			return
+		case done:
+			return
+		}
+		state[c] = visiting
+		for _, child := range c.ScopedCategories() {
+			visit(child, append(path, c))
+		}
+		state[c] = done
+	}
+	for _, c := range Categories {
+		visit(c, nil)
+	}
+}
+
+// ScopedCategories and Parents hand out copies: a caller mutating the
+// result must not corrupt the shared registry index.
+func TestScopeGraph_ReturnsCopies(t *testing.T) {
+	t.Parallel()
+	got := Tenant.ScopedCategories()
+	got[0] = Alias
+	assert.Equal(t, LimitTenancyOverride, Tenant.ScopedCategories()[0])
+
+	parents := LimitTenancyOverride.Parents()
+	parents[0] = Alias
+	assert.Equal(t, Tenant, LimitTenancyOverride.Parents()[0])
+}

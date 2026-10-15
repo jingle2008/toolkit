@@ -89,53 +89,22 @@ const LastDataCategory = Alias - 1
 
 // IsScopeOf returns true if the receiver is a scope of the given category.
 func (e Category) IsScopeOf(o Category) bool {
-	if !e.IsScope() {
-		return false
-	}
-
-	categories := e.ScopedCategories()
-	return slices.Contains(categories, o)
+	return slices.Contains(containsChildren[e], o)
 }
 
 // IsScope returns true if the category is a scope category — i.e. it
-// scopes at least one other category. Derived from ScopedCategories so
-// the set of scope categories has a single source of truth.
+// scopes at least one other category. Derived from the relation registry
+// so the set of scope categories has a single source of truth.
 func (e Category) IsScope() bool {
-	return len(e.ScopedCategories()) > 0
+	return len(containsChildren[e]) > 0
 }
 
-// ScopedCategories returns the categories that are scoped by the receiver.
+// ScopedCategories returns the categories that are scoped by the receiver
+// — its Contains children in the relation registry, in declaration order
+// (the first is where Enter drills in). Returns nil for a category that
+// scopes nothing.
 func (e Category) ScopedCategories() []Category {
-	switch e { //nolint:exhaustive
-	case Tenant:
-		return []Category{
-			LimitTenancyOverride,
-			ConsolePropertyTenancyOverride,
-			PropertyTenancyOverride,
-			DedicatedAICluster,
-			ImportedModel,
-		}
-	case LimitDefinition:
-		return []Category{LimitTenancyOverride, LimitRegionalOverride}
-	case ConsolePropertyDefinition:
-		return []Category{
-			ConsolePropertyTenancyOverride,
-			ConsolePropertyRegionalOverride,
-		}
-	case PropertyDefinition:
-		return []Category{
-			PropertyTenancyOverride,
-			PropertyRegionalOverride,
-		}
-	case GPUPool:
-		return []Category{GPUNode}
-	case GPUNode:
-		return []Category{GPUWorkload}
-	case DedicatedAICluster:
-		return []Category{InferenceService}
-	default:
-		return nil
-	}
+	return slices.Clone(containsChildren[e])
 }
 
 // Parents returns the categories that scope the receiver — the inverse
@@ -143,13 +112,7 @@ func (e Category) ScopedCategories() []Category {
 // tenancy overrides are scoped by both a Tenant and a Definition.
 // Returns nil for top-level categories that have no parent.
 func (e Category) Parents() []Category {
-	var parents []Category
-	for c := Tenant; c <= Alias; c++ {
-		if c.IsScopeOf(e) {
-			parents = append(parents, c)
-		}
-	}
-	return parents
+	return slices.Clone(containsParents[e])
 }
 
 /*

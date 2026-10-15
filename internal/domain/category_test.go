@@ -87,8 +87,8 @@ func TestCategory_ScopedCategories(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.scope.String(), func(t *testing.T) {
 			t.Parallel()
-			got := tc.scope.ScopedCategories()
-			assert.ElementsMatch(t, tc.want, got)
+			// Exact order: Enter drills into ScopedCategories()[0].
+			assert.Equal(t, tc.want, tc.scope.ScopedCategories())
 		})
 	}
 	// non-scope category should return nil
@@ -118,7 +118,7 @@ func TestCategory_Parents(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.child.String(), func(t *testing.T) {
 			t.Parallel()
-			assert.ElementsMatch(t, tc.want, tc.child.Parents())
+			assert.Equal(t, tc.want, tc.child.Parents())
 		})
 	}
 	// Top-level categories have no parent.
