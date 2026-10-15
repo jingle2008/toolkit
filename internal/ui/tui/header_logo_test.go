@@ -44,7 +44,7 @@ func TestFrame_LogoDroppedWhenInfoAloneFits(t *testing.T) {
 	w := lipgloss.Width(m.headerInfo()) + view.LogoWidth + view.LogoMargin - 1
 	m.updateLayout(w, 40)
 	require.False(t, m.showLogo(w))
-	assert.NotContains(t, ansi.Strip(m.frame("")), "[___________]")
+	assert.NotContains(t, ansi.Strip(m.frame("")), "|_   _|")
 }
 
 func TestFrame_HeaderNeverExceedsTerminal(t *testing.T) {

@@ -15,6 +15,11 @@ type Styles struct {
 	InfoKey      lipgloss.Style
 	InfoValue    lipgloss.Style
 
+	// Header logo gradient endpoints ("#RRGGBB"): the info-key orange
+	// fading to the status bar's context pink.
+	LogoTop    lipgloss.Color
+	LogoBottom lipgloss.Color
+
 	// Help view styles
 	HelpBorder lipgloss.Style
 	HelpHeader lipgloss.Style
@@ -72,6 +77,8 @@ func DefaultStyles() Styles {
 		StatusText:   statusText,
 		InfoKey:      infoKey,
 		InfoValue:    infoValue,
+		LogoTop:      lipgloss.Color("#FF8700"), // xterm 208, as infoKey
+		LogoBottom:   lipgloss.Color("#FF5F87"), // as context
 
 		HelpBorder: helpBorder,
 		HelpHeader: helpHeader,
