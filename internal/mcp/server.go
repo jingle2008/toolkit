@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -32,6 +33,12 @@ type Server struct {
 	loader loader.Composite
 	logger logging.Logger
 	server *sdk.Server
+	// bgCtx scopes work that outlives a tool call (drain drivers) to the
+	// server's lifetime; Run replaces it with its own ctx.
+	bgCtx context.Context //nolint:containedctx // lifetime of background drain drivers, which outlive tool calls
+	// drainDrivers holds the "kubeContext/node" keys of drains this
+	// process is driving, so a repeated drain_node adds no second driver.
+	drainDrivers sync.Map
 }
 
 // NewServer constructs a server that exposes read-only category tools.
@@ -42,6 +49,7 @@ func NewServer(cfg config.Config, ld loader.Composite, logger logging.Logger, ve
 		cfg:    cfg,
 		loader: ld,
 		logger: logger,
+		bgCtx:  logging.WithContext(context.Background(), logger),
 	}
 	s.server = sdk.NewServer(&sdk.Implementation{
 		Name:    "toolkit",
@@ -66,6 +74,7 @@ func NewServer(cfg config.Config, ld loader.Composite, logger logging.Logger, ve
 // session list rather than reinitializing cleanly. Construct a fresh
 // Server (via NewServer) if you need to restart.
 func (s *Server) Run(ctx context.Context) error {
+	s.bgCtx = ctx
 	return s.server.Run(ctx, &sdk.StdioTransport{})
 }
 
@@ -172,16 +181,16 @@ func jsonResult[T any](items []T, warnings []string) (*sdk.CallToolResult, listR
 	}, nil
 }
 
-// mutationSuccess returns the standard "OK" envelope every mutation
-// emits on the happy path. Mirrors jsonResult's role but for the
-// mutationResult shape.
-func mutationSuccess(action, kind, target string) (*sdk.CallToolResult, mutationResult, error) {
-	return &sdk.CallToolResult{}, mutationResult{
+// mutationOK returns the standard "OK" envelope every mutation emits on
+// the happy path. Mirrors jsonResult's role but for the mutationResult
+// shape.
+func mutationOK(action, kind, target string) mutationResult {
+	return mutationResult{
 		Status: "OK",
 		Action: action,
 		Kind:   kind,
 		Target: target,
-	}, nil
+	}
 }
 
 // failTool wraps a handler's fatal error path. `what` is the human

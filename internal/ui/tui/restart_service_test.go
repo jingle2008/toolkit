@@ -101,3 +101,17 @@ func TestHandleRestartServiceResultMsg_Toasts(t *testing.T) {
 	assert.Equal(t, "restart ns1/svc1 failed: forbidden", m.toasts.active.msg)
 	assert.Equal(t, toastError, m.toasts.active.sev)
 }
+
+func TestHandleDrainNodeResultMsg_Toasts(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	key := models.ScopedItemKey{Scope: "pool1", Name: "node1"}
+
+	require.NotNil(t, m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key}))
+	assert.Equal(t, "drained pool1/node1", m.toasts.active.msg)
+	assert.Equal(t, toastInfo, m.toasts.active.sev)
+
+	require.NotNil(t, m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, err: errors.New("pdb violation (node uncordoned)")}))
+	assert.Equal(t, "drain pool1/node1 failed: pdb violation (node uncordoned)", m.toasts.active.msg)
+	assert.Equal(t, toastError, m.toasts.active.sev)
+}

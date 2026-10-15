@@ -352,6 +352,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"cordon_node",
 		"uncordon_node",
 		"drain_node",
+		"get_drain_status",
 		"reboot_node",
 		"terminate_node",
 		"scale_gpu_pool",

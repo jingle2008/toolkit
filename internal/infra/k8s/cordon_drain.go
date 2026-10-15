@@ -37,17 +37,6 @@ func SetCordon(ctx context.Context, kubeconfig, contextName, nodeName string, wa
 	return setCordon(ctx, clientset, nodeName, want)
 }
 
-/*
-DrainNode uses kubectl's drain.Helper to cordon and drain a node.
-*/
-func DrainNode(ctx context.Context, kubeconfig, contextName, nodeName string) error {
-	clientset, err := NewClientsetFromKubeConfig(kubeconfig, contextName)
-	if err != nil {
-		return err
-	}
-	return drainNode(ctx, clientset, nodeName)
-}
-
 type logWriter struct{ logger logging.Logger }
 
 func (w logWriter) Write(p []byte) (int, error) {
@@ -55,10 +44,7 @@ func (w logWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-var (
-	runCordonOrUncordon = drain.RunCordonOrUncordon
-	runNodeDrain        = drain.RunNodeDrain
-)
+var runCordonOrUncordon = drain.RunCordonOrUncordon
 
 func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName string) (bool, error) {
 	helper := &drain.Helper{
@@ -92,18 +78,4 @@ func setCordon(ctx context.Context, clientset kubernetes.Interface, nodeName str
 	}
 	helper := &drain.Helper{Ctx: ctx, Client: clientset}
 	return true, runCordonOrUncordon(helper, node, want)
-}
-
-func drainNode(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
-	logger := logging.FromContext(ctx)
-	helper := &drain.Helper{
-		Ctx:                 ctx,
-		Client:              clientset,
-		Out:                 logWriter{logger},
-		ErrOut:              logWriter{logger},
-		IgnoreAllDaemonSets: true,
-		DeleteEmptyDirData:  true,
-		GracePeriodSeconds:  -1, // Use pod's termination grace period
-	}
-	return runNodeDrain(helper, nodeName)
 }

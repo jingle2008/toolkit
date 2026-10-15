@@ -114,6 +114,10 @@ done
 toolkit uncordon $NODE -y
 ```
 
+`drain` is the production runbook, not a bare eviction: it refuses nodes running fine-tuning, training, or replicationJob pods, restarts single-replica InferenceServices so they surge onto another node before their old pod stops, and waits up to 20 minutes for them to reschedule before evicting the rest. A timeout usually means no spare GPU capacity elsewhere. Because step 1 cordoned the node, a failed `drain` leaves it cordoned; a `drain` run on its own uncordons the node again if it fails before eviction starts, and leaves it cordoned once eviction has begun.
+
+The drain's progress lives on the Node (annotation `toolkit/drain`), so an interrupted `toolkit drain` resumes where it stopped when re-run, and the TUI, CLI, and MCP server all see and continue the same drain. Over MCP, `drain_node` returns immediately and the server drives the drain in the background; poll `get_drain_status` for its phase, deadline, and what it is still waiting on.
+
 ### Inspect the audit trail
 
 Every mutation writes a structured line to the log (configured via `--log-file` / `log-file:` — defaults to `toolkit.log`). Set `log-format: json` to make it `jq`-friendly:

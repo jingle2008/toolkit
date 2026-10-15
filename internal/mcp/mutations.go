@@ -23,7 +23,9 @@ import (
 // tests don't have to stub a fake k8s+OCI pipeline.
 var (
 	mcpSetCordonFn        = k8s.SetCordon
-	mcpDrainNodeFn        = k8s.DrainNode
+	mcpStartDrainFn       = k8s.StartDrain
+	mcpAwaitDrainFn       = k8s.AwaitDrain
+	mcpDrainStatusFn      = k8s.GetDrainStatus
 	mcpSoftResetFn        = actions.SoftResetInstance
 	mcpTerminateFn        = actions.TerminateInstance
 	mcpIncreasePoolSizeFn = actions.IncreasePoolSize
@@ -101,13 +103,24 @@ func (s *Server) effectiveMutationEnv(action, kind, target string, in envOverrid
 // call site, and nothing here talks to the session any more now that
 // the notifications/message emission is gone.
 func (s *Server) runMutationTool(action, kind, target string, confirm bool, perform func() error) (*sdk.CallToolResult, mutationResult, error) {
+	return runMutationToolWith(s, action, kind, target, confirm, func() (mutationResult, error) {
+		if err := perform(); err != nil {
+			return mutationResult{}, err
+		}
+		return mutationOK(action, kind, target), nil
+	})
+}
+
+// runMutationToolWith is runMutationTool for tools whose success result
+// carries more than the standard envelope.
+func runMutationToolWith[Out any](s *Server, action, kind, target string, confirm bool, perform func() (Out, error)) (*sdk.CallToolResult, Out, error) {
 	if !confirm {
 		s.logger.Infow(
 			"mutation",
 			"action", action, "kind", kind, "target", target, "surface", "mcp",
 			"phase", "refused",
 		)
-		return failTool[mutationResult](action,
+		return failTool[Out](action,
 			fmt.Errorf("mutating tool requires confirm=true (target %s/%s)", kind, target))
 	}
 
@@ -116,21 +129,23 @@ func (s *Server) runMutationTool(action, kind, target string, confirm bool, perf
 		"action", action, "kind", kind, "target", target, "surface", "mcp",
 		"phase", "begin",
 	)
-	if err := perform(); err != nil {
+	out, err := perform()
+	if err != nil {
 		s.logger.Errorw(
 			"mutation",
 			"action", action, "kind", kind, "target", target, "surface", "mcp",
 			"phase", "failed",
 			"error", err,
 		)
-		return failTool[mutationResult](action+" "+kind+"/"+target, err)
+		return failTool[Out](action+" "+kind+"/"+target, err)
 	}
 	s.logger.Infow(
 		"mutation",
 		"action", action, "kind", kind, "target", target, "surface", "mcp",
 		"phase", "done",
 	)
-	return mutationSuccess(action, kind, target)
+	// Empty Content lets the SDK auto-emit the structured result as text.
+	return &sdk.CallToolResult{}, out, nil
 }
 
 // --- Input types --------------------------------------------------
@@ -145,6 +160,18 @@ type drainNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
 	confirmGate
 	envOverride
+}
+
+type drainStatusInput struct {
+	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
+	envOverride
+}
+
+// drainNodeResult is the standard envelope plus the drain's status at
+// the moment drain_node returned.
+type drainNodeResult struct {
+	mutationResult
+	Drain k8s.DrainStatus `json:"drain"`
 }
 
 type rebootNodeInput struct {
@@ -222,10 +249,50 @@ func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolReques
 	})
 }
 
-func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation("drain", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
-		return mcpDrainNodeFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
+// handleDrainNode starts (or resumes) the drain and returns at once,
+// leaving a background driver to carry it through. The drain lives on
+// the Node, so a driver lost to a server restart is replaced by calling
+// drain_node again.
+func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, drainNodeResult, error) {
+	const action, kind = "drain", "node"
+	env := s.effectiveMutationEnv(action, kind, in.Node, in.envOverride)
+	return runMutationToolWith(s, action, kind, in.Node, in.Confirm, func() (drainNodeResult, error) {
+		status, err := mcpStartDrainFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
+		if err != nil {
+			return drainNodeResult{}, err
+		}
+		if status.Phase.InProgress() {
+			s.driveDrain(env.KubeContext(), in.Node)
+		}
+		return drainNodeResult{mutationResult: mutationOK(action, kind, in.Node), Drain: status}, nil
 	})
+}
+
+// driveDrain carries a node's drain to completion in the background,
+// unless this process already drives it.
+func (s *Server) driveDrain(kubeContext, node string) {
+	key := kubeContext + "/" + node
+	if _, driving := s.drainDrivers.LoadOrStore(key, struct{}{}); driving {
+		return
+	}
+	go func() {
+		defer s.drainDrivers.Delete(key)
+		if err := mcpAwaitDrainFn(s.bgCtx, s.cfg.KubeConfig, kubeContext, node); err != nil {
+			s.logger.Errorw("mutation", "action", "drain", "kind", "node", "target", node, "surface", "mcp",
+				"phase", "background-failed", "error", err)
+			return
+		}
+		s.logger.Infow("mutation", "action", "drain", "kind", "node", "target", node, "surface", "mcp",
+			"phase", "background-done")
+	}()
+}
+
+func (s *Server) handleDrainStatus(ctx context.Context, req *sdk.CallToolRequest, in drainStatusInput) (*sdk.CallToolResult, k8s.DrainStatus, error) {
+	status, err := mcpDrainStatusFn(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride).KubeContext(), in.Node)
+	if err != nil {
+		return failTool[k8s.DrainStatus]("get drain status of node/"+in.Node, err)
+	}
+	return &sdk.CallToolResult{}, status, nil
 }
 
 func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest, in rebootNodeInput) (*sdk.CallToolResult, mutationResult, error) {
@@ -337,9 +404,23 @@ func registerMutationTools(s *Server) {
 	}, s.handleUncordonNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
-		Name:        "drain_node",
-		Description: "Drain pods from a node (cordon + evict). Use before terminate." + mutationToolFooter,
+		Name: "drain_node",
+		Description: "Safely drain a node: cordon; refuse if it runs fine-tuning, training, or replicationJob pods;" +
+			" restart InferenceServices with minReplicas<=1 and wait (up to 20m) for them to reschedule elsewhere;" +
+			" then evict the rest (up to 10m). On failure before eviction, uncordons the node unless it was already cordoned; once eviction starts it stays cordoned." +
+			" Asynchronous: returns at once with the drain's status (phase starting/waiting/evicting/done/failed) while the server drives it in the background;" +
+			" poll get_drain_status for progress. The drain is recorded on the Node, so calling drain_node again resumes it (e.g. after a server restart)" +
+			" without repeating finished steps. Use before terminate." + mutationToolFooter,
 	}, s.handleDrainNode)
+
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name: "get_drain_status",
+		Description: "Read-only: report a node's drain as recorded on the Node by drain_node (or the CLI/TUI): phase" +
+			" (none/starting/waiting/evicting/done/failed), startedAt, the restarted InferenceServices, the current phase's deadline," +
+			" what it still waits on (remaining), and the failure message. Does not advance the drain: if the phase stays" +
+			" in progress past its deadline, no process is driving it, so call drain_node again to resume." +
+			" Accepts env_type/env_region/env_realm overrides.",
+	}, s.handleDrainStatus)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "reboot_node",
