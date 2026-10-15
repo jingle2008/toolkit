@@ -288,12 +288,7 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 // and re-resolve the tenant-owned maps against it; the override maps are
 // provably unaffected and left alone.
 //
-// Both the DAC and ImportedModel maps are re-keyed (not just the current
-// category) so a tenant owning resources in both resolves everywhere at
-// once. Each item retains its raw TenantID after the earlier name-keying,
-// so the suffix-keyed raw map is reconstructed from what's already loaded.
-// The GPUWorkload and InferenceService maps are keyed by node/namespace,
-// so their owners are re-resolved in place. Every map is re-resolved even
+// Every tenant-owned map is re-resolved (see resolveTenantOwners), even
 // when its owners don't change: upsertTenantByID may reallocate
 // ds.Tenants, which would leave Owner pointers into the old array.
 //
@@ -306,6 +301,18 @@ func (m *Model) applyTenantSave(entry models.TenantMetadata) {
 		return
 	}
 	ds.Tenants = upsertTenantByID(ds.Tenants, tenantFromEntry(entry))
+	resolveTenantOwners(ds)
+	m.refreshDisplay()
+}
+
+// resolveTenantOwners re-resolves every loaded tenant-owned map against
+// ds.Tenants. Both the DAC and ImportedModel maps are re-keyed (not just
+// the current category) so a tenant owning resources in both resolves
+// everywhere at once. Each item retains its raw TenantID after the
+// earlier name-keying, so the suffix-keyed raw map is reconstructed from
+// what's already loaded. The GPUWorkload and InferenceService maps are
+// keyed by node/namespace, so their owners are re-resolved in place.
+func resolveTenantOwners(ds *models.Dataset) {
 	if ds.DedicatedAIClusterMap != nil {
 		ds.SetDedicatedAIClusterMap(rawByTenantID(ds.DedicatedAIClusterMap,
 			func(d models.DedicatedAICluster) string { return d.TenantID }))
@@ -320,7 +327,6 @@ func (m *Model) applyTenantSave(entry models.TenantMetadata) {
 	if ds.InferenceServiceMap != nil {
 		ds.SetInferenceServiceMap(ds.InferenceServiceMap)
 	}
-	m.refreshDisplay()
 }
 
 // tenantFromEntry builds a Tenant from a saved metadata entry.

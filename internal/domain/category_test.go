@@ -48,12 +48,12 @@ func TestCategory_IsScope(t *testing.T) {
 	t.Parallel()
 	scopeCases := []Category{
 		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GPUPool, GPUNode,
-		DedicatedAICluster,
+		DedicatedAICluster, BaseModel, ImportedModel, ServingRuntime,
 	}
 	nonScopeCases := []Category{
 		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
 		ConsolePropertyRegionalOverride, PropertyRegionalOverride, ModelArtifact,
-		Environment, ServiceTenancy, InferenceService, ServingRuntime,
+		Environment, ServiceTenancy, InferenceService,
 	}
 	for _, c := range scopeCases {
 		t.Run("scope_"+c.String(), func(t *testing.T) {
@@ -76,19 +76,25 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		want  []Category
 	}
 	cases := []want{
-		{Tenant, []Category{LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster, ImportedModel}},
+		{Tenant, []Category{
+			LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster, ImportedModel,
+			GPUWorkload, InferenceService,
+		}},
 		{LimitDefinition, []Category{LimitTenancyOverride, LimitRegionalOverride}},
 		{ConsolePropertyDefinition, []Category{ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride}},
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},
 		{GPUPool, []Category{GPUNode}},
 		{GPUNode, []Category{GPUWorkload}},
-		{DedicatedAICluster, []Category{InferenceService}},
+		{DedicatedAICluster, []Category{InferenceService, GPUWorkload}},
+		{BaseModel, []Category{InferenceService}},
+		{ImportedModel, []Category{InferenceService}},
+		{ServingRuntime, []Category{InferenceService, GPUWorkload}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.scope.String(), func(t *testing.T) {
 			t.Parallel()
-			got := tc.scope.ScopedCategories()
-			assert.ElementsMatch(t, tc.want, got)
+			// Exact order: Enter drills into ScopedCategories()[0].
+			assert.Equal(t, tc.want, tc.scope.ScopedCategories())
 		})
 	}
 	// non-scope category should return nil
@@ -105,6 +111,8 @@ func TestCategory_Parents(t *testing.T) {
 		{DedicatedAICluster, []Category{Tenant}},
 		{ImportedModel, []Category{Tenant}},
 		{GPUNode, []Category{GPUPool}},
+		// References are not parents: a pod's DAC and an endpoint's
+		// model don't change where `o` goes without a breadcrumb.
 		{GPUWorkload, []Category{GPUNode}},
 		{InferenceService, []Category{DedicatedAICluster}},
 		{LimitRegionalOverride, []Category{LimitDefinition}},
@@ -118,7 +126,7 @@ func TestCategory_Parents(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.child.String(), func(t *testing.T) {
 			t.Parallel()
-			assert.ElementsMatch(t, tc.want, tc.child.Parents())
+			assert.Equal(t, tc.want, tc.child.Parents())
 		})
 	}
 	// Top-level categories have no parent.
@@ -132,6 +140,15 @@ func TestCategory_IsScopeOf(t *testing.T) {
 	assert.True(t, Tenant.IsScopeOf(ConsolePropertyTenancyOverride))
 	assert.True(t, Tenant.IsScopeOf(PropertyTenancyOverride))
 	assert.True(t, Tenant.IsScopeOf(DedicatedAICluster))
+	// References scope too: drill-in from a DAC to its pods, from a model
+	// to the endpoints serving it.
+	assert.True(t, DedicatedAICluster.IsScopeOf(GPUWorkload))
+	assert.True(t, BaseModel.IsScopeOf(InferenceService))
+	assert.True(t, ImportedModel.IsScopeOf(InferenceService))
+	assert.True(t, Tenant.IsScopeOf(GPUWorkload))
+	assert.True(t, Tenant.IsScopeOf(InferenceService))
+	assert.True(t, ServingRuntime.IsScopeOf(InferenceService))
+	assert.True(t, ServingRuntime.IsScopeOf(GPUWorkload))
 	assert.False(t, Tenant.IsScopeOf(GPUNode))
 	assert.False(t, LimitTenancyOverride.IsScopeOf(Tenant))
 }

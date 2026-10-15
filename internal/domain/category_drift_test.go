@@ -77,13 +77,17 @@ func TestIsEnvironmentScoped_EveryCategoryAccountedFor(t *testing.T) {
 	}
 }
 
-// Scope graph must be internally consistent: every child lists its parent back.
+// Scope graph must be internally consistent: every Contains child lists
+// its parent back, every References child does not, and every relation
+// is a drill-in target of its parent.
 func TestScopeGraph_RoundTrips(t *testing.T) {
 	t.Parallel()
-	for _, parent := range Categories {
-		for _, child := range parent.ScopedCategories() {
-			assert.Containsf(t, child.Parents(), parent,
-				"%s is scoped by %s but %s is not in %s.Parents()", child, parent, parent, child)
+	for _, r := range Relations() {
+		assert.Containsf(t, r.Parent.ScopedCategories(), r.Child, "%v: child not scoped by parent", r)
+		if r.Kind == Contains {
+			assert.Containsf(t, r.Child.Parents(), r.Parent, "%v: parent missing from %s.Parents()", r, r.Child)
+		} else {
+			assert.NotContainsf(t, r.Child.Parents(), r.Parent, "%v: a reference is not a parent", r)
 		}
 	}
 }
@@ -105,4 +109,61 @@ func TestAliases_UniqueAndRoundTrip(t *testing.T) {
 			assert.Equalf(t, c, got, "alias %q parses to %s, want %s", a, got, c)
 		}
 	}
+}
+
+// The relation registry must be well-formed: every endpoint is a data
+// category, nothing relates to itself, no edge is declared twice, and
+// the relation graph is acyclic (drill-in and the parent jump must
+// terminate).
+func TestRelations_WellFormed(t *testing.T) {
+	t.Parallel()
+	seen := make(map[Relation]bool)
+	for _, r := range Relations() {
+		for _, c := range []Category{r.Parent, r.Child} {
+			assert.Truef(t, c >= Tenant && c <= LastDataCategory, "%v: endpoint %v is not a data category", r, c)
+		}
+		assert.NotEqualf(t, r.Parent, r.Child, "%v relates a category to itself", r)
+		assert.Containsf(t, []RelationKind{Contains, References}, r.Kind, "%v: unknown kind", r)
+		assert.Falsef(t, seen[r], "%v declared twice", r)
+		seen[r] = true
+	}
+
+	// Depth-first search for a cycle through drill-in children.
+	const (
+		unvisited = iota
+		visiting
+		done
+	)
+	state := make(map[Category]int)
+	var visit func(c Category, path []Category)
+	visit = func(c Category, path []Category) {
+		switch state[c] {
+		case visiting:
+			t.Errorf("relation cycle: %v → %v", path, c)
+			return
+		case done:
+			return
+		}
+		state[c] = visiting
+		for _, child := range c.ScopedCategories() {
+			visit(child, append(path, c))
+		}
+		state[c] = done
+	}
+	for _, c := range Categories {
+		visit(c, nil)
+	}
+}
+
+// ScopedCategories and Parents hand out copies: a caller mutating the
+// result must not corrupt the shared registry index.
+func TestScopeGraph_ReturnsCopies(t *testing.T) {
+	t.Parallel()
+	got := Tenant.ScopedCategories()
+	got[0] = Alias
+	assert.Equal(t, LimitTenancyOverride, Tenant.ScopedCategories()[0])
+
+	parents := LimitTenancyOverride.Parents()
+	parents[0] = Alias
+	assert.Equal(t, Tenant, LimitTenancyOverride.Parents()[0])
 }
