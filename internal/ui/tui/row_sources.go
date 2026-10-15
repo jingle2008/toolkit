@@ -266,6 +266,8 @@ var rowSources = map[domain.Category]rowSource{
 		map[domain.Category]parentKey[models.GPUWorkload]{
 			domain.GPUNode:            byGroup[models.GPUWorkload](),
 			domain.DedicatedAICluster: byField(func(w models.GPUWorkload) string { return w.Namespace }),
+			domain.Tenant:             byField(func(w models.GPUWorkload) string { return ownerName(w.Owner) }),
+			domain.ServingRuntime:     byField(func(w models.GPUWorkload) string { return w.Runtime }),
 		},
 		func(d *models.Dataset) map[string][]models.GPUWorkload { return d.GPUWorkloadMap }),
 	domain.DedicatedAICluster: groupedSource(columns.DACColumns,
@@ -278,6 +280,8 @@ var rowSources = map[domain.Category]rowSource{
 			domain.DedicatedAICluster: byGroup[models.InferenceService](),
 			domain.BaseModel:          byField(sharedCatalogModel),
 			domain.ImportedModel:      byField(currentAPIModel),
+			domain.Tenant:             byField(func(s models.InferenceService) string { return ownerName(s.Owner) }),
+			domain.ServingRuntime:     byField(currentAPIRuntime),
 		},
 		func(d *models.Dataset) map[string][]models.InferenceService { return d.InferenceServiceMap }),
 }
@@ -305,4 +309,26 @@ func currentAPIModel(s models.InferenceService) string {
 		return ""
 	}
 	return s.Model
+}
+
+// currentAPIRuntime returns the ClusterServingRuntime an ome.io endpoint
+// names, or "" for a legacy endpoint: its runtime is a legacy
+// ome.oracle.com runtime, which can share a name with an ome.io one (the
+// legacy content-moderator's gais-contentmoderate does on dp-prod-ord).
+func currentAPIRuntime(s models.InferenceService) string {
+	if s.Legacy {
+		return ""
+	}
+	return s.Runtime
+}
+
+// ownerName returns the resolved owning tenant's name, or "" when the
+// row's tenancy didn't resolve — such a row is under no tenant. The raw
+// tenancy-id is deliberately not used: it is an OCID suffix, never a
+// Tenant name.
+func ownerName(t *models.Tenant) string {
+	if t == nil {
+		return ""
+	}
+	return t.Name
 }

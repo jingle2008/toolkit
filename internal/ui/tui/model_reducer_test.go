@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -447,4 +448,36 @@ func TestHandleDataMsg_IgnoresPerCategoryPayload(t *testing.T) {
 	ds := &models.Dataset{}
 	m.handleDataMsg(dataMsg{Data: ds})
 	require.Same(t, ds, m.dataset, "foundational *models.Dataset payload must still be applied")
+}
+
+// TestHandleTenancyOverridesLoaded_ResolvesEarlierClusterRows covers
+// cluster rows that loaded before the tenants (e.g. after an environment
+// switch while viewing DACs): when the tenants arrive, those rows must
+// resolve, or drilling in from the tenant would miss them.
+func TestHandleTenancyOverridesLoaded_ResolvesEarlierClusterRows(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gens.msg = 1
+	m.dataset.Tenants = nil
+	m.dataset.SetDedicatedAIClusterMap(map[string][]models.DedicatedAICluster{
+		"sfx": {{Name: "dac-1", TenantID: "sfx"}},
+	})
+	m.dataset.SetGPUWorkloadMap(map[string][]models.GPUWorkload{
+		"node-a": {{Name: "pod-1", Node: "node-a", TenantID: "sfx"}},
+	})
+	m.dataset.SetInferenceServiceMap(map[string][]models.InferenceService{
+		"dac-1": {{Name: "isvc-1", Namespace: "dac-1", TenantID: "sfx"}},
+	})
+	require.Contains(t, m.dataset.DedicatedAIClusterMap, "sfx", "unresolved before tenants load")
+
+	m.handleTenancyOverridesLoaded(models.TenancyOverrideGroup{
+		Tenants: []models.Tenant{{Name: "Tenant X", IDs: []string{"ocid1.tenancy.oc1..sfx"}}},
+	}, 1)
+
+	require.Len(t, m.dataset.DedicatedAIClusterMap["Tenant X"], 1)
+	assert.NotContains(t, m.dataset.DedicatedAIClusterMap, "sfx")
+	require.NotNil(t, m.dataset.GPUWorkloadMap["node-a"][0].Owner)
+	assert.Equal(t, "Tenant X", m.dataset.GPUWorkloadMap["node-a"][0].Owner.Name)
+	require.NotNil(t, m.dataset.InferenceServiceMap["dac-1"][0].Owner)
+	assert.Equal(t, "Tenant X", m.dataset.InferenceServiceMap["dac-1"][0].Owner.Name)
 }

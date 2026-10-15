@@ -161,3 +161,89 @@ func TestEnterOnImportedModel_DrillsIntoInferenceServices(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, domain.Scope{Category: domain.Tenant, Name: "tenant-1"}, got)
 }
+
+// A tenant scopes pods and endpoints by their resolved owner; rows whose
+// tenancy didn't resolve are under no tenant.
+func TestComputeTableRows_TenantScopesWorkloadsAndEndpoints(t *testing.T) {
+	t.Parallel()
+	tenant := &models.Tenant{Name: "Tenant X"}
+	other := &models.Tenant{Name: "Tenant Y"}
+	ds := &models.Dataset{
+		GPUWorkloadMap: map[string][]models.GPUWorkload{
+			"node-a": {{Name: "pod-1", Owner: tenant}, {Name: "pod-2", Owner: other}},
+			"node-b": {{Name: "pod-3", Owner: tenant}, {Name: "pod-4", TenantID: "Tenant X"}},
+		},
+		InferenceServiceMap: map[string][]models.InferenceService{
+			"dac-1": {{Name: "isvc-1", Owner: tenant}},
+			"dac-2": {{Name: "isvc-2", Owner: other}},
+			"llama": {{Name: "isvc-3"}}, // on-demand: no tenant
+		},
+	}
+	scope := &domain.Scope{Category: domain.Tenant, Name: "Tenant X"}
+
+	rows, _ := computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, false)
+	assert.Equal(t, []string{"pod-1", "pod-3"}, rowNames(rows), "pod-4's raw tenancy-id must not match a tenant name")
+
+	rows, _ = computeTableRows(ds, domain.InferenceService, scope, "", "", true, false)
+	assert.Equal(t, []string{"isvc-1"}, rowNames(rows))
+}
+
+// A runtime scopes the endpoints naming it and the pods running it. A
+// legacy endpoint never matches, even when its legacy runtime shares the
+// name, and a pod matches by the runtime it actually runs — which covers
+// endpoints whose runtime OME selected at deploy time.
+func TestComputeTableRows_ServingRuntimeScopesEndpointsAndPods(t *testing.T) {
+	t.Parallel()
+	const rt = "gais-contentmoderate"
+	ds := &models.Dataset{
+		InferenceServiceMap: map[string][]models.InferenceService{
+			"dac-1":             {{Name: "isvc-1", Runtime: rt}},
+			"dac-2":             {{Name: "isvc-2"}}, // runtime selected at deploy time
+			"dac-3":             {{Name: "isvc-3", Runtime: "vllm"}},
+			"content-moderator": {{Name: "isvc-4", Runtime: rt, Legacy: true}},
+		},
+		GPUWorkloadMap: map[string][]models.GPUWorkload{
+			"node-a": {{Name: "pod-1", Namespace: "dac-1", Runtime: rt}, {Name: "pod-2", Namespace: "dac-2", Runtime: rt}},
+			"node-b": {{Name: "pod-3", Namespace: "dac-3", Runtime: "vllm"}},
+		},
+	}
+	scope := &domain.Scope{Category: domain.ServingRuntime, Name: rt}
+
+	rows, _ := computeTableRows(ds, domain.InferenceService, scope, "", "", true, false)
+	assert.Equal(t, []string{"isvc-1"}, rowNames(rows))
+
+	rows, _ = computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, false)
+	assert.Equal(t, []string{"pod-1", "pod-2"}, rowNames(rows))
+}
+
+// Enter on a ServingRuntime drills into the endpoints naming it; o
+// returns through the breadcrumb (a runtime has no structural parent).
+func TestEnterOnServingRuntime_DrillsIntoInferenceServices(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.ServingRuntime
+	m.rawRows = []table.Row{{"vllm"}}
+	m.table.SetRows(m.rawRows)
+	m.table.SetCursor(0)
+
+	_ = m.enterContext()
+	require.Equal(t, domain.InferenceService, m.category)
+	require.Equal(t, &domain.Scope{Category: domain.ServingRuntime, Name: "vllm"}, m.scope)
+
+	_ = m.jumpToParent()
+	assert.Equal(t, domain.ServingRuntime, m.category)
+}
+
+// Enter on a Tenant still opens its limit overrides: the reference
+// children are listed after the Contains ones.
+func TestEnterOnTenant_StillOpensLimitOverrides(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.Tenant
+	m.rawRows = []table.Row{{"Tenant X"}}
+	m.table.SetRows(m.rawRows)
+	m.table.SetCursor(0)
+
+	_ = m.enterContext()
+	assert.Equal(t, domain.LimitTenancyOverride, m.category)
+}

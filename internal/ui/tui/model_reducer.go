@@ -465,6 +465,10 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 		ds.LimitTenancyOverrideMap = group.LimitTenancyOverrideMap
 		ds.ConsolePropertyTenancyOverrideMap = group.ConsolePropertyTenancyOverrideMap
 		ds.PropertyTenancyOverrideMap = group.PropertyTenancyOverrideMap
+		// Cluster categories may have loaded first (e.g. an environment
+		// switch while viewing DACs): resolve their owners against the
+		// new tenants, or drilling in from a tenant would miss them.
+		resolveTenantOwners(ds)
 	}, domain.Tenant, len(group.Tenants))
 }
 

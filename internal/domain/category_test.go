@@ -48,12 +48,12 @@ func TestCategory_IsScope(t *testing.T) {
 	t.Parallel()
 	scopeCases := []Category{
 		Tenant, LimitDefinition, ConsolePropertyDefinition, PropertyDefinition, GPUPool, GPUNode,
-		DedicatedAICluster, BaseModel, ImportedModel,
+		DedicatedAICluster, BaseModel, ImportedModel, ServingRuntime,
 	}
 	nonScopeCases := []Category{
 		LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
 		ConsolePropertyRegionalOverride, PropertyRegionalOverride, ModelArtifact,
-		Environment, ServiceTenancy, InferenceService, ServingRuntime,
+		Environment, ServiceTenancy, InferenceService,
 	}
 	for _, c := range scopeCases {
 		t.Run("scope_"+c.String(), func(t *testing.T) {
@@ -76,7 +76,10 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		want  []Category
 	}
 	cases := []want{
-		{Tenant, []Category{LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster, ImportedModel}},
+		{Tenant, []Category{
+			LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride, DedicatedAICluster, ImportedModel,
+			GPUWorkload, InferenceService,
+		}},
 		{LimitDefinition, []Category{LimitTenancyOverride, LimitRegionalOverride}},
 		{ConsolePropertyDefinition, []Category{ConsolePropertyTenancyOverride, ConsolePropertyRegionalOverride}},
 		{PropertyDefinition, []Category{PropertyTenancyOverride, PropertyRegionalOverride}},
@@ -85,6 +88,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 		{DedicatedAICluster, []Category{InferenceService, GPUWorkload}},
 		{BaseModel, []Category{InferenceService}},
 		{ImportedModel, []Category{InferenceService}},
+		{ServingRuntime, []Category{InferenceService, GPUWorkload}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.scope.String(), func(t *testing.T) {
@@ -141,6 +145,10 @@ func TestCategory_IsScopeOf(t *testing.T) {
 	assert.True(t, DedicatedAICluster.IsScopeOf(GPUWorkload))
 	assert.True(t, BaseModel.IsScopeOf(InferenceService))
 	assert.True(t, ImportedModel.IsScopeOf(InferenceService))
+	assert.True(t, Tenant.IsScopeOf(GPUWorkload))
+	assert.True(t, Tenant.IsScopeOf(InferenceService))
+	assert.True(t, ServingRuntime.IsScopeOf(InferenceService))
+	assert.True(t, ServingRuntime.IsScopeOf(GPUWorkload))
 	assert.False(t, Tenant.IsScopeOf(GPUNode))
 	assert.False(t, LimitTenancyOverride.IsScopeOf(Tenant))
 }

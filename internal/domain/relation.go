@@ -41,6 +41,10 @@ var relations = []Relation{
 	{Tenant, PropertyTenancyOverride, Contains},
 	{Tenant, DedicatedAICluster, Contains},
 	{Tenant, ImportedModel, Contains},
+	// A tenant's pods and endpoints, by their resolved owner. Listed after
+	// the Contains children so Enter still opens the limit overrides.
+	{Tenant, GPUWorkload, References},
+	{Tenant, InferenceService, References},
 
 	{LimitDefinition, LimitTenancyOverride, Contains},
 	{LimitDefinition, LimitRegionalOverride, Contains},
@@ -61,6 +65,12 @@ var relations = []Relation{
 	// imported by a tenant.
 	{BaseModel, InferenceService, References},
 	{ImportedModel, InferenceService, References},
+
+	// What uses a runtime: the endpoints naming it (spec.runtime), then
+	// the pods actually running it (serving-runtime label) — which also
+	// covers endpoints whose runtime OME selects at deploy time.
+	{ServingRuntime, InferenceService, References},
+	{ServingRuntime, GPUWorkload, References},
 }
 
 // Relations returns a copy of the relation registry, in declaration order.
