@@ -1,6 +1,7 @@
 package keys
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -87,5 +88,55 @@ func TestFullHelp_QuickSwitchLeadsInSlotOrder(t *testing.T) {
 	}
 	if got := full[1][0].Help().Desc; got != "Alpha" {
 		t.Errorf("second column = %q, want Alpha", got)
+	}
+}
+
+func headerDescs(cols [][]key.Binding) []string {
+	var out []string
+	for _, col := range cols {
+		for _, b := range col {
+			out = append(out, b.Help().Desc)
+		}
+	}
+	return out
+}
+
+func TestHeaderHelp_RanksActionsThenCoreThenHelp(t *testing.T) {
+	t.Parallel()
+	km := KeyMap{
+		Global:  []key.Binding{Help, Quit, Back, ToggleLog},
+		Mode:    []key.Binding{FilterMode, NextCategory},
+		Context: []key.Binding{Refresh, SortAge, Delete},
+	}
+	got := headerDescs(km.HeaderHelp(0, nil))
+	want := []string{"Delete", "Refresh", "Back/Clear", "Filter mode", "Help"}
+	if !slices.Equal(got, want) {
+		t.Errorf("HeaderHelp() = %v, want %v", got, want)
+	}
+}
+
+func TestHeaderHelp_DropsCoreBeforeActionsAndCountsHidden(t *testing.T) {
+	t.Parallel()
+	km := KeyMap{
+		Global:  []key.Binding{Help, Back},
+		Mode:    []key.Binding{FilterMode, CommandMode},
+		Context: []key.Binding{Refresh, Delete},
+	}
+	// Budget for exactly four bindings, Help included.
+	count := func(cols [][]key.Binding) int { return len(headerDescs(cols)) }
+	got := headerDescs(km.HeaderHelp(4, count))
+	want := []string{"Delete", "Refresh", "Back/Clear", "Help +2 more"}
+	if !slices.Equal(got, want) {
+		t.Errorf("HeaderHelp() = %v, want %v", got, want)
+	}
+}
+
+func TestHeaderHelp_QuickSwitchLeads(t *testing.T) {
+	t.Parallel()
+	qs := key.NewBinding(key.WithKeys("0"), key.WithHelp("<0>", "dp-dev-phx"))
+	km := KeyMap{Global: []key.Binding{Help}, QuickSwitch: []key.Binding{qs}}
+	cols := km.HeaderHelp(0, nil)
+	if len(cols) != 2 || cols[0][0].Help().Desc != "dp-dev-phx" {
+		t.Errorf("quick-switch column not leading: %v", headerDescs(cols))
 	}
 }
