@@ -51,6 +51,11 @@ func TestServingRuntimeGPUFamilies(t *testing.T) {
 			ServingRuntime{InstanceTypes: []string{"BM.GPU.B4.8", "BM.GPU4.8", "BM.GPU.H100.8", "BM.GPU.A100-v2.8"}},
 			[]string{"a100-40gb", "h100", "a100-80gb"},
 		},
+		// -NC variants are the same GPU as their plain shape.
+		"nc variants share a family": {
+			ServingRuntime{InstanceTypes: []string{"BM.GPU.H100-NC.8", "BM.GPU.H100.8", "BM.GPU.H200.8", "BM.GPU.H200-NC.8", "BM.GPU.B300.8"}},
+			[]string{"h100", "h200", "b300"},
+		},
 		"unknown shapes pass through whole": {
 			ServingRuntime{InstanceTypes: []string{"BM.GPU.H200-NC.8", "VM.GPU.X.1"}},
 			[]string{"h200", "VM.GPU.X.1"},
