@@ -210,7 +210,14 @@ func (m *Model) centered(msg string) string {
 func (m *Model) frame(main string) string {
 	km := m.keys
 	km.QuickSwitch = m.quickSwitchBindings(m.viewMode)
-	helpView := m.help.View(km)
+	// Measure on an unbounded copy: the real bubble truncates at Width,
+	// which would cap the measurement and hide overflow from HeaderHelp.
+	measure := func(cols [][]key.Binding) int {
+		h := *m.help
+		h.Width = 0
+		return lipgloss.Width(h.FullHelpView(cols))
+	}
+	helpView := m.help.FullHelpView(km.HeaderHelp(m.help.Width, measure))
 	infoView := m.theme.InfoValue.Render(m.infoView())
 	header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
 	status := m.statusView()
