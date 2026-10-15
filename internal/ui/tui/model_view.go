@@ -239,7 +239,7 @@ func (m *Model) frame(main string) string {
 	}
 	header := lipgloss.JoinHorizontal(lipgloss.Top, m.headerInfo(), helpView)
 	if m.showLogo(m.viewWidth) {
-		logo := m.theme.InfoKey.PaddingRight(view.LogoMargin).Render(view.Logo)
+		logo := view.RenderLogo(m.theme.LogoTop, m.theme.LogoBottom)
 		header = lipgloss.JoinHorizontal(lipgloss.Top, header,
 			lipgloss.PlaceHorizontal(max(m.viewWidth-lipgloss.Width(header), 0), lipgloss.Right, logo))
 	}
