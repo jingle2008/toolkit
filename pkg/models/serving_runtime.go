@@ -137,8 +137,11 @@ var shapeFamilies = map[string]string{
 	"BM.GPU.B4.8":      "a100-40gb",
 	"BM.GPU.A100-v2.8": "a100-80gb",
 	"BM.GPU.H100.8":    "h100",
+	"BM.GPU.H100-NC.8": "h100",
+	"BM.GPU.H200.8":    "h200",
 	"BM.GPU.H200-NC.8": "h200",
 	"BM.GPU.B200.8":    "b200",
+	"BM.GPU.B300.8":    "b300",
 }
 
 /*

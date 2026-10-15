@@ -188,7 +188,7 @@ var ServingRuntimeTUIColumns = Set[models.ServingRuntime]{Columns: []Column[mode
 		Render: func(r models.ServingRuntime) string { return r.Name },
 	},
 	{
-		Title: "Hardware", Key: "hardware", Ratio: 0.27, TruncateMiddle: true,
+		Title: "Hardware", Key: "hardware", Ratio: 0.3, TruncateMiddle: true,
 		// GPU families only, normalized across both constraint kinds; the
 		// raw lists stay in the detail view.
 		Render: func(r models.ServingRuntime) string { return strings.Join(r.GPUFamilies(), ", ") },
@@ -200,13 +200,13 @@ var ServingRuntimeTUIColumns = Set[models.ServingRuntime]{Columns: []Column[mode
 		Render: servingRuntimeGPUPerNode,
 	},
 	{
-		Title: "Image", Key: "image", Ratio: 0.29, TruncateMiddle: true,
+		Title: "Image", Key: "image", Ratio: 0.3, TruncateMiddle: true,
 		Render: servingRuntimeImage,
 	},
 	{
 		// Status folds spec.disabled and autoSelect into one word; see
 		// models.ServingRuntime.Status.
-		Title: "Status", Key: "status", Ratio: 0.11,
+		Title: "Status", Key: "status", Ratio: 0.07,
 		Render: models.ServingRuntime.Status,
 	},
 }}
