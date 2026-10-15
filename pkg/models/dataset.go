@@ -68,6 +68,9 @@ func (d *Dataset) FindBaseModelByName(name string) *BaseModel {
 }
 
 // buildTenantIDSuffixMap builds a map from tenant ID suffix to tenant index.
+// When several tenants claim the same ID (flagged via Tenant.SharedWith),
+// the first one in d.Tenants wins; the config loader sorts tenants by
+// name, so the choice is stable across runs.
 func (d *Dataset) buildTenantIDSuffixMap() map[string]int {
 	suffixMap := make(map[string]int)
 
@@ -75,7 +78,9 @@ func (d *Dataset) buildTenantIDSuffixMap() map[string]int {
 		for _, id := range tenant.IDs {
 			parts := strings.Split(id, ".")
 			suffix := parts[len(parts)-1]
-			suffixMap[suffix] = i
+			if _, taken := suffixMap[suffix]; !taken {
+				suffixMap[suffix] = i
+			}
 		}
 	}
 

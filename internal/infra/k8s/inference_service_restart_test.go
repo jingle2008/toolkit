@@ -16,7 +16,8 @@ import (
 func newISVCClient(t *testing.T, srcs ...string) *dynamicfake.FakeDynamicClient {
 	t.Helper()
 	listKinds := map[schema.GroupVersionResource]string{
-		inferenceServiceGVR: "InferenceServiceList",
+		inferenceServiceGVR:   "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	objs := make([]runtime.Object, 0, len(srcs))
 	for _, src := range srcs {
@@ -33,6 +34,16 @@ kind: InferenceService
 metadata:
   name: embed-v4
   namespace: amaaaaaa-dac
+`
+
+// isvcLegacyEmbed is a legacy endpoint sharing embed-v4's name in
+// another namespace, making a namespace-less lookup ambiguous across APIs.
+const isvcLegacyEmbed = `
+apiVersion: ome.oracle.com/v1alpha1
+kind: InferenceService
+metadata:
+  name: embed-v4
+  namespace: legacy-ns
 `
 
 func TestResolveInferenceService(t *testing.T) {
@@ -52,6 +63,19 @@ func TestResolveInferenceService(t *testing.T) {
 		{
 			name: "ambiguous lists namespaces", objs: []string{isvcOnDemand, isvcEmbedOtherNS}, target: "embed-v4",
 			wantErr: "multiple namespaces (amaaaaaa-dac, embed-v4); specify a namespace",
+		},
+		{
+			name: "legacy endpoint resolves", objs: []string{isvcLegacyDedicated}, target: "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
+			want: "amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa",
+		},
+		{
+			name: "legacy endpoint in namespace resolves", objs: []string{isvcLegacyDedicated},
+			namespace: "amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa", target: "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
+			want: "amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa",
+		},
+		{
+			name: "ambiguity spans both APIs", objs: []string{isvcOnDemand, isvcLegacyEmbed}, target: "embed-v4",
+			wantErr: "multiple namespaces (embed-v4, legacy-ns); specify a namespace",
 		},
 		{name: "ambiguity resolved by namespace", objs: []string{isvcOnDemand, isvcEmbedOtherNS}, namespace: "amaaaaaa-dac", target: "embed-v4", want: "amaaaaaa-dac"},
 	}
@@ -89,6 +113,24 @@ func TestRestartInferenceService_StampsRestartedAt(t *testing.T) {
 	got, err = client.Resource(inferenceServiceGVR).Namespace(ns).Get(context.Background(), name, v1.GetOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, "2026-10-14T22:05:05Z", got.GetAnnotations()[restartedAtAnnotation])
+}
+
+// TestRestartInferenceService_Legacy pins that a legacy endpoint (absent
+// from the ome.io API) gets the same restartedAt patch on the legacy API.
+func TestRestartInferenceService_Legacy(t *testing.T) {
+	t.Parallel()
+	client := newISVCClient(t, isvcLegacyDedicated)
+	ns := "amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa"
+	name := "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq"
+	now := time.Date(2026, 10, 14, 15, 4, 5, 0, time.UTC)
+
+	require.NoError(t, restartInferenceService(context.Background(), client, ns, name, now))
+
+	got, err := client.Resource(inferenceServiceV1GVR).Namespace(ns).Get(context.Background(), name, v1.GetOptions{})
+	require.NoError(t, err)
+	assert.Equal(t, "2026-10-14T15:04:05Z", got.GetAnnotations()[restartedAtAnnotation])
+	assert.Equal(t, "aaaaaaaaegodxkqnjoywklqsvrafpzrvilgq56mzgbr52mlffb6x4kz2ddoa", got.GetLabels()["tenancy-id"],
+		"merge patch leaves the rest of the object alone")
 }
 
 func TestRestartInferenceService_NotFound(t *testing.T) {

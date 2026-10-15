@@ -1,6 +1,9 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // Tenant represents a tenant entity.
 type Tenant struct {
@@ -8,6 +11,11 @@ type Tenant struct {
 	IDs        []string `json:"ids"`
 	IsInternal bool     `json:"is_internal"`
 	Note       string   `json:"note,omitempty"`
+	// SharedWith names the other tenants that claim one of this
+	// tenant's OCIDs — typically the same tenancy filed under two
+	// override directories (e.g. "OABCS1" and "oabcs1"). Populated by
+	// the config loader; a non-empty value marks the tenant faulty.
+	SharedWith []string `json:"shared_with,omitempty"`
 }
 
 // GetName returns the name of the tenant.
@@ -30,12 +38,14 @@ func (t Tenant) GetTenantID() string {
 func (t Tenant) FilterableFields() []string {
 	var fields []string
 	if len(t.IDs) > 1 {
-		fields = t.IDs[1:]
+		fields = slices.Clone(t.IDs[1:])
 	}
+	fields = append(fields, t.SharedWith...)
 	return append(fields, t.GetTenantID(), t.Name, fmt.Sprint(t.IsInternal), t.Note)
 }
 
-// IsFaulty returns true if the tenant has multiple IDs.
+// IsFaulty returns true if the tenant has multiple IDs or shares an ID
+// with another tenant.
 func (t Tenant) IsFaulty() bool {
-	return len(t.IDs) > 1
+	return len(t.IDs) > 1 || len(t.SharedWith) > 0
 }

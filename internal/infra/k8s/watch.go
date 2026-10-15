@@ -276,9 +276,14 @@ var (
 	inferenceServiceGVR      = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "inferenceservices"}
 )
 
-// WatchInferenceServices triggers on InferenceService CR changes.
+// WatchInferenceServices triggers on InferenceService CR changes (both
+// API versions LoadInferenceServices merges).
 func WatchInferenceServices(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {
-	return watchTrigger(ctx, DebounceWindow, crWatchOpener(client, inferenceServiceGVR))
+	return watchTrigger(
+		ctx, DebounceWindow,
+		crWatchOpener(client, inferenceServiceGVR),
+		crWatchOpener(client, inferenceServiceV1GVR),
+	)
 }
 
 // WatchServingRuntimes triggers on ClusterServingRuntime CR changes.

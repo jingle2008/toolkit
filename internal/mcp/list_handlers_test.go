@@ -145,7 +145,12 @@ func TestList_GPUNodes_FlatShape(t *testing.T) {
 // other method delegates to stubLoader. Mirrors fakeGPUNodeLoader.
 type fakeDACLoader struct {
 	stubLoader
-	dacs map[string][]models.DedicatedAICluster
+	dacs    map[string][]models.DedicatedAICluster
+	tenants []models.Tenant
+}
+
+func (f *fakeDACLoader) LoadTenancyOverrideGroup(context.Context, string, models.Environment) (models.TenancyOverrideGroup, error) {
+	return models.TenancyOverrideGroup{Tenants: f.tenants}, nil
 }
 
 func (f *fakeDACLoader) LoadDedicatedAIClusters(context.Context, string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
@@ -185,6 +190,37 @@ func TestList_DACs_FlatShape(t *testing.T) {
 			_, hasTenant := item["tenant"]
 			assert.False(t, hasTenant, "redundant `tenant` field should not be added (tenantId carries it)")
 		})
+}
+
+// TestList_DACs_ResolvesOwner pins that list_dacs resolves the owning
+// tenant like the TUI: `owner` is set from the repo's tenant list and the
+// tenant name is matchable by `filter`, while the raw `tenantId` stays.
+func TestList_DACs_ResolvesOwner(t *testing.T) {
+	t.Parallel()
+	loader := &fakeDACLoader{
+		dacs: map[string][]models.DedicatedAICluster{
+			"acme": {{Name: "dac-1", Status: "READY", TenantID: "acme"}},
+		},
+		tenants: []models.Tenant{{Name: "Acme Corp", IDs: []string{"ocid1.tenancy.oc1..acme"}}},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	sess := newTestPair(ctx, t, loader)
+
+	res, err := sess.CallTool(ctx, &sdk.CallToolParams{Name: "list_dacs", Arguments: map[string]any{"filter": "Acme Corp"}})
+	require.NoError(t, err)
+	require.False(t, res.IsError, "%+v", res)
+	raw, err := json.Marshal(res.StructuredContent)
+	require.NoError(t, err)
+	var out struct {
+		Items []map[string]any `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &out))
+	require.Len(t, out.Items, 1, "tenant-name filter should match: %s", raw)
+	assert.Equal(t, "acme", out.Items[0]["tenantId"])
+	owner, ok := out.Items[0]["owner"].(map[string]any)
+	require.True(t, ok, "owner must be set: %s", raw)
+	assert.Equal(t, "Acme Corp", owner["name"])
 }
 
 // TestList_ModelArtifacts_FlatShape pins the wire shape: each item

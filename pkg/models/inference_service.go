@@ -22,13 +22,16 @@ type InferenceService struct {
 	Model     string `json:"model,omitempty"`
 	// ImportedModel is true when the model ref is a namespaced BaseModel
 	// (tenant-imported) rather than a ClusterBaseModel.
-	ImportedModel bool    `json:"importedModel,omitempty"`
-	Runtime       string  `json:"runtime,omitempty"`
-	MinReplicas   int     `json:"minReplicas"`
-	MaxReplicas   int     `json:"maxReplicas"`
-	Ready         string  `json:"ready"`
-	Age           string  `json:"age"`
-	Owner         *Tenant `json:"owner,omitempty"`
+	ImportedModel bool   `json:"importedModel,omitempty"`
+	Runtime       string `json:"runtime,omitempty"`
+	MinReplicas   int    `json:"minReplicas"`
+	MaxReplicas   int    `json:"maxReplicas"`
+	Ready         string `json:"ready"`
+	Age           string `json:"age"`
+	// Legacy is true for an ome.oracle.com/v1alpha1 InferenceService —
+	// an endpoint on a legacy DAC.
+	Legacy bool    `json:"legacy,omitempty"`
+	Owner  *Tenant `json:"owner,omitempty"`
 }
 
 // GetName returns the inference service name.
@@ -41,7 +44,11 @@ func (s InferenceService) IsFaulty() bool { return s.Ready != "True" }
 // excluded (matching GPUWorkload): a formatted duration is noise for
 // text filtering.
 func (s InferenceService) FilterableFields() []string {
-	return []string{s.Name, s.Namespace, s.Type, s.TenantID, s.Model, s.Runtime, s.Ready}
+	fields := []string{s.Name, s.Namespace, s.Type, s.TenantID, s.Model, s.Runtime, s.Ready}
+	if s.Legacy {
+		fields = append(fields, "legacy")
+	}
+	return fields
 }
 
 // IsDedicated reports whether the endpoint runs on a dedicated AI cluster.

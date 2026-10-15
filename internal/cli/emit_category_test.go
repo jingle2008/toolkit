@@ -283,3 +283,70 @@ func TestEmitCategory_UnsupportedFormat(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported format")
 }
+
+// tenantEmitLoader is emitLoader with a tenant whose OCID suffix matches
+// the scripted tenant-owned rows' tenancy-id ("t1"), or a tenant-load
+// failure when tenantErr is set.
+type tenantEmitLoader struct {
+	emitLoader
+	tenantErr error
+}
+
+func (l tenantEmitLoader) LoadTenancyOverrideGroup(context.Context, string, models.Environment) (models.TenancyOverrideGroup, error) {
+	if l.tenantErr != nil {
+		return models.TenancyOverrideGroup{}, l.tenantErr
+	}
+	return models.TenancyOverrideGroup{
+		Tenants: []models.Tenant{{Name: "Tenant One", IDs: []string{"ocid1.tenancy.oc1..t1"}}},
+	}, nil
+}
+
+// TestEmitCategory_ResolvesTenantOwners pins that `toolkit get` resolves
+// tenant-owned rows the way the TUI does: each row gains an `owner`, and
+// the tenant name is matchable by --filter (DAC / ImportedModel are
+// re-keyed by it).
+func TestEmitCategory_ResolvesTenantOwners(t *testing.T) {
+	t.Parallel()
+	for _, cat := range []domain.Category{domain.DedicatedAICluster, domain.ImportedModel, domain.InferenceService} {
+		t.Run(cat.String(), func(t *testing.T) {
+			t.Parallel()
+			var buf bytes.Buffer
+			err := emitCategory(context.Background(), &buf, tenantEmitLoader{}, cat,
+				config.Config{}, testEnv(), "", 0,
+				output.Options{Format: output.FormatJSON}, nil)
+			require.NoError(t, err)
+			var got []map[string]any
+			require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+			require.Len(t, got, 1)
+			owner, ok := got[0]["owner"].(map[string]any)
+			require.True(t, ok, "owner must be set: %s", buf.String())
+			assert.Equal(t, "Tenant One", owner["name"])
+			assert.Equal(t, "t1", got[0]["tenantId"], "raw tenantId is kept")
+		})
+	}
+
+	// The re-keyed group key makes the tenant name filterable.
+	var buf bytes.Buffer
+	err := emitCategory(context.Background(), &buf, tenantEmitLoader{}, domain.DedicatedAICluster,
+		config.Config{}, testEnv(), "tenant one", 0, // runGet lowercases --filter
+		output.Options{Format: output.FormatTable}, nil)
+	require.NoError(t, err)
+	assert.Contains(t, buf.String(), "dac-a")
+	assert.Contains(t, buf.String(), "Tenant One")
+}
+
+// TestEmitCategory_TenantLoadFailureDegrades pins that a tenant-load
+// failure doesn't fail `toolkit get dac`: rows still print, unresolved.
+func TestEmitCategory_TenantLoadFailureDegrades(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	err := emitCategory(context.Background(), &buf, tenantEmitLoader{tenantErr: errors.New("no repo")},
+		domain.DedicatedAICluster, config.Config{}, testEnv(), "", 0,
+		output.Options{Format: output.FormatJSON}, nil)
+	require.NoError(t, err)
+	var got []map[string]any
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+	require.Len(t, got, 1)
+	assert.Equal(t, "dac-a", got[0]["name"])
+	assert.NotContains(t, got[0], "owner")
+}

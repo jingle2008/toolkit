@@ -6,9 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -73,6 +75,82 @@ status:
   - status: "False"
     type: Ready
 `
+
+// isvcLegacyDedicated is a real legacy (ome.oracle.com/v1alpha1)
+// endpoint on a legacy DAC, trimmed to the fields the parser reads.
+const isvcLegacyDedicated = `
+apiVersion: ome.oracle.com/v1alpha1
+kind: InferenceService
+metadata:
+  name: amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq
+  namespace: amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa
+  creationTimestamp: "2025-08-12T00:00:00Z"
+  labels:
+    tenancy-id: aaaaaaaaegodxkqnjoywklqsvrafpzrvilgq56mzgbr52mlffb6x4kz2ddoa
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      dedicatedAIClusterRef:
+        name: amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa
+      modelFormat: {name: huggingface, version: "1"}
+      modelRefs:
+      - kind: Model
+        name: amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq
+      name: ""
+      runtime: vllm-generic-v1
+status:
+  conditions:
+  - {status: "True", type: PredictorReady}
+  - {status: "True", type: Ready}
+`
+
+// isvcLegacyShared is a legacy shared endpoint: no DAC ref, a model ref
+// without kind, and a non-DAC namespace.
+const isvcLegacyShared = `
+apiVersion: ome.oracle.com/v1alpha1
+kind: InferenceService
+metadata:
+  name: content-moderator
+  namespace: content-moderator
+spec:
+  predictor:
+    minReplicas: 2
+    maxReplicas: 3
+    model:
+      modelRefs:
+      - name: content-moderator
+      runtime: gais-contentmoderate
+`
+
+func TestParseLegacyInferenceService(t *testing.T) {
+	t.Parallel()
+	got := parseLegacyInferenceService(parseYAML(t, isvcLegacyDedicated))
+	assert.NotEmpty(t, got.Age)
+	got.Age = ""
+	assert.Equal(t, models.InferenceService{
+		Name:        "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
+		Namespace:   "amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa",
+		Type:        models.InferenceServiceDedicated,
+		TenantID:    "aaaaaaaaegodxkqnjoywklqsvrafpzrvilgq56mzgbr52mlffb6x4kz2ddoa",
+		Model:       "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
+		Runtime:     "vllm-generic-v1",
+		MinReplicas: 1,
+		MaxReplicas: 1,
+		Ready:       "True",
+		Legacy:      true,
+	}, got)
+	assert.Contains(t, got.FilterableFields(), "legacy")
+
+	shared := parseLegacyInferenceService(parseYAML(t, isvcLegacyShared))
+	assert.Equal(t, models.InferenceServiceOnDemand, shared.Type)
+	assert.Equal(t, "content-moderator", shared.Model)
+	assert.Equal(t, "gais-contentmoderate", shared.Runtime)
+	assert.Equal(t, "2/3", shared.Replicas())
+	assert.Equal(t, "Unknown", shared.Ready)
+	assert.True(t, shared.Legacy)
+}
 
 func TestParseInferenceService_Dedicated(t *testing.T) {
 	t.Parallel()
@@ -160,7 +238,8 @@ status: {conditions: [{type: EngineReady, status: "True"}]}
 func TestLoadInferenceServices_GroupsByNamespace(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
-		inferenceServiceGVR: "InferenceServiceList",
+		inferenceServiceGVR:   "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
 		parseYAML(t, isvcDedicated), parseYAML(t, isvcOnDemand))
@@ -175,4 +254,67 @@ func TestLoadInferenceServices_GroupsByNamespace(t *testing.T) {
 	require.Len(t, dac, 1)
 	assert.Equal(t, "rerank-v3-5", dac[0].Model)
 	assert.NotEmpty(t, dac[0].Age)
+}
+
+func TestLoadInferenceServices_MergesLegacy(t *testing.T) {
+	t.Parallel()
+	listKinds := map[schema.GroupVersionResource]string{
+		inferenceServiceGVR:   "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
+	}
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
+		parseYAML(t, isvcDedicated), parseYAML(t, isvcLegacyDedicated), parseYAML(t, isvcLegacyShared))
+
+	got, err := LoadInferenceServices(context.Background(), client)
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+	legacy := got["amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa"]
+	require.Len(t, legacy, 1)
+	assert.True(t, legacy[0].Legacy)
+	assert.Equal(t, "vllm-generic-v1", legacy[0].Runtime)
+	require.Len(t, got["content-moderator"], 1)
+	assert.False(t, got["amaaaaaa22gykbqa6lppvrrw7lrrclyuk5s4kw27tie7bmwr3j4m5p7hmg7a"][0].Legacy)
+}
+
+// TestLoadInferenceServices_NoLegacyCRD pins that a cluster without the
+// legacy CRD (List returns NotFound) still loads the ome.io endpoints.
+func TestLoadInferenceServices_NoLegacyCRD(t *testing.T) {
+	t.Parallel()
+	listKinds := map[schema.GroupVersionResource]string{
+		inferenceServiceGVR:   "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
+	}
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
+		parseYAML(t, isvcDedicated))
+	client.PrependReactor("list", "inferenceservices", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetResource().Group != inferenceServiceV1GVR.Group {
+			return false, nil, nil
+		}
+		return true, nil, apierrors.NewNotFound(inferenceServiceV1GVR.GroupResource(), "")
+	})
+
+	got, err := LoadInferenceServices(context.Background(), client)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+}
+
+// TestLoadInferenceServices_LegacyListErrorFails pins that a legacy list
+// failure other than a missing CRD surfaces rather than silently dropping
+// the legacy endpoints.
+func TestLoadInferenceServices_LegacyListErrorFails(t *testing.T) {
+	t.Parallel()
+	listKinds := map[schema.GroupVersionResource]string{
+		inferenceServiceGVR:   "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
+	}
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds)
+	client.PrependReactor("list", "inferenceservices", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetResource().Group != inferenceServiceV1GVR.Group {
+			return false, nil, nil
+		}
+		return true, nil, apierrors.NewForbidden(inferenceServiceV1GVR.GroupResource(), "", nil)
+	})
+
+	_, err := LoadInferenceServices(context.Background(), client)
+	require.ErrorContains(t, err, "list legacy InferenceService")
 }
