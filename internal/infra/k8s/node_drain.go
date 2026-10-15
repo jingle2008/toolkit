@@ -117,7 +117,11 @@ var (
 	// drainRollbackTimeout bounds recording a failure; it runs on a fresh
 	// context so it survives the failed one being canceled.
 	drainRollbackTimeout = 30 * time.Second
-	drainNow             = time.Now
+	// drainProgressEvery is how often a repeating progress line (what a
+	// phase still waits on, a refused eviction) is re-logged while its
+	// content stays the same; a change is logged at once.
+	drainProgressEvery = time.Minute
+	drainNow           = time.Now
 )
 
 const drainCASRetries = 5
@@ -251,6 +255,67 @@ type drainer struct {
 	clientset kubernetes.Interface
 	client    dynamic.Interface
 	node      string
+	// noted throttles repeating progress lines; see shouldNote.
+	noted map[string]noteMark
+}
+
+type noteMark struct {
+	sig string
+	at  time.Time
+}
+
+// DrainProgressFunc receives a drain's milestones as one-line summaries.
+type DrainProgressFunc func(line string)
+
+type drainProgressKey struct{}
+
+// WithDrainProgress returns a ctx whose drains also report each milestone
+// they log to report, e.g. to show progress on a terminal.
+func WithDrainProgress(ctx context.Context, report DrainProgressFunc) context.Context {
+	return context.WithValue(ctx, drainProgressKey{}, report)
+}
+
+// DrainProgressFrom returns ctx's progress hook, or a no-op.
+func DrainProgressFrom(ctx context.Context) DrainProgressFunc {
+	if report, ok := ctx.Value(drainProgressKey{}).(DrainProgressFunc); ok && report != nil {
+		return report
+	}
+	return func(string) {}
+}
+
+// note logs a drain milestone and reports it to ctx's progress hook.
+func note(ctx context.Context, warn bool, msg string, kv ...any) {
+	logger := logging.FromContext(ctx)
+	if warn {
+		logger.Warnw(msg, kv...)
+	} else {
+		logger.Infow(msg, kv...)
+	}
+	var b strings.Builder
+	b.WriteString(msg)
+	for i := 0; i+1 < len(kv); i += 2 {
+		fmt.Fprintf(&b, " %v=%v", kv[i], kv[i+1])
+	}
+	DrainProgressFrom(ctx)(b.String())
+}
+
+/*
+shouldNote reports whether a repeating progress line is due: when its
+content sig differs from the last one noted under key, or, with every > 0,
+when every has passed since. It keeps a long wait or a PDB-blocked
+eviction from flooding the log (and the TUI's bounded log window) with a
+line per poll.
+*/
+func (d *drainer) shouldNote(key, sig string, every time.Duration) bool {
+	now := drainNow()
+	if last, ok := d.noted[key]; ok && last.sig == sig && (every <= 0 || now.Sub(last.at) < every) {
+		return false
+	}
+	if d.noted == nil {
+		d.noted = map[string]noteMark{}
+	}
+	d.noted[key] = noteMark{sig: sig, at: now}
+	return true
 }
 
 func newDrainer(kubeconfig, contextName, nodeName string) (*drainer, error) {
@@ -276,7 +341,7 @@ func (d *drainer) start(ctx context.Context) (DrainStatus, error) {
 		if serr != nil || !status.Phase.InProgress() {
 			return DrainStatus{}, err
 		}
-		logging.FromContext(ctx).Warnw("drain: start step failed; drain is in progress, continuing", "node", d.node, "error", err)
+		note(ctx, true, "drain: start step failed; drain is in progress, continuing", "node", d.node, "error", err)
 		return status, nil
 	}
 	status, err := d.status(ctx)
@@ -292,14 +357,13 @@ func (d *drainer) start(ctx context.Context) (DrainStatus, error) {
 }
 
 func (d *drainer) await(ctx context.Context) error {
-	logger := logging.FromContext(ctx)
 	streak := 0
 	for {
 		st, err := d.step(ctx, false)
 		switch {
 		case err != nil && ctx.Err() == nil:
 			streak++
-			logger.Warnw("drain: step failed", "node", d.node, "attempt", streak, "error", err)
+			note(ctx, true, "drain: step failed", "node", d.node, "attempt", streak, "error", err)
 			if streak >= drainMaxStepErrors {
 				return fmt.Errorf("drain node %s: %w (the drain stays recorded on the node; run drain again to resume)", d.node, err)
 			}
@@ -360,7 +424,6 @@ func (d *drainer) stepOnce(ctx context.Context, start bool) (DrainState, error) 
 }
 
 func (d *drainer) begin(ctx context.Context, node *corev1.Node, prev DrainState) (DrainState, error) {
-	logger := logging.FromContext(ctx)
 	now := d.now()
 	st := DrainState{Phase: DrainStarting, StartedAt: now, PhaseStartedAt: now}
 	var cordon *bool
@@ -378,7 +441,7 @@ func (d *drainer) begin(ctx context.Context, node *corev1.Node, prev DrainState)
 	if err := d.transition(ctx, prev, st, cordon); err != nil {
 		return prev, err
 	}
-	logger.Infow("drain: started", "node", d.node, "cordonedByDrain", st.CordonedByDrain)
+	note(ctx, false, "drain: started, node cordoned", "node", d.node, "cordonedByDrain", st.CordonedByDrain)
 
 	pctx, cancel := context.WithTimeout(ctx, drainBeginTimeout)
 	defer cancel()
@@ -407,6 +470,7 @@ func (d *drainer) begin(ctx context.Context, node *corev1.Node, prev DrainState)
 		}
 		return d.fail(ctx, st, "record restart plan: "+err.Error(), true)
 	}
+	d.noteRestartPlan(ctx, waiting.Restarted)
 	for _, ref := range plan {
 		if err := patchRestartedAt(ctx, d.client, ref.api.gvr, ref.namespace, ref.name, drainNow()); err != nil {
 			return d.fail(ctx, waiting, err.Error(), true)
@@ -426,6 +490,10 @@ func (d *drainer) advanceWaiting(ctx context.Context, st DrainState) (DrainState
 				"their restarts were already triggered, so the rollouts finish wherever capacity allows, possibly back on this node",
 				drainRescheduleTimeout, strings.Join(remaining, ", ")), true)
 		}
+		if d.shouldNote("waiting", strings.Join(remaining, ","), drainProgressEvery) {
+			note(ctx, false, "drain: waiting for restarted InferenceServices to leave the node", "node", d.node,
+				"remaining", remaining, "deadline", st.PhaseStartedAt.Add(drainRescheduleTimeout).Format(time.RFC3339))
+		}
 		return st, nil
 	}
 	evicting := st
@@ -433,14 +501,13 @@ func (d *drainer) advanceWaiting(ctx context.Context, st DrainState) (DrainState
 	if err := d.transition(ctx, st, evicting, nil); err != nil {
 		return st, err
 	}
-	logging.FromContext(ctx).Infow("drain: evicting", "node", d.node)
+	note(ctx, false, "drain: evicting remaining pods", "node", d.node)
 	return d.advanceEvicting(ctx, evicting)
 }
 
 // advanceEvicting issues one eviction round and reports done once only
 // pods kubectl drain would leave behind (DaemonSet, mirror) remain.
 func (d *drainer) advanceEvicting(ctx context.Context, st DrainState) (DrainState, error) {
-	logger := logging.FromContext(ctx)
 	helper := d.evictHelper(ctx)
 	list, errs := helper.GetPodsForDeletion(d.node)
 	if list == nil {
@@ -452,13 +519,14 @@ func (d *drainer) advanceEvicting(ctx context.Context, st DrainState) (DrainStat
 		return d.fail(ctx, st, "cannot evict pods: "+utilerrors.NewAggregate(errs).Error(), false)
 	}
 	pods := list.Pods()
+	d.noteEvictionWarnings(ctx, list.Warnings(), pods)
 	if len(pods) == 0 {
 		done := st
 		done.Phase, done.PhaseStartedAt = DrainDone, d.now()
 		if err := d.transition(ctx, st, done, nil); err != nil {
 			return st, err
 		}
-		logger.Infow("drain: done", "node", d.node)
+		note(ctx, false, "drain: done, node drained and left cordoned", "node", d.node)
 		return done, nil
 	}
 	if d.expired(st, drainEvictTimeout) {
@@ -469,17 +537,54 @@ func (d *drainer) advanceEvicting(ctx context.Context, st DrainState) (DrainStat
 	if err != nil {
 		return st, fmt.Errorf("check eviction support: %w", err)
 	}
+	names := podNames(pods)
+	if d.shouldNote("evicting", strings.Join(names, ","), drainProgressEvery) {
+		note(ctx, false, "drain: waiting for pods to leave the node", "node", d.node,
+			"remaining", names, "deadline", st.PhaseStartedAt.Add(drainEvictTimeout).Format(time.RFC3339))
+	}
+	d.evictRound(ctx, helper, pods, gv)
+	return st, nil
+}
+
+// evictRound evicts every pod not already terminating. A refused eviction
+// (e.g. 429 from a PodDisruptionBudget) is retried next round until the
+// phase times out.
+func (d *drainer) evictRound(ctx context.Context, helper *drain.Helper, pods []corev1.Pod, gv schema.GroupVersion) {
 	for _, pod := range pods {
 		if pod.DeletionTimestamp != nil {
 			continue // already terminating
 		}
-		// A refused eviction (e.g. 429 from a PodDisruptionBudget) is
-		// retried next round until the phase times out.
-		if err := evictPod(helper, pod, gv); err != nil && !apierrors.IsNotFound(err) {
-			logger.Infow("drain: eviction deferred", "pod", pod.Namespace+"/"+pod.Name, "error", err)
+		name := pod.Namespace + "/" + pod.Name
+		err := evictPod(helper, pod, gv)
+		switch {
+		case err == nil:
+			note(ctx, false, "drain: evicted", "pod", name)
+		case apierrors.IsNotFound(err):
+		case d.shouldNote("deferred:"+name, err.Error(), drainProgressEvery):
+			note(ctx, false, "drain: eviction deferred, will retry", "pod", name, "error", err)
 		}
 	}
-	return st, nil
+}
+
+func (d *drainer) noteRestartPlan(ctx context.Context, restarted []string) {
+	if len(restarted) == 0 {
+		note(ctx, false, "drain: no single-replica InferenceServices to restart", "node", d.node)
+		return
+	}
+	note(ctx, false, "drain: restarting single-replica InferenceServices", "node", d.node, "services", restarted)
+}
+
+// noteEvictionWarnings logs, once each, kubectl drain's warnings (e.g.
+// DaemonSet pods ignored) and the pods whose emptyDir data eviction loses.
+// The latter is detected here because kubectl's own emptyDir warning is
+// overwritten by its later filters for any controller-managed pod.
+func (d *drainer) noteEvictionWarnings(ctx context.Context, warnings string, pods []corev1.Pod) {
+	if warnings != "" && d.shouldNote("evict-warnings", warnings, 0) {
+		note(ctx, true, "drain: "+warnings, "node", d.node)
+	}
+	if lossy := emptyDirPods(pods); len(lossy) > 0 && d.shouldNote("evict-emptydir", strings.Join(lossy, ","), 0) {
+		note(ctx, true, "drain: evicting pods with emptyDir volumes; their emptyDir data is lost", "node", d.node, "pods", lossy)
+	}
 }
 
 // fail records the drain as failed. With rollback set, a node the drain
@@ -499,7 +604,7 @@ func (d *drainer) fail(ctx context.Context, st DrainState, msg string, rollback 
 	if err := d.transition(rctx, st, next, cordon); err != nil {
 		return st, fmt.Errorf("record failed drain (%s): %w", msg, err)
 	}
-	logging.FromContext(ctx).Warnw("drain: failed", "node", d.node, "reason", next.Message)
+	note(ctx, true, "drain: failed", "node", d.node, "reason", next.Message)
 	return next, nil
 }
 
@@ -630,6 +735,20 @@ func podActive(pod *corev1.Pod) bool {
 	return pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed
 }
 
+// emptyDirPods names the pods that mount an emptyDir volume.
+func emptyDirPods(pods []corev1.Pod) []string {
+	var names []string
+	for i := range pods {
+		for _, vol := range pods[i].Spec.Volumes {
+			if vol.EmptyDir != nil {
+				names = append(names, pods[i].Namespace+"/"+pods[i].Name)
+				break
+			}
+		}
+	}
+	return names
+}
+
 func podNames(pods []corev1.Pod) []string {
 	names := make([]string, len(pods))
 	for i := range pods {
@@ -691,12 +810,11 @@ are left to eviction, their other replicas serving meanwhile; so is a
 service whose CR is gone.
 */
 func planRestarts(ctx context.Context, client dynamic.Interface, pods []corev1.Pod) ([]isvcRef, error) {
-	logger := logging.FromContext(ctx)
 	var plan []isvcRef
 	for _, ref := range servingRefs(pods) {
 		obj, err := client.Resource(ref.api.gvr).Namespace(ref.namespace).Get(ctx, ref.name, v1.GetOptions{})
 		if apierrors.IsNotFound(err) {
-			logger.Warnw("drain: InferenceService not found, leaving its pods to eviction", "service", ref.String())
+			note(ctx, true, "drain: InferenceService not found, leaving its pods to eviction", "service", ref.String())
 			continue
 		}
 		if err != nil {
@@ -708,7 +826,7 @@ func planRestarts(ctx context.Context, client dynamic.Interface, pods []corev1.P
 			minReplicas = 1
 		}
 		if minReplicas > 1 {
-			logger.Infow("drain: leaving multi-replica InferenceService to eviction", "service", ref.String(), "minReplicas", minReplicas)
+			note(ctx, false, "drain: leaving multi-replica InferenceService to eviction", "service", ref.String(), "minReplicas", minReplicas)
 			continue
 		}
 		plan = append(plan, ref)
