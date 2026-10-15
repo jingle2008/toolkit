@@ -256,9 +256,11 @@ func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolReques
 func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, in drainNodeInput) (*sdk.CallToolResult, drainNodeResult, error) {
 	const action, kind = "drain", "node"
 	env := s.effectiveMutationEnv(action, kind, in.Node, in.envOverride)
-	return runMutationToolWith(s, action, kind, in.Node, in.Confirm, func() (drainNodeResult, error) {
+	var failed k8s.DrainStatus
+	res, out, err := runMutationToolWith(s, action, kind, in.Node, in.Confirm, func() (drainNodeResult, error) {
 		status, err := mcpStartDrainFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
 		if err != nil {
+			failed = status
 			return drainNodeResult{}, err
 		}
 		if status.Phase.InProgress() {
@@ -266,6 +268,18 @@ func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, 
 		}
 		return drainNodeResult{mutationResult: mutationOK(action, kind, in.Node), Drain: status}, nil
 	})
+	if err != nil && failed.Phase != "" {
+		// A drain that failed still has a status (phase, restarted
+		// services, cordon outcome): return it beside the error.
+		res = &sdk.CallToolResult{}
+		res.SetError(err)
+		out = drainNodeResult{
+			mutationResult: mutationResult{Status: "FAILED", Action: action, Kind: kind, Target: in.Node},
+			Drain:          failed,
+		}
+		return res, out, nil
+	}
+	return res, out, err
 }
 
 // driveDrain carries a node's drain to completion in the background,
@@ -332,16 +346,26 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 	})
 }
 
+// handleRestartInferenceService resolves the namespace before the audited
+// mutation, as the CLI does, so the audit log and result always carry
+// <namespace>/<name>. A refused call (no confirm) is not resolved: refusal
+// must not touch the cluster.
 func (s *Server) handleRestartInferenceService(ctx context.Context, req *sdk.CallToolRequest, in restartInferenceServiceInput) (*sdk.CallToolResult, mutationResult, error) {
+	const action, kind = "restart", "inference_service"
 	target := in.Name
 	if in.Namespace != "" {
 		target = in.Namespace + "/" + in.Name
 	}
-	return s.handleMutation("restart", "inference_service", target, in.Confirm, in.envOverride, func(env models.Environment) error {
-		ns, err := mcpResolveISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Namespace, in.Name)
+	env := s.effectiveMutationEnv(action, kind, target, in.envOverride)
+	ns := in.Namespace
+	if in.Confirm {
+		resolved, err := mcpResolveISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Namespace, in.Name)
 		if err != nil {
-			return err
+			return failTool[mutationResult](action+" "+kind+"/"+target, err)
 		}
+		ns, target = resolved, resolved+"/"+in.Name
+	}
+	return s.runMutationTool(action, kind, target, in.Confirm, func() error {
 		return mcpRestartISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), ns, in.Name)
 	})
 }

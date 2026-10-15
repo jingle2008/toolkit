@@ -730,7 +730,8 @@ func TestIntegration_RestartInferenceService_ResolvesThenPatches(t *testing.T) {
 	assert.Empty(t, gotLookupNS, "omitted namespace searches all namespaces")
 	assert.Equal(t, "ns-resolved", patchedNS)
 	assert.Equal(t, "isvc-a", patchedName)
-	assertMutationOK(t, res, "restart", "inference_service", "isvc-a")
+	// The audited target carries the resolved namespace.
+	assertMutationOK(t, res, "restart", "inference_service", "ns-resolved/isvc-a")
 
 	// An explicit namespace is passed through and labels the target.
 	res, err = clientSess.CallTool(ctx, &sdk.CallToolParams{
@@ -740,7 +741,7 @@ func TestIntegration_RestartInferenceService_ResolvesThenPatches(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, res.IsError)
 	assert.Equal(t, "ns-x", gotLookupNS)
-	assertMutationOK(t, res, "restart", "inference_service", "ns-x/isvc-a")
+	assertMutationOK(t, res, "restart", "inference_service", "ns-resolved/isvc-a")
 }
 
 func TestIntegration_RestartInferenceService_ResolveErrorSkipsPatch(t *testing.T) {
@@ -874,4 +875,57 @@ func TestIntegration_GetDrainStatus(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.IsError)
 	assert.Contains(t, resultText(t, res), "node not found")
+}
+
+func TestIntegration_DrainNode_FailureKeepsStatus(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	oStart, oAwait := mcpStartDrainFn, mcpAwaitDrainFn
+	t.Cleanup(func() { mcpStartDrainFn, mcpAwaitDrainFn = oStart, oAwait })
+	mcpStartDrainFn = func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+		msg := "node runs pods that must not be drained: ft/ft-0 (finetunedmodel-name) (node uncordoned)"
+		return k8s.DrainStatus{Node: node, DrainState: k8s.DrainState{Phase: k8s.DrainFailed, CordonedByDrain: true, Message: msg}},
+			errors.New(msg)
+	}
+	mcpAwaitDrainFn = func(context.Context, string, string, string) error {
+		t.Error("no driver expected for a failed drain")
+		return nil
+	}
+
+	clientSess := newTestPair(ctx, t, stubLoader{})
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "drain_node",
+		Arguments: map[string]any{"node": "node-a", "confirm": true},
+	})
+	require.NoError(t, err)
+	assert.True(t, res.IsError)
+	assert.Contains(t, resultText(t, res), "must not be drained")
+	sc := structured(t, res)
+	assert.Equal(t, "FAILED", sc["status"])
+	drain, ok := sc["drain"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "failed", drain["phase"])
+	assert.Equal(t, true, drain["cordonedByDrain"])
+}
+
+func TestIntegration_RestartInferenceService_RefusalDoesNotResolve(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	oResolve := mcpResolveISVCFn
+	t.Cleanup(func() { mcpResolveISVCFn = oResolve })
+	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) {
+		t.Error("a refused call must not touch the cluster")
+		return "", nil
+	}
+
+	clientSess := newTestPair(ctx, t, stubLoader{})
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "restart_inference_service",
+		Arguments: map[string]any{"name": "isvc-a"},
+	})
+	require.NoError(t, err)
+	assert.True(t, res.IsError)
+	assert.Contains(t, resultText(t, res), "confirm=true")
 }
