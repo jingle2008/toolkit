@@ -36,11 +36,11 @@ var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedCo
 		Render: func(_ string, m models.ImportedModel) string { return m.DisplayName },
 	},
 	{
-		Title: "Namespace", Key: "namespace", Ratio: 0.12, TruncateMiddle: true,
+		Title: "Namespace", Key: "namespace", Ratio: 0.15, TruncateMiddle: true,
 		Render: func(_ string, m models.ImportedModel) string { return m.Namespace },
 	},
 	{
-		Title: "Size", Key: "size", Ratio: 0.08,
+		Title: "Size", Key: "size", Ratio: 0.07,
 		Render: func(_ string, m models.ImportedModel) string { return m.ParameterSize },
 	},
 	{
@@ -48,7 +48,7 @@ var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedCo
 		Render: func(_ string, m models.ImportedModel) string { return strconv.Itoa(m.MaxTokens) },
 	},
 	{
-		Title: "Vendor", Key: "vendor", Ratio: 0.10,
+		Title: "Vendor", Key: "vendor", Ratio: 0.08,
 		Render: func(_ string, m models.ImportedModel) string { return m.Vendor },
 	},
 	{
