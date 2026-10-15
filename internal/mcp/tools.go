@@ -61,7 +61,7 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_imported_models",
-		Description: "List tenant-imported models as a flat array (same shape as `list_dacs`); the owning tenant is preserved on each item as `tenantId`. Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label. Every item carries a non-empty `tenantId` — the label value, or `\"UNKNOWN_TENANCY\"` for orphans (namespaced CRs missing the label, treated as a config error). `namespace` (K8s scope) is orthogonal: empty for cluster-scoped CRs, non-empty for namespaced CRs; a namespaced CR may still carry an arbitrary `tenancy-id` label that the label authoritatively defines. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List tenant-imported models as a flat array (same shape as `list_dacs`); the owning tenant is preserved on each item as `tenantId`. When the tenancy is known to the repo's tenant list (override directories plus metadata), the item also carries `owner` ({name, ids, is_internal, note}) and `filter` matches the tenant name; otherwise `owner` is omitted. Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label. Every item carries a non-empty `tenantId` — the label value, or `\"UNKNOWN_TENANCY\"` for orphans (namespaced CRs missing the label, treated as a config error). `namespace` (K8s scope) is orthogonal: empty for cluster-scoped CRs, non-empty for namespaced CRs; a namespaced CR may still carry an arbitrary `tenancy-id` label that the label authoritatively defines. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListImportedModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -76,17 +76,17 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_workloads",
-		Description: "List GPU-consuming pods (workloads) across all nodes as a flat array. The hosting node is preserved on each item as `node`. Each item is {name, node, tenantId, namespace, model, runtime, gpus, mode}; model/runtime/mode are best-effort and blank for non-serving GPU pods. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+		Description: "List GPU-consuming pods (workloads) across all nodes as a flat array. The hosting node is preserved on each item as `node`. Each item is {name, node, tenantId, namespace, model, runtime, gpus, mode}; model/runtime/mode are best-effort and blank for non-serving GPU pods. Items whose tenancy is known also carry `owner` ({name, ids, is_internal, note}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListGPUWorkloads)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_dacs",
-		Description: "List dedicated AI clusters as a flat array. The owning tenant is preserved on each item as `tenantId`. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+		Description: "List dedicated AI clusters as a flat array. The owning tenant is preserved on each item as `tenantId`. When the tenancy is known to the repo's tenant list (override directories plus metadata), the item also carries `owner` ({name, ids, is_internal, note}) and `filter` matches the tenant name; otherwise `owner` is omitted. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListDACs)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_inference_services",
-		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the model ref is a namespaced BaseModel. `ready` is the Ready condition status (True/False/Unknown). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the model ref is a namespaced BaseModel. `ready` is the Ready condition status (True/False/Unknown). Items whose tenancy is known also carry `owner` ({name, ids, is_internal, note}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListInferenceServices)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -128,6 +128,18 @@ func registerTools(s *Server) {
 }
 
 // --- Handlers -----------------------------------------------------
+
+// tenantDataset loads env's tenants for resolving tenant-owned rows. A
+// load failure degrades to a warning (rows stay keyed by raw tenancy-id
+// with no owner) rather than failing the list call.
+func (s *Server) tenantDataset(ctx context.Context, env models.Environment) (*models.Dataset, []string) {
+	ds, err := resolve.TenantDataset(ctx, s.loader, s.cfg.RepoPath, env)
+	if err != nil {
+		s.logger.Warnw("tenant resolution unavailable", "surface", "mcp", "error", err)
+		return ds, []string{"tenant names unresolved: " + err.Error()}
+	}
+	return ds, nil
+}
 
 // listFlatResult applies the shared filter + limit + JSON-envelope
 // step to an already-loaded slice. Captures the trailing pattern of
@@ -177,13 +189,16 @@ func (s *Server) handleListServingRuntimes(ctx context.Context, req *sdk.CallToo
 }
 
 func (s *Server) handleListImportedModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ImportedModel], error) {
-	grouped, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	env := s.envFor(in.envOverride)
+	grouped, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, env)
 	if err != nil {
 		return failTool[listResult[models.ImportedModel]]("load imported models", err)
 	}
-	// Each item carries its own `tenantId` field, mirroring DAC's
-	// post-wrapper-drop shape — no group key needs to be injected.
-	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
+	// Each item carries its own `tenantId`; resolution adds `owner` and
+	// lets the filter match the tenant name (the re-keyed group key).
+	ds, warnings := s.tenantDataset(ctx, env)
+	ds.SetImportedModelMap(grouped)
+	return jsonResult(flattenGrouped(ds.ImportedModelMap, in.Filter, in.Limit), warnings)
 }
 
 func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUPool], error) {
@@ -226,34 +241,43 @@ func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolReques
 }
 
 func (s *Server) handleListGPUWorkloads(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUWorkload], error) {
-	grouped, err := s.loader.LoadGPUWorkloadsByNode(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	env := s.envFor(in.envOverride)
+	grouped, err := s.loader.LoadGPUWorkloadsByNode(ctx, s.cfg.KubeConfig, env)
 	if err != nil {
 		return failTool[listResult[models.GPUWorkload]]("load gpu workloads", err)
 	}
 	// No wrapper: GPUWorkload.Node (JSON `node`) already carries the
-	// group key. Wrapping would duplicate.
-	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
+	// group key. Wrapping would duplicate. Owners are resolved in place.
+	ds, warnings := s.tenantDataset(ctx, env)
+	ds.SetGPUWorkloadMap(grouped)
+	return jsonResult(flattenGrouped(ds.GPUWorkloadMap, in.Filter, in.Limit), warnings)
 }
 
 func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.DedicatedAICluster], error) {
-	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	env := s.envFor(in.envOverride)
+	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, env)
 	if err != nil {
 		return failTool[listResult[models.DedicatedAICluster]]("load dedicated AI clusters", err)
 	}
-	// No wrapper: the loader keys this map by dac.TenantID
-	// (internal/infra/k8s/dac.go:157), which is already the flat
-	// `tenantId` field on each value. Wrapping would duplicate.
-	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
+	// No wrapper: each value carries its raw `tenantId`. Resolution
+	// re-keys by tenant name (so the filter matches it) and adds `owner`.
+	ds, warnings := s.tenantDataset(ctx, env)
+	ds.SetDedicatedAIClusterMap(grouped)
+	return jsonResult(flattenGrouped(ds.DedicatedAIClusterMap, in.Filter, in.Limit), warnings)
 }
 
 func (s *Server) handleListInferenceServices(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.InferenceService], error) {
-	grouped, err := s.loader.LoadInferenceServices(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
+	env := s.envFor(in.envOverride)
+	grouped, err := s.loader.LoadInferenceServices(ctx, s.cfg.KubeConfig, env)
 	if err != nil {
 		return failTool[listResult[models.InferenceService]]("load inference services", err)
 	}
 	// No wrapper: InferenceService.Namespace (JSON `namespace`) already
-	// carries the group key. Wrapping would duplicate.
-	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
+	// carries the group key. Wrapping would duplicate. Owners are
+	// resolved in place.
+	ds, warnings := s.tenantDataset(ctx, env)
+	ds.SetInferenceServiceMap(grouped)
+	return jsonResult(flattenGrouped(ds.InferenceServiceMap, in.Filter, in.Limit), warnings)
 }
 
 func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Environment], error) {

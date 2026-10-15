@@ -248,6 +248,18 @@ func validateGetConfig(cfg config.Config, cat domain.Category) error {
 	return nil
 }
 
+// tenantDataset loads the env's tenants for resolving tenant-owned rows.
+// A load failure is a warning, not an error: the rows still print, just
+// keyed by raw tenancy-id with no owner (the pre-resolution shape).
+func tenantDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) *models.Dataset {
+	ds, err := resolve.TenantDataset(ctx, ld, cfg.RepoPath, env)
+	if err != nil {
+		logging.FromContext(ctx).Warnw("tenant resolution unavailable", "error", err)
+		fmt.Fprintf(os.Stderr, "warning: tenant names unresolved: %s\n", err)
+	}
+	return ds
+}
+
 //nolint:cyclop // a simple per-category switch is clearer than a registry here
 func emitCategory(
 	ctx context.Context,
@@ -277,10 +289,11 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load imported models: %w", err)
 		}
-		// No top-level `tenant` injection: each item carries its
-		// own `tenantId` field already (same shape as DAC after
-		// the recent wrapper-drop refactor).
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.ImportedModel, env, selected)
+		// Re-key by tenant name and set each item's `owner`, as the
+		// TUI does; each item still carries its raw `tenantId`.
+		ds := tenantDataset(ctx, ld, cfg, env)
+		ds.SetImportedModelMap(grouped)
+		return writeMap(w, collections.FilterMapOrAll(ds.ImportedModelMap, filter), limit, opts, domain.ImportedModel, env, selected)
 	case domain.GPUPool:
 		items, err := ld.LoadGPUPools(ctx, cfg.RepoPath, env)
 		if err != nil {
@@ -317,24 +330,30 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load gpu workloads: %w", err)
 		}
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.GPUWorkload, env, selected)
+		ds := tenantDataset(ctx, ld, cfg, env)
+		ds.SetGPUWorkloadMap(grouped)
+		return writeMap(w, collections.FilterMapOrAll(ds.GPUWorkloadMap, filter), limit, opts, domain.GPUWorkload, env, selected)
 	case domain.DedicatedAICluster:
 		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load dedicated AI clusters: %w", err)
 		}
-		// No top-level `tenant` injection: the loader keys this map
-		// by dac.TenantID (internal/infra/k8s/dac.go:157), which is
-		// already the flat `tenantId` field on each value.
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.DedicatedAICluster, env, selected)
+		// Re-key from raw tenancy-id to tenant name and set each
+		// item's `owner`, as the TUI does; unresolved tenancies keep
+		// the raw key. Each item still carries its raw `tenantId`.
+		ds := tenantDataset(ctx, ld, cfg, env)
+		ds.SetDedicatedAIClusterMap(grouped)
+		return writeMap(w, collections.FilterMapOrAll(ds.DedicatedAIClusterMap, filter), limit, opts, domain.DedicatedAICluster, env, selected)
 	case domain.InferenceService:
 		grouped, err := ld.LoadInferenceServices(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load inference services: %w", err)
 		}
 		// No top-level `namespace` injection: InferenceService.Namespace
-		// already carries the group key.
-		return writeMap(w, collections.FilterMapOrAll(grouped, filter), limit, opts, domain.InferenceService, env, selected)
+		// already carries the group key. Owners are resolved in place.
+		ds := tenantDataset(ctx, ld, cfg, env)
+		ds.SetInferenceServiceMap(grouped)
+		return writeMap(w, collections.FilterMapOrAll(ds.InferenceServiceMap, filter), limit, opts, domain.InferenceService, env, selected)
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
 		domain.ConsolePropertyTenancyOverride,
