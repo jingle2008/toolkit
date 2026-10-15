@@ -16,6 +16,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -290,13 +291,17 @@ func (m *Model) findContextIndex(rows []table.Row) int {
 // updateLayout recalculates the layout for the view and table.
 func (m *Model) updateLayout(w, h int) {
 	m.viewWidth, m.viewHeight = w, h
-	// Budget the info column out of the help bubble's width so the
-	// JoinHorizontal(infoView, helpView) header in frame() doesn't exceed the
-	// terminal and soft-wrap. The extra -1 dodges a bubbles/help edge case:
-	// when columns sum to exactly m.help.Width, the next column still
-	// triggers truncation (>) but the ellipsis-fits check (<) fails, so the
-	// bubble falls through and renders the column uncondensed.
-	m.help.Width = max(w-lipgloss.Width(m.infoView())-1, 0)
+	// Budget the info column (and the logo, when it fits) out of the help
+	// bubble's width so the header in frame() doesn't exceed the terminal
+	// and soft-wrap. The extra -1 dodges a bubbles/help edge case: when
+	// columns sum to exactly m.help.Width, the next column still triggers
+	// truncation (>) but the ellipsis-fits check (<) fails, so the bubble
+	// falls through and renders the column uncondensed.
+	reserved := lipgloss.Width(m.headerInfo())
+	if m.showLogo(w) {
+		reserved += view.LogoWidth + view.LogoMargin
+	}
+	m.help.Width = max(w-reserved-1, 0)
 	var borderStyle lipgloss.Border
 	if m.viewMode == common.DetailsView {
 		borderStyle = m.viewport.Style.GetBorderStyle()
