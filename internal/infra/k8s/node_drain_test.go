@@ -3,11 +3,13 @@ package k8s
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -654,4 +656,146 @@ func TestDrain_EvictionSupportCheckedOncePerRound(t *testing.T) { //nolint:paral
 	f.step()
 	assert.Equal(t, 6, f.evictions)
 	assert.Equal(t, 2, f.discoveries)
+}
+
+// progressCtx returns a ctx whose drain progress lines are collected.
+func progressCtx() (context.Context, *[]string) {
+	var lines []string
+	return WithDrainProgress(context.Background(), func(line string) { lines = append(lines, line) }), &lines
+}
+
+// countPrefix counts lines starting with prefix.
+func countPrefix(lines []string, prefix string) int {
+	n := 0
+	for _, l := range lines {
+		if strings.HasPrefix(l, prefix) {
+			n++
+		}
+	}
+	return n
+}
+
+func TestDrain_ReportsEveryMilestone(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, false, []*corev1.Pod{
+		servingPod("chat-a", "chat-ns", servingLabelV2, "chat"),
+		drainPod("worker", "default", nil, corev1.PodRunning),
+	}, isvcV2Single)
+	ctx, lines := progressCtx()
+
+	_, err := f.d.start(ctx)
+	require.NoError(t, err)
+	f.deletePod("chat-ns", "chat-a")
+	_, err = f.d.step(ctx, false) // services gone: evict
+	require.NoError(t, err)
+	_, err = f.d.step(ctx, false) // nothing left: done
+	require.NoError(t, err)
+
+	want := []string{
+		"drain: started, node cordoned node=gpu-1 cordonedByDrain=true",
+		"drain: restarting single-replica InferenceServices node=gpu-1 services=[ome.io:chat-ns/chat]",
+		"drain: waiting for restarted InferenceServices to leave the node node=gpu-1 remaining=[ome.io:chat-ns/chat] deadline=2026-10-14T09:20:00Z",
+		"drain: evicting remaining pods node=gpu-1",
+		"drain: waiting for pods to leave the node node=gpu-1 remaining=[default/worker] deadline=2026-10-14T09:10:00Z",
+		"drain: evicted pod=default/worker",
+		"drain: done, node drained and left cordoned node=gpu-1",
+	}
+	assert.Equal(t, want, *lines)
+}
+
+func TestDrain_ReportsNoRestartsAndFailure(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, false, []*corev1.Pod{drainPod("ft-0", "ft", map[string]string{fineTuneLabel: "m"}, corev1.PodRunning)})
+	ctx, lines := progressCtx()
+
+	_, err := f.d.start(ctx)
+	require.Error(t, err)
+	assert.Equal(t, []string{
+		"drain: started, node cordoned node=gpu-1 cordonedByDrain=true",
+		"drain: failed node=gpu-1 reason=node runs pods that must not be drained: ft/ft-0 (finetunedmodel-name) (node uncordoned)",
+	}, *lines)
+
+	g := newDrainFixture(t, false, nil)
+	ctx, lines = progressCtx()
+	_, err = g.d.start(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, *lines, "drain: no single-replica InferenceServices to restart node=gpu-1")
+}
+
+func TestDrain_WaitingProgressIsThrottled(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, false, []*corev1.Pod{
+		servingPod("chat-a", "chat-ns", servingLabelV2, "chat"),
+		servingPod("legacy-a", "legacy-ns", servingLabelV1, "legacy"),
+	}, isvcV2Single, isvcV1Unset)
+	ctx, lines := progressCtx()
+	_, err := f.d.start(ctx)
+	require.NoError(t, err)
+	const waiting = "drain: waiting for restarted InferenceServices"
+	require.Equal(t, 1, countPrefix(*lines, waiting))
+
+	for range 5 { // polls within the minute add nothing
+		f.advance(10 * time.Second)
+		_, err = f.d.step(ctx, false)
+		require.NoError(t, err)
+	}
+	assert.Equal(t, 1, countPrefix(*lines, waiting))
+
+	f.advance(15 * time.Second) // a minute since the last line
+	_, err = f.d.step(ctx, false)
+	require.NoError(t, err)
+	assert.Equal(t, 2, countPrefix(*lines, waiting))
+
+	f.deletePod("chat-ns", "chat-a") // what it waits on changed: logged at once
+	_, err = f.d.step(ctx, false)
+	require.NoError(t, err)
+	assert.Equal(t, 3, countPrefix(*lines, waiting))
+	assert.Contains(t, (*lines)[len(*lines)-1], "remaining=[ome.oracle.com:legacy-ns/legacy]")
+}
+
+func TestDrain_DeferredEvictionsAreThrottled(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, true, []*corev1.Pod{drainPod("guarded", "default", nil, corev1.PodRunning)})
+	f.setNode(DrainState{Phase: DrainEvicting, StartedAt: f.now, PhaseStartedAt: f.now}, true)
+	f.evictErr = apierrors.NewTooManyRequests("disruption budget", 10)
+	ctx, lines := progressCtx()
+
+	for range 12 { // two minutes of 10s rounds
+		_, err := f.d.step(ctx, false)
+		require.NoError(t, err)
+		f.advance(10 * time.Second)
+	}
+	assert.Equal(t, 12, f.evictions, "every round still retries")
+	assert.Equal(t, 2, countPrefix(*lines, "drain: eviction deferred, will retry pod=default/guarded"))
+	assert.Equal(t, 2, countPrefix(*lines, "drain: waiting for pods to leave the node"))
+}
+
+func TestDrain_EmptyDirDataLossWarnedOnce(t *testing.T) { //nolint:paralleltest // shared drain seams
+	scratch := drainPod("scratch", "default", nil, corev1.PodRunning)
+	scratch.Spec.Volumes = []corev1.Volume{{Name: "tmp", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}}
+	f := newDrainFixture(t, true, []*corev1.Pod{scratch})
+	f.setNode(DrainState{Phase: DrainEvicting, StartedAt: f.now, PhaseStartedAt: f.now}, true)
+	f.evictErr = apierrors.NewTooManyRequests("disruption budget", 10)
+	ctx, lines := progressCtx()
+
+	for range 3 {
+		_, err := f.d.step(ctx, false)
+		require.NoError(t, err)
+		f.advance(time.Minute)
+	}
+	assert.Equal(t, 1, countPrefix(*lines,
+		"drain: evicting pods with emptyDir volumes; their emptyDir data is lost node=gpu-1 pods=[default/scratch]"))
+}
+
+func TestDrain_KubectlWarningsLoggedOnce(t *testing.T) { //nolint:paralleltest // shared drain seams
+	agent := drainPod("agent", "kube-system", nil, corev1.PodRunning)
+	agent.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "DaemonSet", Name: "agent", Controller: new(true)}}
+	f := newDrainFixture(t, true, []*corev1.Pod{agent, drainPod("guarded", "default", nil, corev1.PodRunning)})
+	require.NoError(t, f.cs.Tracker().Add(&appsv1.DaemonSet{ObjectMeta: v1.ObjectMeta{Name: "agent", Namespace: "kube-system"}}))
+	f.setNode(DrainState{Phase: DrainEvicting, StartedAt: f.now, PhaseStartedAt: f.now}, true)
+	f.evictErr = apierrors.NewTooManyRequests("disruption budget", 10)
+	ctx, lines := progressCtx()
+
+	for range 3 {
+		_, err := f.d.step(ctx, false)
+		require.NoError(t, err)
+		f.advance(time.Minute)
+	}
+	assert.Equal(t, 1, countPrefix(*lines, "drain: ignoring DaemonSet-managed Pods: kube-system/agent"))
 }

@@ -2,10 +2,13 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 )
 
 func TestDrainCmd_DryRun_DoesNotCallK8s(t *testing.T) {
@@ -80,5 +83,28 @@ func TestDrainCmd_PerformError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "pods stuck terminating") {
 		t.Errorf("error must wrap underlying message: %v", err)
+	}
+}
+
+func TestDrainCmd_EchoesProgressOnStderr(t *testing.T) {
+	stageMutationEnv(t)
+	defer swap(&drainNodeFn, func(ctx context.Context, _, _, node string) error {
+		k8s.DrainProgressFrom(ctx)("drain: started, node cordoned node=" + node)
+		return nil
+	})()
+
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"drain", "node-a", "-y"})
+	var stdout, stderr bytes.Buffer
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !strings.Contains(stderr.String(), "drain: started, node cordoned node=node-a") {
+		t.Errorf("expected progress on stderr, got %q", stderr.String())
+	}
+	if strings.Contains(stdout.String(), "drain: started") {
+		t.Errorf("progress leaked onto stdout: %q", stdout.String())
 	}
 }

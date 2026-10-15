@@ -2,6 +2,8 @@ package cli
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -37,7 +39,8 @@ If it fails before eviction starts, the node is uncordoned again
 started, the node stays cordoned. A reschedule timeout usually means no
 other node has spare GPU capacity.
 
-The command blocks until the drain finishes, but the drain itself is
+The command blocks until the drain finishes, printing each milestone
+(restarts, what it is waiting on, evictions) on stderr, but the drain itself is
 recorded on the Node (annotation toolkit/drain): if the command is
 interrupted, running it again resumes where it stopped without repeating
 finished steps, and the TUI and MCP server see the same drain. Use this
@@ -54,6 +57,13 @@ before terminating a node so workloads relocate cleanly.`,
 					DryRun:  dryRun,
 					Yes:     yes,
 				}, func(ctx context.Context) error {
+					// The drain can run for tens of minutes and the log goes to a
+					// file, so echo its milestones on stderr; stdout keeps only
+					// the result line.
+					errOut := cmd.ErrOrStderr()
+					ctx = k8s.WithDrainProgress(ctx, func(line string) {
+						_, _ = fmt.Fprintf(errOut, "%s %s\n", time.Now().Format("15:04:05"), line)
+					})
 					return drainNodeFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 				})
 			})
