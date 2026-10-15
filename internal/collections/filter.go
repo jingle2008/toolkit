@@ -74,8 +74,6 @@ func FilterSlice[T models.NamedFilterable](items []T, name *string, filter strin
 }
 
 // FilterMap returns a map of filtered items from the input map, filtered by key, name, filter, and an optional predicate.
-//
-//nolint:cyclop // function is clear and further splitting would reduce readability
 func FilterMap[T models.NamedFilterable](
 	g map[string][]T,
 	key *string,
@@ -83,25 +81,40 @@ func FilterMap[T models.NamedFilterable](
 	filter string,
 	pred func(T) bool,
 ) map[string][]T {
-	var results map[string][]T
 	if key != nil {
 		if items, ok := g[*key]; ok {
-			results = map[string][]T{*key: FilterSlice(items, name, filter, pred)}
+			return map[string][]T{*key: FilterSlice(items, name, filter, pred)}
 		}
-	} else {
-		results = make(map[string][]T)
-		for key, value := range g {
-			matchKey := strings.Contains(strings.ToLower(key), filter)
-			for _, val := range value {
-				if (name == nil || *name == val.GetName()) &&
-					(matchKey || IsMatch(val, filter, true)) &&
-					(pred == nil || pred(val)) {
-					results[key] = append(results[key], val)
-				}
+		return nil
+	}
+	var keep func(string, T) bool
+	if name != nil {
+		keep = func(_ string, val T) bool { return *name == val.GetName() }
+	}
+	return FilterMapFunc(g, keep, filter, pred)
+}
+
+// FilterMapFunc filters every group of g: an item is kept when keep
+// (if non-nil) accepts its (group key, item) pair, the filter matches
+// either the group key or the item's filterable fields, and pred (if
+// non-nil) accepts it. Groups left empty are dropped.
+func FilterMapFunc[T models.NamedFilterable](
+	g map[string][]T,
+	keep func(key string, item T) bool,
+	filter string,
+	pred func(T) bool,
+) map[string][]T {
+	results := make(map[string][]T)
+	for key, value := range g {
+		matchKey := strings.Contains(strings.ToLower(key), filter)
+		for _, val := range value {
+			if (keep == nil || keep(key, val)) &&
+				(matchKey || IsMatch(val, filter, true)) &&
+				(pred == nil || pred(val)) {
+				results[key] = append(results[key], val)
 			}
 		}
 	}
-
 	return results
 }
 

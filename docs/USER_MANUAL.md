@@ -244,11 +244,23 @@ Some categories are **parent scopes** — pressing `Enter` on a row zooms in to 
 | PropertyDefinition | PropertyTenancyOverride, PropertyRegionalOverride |
 | GPUPool | GPUNode |
 | GPUNode | GPUWorkload |
-| DedicatedAICluster | InferenceService |
+| DedicatedAICluster | InferenceService, GPUWorkload (the pods in the DAC's namespace) |
+| BaseModel | InferenceService (endpoints serving the model) |
+| ImportedModel | InferenceService (endpoints serving the model) |
+
+`Enter` opens the first child category. The scope stays active when you
+switch categories, so switching to another child (e.g. `:gw` after drilling
+into a DAC) lists that child filtered to the same parent.
 
 Press `Esc` to exit the scoped context and return to the parent. On a parent
 scope, `Enter` drills in rather than opening details; use `y` to view a row's
 details instead.
+
+`o` jumps to a row's parent. With a scope active it returns to the scope you
+drilled in from; without one it follows the row's structural parent — a
+GPUWorkload's node, an InferenceService's DAC. A DAC is not the structural
+parent of its pods, and a model is not the parent of the endpoints that
+serve it.
 
 ---
 
@@ -292,12 +304,12 @@ Toolkit organises data into 22 categories:
 
 | Category | Description |
 |----------|-------------|
-| **BaseModel** | AI model definitions; supports faulty tracking |
-| **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label) |
+| **BaseModel** | AI model definitions; supports faulty tracking. `Enter` lists the inference services serving the model (`y` opens details) |
+| **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label). `Enter` lists the inference services serving the model (`y` opens details) |
 | **ModelArtifact** | Model artifact versions |
 | **GPUPool** | OCI GPU instance pools; supports scaling |
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
-| **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode |
+| **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode, or by DedicatedAICluster (the pods in its namespace) |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters; press `Enter` to see the inference services running on one |
 | **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). A `*` after the model marks a tenant-imported (namespaced `BaseModel`) model. **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty. Legacy `ome.oracle.com/v1alpha1` endpoints (on legacy DACs) are listed too and match `/legacy` |
 | **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty |

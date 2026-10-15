@@ -10,8 +10,15 @@ const (
 	// child row belongs to one parent row in that hierarchy (a child may
 	// sit in more than one hierarchy — the tenancy overrides are owned by
 	// both a Tenant and a Definition). Contains relations drive drill-in
-	// (Enter), the parent jump (o), and scoped listing.
+	// (Enter), scoped listing, and the parent jump (o) — including from a
+	// row reached without drilling in.
 	Contains RelationKind = iota + 1
+	// References links a parent to child rows that point at it through a
+	// field rather than belonging to it (an InferenceService names the
+	// BaseModel it serves). References drive drill-in and scoped listing
+	// — "who points at this?" — but are not structural parents: the
+	// parent jump follows one only via the breadcrumb of a drill-in.
+	References
 )
 
 // Relation is a directed link between two categories.
@@ -24,7 +31,10 @@ type Relation struct {
 // relations is the registry of category relationships — the single
 // source of truth for the scope graph. ScopedCategories and Parents are
 // derived from it. Order is significant: a parent's children are listed
-// in declaration order, and the first one is where Enter drills in.
+// in declaration order, and the first one is where Enter drills in. The
+// TUI's row sources declare, per relation, how a child row is matched to
+// a parent row (TestRowSources_ParentKeysMatchRelations keeps the two in
+// step).
 var relations = []Relation{
 	{Tenant, LimitTenancyOverride, Contains},
 	{Tenant, ConsolePropertyTenancyOverride, Contains},
@@ -43,6 +53,14 @@ var relations = []Relation{
 	{GPUNode, GPUWorkload, Contains},
 
 	{DedicatedAICluster, InferenceService, Contains},
+	// A DAC's pods: GPU workloads in the DAC's namespace. A pod is placed
+	// on (contained by) a node; its DAC is a reference through namespace.
+	{DedicatedAICluster, GPUWorkload, References},
+
+	// Endpoints serving a model (spec.model): from the shared catalog, or
+	// imported by a tenant.
+	{BaseModel, InferenceService, References},
+	{ImportedModel, InferenceService, References},
 }
 
 // Relations returns a copy of the relation registry, in declaration order.
@@ -50,19 +68,19 @@ func Relations() []Relation {
 	return slices.Clone(relations)
 }
 
-// containsChildren and containsParents index the Contains relations by
-// parent and by child, built once from the registry.
-var containsChildren, containsParents = indexContains(relations)
+// scopedChildren indexes every relation by parent (drill-in targets, any
+// kind); containsParents indexes the Contains relations by child
+// (structural parents). Both are built once from the registry.
+var scopedChildren, containsParents = indexRelations(relations)
 
-func indexContains(rels []Relation) (children, parents map[Category][]Category) {
+func indexRelations(rels []Relation) (children, parents map[Category][]Category) {
 	children = make(map[Category][]Category)
 	parents = make(map[Category][]Category)
 	for _, r := range rels {
-		if r.Kind != Contains {
-			continue
-		}
 		children[r.Parent] = append(children[r.Parent], r.Child)
-		parents[r.Child] = append(parents[r.Child], r.Parent)
+		if r.Kind == Contains {
+			parents[r.Child] = append(parents[r.Child], r.Parent)
+		}
 	}
 	return children, parents
 }

@@ -77,13 +77,17 @@ func TestIsEnvironmentScoped_EveryCategoryAccountedFor(t *testing.T) {
 	}
 }
 
-// Scope graph must be internally consistent: every child lists its parent back.
+// Scope graph must be internally consistent: every Contains child lists
+// its parent back, every References child does not, and every relation
+// is a drill-in target of its parent.
 func TestScopeGraph_RoundTrips(t *testing.T) {
 	t.Parallel()
-	for _, parent := range Categories {
-		for _, child := range parent.ScopedCategories() {
-			assert.Containsf(t, child.Parents(), parent,
-				"%s is scoped by %s but %s is not in %s.Parents()", child, parent, parent, child)
+	for _, r := range Relations() {
+		assert.Containsf(t, r.Parent.ScopedCategories(), r.Child, "%v: child not scoped by parent", r)
+		if r.Kind == Contains {
+			assert.Containsf(t, r.Child.Parents(), r.Parent, "%v: parent missing from %s.Parents()", r, r.Child)
+		} else {
+			assert.NotContainsf(t, r.Child.Parents(), r.Parent, "%v: a reference is not a parent", r)
 		}
 	}
 }
@@ -109,7 +113,7 @@ func TestAliases_UniqueAndRoundTrip(t *testing.T) {
 
 // The relation registry must be well-formed: every endpoint is a data
 // category, nothing relates to itself, no edge is declared twice, and
-// the Contains graph is acyclic (drill-in and the parent jump must
+// the relation graph is acyclic (drill-in and the parent jump must
 // terminate).
 func TestRelations_WellFormed(t *testing.T) {
 	t.Parallel()
@@ -119,12 +123,12 @@ func TestRelations_WellFormed(t *testing.T) {
 			assert.Truef(t, c >= Tenant && c <= LastDataCategory, "%v: endpoint %v is not a data category", r, c)
 		}
 		assert.NotEqualf(t, r.Parent, r.Child, "%v relates a category to itself", r)
-		assert.Equalf(t, Contains, r.Kind, "%v: unknown kind", r)
+		assert.Containsf(t, []RelationKind{Contains, References}, r.Kind, "%v: unknown kind", r)
 		assert.Falsef(t, seen[r], "%v declared twice", r)
 		seen[r] = true
 	}
 
-	// Depth-first search for a cycle through Contains children.
+	// Depth-first search for a cycle through drill-in children.
 	const (
 		unvisited = iota
 		visiting
@@ -135,7 +139,7 @@ func TestRelations_WellFormed(t *testing.T) {
 	visit = func(c Category, path []Category) {
 		switch state[c] {
 		case visiting:
-			t.Errorf("Contains cycle: %v → %v", path, c)
+			t.Errorf("relation cycle: %v → %v", path, c)
 			return
 		case done:
 			return
