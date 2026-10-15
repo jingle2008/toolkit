@@ -59,7 +59,7 @@ func LoadInferenceServices(ctx context.Context, client dynamic.Interface) (map[s
 // listLegacyInferenceServices lists ome.oracle.com/v1alpha1
 // InferenceServices, returning none when the CRD isn't installed.
 func listLegacyInferenceServices(ctx context.Context, client dynamic.Interface) ([]unstructured.Unstructured, error) {
-	list, err := client.Resource(legacyInferenceServiceGVR).List(ctx, v1.ListOptions{})
+	list, err := client.Resource(inferenceServiceV1GVR).List(ctx, v1.ListOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil, nil
 	}

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
-	drainpkg "k8s.io/kubectl/pkg/drain"
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
@@ -63,18 +62,3 @@ func (m *mockLogger) Errorw(_ string, _ ...any) {}
 func (m *mockLogger) Sync() error { return nil }
 
 func (m *mockLogger) WithFields(_ ...any) logging.Logger { return m }
-
-func TestDrainNode_API(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
-	ctx := context.Background()
-	client := fake.NewSimpleClientset()
-	node := makeNode("n2", map[string]string{}, 0, false, nil)
-	_ = client.Tracker().Add(node)
-	// Patch runNodeDrain to simulate success
-	orig := runNodeDrain
-	defer func() { runNodeDrain = orig }()
-	runNodeDrain = func(_ *drainpkg.Helper, _ string) error {
-		return nil
-	}
-	err := drainNode(ctx, client, "n2")
-	require.NoError(t, err)
-}

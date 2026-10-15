@@ -10,6 +10,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
@@ -56,7 +57,7 @@ func resolveInferenceService(ctx context.Context, client dynamic.Interface, name
 	if namespace != "" {
 		_, err := client.Resource(inferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
 		if apierrors.IsNotFound(err) {
-			if _, legacyErr := client.Resource(legacyInferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{}); legacyErr == nil {
+			if _, legacyErr := client.Resource(inferenceServiceV1GVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{}); legacyErr == nil {
 				return namespace, nil
 			}
 		}
@@ -93,7 +94,7 @@ func inferenceServiceNamespaces(ctx context.Context, client dynamic.Interface, n
 		return nil, fmt.Errorf("list InferenceService: %w", err)
 	}
 	items := list.Items
-	legacy, err := client.Resource(legacyInferenceServiceGVR).List(ctx, opts)
+	legacy, err := client.Resource(inferenceServiceV1GVR).List(ctx, opts)
 	switch {
 	case apierrors.IsNotFound(err): // no legacy CRD
 	case err != nil:
@@ -112,6 +113,21 @@ func inferenceServiceNamespaces(ctx context.Context, client dynamic.Interface, n
 }
 
 func restartInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string, now time.Time) error {
+	// Try the ome.io API first, then the legacy one: the caller only has
+	// namespace/name, and an endpoint lives in exactly one of them.
+	err := patchRestartedAt(ctx, client, inferenceServiceGVR, namespace, name, now)
+	if apierrors.IsNotFound(err) {
+		legacyErr := patchRestartedAt(ctx, client, inferenceServiceV1GVR, namespace, name, now)
+		if legacyErr == nil || !apierrors.IsNotFound(legacyErr) {
+			return legacyErr
+		}
+	}
+	return err
+}
+
+// patchRestartedAt stamps restartedAt on the InferenceService served by
+// gvr; both OME API generations honor the annotation.
+func patchRestartedAt(ctx context.Context, client dynamic.Interface, gvr schema.GroupVersionResource, namespace, name string, now time.Time) error {
 	restartedAt := now.UTC().Format(time.RFC3339)
 	patch, err := json.Marshal(map[string]any{
 		"metadata": map[string]any{
@@ -121,18 +137,8 @@ func restartInferenceService(ctx context.Context, client dynamic.Interface, name
 	if err != nil {
 		return fmt.Errorf("marshal restart patch: %w", err)
 	}
-	// Try the ome.io API first, then the legacy one: the caller only has
-	// namespace/name, and an endpoint lives in exactly one of them.
-	gvr := inferenceServiceGVR
-	_, err = client.Resource(gvr).Namespace(namespace).Patch(ctx, name, types.MergePatchType, patch, v1.PatchOptions{})
-	if apierrors.IsNotFound(err) {
-		_, legacyErr := client.Resource(legacyInferenceServiceGVR).Namespace(namespace).
-			Patch(ctx, name, types.MergePatchType, patch, v1.PatchOptions{})
-		if legacyErr == nil || !apierrors.IsNotFound(legacyErr) {
-			gvr, err = legacyInferenceServiceGVR, legacyErr
-		}
-	}
-	if err != nil {
+	if _, err := client.Resource(gvr).Namespace(namespace).
+		Patch(ctx, name, types.MergePatchType, patch, v1.PatchOptions{}); err != nil {
 		return fmt.Errorf("restart InferenceService %s/%s: %w", namespace, name, err)
 	}
 	logging.FromContext(ctx).Infow("restarted inference service",

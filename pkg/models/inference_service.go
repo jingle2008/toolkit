@@ -2,7 +2,8 @@ package models
 
 import "fmt"
 
-// Inference service types, rendered in the Type column.
+// Inference service types. Not a table column; carried in -o json and
+// the MCP output, and matched by filtering.
 const (
 	InferenceServiceDedicated = "dedicated"
 	InferenceServiceOnDemand  = "on-demand"

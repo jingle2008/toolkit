@@ -239,7 +239,7 @@ func TestLoadInferenceServices_GroupsByNamespace(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
 		inferenceServiceGVR:       "InferenceServiceList",
-		legacyInferenceServiceGVR: "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
 		parseYAML(t, isvcDedicated), parseYAML(t, isvcOnDemand))
@@ -260,7 +260,7 @@ func TestLoadInferenceServices_MergesLegacy(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
 		inferenceServiceGVR:       "InferenceServiceList",
-		legacyInferenceServiceGVR: "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
 		parseYAML(t, isvcDedicated), parseYAML(t, isvcLegacyDedicated), parseYAML(t, isvcLegacyShared))
@@ -282,15 +282,15 @@ func TestLoadInferenceServices_NoLegacyCRD(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
 		inferenceServiceGVR:       "InferenceServiceList",
-		legacyInferenceServiceGVR: "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
 		parseYAML(t, isvcDedicated))
 	client.PrependReactor("list", "inferenceservices", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		if action.GetResource().Group != legacyInferenceServiceGVR.Group {
+		if action.GetResource().Group != inferenceServiceV1GVR.Group {
 			return false, nil, nil
 		}
-		return true, nil, apierrors.NewNotFound(legacyInferenceServiceGVR.GroupResource(), "")
+		return true, nil, apierrors.NewNotFound(inferenceServiceV1GVR.GroupResource(), "")
 	})
 
 	got, err := LoadInferenceServices(context.Background(), client)
@@ -305,14 +305,14 @@ func TestLoadInferenceServices_LegacyListErrorFails(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
 		inferenceServiceGVR:       "InferenceServiceList",
-		legacyInferenceServiceGVR: "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds)
 	client.PrependReactor("list", "inferenceservices", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		if action.GetResource().Group != legacyInferenceServiceGVR.Group {
+		if action.GetResource().Group != inferenceServiceV1GVR.Group {
 			return false, nil, nil
 		}
-		return true, nil, apierrors.NewForbidden(legacyInferenceServiceGVR.GroupResource(), "", nil)
+		return true, nil, apierrors.NewForbidden(inferenceServiceV1GVR.GroupResource(), "", nil)
 	})
 
 	_, err := LoadInferenceServices(context.Background(), client)

@@ -274,9 +274,6 @@ var (
 
 	clusterServingRuntimeGVR = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "clusterservingruntimes"}
 	inferenceServiceGVR      = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "inferenceservices"}
-	// legacyInferenceServiceGVR is the pre-OME-v1beta1 API that serves
-	// endpoints on legacy (ome.oracle.com/v1alpha1) DACs.
-	legacyInferenceServiceGVR = schema.GroupVersionResource{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "inferenceservices"}
 )
 
 // WatchInferenceServices triggers on InferenceService CR changes (both
@@ -285,7 +282,7 @@ func WatchInferenceServices(ctx context.Context, client dynamic.Interface) (<-ch
 	return watchTrigger(
 		ctx, DebounceWindow,
 		crWatchOpener(client, inferenceServiceGVR),
-		crWatchOpener(client, legacyInferenceServiceGVR),
+		crWatchOpener(client, inferenceServiceV1GVR),
 	)
 }
 

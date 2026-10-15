@@ -185,7 +185,7 @@ Maintenance operations the TUI exposes via keyboard shortcuts are also available
 | Command | Effect |
 | ------- | ------ |
 | `toolkit cordon <node>` / `toolkit uncordon <node>` | Toggle scheduling on a Kubernetes node |
-| `toolkit drain <node>` | Evict pods and cordon |
+| `toolkit drain <node>` | Safely drain a node: cordon, refuse nodes running fine-tuning / training / replicationJob pods, rolling-restart single-replica InferenceServices so they move off first, then evict the rest. Blocks until done; the drain is recorded on the Node (`toolkit/drain` annotation), so re-running resumes an interrupted drain. |
 | `toolkit reboot <node>` | Reboot the underlying instance |
 | `toolkit restart inference-service <name> [--namespace <ns>]` | Rolling-restart an OME InferenceService by bumping its `restartedAt` annotation. Without `--namespace`, the name must be unique across namespaces. Alias `isvc`. |
 | `toolkit scale gpu-pool <name>` | Sync OCI instance-pool size to the Terraform-declared `pool.Size` (no `--size` flag — Terraform is the source of truth). The `gpupool` alias is accepted for back-compat. |
@@ -254,7 +254,8 @@ Every read tool takes an optional `filter` (fuzzy substring) and optional `env_t
 | Tool | Effect |
 | ---- | ------ |
 | `cordon_node` / `uncordon_node` | Toggle Kubernetes node scheduling |
-| `drain_node` | Evict pods and cordon |
+| `drain_node` | Start (or resume) the same safe drain as the CLI; returns at once and the server drives it in the background |
+| `get_drain_status` | Read-only, no `confirm` needed: a node's drain phase, deadline, what it still waits on, and any failure message |
 | `reboot_node` | Reboot the underlying instance |
 | `restart_inference_service` | Rolling-restart an OME InferenceService (`namespace` optional) |
 | `scale_gpu_pool` | Resize an OCI GPU instance pool |

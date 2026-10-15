@@ -207,13 +207,16 @@ func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) {
 	}
 }
 
-func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) {
-	if msg.err != nil {
-		m.logger.Errorw("failed to drain node", "key", msg.key, "error", msg.err)
-	}
+func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) tea.Cmd {
 	if m.category == domain.GPUNode {
 		m.updateRows(false)
 	}
+	target := itemKeyString(msg.key)
+	if msg.err != nil {
+		m.logger.Errorw("failed to drain node", "key", msg.key, "error", msg.err)
+		return m.showToast(fmt.Sprintf("drain %s failed: %v", target, msg.err), toastError)
+	}
+	return m.showToast("drained "+target, toastInfo)
 }
 
 // restartInferenceService stamps the selected InferenceService's

@@ -144,12 +144,14 @@ func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 		return nil
 	}
 	m.logger.Infow("action started", "action", "drainNode", "node", itemKeyString(itemKey))
-	return func() tea.Msg {
-		ctx, cancel := m.opCtx()
-		defer cancel()
-		err := k8s.DrainNode(ctx, m.kubeConfig, m.environment.KubeContext(), node.Name)
+	drain := func() tea.Msg {
+		// Draining restarts single-replica services and waits for them to
+		// reschedule, which can take tens of minutes under its own internal
+		// timeouts; the 30s one-shot cap would abort it midway.
+		err := k8s.DrainNode(m.longOpCtx(), m.kubeConfig, m.environment.KubeContext(), node.Name)
 		return drainNodeResultMsg{key: itemKey, err: err}
 	}
+	return tea.Batch(m.showToast("draining "+itemKeyString(itemKey)+"…", toastInfo), drain)
 }
 
 // selectedItem returns the currently selected item in the table.

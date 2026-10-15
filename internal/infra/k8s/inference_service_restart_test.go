@@ -17,7 +17,7 @@ func newISVCClient(t *testing.T, srcs ...string) *dynamicfake.FakeDynamicClient 
 	t.Helper()
 	listKinds := map[schema.GroupVersionResource]string{
 		inferenceServiceGVR:       "InferenceServiceList",
-		legacyInferenceServiceGVR: "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	objs := make([]runtime.Object, 0, len(srcs))
 	for _, src := range srcs {
@@ -126,7 +126,7 @@ func TestRestartInferenceService_Legacy(t *testing.T) {
 
 	require.NoError(t, restartInferenceService(context.Background(), client, ns, name, now))
 
-	got, err := client.Resource(legacyInferenceServiceGVR).Namespace(ns).Get(context.Background(), name, v1.GetOptions{})
+	got, err := client.Resource(inferenceServiceV1GVR).Namespace(ns).Get(context.Background(), name, v1.GetOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, "2026-10-14T15:04:05Z", got.GetAnnotations()[restartedAtAnnotation])
 	assert.Equal(t, "aaaaaaaaegodxkqnjoywklqsvrafpzrvilgq56mzgbr52mlffb6x4kz2ddoa", got.GetLabels()["tenancy-id"],
