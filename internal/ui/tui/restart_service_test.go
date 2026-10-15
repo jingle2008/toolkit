@@ -102,16 +102,26 @@ func TestHandleRestartServiceResultMsg_Toasts(t *testing.T) {
 	assert.Equal(t, toastError, m.toasts.active.sev)
 }
 
-// TestRestartInferenceService_LegacyRefused pins that a legacy
-// (ome.oracle.com/v1alpha1) row is refused with an error toast instead of
-// patching: restart only targets the ome.io API.
-func TestRestartInferenceService_LegacyRefused(t *testing.T) {
-	t.Parallel()
+// TestRestartInferenceService_LegacyDispatches pins that a legacy
+// (ome.oracle.com/v1alpha1) row restarts like any other: the k8s layer
+// picks the API, so the TUI just dispatches namespace/name.
+//
+//nolint:paralleltest // swaps the package-level restartInferenceServiceFn seam
+func TestRestartInferenceService_LegacyDispatches(t *testing.T) {
 	m := newTestModel(t)
-	key := models.ScopedItemKey{Scope: "ns1", Name: "svc1"}
-	svc := &models.InferenceService{Name: "svc1", Namespace: "ns1", Legacy: true}
+	var called bool
+	orig := restartInferenceServiceFn
+	t.Cleanup(func() { restartInferenceServiceFn = orig })
+	restartInferenceServiceFn = func(_ context.Context, _, _, namespace, name string) error {
+		called = namespace == "ns1" && name == "svc1"
+		return nil
+	}
 
-	require.NotNil(t, m.restartInferenceService(svc, key))
-	assert.Contains(t, m.toasts.active.msg, "restart ns1/svc1: legacy")
-	assert.Equal(t, toastError, m.toasts.active.sev)
+	key := models.ScopedItemKey{Scope: "ns1", Name: "svc1"}
+	cmd := m.restartInferenceService(&models.InferenceService{Name: "svc1", Namespace: "ns1", Legacy: true}, key)
+	require.NotNil(t, cmd)
+	msg, ok := cmd().(restartServiceResultMsg)
+	require.True(t, ok)
+	require.NoError(t, msg.err)
+	assert.True(t, called)
 }

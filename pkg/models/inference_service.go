@@ -28,8 +28,7 @@ type InferenceService struct {
 	Ready         string `json:"ready"`
 	Age           string `json:"age"`
 	// Legacy is true for an ome.oracle.com/v1alpha1 InferenceService —
-	// an endpoint on a legacy DAC. Legacy endpoints are read-only here
-	// (restart only targets the ome.io API).
+	// an endpoint on a legacy DAC.
 	Legacy bool    `json:"legacy,omitempty"`
 	Owner  *Tenant `json:"owner,omitempty"`
 }

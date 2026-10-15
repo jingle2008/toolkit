@@ -3,7 +3,6 @@ package k8s
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -17,14 +16,12 @@ import (
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
-// ErrLegacyInferenceService reports that the named InferenceService only
-// exists in the legacy ome.oracle.com/v1alpha1 API, which restart does
-// not target.
-var ErrLegacyInferenceService = errors.New("legacy ome.oracle.com/v1alpha1 InferenceService; restart is not supported")
-
 // restartedAtAnnotation is the InferenceService annotation the OME
 // controller propagates to the serving pods' template; bumping its value
 // triggers a rolling restart (the kubectl-annotate runbook equivalent).
+// The legacy ome.oracle.com/v1alpha1 controller propagates it too: on
+// dp-dev-ord / dp-ppe-ord, every bump of restartedAt alone produced a new
+// ReplicaSet.
 const restartedAtAnnotation = "restartedAt"
 
 /*
@@ -57,64 +54,61 @@ func RestartInferenceService(ctx context.Context, kubeconfig, contextName, names
 
 func resolveInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string) (string, error) {
 	if namespace != "" {
-		if _, err := client.Resource(inferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{}); err != nil {
-			if apierrors.IsNotFound(err) && legacyInferenceServiceExists(ctx, client, namespace, name) {
-				return "", fmt.Errorf("InferenceService %s/%s: %w", namespace, name, ErrLegacyInferenceService)
+		_, err := client.Resource(inferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			if _, legacyErr := client.Resource(legacyInferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{}); legacyErr == nil {
+				return namespace, nil
 			}
+		}
+		if err != nil {
 			return "", fmt.Errorf("get InferenceService %s/%s: %w", namespace, name, err)
 		}
 		return namespace, nil
 	}
 
-	// The field selector narrows server-side; the name check below keeps
-	// the result correct even where the selector is ignored.
-	list, err := client.Resource(inferenceServiceGVR).List(ctx, v1.ListOptions{
-		FieldSelector: "metadata.name=" + name,
-	})
+	namespaces, err := inferenceServiceNamespaces(ctx, client, name)
 	if err != nil {
-		return "", fmt.Errorf("list InferenceService: %w", err)
-	}
-	var namespaces []string
-	for i := range list.Items {
-		if list.Items[i].GetName() == name {
-			namespaces = append(namespaces, list.Items[i].GetNamespace())
-		}
+		return "", err
 	}
 	switch len(namespaces) {
 	case 0:
-		if legacyInferenceServiceExists(ctx, client, "", name) {
-			return "", fmt.Errorf("InferenceService %q: %w", name, ErrLegacyInferenceService)
-		}
 		return "", fmt.Errorf("InferenceService %q not found in any namespace", name)
 	case 1:
 		return namespaces[0], nil
 	default:
-		slices.Sort(namespaces)
 		return "", fmt.Errorf("InferenceService %q exists in multiple namespaces (%s); specify a namespace",
 			name, strings.Join(namespaces, ", "))
 	}
 }
 
-// legacyInferenceServiceExists reports whether a legacy InferenceService
-// called name exists (in namespace, or in any namespace when empty). Any
-// lookup error — including a missing legacy CRD — reads as "no".
-func legacyInferenceServiceExists(ctx context.Context, client dynamic.Interface, namespace, name string) bool {
-	if namespace != "" {
-		_, err := client.Resource(legacyInferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
-		return err == nil
-	}
-	list, err := client.Resource(legacyInferenceServiceGVR).List(ctx, v1.ListOptions{
-		FieldSelector: "metadata.name=" + name,
-	})
+// inferenceServiceNamespaces returns the sorted, distinct namespaces
+// holding an InferenceService called name in either API. A cluster
+// without the legacy CRD contributes no legacy matches.
+func inferenceServiceNamespaces(ctx context.Context, client dynamic.Interface, name string) ([]string, error) {
+	// The field selector narrows server-side; the name check below keeps
+	// the result correct even where the selector is ignored.
+	opts := v1.ListOptions{FieldSelector: "metadata.name=" + name}
+	list, err := client.Resource(inferenceServiceGVR).List(ctx, opts)
 	if err != nil {
-		return false
+		return nil, fmt.Errorf("list InferenceService: %w", err)
 	}
-	for i := range list.Items {
-		if list.Items[i].GetName() == name {
-			return true
+	items := list.Items
+	legacy, err := client.Resource(legacyInferenceServiceGVR).List(ctx, opts)
+	switch {
+	case apierrors.IsNotFound(err): // no legacy CRD
+	case err != nil:
+		return nil, fmt.Errorf("list legacy InferenceService: %w", err)
+	default:
+		items = append(items, legacy.Items...)
+	}
+	var namespaces []string
+	for i := range items {
+		if items[i].GetName() == name {
+			namespaces = append(namespaces, items[i].GetNamespace())
 		}
 	}
-	return false
+	slices.Sort(namespaces)
+	return slices.Compact(namespaces), nil
 }
 
 func restartInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string, now time.Time) error {
@@ -127,11 +121,21 @@ func restartInferenceService(ctx context.Context, client dynamic.Interface, name
 	if err != nil {
 		return fmt.Errorf("marshal restart patch: %w", err)
 	}
-	if _, err := client.Resource(inferenceServiceGVR).Namespace(namespace).
-		Patch(ctx, name, types.MergePatchType, patch, v1.PatchOptions{}); err != nil {
+	// Try the ome.io API first, then the legacy one: the caller only has
+	// namespace/name, and an endpoint lives in exactly one of them.
+	gvr := inferenceServiceGVR
+	_, err = client.Resource(gvr).Namespace(namespace).Patch(ctx, name, types.MergePatchType, patch, v1.PatchOptions{})
+	if apierrors.IsNotFound(err) {
+		_, legacyErr := client.Resource(legacyInferenceServiceGVR).Namespace(namespace).
+			Patch(ctx, name, types.MergePatchType, patch, v1.PatchOptions{})
+		if legacyErr == nil || !apierrors.IsNotFound(legacyErr) {
+			gvr, err = legacyInferenceServiceGVR, legacyErr
+		}
+	}
+	if err != nil {
 		return fmt.Errorf("restart InferenceService %s/%s: %w", namespace, name, err)
 	}
 	logging.FromContext(ctx).Infow("restarted inference service",
-		"namespace", namespace, "name", name, restartedAtAnnotation, restartedAt)
+		"namespace", namespace, "name", name, "apiGroup", gvr.Group, restartedAtAnnotation, restartedAt)
 	return nil
 }

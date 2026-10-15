@@ -299,7 +299,7 @@ Toolkit organises data into 22 categories:
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
 | **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters; press `Enter` to see the inference services running on one |
-| **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). A `*` after the model marks a tenant-imported (namespaced `BaseModel`) model. **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty. Legacy `ome.oracle.com/v1alpha1` endpoints (on legacy DACs) are listed too and match `/legacy`; they cannot be restarted |
+| **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). A `*` after the model marks a tenant-imported (namespaced `BaseModel`) model. **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty. Legacy `ome.oracle.com/v1alpha1` endpoints (on legacy DACs) are listed too and match `/legacy` |
 | **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty |
 
 ### Meta
