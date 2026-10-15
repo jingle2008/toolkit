@@ -26,6 +26,18 @@ func TestBuildTenantIDSuffixMap(t *testing.T) {
 	}
 }
 
+// TestBuildTenantIDSuffixMap_FirstClaimWins pins that an ID claimed by
+// several tenants resolves to the first one, so ownership doesn't depend
+// on which tenant happens to come last.
+func TestBuildTenantIDSuffixMap_FirstClaimWins(t *testing.T) {
+	t.Parallel()
+	d := &Dataset{Tenants: []Tenant{
+		{Name: "OABCS1", IDs: []string{"ocid1.tenancy.oc1..xxxx"}},
+		{Name: "oabcs1", IDs: []string{"ocid1.tenancy.oc1..xxxx"}},
+	}}
+	assert.Equal(t, map[string]int{"xxxx": 0}, d.buildTenantIDSuffixMap())
+}
+
 func TestSetDedicatedAIClusterMap(t *testing.T) {
 	t.Parallel()
 	tenantA := Tenant{Name: "TenantA", IDs: []string{"ocid1.tenancy.oc1..aaaa"}}

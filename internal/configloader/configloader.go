@@ -7,8 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/fileutil"
@@ -126,7 +129,16 @@ func merge[T any](value T, override *T) T {
 	return *override
 }
 
-func getTenants(tenantMap map[string]idSet, tenantMeta []models.TenantMetadata) []models.Tenant {
+// getTenants builds the realm's tenants from the override directories
+// (tenantMap: directory name → tenancy OCIDs) merged with tenant metadata.
+// A metadata name takes precedence over the directory name, and tenants
+// that end up with the same name are merged into one. It also returns the
+// directory name → Tenant.Name mapping that LoadTenancyOverrideGroup uses
+// to re-key the override maps, so Tenant → override scoping keeps working
+// for renamed tenants. Output is deterministic: tenants are sorted by
+// name, IDs are sorted, and tenants claiming the same OCID are flagged
+// via SharedWith.
+func getTenants(tenantMap map[string]idSet, tenantMeta []models.TenantMetadata) ([]models.Tenant, map[string]string) {
 	// Build id -> TenantMetadata map for quick lookup
 	idToMeta := make(map[string]models.TenantMetadata, len(tenantMeta))
 	consumed := make(map[string]bool, len(tenantMeta))
@@ -135,13 +147,23 @@ func getTenants(tenantMap map[string]idSet, tenantMeta []models.TenantMetadata) 
 	}
 
 	tenants := make([]models.Tenant, 0, len(tenantMap)+len(tenantMeta))
+	byName := make(map[string]int, cap(tenants))
+	add := func(t models.Tenant) {
+		if i, ok := byName[t.Name]; ok {
+			tenants[i].IDs = append(tenants[i].IDs, t.IDs...)
+			if tenants[i].Note == "" {
+				tenants[i].Note = t.Note
+			}
+			return
+		}
+		byName[t.Name] = len(tenants)
+		tenants = append(tenants, t)
+	}
 
 	// First: process tenantMap, merging with metadata if any id matches
-	for k, v := range tenantMap {
-		ids := make([]string, 0, len(v))
-		for id := range v {
-			ids = append(ids, id)
-		}
+	dirToName := make(map[string]string, len(tenantMap))
+	for _, k := range slices.Sorted(maps.Keys(tenantMap)) {
+		ids := slices.Sorted(maps.Keys(tenantMap[k]))
 
 		tenantName := k
 		isInternal := true
@@ -156,13 +178,13 @@ func getTenants(tenantMap map[string]idSet, tenantMeta []models.TenantMetadata) 
 			}
 		}
 
-		tenant := models.Tenant{
+		dirToName[k] = tenantName
+		add(models.Tenant{
 			IDs:        ids,
 			Name:       tenantName,
 			IsInternal: isInternal,
 			Note:       note,
-		}
-		tenants = append(tenants, tenant)
+		})
 	}
 
 	// Second: add any metadata entries not matched above
@@ -171,16 +193,65 @@ func getTenants(tenantMap map[string]idSet, tenantMeta []models.TenantMetadata) 
 			continue
 		}
 
-		tenant := models.Tenant{
+		add(models.Tenant{
 			IDs:        []string{m.ID},
 			Name:       *m.Name,
 			IsInternal: *m.IsInternal,
 			Note:       merge("", m.Note),
-		}
-		tenants = append(tenants, tenant)
+		})
 	}
 
-	return tenants
+	for i := range tenants {
+		slices.Sort(tenants[i].IDs)
+		tenants[i].IDs = slices.Compact(tenants[i].IDs)
+	}
+	slices.SortFunc(tenants, func(a, b models.Tenant) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	markSharedIDs(tenants)
+
+	return tenants, dirToName
+}
+
+// markSharedIDs sets SharedWith on every tenant that claims an OCID also
+// claimed by another tenant (e.g. the same tenancy under two differently
+// spelled override directories). Such tenants are flagged faulty, since
+// tenant-owned rows carrying that OCID can only resolve to one of them.
+func markSharedIDs(tenants []models.Tenant) {
+	claimants := make(map[string][]int)
+	for i, t := range tenants {
+		for _, id := range t.IDs {
+			claimants[id] = append(claimants[id], i)
+		}
+	}
+	for i := range tenants {
+		var shared []string
+		for _, id := range tenants[i].IDs {
+			for _, j := range claimants[id] {
+				if j != i {
+					shared = append(shared, tenants[j].Name)
+				}
+			}
+		}
+		slices.Sort(shared)
+		tenants[i].SharedWith = slices.Compact(shared)
+	}
+}
+
+// rekeyByTenant re-keys an override map from tenant directory name to the
+// resolved Tenant.Name (see getTenants), concatenating the overrides of
+// directories that resolve to the same tenant. Directories absent from
+// dirToName keep their key.
+func rekeyByTenant[T any](m map[string][]T, dirToName map[string]string) map[string][]T {
+	out := make(map[string][]T, len(m))
+	for _, dir := range slices.Sorted(maps.Keys(m)) {
+		name, ok := dirToName[dir]
+		if !ok {
+			name = dir
+		}
+		out[name] = append(out[name], m[dir]...)
+	}
+	return out
 }
 
 // tenancyOverrideRecord is the constraint satisfied by every
@@ -384,12 +455,12 @@ func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metad
 		return models.TenancyOverrideGroup{}, err
 	}
 
-	tenants := getTenants(tenantMap, metadata.GetTenants(realm))
+	tenants, dirToName := getTenants(tenantMap, metadata.GetTenants(realm))
 	return models.TenancyOverrideGroup{
 		Tenants:                           tenants,
-		LimitTenancyOverrideMap:           limitTenancyOverrideMap,
-		ConsolePropertyTenancyOverrideMap: consolePropertyTenancyOverrideMap,
-		PropertyTenancyOverrideMap:        propertyTenancyOverrideMap,
+		LimitTenancyOverrideMap:           rekeyByTenant(limitTenancyOverrideMap, dirToName),
+		ConsolePropertyTenancyOverrideMap: rekeyByTenant(consolePropertyTenancyOverrideMap, dirToName),
+		PropertyTenancyOverrideMap:        rekeyByTenant(propertyTenancyOverrideMap, dirToName),
 	}, nil
 }
 

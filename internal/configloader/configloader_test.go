@@ -235,19 +235,66 @@ func TestLoadTenancyOverrides_Error(t *testing.T) {
 func TestGetTenants(t *testing.T) {
 	t.Parallel()
 	m := map[string]idSet{
-		"Tenant1": map[string]struct{}{"id1": {}},
 		"Tenant2": map[string]struct{}{"id2": {}},
+		"Tenant1": map[string]struct{}{"id1b": {}, "id1a": {}},
 	}
-	tenants := getTenants(m, nil)
-	assert.Len(t, tenants, 2)
-	slices.SortFunc(tenants, func(t1, t2 models.Tenant) int {
-		return strings.Compare(t1.Name, t2.Name)
-	})
-	names := []string{tenants[0].Name, tenants[1].Name}
-	assert.Contains(t, names, "Tenant1")
-	assert.Contains(t, names, "Tenant2")
-	assert.ElementsMatch(t, []string{"id1"}, tenants[0].IDs)
-	assert.ElementsMatch(t, []string{"id2"}, tenants[1].IDs)
+	tenants, dirToName := getTenants(m, nil)
+	require.Len(t, tenants, 2)
+	// Sorted by name, IDs sorted — independent of map iteration order.
+	assert.Equal(t, "Tenant1", tenants[0].Name)
+	assert.Equal(t, []string{"id1a", "id1b"}, tenants[0].IDs)
+	assert.Equal(t, "Tenant2", tenants[1].Name)
+	assert.Equal(t, []string{"id2"}, tenants[1].IDs)
+	assert.Equal(t, map[string]string{"Tenant1": "Tenant1", "Tenant2": "Tenant2"}, dirToName)
+}
+
+// TestGetTenants_SharedIDsFlagged pins that two override directories
+// carrying the same tenancy OCID (e.g. "OABCS1" and "oabcs1") stay
+// separate tenants but are both flagged faulty via SharedWith.
+func TestGetTenants_SharedIDsFlagged(t *testing.T) {
+	t.Parallel()
+	m := map[string]idSet{
+		"oabcs1": {"idX": {}},
+		"OABCS1": {"idX": {}},
+		"other":  {"idY": {}},
+	}
+	tenants, _ := getTenants(m, nil)
+	require.Len(t, tenants, 3)
+	assert.Equal(t, "OABCS1", tenants[0].Name)
+	assert.Equal(t, []string{"oabcs1"}, tenants[0].SharedWith)
+	assert.True(t, tenants[0].IsFaulty())
+	assert.Equal(t, "oabcs1", tenants[1].Name)
+	assert.Equal(t, []string{"OABCS1"}, tenants[1].SharedWith)
+	assert.Equal(t, "other", tenants[2].Name)
+	assert.Empty(t, tenants[2].SharedWith)
+	assert.False(t, tenants[2].IsFaulty())
+}
+
+// TestGetTenants_SameNameMerged pins that directories resolving to the
+// same tenant name through metadata collapse into one Tenant, and that
+// both directories map to it.
+func TestGetTenants_SameNameMerged(t *testing.T) {
+	t.Parallel()
+	m := map[string]idSet{
+		"rbcpreprod":  {"idR": {}},
+		"rbc_preprod": {"idR": {}},
+	}
+	name := "rbc-preprod"
+	internal := false
+	tenants, dirToName := getTenants(m, []models.TenantMetadata{{ID: "idR", Name: &name, IsInternal: &internal}})
+	require.Len(t, tenants, 1)
+	assert.Equal(t, name, tenants[0].Name)
+	assert.Equal(t, []string{"idR"}, tenants[0].IDs)
+	assert.Empty(t, tenants[0].SharedWith)
+	assert.False(t, tenants[0].IsInternal)
+	assert.Equal(t, map[string]string{"rbcpreprod": name, "rbc_preprod": name}, dirToName)
+}
+
+func TestRekeyByTenant(t *testing.T) {
+	t.Parallel()
+	m := map[string][]string{"b": {"b1"}, "a": {"a1", "a2"}, "keep": {"k"}}
+	got := rekeyByTenant(m, map[string]string{"a": "T", "b": "T"})
+	assert.Equal(t, map[string][]string{"T": {"a1", "a2", "b1"}, "keep": {"k"}}, got)
 }
 
 type testOverride struct {
@@ -556,29 +603,63 @@ func TestGetTenants_MergeAndUnmatched(t *testing.T) {
 		"TenantB": {"idB": {}},
 	}
 	name := "TenantA-override"
+	extra := "TenantC"
 	isInternal := false
 	note := "note"
 	tenantMeta := []models.TenantMetadata{
 		{ID: "idA", Name: &name, IsInternal: &isInternal, Note: &note},
-		{ID: "idC", Name: &name, IsInternal: &isInternal, Note: &note},
+		{ID: "idC", Name: &extra, IsInternal: &isInternal, Note: &note},
 	}
-	tenants := getTenants(tenantMap, tenantMeta)
-	// Should have 3 tenants: TenantA merged, TenantB as is, idC as extra
-	assert.Len(t, tenants, 3)
-	var foundMerged, foundB, foundC bool
-	for _, tnt := range tenants {
-		switch {
-		case tnt.Name == name && tnt.IDs[0] == "idA":
-			foundMerged = true
-			assert.Equal(t, isInternal, tnt.IsInternal)
-			assert.Equal(t, note, tnt.Note)
-		case tnt.Name == "TenantB" && tnt.IDs[0] == "idB":
-			foundB = true
-		case tnt.Name == name && tnt.IDs[0] == "idC":
-			foundC = true
-		}
+	tenants, dirToName := getTenants(tenantMap, tenantMeta)
+	// TenantA renamed by metadata, TenantB as is, idC as extra; sorted by name.
+	require.Len(t, tenants, 3)
+	assert.Equal(t, models.Tenant{Name: name, IDs: []string{"idA"}, IsInternal: isInternal, Note: note}, tenants[0])
+	assert.Equal(t, models.Tenant{Name: "TenantB", IDs: []string{"idB"}, IsInternal: true}, tenants[1])
+	assert.Equal(t, models.Tenant{Name: extra, IDs: []string{"idC"}, IsInternal: isInternal, Note: note}, tenants[2])
+	assert.Equal(t, map[string]string{"TenantA": name, "TenantB": "TenantB"}, dirToName)
+}
+
+// TestGetTenants_MetadataOnlyNameCollision pins that a metadata-only
+// entry whose name matches an existing tenant is merged into it rather
+// than producing two tenants with the same name.
+func TestGetTenants_MetadataOnlyNameCollision(t *testing.T) {
+	t.Parallel()
+	name := "TenantA"
+	internal := true
+	tenants, _ := getTenants(map[string]idSet{"TenantA": {"idA": {}}},
+		[]models.TenantMetadata{{ID: "idC", Name: &name, IsInternal: &internal}})
+	require.Len(t, tenants, 1)
+	assert.Equal(t, []string{"idA", "idC"}, tenants[0].IDs)
+	assert.True(t, tenants[0].IsFaulty())
+}
+
+// TestLoadTenancyOverrideGroup_RenamedTenantRekeysOverrides pins the fix
+// for metadata-renamed tenants: the override maps must be keyed by the
+// resolved Tenant.Name (the scope key), while each override's TenantName
+// keeps the source directory name.
+func TestLoadTenancyOverrideGroup_RenamedTenantRekeysOverrides(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	realm := "testrealm"
+	for _, category := range []string{"limits", "console_properties", "properties"} {
+		dir := filepath.Join(root, "shared_modules/limits", category+"_tenancy_overrides", "regional_values", realm, "tenant-dir")
+		require.NoError(t, os.MkdirAll(dir, 0o750)) // #nosec G301
 	}
-	assert.True(t, foundMerged)
-	assert.True(t, foundB)
-	assert.True(t, foundC)
+	dir := filepath.Join(root, "shared_modules/limits", "limits_tenancy_overrides", "regional_values", realm, "tenant-dir")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "lim.json"),
+		[]byte(`{"name":"l1","tenant_id":"ocid1.tenancy.testrealm..aaa"}`), 0o600))
+
+	name := "Friendly Name"
+	internal := false
+	meta := &models.Metadata{Tenants: []models.TenantMetadata{
+		{ID: "ocid1.tenancy.testrealm..aaa", Name: &name, IsInternal: &internal},
+	}}
+	group, err := LoadTenancyOverrideGroup(context.Background(), root, realm, meta)
+	require.NoError(t, err)
+
+	require.Len(t, group.Tenants, 1)
+	assert.Equal(t, name, group.Tenants[0].Name)
+	require.Len(t, group.LimitTenancyOverrideMap[name], 1)
+	assert.NotContains(t, group.LimitTenancyOverrideMap, "tenant-dir")
+	assert.Equal(t, "tenant-dir", group.LimitTenancyOverrideMap[name][0].TenantName)
 }

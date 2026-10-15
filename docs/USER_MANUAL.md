@@ -260,7 +260,7 @@ Toolkit organises data into 22 categories:
 
 | Category | Description |
 |----------|-------------|
-| **Tenant** | Tenant-level data; supports faulty tracking, internal flag, and scoping into overrides |
+| **Tenant** | Tenant-level data; supports faulty tracking, internal flag, and scoping into overrides. A tenant is faulty when it has more than one OCID or shares an OCID with another tenant (the same tenancy filed under two override directories) |
 | **Environment** | Cloud environment configurations |
 | **ServiceTenancy** | Service-to-tenancy mappings |
 
