@@ -92,13 +92,10 @@ func TestJsonResult_WarningsPropagate(t *testing.T) {
 	assert.Equal(t, []string{"partial source X failed"}, env.Warnings)
 }
 
-func TestMutationSuccess_Shape(t *testing.T) {
+func TestMutationOK_Shape(t *testing.T) {
 	t.Parallel()
-	res, env, err := mutationSuccess("cordon", "node", "gpu-node-42")
-	require.NoError(t, err)
-	require.NotNil(t, res)
-	assert.Empty(t, res.Content, "mutationSuccess returns empty Content so the SDK can auto-emit it")
-	assert.Equal(t, mutationResult{Status: "OK", Action: "cordon", Kind: "node", Target: "gpu-node-42"}, env)
+	assert.Equal(t, mutationResult{Status: "OK", Action: "cordon", Kind: "node", Target: "gpu-node-42"},
+		mutationOK("cordon", "node", "gpu-node-42"))
 }
 
 func TestWarningsFromPartial(t *testing.T) {

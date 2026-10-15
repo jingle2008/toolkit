@@ -9,6 +9,7 @@ import (
 	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
@@ -83,6 +84,12 @@ func resolveInferenceService(ctx context.Context, client dynamic.Interface, name
 }
 
 func restartInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string, now time.Time) error {
+	return patchRestartedAt(ctx, client, inferenceServiceGVR, namespace, name, now)
+}
+
+// patchRestartedAt stamps restartedAt on the InferenceService served by
+// gvr; both OME API generations honor the annotation.
+func patchRestartedAt(ctx context.Context, client dynamic.Interface, gvr schema.GroupVersionResource, namespace, name string, now time.Time) error {
 	restartedAt := now.UTC().Format(time.RFC3339)
 	patch, err := json.Marshal(map[string]any{
 		"metadata": map[string]any{
@@ -92,7 +99,7 @@ func restartInferenceService(ctx context.Context, client dynamic.Interface, name
 	if err != nil {
 		return fmt.Errorf("marshal restart patch: %w", err)
 	}
-	if _, err := client.Resource(inferenceServiceGVR).Namespace(namespace).
+	if _, err := client.Resource(gvr).Namespace(namespace).
 		Patch(ctx, name, types.MergePatchType, patch, v1.PatchOptions{}); err != nil {
 		return fmt.Errorf("restart InferenceService %s/%s: %w", namespace, name, err)
 	}
