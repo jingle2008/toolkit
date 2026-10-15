@@ -140,3 +140,18 @@ func TestHeaderHelp_QuickSwitchLeads(t *testing.T) {
 		t.Errorf("quick-switch column not leading: %v", headerDescs(cols))
 	}
 }
+
+func TestHeaderHelp_NothingWhenHelpAloneOverflows(t *testing.T) {
+	t.Parallel()
+	km := KeyMap{Global: []key.Binding{Help}, Context: []key.Binding{Refresh}}
+	count := func(cols [][]key.Binding) int { return len(headerDescs(cols)) }
+	if got := km.HeaderHelp(0, nil); len(got) == 0 {
+		t.Fatal("width 0 must disable fitting")
+	}
+	if got := km.HeaderHelp(-1, nil); len(got) == 0 {
+		t.Fatal("negative width must disable fitting")
+	}
+	if got := km.HeaderHelp(1, func(c [][]key.Binding) int { return count(c) + 1 }); got != nil {
+		t.Errorf("HeaderHelp() = %v, want nil", headerDescs(got))
+	}
+}

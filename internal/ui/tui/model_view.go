@@ -201,6 +201,20 @@ func (m *Model) renderActiveView() string {
 	}
 }
 
+// headerInfo renders the header's info column as frame() draws it; layout
+// budgets must measure this, not the unstyled infoView, whose width the
+// InfoValue style pads out.
+func (m *Model) headerInfo() string {
+	return m.theme.InfoValue.Render(m.infoView())
+}
+
+// showLogo reports whether the logo fits beside the info column in a
+// terminal w columns wide. Help yields its space first, so the logo drops
+// only when info and logo alone no longer fit.
+func (m *Model) showLogo(w int) bool {
+	return w >= lipgloss.Width(m.headerInfo())+view.LogoWidth+view.LogoMargin
+}
+
 // centered is a thin wrapper around view.CenterText using model dims.
 func (m *Model) centered(msg string) string {
 	return view.CenterText(msg, m.viewWidth, m.viewHeight)
@@ -217,9 +231,18 @@ func (m *Model) frame(main string) string {
 		h.Width = 0
 		return lipgloss.Width(h.FullHelpView(cols))
 	}
-	helpView := m.help.FullHelpView(km.HeaderHelp(m.help.Width, measure))
-	infoView := m.theme.InfoValue.Render(m.infoView())
-	header := lipgloss.JoinHorizontal(lipgloss.Top, infoView, helpView)
+	// A zero budget means no room, but bubbles and HeaderHelp both read
+	// Width 0 as unbounded, so skip help rather than render it all.
+	var helpView string
+	if m.help.Width > 0 {
+		helpView = m.help.FullHelpView(km.HeaderHelp(m.help.Width, measure))
+	}
+	header := lipgloss.JoinHorizontal(lipgloss.Top, m.headerInfo(), helpView)
+	if m.showLogo(m.viewWidth) {
+		logo := m.theme.InfoKey.PaddingRight(view.LogoMargin).Render(view.Logo)
+		header = lipgloss.JoinHorizontal(lipgloss.Top, header,
+			lipgloss.PlaceHorizontal(max(m.viewWidth-lipgloss.Width(header), 0), lipgloss.Right, logo))
+	}
 	status := m.statusView()
 	return lipgloss.JoinVertical(lipgloss.Left, header, status, main)
 }

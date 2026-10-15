@@ -9,14 +9,15 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
 /*
 TestHeaderHelp_FitsReferenceTerminal guards the header bar against
 silently outgrowing a typical terminal as category actions are added.
 
-The reference is a 120-column terminal with a 30-column info block and
-two quick-switch slots. HeaderHelp may drop core keys to fit, but never a
+The reference is a 120-column terminal with a 30-column info block, the
+header logo, and two quick-switch slots. HeaderHelp may drop core keys to fit, but never a
 category action: if this fails, the new binding needs a decision — trim
 the category's catContext, or shorten a description — not a wider
 reference.
@@ -27,7 +28,8 @@ func TestHeaderHelp_FitsReferenceTerminal(t *testing.T) {
 		termWidth = 120
 		infoWidth = 30
 	)
-	width := termWidth - infoWidth - 1 // mirrors updateLayout's budget
+	// mirrors updateLayout's budget
+	width := termWidth - infoWidth - view.LogoWidth - view.LogoMargin - 1
 	hm := help.New()
 	measure := func(cols [][]key.Binding) int {
 		return lipgloss.Width(hm.FullHelpView(cols))

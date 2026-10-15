@@ -89,8 +89,9 @@ first, then the headerCore keys this KeyMap carries, each tier sorted by
 description. When the columns don't fit, bindings are dropped from the
 tail — core before actions — and the pinned Help entry reports how many
 were hidden, so overflow is never silent. QuickSwitch keeps its leading
-column. measure reports the rendered width of a column set; width <= 0
-disables fitting.
+column; if even QuickSwitch and Help overflow, nothing is returned.
+measure reports the rendered width of a column set; width <= 0 disables
+fitting.
 */
 func (k KeyMap) HeaderHelp(width int, measure func([][]key.Binding) int) [][]key.Binding {
 	byDesc := func(c1, c2 key.Binding) int {
@@ -111,12 +112,15 @@ func (k KeyMap) HeaderHelp(width int, measure func([][]key.Binding) int) [][]key
 	slices.SortStableFunc(core, byDesc)
 
 	items := slices.Concat(actions, core)
-	for n := len(items); ; n-- {
+	for n := len(items); n >= 0; n-- {
 		cols := k.headerColumns(items[:n], len(items)-n)
-		if width <= 0 || n == 0 || measure(cols) <= width {
+		if width <= 0 || measure(cols) <= width {
 			return cols
 		}
 	}
+	// Not even Help fits. Return nothing: handing bubbles an oversized
+	// column makes it skip its ellipsis and render the column anyway.
+	return nil
 }
 
 // headerColumns lays out the QuickSwitch column, then items followed by
