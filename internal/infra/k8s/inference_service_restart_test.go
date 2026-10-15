@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,7 +17,8 @@ import (
 func newISVCClient(t *testing.T, srcs ...string) *dynamicfake.FakeDynamicClient {
 	t.Helper()
 	listKinds := map[schema.GroupVersionResource]string{
-		inferenceServiceGVR: "InferenceServiceList",
+		inferenceServiceGVR:       "InferenceServiceList",
+		legacyInferenceServiceGVR: "InferenceServiceList",
 	}
 	objs := make([]runtime.Object, 0, len(srcs))
 	for _, src := range srcs {
@@ -53,6 +55,15 @@ func TestResolveInferenceService(t *testing.T) {
 			name: "ambiguous lists namespaces", objs: []string{isvcOnDemand, isvcEmbedOtherNS}, target: "embed-v4",
 			wantErr: "multiple namespaces (amaaaaaa-dac, embed-v4); specify a namespace",
 		},
+		{
+			name: "legacy-only name is refused", objs: []string{isvcLegacyDedicated}, target: "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
+			wantErr: "restart is not supported",
+		},
+		{
+			name: "legacy-only name in namespace is refused", objs: []string{isvcLegacyDedicated},
+			namespace: "amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa", target: "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
+			wantErr: "restart is not supported",
+		},
 		{name: "ambiguity resolved by namespace", objs: []string{isvcOnDemand, isvcEmbedOtherNS}, namespace: "amaaaaaa-dac", target: "embed-v4", want: "amaaaaaa-dac"},
 	}
 	for _, tc := range cases {
@@ -61,6 +72,9 @@ func TestResolveInferenceService(t *testing.T) {
 			got, err := resolveInferenceService(context.Background(), newISVCClient(t, tc.objs...), tc.namespace, tc.target)
 			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
+				if strings.Contains(tc.wantErr, "not supported") {
+					require.ErrorIs(t, err, ErrLegacyInferenceService)
+				}
 				return
 			}
 			require.NoError(t, err)

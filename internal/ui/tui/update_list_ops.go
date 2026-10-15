@@ -225,6 +225,9 @@ func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cm
 		m.logger.Errorw("unsupported item type for restart operation", "item", item)
 		return nil
 	}
+	if svc.Legacy {
+		return m.showToast(fmt.Sprintf("restart %s: %v", itemKeyString(itemKey), k8s.ErrLegacyInferenceService), toastError)
+	}
 	m.logger.Infow("action started", "action", "restartInferenceService", "service", itemKeyString(itemKey))
 	namespace, name := svc.Namespace, svc.Name
 	return func() tea.Msg {

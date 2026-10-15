@@ -101,3 +101,17 @@ func TestHandleRestartServiceResultMsg_Toasts(t *testing.T) {
 	assert.Equal(t, "restart ns1/svc1 failed: forbidden", m.toasts.active.msg)
 	assert.Equal(t, toastError, m.toasts.active.sev)
 }
+
+// TestRestartInferenceService_LegacyRefused pins that a legacy
+// (ome.oracle.com/v1alpha1) row is refused with an error toast instead of
+// patching: restart only targets the ome.io API.
+func TestRestartInferenceService_LegacyRefused(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	key := models.ScopedItemKey{Scope: "ns1", Name: "svc1"}
+	svc := &models.InferenceService{Name: "svc1", Namespace: "ns1", Legacy: true}
+
+	require.NotNil(t, m.restartInferenceService(svc, key))
+	assert.Contains(t, m.toasts.active.msg, "restart ns1/svc1: legacy")
+	assert.Equal(t, toastError, m.toasts.active.sev)
+}

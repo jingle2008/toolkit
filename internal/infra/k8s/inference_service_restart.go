@@ -3,17 +3,24 @@ package k8s
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
+
+// ErrLegacyInferenceService reports that the named InferenceService only
+// exists in the legacy ome.oracle.com/v1alpha1 API, which restart does
+// not target.
+var ErrLegacyInferenceService = errors.New("legacy ome.oracle.com/v1alpha1 InferenceService; restart is not supported")
 
 // restartedAtAnnotation is the InferenceService annotation the OME
 // controller propagates to the serving pods' template; bumping its value
@@ -51,6 +58,9 @@ func RestartInferenceService(ctx context.Context, kubeconfig, contextName, names
 func resolveInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string) (string, error) {
 	if namespace != "" {
 		if _, err := client.Resource(inferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{}); err != nil {
+			if apierrors.IsNotFound(err) && legacyInferenceServiceExists(ctx, client, namespace, name) {
+				return "", fmt.Errorf("InferenceService %s/%s: %w", namespace, name, ErrLegacyInferenceService)
+			}
 			return "", fmt.Errorf("get InferenceService %s/%s: %w", namespace, name, err)
 		}
 		return namespace, nil
@@ -72,6 +82,9 @@ func resolveInferenceService(ctx context.Context, client dynamic.Interface, name
 	}
 	switch len(namespaces) {
 	case 0:
+		if legacyInferenceServiceExists(ctx, client, "", name) {
+			return "", fmt.Errorf("InferenceService %q: %w", name, ErrLegacyInferenceService)
+		}
 		return "", fmt.Errorf("InferenceService %q not found in any namespace", name)
 	case 1:
 		return namespaces[0], nil
@@ -80,6 +93,28 @@ func resolveInferenceService(ctx context.Context, client dynamic.Interface, name
 		return "", fmt.Errorf("InferenceService %q exists in multiple namespaces (%s); specify a namespace",
 			name, strings.Join(namespaces, ", "))
 	}
+}
+
+// legacyInferenceServiceExists reports whether a legacy InferenceService
+// called name exists (in namespace, or in any namespace when empty). Any
+// lookup error — including a missing legacy CRD — reads as "no".
+func legacyInferenceServiceExists(ctx context.Context, client dynamic.Interface, namespace, name string) bool {
+	if namespace != "" {
+		_, err := client.Resource(legacyInferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
+		return err == nil
+	}
+	list, err := client.Resource(legacyInferenceServiceGVR).List(ctx, v1.ListOptions{
+		FieldSelector: "metadata.name=" + name,
+	})
+	if err != nil {
+		return false
+	}
+	for i := range list.Items {
+		if list.Items[i].GetName() == name {
+			return true
+		}
+	}
+	return false
 }
 
 func restartInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string, now time.Time) error {
