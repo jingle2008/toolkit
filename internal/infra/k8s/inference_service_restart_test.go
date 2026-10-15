@@ -16,7 +16,7 @@ import (
 func newISVCClient(t *testing.T, srcs ...string) *dynamicfake.FakeDynamicClient {
 	t.Helper()
 	listKinds := map[schema.GroupVersionResource]string{
-		inferenceServiceGVR:       "InferenceServiceList",
+		inferenceServiceGVR:   "InferenceServiceList",
 		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	objs := make([]runtime.Object, 0, len(srcs))

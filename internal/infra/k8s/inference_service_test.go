@@ -238,7 +238,7 @@ status: {conditions: [{type: EngineReady, status: "True"}]}
 func TestLoadInferenceServices_GroupsByNamespace(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
-		inferenceServiceGVR:       "InferenceServiceList",
+		inferenceServiceGVR:   "InferenceServiceList",
 		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
@@ -259,7 +259,7 @@ func TestLoadInferenceServices_GroupsByNamespace(t *testing.T) {
 func TestLoadInferenceServices_MergesLegacy(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
-		inferenceServiceGVR:       "InferenceServiceList",
+		inferenceServiceGVR:   "InferenceServiceList",
 		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
@@ -281,7 +281,7 @@ func TestLoadInferenceServices_MergesLegacy(t *testing.T) {
 func TestLoadInferenceServices_NoLegacyCRD(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
-		inferenceServiceGVR:       "InferenceServiceList",
+		inferenceServiceGVR:   "InferenceServiceList",
 		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
@@ -304,7 +304,7 @@ func TestLoadInferenceServices_NoLegacyCRD(t *testing.T) {
 func TestLoadInferenceServices_LegacyListErrorFails(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
-		inferenceServiceGVR:       "InferenceServiceList",
+		inferenceServiceGVR:   "InferenceServiceList",
 		inferenceServiceV1GVR: "InferenceServiceList",
 	}
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds)
