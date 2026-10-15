@@ -36,7 +36,7 @@ var BaseModelColumns = Set[models.BaseModel]{Columns: []Column[models.BaseModel]
 		Render: func(m models.BaseModel) string { return m.Version },
 	},
 	{
-		Title: "DAC Shape", Key: "dac-shape", Ratio: 0.14,
+		Title: "DAC Shape", Key: "dac-shape", Ratio: 0.15,
 		Render: baseModelDACShape,
 	},
 	{
@@ -44,15 +44,15 @@ var BaseModelColumns = Set[models.BaseModel]{Columns: []Column[models.BaseModel]
 		Render: func(m models.BaseModel) string { return m.ParameterSize },
 	},
 	{
-		Title: "Context", Key: "context", Ratio: 0.07,
+		Title: "Context", Key: "context", Ratio: 0.08,
 		Render: func(m models.BaseModel) string { return strconv.Itoa(m.MaxTokens) },
 	},
 	{
-		Title: "Flags", Key: "flags", Ratio: 0.09,
+		Title: "Flags", Key: "flags", Ratio: 0.08,
 		Render: func(m models.BaseModel) string { return m.Flags() },
 	},
 	{
-		Title: "Status", Key: "status", Ratio: 0.07,
+		Title: "Status", Key: "status", Ratio: 0.06,
 		Render: func(m models.BaseModel) string { return m.Status },
 	},
 }}

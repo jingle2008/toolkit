@@ -1,3 +1,3 @@
-NAME,NAMESPACE,TYPE,TENANT,MODEL,RUNTIME,REPLICAS,READY,AGE
-is-1,amaaaaaa-dac-1,dedicated,tenant-1,amaaaaaa-model-1*,vllm,1/2,True,3d
-embed-v4,embed-v4,on-demand,,embed-v4,,2/4,False,10d
+NAME,NAMESPACE,TENANT,MODEL,RUNTIME,REPLICAS,READY,AGE
+is-1,amaaaaaa-dac-1,tenant-1,amaaaaaa-model-1*,vllm,1/2,True,3d
+embed-v4,embed-v4,,embed-v4,,2/4,False,10d

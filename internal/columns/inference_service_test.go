@@ -27,7 +27,7 @@ func TestInferenceServiceColumns(t *testing.T) {
 		}
 	}
 	want := map[string]string{
-		"name": "e1", "namespace": "amaaaaaadac1", "type": "dedicated", "tenant": "acme",
+		"name": "e1", "namespace": "amaaaaaadac1", "tenant": "acme",
 		"model": "amaaaaaam1*", "runtime": "vllm", "replicas": "1/3", "ready": "True", "age": "3d",
 	}
 	for k, v := range want {
@@ -40,6 +40,9 @@ func TestInferenceServiceColumns(t *testing.T) {
 	}
 	if export["model"] != "amaaaaaam1" {
 		t.Errorf("export model = %q, want the bare name", export["model"])
+	}
+	if _, ok := got["type"]; ok {
+		t.Error("type column should be dropped (inferable from tenant/namespace)")
 	}
 	if s := InferenceServiceColumns.RatioSum(); s < 0.98 || s > 1.02 {
 		t.Errorf("ratio sum %.3f", s)

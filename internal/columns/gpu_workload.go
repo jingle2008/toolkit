@@ -36,11 +36,11 @@ var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn
 		Render: func(_ string, w models.GPUWorkload) string { return w.Model },
 	},
 	{
-		Title: "Runtime", Key: "runtime", Ratio: 0.18,
+		Title: "Runtime", Key: "runtime", Ratio: 0.17,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Runtime },
 	},
 	{
-		Title: "GPUs", Key: "gpus", Ratio: 0.05,
+		Title: "GPUs", Key: "gpus", Ratio: 0.06,
 		Render: func(_ string, w models.GPUWorkload) string { return strconv.Itoa(w.GPUs) },
 	},
 	{

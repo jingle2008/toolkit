@@ -5,25 +5,24 @@ import (
 )
 
 // InferenceServiceColumns is the canonical column set for
-// domain.InferenceService. 9 columns, ratios sum to 1.00. Namespace is the
+// domain.InferenceService. 8 columns, ratios sum to 1.00. Namespace is the
 // group key and MUST stay at index 1: itemKeyFrom/parentScope derive the
 // scoped key and parent (DedicatedAICluster) from row[1] for grouped
 // categories. deploymentMode is omitted: it is RawDeployment everywhere.
+// Type is omitted too: a dedicated row has a tenant and an amaaaaaa
+// namespace, so the column only crowded the table. It stays in -o json
+// and in filtering.
 var InferenceServiceColumns = GroupedSet[models.InferenceService]{Columns: []GroupedColumn[models.InferenceService]{
 	{
-		Title: "Name", Key: "name", Ratio: 0.20, TruncateMiddle: true,
+		Title: "Name", Key: "name", Ratio: 0.18, TruncateMiddle: true,
 		Render: func(_ string, s models.InferenceService) string { return s.Name },
 	},
 	{
-		Title: "Namespace", Key: "namespace", Ratio: 0.20, TruncateMiddle: true,
+		Title: "Namespace", Key: "namespace", Ratio: 0.18, TruncateMiddle: true,
 		Render: func(k string, _ models.InferenceService) string { return k },
 	},
 	{
-		Title: "Type", Key: "type", Ratio: 0.07,
-		Render: func(_ string, s models.InferenceService) string { return s.Type },
-	},
-	{
-		Title: "Tenant", Key: "tenant", Ratio: 0.11, TruncateMiddle: true,
+		Title: "Tenant", Key: "tenant", Ratio: 0.13, TruncateMiddle: true,
 		Render: func(_ string, s models.InferenceService) string { return s.TenantName() },
 		RenderForExport: func(realm, _ string, _ string, s models.InferenceService) string {
 			return s.TenancyOCID(realm)
@@ -31,7 +30,7 @@ var InferenceServiceColumns = GroupedSet[models.InferenceService]{Columns: []Gro
 	},
 	{
 		// A trailing * marks a tenant-imported (namespaced BaseModel) model.
-		Title: "Model", Key: "model", Ratio: 0.14,
+		Title: "Model", Key: "model", Ratio: 0.17,
 		Render: func(_ string, s models.InferenceService) string {
 			if s.ImportedModel {
 				return s.Model + "*"
@@ -41,19 +40,19 @@ var InferenceServiceColumns = GroupedSet[models.InferenceService]{Columns: []Gro
 		RenderForExport: func(_, _ string, _ string, s models.InferenceService) string { return s.Model },
 	},
 	{
-		Title: "Runtime", Key: "runtime", Ratio: 0.14,
+		Title: "Runtime", Key: "runtime", Ratio: 0.17,
 		Render: func(_ string, s models.InferenceService) string { return s.Runtime },
 	},
 	{
-		Title: "Replicas", Key: "replicas", Ratio: 0.05,
+		Title: "Replicas", Key: "replicas", Ratio: 0.07,
 		Render: func(_ string, s models.InferenceService) string { return s.Replicas() },
 	},
 	{
-		Title: "Ready", Key: "ready", Ratio: 0.04,
+		Title: "Ready", Key: "ready", Ratio: 0.06,
 		Render: func(_ string, s models.InferenceService) string { return s.Ready },
 	},
 	{
-		Title: "Age", Key: "age", Ratio: 0.05,
+		Title: "Age", Key: "age", Ratio: 0.04,
 		Render: func(_ string, s models.InferenceService) string { return s.Age },
 	},
 }}
