@@ -106,7 +106,11 @@ var (
 	// another driver concludes its owner died mid-start and rolls it back.
 	// The start itself takes seconds.
 	drainStartingStale = 2 * time.Minute
-	drainPollInterval  = 10 * time.Second
+	// drainBeginTimeout bounds start's planning (blocker check, restart
+	// plan) well inside drainStartingStale, so a slow but live owner gives
+	// up before another driver could take it for dead and roll it back.
+	drainBeginTimeout = time.Minute
+	drainPollInterval = 10 * time.Second
 	// drainMaxStepErrors is how many consecutive failed steps (API errors,
 	// not drain failures) AwaitDrain tolerates before giving up.
 	drainMaxStepErrors = 6
@@ -174,18 +178,19 @@ func parseISVCRef(s string) (isvcRef, bool) {
 	return isvcRef{}, false
 }
 
-// evictPod evicts one pod, falling back to deletion where the cluster
-// lacks the eviction API. A seam for tests.
-var evictPod = func(helper *drain.Helper, pod corev1.Pod) error {
-	gv, err := drain.CheckEvictionSupport(helper.Client)
-	if err != nil {
-		return err
+// Eviction seams for tests. checkEvictionSupport is an API discovery
+// call, so it runs once per eviction round, not once per pod.
+var (
+	checkEvictionSupport = drain.CheckEvictionSupport
+	// evictPod evicts one pod via the eviction API group gv, deleting it
+	// instead where the cluster lacks the eviction API (gv empty).
+	evictPod = func(helper *drain.Helper, pod corev1.Pod, gv schema.GroupVersion) error {
+		if gv.Empty() {
+			return helper.DeletePod(pod)
+		}
+		return helper.EvictPod(pod, gv)
 	}
-	if gv.Empty() {
-		return helper.DeletePod(pod)
-	}
-	return helper.EvictPod(pod, gv)
-}
+)
 
 /*
 StartDrain starts draining a node, or resumes the drain already in
@@ -263,11 +268,22 @@ func newDrainer(kubeconfig, contextName, nodeName string) (*drainer, error) {
 func (d *drainer) start(ctx context.Context) (DrainStatus, error) {
 	st, err := d.step(ctx, true)
 	if err != nil {
-		return DrainStatus{}, err
+		// The error may have struck after the drain was recorded and the
+		// node cordoned. If a drain is now in progress, report that rather
+		// than a failure, so the caller goes on to drive it instead of
+		// leaving a cordoned node that nothing advances.
+		status, serr := d.status(ctx)
+		if serr != nil || !status.Phase.InProgress() {
+			return DrainStatus{}, err
+		}
+		logging.FromContext(ctx).Warnw("drain: start step failed; drain is in progress, continuing", "node", d.node, "error", err)
+		return status, nil
 	}
 	status, err := d.status(ctx)
 	if err != nil {
-		return DrainStatus{}, err
+		// The step succeeded; report it without the live view.
+		logging.FromContext(ctx).Warnw("drain: status read failed", "node", d.node, "error", err)
+		status = DrainStatus{Node: d.node, DrainState: st}
 	}
 	if st.Phase == DrainFailed {
 		return status, errors.New(st.Message)
@@ -307,10 +323,12 @@ func (d *drainer) await(ctx context.Context) error {
 }
 
 // step advances the drain by at most one phase. With start set, a node
-// without a drain in progress begins a new one.
+// without a drain in progress begins a new one — judged by the state seen
+// on the first attempt only: a retry after losing a race must never start
+// over a drain the winner just finished or rolled back.
 func (d *drainer) step(ctx context.Context, start bool) (DrainState, error) {
 	for attempt := 0; ; attempt++ {
-		st, err := d.stepOnce(ctx, start)
+		st, err := d.stepOnce(ctx, start && attempt == 0)
 		if errors.Is(err, errDrainSuperseded) && attempt < drainCASRetries {
 			continue // another driver moved first; act on its state
 		}
@@ -344,24 +362,34 @@ func (d *drainer) stepOnce(ctx context.Context, start bool) (DrainState, error) 
 func (d *drainer) begin(ctx context.Context, node *corev1.Node, prev DrainState) (DrainState, error) {
 	logger := logging.FromContext(ctx)
 	now := d.now()
-	st := DrainState{Phase: DrainStarting, StartedAt: now, PhaseStartedAt: now, CordonedByDrain: !node.Spec.Unschedulable}
+	st := DrainState{Phase: DrainStarting, StartedAt: now, PhaseStartedAt: now}
 	var cordon *bool
-	if st.CordonedByDrain {
+	switch {
+	case !node.Spec.Unschedulable:
+		st.CordonedByDrain = true
 		cordon = new(true)
+	case prev.Phase == DrainFailed && prev.CordonedByDrain:
+		// A drain that failed during eviction left the node cordoned. That
+		// cordon is still the toolkit's, not an operator's, so this drain
+		// inherits it and may lift it again. A done drain's cordon is not
+		// inherited: that node is presumably in maintenance.
+		st.CordonedByDrain = true
 	}
 	if err := d.transition(ctx, prev, st, cordon); err != nil {
 		return prev, err
 	}
-	logger.Infow("drain: started", "node", d.node, "cordoned", st.CordonedByDrain)
+	logger.Infow("drain: started", "node", d.node, "cordonedByDrain", st.CordonedByDrain)
 
-	pods, err := podsOnNode(ctx, d.clientset, d.node)
+	pctx, cancel := context.WithTimeout(ctx, drainBeginTimeout)
+	defer cancel()
+	pods, err := podsOnNode(pctx, d.clientset, d.node)
 	if err != nil {
 		return d.fail(ctx, st, err.Error(), true)
 	}
 	if err := checkDrainBlockers(pods); err != nil {
 		return d.fail(ctx, st, err.Error(), true)
 	}
-	plan, err := planRestarts(ctx, d.client, pods)
+	plan, err := planRestarts(pctx, d.client, pods)
 	if err != nil {
 		return d.fail(ctx, st, err.Error(), true)
 	}
@@ -373,8 +401,11 @@ func (d *drainer) begin(ctx context.Context, node *corev1.Node, prev DrainState)
 	for _, ref := range plan {
 		waiting.Restarted = append(waiting.Restarted, ref.String())
 	}
-	if err := d.transition(ctx, st, waiting, nil); err != nil {
-		return st, err
+	if err := d.transition(pctx, st, waiting, nil); err != nil {
+		if errors.Is(err, errDrainSuperseded) {
+			return st, err // another driver rolled this start back
+		}
+		return d.fail(ctx, st, "record restart plan: "+err.Error(), true)
 	}
 	for _, ref := range plan {
 		if err := patchRestartedAt(ctx, d.client, ref.api.gvr, ref.namespace, ref.name, drainNow()); err != nil {
@@ -391,8 +422,9 @@ func (d *drainer) advanceWaiting(ctx context.Context, st DrainState) (DrainState
 	}
 	if remaining := remainingServices(st, pods); len(remaining) > 0 {
 		if d.expired(st, drainRescheduleTimeout) {
-			return d.fail(ctx, st, fmt.Sprintf("InferenceService pods still on node after %s (likely no spare GPU capacity elsewhere; "+
-				"their rollouts stay pending): %s", drainRescheduleTimeout, strings.Join(remaining, ", ")), true)
+			return d.fail(ctx, st, fmt.Sprintf("InferenceService pods still on node after %s (likely no spare GPU capacity elsewhere): %s; "+
+				"their restarts were already triggered, so the rollouts finish wherever capacity allows, possibly back on this node",
+				drainRescheduleTimeout, strings.Join(remaining, ", ")), true)
 		}
 		return st, nil
 	}
@@ -411,7 +443,12 @@ func (d *drainer) advanceEvicting(ctx context.Context, st DrainState) (DrainStat
 	logger := logging.FromContext(ctx)
 	helper := d.evictHelper(ctx)
 	list, errs := helper.GetPodsForDeletion(d.node)
+	if list == nil {
+		// The pod list itself failed: transient, retried next round.
+		return st, fmt.Errorf("list pods to evict from node %s: %w", d.node, utilerrors.NewAggregate(errs))
+	}
 	if len(errs) > 0 {
+		// Policy refusals (e.g. a pod no controller manages) never clear.
 		return d.fail(ctx, st, "cannot evict pods: "+utilerrors.NewAggregate(errs).Error(), false)
 	}
 	pods := list.Pods()
@@ -428,13 +465,17 @@ func (d *drainer) advanceEvicting(ctx context.Context, st DrainState) (DrainStat
 		return d.fail(ctx, st, fmt.Sprintf("pods still on node after %s (check their PodDisruptionBudgets): %s",
 			drainEvictTimeout, strings.Join(podNames(pods), ", ")), false)
 	}
+	gv, err := checkEvictionSupport(d.clientset)
+	if err != nil {
+		return st, fmt.Errorf("check eviction support: %w", err)
+	}
 	for _, pod := range pods {
 		if pod.DeletionTimestamp != nil {
 			continue // already terminating
 		}
 		// A refused eviction (e.g. 429 from a PodDisruptionBudget) is
 		// retried next round until the phase times out.
-		if err := evictPod(helper, pod); err != nil && !apierrors.IsNotFound(err) {
+		if err := evictPod(helper, pod, gv); err != nil && !apierrors.IsNotFound(err) {
 			logger.Infow("drain: eviction deferred", "pod", pod.Namespace+"/"+pod.Name, "error", err)
 		}
 	}

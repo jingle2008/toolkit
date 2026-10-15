@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/kubectl/pkg/drain"
@@ -99,6 +100,8 @@ type drainFixture struct {
 	evicted   []string
 	evictErr  error
 	evictions int
+	// discoveries counts eviction-support checks (API discovery calls).
+	discoveries int
 }
 
 // newDrainFixture fakes the cluster and the drain seams. Time stands
@@ -127,11 +130,17 @@ func newDrainFixture(t *testing.T, unschedulable bool, pods []*corev1.Pod, isvcs
 		now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC),
 	}
 
-	origNow, origEvict, origPoll := drainNow, evictPod, drainPollInterval
-	t.Cleanup(func() { drainNow, evictPod, drainPollInterval = origNow, origEvict, origPoll })
+	origNow, origEvict, origCheck, origPoll := drainNow, evictPod, checkEvictionSupport, drainPollInterval
+	t.Cleanup(func() {
+		drainNow, evictPod, checkEvictionSupport, drainPollInterval = origNow, origEvict, origCheck, origPoll
+	})
 	drainNow = func() time.Time { return f.now }
 	drainPollInterval = time.Millisecond
-	evictPod = func(_ *drain.Helper, pod corev1.Pod) error {
+	checkEvictionSupport = func(kubernetes.Interface) (schema.GroupVersion, error) {
+		f.discoveries++
+		return schema.GroupVersion{Group: "policy", Version: "v1"}, nil
+	}
+	evictPod = func(_ *drain.Helper, pod corev1.Pod, _ schema.GroupVersion) error {
 		f.evictions++
 		if f.evictErr != nil {
 			return f.evictErr
@@ -338,6 +347,7 @@ func TestDrain_RescheduleTimeout(t *testing.T) { //nolint:paralleltest // shared
 		st := f.step()
 		assert.Equal(t, DrainFailed, st.Phase)
 		assert.Contains(t, st.Message, "no spare GPU capacity")
+		assert.Contains(t, st.Message, "possibly back on this node")
 		assert.Contains(t, st.Message, "ome.io:chat-ns/chat")
 		if unschedulable {
 			assert.Contains(t, st.Message, "(node left cordoned)")
@@ -510,4 +520,138 @@ func TestParseISVCRef(t *testing.T) {
 		_, ok := parseISVCRef(s)
 		assert.False(t, ok, s)
 	}
+}
+
+// setNode rewrites the node's drain state and cordon through the tracker,
+// as another driver would; safe to call from a reactor.
+func (f *drainFixture) setNode(st DrainState, unschedulable bool) {
+	f.t.Helper()
+	raw, err := json.Marshal(st)
+	require.NoError(f.t, err)
+	obj, err := f.cs.Tracker().Get(nodesGVR, "", drainNodeName)
+	require.NoError(f.t, err)
+	node := obj.(*corev1.Node).DeepCopy()
+	node.Annotations = map[string]string{DrainAnnotation: string(raw)}
+	node.Spec.Unschedulable = unschedulable
+	require.NoError(f.t, f.cs.Tracker().Update(nodesGVR, node, ""))
+}
+
+func TestDrain_LosingARaceNeverRestartsARolledBackDrain(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, true, nil)
+	waiting := DrainState{Phase: DrainWaiting, StartedAt: f.now, PhaseStartedAt: f.now, CordonedByDrain: true}
+	f.setNode(waiting, true)
+	rolledBack := DrainState{Phase: DrainFailed, StartedAt: f.now, PhaseStartedAt: f.now, CordonedByDrain: true, Message: "timed out (node uncordoned)"}
+	raced := false
+	// While this driver resumes the drain, another rolls it back first.
+	f.cs.PrependReactor("patch", "nodes", func(k8stesting.Action) (bool, runtime.Object, error) {
+		if raced {
+			return false, nil, nil
+		}
+		raced = true
+		f.setNode(rolledBack, false)
+		return true, nil, apierrors.NewConflict(schema.GroupResource{Resource: "nodes"}, drainNodeName, nil)
+	})
+
+	status, err := f.d.start(context.Background())
+	require.EqualError(t, err, "timed out (node uncordoned)")
+	assert.Equal(t, DrainFailed, status.Phase)
+	assert.Equal(t, rolledBack.Message, f.state().Message, "the winner's rollback stands")
+	assert.False(t, f.node().Spec.Unschedulable, "the node must not be cordoned again")
+}
+
+func TestDrain_FailedPlanWriteRollsBackAtOnce(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, false, []*corev1.Pod{servingPod("chat-a", "chat-ns", servingLabelV2, "chat")}, isvcV2Single)
+	patches := 0
+	f.cs.PrependReactor("patch", "nodes", func(k8stesting.Action) (bool, runtime.Object, error) {
+		patches++
+		if patches == 2 { // the lock succeeds; recording the plan fails
+			return true, nil, apierrors.NewInternalError(context.DeadlineExceeded)
+		}
+		return false, nil, nil
+	})
+
+	status, err := f.d.start(context.Background())
+	require.ErrorContains(t, err, "record restart plan")
+	assert.ErrorContains(t, err, "(node uncordoned)")
+	assert.Equal(t, DrainFailed, status.Phase, "not left in starting for the 2-minute stale window")
+	assert.False(t, f.node().Spec.Unschedulable)
+	assert.Empty(t, f.restarted())
+}
+
+func TestDrain_TransientErrorAfterLockReportsInProgress(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, false, []*corev1.Pod{servingPod("chat-a", "chat-ns", servingLabelV2, "chat")}, isvcV2Single)
+	lists := 0
+	f.cs.PrependReactor("list", "pods", func(k8stesting.Action) (bool, runtime.Object, error) {
+		lists++
+		if lists == 2 { // begin's list succeeds; the first wait check fails
+			return true, nil, apierrors.NewServiceUnavailable("apiserver blip")
+		}
+		return false, nil, nil
+	})
+
+	status, err := f.d.start(context.Background())
+	require.NoError(t, err, "a recorded, cordoned drain must be handed on, not reported failed")
+	assert.Equal(t, DrainWaiting, status.Phase)
+	assert.Equal(t, []string{"ome.io:chat-ns/chat"}, f.restarted())
+
+	f.deletePod("chat-ns", "chat-a")
+	require.NoError(t, f.d.await(context.Background()))
+	assert.Equal(t, DrainDone, f.state().Phase)
+}
+
+func TestDrain_TransientPodListErrorDuringEvictionIsRetried(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, true, []*corev1.Pod{drainPod("worker", "default", nil, corev1.PodRunning)})
+	f.setNode(DrainState{Phase: DrainEvicting, StartedAt: f.now, PhaseStartedAt: f.now, CordonedByDrain: true}, true)
+	failed := false
+	f.cs.PrependReactor("list", "pods", func(k8stesting.Action) (bool, runtime.Object, error) {
+		if failed {
+			return false, nil, nil
+		}
+		failed = true
+		return true, nil, apierrors.NewTimeoutError("list timed out", 1)
+	})
+
+	_, err := f.d.step(context.Background(), false)
+	require.ErrorContains(t, err, "list pods to evict")
+	assert.Equal(t, DrainEvicting, f.state().Phase, "a transient list error must not fail the drain")
+
+	assert.Equal(t, DrainEvicting, f.step().Phase)
+	assert.Equal(t, DrainDone, f.step().Phase)
+}
+
+func TestDrain_ReRunInheritsCordonOfAFailedDrain(t *testing.T) { //nolint:paralleltest // shared drain seams
+	cases := []struct {
+		name       string
+		prev       DrainPhase
+		wantCordon bool
+		wantSuffix string
+	}{
+		{name: "failed drain's cordon is inherited and lifted", prev: DrainFailed, wantCordon: false, wantSuffix: "(node uncordoned)"},
+		{name: "done drain's cordon is kept", prev: DrainDone, wantCordon: true, wantSuffix: "(node left cordoned)"},
+	}
+	for _, tc := range cases { //nolint:paralleltest // shared drain seams
+		t.Run(tc.name, func(t *testing.T) {
+			f := newDrainFixture(t, true, []*corev1.Pod{drainPod("ft-0", "ft", map[string]string{fineTuneLabel: "m"}, corev1.PodRunning)})
+			f.setNode(DrainState{Phase: tc.prev, StartedAt: f.now.Add(-time.Hour), CordonedByDrain: true}, true)
+
+			_, err := f.d.start(context.Background())
+			require.ErrorContains(t, err, tc.wantSuffix)
+			assert.Equal(t, tc.wantCordon, f.node().Spec.Unschedulable)
+		})
+	}
+}
+
+func TestDrain_EvictionSupportCheckedOncePerRound(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, true, []*corev1.Pod{
+		drainPod("a", "default", nil, corev1.PodRunning),
+		drainPod("b", "default", nil, corev1.PodRunning),
+		drainPod("c", "default", nil, corev1.PodRunning),
+	})
+	f.setNode(DrainState{Phase: DrainEvicting, StartedAt: f.now, PhaseStartedAt: f.now}, true)
+	f.evictErr = apierrors.NewTooManyRequests("disruption budget", 10)
+
+	f.step()
+	f.step()
+	assert.Equal(t, 6, f.evictions)
+	assert.Equal(t, 2, f.discoveries)
 }
