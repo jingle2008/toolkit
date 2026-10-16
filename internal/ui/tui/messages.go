@@ -70,6 +70,7 @@ type detailContentRenderedMsg struct {
 type deleteDoneMsg struct {
 	category domain.Category
 	key      models.ItemKey
+	env      models.Environment
 }
 
 type deleteErrMsg struct {
@@ -77,26 +78,34 @@ type deleteErrMsg struct {
 	category  domain.Category
 	key       models.ItemKey
 	prevState string
+	env       models.Environment
 }
 
 type updateDoneMsg struct {
 	err      error
 	category domain.Category
+	env      models.Environment
+	// pools is the enriched snapshot of the GPU pools (category
+	// GPUPool); the handler merges it into the current pool list.
+	pools []models.GPUPool
 }
 
 type gpuPoolScaleStartedMsg struct {
 	key models.ItemKey
+	env models.Environment
 }
 
 type gpuPoolScaleResultMsg struct {
 	key models.ItemKey
 	err error
+	env models.Environment
 }
 
 type cordonNodeResultMsg struct {
 	key   models.ItemKey
 	state bool
 	err   error
+	env   models.Environment
 }
 
 type drainNodeResultMsg struct {
@@ -107,6 +116,7 @@ type drainNodeResultMsg struct {
 type rebootNodeResultMsg struct {
 	key models.ItemKey
 	err error
+	env models.Environment
 }
 
 type restartServiceResultMsg struct {
@@ -224,11 +234,17 @@ type repoWatchClosedMsg struct{}
 
 // datasetReloadedMsg carries a freshly loaded dataset to be merged into the
 // in-memory one (repo-owned fields only; live k8s fields preserved).
-type datasetReloadedMsg struct{ Dataset *models.Dataset }
+type datasetReloadedMsg struct {
+	Dataset *models.Dataset
+	env     models.Environment
+}
 
 // gpuPoolsReloadedMsg carries freshly loaded GPU pools (repo-sourced via their
 // own loader, not LoadDataset) to refresh the cached pool list.
-type gpuPoolsReloadedMsg struct{ Items []models.GPUPool }
+type gpuPoolsReloadedMsg struct {
+	Items []models.GPUPool
+	env   models.Environment
+}
 
 // kubeVersionMsg carries the API server version for Context. Ignored if the
 // active environment's kube context has since changed.

@@ -101,8 +101,9 @@ func (m *Model) handleRefresh() tea.Cmd {
 }
 
 func (m *Model) copyTenantID(item any) tea.Cmd {
+	env := m.environment
 	return func() tea.Msg {
-		actions.CopyTenantID(item, m.environment, m.logger)
+		actions.CopyTenantID(item, env, m.logger)
 		return nil
 	}
 }
@@ -115,13 +116,14 @@ func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey) tea.Cmd {
 	}
 
 	m.logger.Infow("action started", "action", "scaleUpGPUPool", "pool", itemKeyString(itemKey))
+	env := m.environment
 	return tea.Batch(
-		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey} },
+		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey, env: env} },
 		func() tea.Msg {
 			ctx, cancel := m.opCtx()
 			defer cancel()
-			err := actions.IncreasePoolSize(ctx, pool, m.environment, m.logger)
-			return gpuPoolScaleResultMsg{key: itemKey, err: err}
+			err := actions.IncreasePoolSize(ctx, pool, env, m.logger)
+			return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env}
 		},
 	)
 }
@@ -142,11 +144,12 @@ func (m *Model) cordonNode(item any, itemKey models.ItemKey) tea.Cmd {
 		return nil
 	}
 	m.logger.Infow("action started", "action", "toggleCordon", "node", itemKeyString(itemKey))
+	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		state, err := k8s.ToggleCordon(ctx, m.kubeConfig, m.environment.KubeContext(), node.Name)
-		return cordonNodeResultMsg{key: itemKey, state: state, err: err}
+		state, err := k8s.ToggleCordon(ctx, kubeConfig, env.KubeContext(), name)
+		return cordonNodeResultMsg{key: itemKey, state: state, err: err, env: env}
 	}
 }
 
@@ -161,11 +164,12 @@ func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 		return nil
 	}
 	m.logger.Infow("action started", "action", "drainNode", "node", itemKeyString(itemKey))
+	kubeConfig, kubeContext, name := m.kubeConfig, m.environment.KubeContext(), node.Name
 	drain := func() tea.Msg {
 		// Draining restarts single-replica services and waits for them to
 		// reschedule, which can take tens of minutes under its own internal
 		// timeouts; the 30s one-shot cap would abort it midway.
-		err := k8s.DrainNode(m.longOpCtx(), m.kubeConfig, m.environment.KubeContext(), node.Name)
+		err := k8s.DrainNode(m.longOpCtx(), kubeConfig, kubeContext, name)
 		return drainNodeResultMsg{key: itemKey, err: err}
 	}
 	return tea.Batch(m.showToast("draining "+itemKeyString(itemKey)+"…", toastInfo), drain)

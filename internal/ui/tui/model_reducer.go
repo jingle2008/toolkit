@@ -5,6 +5,7 @@ package tui
 import (
 	"context"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -22,16 +23,28 @@ import (
 
 func refreshDataCmd() tea.Cmd { return func() tea.Msg { return dataMsg{} } }
 
-func (m *Model) lookupCompartmentID(ctx context.Context) (string, error) {
-	if m.dataset != nil && m.dataset.GPUNodeMap != nil {
-		for _, v := range m.dataset.GPUNodeMap {
-			for _, n := range v {
-				return n.CompartmentID, nil
-			}
+// knownCompartmentID returns the compartment of any loaded GPU node, or
+// "" when none is loaded.
+func (m *Model) knownCompartmentID() string {
+	if m.dataset == nil {
+		return ""
+	}
+	for _, v := range m.dataset.GPUNodeMap {
+		for _, n := range v {
+			return n.CompartmentID
 		}
 	}
+	return ""
+}
 
-	clientset, err := k8s.NewClientsetFromKubeConfig(m.kubeConfig, m.environment.KubeContext())
+// lookupCompartmentID returns known, or else the compartment of a GPU node
+// listed from env's cluster. It reads no Model state, so it is safe off the
+// Update loop.
+func lookupCompartmentID(ctx context.Context, known, kubeConfig string, env models.Environment) (string, error) {
+	if known != "" {
+		return known, nil
+	}
+	clientset, err := k8s.NewClientsetFromKubeConfig(kubeConfig, env.KubeContext())
 	if err != nil {
 		return "", err
 	}
@@ -43,16 +56,25 @@ func (m *Model) lookupCompartmentID(ctx context.Context) (string, error) {
 	return nodes[0].CompartmentID, nil
 }
 
+// updateGPUPoolState enriches the GPU pools with their OCI instance-pool
+// state (ID, actual size, lifecycle). It works on a snapshot taken here, on
+// the Update loop, and handleUpdateDoneMsg merges the result back: writing
+// the live pool list from the background job would race the Update loop,
+// and the job may finish after an environment switch.
 func (m *Model) updateGPUPoolState() tea.Cmd {
+	env, kubeConfig, known := m.environment, m.kubeConfig, m.knownCompartmentID()
+	var pools []models.GPUPool
+	if m.dataset != nil {
+		pools = slices.Clone(m.dataset.GPUPools)
+	}
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		var err error
-		var compartmentID string
-		if compartmentID, err = m.lookupCompartmentID(ctx); err == nil {
-			err = actions.PopulateGPUPools(ctx, m.dataset.GPUPools, m.environment, compartmentID)
+		compartmentID, err := lookupCompartmentID(ctx, known, kubeConfig, env)
+		if err == nil {
+			err = actions.PopulateGPUPools(ctx, pools, env, compartmentID)
 		}
-		return updateDoneMsg{err: err, category: domain.GPUPool}
+		return updateDoneMsg{err: err, category: domain.GPUPool, env: env, pools: pools}
 	}
 }
 

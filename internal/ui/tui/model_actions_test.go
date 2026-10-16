@@ -132,7 +132,7 @@ func TestHandleUpdateDoneMsg_ErrorUpdatesStatus(t *testing.T) {
 	m.updateColumns()
 	m.updateRows(true)
 
-	m.handleUpdateDoneMsg(updateDoneMsg{err: errors.New("boom"), category: domain.GPUPool})
+	m.handleUpdateDoneMsg(updateDoneMsg{err: errors.New("boom"), category: domain.GPUPool, env: m.environment})
 	if got := m.dataset.GPUPools[0].Status; got != "UNKNOWN" {
 		t.Fatalf("expected gpu pool status UNKNOWN, got %q", got)
 	}
