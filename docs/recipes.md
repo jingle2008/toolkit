@@ -162,7 +162,7 @@ open tenants.csv                 # macOS: opens in Numbers / Excel
 
 ### Cross-join: tenants with their DAC counts
 
-`get dac` is grouped by tenant. Combine with `get tenant` via `jq` to produce a single sheet:
+Each DAC carries its resolved tenant as `owner` (absent when the DAC's `tenantId` matches no known tenant). Combine with `get tenant` via `jq` to produce a single sheet:
 
 ```bash
 toolkit get tenant -o json > /tmp/tenants.json
@@ -176,8 +176,8 @@ jq -nr '
       | input as $dacs
       | $tenants[]
       | . as $t
-      | ($dacs | map(select(.tenant == $t.name)) | length) as $count
-      | ($dacs | map(select(.tenant == $t.name).name) | join(";")) as $names
+      | ($dacs | map(select(.owner.name == $t.name)) | length) as $count
+      | ($dacs | map(select(.owner.name == $t.name).name) | join(";")) as $names
       | [$t.name, ($t.is_internal // false), $count, $names]
       | @csv
     )
@@ -190,9 +190,11 @@ Or, if you just want "tenants with no DACs":
 
 ```bash
 toolkit get tenant -o json | jq -r '.[] | select(.is_internal | not) | .name' > /tmp/external_tenants.txt
-toolkit get dac    -o json | jq -r '.[].tenant' | sort -u > /tmp/tenants_with_dacs.txt
+toolkit get dac    -o json | jq -r '.[].owner.name // empty' | sort -u > /tmp/tenants_with_dacs.txt
 comm -23 <(sort /tmp/external_tenants.txt) /tmp/tenants_with_dacs.txt
 ```
+
+For one tenant's DACs, `toolkit get dac --related-to tenant/<name>` needs no join.
 
 ### What runs in a DAC, and what uses a runtime
 
