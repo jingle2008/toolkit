@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/relations"
 )
 
 // goToTargets returns the rows the selected row relates to, through every
@@ -23,27 +24,12 @@ func (m *Model) goToTargets() []domain.Scope {
 	}
 	var out []domain.Scope
 	for _, t := range src.related(m.dataset, key) {
-		if rowKnownMissing(m, t) {
+		if relations.ParentRowMissing(m.dataset, t.Category, t.Name) {
 			continue
 		}
 		out = append(out, t)
 	}
 	return out
-}
-
-// rowKnownMissing reports whether t's category has rows loaded and none
-// is named t.Name.
-func rowKnownMissing(m *Model, t domain.Scope) bool {
-	rows, _ := computeTableRows(m.dataset, t.Category, nil, "", "", true, false)
-	if len(rows) == 0 {
-		return false
-	}
-	for _, r := range rows {
-		if len(r) > 0 && r[0] == t.Name {
-			return false
-		}
-	}
-	return true
 }
 
 // openGoTo handles g in list view: no targets is a toast, one target

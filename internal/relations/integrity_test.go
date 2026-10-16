@@ -200,3 +200,19 @@ func TestDanglingRows_UnloadedParents(t *testing.T) {
 	ds.GPUPools = nil
 	assert.Nil(t, DanglingRows(ds, domain.GPUNode), "pools not loaded")
 }
+
+func TestParentRowMissing(t *testing.T) {
+	t.Parallel()
+	ds := integrityDataset()
+	assert.False(t, ParentRowMissing(ds, domain.ServingRuntime, "vllm"), "present")
+	assert.True(t, ParentRowMissing(ds, domain.ServingRuntime, "srt-gone"), "loaded, absent")
+	assert.True(t, ParentRowMissing(ds, domain.DedicatedAICluster, "amaaaaaa-gone"), "grouped: absent across all groups")
+	assert.False(t, ParentRowMissing(ds, domain.DedicatedAICluster, "amaaaaaa-dac1"), "grouped: present")
+
+	ds.ServingRuntimes = nil
+	assert.False(t, ParentRowMissing(ds, domain.ServingRuntime, "srt-gone"), "not loaded: can't rule it out")
+	ds.ServingRuntimes = []models.ServingRuntime{}
+	assert.False(t, ParentRowMissing(ds, domain.ServingRuntime, "srt-gone"), "loaded empty: can't rule it out")
+	assert.False(t, ParentRowMissing(ds, domain.InferenceService, "x"), "parents nothing")
+	assert.False(t, ParentRowMissing(nil, domain.ServingRuntime, "x"))
+}
