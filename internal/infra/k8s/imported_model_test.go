@@ -118,3 +118,43 @@ func TestLoadImportedModels_BothSources(t *testing.T) {
 	}
 	_ = models.ImportedModel{} // model package referenced for clarity
 }
+
+// Copies of one model in several namespaces — the tenant's `default`
+// library copy plus the copies made into DAC namespaces for serving — are
+// one ImportedModel: `default` is the primary, the rest are Copies.
+func TestLoadImportedModels_MergesCopies(t *testing.T) {
+	t.Parallel()
+	tenancy := map[string]string{"tenancy-id": "ocid1.tenancy.t"}
+	spec := map[string]any{"vendor": "acme", "version": "v1"}
+	ready := map[string]any{"state": "Ready"}
+	objs := []runtime.Object{
+		// DAC-namespace copies carry the source's HF annotations (as on dp-prod-ord).
+		newNamespacedBM("amaaaaaa-dac2", "amaaaaaa-m1", spec, ready, tenancy, map[string]string{"hf-model-id": "org/model"}),
+		newNamespacedBM("default", "amaaaaaa-m1", spec, ready, tenancy, nil),
+		newNamespacedBM("amaaaaaa-dac1", "amaaaaaa-m1", spec, ready, tenancy, nil),
+		newNamespacedBM("default", "amaaaaaa-m2", spec, ready, tenancy, nil),
+		// No `default` copy: the first namespace in sort order is primary.
+		newNamespacedBM("amaaaaaa-dac9", "amaaaaaa-m3", spec, ready, tenancy, nil),
+		newNamespacedBM("amaaaaaa-dac3", "amaaaaaa-m3", spec, ready, tenancy, nil),
+	}
+	gvrToKind := map[schema.GroupVersionResource]string{
+		{Group: "ome.io", Version: "v1beta1", Resource: "basemodels"}:        "BaseModelList",
+		{Group: "ome.io", Version: "v1beta1", Resource: "clusterbasemodels"}: "ClusterBaseModelList",
+	}
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvrToKind, objs...)
+
+	out, err := LoadImportedModels(context.Background(), client)
+	require.NoError(t, err)
+	byName := map[string]models.ImportedModel{}
+	for _, m := range out["ocid1.tenancy.t"] {
+		byName[m.Name] = m
+	}
+	require.Len(t, byName, 3, "one row per model, not per copy")
+	assert.Equal(t, "default", byName["amaaaaaa-m1"].Namespace)
+	assert.Equal(t, []string{"amaaaaaa-dac1", "amaaaaaa-dac2"}, byName["amaaaaaa-m1"].Copies)
+	assert.Equal(t, []string{"amaaaaaa-dac1", "amaaaaaa-dac2"}, byName["amaaaaaa-m1"].DACNamespaces(), "served by two DACs")
+	assert.Empty(t, byName["amaaaaaa-m2"].Copies)
+	assert.Empty(t, byName["amaaaaaa-m2"].DACNamespaces(), "only in the library: not on a DAC")
+	assert.Equal(t, "amaaaaaa-dac3", byName["amaaaaaa-m3"].Namespace)
+	assert.Equal(t, []string{"amaaaaaa-dac9"}, byName["amaaaaaa-m3"].Copies)
+}

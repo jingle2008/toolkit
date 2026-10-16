@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -231,4 +232,66 @@ func TestMetricsCatalog_InferenceService(t *testing.T) {
 
 	_, need = m.metricsCatalog(&models.InferenceService{Type: models.InferenceServiceDedicated})
 	assert.False(t, need, "no model, no catalog")
+}
+
+// A merged imported model whose primary copy sits in `default` resolves
+// to the DAC holding its copy.
+func TestResolveMetricsPlan_ImportedModelCopyInDAC(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+	im := &models.ImportedModel{
+		BaseModel: models.BaseModel{Name: "amaaaaaaim"},
+		Namespace: "default",
+		Copies:    []string{"amaaaaaadac1"},
+	}
+	filter, _, ok, reason := m.resolveMetricsPlan(im)
+	require.True(t, ok, reason)
+	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.me-abudhabi-1.amaaaaaadac1", filter.Value)
+}
+
+// An imported model served by several DACs opens a picker over them;
+// choosing one opens that DAC's dashboard.
+func TestOpenMetrics_ImportedModelOnSeveralDACsPicks(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+	im := &models.ImportedModel{
+		BaseModel: models.BaseModel{Name: "amaaaaaaim", Capabilities: []string{"TEXT_RERANK"}},
+		Namespace: "default",
+		Copies:    []string{"amaaaaaadac1", "amaaaaaadac2"},
+	}
+	require.Nil(t, m.openMetrics(im))
+	require.Equal(t, common.GoToView, m.viewMode)
+	assert.Equal(t, []domain.Scope{
+		{Category: domain.DedicatedAICluster, Name: "amaaaaaadac1"},
+		{Category: domain.DedicatedAICluster, Name: "amaaaaaadac2"},
+	}, m.goToPicker.targets)
+	assert.Contains(t, m.goToView(), "Open metrics for amaaaaaaim on")
+	assert.Contains(t, m.goToView(), "[enter] open metrics")
+
+	// The real choose: it returns the dashboard launch (built, not run),
+	// with no error toast.
+	_, _ = m.updateGoToView(tea.KeyMsg{Type: tea.KeyDown})
+	_, cmd := m.updateGoToView(tea.KeyMsg{Type: tea.KeyEnter})
+	require.NotNil(t, cmd, "choosing a DAC launches its dashboard")
+	if m.toasts.active != nil {
+		assert.NotEqual(t, toastError, m.toasts.active.sev, m.toasts.active.msg)
+	}
+	assert.Equal(t, common.ListView, m.viewMode)
+
+	// The chosen copy resolves to that DAC's plan.
+	filter, _, ok, reason := m.resolveMetricsPlan(&models.ImportedModel{
+		BaseModel: im.BaseModel, Namespace: "amaaaaaadac2",
+	})
+	require.True(t, ok, reason)
+	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.me-abudhabi-1.amaaaaaadac2", filter.Value)
+}
+
+// resolveMetricsPlan never picks among several DACs silently.
+func TestResolveMetricsPlan_ImportedModelSeveralDACsRefuses(t *testing.T) {
+	t.Parallel()
+	m := newResolveModel(t)
+	im := &models.ImportedModel{Namespace: "default", Copies: []string{"amaaaaaadac1", "amaaaaaadac2"}}
+	_, _, ok, reason := m.resolveMetricsPlan(im)
+	assert.False(t, ok)
+	assert.Equal(t, "imported model is served by 2 dedicated AI clusters; choose one", reason)
 }

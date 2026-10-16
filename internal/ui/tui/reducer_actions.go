@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -189,6 +190,11 @@ type openMetricsTriggerMsg struct {
 // navigation) before the dashboard opens. Items that can't produce metrics
 // are a no-op or an error toast (resolveMetricsPlan).
 func (m *Model) openMetrics(item any) tea.Cmd {
+	if im, ok := item.(*models.ImportedModel); ok && im != nil {
+		if dacs := im.DACNamespaces(); len(dacs) > 1 {
+			return m.pickMetricsDAC(im, dacs)
+		}
+	}
 	cat, need := m.metricsCatalog(item)
 	if !need || m.catalogLoaded(cat) {
 		return m.finishMetrics(item)
@@ -198,6 +204,21 @@ func (m *Model) openMetrics(item any) tea.Cmd {
 		tea.Batch(m.beginTask(), m.catalogLoadCmd(cat, gen)),
 		func() tea.Msg { return openMetricsTriggerMsg{item: item, cat: cat, gen: gen} },
 	)
+}
+
+// pickMetricsDAC opens the picker over the DACs serving an imported model
+// (one per copy in a DAC namespace). Choosing one opens metrics for the
+// model narrowed to that copy, so the single-DAC plan applies.
+func (m *Model) pickMetricsDAC(im *models.ImportedModel, dacs []string) tea.Cmd {
+	targets := make([]domain.Scope, len(dacs))
+	for i, ns := range dacs {
+		targets[i] = domain.Scope{Category: domain.DedicatedAICluster, Name: ns}
+	}
+	return m.openPicker(fmt.Sprintf("Open metrics for %s on", im.Name), "open metrics", targets, func(t domain.Scope) tea.Cmd {
+		one := *im
+		one.Namespace, one.Copies = t.Name, nil
+		return m.openMetrics(&one)
+	})
 }
 
 // metricsCatalog reports which model catalog must be loaded before the
@@ -323,10 +344,19 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 		if it == nil {
 			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 		}
-		if !strings.HasPrefix(it.Namespace, importedModelNamePrefix) {
+		// A DAC serving the model holds a copy of it in its namespace; the
+		// primary copy usually sits in `default`. Several DACs are resolved
+		// by openMetrics's picker, which narrows the item to one.
+		dacs := it.DACNamespaces()
+		switch len(dacs) {
+		case 0:
 			return telemetry.Filter{}, telemetry.CapabilityChat, false, "imported model is not tied to a dedicated AI cluster"
+		case 1:
+		default:
+			return telemetry.Filter{}, telemetry.CapabilityChat, false,
+				fmt.Sprintf("imported model is served by %d dedicated AI clusters; choose one", len(dacs))
 		}
-		ocid := models.DedicatedAICluster{Name: it.Namespace}.OCID(realm, region)
+		ocid := models.DedicatedAICluster{Name: dacs[0]}.OCID(realm, region)
 		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
 		return m.dedicatedPlan(filter, &it.BaseModel)
 	case *models.GPUWorkload:

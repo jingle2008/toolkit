@@ -3,6 +3,8 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -85,5 +87,47 @@ func LoadImportedModels(ctx context.Context, client dynamic.Interface) (map[stri
 			TenantID:  tenantID,
 		})
 	}
+	for tenantID, ms := range result {
+		result[tenantID] = mergeCopies(ms)
+	}
 	return result, nil
+}
+
+// copyLibraryNamespace is where a tenant's imported models live before
+// being copied into a DAC's namespace for serving.
+const copyLibraryNamespace = "default"
+
+// mergeCopies folds a tenant's same-named models — copies of one model in
+// several namespaces (on dp-prod-ord the copies' specs are identical) —
+// into one ImportedModel. The primary copy is the one in `default`, else
+// the first namespace in sort order; the others' namespaces go to Copies,
+// sorted. Order follows each model's first appearance.
+func mergeCopies(ms []models.ImportedModel) []models.ImportedModel {
+	byName := make(map[string][]models.ImportedModel, len(ms))
+	var order []string
+	for _, m := range ms {
+		if _, seen := byName[m.Name]; !seen {
+			order = append(order, m.Name)
+		}
+		byName[m.Name] = append(byName[m.Name], m)
+	}
+	out := make([]models.ImportedModel, 0, len(order))
+	for _, name := range order {
+		group := byName[name]
+		slices.SortFunc(group, func(a, b models.ImportedModel) int {
+			if (a.Namespace == copyLibraryNamespace) != (b.Namespace == copyLibraryNamespace) {
+				if a.Namespace == copyLibraryNamespace {
+					return -1
+				}
+				return 1
+			}
+			return strings.Compare(a.Namespace, b.Namespace)
+		})
+		primary := group[0]
+		for _, c := range group[1:] {
+			primary.Copies = append(primary.Copies, c.Namespace)
+		}
+		out = append(out, primary)
+	}
+	return out
 }

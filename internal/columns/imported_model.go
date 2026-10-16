@@ -2,6 +2,7 @@ package columns
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -36,8 +37,9 @@ var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedCo
 		Render: func(_ string, m models.ImportedModel) string { return m.DisplayName },
 	},
 	{
+		// Every copy's namespace, primary (usually `default`) first.
 		Title: "Namespace", Key: "namespace", Ratio: 0.15, TruncateMiddle: true,
-		Render: func(_ string, m models.ImportedModel) string { return m.Namespace },
+		Render: func(_ string, m models.ImportedModel) string { return strings.Join(m.Namespaces(), ", ") },
 	},
 	{
 		Title: "Size", Key: "size", Ratio: 0.07,

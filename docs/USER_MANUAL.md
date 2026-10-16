@@ -313,7 +313,7 @@ Toolkit organises data into 22 categories:
 | Category | Description |
 |----------|-------------|
 | **BaseModel** | AI model definitions; supports faulty tracking. `Enter` lists the inference services serving the model (`y` opens details) |
-| **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label). `Enter` lists the inference services serving the model (`y` opens details) |
+| **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label). A model copied into several namespaces — its `default` library copy plus copies in DAC namespaces — is one row, with every copy listed under **Namespace**. `m` opens the metrics of the DAC serving the model; when several do, it asks which. `Enter` lists the inference services serving the model (`y` opens details) |
 | **ModelArtifact** | Model artifact versions |
 | **GPUPool** | OCI GPU instance pools; supports scaling |
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
