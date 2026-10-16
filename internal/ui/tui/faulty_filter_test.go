@@ -22,42 +22,28 @@ func TestFaultyFilter_Dangling(t *testing.T) {
 			"amaaaaaa-dac2": {{Name: "down", Namespace: "amaaaaaa-dac2", Type: models.InferenceServiceDedicated, Ready: "False"}},
 		},
 	}
-	on := faultyFilter{on: true}
 
-	rows, _ := computeTableRows(ds, domain.InferenceService, nil, "", "", true, on)
+	rows, _ := computeTableRows(ds, domain.InferenceService, nil, "", "", true, true)
 	assert.Equal(t, []string{"down", "orphan"}, rowNames(rows))
 
 	// DACs not loaded yet: a missing DAC may just be unloaded.
 	ds.DedicatedAIClusterMap = nil
-	rows, _ = computeTableRows(ds, domain.InferenceService, nil, "", "", true, on)
+	rows, _ = computeTableRows(ds, domain.InferenceService, nil, "", "", true, true)
 	assert.Equal(t, []string{"down"}, rowNames(rows))
 }
 
-func TestFaultyFilter_PartialGPUPools(t *testing.T) {
+// A node in a pool missing from terraform is faulty, even when the pool
+// may only be unloaded (a pool source failed): a broken source should
+// catch attention as much as a missing pool.
+func TestFaultyFilter_NodeInMissingPool(t *testing.T) {
 	t.Parallel()
 	ds := &models.Dataset{
-		GPUPools:   []models.GPUPool{{Name: "pool-a"}},
-		GPUNodeMap: map[string][]models.GPUNode{"pool-x": {{Name: "node-x", InstanceType: "BM.GPU4.8", Allocatable: 8, IsReady: true}}},
+		GPUPools: []models.GPUPool{{Name: "pool-a"}},
+		GPUNodeMap: map[string][]models.GPUNode{
+			"pool-a": {{Name: "node-a", InstanceType: "BM.GPU4.8", Allocatable: 8, IsReady: true}},
+			"pool-x": {{Name: "node-x", InstanceType: "BM.GPU4.8", Allocatable: 8, IsReady: true}},
+		},
 	}
-	rows, _ := computeTableRows(ds, domain.GPUNode, nil, "", "", true, faultyFilter{on: true})
-	assert.Len(t, rows, 1, "pool-x isn't in GPUPools")
-	rows, _ = computeTableRows(ds, domain.GPUNode, nil, "", "", true, faultyFilter{on: true, partial: []domain.Category{domain.GPUPool}})
-	assert.Empty(t, rows, "pools loaded partially: pool-x may just be unloaded")
-}
-
-// A partial pool load marks pools partial for the gate until a full
-// reload or an environment switch.
-func TestModel_FaultyFilterTracksPartialPools(t *testing.T) {
-	t.Parallel()
-	m := newTestModel(t)
-	m.showFaulty = true
-	m.handleGPUPoolsLoaded([]models.GPUPool{{Name: "pool-a"}}, true, m.gens.msg)
-	assert.Equal(t, faultyFilter{on: true, partial: []domain.Category{domain.GPUPool}}, m.faultyFilter())
-
-	m.handleGPUPoolsReloaded(gpuPoolsReloadedMsg{Items: []models.GPUPool{{Name: "pool-a"}}})
-	assert.Equal(t, faultyFilter{on: true}, m.faultyFilter())
-
-	m.handleGPUPoolsLoaded([]models.GPUPool{{Name: "pool-a"}}, true, m.gens.msg)
-	m.switchEnvironment(m.environment, domain.Tenant)
-	assert.Empty(t, m.faultyFilter().partial)
+	rows, _ := computeTableRows(ds, domain.GPUNode, nil, "", "", true, true)
+	assert.Equal(t, []string{"node-x"}, rowNames(rows))
 }

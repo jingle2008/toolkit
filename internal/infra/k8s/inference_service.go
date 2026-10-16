@@ -3,7 +3,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,9 +18,6 @@ const (
 	// dacAnnotation names the dedicated AI cluster an InferenceService
 	// runs on. Its value equals the namespace.
 	dacAnnotation = "ome.io/dedicated-ai-cluster"
-	// dacNamespacePrefix is the leading run of a DAC OCID suffix, which
-	// is what a dedicated endpoint's namespace is named after.
-	dacNamespacePrefix = "amaaaaaa"
 	// namespacedBaseModelKind is the model ref kind for a tenant-imported
 	// (namespaced) model; the shared catalog uses ClusterBaseModel.
 	namespacedBaseModelKind = "BaseModel"
@@ -88,7 +84,7 @@ func parseInferenceService(obj *unstructured.Unstructured) models.InferenceServi
 
 	ns := obj.GetNamespace()
 	svcType := models.InferenceServiceOnDemand
-	if _, ok := obj.GetAnnotations()[dacAnnotation]; ok || strings.HasPrefix(ns, dacNamespacePrefix) {
+	if _, ok := obj.GetAnnotations()[dacAnnotation]; ok || models.IsDACName(ns) {
 		svcType = models.InferenceServiceDedicated
 	}
 
@@ -134,7 +130,7 @@ func parseLegacyInferenceService(obj *unstructured.Unstructured) models.Inferenc
 
 	ns := obj.GetNamespace()
 	svcType := models.InferenceServiceOnDemand
-	if dacRef != "" || strings.HasPrefix(ns, dacNamespacePrefix) {
+	if dacRef != "" || models.IsDACName(ns) {
 		svcType = models.InferenceServiceDedicated
 	}
 

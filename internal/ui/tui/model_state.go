@@ -164,10 +164,6 @@ type Model struct {
 	// faultyFilter); the gate itself is category-agnostic.
 	showFaulty bool
 
-	// gpuPoolsPartial is set when the last GPU pool load had sources
-	// fail, so a node's pool may be missing only because it's unloaded.
-	gpuPoolsPartial bool
-
 	// rawRows mirrors m.table.Rows() pre-truncation so itemKeyFrom can
 	// recover un-elided Name/Tenant cells. applyMiddleTruncation
 	// mutates the table's rows in place, which would otherwise leak

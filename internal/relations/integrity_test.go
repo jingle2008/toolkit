@@ -170,8 +170,8 @@ func TestDanglingRows(t *testing.T) {
 }
 
 // The TUI loads categories on demand: a relation whose parent isn't
-// loaded, or loaded with sources missing, can't tell a missing parent
-// from an unloaded one, so it isn't checked.
+// loaded can't tell a missing parent from an unloaded one, so it isn't
+// checked.
 func TestDanglingRows_UnloadedParents(t *testing.T) {
 	t.Parallel()
 	ds := integrityDataset()
@@ -186,7 +186,6 @@ func TestDanglingRows_UnloadedParents(t *testing.T) {
 	nodeX := ds.GPUNodeMap["pool-x"][0]
 	require.NotNil(t, DanglingRows(ds, domain.GPUNode))
 	assert.True(t, DanglingRows(ds, domain.GPUNode)("pool-x", nodeX))
-	assert.Nil(t, DanglingRows(ds, domain.GPUNode, domain.GPUPool), "pools loaded partially")
 
 	ds.GPUPools = nil
 	assert.Nil(t, DanglingRows(ds, domain.GPUNode), "pools not loaded")

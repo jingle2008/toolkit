@@ -62,17 +62,8 @@ Now also sets m.stats from computeTableRows.
 */
 func (m *Model) updateRows(autoSelect bool) {
 	m.gens.nextRows()
-	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.filter, m.sortColumn, m.sortAsc, m.faultyFilter())
+	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.filter, m.sortColumn, m.sortAsc, m.showFaulty)
 	m.applyRows(rows, stats, autoSelect)
-}
-
-// faultyFilter returns the Ctrl+Z gate for the current state.
-func (m *Model) faultyFilter() faultyFilter {
-	f := faultyFilter{on: m.showFaulty}
-	if m.gpuPoolsPartial {
-		f.partial = []domain.Category{domain.GPUPool}
-	}
-	return f
 }
 
 func (m *Model) updateRowsAsync() tea.Cmd {
@@ -83,9 +74,9 @@ func (m *Model) updateRowsAsync() tea.Cmd {
 	filter := m.filter
 	sortColumn := m.sortColumn
 	sortAsc := m.sortAsc
-	faulty := m.faultyFilter()
+	showFaulty := m.showFaulty
 	return func() tea.Msg {
-		rows, stats := computeTableRows(dataset, category, scope, filter, sortColumn, sortAsc, faulty)
+		rows, stats := computeTableRows(dataset, category, scope, filter, sortColumn, sortAsc, showFaulty)
 		return tableRowsComputedMsg{
 			Rows:  rows,
 			Stats: stats,
@@ -445,11 +436,10 @@ func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedMod
 	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetImportedModelMap(items) }, domain.ImportedModel, mapLen(items))
 }
 
-func (m *Model) handleGPUPoolsLoaded(items []models.GPUPool, partial bool, gen int) tea.Cmd {
+func (m *Model) handleGPUPoolsLoaded(items []models.GPUPool, gen int) tea.Cmd {
 	if !m.applyLoaded(gen, func(ds *models.Dataset) { ds.GPUPools = items }, domain.GPUPool, len(items)) {
 		return nil
 	}
-	m.gpuPoolsPartial = partial
 	return m.updateGPUPoolState()
 }
 

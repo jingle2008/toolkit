@@ -34,7 +34,7 @@ func (m *Model) goToTargets() []domain.Scope {
 // rowKnownMissing reports whether t's category has rows loaded and none
 // is named t.Name.
 func rowKnownMissing(m *Model, t domain.Scope) bool {
-	rows, _ := computeTableRows(m.dataset, t.Category, nil, "", "", true, faultyFilter{})
+	rows, _ := computeTableRows(m.dataset, t.Category, nil, "", "", true, false)
 	if len(rows) == 0 {
 		return false
 	}

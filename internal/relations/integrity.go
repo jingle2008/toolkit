@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -114,10 +113,6 @@ func (f flatRows[T]) refs(ds *models.Dataset, parent domain.Category) []ref {
 	return out
 }
 
-// dacNamePrefix leads every DAC name (an OCID resource id), and so every
-// namespace named after a DAC.
-const dacNamePrefix = "amaaaaaa"
-
 func nsName(ns, name string) string { return ns + "/" + name }
 
 // children holds the rows of every scoped category, for the integrity
@@ -176,7 +171,7 @@ var children = map[domain.Category]childRows{
 		// Every pod has a namespace, but only one named after a DAC
 		// points at a DAC; on-demand model namespaces don't.
 		applies: func(parent domain.Category, w models.GPUWorkload) bool {
-			return parent != domain.DedicatedAICluster || strings.HasPrefix(w.Namespace, dacNamePrefix)
+			return parent != domain.DedicatedAICluster || models.IsDACName(w.Namespace)
 		},
 	},
 	domain.DedicatedAICluster: groupedRows[models.DedicatedAICluster]{
@@ -306,17 +301,17 @@ func checkRelation(ds *models.Dataset, r domain.Relation, rows childRows, names 
 // under group, is one CheckIntegrity's FAIL checks report: it names a
 // parent row that doesn't exist. Tenancy (WARN) is not included. It
 // serves a partially loaded dataset — the TUI loads categories on
-// demand — so a relation is checked only when its parent is loaded and
-// not listed in partial (loaded, but some of its sources failed): a
-// missing parent may just be unloaded. nil when no row dangles.
-func DanglingRows(ds *models.Dataset, child domain.Category, partial ...domain.Category) func(group string, row any) bool {
+// demand — so a relation is checked only when its parent is loaded: a
+// parent not loaded yet would make every row dangle. nil when no row
+// dangles.
+func DanglingRows(ds *models.Dataset, child domain.Category) func(group string, row any) bool {
 	rows, ok := children[child]
 	if !ok || ds == nil {
 		return nil
 	}
 	set := make(map[string]bool)
 	for _, r := range domain.Relations() {
-		if r.Child != child || r.Parent == domain.Tenant || slices.Contains(partial, r.Parent) {
+		if r.Child != child || r.Parent == domain.Tenant {
 			continue
 		}
 		names, _ := parentNames(ds, r.Parent)

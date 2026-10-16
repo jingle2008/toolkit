@@ -72,7 +72,7 @@ func (m *Model) exportRows() []table.Row {
 		realm:    m.environment.Realm,
 		region:   m.environment.Region,
 		filter:   m.filter,
-		faulty:   m.faultyFilter(),
+		faulty:   m.showFaulty,
 		export:   true,
 	})
 }

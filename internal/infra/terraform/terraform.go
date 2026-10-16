@@ -9,11 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"os"
 	"path/filepath"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
@@ -38,6 +40,7 @@ const (
 	localBlock  = "locals"
 	varKey      = "var"
 	dataKey     = "data"
+	pathKey     = "path"
 	outputBlock = "output"
 	outputValue = "value"
 )
@@ -54,7 +57,27 @@ var localFuncMap = map[string]function.Function{
 	"toset":    stdlib.MakeToFunc(cty.Set(cty.DynamicPseudoType)),
 	"tolist":   stdlib.MakeToFunc(cty.List(cty.DynamicPseudoType)),
 	"tomap":    stdlib.MakeToFunc(cty.Map(cty.DynamicPseudoType)),
+	"file":     fileFunc,
 }
+
+// fileFunc is terraform's file(): the UTF-8 contents of the file at path.
+// Modules build the path from path.module, so it resolves the same way
+// whatever the working directory.
+var fileFunc = function.New(&function.Spec{
+	Params: []function.Parameter{{Name: "path", Type: cty.String}},
+	Type:   function.StaticReturnType(cty.String),
+	Impl: func(args []cty.Value, _ cty.Type) (cty.Value, error) {
+		path := args[0].AsString()
+		b, err := os.ReadFile(path) //nolint:gosec // a path the module names, under the repo the user configured
+		if err != nil {
+			return cty.NilVal, err
+		}
+		if !utf8.Valid(b) {
+			return cty.NilVal, fmt.Errorf("contents of %s are not valid UTF-8", path)
+		}
+		return cty.StringVal(string(b)), nil
+	},
+})
 
 func getLocalAttributesDI(
 	ctx context.Context,
@@ -272,6 +295,7 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 			localKey: localObject,
 			varKey:   varObject,
 			dataKey:  dataObject,
+			pathKey:  cty.ObjectVal(map[string]cty.Value{"module": cty.StringVal(dirPath)}),
 		},
 		Functions: localFuncMap,
 	}

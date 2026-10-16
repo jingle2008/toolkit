@@ -57,12 +57,12 @@ func TestComputeTableRows_RegionalOverrideScopeFilter(t *testing.T) {
 			scope := &domain.Scope{Category: tc.owner, Name: "item-a"}
 
 			// Display path, scoped to item-a's definition: only item-a.
-			rows, _ := computeTableRows(ds, tc.cat, scope, "", "", true, faultyFilter{})
+			rows, _ := computeTableRows(ds, tc.cat, scope, "", "", true, false)
 			require.Len(t, rows, 1)
 			require.Equal(t, "item-a", rows[0][0])
 
 			// No scope: the full flat list is shown.
-			rows, _ = computeTableRows(ds, tc.cat, nil, "", "", true, faultyFilter{})
+			rows, _ = computeTableRows(ds, tc.cat, nil, "", "", true, false)
 			require.Len(t, rows, 2)
 
 			// Export path, correctly scoped: narrows the same way.

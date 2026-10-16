@@ -21,7 +21,7 @@ type rowCtx struct {
 	realm    string
 	region   string
 	filter   string
-	faulty   faultyFilter
+	faulty   bool
 	export   bool
 }
 
@@ -73,7 +73,7 @@ func flatScopedSource[T models.NamedFilterable](
 		rows: func(rc rowCtx) []table.Row {
 			keep := parents.Keep(rc.scope)
 			items := pick(rc.dataset)
-			faulty := rc.faulty.gate(rc.dataset, rc.category)
+			faulty := faultyGateFor(rc.faulty, rc.dataset, rc.category)
 			if rc.export {
 				return tuiRowsFlatForExport(cols, items, keep, rc.realm, rc.region, rc.filter, faulty)
 			}
@@ -121,7 +121,7 @@ func groupedSource[T models.NamedFilterable](
 	return rowSource{
 		rows: func(rc rowCtx) []table.Row {
 			data := pick(rc.dataset)
-			faulty := rc.faulty.gate(rc.dataset, rc.category)
+			faulty := faultyGateFor(rc.faulty, rc.dataset, rc.category)
 			if rc.export {
 				return tuiRowsGroupedForExport(cols, data, parents, rc.scope, rc.realm, rc.region, rc.filter, faulty)
 			}

@@ -82,7 +82,6 @@ func (m *Model) handleGPUPoolsReloaded(msg gpuPoolsReloadedMsg) tea.Cmd {
 		return nil
 	}
 	m.dataset.GPUPools = msg.Items
-	m.gpuPoolsPartial = false // a partial reload keeps the old data
 	if m.category == domain.GPUPool {
 		m.refreshDisplay()
 	}
