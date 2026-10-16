@@ -66,12 +66,13 @@ func (m *Model) exportRows() []table.Row {
 		return nil
 	}
 	return src.rows(rowCtx{
-		dataset: m.dataset,
-		scope:   m.scope,
-		realm:   m.environment.Realm,
-		region:  m.environment.Region,
-		filter:  m.filter,
-		faulty:  m.showFaulty,
-		export:  true,
+		dataset:  m.dataset,
+		category: m.category,
+		scope:    m.scope,
+		realm:    m.environment.Realm,
+		region:   m.environment.Region,
+		filter:   m.filter,
+		faulty:   m.showFaulty,
+		export:   true,
 	})
 }

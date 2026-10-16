@@ -10,6 +10,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -29,8 +30,22 @@ var statsColumns = map[domain.Category][]string{
 	domain.DedicatedAICluster: {common.SizeCol},
 }
 
-func faultyPred[T models.Faulty](t T) bool {
-	return t.IsFaulty()
+// faultyGate reports whether a row, stored under group, is faulty.
+type faultyGate func(group string, it models.Faulty) bool
+
+// faultyGateFor returns the Ctrl+Z test for category's rows, nil when
+// faultyOnly is off. A row is faulty when its own state is (IsFaulty) or
+// it names a parent row that doesn't exist — what `doctor --relations`
+// reports as FAIL (relations.DanglingRows). Tenancy gaps (doctor's WARN)
+// don't count.
+func faultyGateFor(faultyOnly bool, ds *models.Dataset, category domain.Category) faultyGate {
+	if !faultyOnly {
+		return nil
+	}
+	dangling := relations.DanglingRows(ds, category)
+	return func(group string, it models.Faulty) bool {
+		return it.IsFaulty() || (dangling != nil && dangling(group, it))
+	}
 }
 
 func headersFromSet[T any](cols []columns.Column[T]) []header {
@@ -83,10 +98,11 @@ func computeTableRows(dataset *models.Dataset, category domain.Category, scope *
 		return nil, nil
 	}
 	rows := src.rows(rowCtx{
-		dataset: dataset,
-		scope:   scope,
-		filter:  filter,
-		faulty:  faultyOnly,
+		dataset:  dataset,
+		category: category,
+		scope:    scope,
+		filter:   filter,
+		faulty:   faultyOnly,
 	})
 	if sortColumn != "" && len(rows) > 0 {
 		headers := headersFor(category)

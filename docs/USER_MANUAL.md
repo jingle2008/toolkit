@@ -509,7 +509,7 @@ has dropped.
 
 ### Faulty item tracking
 
-Several categories support a **faulty toggle** (`Ctrl+Z`). When enabled, only items that are in a faulty state are shown. The status bar displays counts like `Faulty: 2, Healthy: 10`.
+Several categories support a **faulty toggle** (`Ctrl+Z`). When enabled, only faulty items are shown. An item is faulty when its own state is, as each category describes above, or when it names a parent row that doesn't exist. For example, an InferenceService whose DAC was deleted is faulty even if it reports `Ready`. These are the rows `toolkit doctor --relations` reports as FAIL; tenancies missing from the metadata (its WARN) don't count. A reference is checked only once its parent category is loaded, since a missing parent may just be unloaded. A node whose pool is missing is faulty even when some GPU pool sources failed to load, so the pool may only be unloaded: a broken source needs attention too, and `toolkit doctor --relations` names it.
 
 ---
 

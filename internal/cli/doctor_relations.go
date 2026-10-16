@@ -43,7 +43,7 @@ func relationChecks(ctx context.Context, cfg config.Config) []checkResult {
 		}}
 	}
 	env := models.Environment{Type: cfg.EnvType, Region: cfg.EnvRegion, Realm: cfg.EnvRealm}
-	ds, poolWarn, err := loadIntegrityDataset(ctx, doctorLoaderFn(ctx, cfg.MetadataFile), cfg, env)
+	ds, poolNote, err := loadIntegrityDataset(ctx, doctorLoaderFn(ctx, cfg.MetadataFile), cfg, env)
 	if err != nil {
 		return []checkResult{{
 			Name: "relations", Status: statusFail, Detail: err.Error(),
@@ -53,10 +53,11 @@ func relationChecks(ctx context.Context, cfg config.Config) []checkResult {
 	checks := relations.CheckIntegrity(ds)
 	out := make([]checkResult, 0, len(checks))
 	for _, c := range checks {
-		if poolWarn != "" && c.Child == domain.GPUNode && c.Parent == domain.GPUPool && len(c.Dangling) > 0 {
-			// Some pool sources didn't load, so a missing pool may just be unloaded.
-			c.Severity = relations.SeverityWarn
-			c.Note = joinNonEmpty(c.Note, poolWarn)
+		if poolNote != "" && c.Child == domain.GPUNode && c.Parent == domain.GPUPool && len(c.Dangling) > 0 {
+			// Still FAIL, as the TUI flags these nodes faulty: a missing
+			// pool may just be unloaded, but a broken source needs fixing
+			// too, and the note names it.
+			c.Note = joinNonEmpty(c.Note, poolNote)
 		}
 		out = append(out, relationResult(c))
 	}
@@ -65,8 +66,8 @@ func relationChecks(ctx context.Context, cfg config.Config) []checkResult {
 
 // loadIntegrityDataset loads every category the relations touch,
 // concurrently, and resolves tenant owners as the TUI does. A partial
-// GPU-pool load is not fatal: poolWarn describes it.
-func loadIntegrityDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) (ds *models.Dataset, poolWarn string, err error) {
+// GPU-pool load is not fatal: poolNote describes it.
+func loadIntegrityDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) (ds *models.Dataset, poolNote string, err error) {
 	var (
 		bms    []models.BaseModel
 		srs    []models.ServingRuntime
@@ -99,7 +100,7 @@ func loadIntegrityDataset(ctx context.Context, ld loader.Composite, cfg config.C
 		var err error
 		pools, err = ld.LoadGPUPools(gctx, cfg.RepoPath, env)
 		if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
-			poolWarn = "some GPU pool sources failed to load: " + partial.Error()
+			poolNote = "some GPU pool sources failed to load: " + partial.Error()
 			return nil
 		}
 		return err
@@ -114,7 +115,7 @@ func loadIntegrityDataset(ctx context.Context, ld loader.Composite, cfg config.C
 	ds.SetImportedModelMap(ims)
 	ds.SetGPUWorkloadMap(pods)
 	ds.SetInferenceServiceMap(isvcs)
-	return ds, poolWarn, nil
+	return ds, poolNote, nil
 }
 
 // relationResult renders one integrity check as a doctor row.

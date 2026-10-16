@@ -135,3 +135,58 @@ func TestCheckIntegrity_Clean(t *testing.T) {
 		assert.Emptyf(t, c.Dangling, "%s", c.Name)
 	}
 }
+
+func TestDanglingRows(t *testing.T) {
+	t.Parallel()
+	ds := integrityDataset()
+	isvc := func(ns, name string) models.InferenceService {
+		for _, s := range ds.InferenceServiceMap[ns] {
+			if s.Name == name {
+				return s
+			}
+		}
+		require.Failf(t, "no endpoint", "%s/%s", ns, name)
+		return models.InferenceService{}
+	}
+
+	dangling := DanglingRows(ds, domain.InferenceService)
+	require.NotNil(t, dangling)
+	assert.True(t, dangling("amaaaaaa-gone", isvc("amaaaaaa-gone", "isvc-2")), "DAC and model missing")
+	assert.True(t, dangling("amaaaaaa-old", isvc("amaaaaaa-old", "isvc-4")), "DAC missing")
+	assert.False(t, dangling("amaaaaaa-dac1", isvc("amaaaaaa-dac1", "isvc-1")))
+	assert.False(t, dangling("llama", isvc("llama", "isvc-3")), "on-demand: no DAC to miss")
+
+	// A row's identity can include its group: a tenancy override is
+	// tenant/name.
+	limits := DanglingRows(ds, domain.LimitTenancyOverride)
+	require.NotNil(t, limits)
+	gone := ds.LimitTenancyOverrideMap["Acme"][1]
+	assert.True(t, limits("Acme", gone))
+	assert.False(t, limits("Other", gone))
+
+	assert.Nil(t, DanglingRows(ds, domain.DedicatedAICluster), "Tenant relations (WARN) don't count")
+	assert.Nil(t, DanglingRows(ds, domain.Tenant), "parents nothing")
+	assert.Nil(t, DanglingRows(nil, domain.InferenceService))
+}
+
+// The TUI loads categories on demand: a relation whose parent isn't
+// loaded can't tell a missing parent from an unloaded one, so it isn't
+// checked.
+func TestDanglingRows_UnloadedParents(t *testing.T) {
+	t.Parallel()
+	ds := integrityDataset()
+	ds.DedicatedAIClusterMap = nil
+	dangling := DanglingRows(ds, domain.InferenceService)
+	require.NotNil(t, dangling)
+	old := ds.InferenceServiceMap["amaaaaaa-old"][0]
+	assert.False(t, dangling("amaaaaaa-old", old), "only its DAC is missing, and DACs aren't loaded")
+	gone := ds.InferenceServiceMap["amaaaaaa-gone"][0]
+	assert.True(t, dangling("amaaaaaa-gone", gone), "its imported model is still missing")
+
+	nodeX := ds.GPUNodeMap["pool-x"][0]
+	require.NotNil(t, DanglingRows(ds, domain.GPUNode))
+	assert.True(t, DanglingRows(ds, domain.GPUNode)("pool-x", nodeX))
+
+	ds.GPUPools = nil
+	assert.Nil(t, DanglingRows(ds, domain.GPUNode), "pools not loaded")
+}

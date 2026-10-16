@@ -75,3 +75,10 @@ func TestImportedModel_OCID(t *testing.T) {
 		})
 	}
 }
+
+func TestIsDACName(t *testing.T) {
+	t.Parallel()
+	assert.True(t, IsDACName("amaaaaaabgjpxjqa6mhrulyxvwwyjnqjqtwu5cszak5n34p3cuvcxouopqza"))
+	assert.False(t, IsDACName("meta-llama-3-70b"), "a shared endpoint's namespace is its model's name")
+	assert.False(t, IsDACName(""))
+}

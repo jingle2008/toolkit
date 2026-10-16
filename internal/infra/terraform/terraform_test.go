@@ -292,6 +292,28 @@ locals {
 	assert.NotNil(t, vals)
 }
 
+// A local using terraform's file() on a path.module-relative path
+// resolves, as in the OKE nodepools module, where a pool's cloud-init
+// reads a script; one failing to resolve took every pool built on it.
+func TestLoadLocalValueMap_FileFunc(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "scripts"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "scripts", "init.sh"), []byte("#!/bin/sh\n"), 0o600))
+	writeTfFile(t, dir, "locals.tf", `
+locals {
+  pool    = { shape = "BM.GPU.H100.8", script = file("${path.module}/scripts/init.sh") }
+  missing = file("${path.module}/scripts/none.sh")
+}
+`)
+	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
+	vals, err := loadLocalValueMap(context.Background(), dir, env)
+	require.NoError(t, err)
+	require.Contains(t, vals, "pool")
+	assert.Equal(t, "#!/bin/sh\n", vals["pool"].GetAttr("script").AsString())
+	assert.NotContains(t, vals, "missing", "a missing file fails that local, as in terraform")
+}
+
 func TestLoadLocalValueMap_NoTfFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

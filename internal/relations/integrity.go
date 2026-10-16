@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -50,6 +49,9 @@ type ref struct{ row, key string }
 // category's rows make toward it.
 type childRows interface {
 	refs(ds *models.Dataset, parent domain.Category) []ref
+	// rowID names row (stored under group) the way refs does; row is
+	// the category's item type.
+	rowID(group string, row any) string
 }
 
 // groupedRows adapts a grouped category: its join keys, its rows, how a
@@ -60,6 +62,14 @@ type groupedRows[T models.NamedFilterable] struct {
 	pick    func(*models.Dataset) map[string][]T
 	id      func(group string, it T) string
 	applies func(parent domain.Category, it T) bool
+}
+
+func (g groupedRows[T]) rowID(group string, row any) string {
+	it, ok := row.(T)
+	if !ok {
+		return ""
+	}
+	return g.id(group, it)
 }
 
 func (g groupedRows[T]) refs(ds *models.Dataset, parent domain.Category) []ref {
@@ -85,6 +95,14 @@ type flatRows[T any] struct {
 	id   func(T) string
 }
 
+func (f flatRows[T]) rowID(_ string, row any) string {
+	it, ok := row.(T)
+	if !ok {
+		return ""
+	}
+	return f.id(it)
+}
+
 func (f flatRows[T]) refs(ds *models.Dataset, parent domain.Category) []ref {
 	var out []ref
 	for _, it := range f.pick(ds) {
@@ -94,10 +112,6 @@ func (f flatRows[T]) refs(ds *models.Dataset, parent domain.Category) []ref {
 	}
 	return out
 }
-
-// dacNamePrefix leads every DAC name (an OCID resource id), and so every
-// namespace named after a DAC.
-const dacNamePrefix = "amaaaaaa"
 
 func nsName(ns, name string) string { return ns + "/" + name }
 
@@ -157,7 +171,7 @@ var children = map[domain.Category]childRows{
 		// Every pod has a namespace, but only one named after a DAC
 		// points at a DAC; on-demand model namespaces don't.
 		applies: func(parent domain.Category, w models.GPUWorkload) bool {
-			return parent != domain.DedicatedAICluster || strings.HasPrefix(w.Namespace, dacNamePrefix)
+			return parent != domain.DedicatedAICluster || models.IsDACName(w.Namespace)
 		},
 	},
 	domain.DedicatedAICluster: groupedRows[models.DedicatedAICluster]{
@@ -193,7 +207,12 @@ var parentNameSets = map[domain.Category]func(*models.Dataset) []string{
 	domain.DedicatedAICluster:        func(d *models.Dataset) []string { return groupedNames(d.DedicatedAIClusterMap) },
 }
 
+// names lists the items' names; nil when xs is (the category isn't
+// loaded).
 func names[T models.NamedItem](xs []T) []string {
+	if xs == nil {
+		return nil
+	}
 	out := make([]string, len(xs))
 	for i, x := range xs {
 		out[i] = x.GetName()
@@ -201,7 +220,11 @@ func names[T models.NamedItem](xs []T) []string {
 	return out
 }
 
+// groupedNames is names across a grouped category; nil when m is.
 func groupedNames[T models.NamedItem](m map[string][]T) []string {
+	if m == nil {
+		return nil
+	}
 	n := 0
 	for _, xs := range m {
 		n += len(xs)
@@ -213,15 +236,20 @@ func groupedNames[T models.NamedItem](m map[string][]T) []string {
 	return out
 }
 
-// parentNames returns the set of a parent category's row names. ok is
-// false for a category that parents nothing.
+// parentNames returns the set of a parent category's row names, nil when
+// the category isn't loaded. ok is false for a category that parents
+// nothing.
 func parentNames(ds *models.Dataset, cat domain.Category) (map[string]bool, bool) {
 	list, ok := parentNameSets[cat]
 	if !ok {
 		return nil, false
 	}
-	set := make(map[string]bool)
-	for _, n := range list(ds) {
+	ns := list(ds)
+	if ns == nil {
+		return nil, true
+	}
+	set := make(map[string]bool, len(ns))
+	for _, n := range ns {
 		set[n] = true
 	}
 	return set, true
@@ -244,22 +272,60 @@ func CheckIntegrity(ds *models.Dataset) []Check {
 			continue
 		}
 		names, _ := parentNames(ds, r.Parent)
-		c := Check{
-			Child: r.Child, Parent: r.Parent, Severity: SeverityFail,
-			Name: fmt.Sprintf("%s → %s", r.Child, r.Parent),
-		}
-		for _, ref := range rows.refs(ds, r.Parent) {
-			c.Checked++
-			if !names[ref.key] {
-				c.Dangling = append(c.Dangling, Dangling{Row: ref.row, Missing: ref.key})
-			}
-		}
+		c := checkRelation(ds, r, rows, names)
 		if r.Child == domain.InferenceService && r.Parent == domain.ServingRuntime {
 			c.Note = unnamedRuntimeNote(ds)
 		}
 		out = append(out, c)
 	}
 	return append(out, checkTenancy(ds))
+}
+
+// checkRelation checks one relation: every child row whose key isn't in
+// names (the parent's row names) is dangling.
+func checkRelation(ds *models.Dataset, r domain.Relation, rows childRows, names map[string]bool) Check {
+	c := Check{
+		Child: r.Child, Parent: r.Parent, Severity: SeverityFail,
+		Name: fmt.Sprintf("%s → %s", r.Child, r.Parent),
+	}
+	for _, ref := range rows.refs(ds, r.Parent) {
+		c.Checked++
+		if !names[ref.key] {
+			c.Dangling = append(c.Dangling, Dangling{Row: ref.row, Missing: ref.key})
+		}
+	}
+	return c
+}
+
+// DanglingRows returns a predicate reporting whether a row of child, stored
+// under group, is one CheckIntegrity's FAIL checks report: it names a
+// parent row that doesn't exist. Tenancy (WARN) is not included. It
+// serves a partially loaded dataset — the TUI loads categories on
+// demand — so a relation is checked only when its parent is loaded: a
+// parent not loaded yet would make every row dangle. nil when no row
+// dangles.
+func DanglingRows(ds *models.Dataset, child domain.Category) func(group string, row any) bool {
+	rows, ok := children[child]
+	if !ok || ds == nil {
+		return nil
+	}
+	set := make(map[string]bool)
+	for _, r := range domain.Relations() {
+		if r.Child != child || r.Parent == domain.Tenant {
+			continue
+		}
+		names, _ := parentNames(ds, r.Parent)
+		if names == nil {
+			continue
+		}
+		for _, d := range checkRelation(ds, r, rows, names).Dangling {
+			set[d.Row] = true
+		}
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	return func(group string, row any) bool { return set[rows.rowID(group, row)] }
 }
 
 // unnamedRuntimeNote counts the ome.io endpoints that name no runtime:

@@ -167,13 +167,6 @@ type metricsOpenErrMsg struct{ err error }
 // metricsWindow is how far back the metrics dashboard looks.
 const metricsWindow = 7 * 24 * time.Hour
 
-// importedModelNamePrefix is the OCID resource-id prefix carried by
-// tenant-owned imported/finetune model names and by DAC names. A model name
-// with this prefix resolves against the imported catalog, anything else
-// against the base catalog. A workload/imported-model namespace with this
-// prefix is a DAC name.
-const importedModelNamePrefix = "amaaaaaa"
-
 // openMetricsTriggerMsg is the second step of openMetrics's sequence: it
 // fires after the model catalog has been loaded and applied, so its handler
 // resolves the plan against the now-populated dataset on the Update loop. gen
@@ -231,7 +224,7 @@ func (m *Model) metricsCatalog(item any) (domain.Category, bool) {
 		if it == nil {
 			return domain.BaseModel, false
 		}
-		return servingCatalog(strings.HasPrefix(it.Namespace, importedModelNamePrefix), it.Model)
+		return servingCatalog(models.IsDACName(it.Namespace), it.Model)
 	case *models.InferenceService:
 		if it == nil {
 			return domain.BaseModel, false
@@ -363,7 +356,7 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 		if it.Model == "" {
 			return telemetry.Filter{}, telemetry.CapabilityChat, false, "workload has no model"
 		}
-		return m.servingPlan(strings.HasPrefix(it.Namespace, importedModelNamePrefix), it.Namespace, it.Model)
+		return m.servingPlan(models.IsDACName(it.Namespace), it.Namespace, it.Model)
 	case *models.InferenceService:
 		if it == nil {
 			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""

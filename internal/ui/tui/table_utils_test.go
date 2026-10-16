@@ -40,7 +40,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 			LifeCyclePhase: "DEPRECATED",
 		},
 	}
-	rows := tuiRowsFlat(columns.BaseModelColumns, baseModels, nil, "", false)
+	rows := tuiRowsFlat(columns.BaseModelColumns, baseModels, nil, "", nil)
 	assert.Len(t, rows, 1)
 	// BaseModelColumns: Name, Display Name, Version, DAC Shape, Size,
 	// Context, Flags, Status. Internal/Vendor/Type were dropped.
@@ -92,10 +92,14 @@ func Test_findItem_returns_expected(t *testing.T) {
 	assert.Equal(t, "TenantA", tenant.Name)
 }
 
-func TestFaultyPred(t *testing.T) {
+func TestFaultyGateFor(t *testing.T) {
 	t.Parallel()
-	assert.True(t, faultyPred(testFaulty{faulty: true}))
-	assert.False(t, faultyPred(testFaulty{faulty: false}))
+	ds := &models.Dataset{}
+	assert.Nil(t, faultyGateFor(false, ds, domain.Tenant), "off")
+	gate := faultyGateFor(true, ds, domain.Tenant)
+	require.NotNil(t, gate)
+	assert.True(t, gate("", testFaulty{faulty: true}))
+	assert.False(t, gate("", testFaulty{faulty: false}))
 }
 
 func TestFindItem_LimitRegionalOverride(t *testing.T) {
@@ -396,7 +400,7 @@ func TestFilterRows(t *testing.T) {
 		{Type: "foo", Region: "us-phx-1"},
 		{Type: "bar", Region: "us-ashburn-1"},
 	}
-	rows := tuiRowsFlat(columns.EnvironmentColumns, items, nil, "foo", false)
+	rows := tuiRowsFlat(columns.EnvironmentColumns, items, nil, "foo", nil)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, "foo-phx", rows[0][0])
 }
@@ -423,7 +427,7 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 		{InternalName: "a", Name: "A"},
 		{InternalName: "b", Name: "B"},
 	}
-	rows := tuiRowsFlat(columns.BaseModelColumns, m, nil, "a", false)
+	rows := tuiRowsFlat(columns.BaseModelColumns, m, nil, "a", nil)
 	assert.Len(t, rows, 1)
 	assert.Contains(t, rows[0][0], "A")
 }

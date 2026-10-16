@@ -116,13 +116,14 @@ func TestRelationChecks(t *testing.T) {
 	assert.Equal(t, []string{"ImportedModel /im-a → t1", "GPUWorkload llama/pod-1 → nobody"}, ten.Items)
 }
 
-// A partial pool load makes a missing pool inconclusive: WARN, not FAIL.
+// A partial pool load leaves a missing pool FAIL, as the TUI flags the
+// nodes, with a note naming the failed source.
 //
 //nolint:paralleltest // swaps doctorLoaderFn
-func TestRelationChecks_PartialPoolsWarn(t *testing.T) {
+func TestRelationChecks_PartialPoolsNoted(t *testing.T) {
 	useDoctorLoader(t, relationsLoader{poolErr: &terraform.PartialLoadError{Errs: []error{errors.New("oke pools unresolved")}}})
 	r := byName(relationChecks(context.Background(), relationsCfg()))["relations: GPUNode → GPUPool"]
-	assert.Equal(t, statusWarn, r.Status)
+	assert.Equal(t, statusFail, r.Status)
 	assert.Contains(t, r.Detail, "some GPU pool sources failed to load")
 }
 

@@ -65,7 +65,7 @@ func (m ImportedModel) Namespaces() []string {
 func (m ImportedModel) DACNamespaces() []string {
 	var out []string
 	for _, ns := range m.Namespaces() {
-		if strings.HasPrefix(ns, ociResourceIDPrefix) {
+		if IsDACName(ns) {
 			out = append(out, ns)
 		}
 	}
@@ -85,6 +85,14 @@ func (m ImportedModel) FilterableFields() []string {
 // model names never carry it (checked on dp-prod-ord: none of 200
 // BaseModels does, all 253 ImportedModels do).
 const ociResourceIDPrefix = "amaaaaaa"
+
+// IsDACName reports whether name is a dedicated AI cluster's (an OCID
+// resource id), and so whether a namespace is named after a DAC: a
+// dedicated endpoint's and its pods', and an imported model copy's
+// served there. A shared endpoint's namespace is its model's name.
+func IsDACName(name string) bool {
+	return strings.HasPrefix(name, ociResourceIDPrefix)
+}
 
 // IsImportedModelName reports whether a model name is an imported model's
 // (an OCID resource id) rather than a shared-catalog name. This holds
