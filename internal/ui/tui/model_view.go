@@ -196,8 +196,8 @@ func (m *Model) renderActiveView() string {
 		return m.logView()
 	case common.ConfirmView:
 		return m.centered(m.confirmView())
-	case common.GoToView:
-		return m.centered(m.goToView())
+	case common.RowPickerView:
+		return m.centered(m.rowPickerView())
 	default:
 		return ""
 	}

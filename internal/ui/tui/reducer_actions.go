@@ -209,7 +209,7 @@ func (m *Model) pickMetricsDAC(im *models.ImportedModel, dacs []string) tea.Cmd 
 	for i, ns := range dacs {
 		targets[i] = domain.Scope{Category: domain.DedicatedAICluster, Name: ns}
 	}
-	return m.openPicker(fmt.Sprintf("Open metrics for %s on", im.Name), "open metrics", targets, func(t domain.Scope) tea.Cmd {
+	return m.openRowPicker(fmt.Sprintf("Open metrics for %s on", im.Name), "open metrics", targets, func(t domain.Scope) tea.Cmd {
 		one := *im
 		one.Namespace, one.Copies = t.Name, nil
 		return m.openMetrics(&one)

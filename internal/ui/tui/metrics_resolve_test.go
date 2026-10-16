@@ -260,18 +260,18 @@ func TestOpenMetrics_ImportedModelOnSeveralDACsPicks(t *testing.T) {
 		Copies:    []string{"amaaaaaadac1", "amaaaaaadac2"},
 	}
 	require.Nil(t, m.openMetrics(im))
-	require.Equal(t, common.GoToView, m.viewMode)
+	require.Equal(t, common.RowPickerView, m.viewMode)
 	assert.Equal(t, []domain.Scope{
 		{Category: domain.DedicatedAICluster, Name: "amaaaaaadac1"},
 		{Category: domain.DedicatedAICluster, Name: "amaaaaaadac2"},
-	}, m.goToPicker.targets)
-	assert.Contains(t, m.goToView(), "Open metrics for amaaaaaaim on")
-	assert.Contains(t, m.goToView(), "[enter] open metrics")
+	}, m.rowPicker.targets)
+	assert.Contains(t, m.rowPickerView(), "Open metrics for amaaaaaaim on")
+	assert.Contains(t, m.rowPickerView(), "[enter] open metrics")
 
 	// The real choose: it returns the dashboard launch (built, not run),
 	// with no error toast.
-	_, _ = m.updateGoToView(tea.KeyMsg{Type: tea.KeyDown})
-	_, cmd := m.updateGoToView(tea.KeyMsg{Type: tea.KeyEnter})
+	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyDown})
+	_, cmd := m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyEnter})
 	require.NotNil(t, cmd, "choosing a DAC launches its dashboard")
 	if m.toasts.active != nil {
 		assert.NotEqual(t, toastError, m.toasts.active.sev, m.toasts.active.msg)

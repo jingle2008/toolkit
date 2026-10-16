@@ -65,14 +65,14 @@ func TestGoToPicker_NavigatesToChoice(t *testing.T) {
 	m := newGoToModel(t)
 
 	require.Nil(t, m.openGoTo())
-	require.Equal(t, common.GoToView, m.viewMode)
-	view := m.goToView()
+	require.Equal(t, common.RowPickerView, m.viewMode)
+	view := m.rowPickerView()
 	assert.Contains(t, view, "> Tenant")
 	assert.Contains(t, view, "BaseModel           llama")
 	assert.Contains(t, view, "[enter] go")
 
-	_, _ = m.updateGoToView(tea.KeyMsg{Type: tea.KeyDown})
-	_, _ = m.updateGoToView(tea.KeyMsg{Type: tea.KeyEnter})
+	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyDown})
+	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyEnter})
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, domain.BaseModel, m.category)
 	assert.Equal(t, &domain.Scope{Category: domain.BaseModel, Name: "llama"}, m.scope)
@@ -82,10 +82,10 @@ func TestGoToPicker_EscCancels(t *testing.T) {
 	t.Parallel()
 	m := newGoToModel(t)
 	_ = m.openGoTo()
-	_, _ = m.updateGoToView(tea.KeyMsg{Type: tea.KeyEsc})
+	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyEsc})
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, domain.InferenceService, m.category)
-	assert.Empty(t, m.goToPicker.targets)
+	assert.Empty(t, m.rowPicker.targets)
 }
 
 // One target jumps straight there; none is a toast.
@@ -129,11 +129,11 @@ func contextHas(km keys.KeyMap, b key.Binding) bool {
 }
 
 // Every picker line has the same width, so the centered block aligns.
-func TestGoToView_LinesEqualWidth(t *testing.T) {
+func TestRowPickerView_LinesEqualWidth(t *testing.T) {
 	t.Parallel()
 	m := newGoToModel(t)
 	_ = m.openGoTo()
-	lines := strings.Split(m.goToView(), "\n")
+	lines := strings.Split(m.rowPickerView(), "\n")
 	for _, l := range lines {
 		assert.Equal(t, lipgloss.Width(lines[0]), lipgloss.Width(l), "%q", l)
 	}
