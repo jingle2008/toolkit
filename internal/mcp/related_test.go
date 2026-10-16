@@ -20,15 +20,15 @@ type relatedLoader struct{ stubLoader }
 
 func (relatedLoader) LoadGPUWorkloadsByNode(context.Context, string, models.Environment) (map[string][]models.GPUWorkload, error) {
 	return map[string][]models.GPUWorkload{
-		"node-a": {{Name: "pod-1", Node: "node-a", Namespace: "dac-1", TenantID: "acme"}, {Name: "pod-2", Node: "node-a", Namespace: "dac-2"}},
-		"node-b": {{Name: "pod-3", Node: "node-b", Namespace: "dac-1", TenantID: "acme", Runtime: "vllm"}},
+		"node-a": {{Name: "pod-1", Node: "node-a", Namespace: "amaaaaaa-dac1", TenantID: "acme"}, {Name: "pod-2", Node: "node-a", Namespace: "amaaaaaa-dac2"}},
+		"node-b": {{Name: "pod-3", Node: "node-b", Namespace: "amaaaaaa-dac1", TenantID: "acme", Runtime: "vllm"}},
 	}, nil
 }
 
 func (relatedLoader) LoadInferenceServices(context.Context, string, models.Environment) (map[string][]models.InferenceService, error) {
 	return map[string][]models.InferenceService{
-		"dac-1": {{Name: "isvc-1", Namespace: "dac-1", Model: "llama", Runtime: "vllm"}},
-		"dac-2": {{Name: "isvc-2", Namespace: "dac-2", Model: "llama", Runtime: "vllm", Legacy: true}},
+		"amaaaaaa-dac1": {{Name: "isvc-1", Namespace: "amaaaaaa-dac1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm"}},
+		"amaaaaaa-dac2": {{Name: "isvc-2", Namespace: "amaaaaaa-dac2", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Legacy: true}},
 	}, nil
 }
 
@@ -73,13 +73,13 @@ func TestListRelated(t *testing.T) {
 		args map[string]any
 		want []string
 	}{
-		{"dac pods across nodes", map[string]any{"category": "gw", "parent_category": "dac", "parent_name": "dac-1"}, []string{"pod-1", "pod-3"}},
+		{"dac pods across nodes", map[string]any{"category": "gw", "parent_category": "dac", "parent_name": "amaaaaaa-dac1"}, []string{"pod-1", "pod-3"}},
 		{"tenant pods by resolved owner", map[string]any{"category": "gpuworkload", "parent_category": "tenant", "parent_name": "Acme"}, []string{"pod-1", "pod-3"}},
 		{"runtime pods", map[string]any{"category": "gw", "parent_category": "sr", "parent_name": "vllm"}, []string{"pod-3"}},
 		{"runtime endpoints skip legacy", map[string]any{"category": "is", "parent_category": "servingruntime", "parent_name": "vllm"}, []string{"isvc-1"}},
 		{"model endpoints", map[string]any{"category": "is", "parent_category": "bm", "parent_name": "llama"}, []string{"isvc-1"}},
-		{"with filter", map[string]any{"category": "gw", "parent_category": "dac", "parent_name": "dac-1", "filter": "node-b"}, []string{"pod-3"}},
-		{"with limit", map[string]any{"category": "gw", "parent_category": "dac", "parent_name": "dac-1", "limit": 1}, []string{"pod-1"}},
+		{"with filter", map[string]any{"category": "gw", "parent_category": "dac", "parent_name": "amaaaaaa-dac1", "filter": "node-b"}, []string{"pod-3"}},
+		{"with limit", map[string]any{"category": "gw", "parent_category": "dac", "parent_name": "amaaaaaa-dac1", "limit": 1}, []string{"pod-1"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

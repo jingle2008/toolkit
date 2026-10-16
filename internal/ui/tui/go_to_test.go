@@ -30,7 +30,7 @@ func newGoToModel(t *testing.T) *Model {
 	m.dataset.ImportedModelMap = map[string][]models.ImportedModel{"Acme": {{BaseModel: models.BaseModel{Name: "amaaaaaa-other"}}}}
 	m.dataset.DedicatedAIClusterMap = map[string][]models.DedicatedAICluster{"Acme": {{Name: "dac-1"}}}
 	m.dataset.InferenceServiceMap = map[string][]models.InferenceService{
-		"dac-1": {{Name: "isvc-1", Namespace: "dac-1", Model: "llama", Runtime: "vllm", Owner: &m.dataset.Tenants[0]}},
+		"dac-1": {{Name: "isvc-1", Namespace: "dac-1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: &m.dataset.Tenants[0]}},
 	}
 	m.category = domain.InferenceService
 	m.keys = keys.ResolveKeys(m.category, common.ListView)
@@ -50,6 +50,22 @@ func TestGoToTargets_InferenceService(t *testing.T) {
 		{Category: domain.DedicatedAICluster, Name: "dac-1"},
 		{Category: domain.ServingRuntime, Name: "vllm"},
 	}, m.goToTargets())
+}
+
+// An on-demand endpoint's namespace is its model, not a DAC, so it offers
+// no DedicatedAICluster target even while DACs aren't loaded.
+func TestGoToTargets_OnDemandHasNoDAC(t *testing.T) {
+	t.Parallel()
+	m := newGoToModel(t)
+	m.dataset.DedicatedAIClusterMap = nil
+	m.dataset.InferenceServiceMap = map[string][]models.InferenceService{
+		"llama": {{Name: "isvc-od", Namespace: "llama", Type: models.InferenceServiceOnDemand, Model: "llama", Runtime: "vllm"}},
+	}
+	m.updateRows(true)
+	require.Len(t, m.rawRows, 1)
+	for _, s := range m.goToTargets() {
+		assert.NotEqual(t, domain.DedicatedAICluster, s.Category, "on-demand endpoint offered DAC %q", s.Name)
+	}
 }
 
 // A target in a category that hasn't loaded yet is kept: jumping loads it.

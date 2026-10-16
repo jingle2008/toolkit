@@ -25,8 +25,8 @@ func TestParseRelatedTo(t *testing.T) {
 		wantErr string
 	}{
 		{in: "", cat: domain.GPUWorkload},
-		{in: "dac/dac-1", cat: domain.GPUWorkload, want: &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}},
-		{in: "dedicatedaicluster/dac-1", cat: domain.GPUWorkload, want: &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}},
+		{in: "dac/amaaaaaa-dac1", cat: domain.GPUWorkload, want: &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}},
+		{in: "dedicatedaicluster/amaaaaaa-dac1", cat: domain.GPUWorkload, want: &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}},
 		{in: "t/OABCS1", cat: domain.DedicatedAICluster, want: &domain.Scope{Category: domain.Tenant, Name: "OABCS1"}},
 		// The name is verbatim: case, a trailing space, and further slashes survive.
 		{in: "tenant/cldhorizonsqa ", cat: domain.InferenceService, want: &domain.Scope{Category: domain.Tenant, Name: "cldhorizonsqa "}},
@@ -70,15 +70,15 @@ type relatedEmitLoader struct{ emitLoader }
 
 func (relatedEmitLoader) LoadGPUWorkloadsByNode(context.Context, string, models.Environment) (map[string][]models.GPUWorkload, error) {
 	return map[string][]models.GPUWorkload{
-		"node-a": {{Name: "pod-1", Node: "node-a", Namespace: "dac-1", Runtime: "vllm"}, {Name: "pod-2", Node: "node-a", Namespace: "dac-2"}},
-		"node-b": {{Name: "pod-3", Node: "node-b", Namespace: "dac-1", Runtime: "srt"}},
+		"node-a": {{Name: "pod-1", Node: "node-a", Namespace: "amaaaaaa-dac1", Runtime: "vllm"}, {Name: "pod-2", Node: "node-a", Namespace: "amaaaaaa-dac2"}},
+		"node-b": {{Name: "pod-3", Node: "node-b", Namespace: "amaaaaaa-dac1", Runtime: "srt"}},
 	}, nil
 }
 
 func (relatedEmitLoader) LoadInferenceServices(context.Context, string, models.Environment) (map[string][]models.InferenceService, error) {
 	return map[string][]models.InferenceService{
-		"dac-1": {{Name: "isvc-1", Namespace: "dac-1", Model: "llama", Runtime: "vllm"}},
-		"dac-2": {{Name: "isvc-2", Namespace: "dac-2", Model: "cohere", Runtime: "vllm"}},
+		"amaaaaaa-dac1": {{Name: "isvc-1", Namespace: "amaaaaaa-dac1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm"}},
+		"amaaaaaa-dac2": {{Name: "isvc-2", Namespace: "amaaaaaa-dac2", Type: models.InferenceServiceDedicated, Model: "cohere", Runtime: "vllm"}},
 	}, nil
 }
 
@@ -100,7 +100,7 @@ func emitNames(t *testing.T, cat domain.Category, related *domain.Scope, filter 
 
 func TestEmitCategory_RelatedTo(t *testing.T) {
 	t.Parallel()
-	dac1 := &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}
+	dac1 := &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}
 
 	// A reference across groups: a DAC's pods on every node.
 	assert.Equal(t, []string{"pod-1", "pod-3"}, emitNames(t, domain.GPUWorkload, dac1, ""))
