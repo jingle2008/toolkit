@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -322,9 +323,31 @@ func TestLoadInferenceServices_NoLegacyCRD(t *testing.T) {
 	require.Len(t, got, 1)
 }
 
+// TestLoadInferenceServices_LegacyForbidden pins that a role without
+// access to the legacy API still loads the ome.io endpoints.
+func TestLoadInferenceServices_LegacyForbidden(t *testing.T) {
+	t.Parallel()
+	listKinds := map[schema.GroupVersionResource]string{
+		inferenceServiceGVR:   "InferenceServiceList",
+		inferenceServiceV1GVR: "InferenceServiceList",
+	}
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds,
+		parseYAML(t, isvcDedicated))
+	client.PrependReactor("list", "inferenceservices", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetResource().Group != inferenceServiceV1GVR.Group {
+			return false, nil, nil
+		}
+		return true, nil, apierrors.NewForbidden(inferenceServiceV1GVR.GroupResource(), "", nil)
+	})
+
+	got, err := LoadInferenceServices(context.Background(), client)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+}
+
 // TestLoadInferenceServices_LegacyListErrorFails pins that a legacy list
-// failure other than a missing CRD surfaces rather than silently dropping
-// the legacy endpoints.
+// failure other than an unavailable API surfaces rather than silently
+// dropping the legacy endpoints.
 func TestLoadInferenceServices_LegacyListErrorFails(t *testing.T) {
 	t.Parallel()
 	listKinds := map[schema.GroupVersionResource]string{
@@ -336,7 +359,7 @@ func TestLoadInferenceServices_LegacyListErrorFails(t *testing.T) {
 		if action.GetResource().Group != inferenceServiceV1GVR.Group {
 			return false, nil, nil
 		}
-		return true, nil, apierrors.NewForbidden(inferenceServiceV1GVR.GroupResource(), "", nil)
+		return true, nil, apierrors.NewInternalError(errors.New("etcd unavailable"))
 	})
 
 	_, err := LoadInferenceServices(context.Background(), client)
