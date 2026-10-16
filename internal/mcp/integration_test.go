@@ -347,6 +347,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"list_definitions",
 		"list_tenancy_overrides",
 		"list_regional_overrides",
+		"list_related",
 		"list_aliases",
 		// Mutation tools (all gated on confirm=true; see mutations.go).
 		"cordon_node",

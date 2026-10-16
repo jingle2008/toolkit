@@ -159,7 +159,14 @@ toolkit get gpupool -o tsv | cut -f1,3
 
 # Suppress headers (table/csv/tsv)
 toolkit get tenant --no-headers
+
+# Only rows related to one parent row — the same relations as the TUI's drill-in
+toolkit get gpuworkload --related-to dac/<dac-name>
+toolkit get inferenceservice --related-to servingruntime/<runtime> -o json
+toolkit get dac --related-to tenant/<tenant-name>
 ```
+
+`--related-to <category>/<name>` keeps the rows related to that parent row, using the relations the TUI drills through: a DAC's pods, a model's or runtime's endpoints, a tenant's DACs, pods and endpoints, a definition's overrides, and so on. The name must match the parent row's first column exactly (case-sensitive). The flag combines with `--filter`, and an unrelated category is rejected with the valid parents listed. Shell completion offers the valid `<category>/` prefixes.
 
 Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit get alias` for the full list, or enable shell completion (`toolkit completion zsh`) for tab-completion. Logs are written to `--log-file` (default `toolkit.log`) so stdout stays clean for parsing.
 
@@ -245,6 +252,7 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | `list_definitions` | `kind`: `limit` / `console_property` / `property` |
 | `list_tenancy_overrides` | Same `kind` enum, tenancy-scoped |
 | `list_regional_overrides` | Same `kind` enum, region-scoped |
+| `list_related` | Rows of `category` related to one parent row (`parent_category` + `parent_name`), e.g. a DAC's pods or a runtime's endpoints. Same relations as the TUI drill-in and `toolkit get --related-to` |
 | `list_aliases` | Discovery — every category alias |
 
 Every read tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments.

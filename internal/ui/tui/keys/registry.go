@@ -122,6 +122,12 @@ var (
 		key.WithKeys("o"),
 		key.WithHelp("<o>", "Parent"),
 	)
+	// GoTo opens a picker of the rows the selected row relates to (its
+	// DAC, model, runtime, tenant, ...) and jumps to the chosen one.
+	GoTo = key.NewBinding(
+		key.WithKeys("g"),
+		key.WithHelp("<g>", "Go to related"),
+	)
 	// OpenMetrics opens the selected DAC's OCI Telemetry MQL dashboard
 	// in the browser. Bound to a plain letter (list view only) — no
 	// text-entry view is active for the DAC list, so it cannot collide
@@ -295,40 +301,40 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize, SortGPUs, ToggleFaulty, ScaleUp, Refresh},
 	},
 	domain.GPUNode: {
-		common.ListView: {Parent, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
+		common.ListView: {Parent, GoTo, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
 	},
 	domain.GPUWorkload: {
-		common.ListView: {Parent, SortTenant, SortGPUs, SortAge, OpenMetrics, ToggleFaulty, Refresh},
+		common.ListView: {Parent, GoTo, SortTenant, SortGPUs, SortAge, OpenMetrics, ToggleFaulty, Refresh},
 	},
 	domain.ServingRuntime: {
 		common.ListView: {SortGPUs, ToggleFaulty, Refresh},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {Parent, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
+		common.ListView: {Parent, GoTo, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
 	},
 	domain.InferenceService: {
-		common.ListView: {Parent, SortTenant, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh, RestartService},
+		common.ListView: {Parent, GoTo, SortTenant, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh, RestartService},
 	},
 	domain.ImportedModel: {
-		common.ListView: {Parent, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},
+		common.ListView: {Parent, GoTo, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},
 	},
 	domain.LimitTenancyOverride: {
-		common.ListView: {Parent, SortTenant, SortRegions, CopyTenant},
+		common.ListView: {Parent, GoTo, SortTenant, SortRegions, CopyTenant},
 	},
 	domain.ConsolePropertyTenancyOverride: {
-		common.ListView: {Parent, SortTenant, SortRegions, SortValue, CopyTenant},
+		common.ListView: {Parent, GoTo, SortTenant, SortRegions, SortValue, CopyTenant},
 	},
 	domain.PropertyTenancyOverride: {
-		common.ListView: {Parent, SortTenant, SortRegions, SortValue, CopyTenant},
+		common.ListView: {Parent, GoTo, SortTenant, SortRegions, SortValue, CopyTenant},
 	},
 	domain.LimitRegionalOverride: {
-		common.ListView: {Parent, SortRegions},
+		common.ListView: {Parent, GoTo, SortRegions},
 	},
 	domain.PropertyRegionalOverride: {
-		common.ListView: {Parent, SortRegions, SortValue},
+		common.ListView: {Parent, GoTo, SortRegions, SortValue},
 	},
 	domain.ConsolePropertyRegionalOverride: {
-		common.ListView: {Parent, SortRegions, SortValue},
+		common.ListView: {Parent, GoTo, SortRegions, SortValue},
 	},
 	domain.Environment: {
 		common.ListView: {SortType},

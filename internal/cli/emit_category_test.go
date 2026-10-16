@@ -180,7 +180,7 @@ func TestEmitCategory_AllCategories_JSON(t *testing.T) {
 			t.Parallel()
 			var buf bytes.Buffer
 			err := emitCategory(context.Background(), &buf, emitLoader{}, tc.cat,
-				config.Config{}, testEnv(), "", 0,
+				config.Config{}, testEnv(), "", nil, 0,
 				output.Options{Format: output.FormatJSON}, nil)
 			require.NoError(t, err)
 			assert.Contains(t, buf.String(), tc.want)
@@ -197,7 +197,7 @@ func TestEmitCategory_AllCategories_Table(t *testing.T) {
 			t.Parallel()
 			var buf bytes.Buffer
 			err := emitCategory(context.Background(), &buf, emitLoader{}, tc.cat,
-				config.Config{}, testEnv(), "", 0,
+				config.Config{}, testEnv(), "", nil, 0,
 				output.Options{Format: output.FormatTable}, nil)
 			require.NoError(t, err)
 			assert.NotEmpty(t, buf.String())
@@ -217,7 +217,7 @@ func TestEmitCategory_LoaderErrorsAreWrapped(t *testing.T) {
 			t.Parallel()
 			var buf bytes.Buffer
 			err := emitCategory(context.Background(), &buf, emitLoader{err: sentinel}, tc.cat,
-				config.Config{}, testEnv(), "", 0,
+				config.Config{}, testEnv(), "", nil, 0,
 				output.Options{Format: output.FormatJSON}, nil)
 			require.ErrorIs(t, err, sentinel, "the underlying cause must survive wrapping")
 			assert.NotEqual(t, sentinel.Error(), err.Error(),
@@ -230,7 +230,7 @@ func TestEmitCategory_UnsupportedCategory(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
 	err := emitCategory(context.Background(), &buf, emitLoader{}, domain.CategoryUnknown,
-		config.Config{}, testEnv(), "", 0,
+		config.Config{}, testEnv(), "", nil, 0,
 		output.Options{Format: output.FormatJSON}, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not supported")
@@ -242,7 +242,7 @@ func TestEmitTenancyGroup_UnsupportedCategory(t *testing.T) {
 	// A category that isn't part of the tenancy group must be rejected
 	// rather than silently emitting nothing.
 	err := emitTenancyGroup(&buf, domain.BaseModel, models.TenancyOverrideGroup{},
-		"", 0, output.Options{Format: output.FormatJSON}, testEnv(), nil)
+		"", nil, 0, output.Options{Format: output.FormatJSON}, testEnv(), nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not in tenancy group")
 }
@@ -251,7 +251,7 @@ func TestEmitCategory_FilterMatchingNothing(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
 	err := emitCategory(context.Background(), &buf, emitLoader{}, domain.BaseModel,
-		config.Config{}, testEnv(), "no-such-model", 0,
+		config.Config{}, testEnv(), "no-such-model", nil, 0,
 		output.Options{Format: output.FormatJSON}, nil)
 	require.NoError(t, err, "an empty result is not an error")
 
@@ -265,7 +265,7 @@ func TestEmitCategory_LimitTruncates(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
 	err := emitCategory(context.Background(), &buf, emitLoader{}, domain.Alias,
-		config.Config{}, testEnv(), "", 2,
+		config.Config{}, testEnv(), "", nil, 2,
 		output.Options{Format: output.FormatJSON}, nil)
 	require.NoError(t, err)
 
@@ -278,7 +278,7 @@ func TestEmitCategory_UnsupportedFormat(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
 	err := emitCategory(context.Background(), &buf, emitLoader{}, domain.BaseModel,
-		config.Config{}, testEnv(), "", 0,
+		config.Config{}, testEnv(), "", nil, 0,
 		output.Options{Format: output.Format("toml")}, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported format")
@@ -312,7 +312,7 @@ func TestEmitCategory_ResolvesTenantOwners(t *testing.T) {
 			t.Parallel()
 			var buf bytes.Buffer
 			err := emitCategory(context.Background(), &buf, tenantEmitLoader{}, cat,
-				config.Config{}, testEnv(), "", 0,
+				config.Config{}, testEnv(), "", nil, 0,
 				output.Options{Format: output.FormatJSON}, nil)
 			require.NoError(t, err)
 			var got []map[string]any
@@ -328,7 +328,7 @@ func TestEmitCategory_ResolvesTenantOwners(t *testing.T) {
 	// The re-keyed group key makes the tenant name filterable.
 	var buf bytes.Buffer
 	err := emitCategory(context.Background(), &buf, tenantEmitLoader{}, domain.DedicatedAICluster,
-		config.Config{}, testEnv(), "tenant one", 0, // runGet lowercases --filter
+		config.Config{}, testEnv(), "tenant one", nil, 0, // runGet lowercases --filter
 		output.Options{Format: output.FormatTable}, nil)
 	require.NoError(t, err)
 	assert.Contains(t, buf.String(), "dac-a")
@@ -341,7 +341,7 @@ func TestEmitCategory_TenantLoadFailureDegrades(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
 	err := emitCategory(context.Background(), &buf, tenantEmitLoader{tenantErr: errors.New("no repo")},
-		domain.DedicatedAICluster, config.Config{}, testEnv(), "", 0,
+		domain.DedicatedAICluster, config.Config{}, testEnv(), "", nil, 0,
 		output.Options{Format: output.FormatJSON}, nil)
 	require.NoError(t, err)
 	var got []map[string]any

@@ -263,6 +263,13 @@ GPUWorkload's node, an InferenceService's DAC. A DAC is not the structural
 parent of its pods, and a tenant, model or runtime is not the parent of the
 pods and endpoints that use it.
 
+`g` goes the other way along every relation: it lists the rows the selected
+row relates to — an InferenceService's tenant, model, DAC and runtime, a
+GPUWorkload's tenant, node, DAC and runtime — and jumps to the one you pick
+(`↑/↓`, `Enter`; `Esc` cancels). With a single target it jumps straight there.
+A target that is known not to exist is left out (e.g. a shared-catalog
+endpoint's model is offered as a BaseModel, not an ImportedModel).
+
 ---
 
 ## Categories

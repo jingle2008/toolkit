@@ -20,6 +20,8 @@ const (
 	LogView
 	// ConfirmView is the modal that gates destructive actions.
 	ConfirmView
+	// GoToView is the picker of rows related to the selected one.
+	GoToView
 )
 
 // String returns the string representation of the ViewMode.
@@ -41,6 +43,8 @@ func (v ViewMode) String() string {
 		return "Log"
 	case ConfirmView:
 		return "Confirm"
+	case GoToView:
+		return "GoTo"
 	default:
 		return "Unknown"
 	}

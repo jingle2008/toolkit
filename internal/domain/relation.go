@@ -79,18 +79,29 @@ func Relations() []Relation {
 }
 
 // scopedChildren indexes every relation by parent (drill-in targets, any
-// kind); containsParents indexes the Contains relations by child
-// (structural parents). Both are built once from the registry.
-var scopedChildren, containsParents = indexRelations(relations)
+// kind); scopingParents indexes every relation by child; containsParents
+// indexes the Contains relations by child (structural parents). All are
+// built once from the registry.
+var scopedChildren, scopingParents, containsParents = indexRelations(relations)
 
-func indexRelations(rels []Relation) (children, parents map[Category][]Category) {
+func indexRelations(rels []Relation) (children, scoping, contains map[Category][]Category) {
 	children = make(map[Category][]Category)
-	parents = make(map[Category][]Category)
+	scoping = make(map[Category][]Category)
+	contains = make(map[Category][]Category)
 	for _, r := range rels {
 		children[r.Parent] = append(children[r.Parent], r.Child)
+		scoping[r.Child] = append(scoping[r.Child], r.Parent)
 		if r.Kind == Contains {
-			parents[r.Child] = append(parents[r.Child], r.Parent)
+			contains[r.Child] = append(contains[r.Child], r.Parent)
 		}
 	}
-	return children, parents
+	return children, scoping, contains
+}
+
+// ScopedBy returns every category that scopes the receiver, through any
+// relation kind, in declaration order — the inverse of ScopedCategories.
+// Unlike Parents it includes References (an InferenceService is scoped by
+// the BaseModel it serves). Returns nil when nothing scopes the receiver.
+func (e Category) ScopedBy() []Category {
+	return slices.Clone(scopingParents[e])
 }

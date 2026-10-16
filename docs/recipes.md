@@ -194,6 +194,24 @@ toolkit get dac    -o json | jq -r '.[].tenant' | sort -u > /tmp/tenants_with_da
 comm -23 <(sort /tmp/external_tenants.txt) /tmp/tenants_with_dacs.txt
 ```
 
+### What runs in a DAC, and what uses a runtime
+
+`--related-to` follows the same relations as a TUI drill-in, so these need no `jq` joins:
+
+```bash
+# GPU pods of one DAC, across every node, with the GPUs they hold
+toolkit get gpuworkload --related-to dac/<dac-name> --columns name,node,gpus
+
+# Every endpoint naming a runtime, and the pods actually running it
+# (pods also cover endpoints whose runtime OME selected at deploy time)
+toolkit get inferenceservice --related-to servingruntime/<runtime>
+toolkit get gpuworkload      --related-to servingruntime/<runtime>
+
+# Everything one tenant runs
+toolkit get dac              --related-to tenant/<tenant-name>
+toolkit get inferenceservice --related-to tenant/<tenant-name> -o json
+```
+
 ### Compare two environments
 
 ```bash
