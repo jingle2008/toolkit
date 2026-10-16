@@ -14,10 +14,10 @@ import (
 // tuiRowsFlatForExport. The cell argument decides whether each cell
 // uses the display-mode Render or the export-mode RenderForExport (with
 // fallback). The filter + faulty pipeline is identical for both.
-func tuiRowsFlatWith[T models.NamedFilterable](s columns.Set[T], items []T, keep func(T) bool, filter string, faultyOnly bool, cell func(columns.Column[T], T) string) []table.Row {
+func tuiRowsFlatWith[T models.NamedFilterable](s columns.Set[T], items []T, keep func(T) bool, filter string, faulty faultyGate, cell func(columns.Column[T], T) string) []table.Row {
 	pred := keep
-	if faultyOnly {
-		pred = func(it T) bool { return (keep == nil || keep(it)) && faultyPred(it) }
+	if faulty != nil {
+		pred = func(it T) bool { return (keep == nil || keep(it)) && faulty("", it) }
 	}
 	matches := collections.FilterSlice(items, nil, filter, pred)
 	rows := make([]table.Row, len(matches))
@@ -35,8 +35,8 @@ func tuiRowsFlatWith[T models.NamedFilterable](s columns.Set[T], items []T, keep
 // TUI's filter + faulty gates and, when keep is non-nil, narrowing to
 // the items it accepts (the active parent scope). Display-mode: every
 // cell uses the column's Render closure.
-func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, keep func(T) bool, filter string, faultyOnly bool) []table.Row {
-	return tuiRowsFlatWith(s, items, keep, filter, faultyOnly, func(c columns.Column[T], m T) string {
+func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, keep func(T) bool, filter string, faulty faultyGate) []table.Row {
+	return tuiRowsFlatWith(s, items, keep, filter, faulty, func(c columns.Column[T], m T) string {
 		return c.Render(m)
 	})
 }
@@ -45,8 +45,8 @@ func tuiRowsFlat[T models.NamedFilterable](s columns.Set[T], items []T, keep fun
 // RenderForExport when present. Used by the CSV export path so
 // OCID-shaped columns emit fully-qualified IDs rather than raw
 // suffixes.
-func tuiRowsFlatForExport[T models.NamedFilterable](s columns.Set[T], items []T, keep func(T) bool, realm, region, filter string, faultyOnly bool) []table.Row {
-	return tuiRowsFlatWith(s, items, keep, filter, faultyOnly, func(c columns.Column[T], m T) string {
+func tuiRowsFlatForExport[T models.NamedFilterable](s columns.Set[T], items []T, keep func(T) bool, realm, region, filter string, faulty faultyGate) []table.Row {
+	return tuiRowsFlatWith(s, items, keep, filter, faulty, func(c columns.Column[T], m T) string {
 		if c.RenderForExport != nil {
 			return c.RenderForExport(realm, region, m)
 		}
@@ -64,14 +64,13 @@ func tuiRowsGroupedWith[T models.NamedFilterable](
 	parents relations.Grouped[T],
 	ctx *domain.Scope,
 	filter string,
-	faultyOnly bool,
+	faulty faultyGate,
 	cell func(columns.GroupedColumn[T], string, T) string,
 ) []table.Row {
-	var pred func(T) bool
-	if faultyOnly {
-		pred = faultyPred
+	if faulty != nil {
+		m = keepFaulty(m, faulty)
 	}
-	matches := parents.Filter(m, ctx, filter, pred)
+	matches := parents.Filter(m, ctx, filter, nil)
 	rows := make([]table.Row, 0)
 	for k, items := range matches {
 		for _, it := range items {
@@ -94,9 +93,9 @@ func tuiRowsGrouped[T models.NamedFilterable](
 	parents relations.Grouped[T],
 	ctx *domain.Scope,
 	filter string,
-	faultyOnly bool,
+	faulty faultyGate,
 ) []table.Row {
-	return tuiRowsGroupedWith(g, m, parents, ctx, filter, faultyOnly, func(c columns.GroupedColumn[T], k string, it T) string {
+	return tuiRowsGroupedWith(g, m, parents, ctx, filter, faulty, func(c columns.GroupedColumn[T], k string, it T) string {
 		return c.Render(k, it)
 	})
 }
@@ -110,12 +109,31 @@ func tuiRowsGroupedForExport[T models.NamedFilterable](
 	parents relations.Grouped[T],
 	ctx *domain.Scope,
 	realm, region, filter string,
-	faultyOnly bool,
+	faulty faultyGate,
 ) []table.Row {
-	return tuiRowsGroupedWith(g, m, parents, ctx, filter, faultyOnly, func(c columns.GroupedColumn[T], k string, it T) string {
+	return tuiRowsGroupedWith(g, m, parents, ctx, filter, faulty, func(c columns.GroupedColumn[T], k string, it T) string {
 		if c.RenderForExport != nil {
 			return c.RenderForExport(realm, region, k, it)
 		}
 		return c.Render(k, it)
 	})
+}
+
+// keepFaulty returns the rows of m that faulty accepts, by group; a group
+// left with none is dropped. The gate needs the group (a row's identity
+// may include it), which the scope filter's predicate doesn't get.
+func keepFaulty[T models.Faulty](m map[string][]T, faulty faultyGate) map[string][]T {
+	out := make(map[string][]T, len(m))
+	for g, items := range m {
+		var kept []T
+		for _, it := range items {
+			if faulty(g, it) {
+				kept = append(kept, it)
+			}
+		}
+		if len(kept) > 0 {
+			out[g] = kept
+		}
+	}
+	return out
 }

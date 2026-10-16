@@ -55,12 +55,12 @@ func TestComputeTableRows_DACScopesGPUWorkloads(t *testing.T) {
 	}}
 	scope := &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}
 
-	rows, _ := computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, false)
+	rows, _ := computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"pod-1", "pod-3"}, rowNames(rows))
 
 	// The free-text filter still applies inside the scope, and matches
 	// the node (group key) as it does unscoped.
-	rows, _ = computeTableRows(ds, domain.GPUWorkload, scope, "node-b", "", true, false)
+	rows, _ = computeTableRows(ds, domain.GPUWorkload, scope, "node-b", "", true, faultyFilter{})
 	assert.Equal(t, []string{"pod-3"}, rowNames(rows))
 
 	// Export narrows the same way.
@@ -68,7 +68,7 @@ func TestComputeTableRows_DACScopesGPUWorkloads(t *testing.T) {
 	assert.Equal(t, []string{"pod-1", "pod-3"}, rowNames(exp))
 
 	// The node scope is unchanged: one node's workloads, whatever the DAC.
-	rows, _ = computeTableRows(ds, domain.GPUWorkload, &domain.Scope{Category: domain.GPUNode, Name: "node-a"}, "", "", true, false)
+	rows, _ = computeTableRows(ds, domain.GPUWorkload, &domain.Scope{Category: domain.GPUNode, Name: "node-a"}, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"pod-1", "pod-2"}, rowNames(rows))
 }
 
@@ -86,11 +86,11 @@ func TestComputeTableRows_BaseModelScopesInferenceServices(t *testing.T) {
 	}}
 	scope := &domain.Scope{Category: domain.BaseModel, Name: "llama"}
 
-	rows, _ := computeTableRows(ds, domain.InferenceService, scope, "", "", true, false)
+	rows, _ := computeTableRows(ds, domain.InferenceService, scope, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"isvc-1", "isvc-3"}, rowNames(rows))
 
 	// The DAC scope is unchanged: the namespace's endpoints only.
-	rows, _ = computeTableRows(ds, domain.InferenceService, &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}, "", "", true, false)
+	rows, _ = computeTableRows(ds, domain.InferenceService, &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"isvc-1"}, rowNames(rows))
 }
 
@@ -139,7 +139,7 @@ func TestComputeTableRows_ImportedModelScopesInferenceServices(t *testing.T) {
 	}}
 	scope := &domain.Scope{Category: domain.ImportedModel, Name: model}
 
-	rows, _ := computeTableRows(ds, domain.InferenceService, scope, "", "", true, false)
+	rows, _ := computeTableRows(ds, domain.InferenceService, scope, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"isvc-1", "isvc-2"}, rowNames(rows))
 }
 
@@ -181,10 +181,10 @@ func TestComputeTableRows_TenantScopesWorkloadsAndEndpoints(t *testing.T) {
 	}
 	scope := &domain.Scope{Category: domain.Tenant, Name: "Tenant X"}
 
-	rows, _ := computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, false)
+	rows, _ := computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"pod-1", "pod-3"}, rowNames(rows), "pod-4's raw tenancy-id must not match a tenant name")
 
-	rows, _ = computeTableRows(ds, domain.InferenceService, scope, "", "", true, false)
+	rows, _ = computeTableRows(ds, domain.InferenceService, scope, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"isvc-1"}, rowNames(rows))
 }
 
@@ -209,10 +209,10 @@ func TestComputeTableRows_ServingRuntimeScopesEndpointsAndPods(t *testing.T) {
 	}
 	scope := &domain.Scope{Category: domain.ServingRuntime, Name: rt}
 
-	rows, _ := computeTableRows(ds, domain.InferenceService, scope, "", "", true, false)
+	rows, _ := computeTableRows(ds, domain.InferenceService, scope, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"isvc-1"}, rowNames(rows))
 
-	rows, _ = computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, false)
+	rows, _ = computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, faultyFilter{})
 	assert.Equal(t, []string{"pod-1", "pod-2"}, rowNames(rows))
 }
 

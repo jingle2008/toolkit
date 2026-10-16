@@ -58,7 +58,7 @@ func loadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, 
 			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
 				logging.FromContext(ctx).Warnw("loaded GPU pools with partial failures",
 					"category", domain.GPUPool, "error", partial)
-				return gpuPoolsLoadedMsg{Items: items, Gen: gen}
+				return gpuPoolsLoadedMsg{Items: items, Partial: true, Gen: gen}
 			}
 			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUPool, err), Gen: gen}
 		}

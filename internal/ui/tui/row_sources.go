@@ -15,13 +15,14 @@ import (
 // callers populate realm/region and set export=true so each cell
 // prefers columns.Column.RenderForExport over Render.
 type rowCtx struct {
-	dataset *models.Dataset
-	scope   *domain.Scope
-	realm   string
-	region  string
-	filter  string
-	faulty  bool
-	export  bool
+	dataset  *models.Dataset
+	category domain.Category
+	scope    *domain.Scope
+	realm    string
+	region   string
+	filter   string
+	faulty   faultyFilter
+	export   bool
 }
 
 // rowSource bundles a category's per-cell row builder, its
@@ -72,10 +73,11 @@ func flatScopedSource[T models.NamedFilterable](
 		rows: func(rc rowCtx) []table.Row {
 			keep := parents.Keep(rc.scope)
 			items := pick(rc.dataset)
+			faulty := rc.faulty.gate(rc.dataset, rc.category)
 			if rc.export {
-				return tuiRowsFlatForExport(cols, items, keep, rc.realm, rc.region, rc.filter, rc.faulty)
+				return tuiRowsFlatForExport(cols, items, keep, rc.realm, rc.region, rc.filter, faulty)
 			}
-			return tuiRowsFlat(cols, items, keep, rc.filter, rc.faulty)
+			return tuiRowsFlat(cols, items, keep, rc.filter, faulty)
 		},
 		headers: headersFromSet(cols.Columns),
 		find: func(d *models.Dataset, key models.ItemKey) any {
@@ -119,10 +121,11 @@ func groupedSource[T models.NamedFilterable](
 	return rowSource{
 		rows: func(rc rowCtx) []table.Row {
 			data := pick(rc.dataset)
+			faulty := rc.faulty.gate(rc.dataset, rc.category)
 			if rc.export {
-				return tuiRowsGroupedForExport(cols, data, parents, rc.scope, rc.realm, rc.region, rc.filter, rc.faulty)
+				return tuiRowsGroupedForExport(cols, data, parents, rc.scope, rc.realm, rc.region, rc.filter, faulty)
 			}
-			return tuiRowsGrouped(cols, data, parents, rc.scope, rc.filter, rc.faulty)
+			return tuiRowsGrouped(cols, data, parents, rc.scope, rc.filter, faulty)
 		},
 		headers: headersFromGroupedSet(cols.Columns),
 		find: func(d *models.Dataset, key models.ItemKey) any {

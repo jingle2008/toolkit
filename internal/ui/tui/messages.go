@@ -137,7 +137,9 @@ type importedModelsLoadedMsg struct {
 
 type gpuPoolsLoadedMsg struct {
 	Items []models.GPUPool
-	Gen   int
+	// Partial is set when some pool sources failed to load.
+	Partial bool
+	Gen     int
 }
 
 type gpuNodesLoadedMsg struct {

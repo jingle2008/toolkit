@@ -121,7 +121,7 @@ func TestHandleGPUPoolsLoaded(t *testing.T) {
 	m.gens.msg = 1
 	items := []models.GPUPool{{Name: "pool1"}}
 
-	cmd := m.handleGPUPoolsLoaded(items, 1)
+	cmd := m.handleGPUPoolsLoaded(items, false, 1)
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd from handleGPUPoolsLoaded")
 	}

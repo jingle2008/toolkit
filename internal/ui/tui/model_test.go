@@ -270,7 +270,7 @@ func TestProcessDataAndErrorMsg(t *testing.T) {
 	m.handleDataMsg(dataMsg{})
 	// Per-category data now flows through the typed handlers.
 	m.handleBaseModelsLoaded([]models.BaseModel{{}}, m.gens.msg)
-	m.handleGPUPoolsLoaded([]models.GPUPool{{}}, m.gens.msg)
+	m.handleGPUPoolsLoaded([]models.GPUPool{{}}, false, m.gens.msg)
 	m.handleGPUNodesLoaded(map[string][]models.GPUNode{"pool": {}}, m.gens.msg)
 	m.handleDedicatedAIClustersLoaded(map[string][]models.DedicatedAICluster{"tenant": {}}, m.gens.msg)
 	// Update with errorMsg

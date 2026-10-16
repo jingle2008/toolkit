@@ -11,7 +11,7 @@ import (
 func TestTuiRowsFlat_BaseModel(t *testing.T) {
 	t.Parallel()
 	m := []models.BaseModel{{Name: "cohere.command", InternalName: "command-r"}}
-	rows := tuiRowsFlat(columns.BaseModelColumns, m, nil, "", false)
+	rows := tuiRowsFlat(columns.BaseModelColumns, m, nil, "", nil)
 	if len(rows) != 1 {
 		t.Fatalf("rows: got %d, want 1", len(rows))
 	}
@@ -25,7 +25,7 @@ func TestTuiRowsGrouped_GPUNode(t *testing.T) {
 	m := map[string][]models.GPUNode{
 		"pool-A": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, Age: "1d"}},
 	}
-	rows := tuiRowsGrouped(columns.GPUNodeColumns, m, relations.GPUNode, nil, "", false)
+	rows := tuiRowsGrouped(columns.GPUNodeColumns, m, relations.GPUNode, nil, "", nil)
 	if len(rows) != 1 {
 		t.Fatalf("rows: got %d, want 1", len(rows))
 	}

@@ -50,6 +50,7 @@ func (m *Model) switchEnvironment(env models.Environment, target domain.Category
 	if m.dataset != nil {
 		m.dataset.ResetRealmScopedFields()
 	}
+	m.gpuPoolsPartial = false
 	m.k8sVersion = ""
 	m.recentEnvs.Touch(env)
 	if target == m.category {

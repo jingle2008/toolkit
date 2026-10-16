@@ -10,6 +10,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -29,8 +30,30 @@ var statsColumns = map[domain.Category][]string{
 	domain.DedicatedAICluster: {common.SizeCol},
 }
 
-func faultyPred[T models.Faulty](t T) bool {
-	return t.IsFaulty()
+// faultyFilter is the Ctrl+Z gate; the zero value is off.
+type faultyFilter struct {
+	on bool
+	// partial lists categories loaded with some sources missing (GPU
+	// pools from terraform); a reference into one isn't checked, as its
+	// parent may just be unloaded.
+	partial []domain.Category
+}
+
+// faultyGate reports whether a row, stored under group, is faulty.
+type faultyGate func(group string, it models.Faulty) bool
+
+// gate returns the faulty test for category's rows, nil when f is off. A
+// row is faulty when its own state is (IsFaulty) or it names a parent
+// row that doesn't exist — what `doctor --relations` reports as FAIL
+// (relations.DanglingRows). Tenancy gaps (doctor's WARN) don't count.
+func (f faultyFilter) gate(ds *models.Dataset, category domain.Category) faultyGate {
+	if !f.on {
+		return nil
+	}
+	dangling := relations.DanglingRows(ds, category, f.partial...)
+	return func(group string, it models.Faulty) bool {
+		return it.IsFaulty() || (dangling != nil && dangling(group, it))
+	}
 }
 
 func headersFromSet[T any](cols []columns.Column[T]) []header {
@@ -65,7 +88,7 @@ computeTableRows returns the table rows for a given category, using the appropri
 If the scope is not valid for the category, it is set to nil.
 Returns: rows, stats (nil if not applicable)
 */
-func computeTableRows(dataset *models.Dataset, category domain.Category, scope *domain.Scope, filter string, sortColumn string, sortAsc bool, faultyOnly bool) ([]table.Row, tableStats) {
+func computeTableRows(dataset *models.Dataset, category domain.Category, scope *domain.Scope, filter string, sortColumn string, sortAsc bool, faulty faultyFilter) ([]table.Row, tableStats) {
 	// row-source closures dereference dataset to pull category-specific
 	// slices/maps; before the first successful load there's nothing to
 	// render. Bail out so refresh-paths driven by user navigation (now
@@ -83,10 +106,11 @@ func computeTableRows(dataset *models.Dataset, category domain.Category, scope *
 		return nil, nil
 	}
 	rows := src.rows(rowCtx{
-		dataset: dataset,
-		scope:   scope,
-		filter:  filter,
-		faulty:  faultyOnly,
+		dataset:  dataset,
+		category: category,
+		scope:    scope,
+		filter:   filter,
+		faulty:   faulty,
 	})
 	if sortColumn != "" && len(rows) > 0 {
 		headers := headersFor(category)

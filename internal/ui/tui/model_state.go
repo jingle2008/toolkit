@@ -159,10 +159,14 @@ type Model struct {
 	history    []domain.Category // chronological list of visited categories
 	historyIdx int               // index of the current position in history
 
-	// Show only faulty items in list view (Tenant, GPUNode,
-	// DedicatedAICluster, ServingRuntime — any category whose model
-	// reports IsFaulty; the gate itself is category-agnostic)
+	// Show only faulty items in list view: rows whose model reports
+	// IsFaulty, or that name a parent row that doesn't exist (see
+	// faultyFilter); the gate itself is category-agnostic.
 	showFaulty bool
+
+	// gpuPoolsPartial is set when the last GPU pool load had sources
+	// fail, so a node's pool may be missing only because it's unloaded.
+	gpuPoolsPartial bool
 
 	// rawRows mirrors m.table.Rows() pre-truncation so itemKeyFrom can
 	// recover un-elided Name/Tenant cells. applyMiddleTruncation

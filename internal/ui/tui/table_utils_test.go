@@ -40,7 +40,7 @@ func Test_getBaseModels_returns_rows(t *testing.T) {
 			LifeCyclePhase: "DEPRECATED",
 		},
 	}
-	rows := tuiRowsFlat(columns.BaseModelColumns, baseModels, nil, "", false)
+	rows := tuiRowsFlat(columns.BaseModelColumns, baseModels, nil, "", nil)
 	assert.Len(t, rows, 1)
 	// BaseModelColumns: Name, Display Name, Version, DAC Shape, Size,
 	// Context, Flags, Status. Internal/Vendor/Type were dropped.
@@ -63,7 +63,7 @@ func Test_getModelArtifacts_returns_rows(t *testing.T) {
 				},
 			},
 		},
-	}, domain.ModelArtifact, nil, "", "", true, false)
+	}, domain.ModelArtifact, nil, "", "", true, faultyFilter{})
 	assert.Len(t, rows, 1)
 	assert.Equal(t, table.Row{"artifactA", "M1", "2x A100", "8.0"}, rows[0])
 }
@@ -92,10 +92,14 @@ func Test_findItem_returns_expected(t *testing.T) {
 	assert.Equal(t, "TenantA", tenant.Name)
 }
 
-func TestFaultyPred(t *testing.T) {
+func TestFaultyFilter_Gate(t *testing.T) {
 	t.Parallel()
-	assert.True(t, faultyPred(testFaulty{faulty: true}))
-	assert.False(t, faultyPred(testFaulty{faulty: false}))
+	ds := &models.Dataset{}
+	assert.Nil(t, faultyFilter{}.gate(ds, domain.Tenant), "off")
+	gate := faultyFilter{on: true}.gate(ds, domain.Tenant)
+	require.NotNil(t, gate)
+	assert.True(t, gate("", testFaulty{faulty: true}))
+	assert.False(t, gate("", testFaulty{faulty: false}))
 }
 
 func TestFindItem_LimitRegionalOverride(t *testing.T) {
@@ -124,7 +128,7 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 		if cat == domain.Alias {
 			continue
 		}
-		rows, _ := computeTableRows(ds, cat, nil, "", "", true, false)
+		rows, _ := computeTableRows(ds, cat, nil, "", "", true, faultyFilter{})
 		assert.Empty(t, rows, "category %v should have no rows for empty dataset", cat)
 	}
 }
@@ -143,7 +147,7 @@ func TestGetTableRows_DedicatedAIClusterStats(t *testing.T) {
 		},
 	}
 
-	rows, stats := computeTableRows(dataset, domain.DedicatedAICluster, nil, "", "", true, false)
+	rows, stats := computeTableRows(dataset, domain.DedicatedAICluster, nil, "", "", true, faultyFilter{})
 	require.Len(t, rows, 5)
 	require.NotNil(t, stats)
 	assert.Equal(t, 11, stats[common.SizeCol])
@@ -192,7 +196,7 @@ func TestGetItemKeyAndString(t *testing.T) {
 func TestComputeTableRows_NilDataset(t *testing.T) {
 	t.Parallel()
 	for cat := domain.Tenant; cat <= domain.Alias; cat++ {
-		rows, stats := computeTableRows(nil, cat, nil, "", "", true, false)
+		rows, stats := computeTableRows(nil, cat, nil, "", "", true, faultyFilter{})
 		require.Nil(t, rows, "category %v: rows should be nil with nil dataset", cat)
 		require.Nil(t, stats, "category %v: stats should be nil with nil dataset", cat)
 	}
@@ -210,7 +214,7 @@ func TestGetHeadersAndTableRows(t *testing.T) {
 	ds := &models.Dataset{}
 	for _, cat := range categories {
 		headers := headersFor(cat)
-		_, _ = computeTableRows(ds, cat, nil, "", "", true, false)
+		_, _ = computeTableRows(ds, cat, nil, "", "", true, faultyFilter{})
 		// Extra assertions for coverage
 		if len(headers) > 0 {
 			require.NotEmpty(t, headers[0].text)
@@ -306,7 +310,7 @@ func TestAllCategories_HeadersAndRows(t *testing.T) {
 			require.InDelta(t, 1.0, sum, 0.1, "header ratios should sum to ~1")
 		}
 		// computeTableRows should not panic
-		_, _ = computeTableRows(ds, cat, nil, "", "", true, false)
+		_, _ = computeTableRows(ds, cat, nil, "", "", true, faultyFilter{})
 	}
 }
 
@@ -396,14 +400,14 @@ func TestFilterRows(t *testing.T) {
 		{Type: "foo", Region: "us-phx-1"},
 		{Type: "bar", Region: "us-ashburn-1"},
 	}
-	rows := tuiRowsFlat(columns.EnvironmentColumns, items, nil, "foo", false)
+	rows := tuiRowsFlat(columns.EnvironmentColumns, items, nil, "foo", nil)
 	assert.Len(t, rows, 1)
 	assert.Equal(t, "foo-phx", rows[0][0])
 }
 
 func TestGetTableRows_UnknownCategory(t *testing.T) {
 	t.Parallel()
-	rows, _ := computeTableRows(&models.Dataset{}, domain.Category(9999), nil, "", "", true, false)
+	rows, _ := computeTableRows(&models.Dataset{}, domain.Category(9999), nil, "", "", true, faultyFilter{})
 	assert.Nil(t, rows)
 }
 
@@ -423,7 +427,7 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 		{InternalName: "a", Name: "A"},
 		{InternalName: "b", Name: "B"},
 	}
-	rows := tuiRowsFlat(columns.BaseModelColumns, m, nil, "a", false)
+	rows := tuiRowsFlat(columns.BaseModelColumns, m, nil, "a", nil)
 	assert.Len(t, rows, 1)
 	assert.Contains(t, rows[0][0], "A")
 }
@@ -431,7 +435,7 @@ func TestGetBaseModels_SortsAndFilters(t *testing.T) {
 func TestGetTableRows_AliasCategory(t *testing.T) {
 	t.Parallel()
 	dataset := &models.Dataset{}
-	rows, _ := computeTableRows(dataset, domain.Alias, nil, "", "", true, false)
+	rows, _ := computeTableRows(dataset, domain.Alias, nil, "", "", true, faultyFilter{})
 	assert.Equal(t, len(domain.Categories), len(rows), "should return one row per category")
 
 	// Find GPUNode row
@@ -445,7 +449,7 @@ func TestGetTableRows_AliasCategory(t *testing.T) {
 	assert.True(t, found, "GPUNode row should be present")
 
 	// Filtering
-	filtered, _ := computeTableRows(dataset, domain.Alias, nil, "tenant", "", true, false)
+	filtered, _ := computeTableRows(dataset, domain.Alias, nil, "tenant", "", true, faultyFilter{})
 	assert.Len(t, filtered, 1, "filter 'tenant' should return exactly one row")
 	assert.Equal(t, "Tenant", filtered[0][0])
 }
