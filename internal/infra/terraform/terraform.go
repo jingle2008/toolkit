@@ -334,9 +334,7 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 		},
 		Functions: localFuncMap,
 	}
-	context.Variables[moduleKey] = moduleOutputs(ctx, dirPath, &context, 0)
-
-	localObject = resolveLocals(ctx, &context, localObject, attributes)
+	localObject = resolveLocalsAndModules(ctx, dirPath, &context, localObject, attributes, 0)
 
 	for key := range attributes {
 		attr, ok := attributes[key]
@@ -394,8 +392,7 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 		Functions: localFuncMap,
 	}
 	// The oc1 targets come from a child module (module.oc1_inventory).
-	evalCtx.Variables[moduleKey] = moduleOutputs(ctx, dirPath, &evalCtx, 0)
-	localObject := resolveLocals(ctx, &evalCtx, cty.EmptyObjectVal, attributes)
+	localObject := resolveLocalsAndModules(ctx, dirPath, &evalCtx, cty.EmptyObjectVal, attributes, 0)
 	for key := range attributes {
 		logger.Warnw("skipping unresolved shep_targets local", "local", key)
 	}

@@ -128,6 +128,44 @@ output "value" {
 	assert.Equal(t, "deep", vals["inner"].AsString())
 }
 
+// A module input that reads a local (or another module's output) waits
+// for it to resolve instead of falling back to the module's default.
+func TestModuleOutputs_InputsFromLocalsAndModules(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	parent := mkdir(t, root, "parent")
+	writeTfFile(t, parent, "main.tf", `
+module "first" {
+  source = "../echo"
+  value  = local.region
+}
+
+module "second" {
+  source = "../echo"
+  value  = "${module.first.value}-again"
+}
+
+locals {
+  region = "us-${var.environment}-1"
+  first  = module.first.value
+  second = module.second.value
+}
+`)
+	writeTfFile(t, mkdir(t, root, "echo"), "main.tf", `
+variable "value" {
+  default = "default"
+}
+
+output "value" {
+  value = var.value
+}
+`)
+	vals, err := loadLocalValueMap(context.Background(), parent, models.Environment{Type: "prod", Region: "us-chicago-1", Realm: "oc1"})
+	require.NoError(t, err)
+	assert.Equal(t, "us-prod-1", vals["first"].AsString())
+	assert.Equal(t, "us-prod-1-again", vals["second"].AsString())
+}
+
 // A module calling itself stops at maxModuleDepth instead of recursing
 // forever.
 func TestModuleOutputs_CycleTerminates(t *testing.T) {

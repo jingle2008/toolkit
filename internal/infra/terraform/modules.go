@@ -28,35 +28,83 @@ var moduleMetaArgs = map[string]bool{
 	"count": true, "for_each": true, "depends_on": true,
 }
 
-// moduleOutputs evaluates the module calls in dirPath and returns the
-// `module` object their outputs are referenced through
-// (module.<name>.<output>). Only local sources (./, ../) are followed. A
-// call's inputs are evaluated against parent — so they may use var,
-// data, path and literals, but not locals, which resolve later — and
-// layered over the module's variable defaults. A call that can't be
-// evaluated is left out, so references to it stay unresolved, as any
-// other unresolvable expression does.
-func moduleOutputs(ctx context.Context, dirPath string, parent *hcl.EvalContext, depth int) cty.Value {
-	logger := logging.FromContext(ctx)
-	calls, _ := scanBlocks(ctx, dirPath, moduleBlock)
-	out := make(map[string]cty.Value, len(calls))
-	for _, call := range calls {
-		name, source, ok := localModuleSource(ctx, call)
+// resolveLocalsAndModules resolves attributes (dirPath's locals) together
+// with dirPath's module calls, which may feed each other: a local can read
+// module.<name>.<output>, and a call's inputs can read local.<name> or
+// another call's outputs. It alternates — evaluate every call whose
+// inputs are ready, then resolve locals — until a round settles
+// neither a call nor a local, keeping evalCtx's `module` object current. Only local sources
+// (./, ../) are followed. A call's inputs are layered over the module's
+// variable defaults; an input naming a local or module that hasn't
+// resolved yet defers the whole call rather than falling back to the
+// default, so no output is computed from a stand-in value. A call that never becomes ready, or can't be evaluated,
+// is left out, so references to it stay unresolved, as any other
+// unresolvable expression does. Returns the final `local` object.
+func resolveLocalsAndModules(
+	ctx context.Context,
+	dirPath string,
+	evalCtx *hcl.EvalContext,
+	localObject cty.Value,
+	attributes hclsyntax.Attributes,
+	depth int,
+) cty.Value {
+	calls := moduleCalls(ctx, dirPath, depth)
+	outputs := make(map[string]cty.Value, len(calls))
+	evalCtx.Variables[moduleKey] = cty.EmptyObjectVal
+	for {
+		progress := false
+		for name, call := range calls {
+			inputs, ready := moduleInputs(ctx, name, call.block, evalCtx)
+			if !ready {
+				continue
+			}
+			delete(calls, name)
+			progress = true
+			out, err := evalModule(ctx, filepath.Join(dirPath, call.source), inputs, evalCtx, depth+1)
+			if err != nil {
+				logging.FromContext(ctx).Warnw("cannot evaluate module", "module", name, "source", call.source, "error", err)
+				continue
+			}
+			outputs[name] = out
+			evalCtx.Variables[moduleKey] = cty.ObjectVal(outputs)
+		}
+		pending := len(attributes)
+		localObject = resolveLocals(ctx, evalCtx, localObject, attributes)
+		if len(attributes) < pending {
+			progress = true
+		}
+		if !progress || len(calls) == 0 {
+			break
+		}
+	}
+	for name := range calls {
+		logging.FromContext(ctx).Debugw("module inputs never resolved; skipping", "module", name, "dir", dirPath)
+	}
+	return localObject
+}
+
+type moduleCall struct {
+	block  *hclsyntax.Block
+	source string
+}
+
+// moduleCalls returns dirPath's local-source module calls by name, or
+// none once depth reaches maxModuleDepth.
+func moduleCalls(ctx context.Context, dirPath string, depth int) map[string]moduleCall {
+	blocks, _ := scanBlocks(ctx, dirPath, moduleBlock)
+	calls := make(map[string]moduleCall, len(blocks))
+	for _, b := range blocks {
+		name, source, ok := localModuleSource(ctx, b)
 		if !ok {
 			continue
 		}
 		if depth >= maxModuleDepth {
-			logger.Warnw("module calls nested too deep; skipping", "module", name, "dir", dirPath)
+			logging.FromContext(ctx).Warnw("module calls nested too deep; skipping", "module", name, "dir", dirPath)
 			continue
 		}
-		outputs, err := evalModule(ctx, filepath.Join(dirPath, source), moduleInputs(ctx, name, call, parent), parent, depth+1)
-		if err != nil {
-			logger.Warnw("cannot evaluate module", "module", name, "source", source, "error", err)
-			continue
-		}
-		out[name] = outputs
+		calls[name] = moduleCall{block: b, source: source}
 	}
-	return cty.ObjectVal(out)
+	return calls
 }
 
 // localModuleSource returns a module call's name and its source when the
@@ -82,23 +130,38 @@ func localModuleSource(ctx context.Context, call *hclsyntax.Block) (name, source
 	return name, source, true
 }
 
-// moduleInputs evaluates a module call's input attributes against parent;
-// an input that doesn't resolve is left out, so the module's default (if
-// any) applies.
-func moduleInputs(ctx context.Context, name string, call *hclsyntax.Block, parent *hcl.EvalContext) map[string]cty.Value {
-	inputs := make(map[string]cty.Value)
+// moduleInputs evaluates a module call's input attributes against parent.
+// An input that doesn't resolve is left out, so the module's default (if
+// any) applies — unless it names a local or module, which may still
+// resolve: then ready is false and the call should wait.
+func moduleInputs(ctx context.Context, name string, call *hclsyntax.Block, parent *hcl.EvalContext) (inputs map[string]cty.Value, ready bool) {
+	inputs = make(map[string]cty.Value)
 	for key, attr := range call.Body.Attributes {
 		if moduleMetaArgs[key] {
 			continue
 		}
 		v, diags := attr.Expr.Value(parent)
 		if diags.HasErrors() || !v.IsWhollyKnown() {
+			if referencesPending(attr.Expr) {
+				return nil, false
+			}
 			logging.FromContext(ctx).Debugw("module input unresolved", "module", name, "input", key, "errors", diags.Errs())
 			continue
 		}
 		inputs[key] = v
 	}
-	return inputs
+	return inputs, true
+}
+
+// referencesPending reports whether expr reads a local or a module
+// output — values resolveLocalsAndModules may not have resolved yet.
+func referencesPending(expr hclsyntax.Expression) bool {
+	for _, tr := range expr.Variables() {
+		if root := tr.RootName(); root == localKey || root == moduleKey {
+			return true
+		}
+	}
+	return false
 }
 
 // evalModule evaluates the module in dir — its locals, then its
@@ -133,8 +196,7 @@ func evalModule(ctx context.Context, dir string, inputs map[string]cty.Value, pa
 	if data, ok := parent.Variables[dataKey]; ok {
 		evalCtx.Variables[dataKey] = data
 	}
-	evalCtx.Variables[moduleKey] = moduleOutputs(ctx, dir, &evalCtx, depth)
-	resolveLocals(ctx, &evalCtx, cty.EmptyObjectVal, locals)
+	resolveLocalsAndModules(ctx, dir, &evalCtx, cty.EmptyObjectVal, locals, depth)
 
 	logger := logging.FromContext(ctx)
 	out := make(map[string]cty.Value, len(outputs))
