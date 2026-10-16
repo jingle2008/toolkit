@@ -14,6 +14,13 @@ type LimitDefinition struct {
 	IsStaged             bool   `json:"is_staged"`
 	IsQuota              bool   `json:"is_quota"`
 	UsageSource          string `json:"usage_source"`
+	// Splat throttle definitions (limits_definitions/splat_limit_definitions.json)
+	// carry these instead of scope/min/max: the API operation throttled,
+	// the dimension it is throttled on (user/tenant), and a default rate
+	// such as "50RPS400RPM".
+	OperationID       string `json:"operation_id,omitempty"`
+	ThrottleDimension string `json:"throttle_dimension,omitempty"`
+	DefaultValue      string `json:"default_value,omitempty"`
 }
 
 // GetName returns the name of the limit definition.
@@ -28,7 +35,11 @@ func (c LimitDefinition) GetDescription() string {
 
 // FilterableFields returns filterable fields for the limit definition.
 func (c LimitDefinition) FilterableFields() []string {
-	return []string{c.Name, c.Description}
+	fields := []string{c.Name, c.Description}
+	if c.OperationID != "" {
+		fields = append(fields, c.OperationID)
+	}
+	return fields
 }
 
 // IsFaulty returns false by default for LimitDefinition.

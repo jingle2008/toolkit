@@ -663,3 +663,50 @@ func TestLoadTenancyOverrideGroup_RenamedTenantRekeysOverrides(t *testing.T) {
 	assert.NotContains(t, group.LimitTenancyOverrideMap, "tenant-dir")
 	assert.Equal(t, "tenant-dir", group.LimitTenancyOverrideMap[name][0].TenantName)
 }
+
+// writeDefinitionRepo seeds the three oc1 definition files (and, when
+// splat is non-empty, the splat throttle definitions) under a temp repo.
+func writeDefinitionRepo(t *testing.T, splat string) string {
+	t.Helper()
+	root := t.TempDir()
+	write := func(rel, body string) {
+		t.Helper()
+		p := filepath.Join(root, "shared_modules/limits", rel)
+		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o750)) // #nosec G301
+		require.NoError(t, os.WriteFile(p, []byte(body), 0o600))
+	}
+	write("limits_definitions/oc1_limits_definition.json", `{"group":"ai","values":[{"name":"dedicated-ai-cluster-count","scope":"REGION"}]}`)
+	write("console_properties_definitions/oc1_console_properties_definition.json", `{"group":"ai","values":[]}`)
+	write("properties_definitions/oc1_properties_definition.json", `{"group":"ai","values":[]}`)
+	if splat != "" {
+		write("limits_definitions/splat_limit_definitions.json", splat)
+	}
+	return root
+}
+
+// TestLoadDefinitionGroups_Splat pins that the splat throttle definitions
+// are appended to the limit definitions, as the Terraform module does.
+func TestLoadDefinitionGroups_Splat(t *testing.T) {
+	t.Parallel()
+	root := writeDefinitionRepo(t, `[{"name":"list-semantic-stores-user","operation_id":"ListSemanticStores",
+		"description":"Dynamic throttle","throttle_dimension":"user","type":"STRING","default_value":"50RPS400RPM"}]`)
+	limits, _, _, err := loadDefinitionGroups(root)
+	require.NoError(t, err)
+	require.Len(t, limits.Values, 2)
+	assert.Equal(t, "dedicated-ai-cluster-count", limits.Values[0].Name)
+	assert.Equal(t, models.LimitDefinition{
+		Name: "list-semantic-stores-user", Description: "Dynamic throttle", Type: "STRING",
+		OperationID: "ListSemanticStores", ThrottleDimension: "user", DefaultValue: "50RPS400RPM",
+	}, limits.Values[1])
+	assert.Contains(t, limits.Values[1].FilterableFields(), "ListSemanticStores")
+}
+
+func TestLoadDefinitionGroups_SplatAbsentOrBroken(t *testing.T) {
+	t.Parallel()
+	limits, _, _, err := loadDefinitionGroups(writeDefinitionRepo(t, ""))
+	require.NoError(t, err, "a repo without the splat file still loads")
+	assert.Len(t, limits.Values, 1)
+
+	_, _, _, err = loadDefinitionGroups(writeDefinitionRepo(t, `{not json`)) //nolint:dogsled // only err matters
+	require.Error(t, err)
+}

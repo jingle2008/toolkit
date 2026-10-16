@@ -394,6 +394,27 @@ func validateEnvironment(env models.Environment, allEnvs []models.Environment) e
 	return nil
 }
 
+// splatLimitDefinitionsFile holds the splat throttle limit definitions,
+// a bare JSON array that the limits_definitions Terraform module appends
+// to oc1_limits_definition.json's group as one more group
+// (all_limits_definitions). Regional and tenancy overrides reference
+// them by name like any other limit.
+const splatLimitDefinitionsFile = "splat_limit_definitions.json"
+
+// loadSplatLimitDefinitions loads the splat throttle definitions, or none
+// when the file is absent (repo revisions predating it).
+func loadSplatLimitDefinitions(limitsRoot string) ([]models.LimitDefinition, error) {
+	path := filepath.Join(limitsRoot, limitsKey+definitionSuffix+"s", splatLimitDefinitionsFile)
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	defs, err := jsonutil.LoadFile[[]models.LimitDefinition](path)
+	if err != nil {
+		return nil, err
+	}
+	return *defs, nil
+}
+
 // loadDefinitionGroups loads the definition groups.
 // NOTE: Definitions are always loaded from the "oc1" realm, regardless of the user's selected realm.
 func loadDefinitionGroups(repoPath string) (
@@ -408,6 +429,11 @@ func loadDefinitionGroups(repoPath string) (
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	splat, err := loadSplatLimitDefinitions(limitsRoot)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	limitGroup.Values = append(limitGroup.Values, splat...)
 
 	consolePropertyDefinitionPath := getConfigPath(limitsRoot, consolePropertiesKey+definitionSuffix)
 	consolePropertyDefinitionGroup, err := jsonutil.LoadFile[models.ConsolePropertyDefinitionGroup](consolePropertyDefinitionPath)

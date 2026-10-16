@@ -288,7 +288,7 @@ Toolkit organises data into 22 categories:
 
 | Category | Description |
 |----------|-------------|
-| **LimitDefinition** | Service quota / limit definitions |
+| **LimitDefinition** | Service quota / limit definitions, including the splat throttle definitions (`splat_limit_definitions.json`; filter by operation, e.g. `/ListSemanticStores`) |
 | **ConsolePropertyDefinition** | Console feature-flag definitions |
 | **PropertyDefinition** | Generic property definitions |
 

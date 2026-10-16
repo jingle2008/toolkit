@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -18,7 +21,10 @@ import (
 // across the subcommands (validateGetConfig, runRootE, …) into one
 // place so operators can confirm their setup before running anything.
 func addDoctorCommand(rootCmd *cobra.Command, cfgFile *string) {
-	var format string
+	var (
+		format    string
+		relations bool
+	)
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Run health checks against the current configuration",
@@ -29,6 +35,14 @@ the merged config, the config file, repo-path, kubeconfig, metadata-file
 — and reports each check as PASS / FAIL / SKIP with a short remediation
 hint when something is wrong.
 
+--relations also checks the data itself: it loads every category for the
+configured environment and, for each relation the TUI drills through,
+reports rows that name a parent that doesn't exist — an endpoint whose
+DAC was deleted, a pod naming a missing runtime, a node in a pool absent
+from terraform. These FAIL. Rows whose tenancy resolves to no known
+tenant are reported as WARN: a gap in the tenant metadata, not broken
+state. -o json/yaml lists every dangling row under items.
+
 Exit code is non-zero if any check fails, so doctor fits into
 precondition scripts:
 
@@ -37,23 +51,30 @@ precondition scripts:
     exit 1
   fi
 
-doctor never makes a network call — it is purely a local file +
-schema audit. (Cluster reachability + OCI credential checks may be
-added under a future --connectivity flag.)
+Without --relations, doctor never makes a network call — it is purely
+a local file + schema audit. (Cluster reachability + OCI credential
+checks may be added under a future --connectivity flag.)
 
 Examples:
   toolkit doctor
   toolkit doctor -o json
-  toolkit doctor -o yaml`,
+  toolkit doctor -o yaml
+  toolkit doctor --relations
+  toolkit doctor --relations -o json | jq '.[] | select(.status != "PASS")'`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			if err := readConfigFile(cfgFile); err != nil {
 				return err
 			}
-			return runDoctor(c.OutOrStdout(), *cfgFile, format)
+			// Ctrl+C cancels the cluster loads of --relations.
+			ctx, stop := signal.NotifyContext(c.Context(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			return runDoctor(ctx, c.OutOrStdout(), *cfgFile, format, relations)
 		},
 	}
 	cmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|yaml")
+	cmd.Flags().BoolVar(&relations, "relations", false,
+		"also check the data's cross-category references (loads every category from the cluster and repo)")
 	_ = cmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"table", "json", "yaml"}, cobra.ShellCompDirectiveNoFileComp
 	})
@@ -67,6 +88,9 @@ const (
 	statusPass checkStatus = "PASS"
 	statusFail checkStatus = "FAIL"
 	statusSkip checkStatus = "SKIP"
+	// statusWarn flags a gap that isn't broken state (an unresolved
+	// tenancy); it doesn't fail doctor.
+	statusWarn checkStatus = "WARN"
 )
 
 // checkResult is a single row of the doctor report. Detail is the
@@ -77,9 +101,12 @@ type checkResult struct {
 	Status checkStatus `json:"status"`
 	Detail string      `json:"detail,omitempty"`
 	Hint   string      `json:"hint,omitempty"`
+	// Items lists every offending row (doctor --relations), where Detail
+	// names only the first few.
+	Items []string `json:"items,omitempty"`
 }
 
-func runDoctor(w io.Writer, cfgFile, format string) error {
+func runDoctor(ctx context.Context, w io.Writer, cfgFile, format string, relations bool) error {
 	// Validate format before doing any work — a typo'd -o shouldn't
 	// stat the filesystem (and stays consistent with `config`).
 	normalized := strings.ToLower(format)
@@ -100,6 +127,17 @@ func runDoctor(w io.Writer, cfgFile, format string) error {
 		unmarshalErr = cfg.Normalize()
 	}
 	results := collectChecks(cfgFile, cfg, unmarshalErr)
+	if relations {
+		if countFails(results) > 0 {
+			results = append(results, checkResult{
+				Name: "relations", Status: statusSkip,
+				Detail: "skipped: the configuration checks above failed",
+				Hint:   "fix those first",
+			})
+		} else {
+			results = append(results, relationChecks(ctx, cfg)...)
+		}
+	}
 
 	switch normalized {
 	case "", "table":

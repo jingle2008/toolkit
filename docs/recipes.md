@@ -212,6 +212,21 @@ toolkit get dac              --related-to tenant/<tenant-name>
 toolkit get inferenceservice --related-to tenant/<tenant-name> -o json
 ```
 
+### Audit cross-category references
+
+`toolkit doctor --relations` loads every category for the environment and checks each relation the TUI drills through. It reports rows that name a parent that doesn't exist (FAIL) and rows whose tenancy resolves to no known tenant (WARN). Examples are endpoints whose DAC was deleted, a pod naming a missing runtime, or a node in a pool absent from terraform.
+
+```bash
+toolkit -t prod -r ord -m oc1 doctor --relations
+
+# Every dangling row, as "row → missing parent"
+toolkit doctor --relations -o json | jq -r '.[] | select(.status == "FAIL") | .items[]'
+
+# The tenancy OCIDs to add to the metadata file
+toolkit doctor --relations -o json \
+  | jq -r '.[] | select(.name == "relations: tenancy resolution") | .items[] | split(" → ")[1]' | sort -u
+```
+
 ### Compare two environments
 
 ```bash
