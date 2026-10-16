@@ -153,7 +153,7 @@ var (
 		domain.GPUNode:            ByGroup[models.GPUWorkload](),
 		domain.DedicatedAICluster: ByField(func(w models.GPUWorkload) string { return w.Namespace }),
 		domain.Tenant:             ByField(func(w models.GPUWorkload) string { return ownerName(w.Owner) }),
-		domain.ServingRuntime:     ByField(func(w models.GPUWorkload) string { return w.Runtime }),
+		domain.ServingRuntime:     ByField(workloadRuntime),
 	}
 
 	DedicatedAICluster = Grouped[models.DedicatedAICluster]{domain.Tenant: ByGroup[models.DedicatedAICluster]()}
@@ -204,6 +204,15 @@ func currentAPIRuntime(s models.InferenceService) string {
 		return ""
 	}
 	return s.Runtime
+}
+
+// workloadRuntime is currentAPIRuntime for a pod: "" for one serving a
+// legacy endpoint, whose runtime is a legacy ome.oracle.com runtime.
+func workloadRuntime(w models.GPUWorkload) string {
+	if w.Legacy {
+		return ""
+	}
+	return w.Runtime
 }
 
 // ownerName returns the resolved owning tenant's name, or "" when the

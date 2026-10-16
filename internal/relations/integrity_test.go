@@ -156,6 +156,16 @@ func TestDanglingRows(t *testing.T) {
 	assert.False(t, dangling("amaaaaaa-dac1", isvc("amaaaaaa-dac1", "isvc-1")))
 	assert.False(t, dangling("llama", isvc("llama", "isvc-3")), "on-demand: no DAC to miss")
 
+	// A legacy endpoint's pod names a legacy runtime, never an ome.io
+	// ServingRuntime, so its runtime isn't checked.
+	current := models.GPUWorkload{Name: "pod-5", Namespace: "amaaaaaa-dac1", Runtime: "legacy-rt"}
+	legacy := models.GPUWorkload{Name: "pod-6", Namespace: "amaaaaaa-dac1", Runtime: "legacy-rt", Legacy: true}
+	ds.GPUWorkloadMap["node-a"] = append(ds.GPUWorkloadMap["node-a"], current, legacy)
+	pods := DanglingRows(ds, domain.GPUWorkload)
+	require.NotNil(t, pods)
+	assert.True(t, pods("node-a", current), "runtime missing")
+	assert.False(t, pods("node-a", legacy), "legacy runtime: not an ome.io one")
+
 	// A row's identity can include its group: a tenancy override is
 	// tenant/name.
 	limits := DanglingRows(ds, domain.LimitTenancyOverride)
