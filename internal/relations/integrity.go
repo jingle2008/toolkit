@@ -54,14 +54,13 @@ type childRows interface {
 	rowID(group string, row any) string
 }
 
-// groupedRows adapts a grouped category: its join keys, its rows, how a
-// row is named in a report, and which rows a relation applies to (nil:
-// every row with a key).
+// groupedRows adapts a grouped category: its join keys, its rows, and how
+// a row is named in a report. A relation covers every row with a
+// non-empty key.
 type groupedRows[T models.NamedFilterable] struct {
-	keys    Grouped[T]
-	pick    func(*models.Dataset) map[string][]T
-	id      func(group string, it T) string
-	applies func(parent domain.Category, it T) bool
+	keys Grouped[T]
+	pick func(*models.Dataset) map[string][]T
+	id   func(group string, it T) string
 }
 
 func (g groupedRows[T]) rowID(group string, row any) string {
@@ -77,9 +76,6 @@ func (g groupedRows[T]) refs(ds *models.Dataset, parent domain.Category) []ref {
 	var out []ref
 	for _, group := range slices.Sorted(maps.Keys(m)) {
 		for _, it := range m[group] {
-			if g.applies != nil && !g.applies(parent, it) {
-				continue
-			}
 			if k, ok := g.keys.ParentName(parent, group, it); ok {
 				out = append(out, ref{row: g.id(group, it), key: k})
 			}
@@ -168,11 +164,6 @@ var children = map[domain.Category]childRows{
 		keys: GPUWorkload,
 		pick: func(d *models.Dataset) map[string][]models.GPUWorkload { return d.GPUWorkloadMap },
 		id:   func(_ string, w models.GPUWorkload) string { return nsName(w.Namespace, w.Name) },
-		// Every pod has a namespace, but only one named after a DAC
-		// points at a DAC; on-demand model namespaces don't.
-		applies: func(parent domain.Category, w models.GPUWorkload) bool {
-			return parent != domain.DedicatedAICluster || models.IsDACName(w.Namespace)
-		},
 	},
 	domain.DedicatedAICluster: groupedRows[models.DedicatedAICluster]{
 		keys: DedicatedAICluster,
@@ -183,11 +174,6 @@ var children = map[domain.Category]childRows{
 		keys: InferenceService,
 		pick: func(d *models.Dataset) map[string][]models.InferenceService { return d.InferenceServiceMap },
 		id:   func(_ string, s models.InferenceService) string { return nsName(s.Namespace, s.Name) },
-		// Only a dedicated endpoint's namespace is a DAC; an on-demand
-		// one is named after its model.
-		applies: func(parent domain.Category, s models.InferenceService) bool {
-			return parent != domain.DedicatedAICluster || s.Type == models.InferenceServiceDedicated
-		},
 	},
 }
 

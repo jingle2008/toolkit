@@ -151,9 +151,9 @@ var (
 	// named after it.
 	GPUWorkload = Grouped[models.GPUWorkload]{
 		domain.GPUNode:            ByGroup[models.GPUWorkload](),
-		domain.DedicatedAICluster: ByField(func(w models.GPUWorkload) string { return w.Namespace }),
+		domain.DedicatedAICluster: ByField(workloadDAC),
 		domain.Tenant:             ByField(func(w models.GPUWorkload) string { return ownerName(w.Owner) }),
-		domain.ServingRuntime:     ByField(func(w models.GPUWorkload) string { return w.Runtime }),
+		domain.ServingRuntime:     ByField(workloadRuntime),
 	}
 
 	DedicatedAICluster = Grouped[models.DedicatedAICluster]{domain.Tenant: ByGroup[models.DedicatedAICluster]()}
@@ -161,13 +161,33 @@ var (
 	// Endpoints are grouped by namespace (the DAC ID for a dedicated one)
 	// and reference the model they serve and the runtime they name.
 	InferenceService = Grouped[models.InferenceService]{
-		domain.DedicatedAICluster: ByGroup[models.InferenceService](),
+		domain.DedicatedAICluster: ByField(endpointDAC),
 		domain.BaseModel:          ByField(sharedCatalogModel),
 		domain.ImportedModel:      ByField(importedModelRef),
 		domain.Tenant:             ByField(func(s models.InferenceService) string { return ownerName(s.Owner) }),
 		domain.ServingRuntime:     ByField(currentAPIRuntime),
 	}
 )
+
+// workloadDAC returns the DAC a pod runs on — its namespace, when that is
+// named after a DAC — or "" for a pod in an on-demand model namespace,
+// which is on no DAC.
+func workloadDAC(w models.GPUWorkload) string {
+	if !models.IsDACName(w.Namespace) {
+		return ""
+	}
+	return w.Namespace
+}
+
+// endpointDAC returns the DAC a dedicated endpoint runs on (its
+// namespace), or "" for an on-demand one, whose namespace is the model
+// name.
+func endpointDAC(s models.InferenceService) string {
+	if s.Type != models.InferenceServiceDedicated {
+		return ""
+	}
+	return s.Namespace
+}
 
 // sharedCatalogModel returns the BaseModel (ClusterBaseModel) an endpoint
 // serves, or "" when its model isn't in the shared catalog: an imported
@@ -204,6 +224,15 @@ func currentAPIRuntime(s models.InferenceService) string {
 		return ""
 	}
 	return s.Runtime
+}
+
+// workloadRuntime is currentAPIRuntime for a pod: "" for one serving a
+// legacy endpoint, whose runtime is a legacy ome.oracle.com runtime.
+func workloadRuntime(w models.GPUWorkload) string {
+	if w.Legacy {
+		return ""
+	}
+	return w.Runtime
 }
 
 // ownerName returns the resolved owning tenant's name, or "" when the

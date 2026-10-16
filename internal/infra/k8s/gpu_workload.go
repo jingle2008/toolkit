@@ -77,6 +77,7 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 				Restarts:  restarts,
 				Age:       age,
 				Mode:      annos["ome.io/deploymentMode"],
+				Legacy:    isLegacyServingPod(labels),
 			}
 			result[pod.Spec.NodeName] = append(result[pod.Spec.NodeName], w)
 			total++
@@ -89,4 +90,13 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 	logging.FromContext(ctx).Debugw("loaded gpu workloads",
 		"workloads", total, "nodes", len(result))
 	return result, nil
+}
+
+// isLegacyServingPod reports whether a pod serves a legacy
+// ome.oracle.com/v1alpha1 InferenceService: it carries the legacy serving
+// label and not the ome.io one.
+func isLegacyServingPod(labels map[string]string) bool {
+	_, v1 := labels[servingLabelV1]
+	_, v2 := labels[servingLabelV2]
+	return v1 && !v2
 }

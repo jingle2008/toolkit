@@ -9,7 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
@@ -338,6 +340,51 @@ func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
 
 	// Cancel after observing the tick, then drain until trig closes to let
 	// watchTrigger's internal goroutines finish cleanly.
+	cancel()
+	for range trig { //nolint:revive // intentional: drain until watchTrigger closes the channel
+	}
+}
+
+// A cluster without the legacy InferenceService CRD still gets a live
+// watch on the ome.io endpoints, matching LoadInferenceServices.
+//
+//nolint:paralleltest // mutates package-global DebounceWindow; must not run in parallel
+func TestWatchInferenceServices_NoLegacyCRD(t *testing.T) {
+	old := DebounceWindow
+	DebounceWindow = 50 * time.Millisecond
+	defer func() { DebounceWindow = old }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
+		map[schema.GroupVersionResource]string{
+			inferenceServiceGVR:   "InferenceServiceList",
+			inferenceServiceV1GVR: "InferenceServiceList",
+		})
+	client.PrependReactor("list", "inferenceservices", func(action cgotesting.Action) (bool, runtime.Object, error) {
+		if action.GetResource().Group != inferenceServiceV1GVR.Group {
+			return false, nil, nil
+		}
+		return true, nil, apierrors.NewNotFound(inferenceServiceV1GVR.GroupResource(), "")
+	})
+
+	trig, err := WatchInferenceServices(ctx, client)
+	require.NoError(t, err)
+
+	isvc := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "ome.io/v1beta1",
+		"kind":       "InferenceService",
+		"metadata":   map[string]any{"name": "e1", "namespace": "ns"},
+	}}
+	_, err = client.Resource(inferenceServiceGVR).Namespace("ns").Create(ctx, isvc, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	select {
+	case <-trig:
+	case <-time.After(time.Second):
+		cancel()
+		t.Fatal("expected a trigger tick after InferenceService create")
+	}
+
 	cancel()
 	for range trig { //nolint:revive // intentional: drain until watchTrigger closes the channel
 	}

@@ -28,7 +28,8 @@ const (
 // (== DedicatedAICluster.Name), the model name for an on-demand one.
 // Both the ome.io/v1beta1 API and the legacy ome.oracle.com/v1alpha1 API
 // (endpoints on legacy DACs) are listed; a cluster without the legacy
-// CRD simply contributes no legacy rows.
+// CRD, or a user not allowed to read it, simply contributes no legacy
+// rows.
 func LoadInferenceServices(ctx context.Context, client dynamic.Interface) (map[string][]models.InferenceService, error) {
 	list, err := client.Resource(inferenceServiceGVR).List(ctx, v1.ListOptions{})
 	if err != nil {
@@ -53,16 +54,27 @@ func LoadInferenceServices(ctx context.Context, client dynamic.Interface) (map[s
 }
 
 // listLegacyInferenceServices lists ome.oracle.com/v1alpha1
-// InferenceServices, returning none when the CRD isn't installed.
+// InferenceServices, returning none when the API is unavailable.
 func listLegacyInferenceServices(ctx context.Context, client dynamic.Interface) ([]unstructured.Unstructured, error) {
 	list, err := client.Resource(inferenceServiceV1GVR).List(ctx, v1.ListOptions{})
-	if apierrors.IsNotFound(err) {
+	if legacyAPIUnavailable(err) {
+		if apierrors.IsForbidden(err) {
+			logging.FromContext(ctx).Warnw("not allowed to list legacy InferenceServices; skipping them", "error", err)
+		}
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("list legacy InferenceService: %w", err)
 	}
 	return list.Items, nil
+}
+
+// legacyAPIUnavailable reports whether err means the legacy
+// ome.oracle.com API can't be read at all — the CRD isn't installed
+// (NotFound) or the user's role doesn't cover it (Forbidden) — so it
+// should contribute nothing rather than fail the ome.io results.
+func legacyAPIUnavailable(err error) bool {
+	return apierrors.IsNotFound(err) || apierrors.IsForbidden(err)
 }
 
 /*

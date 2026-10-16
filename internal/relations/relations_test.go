@@ -46,8 +46,8 @@ func TestKeysMatchRelations(t *testing.T) {
 func TestGrouped_Filter(t *testing.T) {
 	t.Parallel()
 	m := map[string][]models.GPUWorkload{
-		"node-a": {{Name: "pod-1", Namespace: "dac-1"}, {Name: "pod-2", Namespace: "dac-2"}},
-		"node-b": {{Name: "pod-3", Namespace: "dac-1"}},
+		"node-a": {{Name: "pod-1", Namespace: "amaaaaaa-dac1"}, {Name: "pod-2", Namespace: "amaaaaaa-dac2"}},
+		"node-b": {{Name: "pod-3", Namespace: "amaaaaaa-dac1"}},
 	}
 	names := func(g map[string][]models.GPUWorkload) []string {
 		var out []string
@@ -62,7 +62,7 @@ func TestGrouped_Filter(t *testing.T) {
 
 	// ByField: across groups.
 	assert.Equal(t, []string{"pod-1", "pod-3"},
-		names(GPUWorkload.Filter(m, &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}, "", nil)))
+		names(GPUWorkload.Filter(m, &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}, "", nil)))
 	// ByGroup: one group.
 	assert.Equal(t, []string{"pod-1", "pod-2"},
 		names(GPUWorkload.Filter(m, &domain.Scope{Category: domain.GPUNode, Name: "node-a"}, "", nil)))
@@ -84,7 +84,7 @@ func TestFlat_Keep(t *testing.T) {
 // it returns keeps the item.
 func TestParentName_InvertsFilter(t *testing.T) {
 	t.Parallel()
-	w := models.GPUWorkload{Name: "pod-1", Node: "node-a", Namespace: "dac-1", Runtime: "vllm", Owner: &models.Tenant{Name: "Acme"}}
+	w := models.GPUWorkload{Name: "pod-1", Node: "node-a", Namespace: "amaaaaaa-dac1", Runtime: "vllm", Owner: &models.Tenant{Name: "Acme"}}
 	m := map[string][]models.GPUWorkload{"node-a": {w}}
 	for _, parent := range GPUWorkload.Parents() {
 		name, ok := GPUWorkload.ParentName(parent, "node-a", w)

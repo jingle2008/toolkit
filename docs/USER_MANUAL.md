@@ -317,7 +317,7 @@ Toolkit organises data into 22 categories:
 | **ModelArtifact** | Model artifact versions |
 | **GPUPool** | OCI GPU instance pools; supports scaling |
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
-| **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode, or by DedicatedAICluster (the pods in its namespace) |
+| **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode, or by DedicatedAICluster (the pods in its namespace). Pods serving a legacy `ome.oracle.com/v1alpha1` endpoint match `/legacy`; their runtime is a legacy one, so they aren't related to a ServingRuntime |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters; press `Enter` to see the inference services running on one |
 | **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty. Legacy `ome.oracle.com/v1alpha1` endpoints (on legacy DACs) are listed too and match `/legacy` |
 | **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty. `Enter` lists the inference services naming the runtime; with that scope active, `:gw` lists the pods running it, including endpoints whose runtime OME selected at deploy time (`y` opens details) |

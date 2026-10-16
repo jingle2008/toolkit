@@ -7,17 +7,21 @@ import "fmt"
 // GPUNode.Name); its parent category is GPUNode. model/runtime/mode are
 // best-effort: blank for non-serving GPU pods.
 type GPUWorkload struct {
-	Name      string  `json:"name"`
-	Node      string  `json:"node"`
-	TenantID  string  `json:"tenantId"`
-	Namespace string  `json:"namespace"`
-	Model     string  `json:"model,omitempty"`
-	Runtime   string  `json:"runtime,omitempty"`
-	GPUs      int     `json:"gpus"`
-	Restarts  int     `json:"restarts"`
-	Age       string  `json:"age"`
-	Mode      string  `json:"mode,omitempty"`
-	Owner     *Tenant `json:"owner,omitempty"`
+	Name      string `json:"name"`
+	Node      string `json:"node"`
+	TenantID  string `json:"tenantId"`
+	Namespace string `json:"namespace"`
+	Model     string `json:"model,omitempty"`
+	Runtime   string `json:"runtime,omitempty"`
+	GPUs      int    `json:"gpus"`
+	Restarts  int    `json:"restarts"`
+	Age       string `json:"age"`
+	Mode      string `json:"mode,omitempty"`
+	// Legacy is true for a pod serving a legacy ome.oracle.com/v1alpha1
+	// InferenceService; its Runtime then names a legacy runtime, not an
+	// ome.io ClusterServingRuntime.
+	Legacy bool    `json:"legacy,omitempty"`
+	Owner  *Tenant `json:"owner,omitempty"`
 }
 
 // GetName returns the pod name.
@@ -31,7 +35,11 @@ func (w GPUWorkload) IsFaulty() bool { return w.Restarts > 0 }
 // excluded (matching GPUNode): a formatted duration like "3d" is noise
 // for text filtering.
 func (w GPUWorkload) FilterableFields() []string {
-	return []string{w.Name, w.Node, w.TenantID, w.Namespace, w.Model, w.Runtime, w.Mode}
+	fields := []string{w.Name, w.Node, w.TenantID, w.Namespace, w.Model, w.Runtime, w.Mode}
+	if w.Legacy {
+		fields = append(fields, "legacy")
+	}
+	return fields
 }
 
 // TenancyOCID returns the full tenancy OCID from realm + tenancy-id suffix.

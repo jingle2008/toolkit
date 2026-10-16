@@ -45,15 +45,15 @@ func TestComputeTableRows_DACScopesGPUWorkloads(t *testing.T) {
 	t.Parallel()
 	ds := &models.Dataset{GPUWorkloadMap: map[string][]models.GPUWorkload{
 		"node-a": {
-			{Name: "pod-1", Node: "node-a", Namespace: "dac-1"},
-			{Name: "pod-2", Node: "node-a", Namespace: "dac-2"},
+			{Name: "pod-1", Node: "node-a", Namespace: "amaaaaaa-dac1"},
+			{Name: "pod-2", Node: "node-a", Namespace: "amaaaaaa-dac2"},
 		},
 		"node-b": {
-			{Name: "pod-3", Node: "node-b", Namespace: "dac-1"},
+			{Name: "pod-3", Node: "node-b", Namespace: "amaaaaaa-dac1"},
 			{Name: "pod-4", Node: "node-b", Namespace: "llama-3-3-70b-instruct"},
 		},
 	}}
-	scope := &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}
+	scope := &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}
 
 	rows, _ := computeTableRows(ds, domain.GPUWorkload, scope, "", "", true, false)
 	assert.Equal(t, []string{"pod-1", "pod-3"}, rowNames(rows))
@@ -78,10 +78,10 @@ func TestComputeTableRows_DACScopesGPUWorkloads(t *testing.T) {
 func TestComputeTableRows_BaseModelScopesInferenceServices(t *testing.T) {
 	t.Parallel()
 	ds := &models.Dataset{InferenceServiceMap: map[string][]models.InferenceService{
-		"dac-1":             {{Name: "isvc-1", Namespace: "dac-1", Model: "llama"}},
-		"dac-2":             {{Name: "isvc-2", Namespace: "dac-2", Model: "cohere"}},
+		"dac-1":             {{Name: "isvc-1", Namespace: "dac-1", Type: models.InferenceServiceDedicated, Model: "llama"}},
+		"dac-2":             {{Name: "isvc-2", Namespace: "dac-2", Type: models.InferenceServiceDedicated, Model: "cohere"}},
 		"llama":             {{Name: "isvc-3", Namespace: "llama", Model: "llama"}},
-		"dac-3":             {{Name: "isvc-4", Namespace: "dac-3", Model: "llama", ImportedModel: true}},
+		"dac-3":             {{Name: "isvc-4", Namespace: "dac-3", Type: models.InferenceServiceDedicated, Model: "llama", ImportedModel: true}},
 		"content-moderator": {{Name: "isvc-5", Namespace: "content-moderator", Model: "llama", Legacy: true}},
 	}}
 	scope := &domain.Scope{Category: domain.BaseModel, Name: "llama"}

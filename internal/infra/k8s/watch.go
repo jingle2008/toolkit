@@ -277,13 +277,29 @@ var (
 )
 
 // WatchInferenceServices triggers on InferenceService CR changes (both
-// API versions LoadInferenceServices merges).
+// API versions LoadInferenceServices merges). Like the loader, it skips
+// the legacy API when that is unavailable.
 func WatchInferenceServices(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {
 	return watchTrigger(
 		ctx, DebounceWindow,
 		crWatchOpener(client, inferenceServiceGVR),
-		crWatchOpener(client, inferenceServiceV1GVR),
+		legacyCRWatchOpener(client, inferenceServiceV1GVR),
 	)
+}
+
+// legacyCRWatchOpener is crWatchOpener for a legacy ome.oracle.com GVR:
+// when the API is unavailable (legacyAPIUnavailable) it returns a watch
+// that never fires instead of failing the whole trigger.
+func legacyCRWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) func(context.Context) (watch.Interface, error) {
+	open := crWatchOpener(client, gvr)
+	return func(ctx context.Context) (watch.Interface, error) {
+		w, err := open(ctx)
+		if legacyAPIUnavailable(err) {
+			logging.FromContext(ctx).Debugw("legacy API unavailable; not watching", "resource", gvr.String(), "error", err)
+			return watch.NewFake(), nil
+		}
+		return w, err
+	}
 }
 
 // WatchServingRuntimes triggers on ClusterServingRuntime CR changes.

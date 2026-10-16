@@ -41,17 +41,19 @@ func TestLoadGPUWorkloadsByNode(t *testing.T) {
 		{Name: "main", RestartCount: 2},
 		{Name: "sidecar", RestartCount: 1},
 	}
+	legacy := gpuPod("legacy", "node-a", 1,
+		map[string]string{servingLabelV1: "e1", "serving-runtime": "legacy-rt"}, nil)
 	bare := gpuPod("bare", "node-a", 1, nil, nil)   // GPU pod, no serving labels
 	noGPU := gpuPod("nogpu", "node-a", 0, nil, nil) // excluded
 	noNode := gpuPod("nonode", "", 4, nil, nil)     // excluded (unscheduled)
 
-	cs := fake.NewSimpleClientset(serving, bare, noGPU, noNode)
+	cs := fake.NewSimpleClientset(serving, legacy, bare, noGPU, noNode)
 	got, err := LoadGPUWorkloadsByNode(context.Background(), cs)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got["node-a"]) != 2 {
-		t.Fatalf("want 2 workloads on node-a, got %d (%v)", len(got["node-a"]), got)
+	if len(got["node-a"]) != 3 {
+		t.Fatalf("want 3 workloads on node-a, got %d (%v)", len(got["node-a"]), got)
 	}
 	for _, w := range got["node-a"] {
 		if w.Name == "serv" {
@@ -68,6 +70,12 @@ func TestLoadGPUWorkloadsByNode(t *testing.T) {
 			if !w.IsFaulty() {
 				t.Errorf("serv with restarts>0 should be faulty")
 			}
+			if w.Legacy {
+				t.Errorf("serv without the legacy serving label should not be legacy")
+			}
+		}
+		if w.Name == "legacy" && (!w.Legacy || w.Runtime != "legacy-rt") {
+			t.Errorf("legacy extraction wrong: %+v", w)
 		}
 		if w.Name == "bare" && (w.Model != "" || w.Runtime != "" || w.GPUs != 1) {
 			t.Errorf("bare extraction wrong: %+v", w)

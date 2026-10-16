@@ -80,13 +80,18 @@ var startsWithFunc = function.New(&function.Spec{
 })
 
 // allTrueFunc is terraform's alltrue(): whether every element of a list
-// of bools is true (true for an empty list).
+// of bools is true (true for an empty list). Like terraform's, it is
+// unknown once it reaches an unknown element — cty only short-circuits
+// an unknown argument, not a known list holding one.
 var allTrueFunc = function.New(&function.Spec{
 	Params: []function.Parameter{{Name: "list", Type: cty.List(cty.Bool)}},
 	Type:   function.StaticReturnType(cty.Bool),
 	Impl: func(args []cty.Value, _ cty.Type) (cty.Value, error) {
 		for it := args[0].ElementIterator(); it.Next(); {
 			_, v := it.Element()
+			if !v.IsKnown() {
+				return cty.UnknownVal(cty.Bool), nil
+			}
 			if v.IsNull() || !v.True() {
 				return cty.False, nil
 			}
@@ -334,9 +339,7 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 		},
 		Functions: localFuncMap,
 	}
-	context.Variables[moduleKey] = moduleOutputs(ctx, dirPath, &context, 0)
-
-	localObject = resolveLocals(ctx, &context, localObject, attributes)
+	localObject = resolveLocalsAndModules(ctx, dirPath, &context, localObject, attributes, 0)
 
 	for key := range attributes {
 		attr, ok := attributes[key]
@@ -394,8 +397,7 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 		Functions: localFuncMap,
 	}
 	// The oc1 targets come from a child module (module.oc1_inventory).
-	evalCtx.Variables[moduleKey] = moduleOutputs(ctx, dirPath, &evalCtx, 0)
-	localObject := resolveLocals(ctx, &evalCtx, cty.EmptyObjectVal, attributes)
+	localObject := resolveLocalsAndModules(ctx, dirPath, &evalCtx, cty.EmptyObjectVal, attributes, 0)
 	for key := range attributes {
 		logger.Warnw("skipping unresolved shep_targets local", "local", key)
 	}
