@@ -27,17 +27,21 @@ import (
 // The SDK reflects on the typed return for OutputSchema — no
 // map[string]any leakage.
 func flattenGrouped[T models.NamedFilterable](grouped map[string][]T, filter string, limit int) []T {
-	filtered := collections.FilterMapOrAll(grouped, normFilter(filter))
-	keys := make([]string, 0, len(filtered))
-	for k := range filtered {
+	return collections.TruncateSlice(flattenSorted(collections.FilterMapOrAll(grouped, normFilter(filter))), limit)
+}
+
+// flattenSorted concatenates a grouped map's items in group-key order.
+func flattenSorted[T any](grouped map[string][]T) []T {
+	keys := make([]string, 0, len(grouped))
+	for k := range grouped {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	out := make([]T, 0)
 	for _, k := range keys {
-		out = append(out, filtered[k]...)
+		out = append(out, grouped[k]...)
 	}
-	return collections.TruncateSlice(out, limit)
+	return out
 }
 
 // registerTools attaches the read-only category tools to s.server.
@@ -118,6 +122,11 @@ func registerTools(s *Server) {
 		Name:        "list_regional_overrides",
 		Description: "List regional-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListRegionalOverrides)
+
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "list_related",
+		Description: relatedToolDescription(),
+	}, s.handleListRelated)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_aliases",

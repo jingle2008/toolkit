@@ -252,6 +252,7 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | `list_definitions` | `kind`: `limit` / `console_property` / `property` |
 | `list_tenancy_overrides` | Same `kind` enum, tenancy-scoped |
 | `list_regional_overrides` | Same `kind` enum, region-scoped |
+| `list_related` | Rows of `category` related to one parent row (`parent_category` + `parent_name`), e.g. a DAC's pods or a runtime's endpoints. Same relations as the TUI drill-in and `toolkit get --related-to` |
 | `list_aliases` | Discovery — every category alias |
 
 Every read tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments.
