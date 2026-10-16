@@ -115,6 +115,7 @@ type Model struct {
 	viewMode      common.ViewMode
 	lastViewMode  common.ViewMode // for toggling help view
 	confirm       confirmOverlay  // destructive-action confirmation modal state
+	goToPicker    goToOverlay     // go-to-related picker state
 	selectedKey   models.ItemKey
 	viewport      *viewport.Model
 	renderer      view.Renderer

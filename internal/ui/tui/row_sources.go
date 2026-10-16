@@ -41,6 +41,10 @@ type rowSource struct {
 	// parents of its relations key set. TestRowSources_ParentKeysMatchRelations
 	// requires it to equal the domain relations into this category.
 	parents []domain.Category
+	// related returns the parent rows the item at key relates to, one
+	// scope per parent category with a non-empty key, in parents order.
+	// nil for categories that nothing scopes.
+	related func(*models.Dataset, models.ItemKey) []domain.Scope
 }
 
 // flatSource builds a rowSource for a category backed by a flat
@@ -82,6 +86,23 @@ func flatScopedSource[T models.NamedFilterable](
 			return collections.FindByName(pick(d), name)
 		},
 		parents: parents.Parents(),
+		related: func(d *models.Dataset, key models.ItemKey) []domain.Scope {
+			name, ok := key.(string)
+			if !ok || len(parents) == 0 {
+				return nil
+			}
+			it := collections.FindByName(pick(d), name)
+			if it == nil {
+				return nil
+			}
+			var out []domain.Scope
+			for _, p := range parents.Parents() {
+				if n, ok := parents.ParentName(p, *it); ok {
+					out = append(out, domain.Scope{Category: p, Name: n})
+				}
+			}
+			return out
+		},
 	}
 }
 
@@ -115,6 +136,23 @@ func groupedSource[T models.NamedFilterable](
 			return nil
 		},
 		parents: parents.Parents(),
+		related: func(d *models.Dataset, key models.ItemKey) []domain.Scope {
+			k, ok := key.(models.ScopedItemKey)
+			if !ok || len(parents) == 0 {
+				return nil
+			}
+			it := collections.FindByName(pick(d)[k.Scope], k.Name)
+			if it == nil {
+				return nil
+			}
+			var out []domain.Scope
+			for _, p := range parents.Parents() {
+				if n, ok := parents.ParentName(p, k.Scope, *it); ok {
+					out = append(out, domain.Scope{Category: p, Name: n})
+				}
+			}
+			return out
+		},
 	}
 }
 

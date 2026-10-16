@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -77,4 +78,45 @@ func TestFlat_Keep(t *testing.T) {
 	assert.False(t, keep(models.LimitRegionalOverride{Name: "l2"}))
 	assert.Nil(t, LimitRegionalOverride.Keep(nil))
 	assert.Nil(t, LimitRegionalOverride.Keep(&domain.Scope{Category: domain.Tenant, Name: "t"}))
+}
+
+// ParentName is the drill-in run in reverse: filtering by the parent name
+// it returns keeps the item.
+func TestParentName_InvertsFilter(t *testing.T) {
+	t.Parallel()
+	w := models.GPUWorkload{Name: "pod-1", Node: "node-a", Namespace: "dac-1", Runtime: "vllm", Owner: &models.Tenant{Name: "Acme"}}
+	m := map[string][]models.GPUWorkload{"node-a": {w}}
+	for _, parent := range GPUWorkload.Parents() {
+		name, ok := GPUWorkload.ParentName(parent, "node-a", w)
+		require.Truef(t, ok, "%s", parent)
+		got := GPUWorkload.Filter(m, &domain.Scope{Category: parent, Name: name}, "", nil)
+		assert.Lenf(t, got["node-a"], 1, "%s %q", parent, name)
+	}
+
+	// No parent row: an unresolved owner, a legacy endpoint's runtime.
+	_, ok := GPUWorkload.ParentName(domain.Tenant, "node-a", models.GPUWorkload{})
+	assert.False(t, ok)
+	_, ok = InferenceService.ParentName(domain.ServingRuntime, "ns", models.InferenceService{Runtime: "r", Legacy: true})
+	assert.False(t, ok)
+	_, ok = InferenceService.ParentName(domain.GPUPool, "ns", models.InferenceService{})
+	assert.False(t, ok)
+
+	name, ok := LimitRegionalOverride.ParentName(domain.LimitDefinition, models.LimitRegionalOverride{Name: "l1"})
+	assert.True(t, ok)
+	assert.Equal(t, "l1", name)
+}
+
+// The two model categories split endpoints by model name, so an endpoint
+// relates to exactly one of them.
+func TestModelKeys_Disjoint(t *testing.T) {
+	t.Parallel()
+	for _, s := range []models.InferenceService{
+		{Model: "llama"},
+		{Model: "amaaaaaa-x", ImportedModel: true},
+		{Model: "amaaaaaa-y"}, // tenant-labelled ClusterBaseModel ref
+	} {
+		_, bm := InferenceService.ParentName(domain.BaseModel, "ns", s)
+		_, im := InferenceService.ParentName(domain.ImportedModel, "ns", s)
+		assert.NotEqualf(t, bm, im, "%q must relate to exactly one model category", s.Model)
+	}
 }

@@ -8,6 +8,7 @@ package relations
 import (
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -65,6 +66,23 @@ func (g Grouped[T]) Filter(m map[string][]T, scope *domain.Scope, filter string,
 // Parents returns the parent categories, sorted.
 func (g Grouped[T]) Parents() []domain.Category { return slices.Sorted(maps.Keys(g)) }
 
+// ParentName returns the name of the parent row that item (stored under
+// group) relates to — the Scope.Name a drill-in from that parent would
+// carry, run in reverse. ok is false when parent isn't a parent here or
+// the item relates to no parent row (an empty key, e.g. an unresolved
+// owner).
+func (g Grouped[T]) ParentName(parent domain.Category, group string, item T) (string, bool) {
+	k, ok := g[parent]
+	if !ok {
+		return "", false
+	}
+	name := group
+	if k.of != nil {
+		name = k.of(item)
+	}
+	return name, name != ""
+}
+
 // Flat maps each parent category of a flat (slice) category to the key
 // its rows carry toward that parent. A flat row has no storage group, so
 // every key is read from the row.
@@ -86,6 +104,16 @@ func (f Flat[T]) Keep(scope *domain.Scope) func(T) bool {
 
 // Parents returns the parent categories, sorted.
 func (f Flat[T]) Parents() []domain.Category { return slices.Sorted(maps.Keys(f)) }
+
+// ParentName is Grouped.ParentName for a flat row.
+func (f Flat[T]) ParentName(parent domain.Category, item T) (string, bool) {
+	of, ok := f[parent]
+	if !ok {
+		return "", false
+	}
+	name := of(item)
+	return name, name != ""
+}
 
 // The join keys, one set per scoped category. TestKeysMatchRelations
 // requires each set's parents to equal the domain relations into it.
@@ -136,32 +164,44 @@ var (
 	InferenceService = Grouped[models.InferenceService]{
 		domain.DedicatedAICluster: ByGroup[models.InferenceService](),
 		domain.BaseModel:          ByField(sharedCatalogModel),
-		domain.ImportedModel:      ByField(currentAPIModel),
+		domain.ImportedModel:      ByField(importedModelRef),
 		domain.Tenant:             ByField(func(s models.InferenceService) string { return ownerName(s.Owner) }),
 		domain.ServingRuntime:     ByField(currentAPIRuntime),
 	}
 )
 
+// importedModelNamePrefix leads every imported model's name: the name is
+// its OCID resource id. Shared-catalog names never carry it (checked on
+// dp-prod-ord: none of 200 BaseModels does, all 253 ImportedModels do).
+const importedModelNamePrefix = "amaaaaaa"
+
+// IsImportedModelName reports whether a model name is an imported model's
+// (an OCID resource id) rather than a shared-catalog name.
+func IsImportedModelName(name string) bool {
+	return strings.HasPrefix(name, importedModelNamePrefix)
+}
+
 // sharedCatalogModel returns the BaseModel (ClusterBaseModel) an endpoint
-// serves, or "" when its model isn't in the shared catalog: a
-// tenant-imported model, or a legacy endpoint's legacy Model CR, which
-// could otherwise collide with a catalog name.
+// serves, or "" when its model isn't in the shared catalog: an imported
+// model (by name, which also covers a tenant-labelled ClusterBaseModel
+// ref, whose ImportedModel flag is false), or a legacy endpoint's legacy
+// Model CR, which could otherwise collide with a catalog name.
 func sharedCatalogModel(s models.InferenceService) string {
-	if s.ImportedModel || s.Legacy {
+	if s.ImportedModel || s.Legacy || IsImportedModelName(s.Model) {
 		return ""
 	}
 	return s.Model
 }
 
-// currentAPIModel returns the model an ome.io endpoint serves, or "" for a
-// legacy endpoint (whose model is a legacy Model CR). Matching an
-// ImportedModel scope keys on the name alone, not on ImportedModel: an
-// imported model can also be a tenant-labelled ClusterBaseModel, which
-// endpoints reference with kind ClusterBaseModel (so ImportedModel is
-// false). Imported model names are OCIDs, so they can't collide with
-// shared-catalog names.
-func currentAPIModel(s models.InferenceService) string {
-	if s.Legacy {
+// importedModelRef returns the imported model an ome.io endpoint serves,
+// or "" for a shared-catalog model or a legacy endpoint (whose model is a
+// legacy Model CR). It keys on the name, not on ImportedModel: an imported
+// model can also be a tenant-labelled ClusterBaseModel, which endpoints
+// reference with kind ClusterBaseModel (so ImportedModel is false). With
+// sharedCatalogModel it splits endpoints between the two model
+// categories, so going to an endpoint's model never offers both.
+func importedModelRef(s models.InferenceService) string {
+	if s.Legacy || !IsImportedModelName(s.Model) {
 		return ""
 	}
 	return s.Model
