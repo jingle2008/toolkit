@@ -197,6 +197,7 @@ Maintenance operations the TUI exposes via keyboard shortcuts are also available
 | `toolkit restart inference-service <name> [--namespace <ns>]` | Rolling-restart an OME InferenceService by bumping its `restartedAt` annotation. Without `--namespace`, the name must be unique across namespaces. Alias `isvc`. |
 | `toolkit scale gpu-pool <name>` | Sync OCI instance-pool size to the Terraform-declared `pool.Size` (no `--size` flag — Terraform is the source of truth). The `gpupool` alias is accepted for back-compat. |
 | `toolkit delete dac <name>` | Delete a dedicated AI cluster (destructive — requires `--yes`) |
+| `toolkit delete inference-service <name> [--namespace <ns>]` | Delete an orphaned InferenceService — a dedicated endpoint whose DAC no longer exists. Refused for shared endpoints and for endpoints whose DAC exists. One stuck deleting for over 10 minutes is force-deleted by removing its finalizer. Destructive — requires `--yes`. Alias `isvc`. |
 | `toolkit terminate <node>` | Terminate the underlying OCI instance (destructive — requires `--yes`) |
 
 Example:
@@ -268,6 +269,7 @@ Every read tool takes an optional `filter` (fuzzy substring) and optional `env_t
 | `restart_inference_service` | Rolling-restart an OME InferenceService (`namespace` optional) |
 | `scale_gpu_pool` | Resize an OCI GPU instance pool |
 | `delete_dac` | Delete a dedicated AI cluster |
+| `delete_inference_service` | Delete an orphaned InferenceService (its DAC is gone); force-deletes one stuck deleting (`namespace` optional) |
 | `terminate_node` | Terminate the underlying OCI instance |
 
 By default, mutation tools ignore any per-call `env_type` / `env_region` / `env_realm` (MCP tool input fields — these stay snake_case as the JSON-schema field names) and only act in the startup env — the operator's credentials decide the maximum blast radius, not the agent. Pass `--mutation-env-override-allowed` at server start to opt in to per-call env routing.

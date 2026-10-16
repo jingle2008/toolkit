@@ -64,6 +64,10 @@ func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
 		m.handleRebootNodeResultMsg(msg)
 	case restartServiceResultMsg:
 		return []tea.Cmd{m.handleRestartServiceResultMsg(msg)}
+	case isvcDeletePlannedMsg:
+		return []tea.Cmd{m.handleISVCDeletePlannedMsg(msg)}
+	case isvcDeleteResultMsg:
+		return []tea.Cmd{m.handleISVCDeleteResultMsg(msg)}
 	}
 	return nil
 }
