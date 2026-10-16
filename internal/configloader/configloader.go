@@ -120,8 +120,6 @@ func loadRegionalOverrides[T models.NamedItem](ctx context.Context, root, realm,
 	return overrides, nil
 }
 
-type idSet map[string]struct{}
-
 func merge[T any](value T, override *T) T {
 	if override == nil {
 		return value
@@ -129,179 +127,56 @@ func merge[T any](value T, override *T) T {
 	return *override
 }
 
-// getTenants builds the realm's tenants from the override directories
-// (tenantMap: directory name → tenancy OCIDs) merged with tenant metadata.
-// A metadata name takes precedence over the directory name, and tenants
-// that end up with the same name are merged into one. It also returns the
-// directory name → Tenant.Name mapping that LoadTenancyOverrideGroup uses
-// to re-key the override maps, so Tenant → override scoping keeps working
-// for renamed tenants. Output is deterministic: tenants are sorted by
-// name, IDs are sorted, and tenants claiming the same OCID are flagged
-// via SharedWith.
-func getTenants(tenantMap map[string]idSet, tenantMeta []models.TenantMetadata) ([]models.Tenant, map[string]string) {
-	// Build id -> TenantMetadata map for quick lookup
-	idToMeta := make(map[string]models.TenantMetadata, len(tenantMeta))
-	consumed := make(map[string]bool, len(tenantMeta))
+// getTenants builds the realm's tenants: one per tenancy OCID, taken from
+// the override records (ids) and the realm's metadata entries. Metadata
+// is the only source of names; an OCID without a metadata name is named
+// by the OCID itself, so names stay one to one with IDs (metadata names
+// are validated unique on load). A tenancy not marked otherwise in
+// metadata is internal. Sorted by name.
+func getTenants(ids map[string]bool, tenantMeta []models.TenantMetadata) []models.Tenant {
+	byID := make(map[string]models.Tenant, len(ids)+len(tenantMeta))
+	for id := range ids {
+		byID[id] = models.Tenant{ID: id, Name: id, IsInternal: true}
+	}
 	for _, m := range tenantMeta {
-		idToMeta[m.ID] = m
-	}
-
-	tenants := make([]models.Tenant, 0, len(tenantMap)+len(tenantMeta))
-	byName := make(map[string]int, cap(tenants))
-	add := func(t models.Tenant) {
-		if i, ok := byName[t.Name]; ok {
-			tenants[i].IDs = append(tenants[i].IDs, t.IDs...)
-			if tenants[i].Note == "" {
-				tenants[i].Note = t.Note
-			}
-			return
+		t := models.Tenant{ID: m.ID, Name: m.ID, IsInternal: merge(true, m.IsInternal), Note: merge("", m.Note)}
+		if m.Name != nil && *m.Name != "" {
+			t.Name = *m.Name
 		}
-		byName[t.Name] = len(tenants)
-		tenants = append(tenants, t)
+		byID[m.ID] = t
 	}
-
-	// First: process tenantMap, merging with metadata if any id matches
-	dirToName := make(map[string]string, len(tenantMap))
-	for _, k := range slices.Sorted(maps.Keys(tenantMap)) {
-		ids := slices.Sorted(maps.Keys(tenantMap[k]))
-
-		tenantName := k
-		isInternal := true
-		note := ""
-		for _, id := range ids {
-			if m, ok := idToMeta[id]; ok {
-				tenantName = merge(tenantName, m.Name)
-				isInternal = merge(isInternal, m.IsInternal)
-				note = merge(note, m.Note)
-				consumed[id] = true
-				break
-			}
-		}
-
-		dirToName[k] = tenantName
-		add(models.Tenant{
-			IDs:        ids,
-			Name:       tenantName,
-			IsInternal: isInternal,
-			Note:       note,
-		})
-	}
-
-	// Second: add any metadata entries not matched above
-	for _, m := range tenantMeta {
-		if consumed[m.ID] || m.Name == nil || m.IsInternal == nil {
-			continue
-		}
-
-		add(models.Tenant{
-			IDs:        []string{m.ID},
-			Name:       *m.Name,
-			IsInternal: *m.IsInternal,
-			Note:       merge("", m.Note),
-		})
-	}
-
-	for i := range tenants {
-		slices.Sort(tenants[i].IDs)
-		tenants[i].IDs = slices.Compact(tenants[i].IDs)
-	}
+	tenants := slices.Collect(maps.Values(byID))
 	slices.SortFunc(tenants, func(a, b models.Tenant) int {
 		return strings.Compare(a.Name, b.Name)
 	})
-	markSharedIDs(tenants)
-
-	return tenants, dirToName
+	return tenants
 }
 
-// markSharedIDs sets SharedWith on every tenant that claims an OCID also
-// claimed by another tenant (e.g. the same tenancy under two differently
-// spelled override directories). Such tenants are flagged faulty, since
-// tenant-owned rows carrying that OCID can only resolve to one of them.
-func markSharedIDs(tenants []models.Tenant) {
-	claimants := make(map[string][]int)
-	for i, t := range tenants {
-		for _, id := range t.IDs {
-			claimants[id] = append(claimants[id], i)
-		}
-	}
-	for i := range tenants {
-		var shared []string
-		for _, id := range tenants[i].IDs {
-			for _, j := range claimants[id] {
-				if j != i {
-					shared = append(shared, tenants[j].Name)
-				}
+// collectTenantIDs adds every override record's tenancy OCID to ids.
+func collectTenantIDs[T models.TenancyOverride](ids map[string]bool, byDir map[string][]T) {
+	for _, overrides := range byDir {
+		for _, o := range overrides {
+			if id := o.GetTenantID(); id != "" {
+				ids[id] = true
 			}
 		}
-		slices.Sort(shared)
-		tenants[i].SharedWith = slices.Compact(shared)
 	}
 }
 
-// rekeyByTenant re-keys an override map from tenant directory name to the
-// resolved Tenant.Name (see getTenants), concatenating the overrides of
-// directories that resolve to the same tenant. Directories absent from
-// dirToName keep their key.
-func rekeyByTenant[T any](m map[string][]T, dirToName map[string]string) map[string][]T {
-	out := make(map[string][]T, len(m))
-	for _, dir := range slices.Sorted(maps.Keys(m)) {
-		name, ok := dirToName[dir]
-		if !ok {
-			name = dir
+// groupByTenant regroups overrides, loaded per tenant directory, by the
+// tenant each record names through its own tenancy OCID, and stamps that
+// tenant's name on the record. Directory names play no part: they aren't
+// reliable tenant identities.
+func groupByTenant[T models.TenancyOverride](byDir map[string][]T, nameOf map[string]string, setTenantName func(*T, string)) map[string][]T {
+	out := make(map[string][]T)
+	for _, dir := range slices.Sorted(maps.Keys(byDir)) {
+		for _, o := range byDir[dir] {
+			name := nameOf[o.GetTenantID()]
+			setTenantName(&o, name)
+			out[name] = append(out[name], o)
 		}
-		out[name] = append(out[name], m[dir]...)
 	}
 	return out
-}
-
-// tenancyOverrideRecord is the constraint satisfied by every
-// tenancy-override type loaded by loadAndStamp: NamedItem (for the
-// loader path) and TenancyOverride (for the tenantMap update).
-type tenancyOverrideRecord interface {
-	models.NamedItem
-	models.TenancyOverride
-}
-
-// loadAndStamp loads the tenancy override file set under key for the
-// given realm, stamps each record with its source-directory name as
-// TenantName (via setTenantName, since SetTenantName lives on the
-// value pointer), and updates the running tenantMap with this
-// batch's tenant IDs. The three concrete override types call this
-// from LoadTenancyOverrideGroup.
-func loadAndStamp[T tenancyOverrideRecord](
-	ctx context.Context,
-	limitsRoot, realm, key string,
-	tenantMap map[string]idSet,
-	setTenantName func(*T, string),
-) (map[string][]T, error) {
-	m, err := loadTenancyOverrides[T](ctx, limitsRoot, realm, key)
-	if err != nil {
-		return nil, err
-	}
-	for name, ovs := range m {
-		for i := range ovs {
-			setTenantName(&ovs[i], name)
-		}
-	}
-	updateTenants(tenantMap, m)
-	return m, nil
-}
-
-func updateTenants[T models.TenancyOverride](
-	tenantMap map[string]idSet, overrideMap map[string][]T,
-) {
-	for name, overrides := range overrideMap {
-		info, ok := tenantMap[name]
-		if !ok {
-			info = idSet{}
-			tenantMap[name] = info
-		}
-
-		for _, o := range overrides {
-			tenantID := o.GetTenantID()
-			info[tenantID] = struct{}{}
-		}
-	}
 }
 
 func getEnvironments(tenancies []models.ServiceTenancy) []models.Environment {
@@ -454,39 +329,34 @@ func loadDefinitionGroups(repoPath string) (
 LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.
 */
 func LoadTenancyOverrideGroup(ctx context.Context, repoPath, realm string, metadata *models.Metadata) (models.TenancyOverrideGroup, error) {
-	tenantMap := make(map[string]idSet)
 	limitsRoot := getLimitsRoot(repoPath)
-
-	limitTenancyOverrideMap, err := loadAndStamp(
-		ctx, limitsRoot, realm, limitsKey+tenancyOverridesKey, tenantMap,
-		func(v *models.LimitTenancyOverride, name string) { v.SetTenantName(name) },
-	)
+	limits, err := loadTenancyOverrides[models.LimitTenancyOverride](ctx, limitsRoot, realm, limitsKey+tenancyOverridesKey)
+	if err != nil {
+		return models.TenancyOverrideGroup{}, err
+	}
+	consoleProperties, err := loadTenancyOverrides[models.ConsolePropertyTenancyOverride](ctx, limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey)
+	if err != nil {
+		return models.TenancyOverrideGroup{}, err
+	}
+	properties, err := loadTenancyOverrides[models.PropertyTenancyOverride](ctx, limitsRoot, realm, propertiesKey+tenancyOverridesKey)
 	if err != nil {
 		return models.TenancyOverrideGroup{}, err
 	}
 
-	consolePropertyTenancyOverrideMap, err := loadAndStamp(
-		ctx, limitsRoot, realm, consolePropertiesKey+tenancyOverridesKey, tenantMap,
-		func(v *models.ConsolePropertyTenancyOverride, name string) { v.SetTenantName(name) },
-	)
-	if err != nil {
-		return models.TenancyOverrideGroup{}, err
+	ids := make(map[string]bool)
+	collectTenantIDs(ids, limits)
+	collectTenantIDs(ids, consoleProperties)
+	collectTenantIDs(ids, properties)
+	tenants := getTenants(ids, metadata.GetTenants(realm))
+	nameOf := make(map[string]string, len(tenants))
+	for _, t := range tenants {
+		nameOf[t.ID] = t.Name
 	}
-
-	propertyTenancyOverrideMap, err := loadAndStamp(
-		ctx, limitsRoot, realm, propertiesKey+tenancyOverridesKey, tenantMap,
-		func(v *models.PropertyTenancyOverride, name string) { v.SetTenantName(name) },
-	)
-	if err != nil {
-		return models.TenancyOverrideGroup{}, err
-	}
-
-	tenants, dirToName := getTenants(tenantMap, metadata.GetTenants(realm))
 	return models.TenancyOverrideGroup{
 		Tenants:                           tenants,
-		LimitTenancyOverrideMap:           rekeyByTenant(limitTenancyOverrideMap, dirToName),
-		ConsolePropertyTenancyOverrideMap: rekeyByTenant(consolePropertyTenancyOverrideMap, dirToName),
-		PropertyTenancyOverrideMap:        rekeyByTenant(propertyTenancyOverrideMap, dirToName),
+		LimitTenancyOverrideMap:           groupByTenant(limits, nameOf, (*models.LimitTenancyOverride).SetTenantName),
+		ConsolePropertyTenancyOverrideMap: groupByTenant(consoleProperties, nameOf, (*models.ConsolePropertyTenancyOverride).SetTenantName),
+		PropertyTenancyOverrideMap:        groupByTenant(properties, nameOf, (*models.PropertyTenancyOverride).SetTenantName),
 	}, nil
 }
 

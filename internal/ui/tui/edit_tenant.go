@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -282,9 +281,9 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 
 // applyTenantSave reflects a just-saved tenant entry in the dataset
 // entirely in memory — no reload. Because the form only edits UNRESOLVED
-// rows, the entry is always a standalone tenant (getTenants' second
-// pass): its tenancy suffix matched no existing Tenant, which also means
-// it has no tenancy-override entries. So we add the one Tenant directly
+// rows, the entry is always a new tenant: its tenancy suffix matched no
+// existing Tenant, which also means it has no tenancy-override entries
+// (every override record's OCID is a tenant). So we add the one Tenant directly
 // and re-resolve the tenant-owned maps against it; the override maps are
 // provably unaffected and left alone.
 //
@@ -331,8 +330,8 @@ func resolveTenantOwners(ds *models.Dataset) {
 
 // tenantFromEntry builds a Tenant from a saved metadata entry.
 func tenantFromEntry(e models.TenantMetadata) models.Tenant {
-	t := models.Tenant{IDs: []string{e.ID}}
-	if e.Name != nil {
+	t := models.Tenant{ID: e.ID, Name: e.ID}
+	if e.Name != nil && *e.Name != "" {
 		t.Name = *e.Name
 	}
 	if e.IsInternal != nil {
@@ -344,13 +343,12 @@ func tenantFromEntry(e models.TenantMetadata) models.Tenant {
 	return t
 }
 
-// upsertTenantByID replaces the tenant whose IDs contain t's ID, else
-// appends t. (Replacement only matters defensively; the unresolved-only
-// gate means the form never re-edits an already-present tenant.)
+// upsertTenantByID replaces the tenant with t's ID, else appends t.
+// (Replacement only matters defensively; the unresolved-only gate means
+// the form never re-edits an already-present tenant.)
 func upsertTenantByID(tenants []models.Tenant, t models.Tenant) []models.Tenant {
-	id := t.IDs[0]
 	for i := range tenants {
-		if slices.Contains(tenants[i].IDs, id) {
+		if tenants[i].ID == t.ID {
 			tenants[i] = t
 			return tenants
 		}

@@ -201,7 +201,7 @@ func TestList_DACs_ResolvesOwner(t *testing.T) {
 		dacs: map[string][]models.DedicatedAICluster{
 			"acme": {{Name: "dac-1", Status: "READY", TenantID: "acme"}},
 		},
-		tenants: []models.Tenant{{Name: "Acme Corp", IDs: []string{"ocid1.tenancy.oc1..acme"}}},
+		tenants: []models.Tenant{{Name: "Acme Corp", ID: "ocid1.tenancy.oc1..acme"}},
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)

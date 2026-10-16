@@ -51,7 +51,7 @@ func TestLoadTenancyOverrideGroup_Cache(t *testing.T) {
 
 	first, err := l.LoadTenancyOverrideGroup(ctx, repo, env)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"t1"}, tenantNames(first))
+	assert.Equal(t, []string{"ocid1.tenancy.oc1..a"}, tenantNames(first), "no metadata name: named by OCID")
 	again, err := l.LoadTenancyOverrideGroup(ctx, repo, env)
 	require.NoError(t, err)
 	assert.Same(t, &first.Tenants[0], &again.Tenants[0], "unchanged: the cached group is reused")
@@ -59,13 +59,13 @@ func TestLoadTenancyOverrideGroup_Cache(t *testing.T) {
 	writeLimitOverride(t, repo, "t2", "ocid1.tenancy.oc1..b")
 	grown, err := l.LoadTenancyOverrideGroup(ctx, repo, env)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"t1", "t2"}, tenantNames(grown), "a new override file reloads")
+	assert.Equal(t, []string{"ocid1.tenancy.oc1..a", "ocid1.tenancy.oc1..b"}, tenantNames(grown), "a new override file reloads")
 
 	name := "Acme"
 	require.NoError(t, l.UpsertTenantMetadata(models.TenantMetadata{ID: "ocid1.tenancy.oc1..a", Name: &name}))
 	renamed, err := l.LoadTenancyOverrideGroup(ctx, repo, env)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"Acme", "t2"}, tenantNames(renamed), "a metadata write reloads")
+	assert.Equal(t, []string{"Acme", "ocid1.tenancy.oc1..b"}, tenantNames(renamed), "a metadata write reloads")
 }
 
 // A Client built without New has no cache and still loads.
@@ -75,5 +75,23 @@ func TestLoadTenancyOverrideGroup_ZeroClient(t *testing.T) {
 	writeLimitOverride(t, repo, "t1", "ocid1.tenancy.oc1..a")
 	g, err := Client{metadata: &models.Metadata{}}.LoadTenancyOverrideGroup(context.Background(), repo, models.Environment{Realm: "oc1"})
 	require.NoError(t, err)
-	assert.Equal(t, []string{"t1"}, tenantNames(g))
+	assert.Equal(t, []string{"ocid1.tenancy.oc1..a"}, tenantNames(g))
+}
+
+// Metadata is the only source of tenant names, so a metadata file that
+// fails validation blocks loading tenants instead of silently naming
+// every tenant by its OCID.
+func TestLoadTenancyOverrideGroup_InvalidMetadataBlocks(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	repo := t.TempDir()
+	writeLimitOverride(t, repo, "t1", "ocid1.tenancy.oc1..a")
+	meta := filepath.Join(t.TempDir(), "metadata.yaml")
+	require.NoError(t, os.WriteFile(meta, []byte("tenants:\n- {id: ocid1.tenancy.oc1..a, name: Acme}\n- {id: ocid1.tenancy.oc1..b, name: Acme}\n"), 0o600))
+	ldr := New(ctx, meta)
+
+	_, err := ldr.LoadTenancyOverrideGroup(ctx, repo, models.Environment{Realm: "oc1"})
+	require.ErrorContains(t, err, `tenant name "Acme" is used by both`)
+	_, err = ldr.LoadDataset(ctx, repo, models.Environment{Realm: "oc1"})
+	require.ErrorContains(t, err, "invalid tenant metadata")
 }

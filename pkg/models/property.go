@@ -75,7 +75,7 @@ func (o PropertyRegionalOverride) IsFaulty() bool {
 
 // PropertyTenancyOverride represents a tenancy override for a property.
 //
-// TenantName is the originating tenant directory name (populated by
+// TenantName is the owning tenant's name (populated by
 // the configloader, same convention as LimitTenancyOverride).
 // TenantID is the per-record tenant identifier; the JSON key is kept
 // as "tag" for back-compat with the on-disk record format.
@@ -90,7 +90,7 @@ func (o PropertyTenancyOverride) GetTenantID() string {
 	return o.TenantID
 }
 
-// SetTenantName stamps the tenant short name onto the override.
+// SetTenantName stamps the owning tenant's name onto the override.
 // See LimitTenancyOverride.SetTenantName.
 func (o *PropertyTenancyOverride) SetTenantName(name string) {
 	o.TenantName = name

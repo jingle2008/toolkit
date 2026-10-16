@@ -280,7 +280,7 @@ Toolkit organises data into 22 categories:
 
 | Category | Description |
 |----------|-------------|
-| **Tenant** | Tenant-level data; supports faulty tracking, internal flag, and scoping into overrides. A tenant is faulty when it has more than one OCID or shares an OCID with another tenant (the same tenancy filed under two override directories) |
+| **Tenant** | One row per tenancy OCID found in the tenancy overrides or the tenant metadata file, with its internal flag and note; scopes into the tenant's overrides and resources. The name comes from the metadata file only (override directory names are ignored); a tenancy without a metadata name is named by its OCID. Names must be unique: a metadata file that gives two tenancies the same name fails to load |
 | **Environment** | Cloud environment configurations |
 | **ServiceTenancy** | Service-to-tenancy mappings |
 

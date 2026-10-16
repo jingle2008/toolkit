@@ -107,7 +107,7 @@ func (l emitLoader) LoadTenancyOverrideGroup(context.Context, string, models.Env
 		return models.TenancyOverrideGroup{}, l.err
 	}
 	return models.TenancyOverrideGroup{
-		Tenants: []models.Tenant{{Name: "tenant-a", IDs: []string{"id1"}}},
+		Tenants: []models.Tenant{{Name: "tenant-a", ID: "id1"}},
 		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
 			"tenant-a": {{LimitRegionalOverride: models.LimitRegionalOverride{Name: "lim-a"}, TenantID: "id1"}},
 		},
@@ -297,7 +297,7 @@ func (l tenantEmitLoader) LoadTenancyOverrideGroup(context.Context, string, mode
 		return models.TenancyOverrideGroup{}, l.tenantErr
 	}
 	return models.TenancyOverrideGroup{
-		Tenants: []models.Tenant{{Name: "Tenant One", IDs: []string{"ocid1.tenancy.oc1..t1"}}},
+		Tenants: []models.Tenant{{Name: "Tenant One", ID: "ocid1.tenancy.oc1..t1"}},
 	}, nil
 }
 

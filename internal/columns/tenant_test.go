@@ -10,7 +10,7 @@ func TestTenantColumns(t *testing.T) {
 	t.Parallel()
 	tt := models.Tenant{
 		Name:       "alpha",
-		IDs:        []string{"ocid1.tenancy.oc1..a"},
+		ID:         "ocid1.tenancy.oc1..a",
 		IsInternal: true,
 		Note:       "n/a",
 	}

@@ -81,7 +81,7 @@ func Test_findItem_returns_expected(t *testing.T) {
 	t.Parallel()
 	dataset := &models.Dataset{
 		Tenants: []models.Tenant{
-			{Name: "TenantA", IDs: []string{"idA"}},
+			{Name: "TenantA", ID: "idA"},
 		},
 	}
 	key := "TenantA"

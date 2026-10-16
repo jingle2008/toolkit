@@ -345,7 +345,7 @@ func unnamedRuntimeNote(ds *models.Dataset) string {
 }
 
 // checkTenancy reports tenant-owned rows whose tenancy-id resolved to no
-// tenant: a gap in the tenant list (override directories plus metadata),
+// tenant: a gap in the tenant list (tenancy overrides plus metadata),
 // so WARN. Missing is the tenancy-id to add.
 func checkTenancy(ds *models.Dataset) Check {
 	c := Check{Child: domain.CategoryUnknown, Parent: domain.Tenant, Name: "tenancy resolution", Severity: SeverityWarn}

@@ -33,7 +33,7 @@ func (relatedLoader) LoadInferenceServices(context.Context, string, models.Envir
 }
 
 func (relatedLoader) LoadTenancyOverrideGroup(context.Context, string, models.Environment) (models.TenancyOverrideGroup, error) {
-	return models.TenancyOverrideGroup{Tenants: []models.Tenant{{Name: "Acme", IDs: []string{"ocid1.tenancy.oc1..acme"}}}}, nil
+	return models.TenancyOverrideGroup{Tenants: []models.Tenant{{Name: "Acme", ID: "ocid1.tenancy.oc1..acme"}}}, nil
 }
 
 type relatedOut struct {
