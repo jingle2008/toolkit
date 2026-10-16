@@ -213,3 +213,20 @@ locals {
 	assert.True(t, vals["matched"].True())
 	assert.Equal(t, "fallback", vals["fallback"].AsString())
 }
+
+// alltrue over a list holding an unknown bool is unknown, not a panic.
+func TestAllTrue_UnknownElement(t *testing.T) {
+	t.Parallel()
+	list := cty.ListVal([]cty.Value{cty.True, cty.UnknownVal(cty.Bool)})
+	var got cty.Value
+	require.NotPanics(t, func() {
+		var err error
+		got, err = allTrueFunc.Call([]cty.Value{list})
+		require.NoError(t, err)
+	})
+	assert.False(t, got.IsKnown())
+
+	got, err := allTrueFunc.Call([]cty.Value{cty.ListVal([]cty.Value{cty.False, cty.UnknownVal(cty.Bool)})})
+	require.NoError(t, err)
+	assert.Equal(t, cty.False, got, "a false element before the unknown one decides it")
+}

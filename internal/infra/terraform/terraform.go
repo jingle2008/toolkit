@@ -80,13 +80,18 @@ var startsWithFunc = function.New(&function.Spec{
 })
 
 // allTrueFunc is terraform's alltrue(): whether every element of a list
-// of bools is true (true for an empty list).
+// of bools is true (true for an empty list). Like terraform's, it is
+// unknown once it reaches an unknown element — cty only short-circuits
+// an unknown argument, not a known list holding one.
 var allTrueFunc = function.New(&function.Spec{
 	Params: []function.Parameter{{Name: "list", Type: cty.List(cty.Bool)}},
 	Type:   function.StaticReturnType(cty.Bool),
 	Impl: func(args []cty.Value, _ cty.Type) (cty.Value, error) {
 		for it := args[0].ElementIterator(); it.Next(); {
 			_, v := it.Element()
+			if !v.IsKnown() {
+				return cty.UnknownVal(cty.Bool), nil
+			}
 			if v.IsNull() || !v.True() {
 				return cty.False, nil
 			}
