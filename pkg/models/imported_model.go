@@ -1,6 +1,9 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // ImportedModel is a tenant-owned base model. Two sources feed this
 // category:
@@ -45,6 +48,20 @@ type ImportedModel struct {
 // `--filter ocid1.tenancy.…` work without users knowing the source.
 func (m ImportedModel) FilterableFields() []string {
 	return append(m.BaseModel.FilterableFields(), m.Namespace, m.TenantID)
+}
+
+// ociResourceIDPrefix leads the OCID resource ids that name an imported
+// model and a DAC (and so the namespace named after a DAC). Shared-catalog
+// model names never carry it (checked on dp-prod-ord: none of 200
+// BaseModels does, all 253 ImportedModels do).
+const ociResourceIDPrefix = "amaaaaaa"
+
+// IsImportedModelName reports whether a model name is an imported model's
+// (an OCID resource id) rather than a shared-catalog name. This holds
+// whichever way the model is referenced: a namespaced BaseModel, or a
+// tenant-labelled ClusterBaseModel.
+func IsImportedModelName(name string) bool {
+	return strings.HasPrefix(name, ociResourceIDPrefix)
 }
 
 // TenancyOCID returns the full tenancy OCID for the ImportedModel by

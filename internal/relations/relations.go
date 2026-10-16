@@ -8,7 +8,6 @@ package relations
 import (
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -170,24 +169,13 @@ var (
 	}
 )
 
-// importedModelNamePrefix leads every imported model's name: the name is
-// its OCID resource id. Shared-catalog names never carry it (checked on
-// dp-prod-ord: none of 200 BaseModels does, all 253 ImportedModels do).
-const importedModelNamePrefix = "amaaaaaa"
-
-// IsImportedModelName reports whether a model name is an imported model's
-// (an OCID resource id) rather than a shared-catalog name.
-func IsImportedModelName(name string) bool {
-	return strings.HasPrefix(name, importedModelNamePrefix)
-}
-
 // sharedCatalogModel returns the BaseModel (ClusterBaseModel) an endpoint
 // serves, or "" when its model isn't in the shared catalog: an imported
 // model (by name, which also covers a tenant-labelled ClusterBaseModel
 // ref, whose ImportedModel flag is false), or a legacy endpoint's legacy
 // Model CR, which could otherwise collide with a catalog name.
 func sharedCatalogModel(s models.InferenceService) string {
-	if s.ImportedModel || s.Legacy || IsImportedModelName(s.Model) {
+	if s.ImportedModel || s.Legacy || models.IsImportedModelName(s.Model) {
 		return ""
 	}
 	return s.Model
@@ -201,7 +189,7 @@ func sharedCatalogModel(s models.InferenceService) string {
 // sharedCatalogModel it splits endpoints between the two model
 // categories, so going to an endpoint's model never offers both.
 func importedModelRef(s models.InferenceService) string {
-	if s.Legacy || !IsImportedModelName(s.Model) {
+	if s.Legacy || !models.IsImportedModelName(s.Model) {
 		return ""
 	}
 	return s.Model

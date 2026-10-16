@@ -11,7 +11,6 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/telemetry"
-	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -244,7 +243,7 @@ func servingCatalog(dedicated bool, model string) (domain.Category, bool) {
 // modelCatalog routes a model NAME to the catalog that holds it: imported/
 // finetune names carry the imported-model prefix, everything else is base.
 func modelCatalog(modelName string) domain.Category {
-	if relations.IsImportedModelName(modelName) {
+	if models.IsImportedModelName(modelName) {
 		return domain.ImportedModel
 	}
 	return domain.BaseModel

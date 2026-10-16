@@ -90,7 +90,7 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_inference_services",
-		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the model ref is a namespaced BaseModel. `ready` is the Ready condition status (True/False/Unknown). Items whose tenancy is known also carry `owner` ({name, ids, is_internal, note}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the endpoint serves a tenant-imported model (a namespaced BaseModel ref, or a tenant-labelled ClusterBaseModel, whose name is an OCID resource id). `ready` is the Ready condition status (True/False/Unknown). Items whose tenancy is known also carry `owner` ({name, ids, is_internal, note}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListInferenceServices)
 
 	sdk.AddTool(s.server, &sdk.Tool{

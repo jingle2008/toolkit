@@ -184,7 +184,7 @@ typical rows untruncated.
 */
 var ServingRuntimeTUIColumns = Set[models.ServingRuntime]{Columns: []Column[models.ServingRuntime]{
 	{
-		Title: "Name", Key: "name", Ratio: 0.26,
+		Title: "Name", Key: "name", Ratio: 0.26, TruncateMiddle: true,
 		Render: func(r models.ServingRuntime) string { return r.Name },
 	},
 	{
