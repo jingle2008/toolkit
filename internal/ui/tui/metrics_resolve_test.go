@@ -285,13 +285,3 @@ func TestOpenMetrics_ImportedModelOnSeveralDACsPicks(t *testing.T) {
 	require.True(t, ok, reason)
 	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.me-abudhabi-1.amaaaaaadac2", filter.Value)
 }
-
-// resolveMetricsPlan never picks among several DACs silently.
-func TestResolveMetricsPlan_ImportedModelSeveralDACsRefuses(t *testing.T) {
-	t.Parallel()
-	m := newResolveModel(t)
-	im := &models.ImportedModel{Namespace: "default", Copies: []string{"amaaaaaadac1", "amaaaaaadac2"}}
-	_, _, ok, reason := m.resolveMetricsPlan(im)
-	assert.False(t, ok)
-	assert.Equal(t, "imported model is served by 2 dedicated AI clusters; choose one", reason)
-}

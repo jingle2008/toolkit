@@ -190,11 +190,6 @@ type openMetricsTriggerMsg struct {
 // navigation) before the dashboard opens. Items that can't produce metrics
 // are a no-op or an error toast (resolveMetricsPlan).
 func (m *Model) openMetrics(item any) tea.Cmd {
-	if im, ok := item.(*models.ImportedModel); ok && im != nil {
-		if dacs := im.DACNamespaces(); len(dacs) > 1 {
-			return m.pickMetricsDAC(im, dacs)
-		}
-	}
 	cat, need := m.metricsCatalog(item)
 	if !need || m.catalogLoaded(cat) {
 		return m.finishMetrics(item)
@@ -308,8 +303,15 @@ func (m *Model) handleOpenMetricsTrigger(msg openMetricsTriggerMsg) tea.Cmd {
 }
 
 // finishMetrics resolves the item's plan and either launches the dashboard
-// or shows an error toast. A no-op item (empty reason) yields nil.
+// or shows an error toast. A no-op item (empty reason) yields nil. An
+// imported model served by several DACs first goes through the DAC
+// picker, so resolveMetricsPlan — called only from here — sees one.
 func (m *Model) finishMetrics(item any) tea.Cmd {
+	if im, ok := item.(*models.ImportedModel); ok && im != nil {
+		if dacs := im.DACNamespaces(); len(dacs) > 1 {
+			return m.pickMetricsDAC(im, dacs)
+		}
+	}
 	filter, capability, ok, reason := m.resolveMetricsPlan(item)
 	if !ok {
 		if reason == "" {
@@ -345,16 +347,11 @@ func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capabi
 			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
 		}
 		// A DAC serving the model holds a copy of it in its namespace; the
-		// primary copy usually sits in `default`. Several DACs are resolved
-		// by openMetrics's picker, which narrows the item to one.
+		// primary copy usually sits in `default`. finishMetrics routes
+		// several DACs through the picker, so there is at most one here.
 		dacs := it.DACNamespaces()
-		switch len(dacs) {
-		case 0:
+		if len(dacs) == 0 {
 			return telemetry.Filter{}, telemetry.CapabilityChat, false, "imported model is not tied to a dedicated AI cluster"
-		case 1:
-		default:
-			return telemetry.Filter{}, telemetry.CapabilityChat, false,
-				fmt.Sprintf("imported model is served by %d dedicated AI clusters; choose one", len(dacs))
 		}
 		ocid := models.DedicatedAICluster{Name: dacs[0]}.OCID(realm, region)
 		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
