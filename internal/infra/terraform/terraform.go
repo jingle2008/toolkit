@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/ext/tryfunc"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/zclconf/go-cty/cty"
@@ -41,24 +42,58 @@ const (
 	varKey      = "var"
 	dataKey     = "data"
 	pathKey     = "path"
+	moduleKey   = "module"
 	outputBlock = "output"
 	outputValue = "value"
 )
 
 var localFuncMap = map[string]function.Function{
-	"format":   stdlib.FormatFunc,
-	"lookup":   stdlib.LookupFunc,
-	"merge":    stdlib.MergeFunc,
-	"join":     stdlib.JoinFunc,
-	"contains": stdlib.ContainsFunc,
-	"keys":     stdlib.KeysFunc,
-	"flatten":  stdlib.FlattenFunc,
-	"distinct": stdlib.DistinctFunc,
-	"toset":    stdlib.MakeToFunc(cty.Set(cty.DynamicPseudoType)),
-	"tolist":   stdlib.MakeToFunc(cty.List(cty.DynamicPseudoType)),
-	"tomap":    stdlib.MakeToFunc(cty.Map(cty.DynamicPseudoType)),
-	"file":     fileFunc,
+	"format":     stdlib.FormatFunc,
+	"lookup":     stdlib.LookupFunc,
+	"merge":      stdlib.MergeFunc,
+	"join":       stdlib.JoinFunc,
+	"contains":   stdlib.ContainsFunc,
+	"keys":       stdlib.KeysFunc,
+	"flatten":    stdlib.FlattenFunc,
+	"distinct":   stdlib.DistinctFunc,
+	"toset":      stdlib.MakeToFunc(cty.Set(cty.DynamicPseudoType)),
+	"tolist":     stdlib.MakeToFunc(cty.List(cty.DynamicPseudoType)),
+	"tomap":      stdlib.MakeToFunc(cty.Map(cty.DynamicPseudoType)),
+	"file":       fileFunc,
+	"concat":     stdlib.ConcatFunc,
+	"split":      stdlib.SplitFunc,
+	"regex":      stdlib.RegexFunc,
+	"try":        tryfunc.TryFunc,
+	"can":        tryfunc.CanFunc,
+	"startswith": startsWithFunc,
+	"alltrue":    allTrueFunc,
 }
+
+// startsWithFunc is terraform's startswith(): whether str begins with
+// prefix.
+var startsWithFunc = function.New(&function.Spec{
+	Params: []function.Parameter{{Name: "str", Type: cty.String}, {Name: "prefix", Type: cty.String}},
+	Type:   function.StaticReturnType(cty.Bool),
+	Impl: func(args []cty.Value, _ cty.Type) (cty.Value, error) {
+		return cty.BoolVal(strings.HasPrefix(args[0].AsString(), args[1].AsString())), nil
+	},
+})
+
+// allTrueFunc is terraform's alltrue(): whether every element of a list
+// of bools is true (true for an empty list).
+var allTrueFunc = function.New(&function.Spec{
+	Params: []function.Parameter{{Name: "list", Type: cty.List(cty.Bool)}},
+	Type:   function.StaticReturnType(cty.Bool),
+	Impl: func(args []cty.Value, _ cty.Type) (cty.Value, error) {
+		for it := args[0].ElementIterator(); it.Next(); {
+			_, v := it.Element()
+			if v.IsNull() || !v.True() {
+				return cty.False, nil
+			}
+		}
+		return cty.True, nil
+	},
+})
 
 // fileFunc is terraform's file(): the UTF-8 contents of the file at path.
 // Modules build the path from path.module, so it resolves the same way
@@ -299,6 +334,7 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 		},
 		Functions: localFuncMap,
 	}
+	context.Variables[moduleKey] = moduleOutputs(ctx, dirPath, &context, 0)
 
 	localObject = resolveLocals(ctx, &context, localObject, attributes)
 
@@ -353,9 +389,12 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 		Variables: map[string]cty.Value{
 			localKey: cty.EmptyObjectVal,
 			varKey:   cty.ObjectVal(varDefaults),
+			pathKey:  cty.ObjectVal(map[string]cty.Value{"module": cty.StringVal(dirPath)}),
 		},
 		Functions: localFuncMap,
 	}
+	// The oc1 targets come from a child module (module.oc1_inventory).
+	evalCtx.Variables[moduleKey] = moduleOutputs(ctx, dirPath, &evalCtx, 0)
 	localObject := resolveLocals(ctx, &evalCtx, cty.EmptyObjectVal, attributes)
 	for key := range attributes {
 		logger.Warnw("skipping unresolved shep_targets local", "local", key)
