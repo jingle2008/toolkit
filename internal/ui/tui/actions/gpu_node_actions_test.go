@@ -72,8 +72,8 @@ func TestSoftResetInstance_Success(t *testing.T) {
 	logger := &testLogger{}
 	err := SoftResetInstance(context.Background(), node, makeEnv(), logger)
 	require.NoError(t, err)
-	require.Contains(t, logger.Infos[0], "rebooting node")
-	require.Contains(t, logger.Infos[1], "reboot request is submitted successfully")
+	require.Contains(t, logger.Infos[0], "restarting node")
+	require.Contains(t, logger.Infos[1], "restart request is submitted successfully")
 }
 
 func TestSoftResetInstance_Error(t *testing.T) {

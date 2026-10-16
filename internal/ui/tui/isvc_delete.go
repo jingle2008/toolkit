@@ -66,23 +66,7 @@ func (m *Model) handleISVCDeletePlannedMsg(msg isvcDeletePlannedMsg) tea.Cmd {
 	if m.category != domain.InferenceService || m.viewMode != common.ListView {
 		return nil
 	}
-	return m.requestConfirm(m.confirmDeleteInferenceService(msg.key, msg.outcome))
-}
-
-func (m *Model) confirmDeleteInferenceService(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmOverlay {
-	c := confirmOverlay{
-		tier:    tierIrreversible,
-		action:  "Delete",
-		kind:    "orphaned InferenceService",
-		target:  itemKeyString(itemKey),
-		warning: "Its DAC is gone. If it stays deleting, run again after 10m to force-delete.",
-		run:     func() tea.Cmd { return m.deleteOrphanInferenceService(itemKey) },
-	}
-	if outcome == k8s.OrphanFinalized {
-		c.action = "Force-delete"
-		c.warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
-	}
-	return c
+	return m.requestConfirm(m.confirmDelete(msg.key, msg.outcome))
 }
 
 // deleteOrphanInferenceService runs the delete; the delete re-checks the

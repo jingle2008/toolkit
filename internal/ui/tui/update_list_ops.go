@@ -24,6 +24,8 @@ func (m *Model) deleteItem(itemKey models.ItemKey) tea.Cmd {
 		return m.deleteDedicatedAICluster(itemKey)
 	case domain.GPUNode:
 		return m.deleteGPUNode(itemKey)
+	case domain.InferenceService:
+		return m.deleteOrphanInferenceService(itemKey)
 	default:
 		// exhaustive
 	}
@@ -101,23 +103,23 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 	}
 }
 
-func (m *Model) rebootNode(item any, itemKey models.ItemKey) tea.Cmd {
+func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 	if item == nil {
-		m.logger.Errorw("no item selected for reboot operation", "category", m.category)
+		m.logger.Errorw("no item selected for restart operation", "category", m.category)
 		return nil
 	}
 
 	node, ok := item.(*models.GPUNode)
 	if !ok {
-		m.logger.Errorw("unsupported item type for reboot operation", "item", item)
+		m.logger.Errorw("unsupported item type for restart operation", "item", item)
 		return nil
 	}
 
-	if node.GetStatus() == "Rebooting" {
+	if node.GetStatus() == "Restarting" {
 		return nil
 	}
 	// optimistic UI
-	node.SetStatus("Rebooting")
+	node.SetStatus("Restarting")
 	m.updateRows(false)
 
 	env := m.environment
@@ -125,7 +127,7 @@ func (m *Model) rebootNode(item any, itemKey models.ItemKey) tea.Cmd {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := actions.SoftResetInstance(ctx, node, env, m.logger)
-		return rebootNodeResultMsg{key: itemKey, err: err, env: env}
+		return restartNodeResultMsg{key: itemKey, err: err, env: env}
 	}
 }
 
@@ -291,9 +293,9 @@ func (m *Model) handleRestartServiceResultMsg(msg restartServiceResultMsg) tea.C
 	return m.showToast("restart requested for "+target, toastInfo)
 }
 
-func (m *Model) handleRebootNodeResultMsg(msg rebootNodeResultMsg) {
+func (m *Model) handleRestartNodeResultMsg(msg restartNodeResultMsg) {
 	if msg.err != nil {
-		m.logger.Errorw("failed to reboot node", "key", msg.key, "error", msg.err)
+		m.logger.Errorw("failed to restart node", "key", msg.key, "error", msg.err)
 	}
 	if !m.inCurrentEnv(msg.env) {
 		return
@@ -303,7 +305,7 @@ func (m *Model) handleRebootNodeResultMsg(msg rebootNodeResultMsg) {
 		if msg.err != nil {
 			node.SetStatus("FAILED")
 		} else {
-			// Clear transient "Rebooting" status to recompute via GetStatus()
+			// Clear transient "Restarting" status to recompute via GetStatus()
 			node.SetStatus("")
 		}
 	}

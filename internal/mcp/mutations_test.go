@@ -142,7 +142,7 @@ func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
 		{"cordon_node", map[string]any{"node": "node-a"}},
 		{"uncordon_node", map[string]any{"node": "node-a"}},
 		{"drain_node", map[string]any{"node": "node-a"}},
-		{"reboot_node", map[string]any{"node": "node-a"}},
+		{"restart_node", map[string]any{"node": "node-a"}},
 		{"terminate_node", map[string]any{"node": "node-a"}},
 		{"scale_gpu_pool", map[string]any{"name": "pool-a"}},
 		{"delete_dac", map[string]any{"name": "dac-a"}},
@@ -288,7 +288,7 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 	}
 }
 
-func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
+func TestIntegration_RestartNodeTool_ConfirmTrueExecutes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
@@ -303,7 +303,7 @@ func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
 	clientSess := newTestPair(ctx, t, stubLoader{})
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
-		Name: "reboot_node",
+		Name: "restart_node",
 		Arguments: map[string]any{
 			"node":    "node-a",
 			"ocid":    "ocid1.instance.fake",
@@ -316,7 +316,7 @@ func TestIntegration_RebootTool_ConfirmTrueExecutes(t *testing.T) {
 	if gotNode == nil || gotNode.ID != "ocid1.instance.fake" {
 		t.Errorf("expected synthesized node from --ocid, got: %+v", gotNode)
 	}
-	assertMutationOK(t, res, "reboot", "node", "node-a")
+	assertMutationOK(t, res, "restart", "node", "node-a")
 }
 
 func TestIntegration_ScaleGPUPoolTool_ConfirmTrueExecutes(t *testing.T) {
@@ -447,7 +447,7 @@ func TestIntegration_MutationTool_IgnoresEnvOverride_WhenDisallowed(t *testing.T
 }
 
 // TestIntegration_MutationTool_PropagatesEnvOverride asserts the
-// override reaches every action's input across reboot/terminate/scale
+// override reaches every action's input across restart/terminate/scale
 // — not just delete_dac. These three thread env through additional
 // hops (resolver, OCI client construction) where a future refactor
 // could accidentally drop it.
@@ -455,7 +455,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	// reboot — env reaches the action AND the resolver.
+	// restart node — env reaches the action AND the resolver.
 	var gotResolverEnv, gotActionEnv models.Environment
 	origResolve := mcpResolveGPUNodeFn
 	defer func() { mcpResolveGPUNodeFn = origResolve }()
@@ -475,7 +475,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	})
 
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
-		Name: "reboot_node",
+		Name: "restart_node",
 		Arguments: map[string]any{
 			"node":      "node-a",
 			"ocid":      "ocid1.instance.fake",
@@ -484,8 +484,8 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "oc2", gotResolverEnv.Realm, "reboot resolver must see overridden realm")
-	assert.Equal(t, "oc2", gotActionEnv.Realm, "reboot action must see overridden realm")
+	assert.Equal(t, "oc2", gotResolverEnv.Realm, "restart resolver must see overridden realm")
+	assert.Equal(t, "oc2", gotActionEnv.Realm, "restart action must see overridden realm")
 
 	// terminate — same shape, different action seam.
 	gotActionEnv = models.Environment{}
@@ -606,7 +606,7 @@ func TestIntegration_MutationTools_RegisteredInListTools(t *testing.T) {
 	}
 	for _, name := range []string{
 		"cordon_node", "uncordon_node", "drain_node",
-		"reboot_node", "terminate_node",
+		"restart_node", "terminate_node",
 		"scale_gpu_pool", "delete_dac",
 		"restart_inference_service", "delete_inference_service", "set_tenant",
 	} {

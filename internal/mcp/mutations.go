@@ -176,7 +176,7 @@ type drainNodeResult struct {
 	Drain k8s.DrainStatus `json:"drain"`
 }
 
-type rebootNodeInput struct {
+type restartNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
 	OCID string `json:"ocid,omitempty" jsonschema:"skip k8s lookup and target this instance OCID directly"`
 	confirmGate
@@ -325,8 +325,8 @@ func (s *Server) handleDrainStatus(ctx context.Context, req *sdk.CallToolRequest
 	return &sdk.CallToolResult{}, status, nil
 }
 
-func (s *Server) handleRebootNode(ctx context.Context, req *sdk.CallToolRequest, in rebootNodeInput) (*sdk.CallToolResult, mutationResult, error) {
-	return s.handleMutation("reboot", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
+func (s *Server) handleRestartNode(ctx context.Context, req *sdk.CallToolRequest, in restartNodeInput) (*sdk.CallToolResult, mutationResult, error) {
+	return s.handleMutation("restart", "node", in.Node, in.Confirm, in.envOverride, func(env models.Environment) error {
 		node, err := mcpResolveGPUNodeFn(ctx, s, env, in.Node, in.OCID)
 		if err != nil {
 			return err
@@ -497,9 +497,9 @@ func registerMutationTools(s *Server) {
 	}, s.handleDrainStatus)
 
 	sdk.AddTool(s.server, &sdk.Tool{
-		Name:        "reboot_node",
+		Name:        "restart_node",
 		Description: "Soft-reset the OCI instance backing a GPU node. Fire-and-forget." + mutationToolFooter,
-	}, s.handleRebootNode)
+	}, s.handleRestartNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "terminate_node",

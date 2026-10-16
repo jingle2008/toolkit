@@ -113,14 +113,14 @@ func TestDeleteItemActions(t *testing.T) {
 	}
 }
 
-func TestRebootNode_InvalidItem(t *testing.T) {
+func TestRestartNode_InvalidItem(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	if cmd := m.rebootNode(nil, nil); cmd != nil {
-		t.Fatal("expected nil cmd for nil reboot item")
+	if cmd := m.restartNode(nil, nil); cmd != nil {
+		t.Fatal("expected nil cmd for nil restart item")
 	}
-	if cmd := m.rebootNode("not-a-node", nil); cmd != nil {
-		t.Fatal("expected nil cmd for invalid reboot item type")
+	if cmd := m.restartNode("not-a-node", nil); cmd != nil {
+		t.Fatal("expected nil cmd for invalid restart item type")
 	}
 }
 

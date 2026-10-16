@@ -51,7 +51,7 @@ var resolveGPUPoolFn = func(ctx context.Context, cfg config.Config, env models.E
 // subcommand needs.
 //
 //   - needsKube=true  → cluster-scoped mutations (cordon, drain) and
-//     OCI mutations resolving a node by name without --ocid (reboot,
+//     OCI mutations resolving a node by name without --ocid (restart node,
 //     terminate without --ocid). Verifies the kubeconfig path is
 //     readable; the path itself is always populated by the persistent
 //     --kubeconfig flag's default (~/.kube/config), so the "missing

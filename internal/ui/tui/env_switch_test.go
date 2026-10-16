@@ -62,7 +62,7 @@ func TestActionResults_FromPreviousEnvLeaveRowsAlone(t *testing.T) {
 	assert.Equal(t, "RUNNING", m.dataset.GPUPools[0].Status)
 
 	m.handleCordonNodeResultMsg(cordonNodeResultMsg{key: nodeKey, state: true, env: otherEnv})
-	m.handleRebootNodeResultMsg(rebootNodeResultMsg{key: nodeKey, err: errors.New("boom"), env: otherEnv})
+	m.handleRestartNodeResultMsg(restartNodeResultMsg{key: nodeKey, err: errors.New("boom"), env: otherEnv})
 	m.handleDeleteDoneMsg(deleteDoneMsg{category: domain.GPUNode, key: nodeKey, env: otherEnv})
 	require.Len(t, m.dataset.GPUNodeMap["pool1"], 1, "not removed")
 	node := m.dataset.GPUNodeMap["pool1"][0]

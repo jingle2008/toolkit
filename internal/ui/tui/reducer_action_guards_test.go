@@ -24,7 +24,7 @@ func TestActionGuards_NilItem(t *testing.T) {
 
 	assert.Nil(t, m.cordonNode(nil, key), "cordon must not dispatch without an item")
 	assert.Nil(t, m.drainNode(nil, key), "drain must not dispatch without an item")
-	assert.Nil(t, m.rebootNode(nil, key), "reboot must not dispatch without an item")
+	assert.Nil(t, m.restartNode(nil, key), "restart must not dispatch without an item")
 	assert.Nil(t, m.scaleUpGPUPool(nil, key), "scale must not dispatch without an item")
 }
 
@@ -39,19 +39,19 @@ func TestActionGuards_WrongItemType(t *testing.T) {
 
 	assert.Nil(t, m.cordonNode(wrong, key))
 	assert.Nil(t, m.drainNode(wrong, key))
-	assert.Nil(t, m.rebootNode(wrong, key))
+	assert.Nil(t, m.restartNode(wrong, key))
 	assert.Nil(t, m.scaleUpGPUPool(wrong, key))
 }
 
-func TestRebootNode_AlreadyRebootingIsNoOp(t *testing.T) {
+func TestRestartNode_AlreadyRestartingIsNoOp(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	node := &models.GPUNode{Name: "node-a"}
-	node.SetStatus("Rebooting")
+	node.SetStatus("Restarting")
 
-	// Re-pressing the key while a reboot is in flight must not queue a
+	// Re-pressing the key while a restart is in flight must not queue a
 	// second SoftResetInstance for the same node.
-	assert.Nil(t, m.rebootNode(node, models.ItemKey("node-a")))
+	assert.Nil(t, m.restartNode(node, models.ItemKey("node-a")))
 }
 
 func TestDeleteGPUNode_ItemNotFound(t *testing.T) {

@@ -113,7 +113,7 @@ type drainNodeResultMsg struct {
 	err error
 }
 
-type rebootNodeResultMsg struct {
+type restartNodeResultMsg struct {
 	key models.ItemKey
 	err error
 	env models.Environment

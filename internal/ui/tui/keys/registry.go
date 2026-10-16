@@ -172,15 +172,9 @@ var (
 		key.WithKeys("r"),
 		key.WithHelp("<r>", "Refresh"),
 	)
-	// RebootNode is a key binding for rebooting a GPU node.
-	RebootNode = key.NewBinding(
-		key.WithKeys("R"),
-		key.WithHelp("<shift+r>", "Reboot Node"),
-	)
-	// RestartService is a key binding for rolling-restarting an
-	// InferenceService. It shares "R" with RebootNode; the two never
-	// appear in the same category context.
-	RestartService = key.NewBinding(
+	// Restart is a key binding for restarting the selected row: a GPU
+	// node's instance (soft reset) or an InferenceService (rolling restart).
+	Restart = key.NewBinding(
 		key.WithKeys("R"),
 		key.WithHelp("<shift+r>", "Restart"),
 	)
@@ -301,7 +295,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize, SortGPUs, ToggleFaulty, ScaleUp, Refresh},
 	},
 	domain.GPUNode: {
-		common.ListView: {Parent, GoTo, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, RebootNode, Delete},
+		common.ListView: {Parent, GoTo, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, Restart, Delete},
 	},
 	domain.GPUWorkload: {
 		common.ListView: {Parent, GoTo, SortTenant, SortGPUs, SortAge, OpenMetrics, ToggleFaulty, Refresh},
@@ -313,7 +307,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {Parent, GoTo, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
 	},
 	domain.InferenceService: {
-		common.ListView: {Parent, GoTo, SortTenant, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh, RestartService, Delete},
+		common.ListView: {Parent, GoTo, SortTenant, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh, Restart, Delete},
 	},
 	domain.ImportedModel: {
 		common.ListView: {Parent, GoTo, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},
