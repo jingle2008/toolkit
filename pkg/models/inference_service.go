@@ -20,8 +20,10 @@ type InferenceService struct {
 	Type      string `json:"type"`
 	TenantID  string `json:"tenantId,omitempty"`
 	Model     string `json:"model,omitempty"`
-	// ImportedModel is true when the model ref is a namespaced BaseModel
-	// (tenant-imported) rather than a ClusterBaseModel.
+	// ImportedModel is true when the endpoint serves a tenant-imported
+	// model rather than a shared-catalog one: a namespaced BaseModel ref,
+	// or a ClusterBaseModel ref whose name is an imported model's OCID (a
+	// tenant-labelled ClusterBaseModel).
 	ImportedModel bool   `json:"importedModel,omitempty"`
 	Runtime       string `json:"runtime,omitempty"`
 	MinReplicas   int    `json:"minReplicas"`

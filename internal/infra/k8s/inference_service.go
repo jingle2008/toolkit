@@ -93,12 +93,14 @@ func parseInferenceService(obj *unstructured.Unstructured) models.InferenceServi
 	}
 
 	return models.InferenceService{
-		Name:          obj.GetName(),
-		Namespace:     ns,
-		Type:          svcType,
-		TenantID:      obj.GetLabels()["tenancy-id"],
-		Model:         modelName,
-		ImportedModel: modelKind == namespacedBaseModelKind,
+		Name:      obj.GetName(),
+		Namespace: ns,
+		Type:      svcType,
+		TenantID:  obj.GetLabels()["tenancy-id"],
+		Model:     modelName,
+		// Imported whether referenced as a namespaced BaseModel or as a
+		// tenant-labelled ClusterBaseModel: the name (an OCID) says so.
+		ImportedModel: modelKind == namespacedBaseModelKind || models.IsImportedModelName(modelName),
 		Runtime:       runtime,
 		MinReplicas:   minReplicas,
 		MaxReplicas:   maxReplicas,

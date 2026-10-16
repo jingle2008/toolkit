@@ -313,13 +313,13 @@ Toolkit organises data into 22 categories:
 | Category | Description |
 |----------|-------------|
 | **BaseModel** | AI model definitions; supports faulty tracking. `Enter` lists the inference services serving the model (`y` opens details) |
-| **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label). `Enter` lists the inference services serving the model (`y` opens details) |
+| **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label). A model copied into several namespaces — its `default` library copy plus copies in DAC namespaces — is one row, with every copy listed under **Namespace**. `m` opens the metrics of the DAC serving the model; when several do, it asks which. `Enter` lists the inference services serving the model (`y` opens details) |
 | **ModelArtifact** | Model artifact versions |
 | **GPUPool** | OCI GPU instance pools; supports scaling |
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
 | **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode, or by DedicatedAICluster (the pods in its namespace) |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters; press `Enter` to see the inference services running on one |
-| **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). A `*` after the model marks a tenant-imported (namespaced `BaseModel`) model. **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty. Legacy `ome.oracle.com/v1alpha1` endpoints (on legacy DACs) are listed too and match `/legacy` |
+| **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty. Legacy `ome.oracle.com/v1alpha1` endpoints (on legacy DACs) are listed too and match `/legacy` |
 | **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty. `Enter` lists the inference services naming the runtime; with that scope active, `:gw` lists the pods running it, including endpoints whose runtime OME selected at deploy time (`y` opens details) |
 
 ### Meta

@@ -32,11 +32,11 @@ var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn
 		Render: func(_ string, w models.GPUWorkload) string { return w.Namespace },
 	},
 	{
-		Title: "Model", Key: "model", Ratio: 0.13,
+		Title: "Model", Key: "model", Ratio: 0.13, TruncateMiddle: true,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Model },
 	},
 	{
-		Title: "Runtime", Key: "runtime", Ratio: 0.17,
+		Title: "Runtime", Key: "runtime", Ratio: 0.17, TruncateMiddle: true,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Runtime },
 	},
 	{

@@ -28,7 +28,8 @@ func TestInferenceServiceColumns(t *testing.T) {
 	}
 	want := map[string]string{
 		"name": "e1", "namespace": "amaaaaaadac1", "tenant": "acme",
-		"model": "amaaaaaam1*", "runtime": "vllm", "replicas": "1/3", "ready": "True", "age": "3d",
+		// No imported-model marker: the name alone (an OCID) says it.
+		"model": "amaaaaaam1", "runtime": "vllm", "replicas": "1/3", "ready": "True", "age": "3d",
 	}
 	for k, v := range want {
 		if got[k] != v {
@@ -38,8 +39,8 @@ func TestInferenceServiceColumns(t *testing.T) {
 	if export["tenant"] != "ocid1.tenancy.oc1..suffix1" {
 		t.Errorf("export tenant = %q", export["tenant"])
 	}
-	if export["model"] != "amaaaaaam1" {
-		t.Errorf("export model = %q, want the bare name", export["model"])
+	if _, ok := export["model"]; ok {
+		t.Error("model needs no export override: display and export are both the bare name")
 	}
 	if _, ok := got["type"]; ok {
 		t.Error("type column should be dropped (inferable from tenant/namespace)")
@@ -63,6 +64,17 @@ func TestInferenceServiceColumns_OnDemandTenantBlank(t *testing.T) {
 		}
 		if v := c.RenderForExport("oc1", "", "embed-v4", od); v != "" {
 			t.Errorf("on-demand tenant export = %q, want blank", v)
+		}
+	}
+}
+
+// Model (imported models' OCIDs) and Runtime values share long prefixes,
+// so they truncate in the middle to keep the distinct tail visible.
+func TestInferenceServiceColumns_TruncateMiddle(t *testing.T) {
+	t.Parallel()
+	for _, c := range InferenceServiceColumns.Columns {
+		if (c.Key == "model" || c.Key == "runtime") && !c.TruncateMiddle {
+			t.Errorf("%s should truncate in the middle", c.Key)
 		}
 	}
 }

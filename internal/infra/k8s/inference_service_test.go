@@ -214,6 +214,30 @@ spec: {model: {kind: BaseModel, name: amaaaaaa-model}}
 			},
 		},
 		{
+			// A tenant-labelled ClusterBaseModel is imported too: its name
+			// is an imported model's OCID, though the ref kind is cluster-wide.
+			name: "tenant ClusterBaseModel ref is an imported model",
+			src: `
+metadata: {name: x, namespace: amaaaaaa-dac}
+spec: {model: {kind: ClusterBaseModel, name: amaaaaaa-tenant-cbm}}
+`,
+			check: func(t *testing.T, s models.InferenceService) {
+				t.Helper()
+				assert.True(t, s.ImportedModel)
+			},
+		},
+		{
+			name: "shared ClusterBaseModel ref is not imported",
+			src: `
+metadata: {name: x, namespace: amaaaaaa-dac}
+spec: {model: {kind: ClusterBaseModel, name: llama-3-3-70b-instruct}}
+`,
+			check: func(t *testing.T, s models.InferenceService) {
+				t.Helper()
+				assert.False(t, s.ImportedModel)
+			},
+		},
+		{
 			name: "missing Ready condition reads Unknown",
 			src: `
 metadata: {name: x, namespace: y}

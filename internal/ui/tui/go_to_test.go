@@ -69,6 +69,7 @@ func TestGoToPicker_NavigatesToChoice(t *testing.T) {
 	view := m.goToView()
 	assert.Contains(t, view, "> Tenant")
 	assert.Contains(t, view, "BaseModel           llama")
+	assert.Contains(t, view, "[enter] go")
 
 	_, _ = m.updateGoToView(tea.KeyMsg{Type: tea.KeyDown})
 	_, _ = m.updateGoToView(tea.KeyMsg{Type: tea.KeyEnter})

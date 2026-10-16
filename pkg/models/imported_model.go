@@ -1,6 +1,9 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // ImportedModel is a tenant-owned base model. Two sources feed this
 // category:
@@ -35,16 +38,60 @@ import "fmt"
 // alongside.
 type ImportedModel struct {
 	BaseModel
-	Namespace string  `json:"namespace,omitempty"`
-	TenantID  string  `json:"tenantId"`
-	Owner     *Tenant `json:"owner,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	// Copies lists the namespaces of further copies of the same model
+	// (same name, same tenant), sorted. A tenant's model lives in
+	// `default` and is copied into a DAC's namespace to be served there
+	// (a namespaced model ref resolves in the endpoint's own namespace);
+	// the copies are one model, so they are one row, with Namespace the
+	// primary copy (`default` when present). Empty for most models.
+	Copies   []string `json:"copies,omitempty"`
+	TenantID string   `json:"tenantId"`
+	Owner    *Tenant  `json:"owner,omitempty"`
+}
+
+// Namespaces returns the namespaces of every copy: Namespace, then Copies.
+func (m ImportedModel) Namespaces() []string {
+	if m.Namespace == "" && len(m.Copies) == 0 {
+		return nil
+	}
+	return append([]string{m.Namespace}, m.Copies...)
+}
+
+// DACNamespaces returns the namespaces of the copies that sit in a DAC's
+// namespace (named after the DAC's OCID) — one per dedicated AI cluster
+// serving the model. Empty when the model isn't deployed on a DAC; more
+// than one when several DACs serve it.
+func (m ImportedModel) DACNamespaces() []string {
+	var out []string
+	for _, ns := range m.Namespaces() {
+		if strings.HasPrefix(ns, ociResourceIDPrefix) {
+			out = append(out, ns)
+		}
+	}
+	return out
 }
 
 // FilterableFields extends BaseModel's filterable set with the
 // imported-specific identity fields so `--filter namespace-x` or
 // `--filter ocid1.tenancy.…` work without users knowing the source.
 func (m ImportedModel) FilterableFields() []string {
-	return append(m.BaseModel.FilterableFields(), m.Namespace, m.TenantID)
+	fields := append(m.BaseModel.FilterableFields(), m.Namespace, m.TenantID)
+	return append(fields, m.Copies...)
+}
+
+// ociResourceIDPrefix leads the OCID resource ids that name an imported
+// model and a DAC (and so the namespace named after a DAC). Shared-catalog
+// model names never carry it (checked on dp-prod-ord: none of 200
+// BaseModels does, all 253 ImportedModels do).
+const ociResourceIDPrefix = "amaaaaaa"
+
+// IsImportedModelName reports whether a model name is an imported model's
+// (an OCID resource id) rather than a shared-catalog name. This holds
+// whichever way the model is referenced: a namespaced BaseModel, or a
+// tenant-labelled ClusterBaseModel.
+func IsImportedModelName(name string) bool {
+	return strings.HasPrefix(name, ociResourceIDPrefix)
 }
 
 // TenancyOCID returns the full tenancy OCID for the ImportedModel by

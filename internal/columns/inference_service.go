@@ -29,18 +29,13 @@ var InferenceServiceColumns = GroupedSet[models.InferenceService]{Columns: []Gro
 		},
 	},
 	{
-		// A trailing * marks a tenant-imported (namespaced BaseModel) model.
-		Title: "Model", Key: "model", Ratio: 0.17,
-		Render: func(_ string, s models.InferenceService) string {
-			if s.ImportedModel {
-				return s.Model + "*"
-			}
-			return s.Model
-		},
-		RenderForExport: func(_, _ string, _ string, s models.InferenceService) string { return s.Model },
+		// Imported model names are OCID resource ids sharing a long
+		// prefix, so truncate in the middle to keep the distinct tail.
+		Title: "Model", Key: "model", Ratio: 0.17, TruncateMiddle: true,
+		Render: func(_ string, s models.InferenceService) string { return s.Model },
 	},
 	{
-		Title: "Runtime", Key: "runtime", Ratio: 0.17,
+		Title: "Runtime", Key: "runtime", Ratio: 0.17, TruncateMiddle: true,
 		Render: func(_ string, s models.InferenceService) string { return s.Runtime },
 	},
 	{

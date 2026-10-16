@@ -13,11 +13,16 @@ import (
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
-// goToOverlay holds the go-to-related picker: the rows the selected row
-// relates to, the highlighted one, and the view to restore on cancel.
+// goToOverlay holds a row picker: a title, the rows to choose from, the
+// highlighted one, what choosing does, and the view to restore. It backs
+// the go-to-related picker (g) and the DAC choice for an imported model's
+// metrics (m).
 type goToOverlay struct {
+	title      string
+	verb       string // what enter does, for the footer (e.g. "go")
 	targets    []domain.Scope
 	cursor     int
+	choose     func(domain.Scope) tea.Cmd
 	returnView common.ViewMode
 }
 
@@ -71,10 +76,17 @@ func (m *Model) openGoTo() tea.Cmd {
 	case 1:
 		return m.goTo(targets[0])
 	default:
-		m.goToPicker = goToOverlay{targets: targets, returnView: m.viewMode}
-		m.viewMode = common.GoToView
-		return nil
+		return m.openPicker("Go to", "go", targets, m.goTo)
 	}
+}
+
+// openPicker shows the row picker over targets; choose runs on enter.
+//
+//nolint:unparam // returns nil so callers can `return m.openPicker(...)`
+func (m *Model) openPicker(title, verb string, targets []domain.Scope, choose func(domain.Scope) tea.Cmd) tea.Cmd {
+	m.goToPicker = goToOverlay{title: title, verb: verb, targets: targets, choose: choose, returnView: m.viewMode}
+	m.viewMode = common.GoToView
+	return nil
 }
 
 // goTo navigates to t's category with t as the scope, so the list lands
@@ -105,10 +117,10 @@ func (m *Model) updateGoToView(msg tea.Msg) (tea.Model, tea.Cmd) {
 			g.cursor++
 		}
 	case km.String() == "enter":
-		t := g.targets[g.cursor]
+		t, choose := g.targets[g.cursor], g.choose
 		m.viewMode = g.returnView
 		m.goToPicker = goToOverlay{}
-		return m, m.goTo(t)
+		return m, choose(t)
 	case km.String() == "esc":
 		m.viewMode = g.returnView
 		m.goToPicker = goToOverlay{}
@@ -126,7 +138,7 @@ func (m *Model) goToView() string {
 		catWidth = max(catWidth, len(t.Category.String()))
 	}
 	lines := make([]string, 0, len(g.targets)+4)
-	lines = append(lines, "Go to", "")
+	lines = append(lines, g.title, "")
 	for i, t := range g.targets {
 		marker := "  "
 		if i == g.cursor {
@@ -134,7 +146,7 @@ func (m *Model) goToView() string {
 		}
 		lines = append(lines, fmt.Sprintf("%s%-*s  %s", marker, catWidth, t.Category, t.Name))
 	}
-	lines = append(lines, "", "[↑/↓] select   [enter] go   [esc] cancel")
+	lines = append(lines, "", fmt.Sprintf("[↑/↓] select   [enter] %s   [esc] cancel", g.verb))
 	width := 0
 	for _, l := range lines {
 		width = max(width, lipgloss.Width(l))

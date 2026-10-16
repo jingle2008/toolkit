@@ -56,7 +56,7 @@ var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Type },
 	},
 	{
-		Title: "Model", Key: "model", Ratio: 0.10,
+		Title: "Model", Key: "model", Ratio: 0.10, TruncateMiddle: true,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.ModelName },
 	},
 	{
