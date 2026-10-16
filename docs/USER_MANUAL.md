@@ -492,6 +492,15 @@ Select a node in the `GPUNode` category:
 | `r` | Refresh | Reload cluster data |
 | `Ctrl+Z` | Toggle Faulty | Show/hide faulty clusters |
 
+### Inference Services (`InferenceService`)
+
+| Key | Operation | Description |
+|-----|-----------|-------------|
+| `Shift+R` | Restart | Rolling-restart the selected endpoint (bumps `restartedAt`) |
+| `Ctrl+X` | Delete | Delete the selected endpoint if it is orphaned (its DAC no longer exists) |
+
+`Ctrl+X` checks the cluster before asking. An endpoint that isn't orphaned is refused with a toast saying why: shared endpoints and endpoints whose DAC still exists in any DAC API belong to the control plane (delete the DAC instead). For an orphan, the confirm modal names the action. **Delete** issues a normal delete. **Force-delete** applies when a deletion has been pending for over 10 minutes: the OME controller can't finalize an endpoint whose DAC or model is gone, so the deletion hangs on its `inferenceservice.finalizers` finalizer and the namespace stays `Terminating`; force-delete removes the finalizer. `Ctrl+Z` lists orphans, since they name a DAC that doesn't exist.
+
 ### Refreshing cluster-derived categories
 
 The `r` key reloads the current list from the live cluster. In addition

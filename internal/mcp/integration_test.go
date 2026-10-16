@@ -359,6 +359,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"scale_gpu_pool",
 		"delete_dac",
 		"restart_inference_service",
+		"delete_inference_service",
 		"set_tenant",
 	}
 	for _, name := range want {

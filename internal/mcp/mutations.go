@@ -32,6 +32,8 @@ var (
 	mcpDeleteDACFn        = actions.DeleteDedicatedAICluster
 	mcpResolveISVCFn      = k8s.ResolveInferenceService
 	mcpRestartISVCFn      = k8s.RestartInferenceService
+	mcpPlanOrphanISVCFn   = k8s.PlanOrphanInferenceServiceDelete
+	mcpDeleteOrphanISVCFn = k8s.DeleteOrphanInferenceService
 	mcpResolveGPUNodeFn   = func(ctx context.Context, s *Server, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 		return resolve.GPUNode(ctx, s.loader, s.cfg.KubeConfig, env, name, ocid)
 	}
@@ -207,6 +209,20 @@ type restartInferenceServiceInput struct {
 	envOverride
 }
 
+type deleteInferenceServiceInput struct {
+	Name      string `json:"name" jsonschema:"the InferenceService name (same as list_inference_services shows)"`
+	Namespace string `json:"namespace,omitempty" jsonschema:"the InferenceService namespace; omit to search all namespaces (the name must then be unique)"`
+	confirmGate
+	envOverride
+}
+
+// deleteInferenceServiceResult is the mutation envelope plus the
+// one-line outcome, which says when a follow-up force-delete applies.
+type deleteInferenceServiceResult struct {
+	mutationResult
+	Summary string `json:"summary"`
+}
+
 type setTenantInput struct {
 	OCID       string `json:"ocid" jsonschema:"the full tenancy OCID (the metadata entry key); must start with ocid1.tenancy."`
 	Name       string `json:"name" jsonschema:"friendly tenant name (required)"`
@@ -370,6 +386,40 @@ func (s *Server) handleRestartInferenceService(ctx context.Context, req *sdk.Cal
 	})
 }
 
+// handleDeleteInferenceService deletes an orphaned endpoint (its DAC is
+// gone). As for restart, the target is resolved — and here also checked
+// and planned — only once confirmed, so a refused call never touches the
+// cluster; the planned action (delete or force-delete) names the audited
+// mutation.
+func (s *Server) handleDeleteInferenceService(ctx context.Context, req *sdk.CallToolRequest, in deleteInferenceServiceInput) (*sdk.CallToolResult, deleteInferenceServiceResult, error) {
+	const kind = "inference_service"
+	action, target := "delete", in.Name
+	if in.Namespace != "" {
+		target = in.Namespace + "/" + in.Name
+	}
+	env := s.effectiveMutationEnv(action, kind, target, in.envOverride)
+	ns := in.Namespace
+	if in.Confirm {
+		resolved, err := mcpResolveISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Namespace, in.Name)
+		if err != nil {
+			return failTool[deleteInferenceServiceResult](action+" "+kind+"/"+target, err)
+		}
+		ns, target = resolved, resolved+"/"+in.Name
+		outcome, err := mcpPlanOrphanISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), ns, in.Name)
+		if err != nil {
+			return failTool[deleteInferenceServiceResult](action+" "+kind+"/"+target, err)
+		}
+		action = outcome.Action()
+	}
+	return runMutationToolWith(s, action, kind, target, in.Confirm, func() (deleteInferenceServiceResult, error) {
+		done, err := mcpDeleteOrphanISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), ns, in.Name)
+		if err != nil {
+			return deleteInferenceServiceResult{}, err
+		}
+		return deleteInferenceServiceResult{mutationResult: mutationOK(done.Action(), kind, target), Summary: done.Summary(target)}, nil
+	})
+}
+
 func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, in setTenantInput) (*sdk.CallToolResult, mutationResult, error) {
 	if strings.TrimSpace(in.Name) == "" {
 		return failTool[mutationResult]("set tenant", errors.New("name is required"))
@@ -471,6 +521,14 @@ func registerMutationTools(s *Server) {
 		Description: "Trigger a rolling restart of an OME InferenceService by bumping its restartedAt annotation. Fire-and-forget." +
 			" Omit namespace to search all namespaces; an ambiguous name is refused." + mutationToolFooter,
 	}, s.handleRestartInferenceService)
+
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name: "delete_inference_service",
+		Description: "Delete an orphaned OME InferenceService: a dedicated endpoint whose DAC no longer exists (doctor --relations reports it dangling)." +
+			" Refused for shared endpoints and for endpoints whose DAC exists (delete_dac owns those)." +
+			" An endpoint stuck deleting for over 10 minutes is force-deleted by removing its finalizer; summary says when a second call is needed." +
+			" Omit namespace to search all namespaces; an ambiguous name is refused. DESTRUCTIVE." + mutationToolFooter,
+	}, s.handleDeleteInferenceService)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name: "set_tenant",

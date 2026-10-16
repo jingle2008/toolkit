@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -80,6 +81,7 @@ func stubAllMutationSeams() (*bool, func()) {
 	oResolvePool, oInc, oDelDAC := mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn
 	oUpsert := mcpUpsertTenantFn
 	oResolveISVC, oRestartISVC := mcpResolveISVCFn, mcpRestartISVCFn
+	oPlanOrphan, oDeleteOrphan := mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn
 
 	mcpSetCordonFn = func(context.Context, string, string, string, bool) (bool, error) { mark(); return true, nil }
 	mcpStartDrainFn = func(context.Context, string, string, string) (k8s.DrainStatus, error) {
@@ -104,6 +106,14 @@ func stubAllMutationSeams() (*bool, func()) {
 	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error { mark(); return nil }
 	mcpResolveISVCFn = func(_ context.Context, _, _, namespace, _ string) (string, error) { mark(); return namespace, nil }
 	mcpRestartISVCFn = func(context.Context, string, string, string, string) error { mark(); return nil }
+	mcpPlanOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+		mark()
+		return k8s.OrphanDeleted, nil
+	}
+	mcpDeleteOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+		mark()
+		return k8s.OrphanDeleted, nil
+	}
 
 	return &called, func() {
 		mcpSetCordonFn, mcpStartDrainFn = oCordon, oDrain
@@ -111,6 +121,7 @@ func stubAllMutationSeams() (*bool, func()) {
 		mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn = oResolvePool, oInc, oDelDAC
 		mcpUpsertTenantFn = oUpsert
 		mcpResolveISVCFn, mcpRestartISVCFn = oResolveISVC, oRestartISVC
+		mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn = oPlanOrphan, oDeleteOrphan
 	}
 }
 
@@ -136,6 +147,7 @@ func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
 		{"scale_gpu_pool", map[string]any{"name": "pool-a"}},
 		{"delete_dac", map[string]any{"name": "dac-a"}},
 		{"restart_inference_service", map[string]any{"name": "isvc-a"}},
+		{"delete_inference_service", map[string]any{"name": "isvc-a"}},
 		{"set_tenant", map[string]any{"ocid": "ocid1.tenancy.oc1..aaaa", "name": "Acme"}},
 	}
 
@@ -596,7 +608,7 @@ func TestIntegration_MutationTools_RegisteredInListTools(t *testing.T) {
 		"cordon_node", "uncordon_node", "drain_node",
 		"reboot_node", "terminate_node",
 		"scale_gpu_pool", "delete_dac",
-		"restart_inference_service", "set_tenant",
+		"restart_inference_service", "delete_inference_service", "set_tenant",
 	} {
 		assert.True(t, got[name], "tools/list missing mutation tool %q", name)
 	}
@@ -770,6 +782,65 @@ func TestIntegration_RestartInferenceService_ResolveErrorSkipsPatch(t *testing.T
 	assert.True(t, res.IsError)
 	assert.False(t, patched, "ambiguous name must not be patched")
 	assert.Contains(t, resultText(t, res), "multiple namespaces")
+}
+
+func TestIntegration_DeleteInferenceService_PlansThenDeletes(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	oResolve, oPlan, oDelete := mcpResolveISVCFn, mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn
+	t.Cleanup(func() { mcpResolveISVCFn, mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn = oResolve, oPlan, oDelete })
+
+	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) { return "ns-resolved", nil }
+	mcpPlanOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+		return k8s.OrphanFinalized, nil
+	}
+	var deletedNS, deletedName string
+	mcpDeleteOrphanISVCFn = func(_ context.Context, _, _, namespace, name string) (k8s.OrphanDeleteOutcome, error) {
+		deletedNS, deletedName = namespace, name
+		return k8s.OrphanFinalized, nil
+	}
+
+	clientSess := newTestPair(ctx, t, stubLoader{})
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "delete_inference_service",
+		Arguments: map[string]any{"name": "isvc-a", "confirm": true},
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError, "expected success: %s", resultText(t, res))
+	assert.Equal(t, "ns-resolved", deletedNS)
+	assert.Equal(t, "isvc-a", deletedName)
+	assertMutationOK(t, res, "force-delete", "inference_service", "ns-resolved/isvc-a")
+	assert.Equal(t, "force-deleted ns-resolved/isvc-a: finalizer removed", structured(t, res)["summary"])
+}
+
+// A target that isn't an orphan is refused at planning: nothing is deleted.
+func TestIntegration_DeleteInferenceService_RefusalSkipsDelete(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+
+	oResolve, oPlan, oDelete := mcpResolveISVCFn, mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn
+	t.Cleanup(func() { mcpResolveISVCFn, mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn = oResolve, oPlan, oDelete })
+
+	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) { return "ns-a", nil }
+	mcpPlanOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+		return "", fmt.Errorf("%w: its DAC dac-1 exists (ome.io); delete the DAC instead", k8s.ErrNotOrphan)
+	}
+	deleted := false
+	mcpDeleteOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+		deleted = true
+		return "", nil
+	}
+
+	clientSess := newTestPair(ctx, t, stubLoader{})
+	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "delete_inference_service",
+		Arguments: map[string]any{"name": "isvc-a", "confirm": true},
+	})
+	require.NoError(t, err)
+	assert.True(t, res.IsError)
+	assert.False(t, deleted, "a refused target must not be deleted")
+	assert.Contains(t, resultText(t, res), "delete the DAC instead")
 }
 
 func TestIntegration_DrainNode_ReturnsAtOnceAndDrivesInBackground(t *testing.T) {
