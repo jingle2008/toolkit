@@ -241,6 +241,19 @@ func parentNames(ds *models.Dataset, cat domain.Category) (map[string]bool, bool
 	return set, true
 }
 
+// ParentRowMissing reports whether parent has rows loaded and none is
+// named name. A category not loaded yet, or loaded with no rows, can't
+// rule a name out, so it reports false; so does a category that parents
+// nothing.
+func ParentRowMissing(ds *models.Dataset, parent domain.Category, name string) bool {
+	list, ok := parentNameSets[parent]
+	if !ok || ds == nil {
+		return false
+	}
+	ns := list(ds)
+	return len(ns) > 0 && !slices.Contains(ns, name)
+}
+
 // CheckIntegrity checks every relation in the domain registry against ds,
 // which must have every category loaded and tenant owners resolved: a row
 // whose key names a parent row that doesn't exist is dangling. Relations
