@@ -242,7 +242,8 @@ func TestGetTenants(t *testing.T) {
 		[]models.TenantMetadata{
 			{ID: "ocid1.tenancy.oc1..a", Name: &acme, IsInternal: &external, Note: &note},
 			{ID: "ocid1.tenancy.oc1..c"}, // metadata only, no name
-		})
+		},
+	)
 	assert.Equal(t, []models.Tenant{
 		{Name: "Acme", ID: "ocid1.tenancy.oc1..a", IsInternal: false, Note: "n"},
 		{Name: "ocid1.tenancy.oc1..b", ID: "ocid1.tenancy.oc1..b", IsInternal: true},

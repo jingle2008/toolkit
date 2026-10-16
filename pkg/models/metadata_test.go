@@ -14,7 +14,8 @@ func TestMetadata_Validate(t *testing.T) {
 	require.NoError(t, (&Metadata{Tenants: []TenantMetadata{
 		{ID: "a", Name: name("Acme")},
 		{ID: "b", Name: name("Beta")},
-		{ID: "c"}, {ID: "d", Name: name("")}, // unnamed entries don't collide
+		{ID: "c"},
+		{ID: "d", Name: name("")}, // unnamed entries don't collide
 	}}).Validate())
 
 	err := (&Metadata{Tenants: []TenantMetadata{
