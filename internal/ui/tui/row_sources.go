@@ -1,14 +1,12 @@
 package tui
 
 import (
-	"maps"
-	"slices"
-
 	"github.com/charmbracelet/bubbles/table"
 
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -40,35 +38,10 @@ type rowSource struct {
 	headers []header
 	find    func(*models.Dataset, models.ItemKey) any
 	// parents lists the categories this source can be scoped by — the
-	// keys of its parent-key map. TestRowSources_ParentKeysMatchRelations
+	// parents of its relations key set. TestRowSources_ParentKeysMatchRelations
 	// requires it to equal the domain relations into this category.
 	parents []domain.Category
 }
-
-// parentKey says how a grouped child row is matched to a parent scope,
-// comparing against Scope.Name (the parent row's first column). It has
-// two forms, and both filter:
-//
-//   - byGroup (of == nil): the row's storage group — the map key, e.g. a
-//     DAC's tenant. A nil of does NOT mean "match everything": it selects
-//     the single group keyed by the scope name. filterScopedGroups
-//     handles it as its own branch (a direct map lookup) rather than as
-//     a func returning the key, so the free-text filter keeps matching
-//     row fields only, exactly as before relations had keys.
-//   - byField (of != nil): a key read from the row itself, e.g. a
-//     workload's namespace for its DAC; rows are kept across all groups
-//     when of(row) == Scope.Name.
-type parentKey[T any] struct {
-	of func(T) string // nil selects byGroup; see above
-}
-
-// byGroup matches a grouped child row by its storage group key: only the
-// group named by the scope is listed.
-func byGroup[T any]() parentKey[T] { return parentKey[T]{} }
-
-// byField matches a child row by the key of returns for it: rows whose
-// key equals the scope name are listed, from whichever groups hold them.
-func byField[T any](of func(T) string) parentKey[T] { return parentKey[T]{of: of} }
 
 // flatSource builds a rowSource for a category backed by a flat
 // columns.Set. pick projects the dataset to the typed slice. The
@@ -82,26 +55,18 @@ func flatSource[T models.NamedFilterable](
 }
 
 // flatScopedSource is a flatSource whose rows are narrowed when a parent
-// scope is active. parents maps each parent category to the key a row
-// carries toward it (e.g. LimitRegionalOverride's GetName for
-// LimitDefinition); when rc.scope names one of them, only rows whose key
-// equals scope.Name are rendered. Keying on the scope's category (rather
-// than "any non-nil scope") keeps the unguarded export path from
-// filtering on an unrelated lingering scope.
+// scope is active, by the join keys in parents (see relations.Flat).
+// Keying on the scope's category (rather than "any non-nil scope") keeps
+// the unguarded export path from filtering on an unrelated lingering
+// scope.
 func flatScopedSource[T models.NamedFilterable](
 	cols columns.Set[T],
-	parents map[domain.Category]func(T) string,
+	parents relations.Flat[T],
 	pick func(*models.Dataset) []T,
 ) rowSource {
 	return rowSource{
 		rows: func(rc rowCtx) []table.Row {
-			var keep func(T) bool
-			if rc.scope != nil {
-				if of, ok := parents[rc.scope.Category]; ok {
-					name := rc.scope.Name
-					keep = func(it T) bool { return of(it) == name }
-				}
-			}
+			keep := parents.Keep(rc.scope)
 			items := pick(rc.dataset)
 			if rc.export {
 				return tuiRowsFlatForExport(cols, items, keep, rc.realm, rc.region, rc.filter, rc.faulty)
@@ -116,19 +81,18 @@ func flatScopedSource[T models.NamedFilterable](
 			}
 			return collections.FindByName(pick(d), name)
 		},
-		parents: slices.Sorted(maps.Keys(parents)),
+		parents: parents.Parents(),
 	}
 }
 
 // groupedSource is the grouped counterpart to flatSource. pick
-// projects the dataset to the typed group→items map; parents maps each
-// parent category to how a row is matched to it (see parentKey), e.g.
-// domain.Tenant: byGroup for DedicatedAICluster, whose map is keyed by
-// tenant. Filter/faulty/scope handling is shared between display and
-// export.
+// projects the dataset to the typed group→items map; parents is the
+// category's join keys (see relations.Grouped), e.g. tenant-keyed for
+// DedicatedAICluster. Filter/faulty/scope handling is shared between
+// display and export.
 func groupedSource[T models.NamedFilterable](
 	cols columns.GroupedSet[T],
-	parents map[domain.Category]parentKey[T],
+	parents relations.Grouped[T],
 	pick func(*models.Dataset) map[string][]T,
 ) rowSource {
 	return rowSource{
@@ -150,7 +114,7 @@ func groupedSource[T models.NamedFilterable](
 			}
 			return nil
 		},
-		parents: slices.Sorted(maps.Keys(parents)),
+		parents: parents.Parents(),
 	}
 }
 
@@ -196,24 +160,15 @@ var rowSources = map[domain.Category]rowSource{
 	// Tenancy overrides are grouped by tenant and named after their
 	// definition, so both parents match without a lookup.
 	domain.LimitTenancyOverride: groupedSource(columns.LimitTenancyOverrideColumns,
-		map[domain.Category]parentKey[models.LimitTenancyOverride]{
-			domain.Tenant:          byGroup[models.LimitTenancyOverride](),
-			domain.LimitDefinition: byField(models.LimitTenancyOverride.GetName),
-		},
+		relations.LimitTenancyOverride,
 		func(d *models.Dataset) map[string][]models.LimitTenancyOverride { return d.LimitTenancyOverrideMap }),
 	domain.ConsolePropertyTenancyOverride: groupedSource(columns.ConsolePropertyTenancyOverrideColumns,
-		map[domain.Category]parentKey[models.ConsolePropertyTenancyOverride]{
-			domain.Tenant:                    byGroup[models.ConsolePropertyTenancyOverride](),
-			domain.ConsolePropertyDefinition: byField(models.ConsolePropertyTenancyOverride.GetName),
-		},
+		relations.ConsolePropertyTenancyOverride,
 		func(d *models.Dataset) map[string][]models.ConsolePropertyTenancyOverride {
 			return d.ConsolePropertyTenancyOverrideMap
 		}),
 	domain.PropertyTenancyOverride: groupedSource(columns.PropertyTenancyOverrideColumns,
-		map[domain.Category]parentKey[models.PropertyTenancyOverride]{
-			domain.Tenant:             byGroup[models.PropertyTenancyOverride](),
-			domain.PropertyDefinition: byField(models.PropertyTenancyOverride.GetName),
-		},
+		relations.PropertyTenancyOverride,
 		func(d *models.Dataset) map[string][]models.PropertyTenancyOverride {
 			return d.PropertyTenancyOverrideMap
 		}),
@@ -222,21 +177,15 @@ var rowSources = map[domain.Category]rowSource{
 	// flat slice named after the owning definition, so they narrow by
 	// GetName.
 	domain.LimitRegionalOverride: flatScopedSource(columns.LimitRegionalOverrideColumns,
-		map[domain.Category]func(models.LimitRegionalOverride) string{
-			domain.LimitDefinition: models.LimitRegionalOverride.GetName,
-		},
+		relations.LimitRegionalOverride,
 		func(d *models.Dataset) []models.LimitRegionalOverride { return d.LimitRegionalOverrides }),
 	domain.ConsolePropertyRegionalOverride: flatScopedSource(columns.ConsolePropertyRegionalOverrideColumns,
-		map[domain.Category]func(models.ConsolePropertyRegionalOverride) string{
-			domain.ConsolePropertyDefinition: models.ConsolePropertyRegionalOverride.GetName,
-		},
+		relations.ConsolePropertyRegionalOverride,
 		func(d *models.Dataset) []models.ConsolePropertyRegionalOverride {
 			return d.ConsolePropertyRegionalOverrides
 		}),
 	domain.PropertyRegionalOverride: flatScopedSource(columns.PropertyRegionalOverrideColumns,
-		map[domain.Category]func(models.PropertyRegionalOverride) string{
-			domain.PropertyDefinition: models.PropertyRegionalOverride.GetName,
-		},
+		relations.PropertyRegionalOverride,
 		func(d *models.Dataset) []models.PropertyRegionalOverride { return d.PropertyRegionalOverrides }),
 	domain.BaseModel: flatSource(columns.BaseModelColumns,
 		func(d *models.Dataset) []models.BaseModel { return d.BaseModels }),
@@ -245,7 +194,7 @@ var rowSources = map[domain.Category]rowSource{
 	domain.ServingRuntime: flatSource(columns.ServingRuntimeTUIColumns,
 		func(d *models.Dataset) []models.ServingRuntime { return d.ServingRuntimes }),
 	domain.ImportedModel: groupedSource(columns.ImportedModelColumns,
-		map[domain.Category]parentKey[models.ImportedModel]{domain.Tenant: byGroup[models.ImportedModel]()},
+		relations.ImportedModel,
 		func(d *models.Dataset) map[string][]models.ImportedModel { return d.ImportedModelMap }),
 	// Grouped by model internal name, but not (yet) a relation: the
 	// BaseModel catalog covers few artifacts' models.
@@ -258,77 +207,19 @@ var rowSources = map[domain.Category]rowSource{
 	domain.GPUPool: flatSource(columns.GPUPoolColumns,
 		func(d *models.Dataset) []models.GPUPool { return d.GPUPools }),
 	domain.GPUNode: groupedSource(columns.GPUNodeColumns,
-		map[domain.Category]parentKey[models.GPUNode]{domain.GPUPool: byGroup[models.GPUNode]()},
+		relations.GPUNode,
 		func(d *models.Dataset) map[string][]models.GPUNode { return d.GPUNodeMap }),
 	// Workloads are grouped by node; a DAC's pods run in the namespace
 	// named after it.
 	domain.GPUWorkload: groupedSource(columns.GPUWorkloadColumns,
-		map[domain.Category]parentKey[models.GPUWorkload]{
-			domain.GPUNode:            byGroup[models.GPUWorkload](),
-			domain.DedicatedAICluster: byField(func(w models.GPUWorkload) string { return w.Namespace }),
-			domain.Tenant:             byField(func(w models.GPUWorkload) string { return ownerName(w.Owner) }),
-			domain.ServingRuntime:     byField(func(w models.GPUWorkload) string { return w.Runtime }),
-		},
+		relations.GPUWorkload,
 		func(d *models.Dataset) map[string][]models.GPUWorkload { return d.GPUWorkloadMap }),
 	domain.DedicatedAICluster: groupedSource(columns.DACColumns,
-		map[domain.Category]parentKey[models.DedicatedAICluster]{domain.Tenant: byGroup[models.DedicatedAICluster]()},
+		relations.DedicatedAICluster,
 		func(d *models.Dataset) map[string][]models.DedicatedAICluster { return d.DedicatedAIClusterMap }),
 	// Endpoints are grouped by namespace (the DAC ID for a dedicated one)
 	// and reference the model they serve.
 	domain.InferenceService: groupedSource(columns.InferenceServiceColumns,
-		map[domain.Category]parentKey[models.InferenceService]{
-			domain.DedicatedAICluster: byGroup[models.InferenceService](),
-			domain.BaseModel:          byField(sharedCatalogModel),
-			domain.ImportedModel:      byField(currentAPIModel),
-			domain.Tenant:             byField(func(s models.InferenceService) string { return ownerName(s.Owner) }),
-			domain.ServingRuntime:     byField(currentAPIRuntime),
-		},
+		relations.InferenceService,
 		func(d *models.Dataset) map[string][]models.InferenceService { return d.InferenceServiceMap }),
-}
-
-// sharedCatalogModel returns the BaseModel (ClusterBaseModel) an endpoint
-// serves, or "" when its model isn't in the shared catalog: a
-// tenant-imported model, or a legacy endpoint's legacy Model CR, which
-// could otherwise collide with a catalog name.
-func sharedCatalogModel(s models.InferenceService) string {
-	if s.ImportedModel || s.Legacy {
-		return ""
-	}
-	return s.Model
-}
-
-// currentAPIModel returns the model an ome.io endpoint serves, or "" for a
-// legacy endpoint (whose model is a legacy Model CR). Matching an
-// ImportedModel scope keys on the name alone, not on ImportedModel: an
-// imported model can also be a tenant-labelled ClusterBaseModel, which
-// endpoints reference with kind ClusterBaseModel (so ImportedModel is
-// false). Imported model names are OCIDs, so they can't collide with
-// shared-catalog names.
-func currentAPIModel(s models.InferenceService) string {
-	if s.Legacy {
-		return ""
-	}
-	return s.Model
-}
-
-// currentAPIRuntime returns the ClusterServingRuntime an ome.io endpoint
-// names, or "" for a legacy endpoint: its runtime is a legacy
-// ome.oracle.com runtime, which can share a name with an ome.io one (the
-// legacy content-moderator's gais-contentmoderate does on dp-prod-ord).
-func currentAPIRuntime(s models.InferenceService) string {
-	if s.Legacy {
-		return ""
-	}
-	return s.Runtime
-}
-
-// ownerName returns the resolved owning tenant's name, or "" when the
-// row's tenancy didn't resolve — such a row is under no tenant. The raw
-// tenancy-id is deliberately not used: it is an OCID suffix, never a
-// Tenant name.
-func ownerName(t *models.Tenant) string {
-	if t == nil {
-		return ""
-	}
-	return t.Name
 }

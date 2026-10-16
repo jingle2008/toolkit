@@ -250,3 +250,12 @@ func TestParseCategory_InferenceServiceShortAlias(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, InferenceService, cat)
 }
+
+func TestCategory_ScopedBy(t *testing.T) {
+	t.Parallel()
+	// Declaration order: the Tenant relations are declared first.
+	assert.Equal(t, []Category{Tenant, GPUNode, DedicatedAICluster, ServingRuntime}, GPUWorkload.ScopedBy())
+	assert.Equal(t, []Category{Tenant, DedicatedAICluster, BaseModel, ImportedModel, ServingRuntime}, InferenceService.ScopedBy())
+	assert.Equal(t, []Category{Tenant, LimitDefinition}, LimitTenancyOverride.ScopedBy())
+	assert.Nil(t, Tenant.ScopedBy())
+}

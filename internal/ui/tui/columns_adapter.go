@@ -6,6 +6,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -60,7 +61,7 @@ func tuiRowsFlatForExport[T models.NamedFilterable](s columns.Set[T], items []T,
 func tuiRowsGroupedWith[T models.NamedFilterable](
 	g columns.GroupedSet[T],
 	m map[string][]T,
-	parents map[domain.Category]parentKey[T],
+	parents relations.Grouped[T],
 	ctx *domain.Scope,
 	filter string,
 	faultyOnly bool,
@@ -70,7 +71,7 @@ func tuiRowsGroupedWith[T models.NamedFilterable](
 	if faultyOnly {
 		pred = faultyPred
 	}
-	matches := filterScopedGroups(m, parents, ctx, filter, pred)
+	matches := parents.Filter(m, ctx, filter, pred)
 	rows := make([]table.Row, 0)
 	for k, items := range matches {
 		for _, it := range items {
@@ -84,40 +85,13 @@ func tuiRowsGroupedWith[T models.NamedFilterable](
 	return rows
 }
 
-// filterScopedGroups applies the parent-scope gate, then filter and pred.
-// A scope whose category isn't one of parents doesn't narrow. A byGroup
-// parent selects the one group keyed by the scope name — the filter
-// then matches items only, as the key is fixed. A byField parent keeps
-// the items whose key equals the scope name, across all groups.
-func filterScopedGroups[T models.NamedFilterable](
-	m map[string][]T,
-	parents map[domain.Category]parentKey[T],
-	ctx *domain.Scope,
-	filter string,
-	pred func(T) bool,
-) map[string][]T {
-	if ctx == nil {
-		return collections.FilterMap(m, nil, nil, filter, pred)
-	}
-	pk, ok := parents[ctx.Category]
-	switch {
-	case !ok:
-		return collections.FilterMap(m, nil, nil, filter, pred)
-	case pk.of == nil:
-		return collections.FilterMap(m, &ctx.Name, nil, filter, pred)
-	default:
-		name := ctx.Name
-		return collections.FilterMapFunc(m, func(_ string, it T) bool { return pk.of(it) == name }, filter, pred)
-	}
-}
-
 // tuiRowsGrouped renders a grouped map, applying the parent-scope gate
 // before filter/faulty. Display-mode: every cell
 // uses the column's Render closure with the (group key, item) pair.
 func tuiRowsGrouped[T models.NamedFilterable](
 	g columns.GroupedSet[T],
 	m map[string][]T,
-	parents map[domain.Category]parentKey[T],
+	parents relations.Grouped[T],
 	ctx *domain.Scope,
 	filter string,
 	faultyOnly bool,
@@ -133,7 +107,7 @@ func tuiRowsGrouped[T models.NamedFilterable](
 func tuiRowsGroupedForExport[T models.NamedFilterable](
 	g columns.GroupedSet[T],
 	m map[string][]T,
-	parents map[domain.Category]parentKey[T],
+	parents relations.Grouped[T],
 	ctx *domain.Scope,
 	realm, region, filter string,
 	faultyOnly bool,

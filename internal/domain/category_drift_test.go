@@ -84,6 +84,7 @@ func TestScopeGraph_RoundTrips(t *testing.T) {
 	t.Parallel()
 	for _, r := range Relations() {
 		assert.Containsf(t, r.Parent.ScopedCategories(), r.Child, "%v: child not scoped by parent", r)
+		assert.Containsf(t, r.Child.ScopedBy(), r.Parent, "%v: parent missing from %s.ScopedBy()", r, r.Child)
 		if r.Kind == Contains {
 			assert.Containsf(t, r.Child.Parents(), r.Parent, "%v: parent missing from %s.Parents()", r, r.Child)
 		} else {
