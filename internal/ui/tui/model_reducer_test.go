@@ -248,7 +248,7 @@ func TestGetCompartmentID_FromDataset(t *testing.T) {
 		"pool": {{CompartmentID: "ocid1.compartment"}},
 	}
 
-	got, err := m.lookupCompartmentID(context.Background())
+	got, err := lookupCompartmentID(context.Background(), m.knownCompartmentID(), "", m.environment)
 	if err != nil {
 		t.Fatalf("lookupCompartmentID error: %v", err)
 	}

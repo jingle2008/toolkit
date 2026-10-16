@@ -86,7 +86,7 @@ For **mutation** tools, env overrides are off by default — the operator's star
 
 ## 2. GPU node maintenance window
 
-The TUI exposes cordon/drain/reboot via keyboard shortcuts; the CLI exposes them as scriptable subcommands so you can wrap them in change-management runbooks.
+The TUI exposes cordon/drain/restart via keyboard shortcuts; the CLI exposes them as scriptable subcommands so you can wrap them in change-management runbooks.
 
 ### Preview, then run
 
@@ -96,12 +96,12 @@ NODE=gpu-node-42
 # 1. Preview each step before touching anything.
 toolkit cordon  $NODE --dry-run
 toolkit drain   $NODE --dry-run
-toolkit reboot  $NODE --dry-run
+toolkit restart node $NODE --dry-run
 
 # 2. Execute. -y skips the interactive prompt for runbook automation.
 toolkit cordon  $NODE -y
 toolkit drain   $NODE -y
-toolkit reboot  $NODE -y
+toolkit restart node $NODE -y
 
 # 3. Wait for the node to come back. `get gpunode` reflects live status —
 #    isReady is the bool we want; the human-readable status string (from
@@ -143,7 +143,7 @@ Typical output (pretty-printed):
 
 If you've wired MCP per Recipe 1, ask the agent:
 
-> Drain gpu-node-42, reboot it, and re-enable scheduling once it's back. Don't do anything until I say "confirm".
+> Drain gpu-node-42, restart it, and re-enable scheduling once it's back. Don't do anything until I say "confirm".
 
 The agent will call `cordon_node`, `drain_node`, etc. — but each call requires `confirm: true`. Without it, the call refuses, logs the refusal, and returns an error explaining that `confirm=true` is required. You can preview the plan before authorizing the destructive set.
 

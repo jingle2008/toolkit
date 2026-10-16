@@ -14,7 +14,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-func TestRebootCmd_DryRun_DoesNotCallOCI(t *testing.T) {
+func TestRestartNodeCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageMutationEnv(t)
 	called := false
 	defer swap(&softResetInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
@@ -22,19 +22,19 @@ func TestRebootCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 		return nil
 	})()
 
-	out, err := runRootCmd(t, []string{"reboot", "node-a", "--ocid", "ocid1.instance.fake", "--dry-run"}, "")
+	out, err := runRootCmd(t, []string{"restart", "node", "node-a", "--ocid", "ocid1.instance.fake", "--dry-run"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if called {
 		t.Fatal("--dry-run must not call OCI")
 	}
-	if !strings.Contains(out, "DRY-RUN: would reboot node/node-a") {
+	if !strings.Contains(out, "DRY-RUN: would restart node/node-a") {
 		t.Errorf("expected DRY-RUN line, got: %q", out)
 	}
 }
 
-func TestRebootCmd_OcidBypassesResolver(t *testing.T) {
+func TestRestartNodeCmd_OcidBypassesResolver(t *testing.T) {
 	// Stage env WITHOUT a kubeconfig — the --ocid path must not need
 	// it. Only env triple is required.
 	t.Setenv("HOME", t.TempDir())
@@ -56,7 +56,7 @@ func TestRebootCmd_OcidBypassesResolver(t *testing.T) {
 		return nil
 	})()
 
-	if _, err := runRootCmd(t, []string{"reboot", "node-a", "--ocid", "ocid1.instance.fake", "-y"}, ""); err != nil {
+	if _, err := runRootCmd(t, []string{"restart", "node", "node-a", "--ocid", "ocid1.instance.fake", "-y"}, ""); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if resolverCalled {
@@ -67,7 +67,7 @@ func TestRebootCmd_OcidBypassesResolver(t *testing.T) {
 	}
 }
 
-func TestRebootCmd_NameResolvesViaCluster(t *testing.T) {
+func TestRestartNodeCmd_NameResolvesViaCluster(t *testing.T) {
 	stageMutationEnv(t)
 	defer swap(&resolveGPUNodeFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUNode, error) {
 		if name != "node-a" {
@@ -82,7 +82,7 @@ func TestRebootCmd_NameResolvesViaCluster(t *testing.T) {
 		return nil
 	})()
 
-	if _, err := runRootCmd(t, []string{"reboot", "node-a", "-y"}, ""); err != nil {
+	if _, err := runRootCmd(t, []string{"restart", "node", "node-a", "-y"}, ""); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if gotNode == nil || gotNode.ID != "ocid1.resolved" {
@@ -90,13 +90,13 @@ func TestRebootCmd_NameResolvesViaCluster(t *testing.T) {
 	}
 }
 
-func TestRebootCmd_ResolverNotFound(t *testing.T) {
+func TestRestartNodeCmd_ResolverNotFound(t *testing.T) {
 	stageMutationEnv(t)
 	defer swap(&resolveGPUNodeFn, func(context.Context, config.Config, models.Environment, string) (*models.GPUNode, error) {
 		return nil, errors.New("gpu node \"node-missing\" not found in any pool")
 	})()
 
-	_, err := runRootCmd(t, []string{"reboot", "node-missing", "-y"}, "")
+	_, err := runRootCmd(t, []string{"restart", "node", "node-missing", "-y"}, "")
 	if err == nil {
 		t.Fatal("expected error when node not found")
 	}

@@ -73,6 +73,7 @@ func TestHandleDeleteErrMsg_GPUNodeRestoresStatus(t *testing.T) {
 		err:      errors.New("boom"),
 		category: domain.GPUNode,
 		key:      models.ScopedItemKey{Scope: "pool1", Name: "node1"},
+		env:      m.environment,
 	}
 	msg.prevState = "OK"
 	m.handleDeleteErrMsg(msg)
@@ -96,6 +97,7 @@ func TestHandleDeleteDoneMsg_GPUNodeRemoved(t *testing.T) {
 	m.handleDeleteDoneMsg(deleteDoneMsg{
 		category: domain.GPUNode,
 		key:      models.ScopedItemKey{Scope: "pool1", Name: "node1"},
+		env:      m.environment,
 	})
 
 	if len(m.dataset.GPUNodeMap["pool1"]) != 0 {

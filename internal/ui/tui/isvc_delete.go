@@ -23,6 +23,7 @@ type isvcDeletePlannedMsg struct {
 	key     models.ItemKey
 	outcome k8s.OrphanDeleteOutcome
 	err     error
+	env     models.Environment
 }
 
 type isvcDeleteResultMsg struct {
@@ -41,18 +42,23 @@ func (m *Model) planDeleteInferenceService(itemKey models.ItemKey, item any) tea
 		return nil
 	}
 	namespace, name := svc.Namespace, svc.Name
+	env, kubeConfig := m.environment, m.kubeConfig
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		outcome, err := planOrphanISVCDeleteFn(ctx, m.kubeConfig, m.environment.KubeContext(), namespace, name)
-		return isvcDeletePlannedMsg{key: itemKey, outcome: outcome, err: err}
+		outcome, err := planOrphanISVCDeleteFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
+		return isvcDeletePlannedMsg{key: itemKey, outcome: outcome, err: err, env: env}
 	}
 }
 
 // handleISVCDeletePlannedMsg opens the confirm modal for an orphan, or
-// toasts the refusal. A plan that lands after the user moved on is
-// dropped rather than popping a modal over another view.
+// toasts the refusal. A plan that lands after the user moved on — another
+// view, category, or environment — is dropped rather than popping a modal
+// that would act on whatever now has that key.
 func (m *Model) handleISVCDeletePlannedMsg(msg isvcDeletePlannedMsg) tea.Cmd {
+	if !m.inCurrentEnv(msg.env) {
+		return nil
+	}
 	target := itemKeyString(msg.key)
 	if msg.err != nil {
 		return m.showToast(fmt.Sprintf("can't delete %s: %v", target, msg.err), toastError)
@@ -60,23 +66,7 @@ func (m *Model) handleISVCDeletePlannedMsg(msg isvcDeletePlannedMsg) tea.Cmd {
 	if m.category != domain.InferenceService || m.viewMode != common.ListView {
 		return nil
 	}
-	return m.requestConfirm(m.confirmDeleteInferenceService(msg.key, msg.outcome))
-}
-
-func (m *Model) confirmDeleteInferenceService(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmOverlay {
-	c := confirmOverlay{
-		tier:    tierIrreversible,
-		action:  "Delete",
-		kind:    "orphaned InferenceService",
-		target:  itemKeyString(itemKey),
-		warning: "Its DAC is gone. If it stays deleting, run again after 10m to force-delete.",
-		run:     func() tea.Cmd { return m.deleteOrphanInferenceService(itemKey) },
-	}
-	if outcome == k8s.OrphanFinalized {
-		c.action = "Force-delete"
-		c.warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
-	}
-	return c
+	return m.requestConfirm(m.confirmDelete(msg.key, msg.outcome))
 }
 
 // deleteOrphanInferenceService runs the delete; the delete re-checks the
@@ -89,10 +79,11 @@ func (m *Model) deleteOrphanInferenceService(itemKey models.ItemKey) tea.Cmd {
 	}
 	m.logger.Infow("action started", "action", "deleteOrphanInferenceService", "service", itemKeyString(itemKey))
 	namespace, name := svc.Namespace, svc.Name
+	kubeConfig, kubeContext := m.kubeConfig, m.environment.KubeContext()
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		outcome, err := deleteOrphanISVCFn(ctx, m.kubeConfig, m.environment.KubeContext(), namespace, name)
+		outcome, err := deleteOrphanISVCFn(ctx, kubeConfig, kubeContext, namespace, name)
 		return isvcDeleteResultMsg{key: itemKey, outcome: outcome, err: err}
 	}
 }

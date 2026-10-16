@@ -64,7 +64,7 @@ func TestHandleDatasetReloaded_MergesPreservingK8s(t *testing.T) {
 	}
 	m.handleDatasetReloaded(datasetReloadedMsg{Dataset: &models.Dataset{
 		Tenants: []models.Tenant{{Name: "new"}},
-	}})
+	}, env: m.environment})
 	require.Equal(t, "new", m.dataset.Tenants[0].Name, "repo field updated")
 	require.Len(t, m.dataset.BaseModels, 1, "k8s field preserved")
 }
@@ -83,7 +83,7 @@ func TestHandleDatasetReloaded_CachesMergeOnK8sCategory(t *testing.T) {
 	}
 	m.handleDatasetReloaded(datasetReloadedMsg{Dataset: &models.Dataset{
 		Tenants: []models.Tenant{{Name: "new"}},
-	}})
+	}, env: m.environment})
 	require.Equal(t, "new", m.dataset.Tenants[0].Name, "merge still applied while on a k8s category")
 	require.Len(t, m.dataset.BaseModels, 1, "k8s field preserved")
 }

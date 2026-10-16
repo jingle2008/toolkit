@@ -40,10 +40,15 @@ switchEnvironment makes env current, drops the realm-scoped data loaded for
 the previous one, records env as most recently used, and loads target in the
 new context.
 
-When target is the current category the switch happens in place: the scope
-and visible rows belong to the old context, and the old k8s watch dies with
-the load context updateCategoryCore cancels, so all three are cleared here
-(a category change clears the rows and watch state on its own).
+The scope always names a row of the old environment, so it's cleared
+whatever the target: navigation keeps a scope across the categories it
+scopes, so a DAC picked before the switch would otherwise still filter
+:gw and :is after it. When target is the current category the switch
+happens in place: the visible rows belong to the old context, and the old
+k8s watch dies with the load context updateCategoryCore cancels, so both
+are cleared here too (a category change clears them on its own).
+Results still in flight for the old environment are dropped on arrival
+(inCurrentEnv).
 */
 func (m *Model) switchEnvironment(env models.Environment, target domain.Category) tea.Cmd {
 	m.environment = env
@@ -52,8 +57,8 @@ func (m *Model) switchEnvironment(env models.Environment, target domain.Category
 	}
 	m.k8sVersion = ""
 	m.recentEnvs.Touch(env)
+	m.scope = nil
 	if target == m.category {
-		m.scope = nil
 		m.watch.k8sActive = false
 		m.watch.k8sTrigger = nil
 		m.applyRows(nil, nil, false)
@@ -63,6 +68,18 @@ func (m *Model) switchEnvironment(env models.Environment, target domain.Category
 		fetchKubeVersionCmd(m.kubeConfig, m.environment.KubeContext()),
 		m.saveRecentEnvsCmd(),
 	)
+}
+
+// inCurrentEnv reports whether a result produced for env still applies.
+// An action or reload can finish after the user switched environments,
+// and row keys repeat across them (GPU pool names, node IPs), so applying
+// it would mark or replace another environment's rows.
+func (m *Model) inCurrentEnv(env models.Environment) bool {
+	if env.Equals(m.environment) {
+		return true
+	}
+	m.logger.Debugw("dropping result from a previous environment", "env", env.KubeContext(), "current", m.environment.KubeContext())
+	return false
 }
 
 // quickSwitchBindings returns one help binding per occupied slot, in slot

@@ -46,11 +46,6 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	itemKey := itemKeyFrom(m.category, m.selectedRawRow())
 	item := findItem(m.dataset, m.category, itemKey)
-	if m.category == domain.InferenceService {
-		if cmd, ok := m.handleInferenceServiceActions(msg, itemKey, item); ok {
-			return cmd
-		}
-	}
 	switch {
 	case key.Matches(msg, keys.CopyTenant):
 		return m.copyTenantID(item)
@@ -65,28 +60,24 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.DrainNode):
 		return m.requestConfirm(m.confirmDrain(itemKey))
 	case key.Matches(msg, keys.Delete):
-		return m.requestConfirm(m.confirmDelete(itemKey))
-	case key.Matches(msg, keys.RebootNode):
-		return m.requestConfirm(m.confirmReboot(itemKey))
+		return m.requestDelete(itemKey, item)
+	case key.Matches(msg, keys.Restart):
+		return m.requestConfirm(m.confirmRestart(itemKey, item))
 	case key.Matches(msg, keys.ScaleUp):
 		return m.requestConfirm(m.confirmScale(itemKey))
 	}
 	return nil
 }
 
-// handleInferenceServiceActions handles the InferenceService keys that
-// share a binding with another category's action, so they are checked
-// before the generic switch: RestartService shares "R" with RebootNode,
-// and Delete runs the orphan check instead of the DAC/node confirm. ok is
-// false for any other key.
-func (m *Model) handleInferenceServiceActions(msg tea.KeyMsg, itemKey models.ItemKey, item any) (tea.Cmd, bool) {
-	switch {
-	case key.Matches(msg, keys.RestartService):
-		return m.requestConfirm(m.confirmRestart(itemKey, item)), true
-	case key.Matches(msg, keys.Delete):
-		return m.planDeleteInferenceService(itemKey, item), true
+// requestDelete starts ctrl+x. Only an orphaned InferenceService can be
+// deleted, and whether that's a delete or a force-delete depends on the
+// cluster, so it is checked first and the modal opens with the answer
+// (handleISVCDeletePlannedMsg); other categories confirm at once.
+func (m *Model) requestDelete(itemKey models.ItemKey, item any) tea.Cmd {
+	if m.category == domain.InferenceService {
+		return m.planDeleteInferenceService(itemKey, item)
 	}
-	return nil, false
+	return m.requestConfirm(m.confirmDelete(itemKey, ""))
 }
 
 // handleRefresh reloads the current category (re-establishing its k8s watch)
@@ -101,8 +92,9 @@ func (m *Model) handleRefresh() tea.Cmd {
 }
 
 func (m *Model) copyTenantID(item any) tea.Cmd {
+	env := m.environment
 	return func() tea.Msg {
-		actions.CopyTenantID(item, m.environment, m.logger)
+		actions.CopyTenantID(item, env, m.logger)
 		return nil
 	}
 }
@@ -115,13 +107,14 @@ func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey) tea.Cmd {
 	}
 
 	m.logger.Infow("action started", "action", "scaleUpGPUPool", "pool", itemKeyString(itemKey))
+	env := m.environment
 	return tea.Batch(
-		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey} },
+		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey, env: env} },
 		func() tea.Msg {
 			ctx, cancel := m.opCtx()
 			defer cancel()
-			err := actions.IncreasePoolSize(ctx, pool, m.environment, m.logger)
-			return gpuPoolScaleResultMsg{key: itemKey, err: err}
+			err := actions.IncreasePoolSize(ctx, pool, env, m.logger)
+			return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env}
 		},
 	)
 }
@@ -142,11 +135,12 @@ func (m *Model) cordonNode(item any, itemKey models.ItemKey) tea.Cmd {
 		return nil
 	}
 	m.logger.Infow("action started", "action", "toggleCordon", "node", itemKeyString(itemKey))
+	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		state, err := k8s.ToggleCordon(ctx, m.kubeConfig, m.environment.KubeContext(), node.Name)
-		return cordonNodeResultMsg{key: itemKey, state: state, err: err}
+		state, err := k8s.ToggleCordon(ctx, kubeConfig, env.KubeContext(), name)
+		return cordonNodeResultMsg{key: itemKey, state: state, err: err, env: env}
 	}
 }
 
@@ -161,11 +155,12 @@ func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 		return nil
 	}
 	m.logger.Infow("action started", "action", "drainNode", "node", itemKeyString(itemKey))
+	kubeConfig, kubeContext, name := m.kubeConfig, m.environment.KubeContext(), node.Name
 	drain := func() tea.Msg {
 		// Draining restarts single-replica services and waits for them to
 		// reschedule, which can take tens of minutes under its own internal
 		// timeouts; the 30s one-shot cap would abort it midway.
-		err := k8s.DrainNode(m.longOpCtx(), m.kubeConfig, m.environment.KubeContext(), node.Name)
+		err := k8s.DrainNode(m.longOpCtx(), kubeConfig, kubeContext, name)
 		return drainNodeResultMsg{key: itemKey, err: err}
 	}
 	return tea.Batch(m.showToast("draining "+itemKeyString(itemKey)+"…", toastInfo), drain)

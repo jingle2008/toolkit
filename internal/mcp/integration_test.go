@@ -354,7 +354,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"uncordon_node",
 		"drain_node",
 		"get_drain_status",
-		"reboot_node",
+		"restart_node",
 		"terminate_node",
 		"scale_gpu_pool",
 		"delete_dac",

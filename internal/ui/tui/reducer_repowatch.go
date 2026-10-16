@@ -61,7 +61,7 @@ func (m *Model) maybeStartRepoWatchCmd() tea.Cmd {
 // have changed its visible rows, so the recompute is skipped (the merged data
 // is still cached for when the user navigates to a repo category).
 func (m *Model) handleDatasetReloaded(msg datasetReloadedMsg) {
-	if msg.Dataset == nil {
+	if msg.Dataset == nil || !m.inCurrentEnv(msg.env) {
 		return
 	}
 	if m.dataset == nil {
@@ -78,7 +78,7 @@ func (m *Model) handleDatasetReloaded(msg datasetReloadedMsg) {
 // pool enrichment (task-neutral). The view is rebuilt only when GPU pools are
 // on screen.
 func (m *Model) handleGPUPoolsReloaded(msg gpuPoolsReloadedMsg) tea.Cmd {
-	if m.dataset == nil {
+	if m.dataset == nil || !m.inCurrentEnv(msg.env) {
 		return nil
 	}
 	m.dataset.GPUPools = msg.Items

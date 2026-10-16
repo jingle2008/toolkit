@@ -24,6 +24,8 @@ func (m *Model) deleteItem(itemKey models.ItemKey) tea.Cmd {
 		return m.deleteDedicatedAICluster(itemKey)
 	case domain.GPUNode:
 		return m.deleteGPUNode(itemKey)
+	case domain.InferenceService:
+		return m.deleteOrphanInferenceService(itemKey)
 	default:
 		// exhaustive
 	}
@@ -46,22 +48,25 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	prevState := dac.Status
 	dac.Status = "Deleting"
 	m.updateRows(false)
+	env := m.environment
 	return func() tea.Msg {
 		// DAC deletion is a multi-minute workflow with its own internal
 		// timeout; use longOpCtx so the 30s one-shot cap doesn't cancel it
 		// after endpoint deletion but before the cluster delete completes.
 		ctx := m.longOpCtx()
-		if err := actions.DeleteDedicatedAICluster(ctx, dac, m.environment, m.logger); err != nil {
+		if err := actions.DeleteDedicatedAICluster(ctx, dac, env, m.logger); err != nil {
 			return deleteErrMsg{
 				err:       err,
 				category:  domain.DedicatedAICluster,
 				key:       itemKey,
 				prevState: prevState,
+				env:       env,
 			}
 		}
 		return deleteDoneMsg{
 			category: domain.DedicatedAICluster,
 			key:      itemKey,
+			env:      env,
 		}
 	}
 }
@@ -78,52 +83,59 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 	}
 	node.SetStatus("Deleting")
 	m.updateRows(false)
+	env := m.environment
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		if err := actions.TerminateInstance(ctx, node, m.environment, m.logger); err != nil {
+		if err := actions.TerminateInstance(ctx, node, env, m.logger); err != nil {
 			return deleteErrMsg{
 				err:      err,
 				category: domain.GPUNode,
 				key:      itemKey,
+				env:      env,
 			}
 		}
 		return deleteDoneMsg{
 			category: domain.GPUNode,
 			key:      itemKey,
+			env:      env,
 		}
 	}
 }
 
-func (m *Model) rebootNode(item any, itemKey models.ItemKey) tea.Cmd {
+func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 	if item == nil {
-		m.logger.Errorw("no item selected for reboot operation", "category", m.category)
+		m.logger.Errorw("no item selected for restart operation", "category", m.category)
 		return nil
 	}
 
 	node, ok := item.(*models.GPUNode)
 	if !ok {
-		m.logger.Errorw("unsupported item type for reboot operation", "item", item)
+		m.logger.Errorw("unsupported item type for restart operation", "item", item)
 		return nil
 	}
 
-	if node.GetStatus() == "Rebooting" {
+	if node.GetStatus() == "Restarting" {
 		return nil
 	}
 	// optimistic UI
-	node.SetStatus("Rebooting")
+	node.SetStatus("Restarting")
 	m.updateRows(false)
 
+	env := m.environment
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		err := actions.SoftResetInstance(ctx, node, m.environment, m.logger)
-		return rebootNodeResultMsg{key: itemKey, err: err}
+		err := actions.SoftResetInstance(ctx, node, env, m.logger)
+		return restartNodeResultMsg{key: itemKey, err: err, env: env}
 	}
 }
 
 func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
 	m.logger.Errorw("failed to delete item", "key", msg.key, "error", msg.err)
+	if !m.inCurrentEnv(msg.env) {
+		return
+	}
 	item := findItem(m.dataset, msg.category, msg.key)
 
 	if dac, ok := item.(*models.DedicatedAICluster); ok {
@@ -139,6 +151,9 @@ func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
 }
 
 func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
+	if !m.inCurrentEnv(msg.env) {
+		return
+	}
 	removeItemFromDataset(m.dataset, msg.category, msg.key)
 
 	// update view if current
@@ -151,11 +166,29 @@ func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
 	}
 }
 
+// handleUpdateDoneMsg applies a GPU pool enrichment (updateGPUPoolState):
+// each current pool takes the enriched ID, actual size and status of the
+// snapshot pool of its name. A pool added since the snapshot keeps its
+// state until the next enrichment.
 func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
 	if msg.err != nil {
 		m.logger.Errorw("failed to update data", "category", msg.category, "error", msg.err)
-		for i := range m.dataset.GPUPools {
-			m.dataset.GPUPools[i].Status = "UNKNOWN"
+	}
+	if m.dataset == nil || !m.inCurrentEnv(msg.env) {
+		return
+	}
+	enriched := make(map[string]models.GPUPool, len(msg.pools))
+	for _, p := range msg.pools {
+		enriched[p.Name] = p
+	}
+	for i := range m.dataset.GPUPools {
+		pool := &m.dataset.GPUPools[i]
+		if msg.err != nil {
+			pool.Status = "UNKNOWN"
+			continue
+		}
+		if e, ok := enriched[pool.Name]; ok {
+			pool.ID, pool.ActualSize, pool.Status = e.ID, e.ActualSize, e.Status
 		}
 	}
 
@@ -166,6 +199,9 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
 }
 
 func (m *Model) handleGPUPoolScaleStartedMsg(msg gpuPoolScaleStartedMsg) {
+	if !m.inCurrentEnv(msg.env) {
+		return
+	}
 	item := findItem(m.dataset, domain.GPUPool, msg.key)
 	if pool, ok := item.(*models.GPUPool); ok && pool != nil {
 		pool.Status = "SCALING"
@@ -176,10 +212,15 @@ func (m *Model) handleGPUPoolScaleStartedMsg(msg gpuPoolScaleStartedMsg) {
 }
 
 func (m *Model) handleGPUPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
+	if msg.err != nil {
+		m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
+	}
+	if !m.inCurrentEnv(msg.env) {
+		return
+	}
 	item := findItem(m.dataset, domain.GPUPool, msg.key)
 	if pool, ok := item.(*models.GPUPool); ok && pool != nil {
 		if msg.err != nil {
-			m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
 			pool.Status = "FAILED"
 		} else {
 			// Optimistic success state until enrichment updates the pool
@@ -192,11 +233,15 @@ func (m *Model) handleGPUPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
 }
 
 func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) {
+	if msg.err != nil {
+		m.logger.Errorw("failed to toggle cordon state", "key", msg.key, "error", msg.err)
+	}
+	if !m.inCurrentEnv(msg.env) {
+		return
+	}
 	item := findItem(m.dataset, domain.GPUNode, msg.key)
 	if node, ok := item.(*models.GPUNode); ok && node != nil {
-		if msg.err != nil {
-			m.logger.Errorw("failed to toggle cordon state", "key", msg.key, "error", msg.err)
-		} else {
+		if msg.err == nil {
 			node.IsSchedulingDisabled = msg.state
 			// Clear transient status so GetStatus reflects current state
 			node.SetStatus("")
@@ -230,10 +275,11 @@ func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cm
 	}
 	m.logger.Infow("action started", "action", "restartInferenceService", "service", itemKeyString(itemKey))
 	namespace, name := svc.Namespace, svc.Name
+	kubeConfig, kubeContext := m.kubeConfig, m.environment.KubeContext()
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		err := restartInferenceServiceFn(ctx, m.kubeConfig, m.environment.KubeContext(), namespace, name)
+		err := restartInferenceServiceFn(ctx, kubeConfig, kubeContext, namespace, name)
 		return restartServiceResultMsg{key: itemKey, err: err}
 	}
 }
@@ -247,14 +293,19 @@ func (m *Model) handleRestartServiceResultMsg(msg restartServiceResultMsg) tea.C
 	return m.showToast("restart requested for "+target, toastInfo)
 }
 
-func (m *Model) handleRebootNodeResultMsg(msg rebootNodeResultMsg) {
+func (m *Model) handleRestartNodeResultMsg(msg restartNodeResultMsg) {
+	if msg.err != nil {
+		m.logger.Errorw("failed to restart node", "key", msg.key, "error", msg.err)
+	}
+	if !m.inCurrentEnv(msg.env) {
+		return
+	}
 	item := findItem(m.dataset, domain.GPUNode, msg.key)
 	if node, ok := item.(*models.GPUNode); ok && node != nil {
 		if msg.err != nil {
-			m.logger.Errorw("failed to reboot node", "key", msg.key, "error", msg.err)
 			node.SetStatus("FAILED")
 		} else {
-			// Clear transient "Rebooting" status to recompute via GetStatus()
+			// Clear transient "Restarting" status to recompute via GetStatus()
 			node.SetStatus("")
 		}
 	}

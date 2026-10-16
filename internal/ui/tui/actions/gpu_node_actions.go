@@ -31,7 +31,7 @@ type computeMgmtClient interface {
 	ListInstancePools(ctx context.Context, req core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error)
 }
 
-// SoftResetInstance performs a soft reset (reboot) of the given instance.
+// SoftResetInstance performs a soft reset (restart) of the given instance.
 func SoftResetInstance(
 	ctx context.Context,
 	node *models.GPUNode,
@@ -43,7 +43,7 @@ func SoftResetInstance(
 		return fmt.Errorf("failed to create compute client: %w", err)
 	}
 
-	logger.Infow("rebooting node", "id", node.ID, "name", node.Name)
+	logger.Infow("restarting node", "id", node.ID, "name", node.Name)
 	resp, err := client.InstanceAction(ctx, core.InstanceActionRequest{
 		InstanceId: common.String(node.ID),
 		Action:     core.InstanceActionActionSoftreset,
@@ -56,7 +56,7 @@ func SoftResetInstance(
 		return fmt.Errorf("failed to soft reset instance: %w, request id: %s", err, reqID)
 	}
 
-	logger.Infow("reboot request is submitted successfully", "id",
+	logger.Infow("restart request is submitted successfully", "id",
 		node.ID, "opc-request-id", resp.OpcRequestId)
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -19,7 +20,7 @@ type confirmTier int
 
 const (
 	// tierRecoverable actions can be undone or retried (cordon, drain,
-	// reboot, scale); a single y/N confirms.
+	// restart, scale); a single y/N confirms.
 	tierRecoverable confirmTier = iota
 	// tierIrreversible actions destroy state (delete DAC, terminate node);
 	// they require an explicit capital Y behind a DESTRUCTIVE warning.
@@ -73,9 +74,11 @@ func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
 
 // confirmDelete builds the irreversible overlay for the Delete key. The
 // action label and warning depend on the category: a DAC is deleted, a GPU
-// node's backing instance is terminated. run re-resolves nothing extra —
-// deleteItem already re-finds its target by key at execution time.
-func (m *Model) confirmDelete(itemKey models.ItemKey) confirmOverlay {
+// node's backing instance is terminated, an orphaned InferenceService is
+// deleted or — planned as k8s.OrphanFinalized — force-deleted (outcome is
+// the plan; empty for the other categories). run re-resolves nothing
+// extra — deleteItem already re-finds its target by key at execution time.
+func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmOverlay {
 	c := confirmOverlay{
 		tier:   tierIrreversible,
 		target: itemKeyString(itemKey),
@@ -85,6 +88,13 @@ func (m *Model) confirmDelete(itemKey models.ItemKey) confirmOverlay {
 	case domain.GPUNode:
 		c.action, c.kind = "Terminate", "node"
 		c.warning = "Boot volume destroyed. Cannot undo."
+	case domain.InferenceService:
+		c.action, c.kind = "Delete", "orphaned InferenceService"
+		c.warning = "Its DAC is gone. If it stays deleting, run again after 10m to force-delete."
+		if outcome == k8s.OrphanFinalized {
+			c.action = "Force-delete"
+			c.warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
+		}
 	default: // DedicatedAICluster
 		c.action, c.kind = "Delete", "DAC"
 		c.warning = "This is irreversible."
@@ -115,29 +125,27 @@ func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
 	}
 }
 
-func (m *Model) confirmReboot(itemKey models.ItemKey) confirmOverlay {
-	return confirmOverlay{
-		tier:   tierRecoverable,
-		action: "Reboot",
-		kind:   "node",
-		target: itemKeyString(itemKey),
-		run:    func() tea.Cmd { return m.rebootNode(findItem(m.dataset, m.category, itemKey), itemKey) },
-	}
-}
-
-// confirmRestart builds the recoverable overlay for an InferenceService
-// rolling restart. The warning surfaces the current Ready state so the
-// operator sees whether the endpoint is healthy before disrupting it.
+// confirmRestart builds the recoverable overlay for the Restart key: a GPU
+// node's instance is soft-reset, an InferenceService is rolling-restarted.
+// For an InferenceService the warning surfaces the current Ready state so
+// the operator sees whether the endpoint is healthy before disrupting it.
+// Other categories don't bind Restart.
 func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay {
 	c := confirmOverlay{
 		tier:   tierRecoverable,
 		action: "Restart",
-		kind:   "InferenceService",
 		target: itemKeyString(itemKey),
-		run:    func() tea.Cmd { return m.restartInferenceService(findItem(m.dataset, m.category, itemKey), itemKey) },
 	}
-	if svc, ok := item.(*models.InferenceService); ok && svc != nil {
-		c.warning = "Ready: " + svc.Ready
+	switch m.category {
+	case domain.GPUNode:
+		c.kind = "node"
+		c.run = func() tea.Cmd { return m.restartNode(findItem(m.dataset, m.category, itemKey), itemKey) }
+	default: // InferenceService
+		c.kind = "InferenceService"
+		c.run = func() tea.Cmd { return m.restartInferenceService(findItem(m.dataset, m.category, itemKey), itemKey) }
+		if svc, ok := item.(*models.InferenceService); ok && svc != nil {
+			c.warning = "Ready: " + svc.Ready
+		}
 	}
 	return c
 }

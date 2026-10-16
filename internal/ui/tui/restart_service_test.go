@@ -30,8 +30,8 @@ func newInferenceServiceModel(t *testing.T) *Model {
 
 func shiftR() tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'R'}} }
 
-// "R" is bound to both RebootNode and RestartService; in the
-// InferenceService category it must open the restart modal, never reboot.
+// "R" restarts the selected row; in the InferenceService category that is
+// a rolling restart of the endpoint.
 func TestShiftR_InInferenceService_OpensRestartConfirm(t *testing.T) {
 	t.Parallel()
 	m := newInferenceServiceModel(t)
@@ -46,7 +46,7 @@ func TestShiftR_InInferenceService_OpensRestartConfirm(t *testing.T) {
 	assert.Contains(t, m.confirmView(), "Ready: False", "recoverable modal renders the warning line")
 }
 
-func TestShiftR_InGPUNode_StillReboots(t *testing.T) {
+func TestShiftR_InGPUNode_RestartsNode(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.category = domain.GPUNode
@@ -56,7 +56,8 @@ func TestShiftR_InGPUNode_StillReboots(t *testing.T) {
 	m.updateRows(true)
 
 	m.handleItemActions(shiftR())
-	assert.Equal(t, "Reboot", m.confirm.action)
+	assert.Equal(t, "Restart", m.confirm.action)
+	assert.Equal(t, "node", m.confirm.kind)
 }
 
 //nolint:paralleltest // swaps the package-level restartInferenceServiceFn seam

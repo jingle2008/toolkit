@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -154,7 +155,7 @@ func TestConfirmDelete_TierByCategory(t *testing.T) {
 
 	m := newConfirmTestModel(t)
 	m.category = domain.DedicatedAICluster
-	dac := m.confirmDelete(key)
+	dac := m.confirmDelete(key, "")
 	assert.Equal(t, tierIrreversible, dac.tier)
 	assert.Equal(t, "Delete", dac.action)
 	assert.Equal(t, "DAC", dac.kind)
@@ -163,16 +164,24 @@ func TestConfirmDelete_TierByCategory(t *testing.T) {
 	assert.NotNil(t, dac.run)
 
 	m.category = domain.GPUNode
-	node := m.confirmDelete(key)
+	node := m.confirmDelete(key, "")
 	assert.Equal(t, tierIrreversible, node.tier)
 	assert.Equal(t, "Terminate", node.action)
 	assert.Equal(t, "node", node.kind)
+
+	m.category = domain.InferenceService
+	isvc := m.confirmDelete(key, k8s.OrphanDeleted)
+	assert.Equal(t, tierIrreversible, isvc.tier)
+	assert.Equal(t, "Delete", isvc.action)
+	assert.Equal(t, "orphaned InferenceService", isvc.kind)
+	assert.Equal(t, "Force-delete", m.confirmDelete(key, k8s.OrphanFinalized).action)
 }
 
 func TestConfirmRecoverableBuilders(t *testing.T) {
 	t.Parallel()
 	key := models.ScopedItemKey{Scope: "pool1", Name: "gpu-1"}
 	m := newConfirmTestModel(t)
+	m.category = domain.GPUNode
 
 	for _, tc := range []struct {
 		name   string
@@ -182,7 +191,7 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 	}{
 		{"cordon", m.confirmCordon(key), "Toggle cordon", "node"},
 		{"drain", m.confirmDrain(key), "Drain", "node"},
-		{"reboot", m.confirmReboot(key), "Reboot", "node"},
+		{"restart", m.confirmRestart(key, nil), "Restart", "node"},
 		{"scale", m.confirmScale(key), "Scale up", "GPU pool"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

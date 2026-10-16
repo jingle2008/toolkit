@@ -237,7 +237,7 @@ func reloadDatasetCmd(ctx context.Context, ld loader.Composite, repoPath string,
 			logger.Warnw("background dataset reload failed; keeping current data", "error", err)
 			return nil
 		}
-		return datasetReloadedMsg{Dataset: ds}
+		return datasetReloadedMsg{Dataset: ds, env: env}
 	}
 }
 
@@ -250,7 +250,7 @@ func reloadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string
 			logger.Warnw("background GPU pool reload failed; keeping current data", "error", err)
 			return nil
 		}
-		return gpuPoolsReloadedMsg{Items: items}
+		return gpuPoolsReloadedMsg{Items: items, env: env}
 	}
 }
 

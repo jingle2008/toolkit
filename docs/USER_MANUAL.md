@@ -461,7 +461,7 @@ Press `y` on any selected row to open the **Detail View**, which shows the full 
 
 Certain categories expose live infrastructure operations. These require Kubernetes or OCI credentials to be configured.
 
-> **Warning:** Operations like Drain, Reboot, and Delete are **irreversible**. Toolkit guards against duplicate in-flight requests automatically.
+> **Warning:** Drain and Restart disrupt running workloads, and Delete is **irreversible**. Toolkit guards against duplicate in-flight requests automatically.
 
 ### GPU Nodes (`GPUNode`)
 
@@ -471,7 +471,7 @@ Select a node in the `GPUNode` category:
 |-----|-----------|-------------|
 | `Shift+C` | Toggle Cordon | Mark node unschedulable / schedulable |
 | `Shift+D` | Drain | Evict all pods from the node |
-| `Shift+R` | Reboot | Soft-reset (reboot) the node |
+| `Shift+R` | Restart | Soft-reset (restart) the node's instance |
 | `Ctrl+X` | Delete | Terminate the node instance |
 | `r` | Refresh | Reload GPU node data |
 | `Ctrl+Z` | Toggle Faulty | Show/hide nodes flagged as faulty |
