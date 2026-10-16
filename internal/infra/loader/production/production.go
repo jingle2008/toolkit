@@ -31,6 +31,7 @@ type Client struct {
 	metadataFile    string
 	metadata        *models.Metadata
 	metadataLoadErr error // non-nil when an EXISTING metadata file failed to parse; blocks writes to avoid clobbering it
+	tenancy         *tenancyCache
 }
 
 // New returns a Client implementation for production use.
@@ -38,6 +39,7 @@ func New(ctx context.Context, metadataFile string) loader.Composite {
 	l := &Client{
 		metadataFile: metadataFile,
 		metadata:     &models.Metadata{},
+		tenancy:      newTenancyCache(),
 	}
 
 	if metadataFile != "" {
@@ -143,9 +145,27 @@ func (Client) LoadInferenceServices(ctx context.Context, kubeCfg string, env mod
 	return k8s.LoadInferenceServices(ctx, client)
 }
 
-// LoadTenancyOverrideGroup loads tenants and all tenancy override maps for a given realm.
+// LoadTenancyOverrideGroup loads tenants and all tenancy override maps
+// for a given realm. The result is cached until the override files or
+// the tenant metadata change (see tenancyCache), so callers share it and
+// must not modify it.
 func (l Client) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
-	return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, l.metadata)
+	fp, err := configloader.TenancyOverrideFingerprint(repo, env.Realm)
+	if err != nil {
+		logging.FromContext(ctx).Debugw("tenancy override fingerprint failed; loading uncached", "error", err)
+		return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, l.metadata)
+	}
+	key := tenancyCacheKey{repo: repo, realm: env.Realm}
+	metadata := l.metadata
+	if group, ok := l.tenancy.get(key, fp, metadata); ok {
+		return group, nil
+	}
+	group, err := configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, metadata)
+	if err != nil {
+		return models.TenancyOverrideGroup{}, err
+	}
+	l.tenancy.put(key, fp, metadata, group)
+	return group, nil
 }
 
 /*
