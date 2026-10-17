@@ -1,42 +1,38 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import tea "charm.land/bubbletea/v2"
 
-// namedKeys maps the key names tests press to their key types; anything
-// else is typed as runes.
-var namedKeys = map[string]tea.KeyType{
-	"esc":       tea.KeyEsc,
-	"enter":     tea.KeyEnter,
-	"tab":       tea.KeyTab,
-	"shift+tab": tea.KeyShiftTab,
-	"up":        tea.KeyUp,
-	"down":      tea.KeyDown,
-	"left":      tea.KeyLeft,
-	"right":     tea.KeyRight,
-	"home":      tea.KeyHome,
-	"end":       tea.KeyEnd,
-	"pgup":      tea.KeyPgUp,
-	"pgdown":    tea.KeyPgDown,
-	"backspace": tea.KeyBackspace,
-	"space":     tea.KeySpace,
-	" ":         tea.KeySpace,
-	"ctrl+a":    tea.KeyCtrlA,
-	"ctrl+c":    tea.KeyCtrlC,
-	"ctrl+o":    tea.KeyCtrlO,
-	"ctrl+x":    tea.KeyCtrlX,
-	"ctrl+z":    tea.KeyCtrlZ,
+// namedKeys maps the key names tests press to their key events; anything
+// else is typed as text.
+var namedKeys = map[string]tea.Key{
+	"esc":       {Code: tea.KeyEscape},
+	"enter":     {Code: tea.KeyEnter},
+	"tab":       {Code: tea.KeyTab},
+	"shift+tab": {Code: tea.KeyTab, Mod: tea.ModShift},
+	"up":        {Code: tea.KeyUp},
+	"down":      {Code: tea.KeyDown},
+	"left":      {Code: tea.KeyLeft},
+	"right":     {Code: tea.KeyRight},
+	"home":      {Code: tea.KeyHome},
+	"end":       {Code: tea.KeyEnd},
+	"pgup":      {Code: tea.KeyPgUp},
+	"pgdown":    {Code: tea.KeyPgDown},
+	"backspace": {Code: tea.KeyBackspace},
+	"space":     {Code: tea.KeySpace, Text: " "},
+	" ":         {Code: tea.KeySpace, Text: " "},
+	"ctrl+a":    {Code: 'a', Mod: tea.ModCtrl},
+	"ctrl+c":    {Code: 'c', Mod: tea.ModCtrl},
+	"ctrl+o":    {Code: 'o', Mod: tea.ModCtrl},
+	"ctrl+x":    {Code: 'x', Mod: tea.ModCtrl},
+	"ctrl+z":    {Code: 'z', Mod: tea.ModCtrl},
 }
 
 // keyPress builds the key event for s as the terminal would send it: a
 // named key ("esc", "ctrl+c", "shift+tab", ...) or typed text ("y",
-// "acme"). It is the only place tests build key events, so the bubbletea
-// v2 key API change lands here alone.
+// "acme"). It is the only place tests build key events.
 func keyPress(s string) tea.KeyMsg {
-	if t, ok := namedKeys[s]; ok {
-		if t == tea.KeySpace {
-			return tea.KeyMsg{Type: t, Runes: []rune{' '}}
-		}
-		return tea.KeyMsg{Type: t}
+	if k, ok := namedKeys[s]; ok {
+		return tea.KeyPressMsg(k)
 	}
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+	return tea.KeyPressMsg{Code: []rune(s)[0], Text: s}
 }

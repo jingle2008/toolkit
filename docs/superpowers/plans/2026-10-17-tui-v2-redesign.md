@@ -80,35 +80,39 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 ## Phase 3: v2 swap (behavior-preserving)
 
 ### Task 3.1: Dependencies and imports
-- [ ] Run `go get charm.land/bubbletea/v2@v2.1.0 charm.land/bubbles/v2@v2.2.1
+- [x] Run `go get charm.land/bubbletea/v2@v2.1.0 charm.land/bubbles/v2@v2.2.1
   charm.land/lipgloss/v2@v2.0.6 charm.land/glamour/v2@v2.0.1`.
-- [ ] Rewrite the imports in the 42 non-test and 38 test files, keeping local imports last.
-- [ ] Run `go mod tidy`. The v1 modules will still appear because the golangci-lint tools
+- [x] Rewrite the imports in the 42 non-test and 38 test files, keeping local imports last.
+- [x] Run `go mod tidy`. The v1 modules will still appear because the golangci-lint tools
   pull them in. That is expected.
 
 ### Task 3.2: API breaks
-- [ ] Root `View()` returns `tea.View` and sets `v.AltScreen = true`. Remove
+- [x] Root `View()` returns `tea.View` and sets `v.AltScreen = true`. Remove
   `tea.WithAltScreen()` from `internal/cli/root.go:222`.
-- [ ] Change `tea.KeyMsg` type assertions to `tea.KeyPressMsg` (18 sites). Update the
+- [x] Change `tea.KeyMsg` type assertions to `tea.KeyPressMsg` (18 sites). Update the
   `keyPress` helper to build `tea.KeyPressMsg{Code, Text, Mod}`.
-- [ ] viewport: replace `New(20, 20)` with `New(viewport.WithWidth(20),
+- [x] viewport: replace `New(20, 20)` with `New(viewport.WithWidth(20),
   viewport.WithHeight(20))` (`model_state.go:305,312`). Replace field assignments with
   `SetWidth`/`SetHeight` (`model_reducer.go:334-335`, `log_view.go:94-95`).
-- [ ] textinput: `ti.SetWidth(...)` (`model_view.go:110`).
-- [ ] help: `Width()`/`SetWidth()` (`model_view.go:233,239,240`).
-- [ ] stopwatch: `stopwatch.New(stopwatch.WithInterval(time.Second))` (`model_state.go:339`).
-- [ ] filepicker: switch from reading `Height` as a field to the method.
-- [ ] lipgloss: replace the 2 `AdaptiveColor` uses with `compat.AdaptiveColor`. Change the
-  `LogoTop`/`LogoBottom` hex build to `lipgloss.Color(hex)`.
-- [ ] glamour: swap the import path in `view/render.go`. `WithStandardStyle(styles.DarkStyle)`
+- [x] textinput: `ti.SetWidth(...)` (`model_view.go:110`).
+- [x] help: `Width()`/`SetWidth()` (`model_view.go:233,239,240`).
+- [x] stopwatch: `stopwatch.New(stopwatch.WithInterval(time.Second))` (`model_state.go:339`).
+- [x] filepicker: switch from reading `Height` as a field to the method.
+- [x] lipgloss: replace the 2 `AdaptiveColor` uses with `lipgloss.LightDark(isDark)`, with
+  `DefaultStyles(isDark)` rebuilt on `tea.BackgroundColorMsg`, which `Init` requests.
+  *(Deviation: `compat.AdaptiveColor` was dropped. It queries the terminal at package
+  init, which every CLI command would pay for, since `internal/cli` imports the TUI.)*
+- [x] lipgloss: `Style.Width` now counts the border. Bordered boxes go through
+  `boxWidth(style, w)` to keep their v1 outer width.
+- [x] glamour: swap the import path in `view/render.go`. `WithStandardStyle(styles.DarkStyle)`
   stays.
 
 ### Task 3.3: Keep v1 behavior
-- [ ] Unbind the viewport `Left`/`Right` keys (`h`/`l`) in both viewports (details and log).
+- [x] Unbind the viewport `Left`/`Right` keys (`h`/`l`) in both viewports (details and log).
   Add a test that `h` in DetailsView opens Help.
-- [ ] Configure the textinput cursor to look the same as v1. Goldens catch any drift.
-- [ ] Don't set `KeyboardEnhancements`.
-- [ ] Goldens must stay **byte-identical**. Run `go test ./...` and `make ci`, and run the
+- [x] Configure the textinput cursor to look the same as v1. Goldens catch any drift.
+- [x] Don't set `KeyboardEnhancements`.
+- [x] Goldens must stay **byte-identical**. Run `go test ./...` and `make ci`, and run the
   app by hand at 80×24.
 
 ## Phase 4: Theme roles

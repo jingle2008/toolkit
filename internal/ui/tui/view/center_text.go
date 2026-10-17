@@ -4,7 +4,7 @@ Package view provides utilities for rendering and centering text in the TUI.
 package view
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // CenterText centers the given text within the specified width and height.

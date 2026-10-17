@@ -102,10 +102,10 @@ func TestLiveIndicator_ShowsOnRepoCategory(t *testing.T) {
 	m.viewWidth, m.viewHeight = 100, 20
 	m.category = domain.Tenant // repo-backed: NeedsKubeConfig() == false
 	m.watch.repoActive = true
-	require.True(t, strings.Contains(m.View(), "LIVE"),
+	require.True(t, strings.Contains(m.render(), "LIVE"),
 		"a repo-backed category with repoWatching must show the live indicator")
 
 	m.watch.repoActive = false
-	require.False(t, strings.Contains(m.View(), "LIVE"),
+	require.False(t, strings.Contains(m.render(), "LIVE"),
 		"no indicator when the repo watch is not established")
 }

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/table"
+	"charm.land/bubbles/v2/table"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -25,6 +25,7 @@ func TestApplyRows_AutoSelect_ScrollsTargetFullyIntoView(t *testing.T) {
 	// SetHeight re-render doesn't index the new single column past its width.
 	table.WithColumns([]table.Column{{Title: "Name", Width: 20}})(m.table)
 	table.WithRows(nil)(m.table)
+	m.table.SetWidth(20) // v2 viewports render nothing at width 0
 	m.table.SetHeight(7) // header (2 lines) + ~5 visible rows
 
 	// 30 rows: row-00 .. row-29. Zero-padded so no name is a substring of

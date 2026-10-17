@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -24,7 +24,7 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.showToast(err.Error(), toastError)
 	}
 
-	keyMsg, isKeyMsg := msg.(tea.KeyMsg)
+	keyMsg, isKeyMsg := msg.(tea.KeyPressMsg)
 	if isKeyMsg {
 		switch {
 		case key.Matches(keyMsg, keys.ExportCSV), key.Matches(keyMsg, keys.Back):
@@ -68,7 +68,7 @@ func (m *Model) exportView() string {
 	s.WriteString("\n\nPick an export path:\n\n")
 	s.WriteString(m.dirPicker.View() + "\n")
 	s.WriteString(m.exportHelpView())
-	return m.theme.HelpBorder.Width(m.viewWidth * 4 / 5).Render(s.String())
+	return boxWidth(m.theme.HelpBorder, m.viewWidth*4/5).Render(s.String())
 }
 
 func (m *Model) exportHelpView() string {

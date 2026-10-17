@@ -6,10 +6,10 @@ package tui
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/stopwatch"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/stopwatch"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -24,6 +24,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.onResize(msg)
+	case tea.BackgroundColorMsg:
+		setStyles(m, DefaultStyles(msg.IsDark()))
+		return m, nil
 	case errMsg:
 		return m, m.handleErrMsg(msg)
 	case toastExpireMsg:
@@ -130,7 +133,7 @@ func (m *Model) onResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 // return view, and arms the live-refresh tick. Returns (model, cmd, true) on
 // intercept, (m, nil, false) otherwise.
 func (m *Model) interceptToggleLog(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
-	km, ok := msg.(tea.KeyMsg)
+	km, ok := msg.(tea.KeyPressMsg)
 	if !ok || !key.Matches(km, keys.ToggleLog) {
 		return m, nil, false
 	}

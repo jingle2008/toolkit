@@ -10,14 +10,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/charmbracelet/bubbles/filepicker"
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/stopwatch"
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/filepicker"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/stopwatch"
+	"charm.land/bubbles/v2/table"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	"charm.land/lipgloss/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
@@ -219,9 +219,11 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 	return m, nil
 }
 
-// initStyles initializes all style fields for the model using shared style definitions.
+// initStyles initializes all style fields for the model using shared style
+// definitions. It assumes a dark background until the terminal reports its
+// color (tea.BackgroundColorMsg, requested in Init).
 func initStyles(m *Model) {
-	setStyles(m, DefaultStyles())
+	setStyles(m, DefaultStyles(true))
 }
 
 // setStyles applies a Styles set to the model's theme.
@@ -302,14 +304,16 @@ func setDefaults(m *Model) {
 		m.textInput = &ti
 	}
 	if m.viewport == nil {
-		vp := viewport.New(20, 20)
+		vp := viewport.New(viewport.WithWidth(20), viewport.WithHeight(20))
 		vp.Style = lipgloss.NewStyle().
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("62"))
+		disableHorizontalScroll(&vp)
 		m.viewport = &vp
 	}
 	if m.log.viewport == nil {
-		lvp := viewport.New(20, 20)
+		lvp := viewport.New(viewport.WithWidth(20), viewport.WithHeight(20))
+		disableHorizontalScroll(&lvp)
 		m.log.viewport = &lvp
 	}
 	if m.recentEnvs == nil {
@@ -336,7 +340,7 @@ func setDefaults(m *Model) {
 		m.loadingSpinner = &loadingSpinner
 	}
 	if m.loadingTimer == nil {
-		sw := stopwatch.NewWithInterval(time.Second)
+		sw := stopwatch.New(stopwatch.WithInterval(time.Second))
 		m.loadingTimer = &sw
 	}
 	if m.dirPicker == nil {
@@ -390,4 +394,12 @@ func (m *Model) opCtx() (context.Context, context.CancelFunc) {
 // cancels on TUI shutdown and survives navigation/refresh.
 func (m *Model) longOpCtx() context.Context {
 	return m.sessionCtx()
+}
+
+// disableHorizontalScroll unbinds the v2 viewport's left/right keys. They
+// default to h/l, and h is Help; the details and log bodies wrap, so
+// there is nothing to scroll sideways.
+func disableHorizontalScroll(vp *viewport.Model) {
+	vp.KeyMap.Left.SetEnabled(false)
+	vp.KeyMap.Right.SetEnabled(false)
 }

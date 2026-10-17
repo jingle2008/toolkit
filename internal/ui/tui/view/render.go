@@ -3,8 +3,8 @@ package view
 import (
 	"fmt"
 
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/glamour/styles"
+	"charm.land/glamour/v2"
+	"charm.land/glamour/v2/styles"
 )
 
 // Renderer abstracts rendering JSON to a string (for viewport/detail).

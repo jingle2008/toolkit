@@ -12,9 +12,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/mutation"
@@ -175,7 +175,7 @@ func (m *Model) enterEditTenantView() tea.Cmd {
 // intercepted at the top of Update so they fire regardless of the
 // active view, and therefore never reach here.
 func (m *Model) updateEditTenantView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	keyMsg, ok := msg.(tea.KeyMsg)
+	keyMsg, ok := msg.(tea.KeyPressMsg)
 	if !ok || m.editTenant == nil {
 		return m, nil
 	}
@@ -399,7 +399,7 @@ func (m *Model) editTenantView() string {
 		"",
 		m.help.ShortHelpView([]key.Binding{keys.Confirm, keys.OpenPortal, keys.Back}),
 	}
-	return m.theme.HelpBorder.Width(m.viewWidth * 3 / 5).Render(strings.Join(lines, "\n"))
+	return boxWidth(m.theme.HelpBorder, m.viewWidth*3/5).Render(strings.Join(lines, "\n"))
 }
 
 // metadataPath returns the configured metadata file path for display,

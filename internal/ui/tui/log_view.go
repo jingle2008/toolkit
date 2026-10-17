@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -91,8 +91,8 @@ func (m *Model) logView() string {
 	if bodyHeight < 1 {
 		bodyHeight = 1
 	}
-	m.log.viewport.Width = width
-	m.log.viewport.Height = bodyHeight
+	m.log.viewport.SetWidth(width)
+	m.log.viewport.SetHeight(bodyHeight)
 
 	follow := m.log.viewport.AtBottom()
 	m.log.viewport.SetContent(m.renderLogEntries(width))
@@ -135,7 +135,7 @@ func logTickCmd() tea.Cmd {
 // quit, the home/end follow controls (the viewport keymap lacks them),
 // and otherwise forwards scrolling to the viewport.
 func (m *Model) updateLogView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if km, ok := msg.(tea.KeyMsg); ok {
+	if km, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(km, keys.ToggleLog, keys.Back):
 			m.viewMode = m.log.returnView

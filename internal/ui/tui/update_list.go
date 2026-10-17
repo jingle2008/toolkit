@@ -6,8 +6,8 @@ package tui
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -28,7 +28,7 @@ func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
 	// intercepted at the top of Update so they fire from any view —
 	// they don't reach this router.
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKeyMsg(msg)
 	case filterMsg:
 		return []tea.Cmd{m.handleFilterMsg(msg)}
@@ -183,7 +183,7 @@ func (m *Model) enterExportView() []tea.Cmd {
 // backspaceKey is the key event enterExportView sends to nudge a picker that
 // already has a path (its Back binding includes backspace).
 func backspaceKey() tea.KeyMsg {
-	return tea.KeyMsg{Type: tea.KeyBackspace}
+	return tea.KeyPressMsg{Code: tea.KeyBackspace}
 }
 
 func (*Model) pasteFilter() tea.Cmd {

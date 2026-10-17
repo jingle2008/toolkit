@@ -6,7 +6,7 @@ using Bubble Tea and Charmbracelet components.
 package tui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 )
@@ -86,5 +86,6 @@ func (m *Model) Init() tea.Cmd {
 		startRepoWatchCmd(m.sessionCtx(), m.loader, m.repoPath),
 		fetchKubeVersionCmd(m.kubeConfig, m.environment.KubeContext()),
 		saveRecent,
+		tea.RequestBackgroundColor,
 	)
 }

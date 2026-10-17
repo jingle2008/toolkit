@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
@@ -31,8 +31,11 @@ type Styles struct {
 	HelpDesc   lipgloss.Style
 }
 
-// DefaultStyles returns the shared immutable style set for the TUI.
-func DefaultStyles() Styles {
+// DefaultStyles returns the shared immutable style set for the TUI on a
+// dark (isDark) or light terminal background.
+func DefaultStyles(isDark bool) Styles {
+	lightDark := lipgloss.LightDark(isDark)
+
 	base := lipgloss.NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color("240"))
@@ -42,8 +45,8 @@ func DefaultStyles() Styles {
 		Padding(0, 1)
 
 	statusBar := lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#343433", Dark: "#C1C6B2"}).
-		Background(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#353533"})
+		Foreground(lightDark(lipgloss.Color("#343433"), lipgloss.Color("#C1C6B2"))).
+		Background(lightDark(lipgloss.Color("#D9DCCF"), lipgloss.Color("#353533")))
 
 	context := lipgloss.NewStyle().
 		Inherit(statusBar).
@@ -89,4 +92,11 @@ func DefaultStyles() Styles {
 		HelpKey:    helpKey,
 		HelpDesc:   helpDesc,
 	}
+}
+
+// boxWidth sets s's width to w plus its horizontal border. lipgloss v2
+// counts the border inside Width, v1 added it outside; this keeps the
+// boxes' v1 outer width.
+func boxWidth(s lipgloss.Style, w int) lipgloss.Style {
+	return s.Width(w + s.GetHorizontalBorderSize())
 }

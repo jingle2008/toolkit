@@ -4,8 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/table"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -38,7 +39,7 @@ func TestModel_updateContent_and_View(t *testing.T) {
 	msg, ok := cmd().(detailContentRenderedMsg)
 	require.True(t, ok)
 	m.handleDetailContentRenderedMsg(msg)
-	viewStr := m.View()
+	viewStr := m.render()
 	assert.IsType(t, "", viewStr)
 }
 
@@ -162,7 +163,7 @@ func TestView_LoadingView(t *testing.T) {
 	m := makeTestModel()
 	m.dataset = nil // full-screen LoadingView is only used while the first dataset is still loading
 	m.viewMode = common.LoadingView
-	out := m.View()
+	out := m.render()
 	assert.Contains(t, out, "Loading data")
 }
 
@@ -185,7 +186,7 @@ func TestView_HelpView(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.HelpView
-	out := m.View()
+	out := ansi.Strip(m.render())
 	assert.Contains(t, out, "General Actions")
 }
 
@@ -193,7 +194,7 @@ func TestView_ListView(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.ListView
-	out := m.View()
+	out := m.render()
 	assert.NotEmpty(t, out)
 }
 
@@ -203,6 +204,6 @@ func TestView_DetailsView(t *testing.T) {
 	m.viewMode = common.DetailsView
 	m.selectedKey = "foo"
 	m.viewport.SetContent("details")
-	out := m.View()
+	out := m.render()
 	assert.Contains(t, out, "details")
 }

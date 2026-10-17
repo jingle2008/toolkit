@@ -1,6 +1,6 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import tea "charm.land/bubbletea/v2"
 
 // routeListLoadedMsg dispatches a typed *LoadedMsg to its matching
 // handler. The only branch that returns a follow-up cmd is

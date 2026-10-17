@@ -46,7 +46,7 @@ copy IDs — revisit behind a flag later); any CLI/MCP change; v2 keyboard enhan
 | Order | Migration first and behavior-preserving; redesign on top. |
 | Safety net | ANSI-stripped golden snapshots of every view, added on v1 before the swap; the swap must leave them byte-identical. |
 | Swap parity | v2 defaults that change UX are disabled in the swap: viewport `h`/`l` horizontal scroll unbound (`h` is Help), textinput cursor matches v1, no keyboard enhancements requested. |
-| Light/dark | Swap uses `compat.AdaptiveColor` (drop-in). The theme phase moves to `lipgloss.LightDark(isDark)` fed by `tea.BackgroundColorMsg`. glamour stays on `DarkStyle` (the auto style costs 5–10 s at startup). |
+| Light/dark | `lipgloss.LightDark(isDark)` fed by `tea.BackgroundColorMsg` from the swap on (`compat.AdaptiveColor` queries the terminal at package init, which every CLI command would pay for). The theme phase builds all roles this way. glamour stays on `DarkStyle` (the auto style costs 5–10 s at startup). |
 | Palette | Keep the existing identity (orange `#FF8700`, pink `#FF5F87`, purple `#A550DF`) as named roles. |
 | Layout | Single pane with compact chrome; optional right-hand preview pane. |
 | Modals | Composited over the dimmed underlying view with lipgloss v2 layers. |
