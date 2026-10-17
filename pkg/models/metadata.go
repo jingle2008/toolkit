@@ -12,6 +12,9 @@ type TenantMetadata struct {
 	ID         string  `json:"id"`
 	IsInternal *bool   `json:"is_internal,omitempty"`
 	Note       *string `json:"note,omitempty"`
+	// Status is the tenancy's account state, written by tenant-sync. It
+	// is machine-owned: an upsert without one keeps the existing value.
+	Status string `json:"status,omitempty"`
 }
 
 // Metadata is the top-level structure for metadata.json/yaml.

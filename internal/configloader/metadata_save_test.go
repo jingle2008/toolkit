@@ -116,3 +116,16 @@ func TestLoadMetadata_RejectsDuplicates(t *testing.T) {
 		require.ErrorContainsf(t, err, "invalid tenant metadata", "duplicate %s", name)
 	}
 }
+
+// Status is machine-owned: an edit that doesn't carry one (the TUI form,
+// MCP upsert_tenant_metadata) keeps it, while tenant-sync's own upsert,
+// which does carry one, replaces it.
+func TestUpsertTenant_KeepsStatus(t *testing.T) {
+	t.Parallel()
+	m := &models.Metadata{Tenants: []models.TenantMetadata{{ID: "id-a", Name: strptr("A"), Status: "ACTIVE"}}}
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A2")}))
+	require.Equal(t, "ACTIVE", m.Tenants[0].Status)
+	require.Equal(t, "A2", *m.Tenants[0].Name)
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A2"), Status: "DELETING"}))
+	require.Equal(t, "DELETING", m.Tenants[0].Status)
+}

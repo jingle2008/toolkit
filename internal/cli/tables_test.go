@@ -26,12 +26,12 @@ import (
 func TestRenderTable_Tenant(t *testing.T) {
 	t.Parallel()
 	items := []models.Tenant{
-		{Name: "t1", ID: "ocid1.a", IsInternal: true, Note: "n"},
+		{Name: "t1", ID: "ocid1.a", IsInternal: true, Note: "n", Status: "ACTIVE"},
 	}
 	headers, rows, err := columns.RenderTable(domain.Tenant, items, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"NAME", "OCID", "INTERNAL", "NOTE"}, headers)
-	assert.Equal(t, [][]string{{"t1", "ocid1.a", "true", "n"}}, rows)
+	assert.Equal(t, []string{"NAME", "OCID", "INTERNAL", "STATUS", "NOTE"}, headers)
+	assert.Equal(t, [][]string{{"t1", "ocid1.a", "true", "ACTIVE", "n"}}, rows)
 
 	// Empty input still returns headers + empty rows.
 	hdr, r, err2 := columns.RenderTable(domain.Tenant, []models.Tenant(nil), nil)

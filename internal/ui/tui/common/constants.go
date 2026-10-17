@@ -5,6 +5,8 @@ const (
 	NameCol = "Name"
 	// InternalCol is the column name for "Internal".
 	InternalCol = "Internal"
+	// StatusCol is the column name for "Status".
+	StatusCol = "Status"
 	// ValueCol is the column name for "Value".
 	ValueCol = "Value"
 	// RegionsCol is the column name for "Regions".

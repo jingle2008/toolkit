@@ -13,7 +13,17 @@ type Tenant struct {
 	ID         string `json:"id"`
 	IsInternal bool   `json:"is_internal"`
 	Note       string `json:"note,omitempty"`
+	// Status is the tenancy's account state as the account admin service
+	// reports it (ACTIVE, DELETING, TERMINATED, ALWAYS_FREE_ONLY, ...),
+	// recorded in metadata by tenant-sync; empty when unknown.
+	Status string `json:"status,omitempty"`
 }
+
+// Tenancy account states that mark a tenancy as going or gone.
+const (
+	TenantStatusDeleting   = "DELETING"
+	TenantStatusTerminated = "TERMINATED"
+)
 
 // GetName returns the name of the tenant.
 func (t Tenant) GetName() string {
@@ -33,12 +43,11 @@ func (t Tenant) Named() bool {
 
 // FilterableFields returns filterable fields for the tenant.
 func (t Tenant) FilterableFields() []string {
-	return []string{t.ID, t.Name, fmt.Sprint(t.IsInternal), t.Note}
+	return []string{t.ID, t.Name, fmt.Sprint(t.IsInternal), t.Note, t.Status}
 }
 
-// IsFaulty is always false: a tenant is one OCID with one name, so it
-// has no state of its own to be wrong. (It satisfies Faulty so the
-// Tenant list supports the faulty filter like every other category.)
+// IsFaulty reports whether the tenancy is being deleted or is terminated:
+// whatever the repo still holds for it is left over.
 func (t Tenant) IsFaulty() bool {
-	return false
+	return t.Status == TenantStatusDeleting || t.Status == TenantStatusTerminated
 }

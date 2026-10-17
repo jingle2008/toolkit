@@ -25,15 +25,17 @@ func TestExportTableCSV_Success(t *testing.T) {
 	// pre-rendered rows. Populate the dataset to drive the output.
 	headers := []header{
 		{text: "Name"},
-		{text: "OCIDs"},
+		{text: "OCID"},
 		{text: "Internal"},
+		{text: "Status"},
 		{text: "Note"},
 	}
 	tbl := table.New()
 	tbl.SetColumns([]table.Column{
 		{Title: "Name"},
-		{Title: "OCIDs"},
+		{Title: "OCID"},
 		{Title: "Internal"},
+		{Title: "Status"},
 		{Title: "Note"},
 	})
 
@@ -60,9 +62,9 @@ func TestExportTableCSV_Success(t *testing.T) {
 	records, err := r.ReadAll()
 	require.NoError(t, err)
 	require.Len(t, records, 3)
-	assert.Equal(t, []string{"Name", "OCIDs", "Internal", "Note"}, records[0])
-	assert.Equal(t, []string{"alice", "ocid1.tenancy.oc1..a", "true", "n1"}, records[1])
-	assert.Equal(t, []string{"bob", "ocid1.tenancy.oc1..b", "false", "n2"}, records[2])
+	assert.Equal(t, []string{"Name", "OCID", "Internal", "Status", "Note"}, records[0])
+	assert.Equal(t, []string{"alice", "ocid1.tenancy.oc1..a", "true", "", "n1"}, records[1])
+	assert.Equal(t, []string{"bob", "ocid1.tenancy.oc1..b", "false", "", "n2"}, records[2])
 }
 
 // TestExportTableCSV_DACUsesFullOCIDs locks in the column-registry
@@ -188,16 +190,18 @@ func TestExportTableCSV_IgnoresInteractiveSort(t *testing.T) {
 	tbl := table.New()
 	tbl.SetColumns([]table.Column{
 		{Title: "Name"},
-		{Title: "OCIDs"},
+		{Title: "OCID"},
 		{Title: "Internal"},
+		{Title: "Status"},
 		{Title: "Note"},
 	})
 
 	m := &Model{
 		headers: []header{
 			{text: "Name"},
-			{text: "OCIDs"},
+			{text: "OCID"},
 			{text: "Internal"},
+			{text: "Status"},
 			{text: "Note"},
 		},
 		table:       &tbl,

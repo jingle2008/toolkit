@@ -340,6 +340,7 @@ func tenantFromEntry(e models.TenantMetadata) models.Tenant {
 	if e.Note != nil {
 		t.Note = *e.Note
 	}
+	t.Status = e.Status
 	return t
 }
 

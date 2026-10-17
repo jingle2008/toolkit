@@ -41,7 +41,8 @@ func SaveMetadata(path string, m *models.Metadata) error {
 // UpsertTenant merges entry into m: if a tenant with the same ID
 // already exists it is replaced in place, otherwise entry is appended.
 // It refuses, leaving m unchanged, a name another tenancy already has:
-// names map one to one to IDs.
+// names map one to one to IDs. Status is machine-owned (tenant-sync
+// writes it), so an entry without one keeps the existing status.
 func UpsertTenant(m *models.Metadata, entry models.TenantMetadata) error {
 	if entry.Name != nil && *entry.Name != "" {
 		for _, t := range m.Tenants {
@@ -52,6 +53,9 @@ func UpsertTenant(m *models.Metadata, entry models.TenantMetadata) error {
 	}
 	for i := range m.Tenants {
 		if m.Tenants[i].ID == entry.ID {
+			if entry.Status == "" {
+				entry.Status = m.Tenants[i].Status
+			}
 			m.Tenants[i] = entry
 			return nil
 		}
