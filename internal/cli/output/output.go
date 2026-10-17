@@ -61,6 +61,11 @@ type Options struct {
 	Format    Format
 	NoHeaders bool // table/csv/tsv: omit header row
 	Pretty    bool // json/yaml: pretty-print
+	// Item, when set, is `toolkit get <category> <name>`: render only the
+	// row of that name, as a single object rather than a list (table,
+	// csv and tsv: a one-row table). The caller picks the row, and
+	// reports none or several.
+	Item string
 }
 
 // WriteJSON emits items as a single JSON value (typically an array).

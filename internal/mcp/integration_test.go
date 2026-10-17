@@ -350,6 +350,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"list_related",
 		"list_aliases",
 		"check_integrity",
+		"get_item",
 		"get_drain_status",
 		// Mutation tools (all gated on confirm=true; see mutations.go).
 		"cordon_node",

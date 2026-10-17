@@ -25,6 +25,22 @@ What remains:
 | #144 one tenant per OCID | Tenant shape is now `{name, id, …}` everywhere. |
 | #145 tenant status + `tenant sync` | Tenant `status` shows on all surfaces. A DELETING/TERMINATED tenant is now `IsFaulty`, so TUI Ctrl+Z on Tenant picks it up. `tenant sync` is CLI-only by design, but its writes race the TUI/MCP (F9). |
 
+## Status (2026-10-17)
+
+| Finding | Status |
+|---|---|
+| F1 TUI compartment lookup | Fixed in #146 |
+| F2 MCP destructive gating | Fixed: annotations #146; `confirm_target` and `dry_run` #148; `--mcp-read-only` #149 |
+| F3 mutation policy in three places | Fixed in #148 (`internal/mutation`; the TUI now writes audit records) |
+| F4 row-level dangling only in the TUI | Fixed in #150 (`get --faulty`, MCP `faulty`, `check_integrity`) |
+| F5 no get-by-name | Fixed by the get-by-name PR (`get <category> <name>`, MCP `get_item`) |
+| F6 wrong flag name in MCP docs | Fixed in #146 |
+| F7 metrics plan in the TUI | Open (backlog, plan Phase 5) |
+| F8 minor gaps and layering | Partly fixed: the TUI sets cordon explicitly (#148); `ToggleCordon` removed (#149). The rest is open (plan Phase 6) |
+| F9 metadata lost updates | Fixed in #147 |
+
+The matrices below are the audit as found, before these fixes.
+
 ## Read / query matrix
 
 | Capability | TUI | CLI | MCP |

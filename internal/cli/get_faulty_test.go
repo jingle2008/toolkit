@@ -81,8 +81,9 @@ func TestValidateFaulty(t *testing.T) {
 	kube := filepath.Join(t.TempDir(), "kubeconfig")
 	require.NoError(t, os.WriteFile(kube, nil, 0o600))
 	cfg := config.Config{KubeConfig: kube}
-	require.NoError(t, validateFaulty(cfg, domain.Tenant))
-	require.ErrorContains(t, validateFaulty(cfg, domain.LimitDefinition), "never faulty; it applies to: basemodel")
-	require.ErrorContains(t, validateFaulty(config.Config{}, domain.Tenant), "--faulty needs --kubeconfig")
-	require.ErrorContains(t, validateFaulty(config.Config{KubeConfig: "/nonexistent"}, domain.Tenant), "not readable")
+	require.NoError(t, validateFaulty(cfg, domain.Tenant, true))
+	require.NoError(t, validateFaulty(config.Config{}, domain.LimitDefinition, false), "off: nothing to check")
+	require.ErrorContains(t, validateFaulty(cfg, domain.LimitDefinition, true), "never faulty; it applies to: basemodel")
+	require.ErrorContains(t, validateFaulty(config.Config{}, domain.Tenant, true), "--faulty needs --kubeconfig")
+	require.ErrorContains(t, validateFaulty(config.Config{KubeConfig: "/nonexistent"}, domain.Tenant, true), "not readable")
 }

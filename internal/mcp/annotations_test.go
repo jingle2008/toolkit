@@ -45,6 +45,7 @@ var wantHints = map[string]toolHint{
 	"list_related":              hintReadOnly,
 	"list_aliases":              hintReadOnly,
 	"check_integrity":           hintReadOnly,
+	"get_item":                  hintReadOnly,
 	"get_drain_status":          hintReadOnly,
 	"cordon_node":               hintIdempotent,
 	"uncordon_node":             hintIdempotent,

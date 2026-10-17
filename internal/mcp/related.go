@@ -91,9 +91,9 @@ func (s *Server) handleListRelated(ctx context.Context, _ *sdk.CallToolRequest, 
 func (s *Server) relatedItems(ctx context.Context, child domain.Category, scope *domain.Scope, env models.Environment, filter string) ([]any, []string, error) {
 	switch child { //nolint:exhaustive // validated: only scoped categories
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride:
-		grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, env)
+		grp, err := s.tenancyGroup(ctx, env)
 		if err != nil {
-			return nil, nil, fmt.Errorf("load tenancy override group: %w", err)
+			return nil, nil, err
 		}
 		switch child { //nolint:exhaustive // the three tenancy overrides
 		case domain.LimitTenancyOverride:
@@ -122,43 +122,35 @@ func (s *Server) relatedItems(ctx context.Context, child domain.Category, scope 
 		}
 		return toAnySlice(collections.FilterSlice(items, nil, filter, relations.PropertyRegionalOverride.Keep(scope))), nil, nil
 	case domain.GPUNode:
-		grouped, err := s.loader.LoadGPUNodesByPool(ctx, s.cfg.KubeConfig, env)
+		grouped, err := s.gpuNodes(ctx, env)
 		if err != nil {
-			return nil, nil, fmt.Errorf("load gpu nodes: %w", err)
+			return nil, nil, err
 		}
 		return flattenRelated(relations.GPUNode, grouped, scope, filter), nil, nil
 	case domain.ImportedModel:
-		grouped, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, env)
+		grouped, warnings, err := s.importedModels(ctx, env)
 		if err != nil {
-			return nil, nil, fmt.Errorf("load imported models: %w", err)
+			return nil, nil, err
 		}
-		ds, warnings := s.tenantDataset(ctx, env)
-		ds.SetImportedModelMap(grouped)
-		return flattenRelated(relations.ImportedModel, ds.ImportedModelMap, scope, filter), warnings, nil
+		return flattenRelated(relations.ImportedModel, grouped, scope, filter), warnings, nil
 	case domain.GPUWorkload:
-		grouped, err := s.loader.LoadGPUWorkloadsByNode(ctx, s.cfg.KubeConfig, env)
+		grouped, warnings, err := s.gpuWorkloads(ctx, env)
 		if err != nil {
-			return nil, nil, fmt.Errorf("load gpu workloads: %w", err)
+			return nil, nil, err
 		}
-		ds, warnings := s.tenantDataset(ctx, env)
-		ds.SetGPUWorkloadMap(grouped)
-		return flattenRelated(relations.GPUWorkload, ds.GPUWorkloadMap, scope, filter), warnings, nil
+		return flattenRelated(relations.GPUWorkload, grouped, scope, filter), warnings, nil
 	case domain.DedicatedAICluster:
-		grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, env)
+		grouped, warnings, err := s.dacs(ctx, env)
 		if err != nil {
-			return nil, nil, fmt.Errorf("load dedicated AI clusters: %w", err)
+			return nil, nil, err
 		}
-		ds, warnings := s.tenantDataset(ctx, env)
-		ds.SetDedicatedAIClusterMap(grouped)
-		return flattenRelated(relations.DedicatedAICluster, ds.DedicatedAIClusterMap, scope, filter), warnings, nil
+		return flattenRelated(relations.DedicatedAICluster, grouped, scope, filter), warnings, nil
 	case domain.InferenceService:
-		grouped, err := s.loader.LoadInferenceServices(ctx, s.cfg.KubeConfig, env)
+		grouped, warnings, err := s.inferenceServices(ctx, env)
 		if err != nil {
-			return nil, nil, fmt.Errorf("load inference services: %w", err)
+			return nil, nil, err
 		}
-		ds, warnings := s.tenantDataset(ctx, env)
-		ds.SetInferenceServiceMap(grouped)
-		return flattenRelated(relations.InferenceService, ds.InferenceServiceMap, scope, filter), warnings, nil
+		return flattenRelated(relations.InferenceService, grouped, scope, filter), warnings, nil
 	default:
 		return nil, nil, fmt.Errorf("%s has no related rows", child)
 	}
