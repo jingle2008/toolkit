@@ -3,7 +3,6 @@ package tui
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -12,8 +11,6 @@ import (
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
-
-func runeKey(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
 
 // G is Sort GPUs; the table no longer also takes it as go-to-bottom, so
 // sorting leaves the cursor where it was. end still goes to the last row.
@@ -28,11 +25,11 @@ func TestShiftG_SortsWithoutJumpingToBottom(t *testing.T) {
 	m.updateRows(true)
 	m.table.SetCursor(1)
 
-	_, _ = m.Update(runeKey("G"))
+	_, _ = m.Update(keyPress("G"))
 	assert.Equal(t, "GPUs", m.sortColumn)
 	assert.Equal(t, 1, m.table.Cursor(), "G must not also jump to the last row")
 
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	_, _ = m.Update(keyPress("end"))
 	assert.Equal(t, 3, m.table.Cursor())
 }
 
@@ -44,13 +41,13 @@ func TestEscInFilterInput_KeepsScope(t *testing.T) {
 	m.scope = scope
 	m.viewMode = common.ListView
 
-	_, _ = m.Update(runeKey("/"))
+	_, _ = m.Update(keyPress("/"))
 	require.Equal(t, common.EditInput, m.inputMode)
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, _ = m.Update(keyPress("esc"))
 	assert.Equal(t, common.NormalInput, m.inputMode)
 	assert.Equal(t, scope, m.scope)
 
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, _ = m.Update(keyPress("esc"))
 	assert.Nil(t, m.scope, "a second esc leaves the scope")
 }
 
@@ -59,11 +56,11 @@ func TestEscInFilterInput_ClearsAppliedFilter(t *testing.T) {
 	t.Parallel()
 	m := newGoToModel(t)
 	m.viewMode = common.ListView
-	_, _ = m.Update(runeKey("/"))
+	_, _ = m.Update(keyPress("/"))
 	m.filter = "isvc"
 	m.textInput.SetValue("isvc")
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, cmd := m.Update(keyPress("esc"))
 	assert.Equal(t, common.NormalInput, m.inputMode)
 	assert.Empty(t, m.textInput.Value())
 	assert.NotNil(t, cmd, "clearing the filter re-filters the table")
@@ -76,14 +73,14 @@ func TestBacktickInInput_IsText(t *testing.T) {
 	for _, open := range []string{"/", ":"} {
 		m := newGoToModel(t)
 		m.viewMode = common.ListView
-		_, _ = m.Update(runeKey(open))
-		_, _ = m.Update(runeKey("`"))
+		_, _ = m.Update(keyPress(open))
+		_, _ = m.Update(keyPress("`"))
 		assert.Equalf(t, common.ListView, m.viewMode, "%s input", open)
 		assert.Equalf(t, "`", m.textInput.Value(), "%s input", open)
 	}
 
 	m := newGoToModel(t)
 	m.viewMode = common.ListView
-	_, _ = m.Update(runeKey("`"))
+	_, _ = m.Update(keyPress("`"))
 	assert.Equal(t, common.LogView, m.viewMode)
 }

@@ -16,11 +16,11 @@ func TestUpdateExportView_ExitAndQuit(t *testing.T) {
 	m.viewMode = common.ExportView
 	m.lastViewMode = common.ListView
 
-	model, cmd := m.updateExportView(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keys.ExportCSV.Keys()[0])})
+	model, cmd := m.updateExportView(keyPress(keys.ExportCSV.Keys()[0]))
 	assert.Equal(t, common.ListView, model.(*Model).viewMode)
 	assert.Nil(t, cmd)
 
-	model, cmd = m.updateExportView(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keys.Quit.Keys()[0])})
+	model, cmd = m.updateExportView(keyPress(keys.Quit.Keys()[0]))
 	assert.Equal(t, common.ListView, model.(*Model).viewMode)
 	if cmd == nil {
 		t.Fatal("expected quit cmd")
@@ -42,7 +42,7 @@ func TestUpdateExportView_QuitCancelsInFlight(t *testing.T) {
 	canceled := false
 	m.loadCancel = func() { canceled = true }
 
-	_, cmd := m.updateExportView(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keys.Quit.Keys()[0])})
+	_, cmd := m.updateExportView(keyPress(keys.Quit.Keys()[0]))
 	if !canceled {
 		t.Fatal("quit from export view did not cancel in-flight tasks")
 	}
@@ -60,7 +60,7 @@ func TestUpdateExportView_EscDismisses(t *testing.T) {
 	m.viewMode = common.ExportView
 	m.lastViewMode = common.ListView
 
-	model, cmd := m.updateExportView(tea.KeyMsg{Type: tea.KeyEsc})
+	model, cmd := m.updateExportView(keyPress("esc"))
 	assert.Equal(t, common.ListView, model.(*Model).viewMode)
 	assert.Nil(t, cmd)
 }
@@ -72,8 +72,8 @@ func TestUpdateExportView_EscDismisses(t *testing.T) {
 func TestUpdateExportView_DismissRestoresLastViewMode(t *testing.T) {
 	t.Parallel()
 	for _, k := range []tea.KeyMsg{
-		{Type: tea.KeyEsc},
-		{Type: tea.KeyRunes, Runes: []rune(keys.ExportCSV.Keys()[0])},
+		keyPress("esc"),
+		keyPress(keys.ExportCSV.Keys()[0]),
 	} {
 		m := newTestModel(t)
 		m.viewMode = common.ExportView

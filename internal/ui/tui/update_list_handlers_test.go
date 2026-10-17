@@ -96,7 +96,7 @@ func TestEnterExportView_WithPickerPath(t *testing.T) {
 	msg := cmds[0]()
 	keyMsg, ok := msg.(tea.KeyMsg)
 	require.True(t, ok, "expected a tea.KeyMsg, got %T", msg)
-	assert.Equal(t, tea.KeyBackspace, keyMsg.Type)
+	assert.Equal(t, "backspace", keyMsg.String())
 }
 
 //nolint:paralleltest // stubClipboard swaps package-level seams; these must stay serial

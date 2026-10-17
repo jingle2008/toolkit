@@ -3,7 +3,6 @@ package tui
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -270,8 +269,8 @@ func TestOpenMetrics_ImportedModelOnSeveralDACsPicks(t *testing.T) {
 
 	// The real choose: it returns the dashboard launch (built, not run),
 	// with no error toast.
-	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyDown})
-	_, cmd := m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyEnter})
+	_, _ = m.updateRowPickerView(keyPress("down"))
+	_, cmd := m.updateRowPickerView(keyPress("enter"))
 	require.NotNil(t, cmd, "choosing a DAC launches its dashboard")
 	if m.toasts.active != nil {
 		assert.NotEqual(t, toastError, m.toasts.active.sev, m.toasts.active.msg)

@@ -5,7 +5,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/stopwatch"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 type fakeErrMsg string
@@ -17,7 +16,7 @@ func TestUpdateLoadingView_QuitKey(t *testing.T) {
 	m := &Model{}
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	msg := keyPress("q")
 	_, cmd := m.updateLoadingView(msg)
 	if cmd == nil {
 		t.Fatal("expected tea.Quit command, got nil")

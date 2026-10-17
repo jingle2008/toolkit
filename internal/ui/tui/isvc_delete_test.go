@@ -16,7 +16,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
-func ctrlX() tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyCtrlX} }
+func ctrlX() tea.KeyMsg { return keyPress("ctrl+x") }
 
 func stubOrphanPlan(t *testing.T, outcome k8s.OrphanDeleteOutcome, err error) {
 	t.Helper()
@@ -93,11 +93,11 @@ func TestDeleteOrphanInferenceService_ConfirmDeletesAndToasts(t *testing.T) {
 	}
 
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
-	_, cmd := m.updateConfirmView(keyMsg("y"))
+	_, cmd := m.updateConfirmView(keyPress("y"))
 	assert.Nil(t, cmd, "irreversible: lowercase y cancels")
 
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
-	_, cmd = m.updateConfirmView(keyMsg("Y"))
+	_, cmd = m.updateConfirmView(keyPress("Y"))
 	require.NotNil(t, cmd, "confirming must dispatch the delete")
 	msg, ok := cmd().(isvcDeleteResultMsg)
 	require.True(t, ok)

@@ -1,6 +1,10 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
+)
 
 // Styles groups immutable lipgloss styles used by the TUI.
 // Keeping these centralized avoids per-Model recomputation and makes tests simpler.
@@ -15,10 +19,10 @@ type Styles struct {
 	InfoKey      lipgloss.Style
 	InfoValue    lipgloss.Style
 
-	// Header logo gradient endpoints ("#RRGGBB"): the info-key orange
+	// Header logo gradient endpoints: the info-key orange
 	// fading to the status bar's context pink.
-	LogoTop    lipgloss.Color
-	LogoBottom lipgloss.Color
+	LogoTop    view.RGB
+	LogoBottom view.RGB
 
 	// Help view styles
 	HelpBorder lipgloss.Style
@@ -77,8 +81,8 @@ func DefaultStyles() Styles {
 		StatusText:   statusText,
 		InfoKey:      infoKey,
 		InfoValue:    infoValue,
-		LogoTop:      lipgloss.Color("#FF8700"), // xterm 208, as infoKey
-		LogoBottom:   lipgloss.Color("#FF5F87"), // as context
+		LogoTop:      view.RGB{R: 0xFF, G: 0x87, B: 0x00}, // xterm 208, as infoKey
+		LogoBottom:   view.RGB{R: 0xFF, G: 0x5F, B: 0x87}, // as context
 
 		HelpBorder: helpBorder,
 		HelpHeader: helpHeader,

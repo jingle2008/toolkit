@@ -29,7 +29,7 @@ func newInferenceServiceModel(t *testing.T) *Model {
 	return m
 }
 
-func shiftR() tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'R'}} }
+func shiftR() tea.KeyMsg { return keyPress("R") }
 
 // "R" restarts the selected row; in the InferenceService category that is
 // a rolling restart of the endpoint.
@@ -73,7 +73,7 @@ func TestRestartInferenceService_ConfirmPatchesRow(t *testing.T) {
 	}
 
 	m.handleItemActions(shiftR())
-	_, cmd := m.updateConfirmView(keyMsg("y"))
+	_, cmd := m.updateConfirmView(keyPress("y"))
 	require.NotNil(t, cmd, "confirming must dispatch the restart")
 	msg, ok := cmd().(restartServiceResultMsg)
 	require.True(t, ok)

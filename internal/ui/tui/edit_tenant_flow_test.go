@@ -3,7 +3,6 @@ package tui
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -56,27 +55,27 @@ func TestHandleEditTenantKey_Flows(t *testing.T) {
 	m := openForm(t)
 
 	// Tab advances focus to the internal toggle.
-	m.handleEditTenantKey(tea.KeyMsg{Type: tea.KeyTab})
+	m.handleEditTenantKey(keyPress("tab"))
 	assert.Equal(t, focusInternal, m.editTenant.focus)
 
 	// Space on the internal field flips the flag.
 	was := m.editTenant.isInternal
-	m.handleEditTenantKey(tea.KeyMsg{Type: tea.KeySpace})
+	m.handleEditTenantKey(keyPress("space"))
 	assert.NotEqual(t, was, m.editTenant.isInternal)
 
 	// Shift+Tab returns to the name field; typed runes route to it.
-	m.handleEditTenantKey(tea.KeyMsg{Type: tea.KeyShiftTab})
+	m.handleEditTenantKey(keyPress("shift+tab"))
 	assert.Equal(t, focusName, m.editTenant.focus)
-	m.handleEditTenantKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("acme")})
+	m.handleEditTenantKey(keyPress("acme"))
 	assert.Contains(t, m.editTenant.name.Value(), "acme")
 
 	// Ctrl+O builds the portal-open command (not executed — it would
 	// launch a real browser).
-	_, cmd := m.handleEditTenantKey(tea.KeyMsg{Type: tea.KeyCtrlO})
+	_, cmd := m.handleEditTenantKey(keyPress("ctrl+o"))
 	assert.NotNil(t, cmd)
 
 	// Esc closes the form and returns to the list view.
-	m.handleEditTenantKey(tea.KeyMsg{Type: tea.KeyEsc})
+	m.handleEditTenantKey(keyPress("esc"))
 	assert.Nil(t, m.editTenant)
 	assert.Equal(t, common.ListView, m.viewMode)
 }
@@ -86,13 +85,13 @@ func TestHandleEditTenantKey_Confirm(t *testing.T) {
 	m := openForm(t)
 
 	// Empty name → a warning command, form stays open.
-	_, cmd := m.handleEditTenantKey(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.handleEditTenantKey(keyPress("enter"))
 	assert.NotNil(t, cmd)
 	assert.NotNil(t, m.editTenant)
 
 	// With a name → a save command.
 	m.editTenant.name.SetValue("acme")
-	_, cmd = m.handleEditTenantKey(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd = m.handleEditTenantKey(keyPress("enter"))
 	assert.NotNil(t, cmd)
 }
 

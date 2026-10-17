@@ -86,7 +86,7 @@ func Test_updateLoadingView_QuitKey(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
 	m.viewMode = common.LoadingView
-	msg := tea.KeyMsg{Type: tea.KeyCtrlC}
+	msg := keyPress("ctrl+c")
 	_, cmd := m.updateLoadingView(msg)
 	require.NotNil(t, cmd)
 	// tea.Quit is a function returning tea.QuitMsg, so call cmd() and check type
@@ -147,7 +147,7 @@ func Test_updateHelpView_KeyMsg(t *testing.T) {
 	)
 	require.NoError(t, err)
 	m.viewMode = common.HelpView
-	msg := tea.KeyMsg{Type: tea.KeyCtrlC}
+	msg := keyPress("ctrl+c")
 	_, cmd := m.updateHelpView(msg)
 	require.NotNil(t, cmd)
 	res := cmd()

@@ -281,7 +281,7 @@ func TestModelUpdateBranches(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	// Simulate tea.KeyMsg for "ctrl+c"
-	m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	m.Update(keyPress("ctrl+c"))
 	// Simulate tea.WindowSizeMsg
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 40})
 	// Simulate dataMsg
@@ -350,7 +350,7 @@ func TestModel_DetailView_and_ExitDetailView(t *testing.T) {
 	m := newTestModel(t)
 	m.enterDetailView()
 	// Simulate "esc" key in detail view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("esc")}
+	msg := keyPress("esc")
 	_, _ = m.updateDetailView(msg)
 	m.exitDetailView()
 }
@@ -366,56 +366,56 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 	if len(keys.Quit.Keys()) > 0 {
 		keyStr = keys.Quit.Keys()[0]
 	}
-	quitMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	quitMsg := keyPress(keyStr)
 	m.updateListView(quitMsg)
 
 	// Simulate NextCategory key
 	if len(keys.NextCategory.Keys()) > 0 {
 		keyStr = keys.NextCategory.Keys()[0]
 	}
-	nextCatMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	nextCatMsg := keyPress(keyStr)
 	m.updateListView(nextCatMsg)
 
 	// Simulate PrevCategory key
 	if len(keys.PrevCategory.Keys()) > 0 {
 		keyStr = keys.PrevCategory.Keys()[0]
 	}
-	prevCatMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	prevCatMsg := keyPress(keyStr)
 	m.updateListView(prevCatMsg)
 
 	// Simulate FilterItems key
 	if len(keys.FilterMode.Keys()) > 0 {
 		keyStr = keys.FilterMode.Keys()[0]
 	}
-	filterMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	filterMsg := keyPress(keyStr)
 	m.updateListView(filterMsg)
 
 	// Simulate JumpTo key
 	if len(keys.CommandMode.Keys()) > 0 {
 		keyStr = keys.CommandMode.Keys()[0]
 	}
-	jumpToMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	jumpToMsg := keyPress(keyStr)
 	m.updateListView(jumpToMsg)
 
 	// Simulate ViewDetails key
 	if len(keys.ViewDetails.Keys()) > 0 {
 		keyStr = keys.ViewDetails.Keys()[0]
 	}
-	viewDetailsMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	viewDetailsMsg := keyPress(keyStr)
 	m.updateListView(viewDetailsMsg)
 
 	// Simulate ApplyContext key
 	if len(keys.Confirm.Keys()) > 0 {
 		keyStr = keys.Confirm.Keys()[0]
 	}
-	applyContextMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(keyStr)}
+	applyContextMsg := keyPress(keyStr)
 	m.updateListView(applyContextMsg)
 
 	// Switch to Edit mode and test "enter" and "esc"
 	m.inputMode = common.EditInput
 	m.editTarget = common.AliasTarget
-	enterMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("enter")}
-	escMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("esc")}
+	enterMsg := keyPress("enter")
+	escMsg := keyPress("esc")
 	m.updateListView(enterMsg)
 	m.updateListView(escMsg)
 	m.editTarget = common.FilterTarget

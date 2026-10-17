@@ -67,7 +67,7 @@ func TestCordon_ConfirmedIsAudited(t *testing.T) {
 		node := models.GPUNode{Name: "gpu-1", IsSchedulingDisabled: tc.cordoned}
 		m, key, sink := newGPUNodeModel(t, node)
 		m.requestConfirm(m.confirmCordon(key, &node))
-		_, cmd := m.updateConfirmView(keyMsg("y"))
+		_, cmd := m.updateConfirmView(keyPress("y"))
 		require.NotNil(t, cmd)
 		msg, ok := cmd().(cordonNodeResultMsg)
 		require.True(t, ok)
@@ -94,7 +94,7 @@ func TestCordon_CancelledIsAuditedRefused(t *testing.T) {
 	node := models.GPUNode{Name: "gpu-1"}
 	m, key, sink := newGPUNodeModel(t, node)
 	m.requestConfirm(m.confirmCordon(key, &node))
-	_, cmd := m.updateConfirmView(keyMsg("n"))
+	_, cmd := m.updateConfirmView(keyPress("n"))
 	assert.Nil(t, cmd)
 	assert.Equal(t, []auditRecord{{"cordon", "node", "gpu-1", "refused"}}, auditRecords(sink))
 }
@@ -115,7 +115,7 @@ func TestISVCDelete_ConfirmedIsAuditedAsPlanned(t *testing.T) {
 	sink := logging.NewRingSink(16)
 	m.logger = sink
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
-	_, cmd := m.updateConfirmView(keyMsg("Y"))
+	_, cmd := m.updateConfirmView(keyPress("Y"))
 	require.NotNil(t, cmd)
 	msg, ok := cmd().(isvcDeleteResultMsg)
 	require.True(t, ok)
@@ -136,7 +136,7 @@ func TestISVCDelete_CancelledIsAuditedRefused(t *testing.T) {
 	sink := logging.NewRingSink(16)
 	m.logger = sink
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
-	_, cmd := m.updateConfirmView(keyMsg("y")) // lowercase y cancels an irreversible action
+	_, cmd := m.updateConfirmView(keyPress("y")) // lowercase y cancels an irreversible action
 	assert.Nil(t, cmd)
 	assert.Equal(t, []auditRecord{{"delete", "inference_service", "ns1/svc1", "refused"}}, auditRecords(sink))
 }
