@@ -304,6 +304,35 @@ func TestUpsertTenantMetadata_PreservesExistingEntries(t *testing.T) {
 	require.Len(t, got.Tenants, 3) // existing two preserved + new one
 }
 
+// Two long-lived processes (a TUI and an MCP server, say) share the
+// file: each one's upsert keeps what the other wrote after it started.
+func TestUpsertTenantMetadata_KeepsOtherWritersEntries(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "metadata.yaml")
+	a, ok := New(context.Background(), path).(loader.TenantMetadataWriter)
+	require.True(t, ok)
+	b, ok := New(context.Background(), path).(loader.TenantMetadataWriter)
+	require.True(t, ok)
+
+	require.NoError(t, a.UpsertTenantMetadata(models.TenantMetadata{ID: "ocid1.tenancy.oc1..aaa", Name: sp("one")}))
+	require.NoError(t, b.UpsertTenantMetadata(models.TenantMetadata{ID: "ocid1.tenancy.oc1..bbb", Name: sp("two")}))
+	// What `toolkit tenant sync --write` records meanwhile survives too.
+	synced, err := configloader.LoadMetadata(path)
+	require.NoError(t, err)
+	synced.Tenants = append(synced.Tenants, models.TenantMetadata{ID: "ocid1.tenancy.oc1..ccc", Status: models.TenantStatusDeleting})
+	require.NoError(t, configloader.SaveMetadata(path, synced))
+	require.NoError(t, a.UpsertTenantMetadata(models.TenantMetadata{ID: "ocid1.tenancy.oc1..ddd", Name: sp("four")}))
+
+	got, err := configloader.LoadMetadata(path)
+	require.NoError(t, err)
+	byID := map[string]models.TenantMetadata{}
+	for _, e := range got.Tenants {
+		byID[e.ID] = e
+	}
+	require.Len(t, byID, 4)
+	assert.Equal(t, models.TenantStatusDeleting, byID["ocid1.tenancy.oc1..ccc"].Status)
+}
+
 func TestUpsertTenantMetadata_RefusesToOverwriteUnparseableFile(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "metadata.yaml")

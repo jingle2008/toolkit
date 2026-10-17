@@ -47,9 +47,10 @@ and record the result in the metadata file:
     stops the run: re-authenticate (run any oci-ops command and accept the
     prompt), then rerun.
 
-It is a dry run unless --write, which backs the file up first. Quit any
-running toolkit TUI or MCP server before --write: each keeps the metadata
-it started with and would overwrite the synced file on its next save.
+It is a dry run unless --write, which backs the file up first. The
+lookups are applied to the file as it is when written, so tenant edits
+made meanwhile (set tenant, a TUI or MCP server) are kept. A running TUI
+or MCP server shows the synced names and statuses once restarted.
 
 Requires the oci-ops CLI on PATH. oc1 only.
 

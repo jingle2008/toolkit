@@ -45,14 +45,39 @@ type Report struct {
 // leaves the tenancy's entry as it was. It stops, returning
 // ErrNotAuthenticated, as soon as a lookup finds the session gone.
 func Sync(ctx context.Context, ids []string, meta *models.Metadata, f Fetcher, opts Options) (*models.Metadata, Report, error) {
-	accounts, errs, err := fetchAll(ctx, ids, f, opts)
+	r, err := Lookup(ctx, ids, f, opts)
 	if err != nil {
 		return nil, Report{}, err
 	}
+	return r.Apply(meta)
+}
+
+// Lookups is the slow half of a sync, every tenancy's lookup, kept to be
+// applied to the metadata later: `tenant sync --write` applies it to the
+// file as it is when written, so edits made during the lookups survive.
+type Lookups struct {
+	ids      []string
+	accounts map[string]Account
+	errs     map[string]error
+}
+
+// Lookup looks up every tenancy in ids. It stops, returning
+// ErrNotAuthenticated, as soon as a lookup finds the session gone.
+func Lookup(ctx context.Context, ids []string, f Fetcher, opts Options) (Lookups, error) {
+	accounts, errs, err := fetchAll(ctx, ids, f, opts)
+	if err != nil {
+		return Lookups{}, err
+	}
+	return Lookups{ids: ids, accounts: accounts, errs: errs}, nil
+}
+
+// Apply applies the lookups to a copy of meta, which it returns with a
+// report, by Sync's rules.
+func (r Lookups) Apply(meta *models.Metadata) (*models.Metadata, Report, error) {
 	next := &models.Metadata{Tenants: slices.Clone(meta.Tenants)}
-	report := Report{Looked: len(ids)}
-	for _, id := range slices.Sorted(slices.Values(ids)) {
-		if err := apply(next, id, accounts[id], errs[id], &report); err != nil {
+	report := Report{Looked: len(r.ids)}
+	for _, id := range slices.Sorted(slices.Values(r.ids)) {
+		if err := apply(next, id, r.accounts[id], r.errs[id], &report); err != nil {
 			return nil, Report{}, err
 		}
 	}

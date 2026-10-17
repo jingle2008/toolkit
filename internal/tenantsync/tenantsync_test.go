@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -244,6 +245,64 @@ func TestRun_DryRunThenWrite(t *testing.T) {
 	assert.Contains(t, out.String(), "acme: ACTIVE -> TERMINATED")
 	backups, _ := filepath.Glob(cfg.MetadataFile + ".bak-*")
 	assert.Len(t, backups, 1)
+}
+
+// hookFetcher runs onFirst before its first lookup, standing in for
+// another toolkit process writing the metadata file mid-sync.
+type hookFetcher struct {
+	Fetcher
+	once    sync.Once
+	onFirst func()
+}
+
+func (h *hookFetcher) Fetch(ctx context.Context, id string) ([]byte, error) {
+	h.once.Do(h.onFirst)
+	return h.Fetcher.Fetch(ctx, id)
+}
+
+// A `set tenant` that lands while the lookups run survives the write:
+// the results apply to the file as it is when written.
+//
+//nolint:paralleltest // replaces the package-level newFetcherFn seam
+func TestRun_WriteKeepsConcurrentEdits(t *testing.T) {
+	orig := newFetcherFn
+	t.Cleanup(func() { newFetcherFn = orig })
+	cfg := Config{
+		RepoPath:     writeRepo(t, "ocid1.tenancy.oc1..a"),
+		MetadataFile: filepath.Join(t.TempDir(), "metadata.yaml"),
+		Parallel:     1,
+		Write:        true,
+	}
+	newFetcherFn = func() Fetcher {
+		return &hookFetcher{
+			Fetcher: &fakeFetcher{raw: map[string][]byte{
+				"ocid1.tenancy.oc1..a": details("ocid1.tenancy.oc1..a", "acme", "INTERNAL", "ACTIVE"),
+			}},
+			onFirst: func() {
+				_, err := configloader.UpdateMetadata(cfg.MetadataFile, func(m *models.Metadata) error {
+					return configloader.UpsertTenant(m, models.TenantMetadata{ID: "ocid1.tenancy.oc1..z", Name: strp("zed")})
+				})
+				require.NoError(t, err)
+			},
+		}
+	}
+
+	var out bytes.Buffer
+	require.NoError(t, Run(context.Background(), cfg, &out))
+	got, err := configloader.LoadMetadata(cfg.MetadataFile)
+	require.NoError(t, err)
+	byID := map[string]models.TenantMetadata{}
+	for _, e := range got.Tenants {
+		byID[e.ID] = e
+	}
+	require.Contains(t, byID, "ocid1.tenancy.oc1..z", "the mid-sync edit was overwritten")
+	assert.Equal(t, "ACTIVE", byID["ocid1.tenancy.oc1..a"].Status)
+	backups, _ := filepath.Glob(cfg.MetadataFile + ".bak-*")
+	require.Len(t, backups, 1, "the file the sync replaced is backed up")
+	saved, err := os.ReadFile(backups[0])
+	require.NoError(t, err)
+	assert.Contains(t, string(saved), "ocid1.tenancy.oc1..z", "the backup holds the file as written mid-sync")
+	assert.NotContains(t, string(saved), "acme", "taken before the sync's write")
 }
 
 //nolint:paralleltest // replaces the package-level newFetcherFn seam

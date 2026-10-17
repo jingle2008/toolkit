@@ -56,29 +56,44 @@ func Run(ctx context.Context, cfg Config, stdout io.Writer) error {
 	if cfg.CacheDir != "" {
 		f = Cached{Dir: cfg.CacheDir, Next: f}
 	}
-	next, report, err := Sync(ctx, ids, meta, f, Options{Parallel: cfg.Parallel, Retries: 4, Backoff: 5 * time.Second})
+	lookups, err := Lookup(ctx, ids, f, Options{Parallel: cfg.Parallel, Retries: 4, Backoff: 5 * time.Second})
+	if err != nil {
+		return err
+	}
+	if !cfg.Write {
+		_, report, err := lookups.Apply(meta)
+		if err != nil {
+			return err
+		}
+		printReport(stdout, report)
+		_, _ = fmt.Fprintln(stdout, "dry run: nothing written; rerun with --write to save")
+		return nil
+	}
+	return writeMetadata(stdout, cfg.MetadataFile, lookups)
+}
+
+// writeMetadata applies lookups to the metadata file as it is now — not
+// as read before the lookups, so edits made meanwhile (`set tenant`, a
+// TUI or MCP server) survive — backs the file up, saves the result, and
+// loads it back to confirm toolkit will accept it.
+func writeMetadata(stdout io.Writer, path string, lookups Lookups) error {
+	var report Report
+	var backup string
+	_, err := configloader.UpdateMetadata(path, func(m *models.Metadata) error {
+		next, r, err := lookups.Apply(m)
+		if err != nil {
+			return err
+		}
+		if backup, err = backupFile(path); err != nil {
+			return err
+		}
+		report, *m = r, *next
+		return nil
+	})
 	if err != nil {
 		return err
 	}
 	printReport(stdout, report)
-
-	if !cfg.Write {
-		_, _ = fmt.Fprintln(stdout, "dry run: nothing written; rerun with --write to save")
-		return nil
-	}
-	return writeMetadata(stdout, cfg.MetadataFile, next)
-}
-
-// writeMetadata backs up path, saves m there, and loads it back to
-// confirm toolkit will accept it.
-func writeMetadata(stdout io.Writer, path string, m *models.Metadata) error {
-	backup, err := backupFile(path)
-	if err != nil {
-		return err
-	}
-	if err := configloader.SaveMetadata(path, m); err != nil {
-		return err
-	}
 	if _, err := configloader.LoadMetadata(path); err != nil {
 		return fmt.Errorf("written metadata doesn't load back (backup: %s): %w", backup, err)
 	}
