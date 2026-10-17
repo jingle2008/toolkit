@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -220,4 +221,42 @@ func TestIrreversibleTools_RequireConfirmTarget(t *testing.T) {
 		}
 		*performed = nil
 	}
+}
+
+// With --mcp-read-only no mutating tool is registered at all, so no
+// prompt can reach one; every read tool, get_drain_status included, is.
+func TestReadOnlyServer_RegistersNoMutationTools(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	sess := newTestPair(ctx, t, stubLoader{}, func(c *config.Config) { c.MCPReadOnly = true })
+	res, err := sess.ListTools(ctx, &sdk.ListToolsParams{})
+	require.NoError(t, err)
+
+	got := map[string]bool{}
+	for _, tool := range res.Tools {
+		got[tool.Name] = true
+		assert.True(t, tool.Annotations != nil && tool.Annotations.ReadOnlyHint, "%s is not read-only", tool.Name)
+	}
+	for name := range toolActions {
+		assert.False(t, got[name], "read-only server registers %s", name)
+	}
+	for name, hint := range wantHints {
+		if hint == hintReadOnly {
+			assert.True(t, got[name], "read-only server is missing %s", name)
+		}
+	}
+}
+
+// A mutating tool called on a read-only server is unknown, not refused.
+func TestReadOnlyServer_RejectsMutationCalls(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	sess := newTestPair(ctx, t, stubLoader{}, func(c *config.Config) { c.MCPReadOnly = true })
+	_, err := sess.CallTool(ctx, &sdk.CallToolParams{
+		Name:      "terminate_node",
+		Arguments: map[string]any{"node": "node-a", "confirm": true, "confirm_target": "node-a"},
+	})
+	require.ErrorContains(t, err, `unknown tool "terminate_node"`)
 }

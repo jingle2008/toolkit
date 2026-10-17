@@ -32,12 +32,19 @@ type Config struct {
 	// OCI credentials decide the maximum blast radius — not the
 	// operator's startup-env choice.
 	MutationEnvOverrideAllowed bool `mapstructure:"mutation-env-override-allowed"`
+	// MCPReadOnly starts `toolkit mcp` without its mutating tools: they
+	// aren't registered, so an agent can't call one whatever it's told.
+	// Default false.
+	MCPReadOnly bool `mapstructure:"mcp-read-only"`
 }
 
 // FlagMutationEnvOverrideAllowed is the flag (and config key) behind
 // MutationEnvOverrideAllowed, named once so the MCP tool descriptions
 // that tell agents about it cannot drift from the real flag.
 const FlagMutationEnvOverrideAllowed = "mutation-env-override-allowed"
+
+// FlagMCPReadOnly is the flag (and config key) behind MCPReadOnly.
+const FlagMCPReadOnly = "mcp-read-only"
 
 /*
 Normalize canonicalizes the user-supplied env values in place: short

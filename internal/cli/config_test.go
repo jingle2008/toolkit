@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
+
+	"github.com/jingle2008/toolkit/internal/config"
 	"sigs.k8s.io/yaml"
 )
 
@@ -341,5 +343,41 @@ func TestConfigCmd_YAMLDecodes(t *testing.T) {
 	}
 	if view.Settings == nil {
 		t.Error("expected non-nil settings map after YAML decode")
+	}
+}
+
+// --mcp-read-only and TOOLKIT_MCP_READ_ONLY reach the config `toolkit mcp`
+// unmarshals, under the key config.MCPReadOnly reads.
+func TestMCPReadOnly_FlagAndEnvReachConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		env  string
+	}{
+		{"flag", []string{"--" + config.FlagMCPReadOnly}, ""},
+		{"env", nil, "true"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			t.Setenv("TOOLKIT_MCP_READ_ONLY", tc.env)
+			viper.Reset()
+			t.Cleanup(viper.Reset)
+
+			cmd := NewRootCmd("vtest")
+			cmd.SetArgs(append([]string{"config", "-o", "json"}, tc.args...))
+			stdout := new(bytes.Buffer)
+			cmd.SetOut(stdout)
+			cmd.SetErr(new(bytes.Buffer))
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("toolkit config: %v", err)
+			}
+			var cfg config.Config
+			if err := viper.Unmarshal(&cfg); err != nil {
+				t.Fatal(err)
+			}
+			if !cfg.MCPReadOnly {
+				t.Errorf("MCPReadOnly not set via %s; output:\n%s", tc.name, stdout.String())
+			}
+		})
 	}
 }

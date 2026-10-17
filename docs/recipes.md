@@ -80,7 +80,7 @@ A single `toolkit mcp` server boots in one env (`env-type` / `env-region` / `env
 
 > Compare the base-model lineup in `oc1`/`us-phoenix-1` versus `oc1`/`us-ashburn-1`.
 
-For **mutation** tools, env overrides are off by default — the operator's startup env is the maximum blast radius. Opt in (carefully) with `--mutation-env-override-allowed` at server start if your agent needs multi-realm authority.
+For **mutation** tools, env overrides are off by default — the operator's startup env is the maximum blast radius. Opt in (carefully) with `--mutation-env-override-allowed` at server start if your agent needs multi-realm authority. Going the other way, `args = ["mcp", "--mcp-read-only"]` starts a server with no mutation tools at all — the safe default for an agent that only needs to answer questions.
 
 ---
 
