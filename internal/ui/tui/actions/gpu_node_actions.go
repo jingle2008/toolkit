@@ -154,7 +154,7 @@ func PopulateGPUPools(
 	gpuPoolMap := make(map[string]*models.GPUPool)
 	for i := range gpuPools {
 		gpuPoolMap[gpuPools[i].Name] = &gpuPools[i]
-		gpuPools[i].Status = "NONEXIST"
+		gpuPools[i].Status = models.GPUPoolStatusNonexistent
 	}
 
 	applyInstancePoolSummaries(gpuPoolMap, resp.Items)

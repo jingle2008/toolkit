@@ -558,7 +558,7 @@ func loadGPUPools(ctx context.Context, dirPath, poolConfigName string, isOkeMana
 
 	var gpuPools []models.GPUPool
 	for name, value := range poolsValue.AsValueMap() {
-		pool := models.GPUPool{Name: name, IsOkeManaged: isOkeManaged, CapacityType: "on-demand", Status: "..."}
+		pool := models.GPUPool{Name: name, IsOkeManaged: isOkeManaged, CapacityType: "on-demand", Status: models.GPUPoolStatusPending}
 		for k, v := range value.AsValueMap() {
 			switch k {
 			case "shape":
