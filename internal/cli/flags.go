@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 )
 
@@ -28,7 +29,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Enable debug logging")
 	rootCmd.PersistentFlags().String("log-format", "console", "Log format: console|json|slog")
 	rootCmd.PersistentFlags().String("log-level", "", "Minimum log level: debug|info|warn|error (empty uses debug flag)")
-	rootCmd.PersistentFlags().Bool("mutation-env-override-allowed", false,
+	rootCmd.PersistentFlags().Bool(config.FlagMutationEnvOverrideAllowed, false,
 		"Allow MCP mutation tools to override the startup env_realm/env_region/env_type per call. "+
 			"Default false: mutations only ever target the startup env even if the agent provides override fields. "+
 			"Enable only if the operator's credentials are intended to grant the agent multi-realm authority.")

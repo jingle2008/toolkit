@@ -50,86 +50,103 @@ func flattenSorted[T any](grouped map[string][]T) []T {
 func registerTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_tenants",
+		Annotations: readOnly(),
 		Description: "List tenants in the configured realm: one per tenancy OCID found in tenancy overrides or tenant metadata, named by its metadata name or, without one, by its OCID. Returns Tenant objects {name, id, is_internal, note, status}; `status` is the tenancy account state recorded by `toolkit tenant sync` (ACTIVE, DELETING, TERMINATED, ALWAYS_FREE_ONLY), omitted when unknown. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListTenants)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_base_models",
+		Annotations: readOnly(),
 		Description: "List base models loaded from the cluster. Returns BaseModel objects {name, internalName, displayName, vendor, type, version, status, maxTokens, ...}. Tenant-scoped models (ClusterBaseModel CRs with a `tenancy-id` label) are excluded — use list_imported_models for those. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListBaseModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_serving_runtimes",
+		Annotations: readOnly(),
 		Description: "List OME ClusterServingRuntime CRs — the cluster-scoped templates that define how a class of models is served. Returns ServingRuntime objects {name, acceleratorClasses, instanceTypes, image, modelSizeMin, modelSizeMax, cpuLimit, memoryLimit, gpuLimit, disabled, autoSelect}. `acceleratorClasses` (e.g. \"nvidia-h100-8\", family plus tensor-parallel size) and `instanceTypes` (e.g. \"BM.GPU.H100.8\", from the required node affinity) are both optional and may both be absent. `image` and the limits come from the ome-container, preferring spec.engineConfig.runner over spec.containers. `autoSelect` is true when any supportedModelFormats entry sets it. Namespaced ServingRuntime CRs are not included. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListServingRuntimes)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_imported_models",
+		Annotations: readOnly(),
 		Description: "List tenant-imported models as a flat array (same shape as `list_dacs`); the owning tenant is preserved on each item as `tenantId`. When the tenancy is known to the repo's tenant list (the tenancies in tenancy overrides plus metadata), the item also carries `owner` ({name, id, is_internal, note, status}) and `filter` matches the tenant name; otherwise `owner` is omitted. Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label. Every item carries a non-empty `tenantId` — the label value, or `\"UNKNOWN_TENANCY\"` for orphans (namespaced CRs missing the label, treated as a config error). `namespace` (K8s scope) is orthogonal: empty for cluster-scoped CRs, non-empty for namespaced CRs; a namespaced CR may still carry an arbitrary `tenancy-id` label that the label authoritatively defines. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. A model copied into several namespaces (its `default` library copy plus copies made into DAC namespaces for serving) is one item: `namespace` is the primary copy (`default` when present) and `copies` lists the other namespaces. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListImportedModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_pools",
+		Annotations: readOnly(),
 		Description: "List GPU pools (self-managed instance pools, self-managed cluster networks, and OKE-managed nodepools). Returns GPUPool objects with live `actualSize` and `status` enriched from OCI's ListInstancePools (matches the TUI). Warnings field is populated when one or more pool sources fail to resolve or enrichment is incomplete. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListGPUPools)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_nodes",
+		Annotations: readOnly(),
 		Description: "List GPU nodes across all pools as a flat array. The originating pool is preserved on each item as `poolName`. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListGPUNodes)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_workloads",
+		Annotations: readOnly(),
 		Description: "List GPU-consuming pods (workloads) across all nodes as a flat array. The hosting node is preserved on each item as `node`. Each item is {name, node, tenantId, namespace, model, runtime, gpus, mode}; model/runtime/mode are best-effort and blank for non-serving GPU pods. Items whose tenancy is known also carry `owner` ({name, id, is_internal, note, status}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListGPUWorkloads)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_dacs",
+		Annotations: readOnly(),
 		Description: "List dedicated AI clusters as a flat array. The owning tenant is preserved on each item as `tenantId`. When the tenancy is known to the repo's tenant list (the tenancies in tenancy overrides plus metadata), the item also carries `owner` ({name, id, is_internal, note, status}) and `filter` matches the tenant name; otherwise `owner` is omitted. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListDACs)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_inference_services",
+		Annotations: readOnly(),
 		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the endpoint serves a tenant-imported model (a namespaced BaseModel ref, or a tenant-labelled ClusterBaseModel, whose name is an OCID resource id). `ready` is the Ready condition status (True/False/Unknown). Items whose tenancy is known also carry `owner` ({name, id, is_internal, note, status}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListInferenceServices)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_environments",
+		Annotations: readOnly(),
 		Description: "List all known toolkit environments (type/region/realm tuples). No env_override needed; returns all envs visible to the configured repo. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListEnvironments)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_service_tenancies",
+		Annotations: readOnly(),
 		Description: "List service tenancies declared in the toolkit repo. Returns ServiceTenancy objects {name, realm, home_region, regions, environment}. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListServiceTenancies)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_model_artifacts",
+		Annotations: readOnly(),
 		Description: "List model artifacts (object-storage paths) as a flat array. The owning base-model name is preserved on each item as `model_name`. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListModelArtifacts)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_definitions",
+		Annotations: readOnly(),
 		Description: "List definitions of the given kind. `kind` must be one of: limit, console_property, property. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListDefinitions)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_tenancy_overrides",
+		Annotations: readOnly(),
 		Description: "List tenancy-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property. Each item carries the owning tenant via `tenant`. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListTenancyOverrides)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_regional_overrides",
+		Annotations: readOnly(),
 		Description: "List regional-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListRegionalOverrides)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_related",
+		Annotations: readOnly(),
 		Description: relatedToolDescription(),
 	}, s.handleListRelated)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_aliases",
+		Annotations: readOnly(),
 		Description: "Discovery tool. Lists each registered alias and its canonical category name. Useful for an agent that wants to confirm short codes before calling other tools.",
 	}, s.handleListAliases)
 
