@@ -259,3 +259,29 @@ func TestCategory_ScopedBy(t *testing.T) {
 	assert.Equal(t, []Category{Tenant, LimitDefinition}, LimitTenancyOverride.ScopedBy())
 	assert.Nil(t, Tenant.ScopedBy())
 }
+
+// AliasEntries is every category but CategoryUnknown, in category order,
+// each with the aliases ParseCategory takes.
+func TestAliasEntries(t *testing.T) {
+	t.Parallel()
+	entries := AliasEntries()
+	var want []string
+	for _, c := range Categories {
+		if c != CategoryUnknown {
+			want = append(want, c.String())
+		}
+	}
+	got := make([]string, len(entries))
+	for i, e := range entries {
+		got[i] = e.Name
+		for _, a := range e.Aliases {
+			c, err := ParseCategory(a)
+			if err != nil || c.String() != e.Name {
+				t.Errorf("alias %q of %s parses to %v, %v", a, e.Name, c, err)
+			}
+		}
+	}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("AliasEntries names = %v, want %v", got, want)
+	}
+}

@@ -35,8 +35,8 @@ What remains:
 | F4 row-level dangling only in the TUI | Fixed in #150 (`get --faulty`, MCP `faulty`, `check_integrity`) |
 | F5 no get-by-name | Fixed by the get-by-name PR (`get <category> <name>`, MCP `get_item`) |
 | F6 wrong flag name in MCP docs | Fixed in #146 |
-| F7 metrics plan in the TUI | Open (backlog, plan Phase 5) |
-| F8 minor gaps and layering | Partly fixed: the TUI sets cordon explicitly (#148); `ToggleCordon` removed (#149). The rest is open (plan Phase 6) |
+| F7 metrics plan in the TUI | Fixed by the parity-backlog PR: planning moved to `telemetry.PlanFor`; `toolkit metrics` and MCP `metrics_url` |
+| F8 minor gaps and layering | Fixed: explicit cordon (#148); `ToggleCordon` removed (#149); OCI operations moved to `internal/infra/oci` and output to `internal/output`, `drain --status`, one alias shape, the ServingRuntime TUI column set documented (parity-backlog PR). CLI/MCP sort: left out by decision (pipe to `sort`/jq) |
 | F9 metadata lost updates | Fixed in #147 |
 
 A re-check of what those PRs added on more than one surface found new drift, now closed too:

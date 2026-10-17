@@ -741,51 +741,38 @@ func emitFromDataset(
 	}
 }
 
-// aliasView is the JSON/YAML shape for `toolkit get alias`. It matches
-// the canonical column set (Name + Aliases joined): one entry per
-// category, with the list of aliases for that category. Useful for
-// scripts and LLM agents.
-type aliasView struct {
-	Name    string   `json:"name"`
-	Aliases []string `json:"aliases"`
+// aliasEntryMatches reports whether --filter matches the category's name
+// or one of its aliases (case-insensitive substring).
+func aliasEntryMatches(e domain.AliasEntry, filter string) bool {
+	if strings.Contains(strings.ToLower(e.Name), filter) {
+		return true
+	}
+	for _, a := range e.Aliases {
+		if strings.Contains(strings.ToLower(a), filter) {
+			return true
+		}
+	}
+	return false
 }
 
-// writeAliases renders the canonical alias list — one row per category
-// (TUI shape, spec Decision #4). This is an intentional change from
-// the legacy 1-row-per-alias CLI shape.
-//
-//nolint:cyclop // filter loop + per-format dispatch are intrinsic to the contract
 func writeAliases(w writer, filter string, limit int, opts output.Options, selected []string) error {
-	cats := make([]domain.Category, 0, len(domain.Categories))
-	for _, c := range domain.Categories {
-		if c == domain.CategoryUnknown {
+	var (
+		entries []domain.AliasEntry
+		cats    []domain.Category // the same rows, for the table's column set
+	)
+	for _, e := range domain.AliasEntries() { // in category order
+		if filter != "" && !aliasEntryMatches(e, filter) {
 			continue
 		}
-		if filter != "" {
-			catName := strings.ToLower(c.String())
-			if !strings.Contains(catName, filter) {
-				matched := false
-				for _, a := range c.Aliases() {
-					if strings.Contains(strings.ToLower(a), filter) {
-						matched = true
-						break
-					}
-				}
-				if !matched {
-					continue
-				}
-			}
+		c, err := domain.ParseCategory(e.Name)
+		if err != nil {
+			return err
 		}
-		cats = append(cats, c)
+		entries, cats = append(entries, e), append(cats, c)
 	}
-	// Categories are already in registration (enum) order.
 	switch opts.Format {
 	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
-		items := make([]aliasView, 0, len(cats))
-		for _, c := range cats {
-			items = append(items, aliasView{Name: c.String(), Aliases: c.Aliases()})
-		}
-		return writeEncoded(w, opts, collections.TruncateSlice(items, limit))
+		return writeEncoded(w, opts, collections.TruncateSlice(entries, limit))
 	case output.FormatTable, output.FormatCSV, output.FormatTSV:
 		// Alias is a static enum dump — no env-dependent columns,
 		// so passing an empty environment is correct.
