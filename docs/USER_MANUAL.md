@@ -280,7 +280,7 @@ Toolkit organises data into 22 categories:
 
 | Category | Description |
 |----------|-------------|
-| **Tenant** | One row per tenancy OCID found in the tenancy overrides or the tenant metadata file, with its internal flag and note; scopes into the tenant's overrides and resources. The name comes from the metadata file only (override directory names are ignored); a tenancy without a metadata name is named by its OCID. Names must be unique: a metadata file that gives two tenancies the same name fails to load. **Status** is the tenancy's account state (`ACTIVE`, `DELETING`, `TERMINATED`, `ALWAYS_FREE_ONLY`) as last recorded by `tenant-sync`, blank when unknown; a `DELETING` or `TERMINATED` tenant is reported as faulty |
+| **Tenant** | One row per tenancy OCID found in the tenancy overrides or the tenant metadata file, with its internal flag and note; scopes into the tenant's overrides and resources. The name comes from the metadata file only (override directory names are ignored); a tenancy without a metadata name is named by its OCID. Names must be unique: a metadata file that gives two tenancies the same name fails to load. **Status** is the tenancy's account state (`ACTIVE`, `DELETING`, `TERMINATED`, `ALWAYS_FREE_ONLY`) as last recorded by `toolkit tenant sync`, blank when unknown; a `DELETING` or `TERMINATED` tenant is reported as faulty |
 | **Environment** | Cloud environment configurations |
 | **ServiceTenancy** | Service-to-tenancy mappings |
 
@@ -687,35 +687,36 @@ Supported log formats: `console` (human-readable), `json` (structured), `slog` (
 | `toolkit init` | Scaffold `~/.config/toolkit/config.yaml` with example values |
 | `toolkit completion <shell>` | Print shell completion script for `bash`, `zsh`, `fish`, or `powershell` |
 | `toolkit version [--check-updates]` | Print installed version; `--check-updates` fetches the latest release from GitHub and compares |
+| `toolkit tenant sync [--write]` | Fill in oc1 tenant names, internal flags and status in the metadata file from the account admin service (needs `oci-ops`); see below |
 
-### Syncing tenant names and status (`tenant-sync`)
+### Syncing tenant names and status (`toolkit tenant sync`)
 
-`tenant-sync` is a separate command that fills in the tenant metadata file
-from the account admin service, through the `oci-ops` CLI. It covers every
-oc1 tenancy in the repo's tenancy overrides plus the oc1 entries already in
-the metadata file. Other realms aren't supported.
+`toolkit tenant sync` fills in the tenant metadata file from the account
+admin service, through the `oci-ops` CLI (which must be on `PATH`). It
+covers every oc1 tenancy in the repo's tenancy overrides plus the oc1
+entries already in the metadata file. Other realms aren't supported.
 
 ```bash
-go install github.com/jingle2008/toolkit/cmd/tenant-sync@latest
-tenant-sync                      # dry run: prints what would change
-tenant-sync -write               # backs up the metadata file, then saves it
+toolkit tenant sync              # dry run: prints what would change
+toolkit tenant sync --write      # backs up the metadata file, then saves it
 ```
 
 - **Status** (`ACTIVE`, `DELETING`, `TERMINATED`, `ALWAYS_FREE_ONLY`) is
   refreshed on every run.
 - **Name** and **internal flag** are only filled in when an entry has none.
   Your values are never overwritten: where the service disagrees, or its name
-  is already used by another tenancy, the dry run lists it and leaves yours.
+  is already used by another tenancy, the report lists it and leaves yours.
 - A failed lookup leaves the entry as it was. An expired `oci-ops` session
   stops the run; re-authenticate (run any `oci-ops` command and accept the
   prompt) and rerun.
-- `-cache-dir <dir>` saves each response and reuses it on the next run, so an
-  interrupted sync resumes without repeating lookups. Cached statuses are as
-  old as the files: use a fresh directory for current ones.
-- The repo and metadata paths default to `repo-path` and `metadata-file` in
-  `~/.config/toolkit/config.yaml`; `-repo` and `-metadata` override them.
+- `--cache-dir <dir>` saves each response and reuses it on the next run, so
+  an interrupted sync resumes without repeating lookups. Cached statuses are
+  as old as the files: use a fresh directory for current ones.
+- The repo and metadata file are the usual `repo-path` and `metadata-file`
+  settings (config file, `--repo-path` / `--metadata-file`, or `TOOLKIT_*`
+  environment variables).
 
-Quit any running toolkit TUI or MCP server before `-write`. Each keeps the
+Quit any running toolkit TUI or MCP server before `--write`. Each keeps the
 metadata it started with and would overwrite the synced file on its next
 tenant save.
 

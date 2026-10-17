@@ -118,7 +118,7 @@ func TestLoadMetadata_RejectsDuplicates(t *testing.T) {
 }
 
 // Status is machine-owned: an edit that doesn't carry one (the TUI form,
-// MCP upsert_tenant_metadata) keeps it, while tenant-sync's own upsert,
+// MCP upsert_tenant_metadata) keeps it, while the sync's own upsert,
 // which does carry one, replaces it.
 func TestUpsertTenant_KeepsStatus(t *testing.T) {
 	t.Parallel()

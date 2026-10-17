@@ -1,7 +1,7 @@
 /*
 Package tenantsync records each tenancy's name, internal flag and account
 status in the tenant metadata file, from the account admin service
-(oci-ops account-admin-tool). It backs the tenant-sync command and is
+(oci-ops account-admin-tool). It backs `toolkit tenant sync` and is
 oc1 only.
 */
 package tenantsync
@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-// Account is what tenant-sync reads for one tenancy.
+// Account is what the sync reads for one tenancy.
 type Account struct {
 	TenancyID string
 	Name      string

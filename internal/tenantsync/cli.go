@@ -3,14 +3,10 @@ package tenantsync
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
-
-	"sigs.k8s.io/yaml"
 
 	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -25,44 +21,29 @@ const (
 // newFetcherFn builds the live fetcher; a seam for tests.
 var newFetcherFn = func() Fetcher { return OCIOps{Region: region} }
 
-// toolkitConfig is the part of toolkit's config file tenant-sync reads.
-type toolkitConfig struct {
-	RepoPath     string `json:"repo-path"`
-	MetadataFile string `json:"metadata-file"`
+// Config is one run of the sync.
+type Config struct {
+	RepoPath     string // the repo whose oc1 tenancy overrides list the tenancies
+	MetadataFile string // the tenant metadata file to update
+	CacheDir     string // optional: reuse and save raw lookups here
+	Parallel     int    // concurrent lookups
+	Write        bool   // write the metadata file; otherwise a dry run
 }
 
-// Main runs tenant-sync with args (without the program name) and returns
-// the exit code.
-func Main(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	if err := run(ctx, args, stdout); err != nil {
-		_, _ = fmt.Fprintln(stderr, "tenant-sync:", err)
-		return 1
+// Run syncs every oc1 tenancy, prints what changed (or would) to stdout,
+// and writes the metadata file when cfg.Write is set.
+func Run(ctx context.Context, cfg Config, stdout io.Writer) error {
+	if cfg.RepoPath == "" {
+		return errors.New("no repo path: set repo-path in the config file or pass --repo-path")
 	}
-	return 0
-}
-
-func run(ctx context.Context, args []string, stdout io.Writer) error {
-	home, _ := os.UserHomeDir()
-	fs := flag.NewFlagSet("tenant-sync", flag.ContinueOnError)
-	cfgFile := fs.String("config", filepath.Join(home, ".config", "toolkit", "config.yaml"), "toolkit config file (for repo-path and metadata-file)")
-	repo := fs.String("repo", "", "repo path (default: repo-path from the config file)")
-	metaFile := fs.String("metadata", "", "tenant metadata file (default: metadata-file from the config file, else ~/.config/toolkit/metadata.yaml)")
-	cacheDir := fs.String("cache-dir", "", "reuse and save raw lookups here, so an interrupted sync resumes; use a fresh directory for current statuses")
-	parallel := fs.Int("parallel", 3, "concurrent lookups")
-	write := fs.Bool("write", false, "write the metadata file (default: dry run)")
-	if err := fs.Parse(args); err != nil {
-		return err
+	if cfg.MetadataFile == "" {
+		return errors.New("no metadata file: set metadata-file in the config file or pass --metadata-file")
 	}
-
-	if err := resolvePaths(*cfgFile, home, repo, metaFile); err != nil {
-		return err
-	}
-
-	meta, err := loadMetadata(*metaFile)
+	meta, err := loadMetadata(cfg.MetadataFile)
 	if err != nil {
 		return err
 	}
-	group, err := configloader.LoadTenancyOverrideGroup(ctx, *repo, realm, meta)
+	group, err := configloader.LoadTenancyOverrideGroup(ctx, cfg.RepoPath, realm, meta)
 	if err != nil {
 		return fmt.Errorf("load %s tenants: %w", realm, err)
 	}
@@ -72,42 +53,20 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	f := newFetcherFn()
-	if *cacheDir != "" {
-		f = Cached{Dir: *cacheDir, Next: f}
+	if cfg.CacheDir != "" {
+		f = Cached{Dir: cfg.CacheDir, Next: f}
 	}
-	next, report, err := Sync(ctx, ids, meta, f, Options{Parallel: *parallel, Retries: 4, Backoff: 5 * time.Second})
+	next, report, err := Sync(ctx, ids, meta, f, Options{Parallel: cfg.Parallel, Retries: 4, Backoff: 5 * time.Second})
 	if err != nil {
 		return err
 	}
 	printReport(stdout, report)
 
-	if !*write {
-		_, _ = fmt.Fprintln(stdout, "dry run: nothing written; rerun with -write to save")
+	if !cfg.Write {
+		_, _ = fmt.Fprintln(stdout, "dry run: nothing written; rerun with --write to save")
 		return nil
 	}
-	return writeMetadata(stdout, *metaFile, next)
-}
-
-// resolvePaths fills an unset repo and metadata path from toolkit's
-// config file, the metadata path falling back to toolkit's default.
-func resolvePaths(cfgFile, home string, repo, metaFile *string) error {
-	cfg, err := readConfig(cfgFile)
-	if err != nil {
-		return err
-	}
-	if *repo == "" {
-		*repo = cfg.RepoPath
-	}
-	if *repo == "" {
-		return errors.New("no repo path: pass -repo or set repo-path in the config file")
-	}
-	if *metaFile == "" {
-		*metaFile = cfg.MetadataFile
-	}
-	if *metaFile == "" {
-		*metaFile = filepath.Join(home, ".config", "toolkit", "metadata.yaml")
-	}
-	return nil
+	return writeMetadata(stdout, cfg.MetadataFile, next)
 }
 
 // writeMetadata backs up path, saves m there, and loads it back to
@@ -129,22 +88,6 @@ func writeMetadata(stdout io.Writer, path string, m *models.Metadata) error {
 	}
 	_, _ = fmt.Fprintln(stdout)
 	return nil
-}
-
-// readConfig reads toolkit's config file; a missing one is empty.
-func readConfig(path string) (toolkitConfig, error) {
-	var cfg toolkitConfig
-	data, err := os.ReadFile(path) //nolint:gosec // the user's own config file
-	if errors.Is(err, os.ErrNotExist) {
-		return cfg, nil
-	}
-	if err != nil {
-		return cfg, err
-	}
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return cfg, fmt.Errorf("parse %s: %w", path, err)
-	}
-	return cfg, nil
 }
 
 // loadMetadata loads the metadata file; a missing one is empty, and the

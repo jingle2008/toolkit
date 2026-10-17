@@ -19,7 +19,7 @@ type Cached struct {
 // Fetch implements Fetcher.
 func (c Cached) Fetch(ctx context.Context, ocid string) ([]byte, error) {
 	path := filepath.Join(c.Dir, ocid+".json")
-	if raw, err := os.ReadFile(path); err == nil { //nolint:gosec // a file tenant-sync wrote, named by the tenancy OCID
+	if raw, err := os.ReadFile(path); err == nil { //nolint:gosec // a file the sync wrote, named by the tenancy OCID
 		if _, perr := ParseAccount(raw); perr == nil {
 			return raw, nil
 		}

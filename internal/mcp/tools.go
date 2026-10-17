@@ -50,7 +50,7 @@ func flattenSorted[T any](grouped map[string][]T) []T {
 func registerTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_tenants",
-		Description: "List tenants in the configured realm: one per tenancy OCID found in tenancy overrides or tenant metadata, named by its metadata name or, without one, by its OCID. Returns Tenant objects {name, id, is_internal, note, status}; `status` is the tenancy account state recorded by tenant-sync (ACTIVE, DELETING, TERMINATED, ALWAYS_FREE_ONLY), omitted when unknown. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List tenants in the configured realm: one per tenancy OCID found in tenancy overrides or tenant metadata, named by its metadata name or, without one, by its OCID. Returns Tenant objects {name, id, is_internal, note, status}; `status` is the tenancy account state recorded by `toolkit tenant sync` (ACTIVE, DELETING, TERMINATED, ALWAYS_FREE_ONLY), omitted when unknown. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListTenants)
 
 	sdk.AddTool(s.server, &sdk.Tool{

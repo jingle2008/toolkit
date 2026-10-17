@@ -15,7 +15,7 @@ type Tenant struct {
 	Note       string `json:"note,omitempty"`
 	// Status is the tenancy's account state as the account admin service
 	// reports it (ACTIVE, DELETING, TERMINATED, ALWAYS_FREE_ONLY, ...),
-	// recorded in metadata by tenant-sync; empty when unknown.
+	// recorded in metadata by `toolkit tenant sync`; empty when unknown.
 	Status string `json:"status,omitempty"`
 }
 

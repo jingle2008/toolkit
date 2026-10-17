@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 
@@ -207,7 +206,7 @@ func writeRepo(t *testing.T, ids ...string) string {
 }
 
 //nolint:paralleltest // replaces the package-level newFetcherFn seam
-func TestMain_DryRunThenWrite(t *testing.T) {
+func TestRun_DryRunThenWrite(t *testing.T) {
 	orig := newFetcherFn
 	t.Cleanup(func() { newFetcherFn = orig })
 	f := &fakeFetcher{raw: map[string][]byte{
@@ -215,24 +214,25 @@ func TestMain_DryRunThenWrite(t *testing.T) {
 		"ocid1.tenancy.oc1..b": details("ocid1.tenancy.oc1..b", "beta", "EXTERNAL", "DELETING"),
 	}}
 	newFetcherFn = func() Fetcher { return f }
+	cfg := Config{
+		RepoPath:     writeRepo(t, "ocid1.tenancy.oc1..a", "ocid1.tenancy.oc1..b"),
+		MetadataFile: filepath.Join(t.TempDir(), "metadata.yaml"),
+		Parallel:     2,
+	}
+	ctx := context.Background()
 
-	repo := writeRepo(t, "ocid1.tenancy.oc1..a", "ocid1.tenancy.oc1..b")
-	dir := t.TempDir()
-	cfg := filepath.Join(dir, "config.yaml")
-	meta := filepath.Join(dir, "metadata.yaml")
-	require.NoError(t, os.WriteFile(cfg, []byte("repo-path: "+repo+"\nmetadata-file: "+meta+"\n"), 0o600))
-
-	var out, errOut bytes.Buffer
-	require.Equal(t, 0, Main(context.Background(), []string{"-config", cfg}, &out, &errOut), errOut.String())
+	var out bytes.Buffer
+	require.NoError(t, Run(ctx, cfg, &out))
 	assert.Contains(t, out.String(), "looked up 2 oc1 tenancies: 2 named, 2 status changes")
 	assert.Contains(t, out.String(), "dry run")
-	assert.NoFileExists(t, meta, "a dry run writes nothing")
+	assert.NoFileExists(t, cfg.MetadataFile, "a dry run writes nothing")
 
+	cfg.Write = true
 	out.Reset()
-	require.Equal(t, 0, Main(context.Background(), []string{"-config", cfg, "-write"}, &out, &errOut), errOut.String())
-	assert.Contains(t, out.String(), "wrote "+meta)
+	require.NoError(t, Run(ctx, cfg, &out))
+	assert.Contains(t, out.String(), "wrote "+cfg.MetadataFile)
 	assert.NotContains(t, out.String(), "backup", "no file to back up yet")
-	data, err := os.ReadFile(meta) //nolint:gosec // test file
+	data, err := os.ReadFile(cfg.MetadataFile)
 	require.NoError(t, err)
 	assert.Contains(t, string(data), "name: acme")
 	assert.Contains(t, string(data), "status: DELETING")
@@ -240,38 +240,29 @@ func TestMain_DryRunThenWrite(t *testing.T) {
 	// A second write backs up the first, and reports a status change.
 	f.raw["ocid1.tenancy.oc1..a"] = details("ocid1.tenancy.oc1..a", "acme", "INTERNAL", "TERMINATED")
 	out.Reset()
-	require.Equal(t, 0, Main(context.Background(), []string{"-config", cfg, "-write"}, &out, &errOut), errOut.String())
+	require.NoError(t, Run(ctx, cfg, &out))
 	assert.Contains(t, out.String(), "acme: ACTIVE -> TERMINATED")
-	backups, _ := filepath.Glob(meta + ".bak-*")
+	backups, _ := filepath.Glob(cfg.MetadataFile + ".bak-*")
 	assert.Len(t, backups, 1)
 }
 
 //nolint:paralleltest // replaces the package-level newFetcherFn seam
-func TestMain_Errors(t *testing.T) {
+func TestRun_Errors(t *testing.T) {
 	orig := newFetcherFn
 	t.Cleanup(func() { newFetcherFn = orig })
 	newFetcherFn = func() Fetcher {
 		return &fakeFetcher{errs: map[string][]error{"ocid1.tenancy.oc1..a": {ErrNotAuthenticated}}}
 	}
+	ctx := context.Background()
 	dir := t.TempDir()
-	missingCfg := filepath.Join(dir, "none.yaml")
-	var out, errOut bytes.Buffer
-
-	assert.Equal(t, 1, Main(context.Background(), []string{"-config", missingCfg}, &out, &errOut))
-	assert.Contains(t, errOut.String(), "no repo path")
-
-	errOut.Reset()
 	repo := writeRepo(t, "ocid1.tenancy.oc1..a")
-	assert.Equal(t, 1, Main(context.Background(), []string{"-config", missingCfg, "-repo", repo, "-metadata", filepath.Join(dir, "m.yaml")}, &out, &errOut))
-	assert.Contains(t, errOut.String(), "re-authenticate")
+	var out bytes.Buffer
 
-	errOut.Reset()
+	require.ErrorContains(t, Run(ctx, Config{MetadataFile: "m.yaml"}, &out), "no repo path")
+	require.ErrorContains(t, Run(ctx, Config{RepoPath: repo}, &out), "no metadata file")
+	require.ErrorIs(t, Run(ctx, Config{RepoPath: repo, MetadataFile: filepath.Join(dir, "m.yaml")}, &out), ErrNotAuthenticated)
+
 	bad := filepath.Join(dir, "bad.yaml")
 	require.NoError(t, os.WriteFile(bad, []byte("tenants:\n- {id: a, name: x}\n- {id: b, name: x}\n"), 0o600))
-	assert.Equal(t, 1, Main(context.Background(), []string{"-config", missingCfg, "-repo", repo, "-metadata", bad}, &out, &errOut))
-	assert.Contains(t, errOut.String(), "invalid tenant metadata")
-
-	errOut.Reset()
-	assert.Equal(t, 1, Main(context.Background(), []string{"-bogus"}, &out, &errOut))
-	assert.True(t, strings.Contains(errOut.String(), "bogus"))
+	require.ErrorContains(t, Run(ctx, Config{RepoPath: repo, MetadataFile: bad}, &out), "invalid tenant metadata")
 }
