@@ -38,7 +38,7 @@ func TestRequestConfirm_OpensModalAndCapturesReturnView(t *testing.T) {
 	m.viewMode = common.ListView
 
 	cmd := m.requestConfirm(confirmOverlay{
-		tier:   mutation.Recoverable,
+		act:    mutation.Action{Tier: mutation.Recoverable},
 		action: "Drain",
 		kind:   "node",
 		target: "gpu-1",
@@ -55,7 +55,7 @@ func TestDismissConfirm_RestoresViewAndClears(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	m.viewMode = common.ListView
-	m.requestConfirm(confirmOverlay{tier: mutation.Recoverable, action: "Drain", run: func() tea.Cmd { return nil }})
+	m.requestConfirm(confirmOverlay{act: mutation.Action{Tier: mutation.Recoverable}, action: "Drain", run: func() tea.Cmd { return nil }})
 
 	m.dismissConfirm()
 
@@ -68,7 +68,7 @@ func TestDismissConfirm_RestoresViewAndClears(t *testing.T) {
 func armConfirm(m *Model, tier mutation.Tier) *bool {
 	ran := false
 	m.confirm = confirmOverlay{
-		tier:       tier,
+		act:        mutation.Action{Tier: tier},
 		action:     "Delete",
 		kind:       "DAC",
 		target:     "dac-1",
@@ -157,7 +157,7 @@ func TestConfirmDelete_TierByCategory(t *testing.T) {
 	m := newConfirmTestModel(t)
 	m.category = domain.DedicatedAICluster
 	dac := m.confirmDelete(key, "")
-	assert.Equal(t, mutation.Irreversible, dac.tier)
+	assert.Equal(t, mutation.Irreversible, dac.act.Tier)
 	assert.Equal(t, "Delete", dac.action)
 	assert.Equal(t, "DAC", dac.kind)
 	assert.Equal(t, itemKeyString(key), dac.target)
@@ -166,13 +166,13 @@ func TestConfirmDelete_TierByCategory(t *testing.T) {
 
 	m.category = domain.GPUNode
 	node := m.confirmDelete(key, "")
-	assert.Equal(t, mutation.Irreversible, node.tier)
+	assert.Equal(t, mutation.Irreversible, node.act.Tier)
 	assert.Equal(t, "Terminate", node.action)
 	assert.Equal(t, "node", node.kind)
 
 	m.category = domain.InferenceService
 	isvc := m.confirmDelete(key, k8s.OrphanDeleted)
-	assert.Equal(t, mutation.Irreversible, isvc.tier)
+	assert.Equal(t, mutation.Irreversible, isvc.act.Tier)
 	assert.Equal(t, "Delete", isvc.action)
 	assert.Equal(t, "orphaned InferenceService", isvc.kind)
 	assert.Equal(t, "Force-delete", m.confirmDelete(key, k8s.OrphanFinalized).action)
@@ -198,7 +198,7 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, mutation.Recoverable, tc.got.tier)
+			assert.Equal(t, mutation.Recoverable, tc.got.act.Tier)
 			assert.Equal(t, tc.action, tc.got.action)
 			assert.Equal(t, tc.kind, tc.got.kind)
 			assert.Empty(t, tc.got.warning, "recoverable actions carry no warning line")
@@ -210,7 +210,7 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 func TestConfirmView_RecoverableRender(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
-	m.confirm = confirmOverlay{tier: mutation.Recoverable, action: "Drain", kind: "node", target: "gpu-1"}
+	m.confirm = confirmOverlay{act: mutation.Action{Tier: mutation.Recoverable}, action: "Drain", kind: "node", target: "gpu-1"}
 	out := m.confirmView()
 	assert.Contains(t, out, "Drain")
 	assert.Contains(t, out, "gpu-1")
@@ -222,7 +222,7 @@ func TestConfirmView_IrreversibleRender(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	m.confirm = confirmOverlay{
-		tier: mutation.Irreversible, action: "Terminate", kind: "node",
+		act: mutation.Action{Tier: mutation.Irreversible}, action: "Terminate", kind: "node",
 		target: "gpu-1", warning: "Boot volume destroyed. Cannot undo.",
 	}
 	out := m.confirmView()

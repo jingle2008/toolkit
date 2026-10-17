@@ -33,4 +33,9 @@ func TestGPUPool_IsFaulty(t *testing.T) {
 	assert.False(t, GPUPool{Size: 2, ActualSize: 2}.IsFaulty())
 	assert.True(t, GPUPool{Size: 2, ActualSize: 1}.IsFaulty())
 	assert.True(t, GPUPool{Size: 2, ActualSize: 3}.IsFaulty())
+	// An actual size not looked up yet, or that couldn't be, is unknown,
+	// not zero; a pool OCI lacks is really empty.
+	assert.False(t, GPUPool{Size: 2, Status: GPUPoolStatusPending}.IsFaulty())
+	assert.False(t, GPUPool{Size: 2, Status: GPUPoolStatusUnknown}.IsFaulty())
+	assert.True(t, GPUPool{Size: 2, Status: GPUPoolStatusNonexistent}.IsFaulty())
 }

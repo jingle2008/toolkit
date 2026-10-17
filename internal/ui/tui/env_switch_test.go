@@ -120,3 +120,16 @@ func TestUpdateGPUPoolState_SnapshotsPools(t *testing.T) {
 	msg.pools[0].Status = "changed"
 	assert.Equal(t, "...", m.dataset.GPUPools[0].Status, "the message carries a copy")
 }
+
+// With the OCI lookup failed, every pool's actual size is unknown: Ctrl+Z
+// shows none as faulty, rather than every pool as short of its size.
+func TestFaultyPools_EnrichmentFailureFlagsNone(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset.GPUPools = []models.GPUPool{{Name: "a", Size: 4, Status: models.GPUPoolStatusPending}}
+	m.handleUpdateDoneMsg(updateDoneMsg{category: domain.GPUPool, env: m.environment, err: errors.New("no OCI session")})
+	require.Equal(t, models.GPUPoolStatusUnknown, m.dataset.GPUPools[0].Status)
+
+	rows, _ := computeTableRows(m.dataset, domain.GPUPool, nil, "", "", true, true)
+	assert.Empty(t, rows)
+}

@@ -80,10 +80,11 @@ func TestCordon_ConfirmedIsAudited(t *testing.T) {
 	assert.Equal(t, []bool{true, false}, gotWant)
 }
 
-// A cancelled modal acts on nothing and audits nothing.
+// A cancelled modal acts on nothing and is audited as refused, as
+// declining the CLI's prompt is.
 //
 //nolint:paralleltest // swaps the package-level setCordonFn seam
-func TestCordon_CancelledIsNotAudited(t *testing.T) {
+func TestCordon_CancelledIsAuditedRefused(t *testing.T) {
 	orig := setCordonFn
 	t.Cleanup(func() { setCordonFn = orig })
 	setCordonFn = func(context.Context, string, string, string, bool) (bool, error) {
@@ -95,7 +96,7 @@ func TestCordon_CancelledIsNotAudited(t *testing.T) {
 	m.requestConfirm(m.confirmCordon(key, &node))
 	_, cmd := m.updateConfirmView(keyMsg("n"))
 	assert.Nil(t, cmd)
-	assert.Empty(t, auditRecords(sink))
+	assert.Equal(t, []auditRecord{{"cordon", "node", "gpu-1", "refused"}}, auditRecords(sink))
 }
 
 // An orphan delete is audited as the plan named it, under its
@@ -123,4 +124,19 @@ func TestISVCDelete_ConfirmedIsAuditedAsPlanned(t *testing.T) {
 		{"force-delete", "inference_service", "ns1/svc1", "begin"},
 		{"force-delete", "inference_service", "ns1/svc1", "failed"},
 	}, auditRecords(sink))
+}
+
+// A refused InferenceService delete names <namespace>/<name>, as its
+// done record would.
+//
+//nolint:paralleltest // swaps the package-level plan seam
+func TestISVCDelete_CancelledIsAuditedRefused(t *testing.T) {
+	stubOrphanPlan(t, k8s.OrphanDeleted, nil)
+	m := newInferenceServiceModel(t)
+	sink := logging.NewRingSink(16)
+	m.logger = sink
+	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
+	_, cmd := m.updateConfirmView(keyMsg("y")) // lowercase y cancels an irreversible action
+	assert.Nil(t, cmd)
+	assert.Equal(t, []auditRecord{{"delete", "inference_service", "ns1/svc1", "refused"}}, auditRecords(sink))
 }

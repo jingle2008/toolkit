@@ -111,7 +111,7 @@ type planned struct {
 	action mutation.Action
 	target string
 	// resolved is what the lookup found, reported by a dry run.
-	resolved map[string]any
+	resolved mutation.Resolved
 }
 
 func (p planned) String() string { return p.action.Verb + " " + p.action.Kind + "/" + p.target }
@@ -375,7 +375,7 @@ func (s *Server) planGPUNode(ctx context.Context, env models.Environment, name, 
 			return err
 		}
 		*node = n
-		p.resolved = map[string]any{"instance_id": n.ID}
+		p.resolved = mutation.ResolvedNode(n.ID)
 		return nil
 	}
 }
@@ -418,7 +418,7 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 				return err
 			}
 			pool = found
-			p.resolved = map[string]any{"pool_id": found.ID, "size": found.Size, "actual_size": found.ActualSize}
+			p.resolved = mutation.ResolvedPool(found.ID, found.Size, found.ActualSize)
 			return nil
 		},
 		perform: func(p planned) (mutationResult, error) {
@@ -456,7 +456,7 @@ func (s *Server) planISVC(ctx context.Context, env models.Environment, namespace
 			return err
 		}
 		*ns, p.target = resolved, resolved+"/"+name
-		p.resolved = map[string]any{"namespace": resolved}
+		p.resolved = mutation.ResolvedNamespace(resolved)
 		return nil
 	}
 }

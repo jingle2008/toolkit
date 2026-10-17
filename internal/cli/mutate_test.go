@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/mutation"
@@ -234,10 +235,10 @@ func TestWithMutationSetup_InitLoggerError(t *testing.T) {
 // failed, from surface cli; a dry run writes one dry_run record.
 func TestRunMutation_Audits(t *testing.T) {
 	t.Parallel()
-	phases := func(plan mutationPlan, perform func(context.Context) error) []string {
+	phasesIn := func(stdin string, plan mutationPlan, perform func(context.Context) error) []string {
 		sink := logging.NewRingSink(8)
 		ctx := logging.WithContext(context.Background(), sink)
-		_ = runMutation(ctx, strings.NewReader(""), &bytes.Buffer{}, plan, perform)
+		_ = runMutation(ctx, strings.NewReader(stdin), &bytes.Buffer{}, plan, perform)
 		var got []string
 		for _, e := range sink.Snapshot() {
 			kv := map[any]any{}
@@ -250,10 +251,53 @@ func TestRunMutation_Audits(t *testing.T) {
 		}
 		return got
 	}
+	phases := func(plan mutationPlan, perform func(context.Context) error) []string {
+		return phasesIn("", plan, perform)
+	}
 	ok := func(context.Context) error { return nil }
 	fail := func(context.Context) error { return errors.New("boom") }
 
 	assert.Equal(t, []string{"begin", "done"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true}, ok))
 	assert.Equal(t, []string{"begin", "failed"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true}, fail))
 	assert.Equal(t, []string{"dry_run"}, phases(mutationPlan{Action: mutation.TerminateNode, Target: "n1", DryRun: true}, ok))
+
+	// Refusals are audited, as on MCP and in the TUI: declining the
+	// prompt, and an irreversible action without --yes.
+	assert.Equal(t, []string{"refused"}, phasesIn("n\n", mutationPlan{Action: mutation.DrainNode, Target: "n1"}, ok))
+	assert.Equal(t, []string{"refused"}, phases(mutationPlan{Action: mutation.TerminateNode, Target: "n1"}, ok))
+
+	// A failed lookup is audited as failed, without a begin (nothing ran),
+	// except in a dry run.
+	lost := func(context.Context, *mutationPlan) error { return errors.New("node not found") }
+	assert.Equal(t, []string{"failed"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true, Resolve: lost}, ok))
+	assert.Empty(t, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", DryRun: true, Resolve: lost}, ok))
+}
+
+// An irreversible action without --yes is refused before its target is
+// looked up: refusing touches nothing, as on MCP.
+func TestRunMutation_IrreversibleRefusedBeforeLookup(t *testing.T) {
+	t.Parallel()
+	looked := false
+	err := runMutation(context.Background(), strings.NewReader("y\n"), &bytes.Buffer{}, mutationPlan{
+		Action: mutation.TerminateNode, Target: "n1",
+		Resolve: func(context.Context, *mutationPlan) error { looked = true; return nil },
+	}, func(context.Context) error { return nil })
+	require.ErrorContains(t, err, "--yes")
+	assert.False(t, looked)
+}
+
+// The lookup may refine the action and target; the dry run and prompt
+// name what it found.
+func TestRunMutation_ResolveRefinesPlan(t *testing.T) {
+	t.Parallel()
+	var out bytes.Buffer
+	err := runMutation(context.Background(), strings.NewReader(""), &out, mutationPlan{
+		Action: mutation.DeleteInferenceService, Target: "svc", DryRun: true,
+		Resolve: func(_ context.Context, p *mutationPlan) error {
+			p.Action, p.Target, p.Resolved = mutation.ForceDeleteInferenceService, "ns1/svc", mutation.ResolvedNamespace("ns1")
+			return nil
+		},
+	}, func(context.Context) error { return nil })
+	require.NoError(t, err)
+	assert.Equal(t, "DRY-RUN: would force-delete inference_service/ns1/svc (namespace=ns1)\n", out.String())
 }

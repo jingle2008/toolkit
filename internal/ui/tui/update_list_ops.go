@@ -196,7 +196,7 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
 	for i := range m.dataset.GPUPools {
 		pool := &m.dataset.GPUPools[i]
 		if msg.err != nil {
-			pool.Status = "UNKNOWN"
+			pool.Status = models.GPUPoolStatusUnknown
 			continue
 		}
 		if e, ok := enriched[pool.Name]; ok {
