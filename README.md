@@ -165,9 +165,15 @@ toolkit get tenant --no-headers
 toolkit get gpuworkload --related-to dac/<dac-name>
 toolkit get inferenceservice --related-to servingruntime/<runtime> -o json
 toolkit get dac --related-to tenant/<tenant-name>
+
+# Only faulty rows — what the TUI's Ctrl+Z shows
+toolkit get gpunode --faulty
+toolkit get inferenceservice --faulty -o json
 ```
 
 `--related-to <category>/<name>` keeps the rows related to that parent row, using the relations the TUI drills through: a DAC's pods, a model's or runtime's endpoints, a tenant's DACs, pods and endpoints, a definition's overrides, and so on. The name must match the parent row's first column exactly (case-sensitive). The flag combines with `--filter`, and an unrelated category is rejected with the valid parents listed. Shell completion offers the valid `<category>/` prefixes.
+
+`--faulty` keeps the rows the TUI's Ctrl+Z shows: rows in a bad state (an unready endpoint, a pool short of its declared size, a deleting tenant, …) or naming a parent row that doesn't exist, as `doctor --relations` reports. It applies to `basemodel`, `tenant`, `gpupool`, `gpunode`, `gpuworkload`, `servingruntime`, `dac` and `inferenceservice`, combines with `--filter` and `--related-to`, and loads every category, so it needs the cluster. For `gpupool` it also needs OCI, since a pool's live size decides; without it the command fails rather than list every pool.
 
 Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit get alias` for the full list, or enable shell completion (`toolkit completion zsh`) for tab-completion. Logs are written to `--log-file` (default `toolkit.log`) so stdout stays clean for parsing.
 
@@ -256,6 +262,10 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | `list_regional_overrides` | Same `kind` enum, region-scoped |
 | `list_related` | Rows of `category` related to one parent row (`parent_category` + `parent_name`), e.g. a DAC's pods or a runtime's endpoints. Same relations as the TUI drill-in and `toolkit get --related-to` |
 | `list_aliases` | Discovery — every category alias |
+
+| `check_integrity` | Every relation checked, as `toolkit doctor --relations`: per relation, rows checked and every row naming a missing parent; `status` PASS / FAIL / WARN |
+
+The tools for the categories whose rows can be faulty (`list_base_models`, `list_tenants`, `list_gpu_pools`, `list_gpu_nodes`, `list_gpu_workloads`, `list_serving_runtimes`, `list_dacs`, `list_inference_services`) also take `faulty: true`: only the rows the TUI's Ctrl+Z shows, as `toolkit get --faulty`. `list_inference_services` with `faulty: true` is how an agent finds the orphaned endpoints `delete_inference_service` removes.
 
 Every read tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments.
 

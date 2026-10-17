@@ -349,11 +349,12 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"list_regional_overrides",
 		"list_related",
 		"list_aliases",
+		"check_integrity",
+		"get_drain_status",
 		// Mutation tools (all gated on confirm=true; see mutations.go).
 		"cordon_node",
 		"uncordon_node",
 		"drain_node",
-		"get_drain_status",
 		"restart_node",
 		"terminate_node",
 		"scale_gpu_pool",

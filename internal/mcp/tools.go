@@ -150,6 +150,12 @@ func registerTools(s *Server) {
 		Description: "Discovery tool. Lists each registered alias and its canonical category name. Useful for an agent that wants to confirm short codes before calling other tools.",
 	}, s.handleListAliases)
 
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "check_integrity",
+		Annotations: readOnly(),
+		Description: checkIntegrityDescription,
+	}, s.handleCheckIntegrity)
+
 	// Read-only, but reports what drain_node started (or the CLI/TUI), so
 	// a read-only server can still watch a drain.
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -205,7 +211,10 @@ func toAnySlice[T any](items []T) []any {
 	return out
 }
 
-func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Tenant], error) {
+func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.Tenant], error) {
+	if in.Faulty {
+		return faultyFlat(ctx, s, domain.Tenant, in, func(ds *models.Dataset) []models.Tenant { return ds.Tenants })
+	}
 	grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[models.Tenant]]("load tenants", err)
@@ -213,7 +222,10 @@ func (s *Server) handleListTenants(ctx context.Context, req *sdk.CallToolRequest
 	return listFlatResult(grp.Tenants, in.Filter, in.Limit, nil)
 }
 
-func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.BaseModel], error) {
+func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.BaseModel], error) {
+	if in.Faulty {
+		return faultyFlat(ctx, s, domain.BaseModel, in, func(ds *models.Dataset) []models.BaseModel { return ds.BaseModels })
+	}
 	items, err := s.loader.LoadBaseModels(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[models.BaseModel]]("load base models", err)
@@ -221,7 +233,10 @@ func (s *Server) handleListBaseModels(ctx context.Context, req *sdk.CallToolRequ
 	return listFlatResult(items, in.Filter, in.Limit, nil)
 }
 
-func (s *Server) handleListServingRuntimes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ServingRuntime], error) {
+func (s *Server) handleListServingRuntimes(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.ServingRuntime], error) {
+	if in.Faulty {
+		return faultyFlat(ctx, s, domain.ServingRuntime, in, func(ds *models.Dataset) []models.ServingRuntime { return ds.ServingRuntimes })
+	}
 	items, err := s.loader.LoadServingRuntimes(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[models.ServingRuntime]]("load serving runtimes", err)
@@ -242,7 +257,10 @@ func (s *Server) handleListImportedModels(ctx context.Context, req *sdk.CallTool
 	return jsonResult(flattenGrouped(ds.ImportedModelMap, in.Filter, in.Limit), warnings)
 }
 
-func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUPool], error) {
+func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.GPUPool], error) {
+	if in.Faulty {
+		return faultyFlat(ctx, s, domain.GPUPool, in, func(ds *models.Dataset) []models.GPUPool { return ds.GPUPools })
+	}
 	env := s.envFor(in.envOverride)
 	items, err := s.loader.LoadGPUPools(ctx, s.cfg.RepoPath, env)
 	warnings := warningsFromPartial(err)
@@ -271,7 +289,10 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 	return listFlatResult(items, in.Filter, in.Limit, warnings)
 }
 
-func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUNode], error) {
+func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.GPUNode], error) {
+	if in.Faulty {
+		return faultyGrouped(ctx, s, domain.GPUNode, in, func(ds *models.Dataset) map[string][]models.GPUNode { return ds.GPUNodeMap })
+	}
 	grouped, err := s.loader.LoadGPUNodesByPool(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[models.GPUNode]]("load gpu nodes", err)
@@ -281,7 +302,10 @@ func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolReques
 	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
-func (s *Server) handleListGPUWorkloads(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.GPUWorkload], error) {
+func (s *Server) handleListGPUWorkloads(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.GPUWorkload], error) {
+	if in.Faulty {
+		return faultyGrouped(ctx, s, domain.GPUWorkload, in, func(ds *models.Dataset) map[string][]models.GPUWorkload { return ds.GPUWorkloadMap })
+	}
 	env := s.envFor(in.envOverride)
 	grouped, err := s.loader.LoadGPUWorkloadsByNode(ctx, s.cfg.KubeConfig, env)
 	if err != nil {
@@ -294,7 +318,10 @@ func (s *Server) handleListGPUWorkloads(ctx context.Context, req *sdk.CallToolRe
 	return jsonResult(flattenGrouped(ds.GPUWorkloadMap, in.Filter, in.Limit), warnings)
 }
 
-func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.DedicatedAICluster], error) {
+func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.DedicatedAICluster], error) {
+	if in.Faulty {
+		return faultyGrouped(ctx, s, domain.DedicatedAICluster, in, func(ds *models.Dataset) map[string][]models.DedicatedAICluster { return ds.DedicatedAIClusterMap })
+	}
 	env := s.envFor(in.envOverride)
 	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, env)
 	if err != nil {
@@ -307,7 +334,10 @@ func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, i
 	return jsonResult(flattenGrouped(ds.DedicatedAIClusterMap, in.Filter, in.Limit), warnings)
 }
 
-func (s *Server) handleListInferenceServices(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.InferenceService], error) {
+func (s *Server) handleListInferenceServices(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.InferenceService], error) {
+	if in.Faulty {
+		return faultyGrouped(ctx, s, domain.InferenceService, in, func(ds *models.Dataset) map[string][]models.InferenceService { return ds.InferenceServiceMap })
+	}
 	env := s.envFor(in.envOverride)
 	grouped, err := s.loader.LoadInferenceServices(ctx, s.cfg.KubeConfig, env)
 	if err != nil {
