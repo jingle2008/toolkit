@@ -95,7 +95,7 @@ func TestComputeTableRows_BaseModelScopesInferenceServices(t *testing.T) {
 }
 
 // Enter on a BaseModel now drills into the endpoints serving it (y still
-// opens details), and o returns to the model through the breadcrumb.
+// opens details).
 func TestEnterOnBaseModel_DrillsIntoInferenceServices(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
@@ -107,22 +107,23 @@ func TestEnterOnBaseModel_DrillsIntoInferenceServices(t *testing.T) {
 	_ = m.enterContext()
 	require.Equal(t, domain.InferenceService, m.category)
 	require.Equal(t, &domain.Scope{Category: domain.BaseModel, Name: "llama"}, m.scope)
-
-	_ = m.jumpToParent()
-	assert.Equal(t, domain.BaseModel, m.category)
 }
 
-// A reference is not a structural parent: without a breadcrumb, o on a
-// workload still goes to its node and on an endpoint to its DAC.
-func TestParentScope_IgnoresReferences(t *testing.T) {
+// A reference is not a structural parent: without a breadcrumb, the go-to
+// picker starts a workload on its node and an endpoint on its DAC; with
+// one, on the scope drilled in from.
+func TestGoToParentIndex(t *testing.T) {
 	t.Parallel()
-	got, ok := parentScope(domain.GPUWorkload, table.Row{"pod-1", "node-a"})
-	require.True(t, ok)
-	assert.Equal(t, domain.Scope{Category: domain.GPUNode, Name: "node-a"}, got)
+	workload := []domain.Scope{{Category: domain.Tenant}, {Category: domain.GPUNode}, {Category: domain.DedicatedAICluster}, {Category: domain.ServingRuntime}}
+	endpoint := []domain.Scope{{Category: domain.Tenant}, {Category: domain.BaseModel}, {Category: domain.DedicatedAICluster}, {Category: domain.ServingRuntime}}
+	override := []domain.Scope{{Category: domain.Tenant}, {Category: domain.LimitDefinition}}
 
-	got, ok = parentScope(domain.InferenceService, table.Row{"isvc-1", "dac-1"})
-	require.True(t, ok)
-	assert.Equal(t, domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}, got)
+	assert.Equal(t, 1, goToParentIndex(domain.GPUWorkload, nil, workload))
+	assert.Equal(t, 2, goToParentIndex(domain.InferenceService, nil, endpoint))
+	assert.Equal(t, 3, goToParentIndex(domain.InferenceService, &domain.Scope{Category: domain.ServingRuntime, Name: "vllm"}, endpoint))
+	assert.Equal(t, 1, goToParentIndex(domain.LimitTenancyOverride, &domain.Scope{Category: domain.LimitDefinition, Name: "l"}, override))
+	assert.Equal(t, 0, goToParentIndex(domain.LimitTenancyOverride, nil, override), "two parents, no breadcrumb: first")
+	assert.Equal(t, 0, goToParentIndex(domain.InferenceService, nil, endpoint[:2]), "parent not offered: first")
 }
 
 // An ImportedModel scopes the endpoints serving it by model name — both
@@ -143,8 +144,7 @@ func TestComputeTableRows_ImportedModelScopesInferenceServices(t *testing.T) {
 	assert.Equal(t, []string{"isvc-1", "isvc-2"}, rowNames(rows))
 }
 
-// Enter on an ImportedModel drills into the endpoints serving it, while o
-// without a breadcrumb still goes to its tenant.
+// Enter on an ImportedModel drills into the endpoints serving it.
 func TestEnterOnImportedModel_DrillsIntoInferenceServices(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
@@ -156,10 +156,6 @@ func TestEnterOnImportedModel_DrillsIntoInferenceServices(t *testing.T) {
 	_ = m.enterContext()
 	require.Equal(t, domain.InferenceService, m.category)
 	require.Equal(t, &domain.Scope{Category: domain.ImportedModel, Name: "amaaaaaa-imported"}, m.scope)
-
-	got, ok := parentScope(domain.ImportedModel, table.Row{"amaaaaaa-imported", "tenant-1"})
-	require.True(t, ok)
-	assert.Equal(t, domain.Scope{Category: domain.Tenant, Name: "tenant-1"}, got)
 }
 
 // A tenant scopes pods and endpoints by their resolved owner; rows whose
@@ -216,8 +212,7 @@ func TestComputeTableRows_ServingRuntimeScopesEndpointsAndPods(t *testing.T) {
 	assert.Equal(t, []string{"pod-1", "pod-2"}, rowNames(rows))
 }
 
-// Enter on a ServingRuntime drills into the endpoints naming it; o
-// returns through the breadcrumb (a runtime has no structural parent).
+// Enter on a ServingRuntime drills into the endpoints naming it.
 func TestEnterOnServingRuntime_DrillsIntoInferenceServices(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
@@ -229,9 +224,6 @@ func TestEnterOnServingRuntime_DrillsIntoInferenceServices(t *testing.T) {
 	_ = m.enterContext()
 	require.Equal(t, domain.InferenceService, m.category)
 	require.Equal(t, &domain.Scope{Category: domain.ServingRuntime, Name: "vllm"}, m.scope)
-
-	_ = m.jumpToParent()
-	assert.Equal(t, domain.ServingRuntime, m.category)
 }
 
 // Enter on a Tenant still opens its limit overrides: the reference
@@ -246,4 +238,18 @@ func TestEnterOnTenant_StillOpensLimitOverrides(t *testing.T) {
 
 	_ = m.enterContext()
 	assert.Equal(t, domain.LimitTenancyOverride, m.category)
+}
+
+func TestEnterOnDAC_DrillsIntoInferenceServices(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.DedicatedAICluster
+	m.rawRows = []table.Row{{"dac1", "tenant1"}}
+	m.table.SetRows(m.rawRows)
+	m.table.SetCursor(0)
+
+	_ = m.enterContext()
+
+	require.Equal(t, domain.InferenceService, m.category)
+	require.Equal(t, &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac1"}, m.scope)
 }

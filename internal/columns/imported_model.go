@@ -12,11 +12,11 @@ import (
 // (Name, Display Name, Size, Context, Vendor, Status) plus the imported-only
 // Tenant (grouping key) and Namespace columns. The Internal/owner-state
 // column was dropped from the table; owner state stays reachable via the
-// Parent shortcut and `-o json`. Version stays reachable via `-o json`.
+// go-to-related shortcut and `-o json`. Version stays reachable via `-o json`.
 //
-// Tenant MUST stay at index 1: itemKeyFrom/parentScope in
-// internal/ui/tui/table_utils.go derive the scoped key and parent from
-// row[1] for grouped categories ("view details" and "jump to parent").
+// Tenant MUST stay at index 1: itemKeyFrom in
+// internal/ui/tui/table_utils.go derives the scoped key from row[1] for
+// grouped categories ("view details" and "go to related").
 var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedColumn[models.ImportedModel]{
 	{
 		Title: "Name", Key: "name", Ratio: 0.18, TruncateMiddle: true,
