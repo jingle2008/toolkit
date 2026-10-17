@@ -198,6 +198,19 @@ toolkit config --validate         # run config.Validate(); exit non-zero on fail
 
 `--validate` mode emits a structured `{valid, config_file, error?}` payload and exits non-zero on failure — suitable for `if ! toolkit config --validate; then abort; fi` precondition checks in CI/scripts.
 
+### Metrics dashboards (`toolkit metrics`)
+
+`toolkit metrics <category> <name>` prints the OCI Telemetry dashboard URL the TUI's metrics key (`m`) opens: the last 7 days of the metrics the served model's capability calls for, scoped to the DAC (dedicated) or the model (on-demand). It works for `dac`, `importedmodel`, `gpuworkload` and `inferenceservice`; `<name>` matches as in `get <category> <name>`.
+
+```bash
+toolkit metrics dac <dac-name>
+toolkit metrics inferenceservice <namespace>/<name>
+toolkit metrics importedmodel <name> --dac <dac-namespace>   # a model several DACs serve
+open "$(toolkit metrics dac <dac-name>)"
+```
+
+A row with no dashboard — no model, or a capability with no metrics — fails with the reason, as the TUI's toast does.
+
 ### Cluster mutations
 
 Maintenance operations the TUI exposes via keyboard shortcuts are also available as scriptable subcommands. All mutations support `--dry-run` / `-n` (preview the action) and `--yes` / `-y` (skip the interactive prompt). Each call writes a JSON line to the audit log.
@@ -270,6 +283,7 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | `list_aliases` | Discovery — every category alias |
 
 | `get_item` | The one row of `category` named exactly `name` — the full object its list tool returns, as `toolkit get <category> <name>`: a name shared across groups is refused with each candidate as `<group>/<name>`, which picks one. No match is an error |
+| `metrics_url` | The OCI Telemetry dashboard URL for a DAC, imported model, GPU workload or inference service, with the capability and filter it uses — as `toolkit metrics` and the TUI's metrics key |
 | `check_integrity` | Every relation checked, as `toolkit doctor --relations`: per relation, rows checked, every row naming a missing parent, and a `hint` on fixing them; `status` PASS / FAIL / WARN |
 
 The tools for the categories whose rows can be faulty (`list_base_models`, `list_tenants`, `list_gpu_pools`, `list_gpu_nodes`, `list_gpu_workloads`, `list_serving_runtimes`, `list_dacs`, `list_inference_services`) also take `faulty: true`: only the rows the TUI's Ctrl+Z shows, as `toolkit get --faulty`. `list_inference_services` with `faulty: true` is how an agent finds the orphaned endpoints `delete_inference_service` removes. `list_related` takes `faulty: true` too, for the faulty rows within one parent (a DAC's unready endpoints), as `toolkit get --related-to … --faulty` and Ctrl+Z inside a TUI drill-in.

@@ -159,6 +159,18 @@ func withMutationSetup(
 	needsKube, needsRepo, needsEnv bool,
 	fn func(ctx context.Context, cfg config.Config, env models.Environment) error,
 ) error {
+	return withCommandSetup(cfgFile, "mutate", needsKube, needsRepo, needsEnv, fn)
+}
+
+// withCommandSetup is withMutationSetup for any command that reaches the
+// loader: config, the needs checks, a logger tagged cmd=name, a signal
+// context, and the env.
+func withCommandSetup(
+	cfgFile *string,
+	name string,
+	needsKube, needsRepo, needsEnv bool,
+	fn func(ctx context.Context, cfg config.Config, env models.Environment) error,
+) error {
 	if err := readConfigFile(cfgFile); err != nil {
 		return err
 	}
@@ -177,10 +189,10 @@ func withMutationSetup(
 	if err != nil {
 		return err
 	}
-	logger = logger.WithFields("cmd", "mutate")
+	logger = logger.WithFields("cmd", name)
 	defer func() { _ = logger.Sync() }()
-	// Mutations act on whatever env this resolves to, so the expansion
-	// belongs in the audit trail alongside the action itself.
+	// Commands act on whatever env this resolves to, so the expansion
+	// belongs in the log (for mutations, the audit trail) alongside them.
 	logEnvAliases(logger, rawType, rawRegion, cfg)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

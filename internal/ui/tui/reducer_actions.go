@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -184,9 +185,6 @@ func (m *Model) selectedItem() any {
 // metricsOpenErrMsg reports a failure to launch the metrics dashboard.
 type metricsOpenErrMsg struct{ err error }
 
-// metricsWindow is how far back the metrics dashboard looks.
-const metricsWindow = 7 * 24 * time.Hour
-
 // openMetricsTriggerMsg is the second step of openMetrics's sequence: it
 // fires after the model catalog has been loaded and applied, so its handler
 // resolves the plan against the now-populated dataset on the Update loop. gen
@@ -230,52 +228,9 @@ func (m *Model) pickMetricsDAC(im *models.ImportedModel, dacs []string) tea.Cmd 
 }
 
 // metricsCatalog reports which model catalog must be loaded before the
-// item's plan can be resolved. need is false when no catalog is required
-// (DAC without a model) or the item can't produce metrics here (default).
-// Task 4 adds the ImportedModel and GPUWorkload cases.
+// item's plan can be resolved (telemetry.CatalogFor).
 func (m *Model) metricsCatalog(item any) (domain.Category, bool) {
-	switch it := item.(type) {
-	case *models.DedicatedAICluster:
-		if it == nil || it.ModelName == "" {
-			return domain.BaseModel, false
-		}
-		return modelCatalog(it.ModelName), true
-	case *models.GPUWorkload:
-		if it == nil {
-			return domain.BaseModel, false
-		}
-		return servingCatalog(models.IsDACName(it.Namespace), it.Model)
-	case *models.InferenceService:
-		if it == nil {
-			return domain.BaseModel, false
-		}
-		return servingCatalog(it.IsDedicated(), it.Model)
-	default: // *models.ImportedModel (capabilities inline) or unknown
-		return domain.BaseModel, false
-	}
-}
-
-// servingCatalog is metricsCatalog for a serving pod or endpoint: a
-// dedicated one resolves its model by name, an on-demand one against the
-// base catalog. No model means no metrics, so no catalog.
-func servingCatalog(dedicated bool, model string) (domain.Category, bool) {
-	switch {
-	case model == "":
-		return domain.BaseModel, false
-	case dedicated:
-		return modelCatalog(model), true
-	default:
-		return domain.BaseModel, true
-	}
-}
-
-// modelCatalog routes a model NAME to the catalog that holds it: imported/
-// finetune names carry the imported-model prefix, everything else is base.
-func modelCatalog(modelName string) domain.Category {
-	if models.IsImportedModelName(modelName) {
-		return domain.ImportedModel
-	}
-	return domain.BaseModel
+	return telemetry.CatalogFor(item)
 }
 
 // catalogLoaded reports whether the given model catalog is present on the
@@ -335,94 +290,26 @@ func (m *Model) finishMetrics(item any) tea.Cmd {
 	return m.launchMetrics(filter, capability)
 }
 
-// resolveMetricsPlan maps a selected item to its metrics plan: the MQL filter
-// and capability, plus ok/reason. ok=false with a non-empty reason is a
-// user-facing error toast; ok=false with empty reason is a silent no-op
-// (unknown/nil item). Reads m.dataset, which is non-nil whenever a catalog
-// was required (guaranteed loaded before this runs). Task 4 adds the
-// ImportedModel and GPUWorkload cases.
-//
-//nolint:cyclop // per-item-type metrics resolution; the switch is the routing surface
+// resolveMetricsPlan maps a selected item to its metrics plan
+// (telemetry.PlanFor, shared with `toolkit metrics` and MCP's
+// metrics_url): the MQL filter and capability, plus ok/reason. ok=false
+// with a non-empty reason is a user-facing error toast; ok=false with
+// empty reason is a silent no-op (unknown/nil item). Reads m.dataset,
+// which is non-nil whenever a catalog was required (guaranteed loaded
+// before this runs).
 func (m *Model) resolveMetricsPlan(item any) (telemetry.Filter, telemetry.Capability, bool, string) {
-	realm, region := m.environment.Realm, m.environment.Region
-	switch it := item.(type) {
-	case *models.DedicatedAICluster:
-		if it == nil {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
-		}
-		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: it.OCID(realm, region)}
-		if it.ModelName == "" {
-			return filter, telemetry.CapabilityChat, true, ""
-		}
-		return m.dedicatedPlan(filter, m.dataset.FindModelByName(it.ModelName))
-	case *models.ImportedModel:
-		if it == nil {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
-		}
-		// A DAC serving the model holds a copy of it in its namespace; the
-		// primary copy usually sits in `default`. finishMetrics routes
-		// several DACs through the picker, so there is at most one here.
-		dacs := it.DACNamespaces()
-		if len(dacs) == 0 {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, "imported model is not tied to a dedicated AI cluster"
-		}
-		ocid := models.DedicatedAICluster{Name: dacs[0]}.OCID(realm, region)
-		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
-		return m.dedicatedPlan(filter, &it.BaseModel)
-	case *models.GPUWorkload:
-		if it == nil {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
-		}
-		if it.Model == "" {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, "workload has no model"
-		}
-		return m.servingPlan(models.IsDACName(it.Namespace), it.Namespace, it.Model)
-	case *models.InferenceService:
-		if it == nil {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
-		}
-		if it.Model == "" {
-			return telemetry.Filter{}, telemetry.CapabilityChat, false, "inference service has no model"
-		}
-		return m.servingPlan(it.IsDedicated(), it.Namespace, it.Model)
-	default:
-		return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
+	var catalog telemetry.Catalog
+	if m.dataset != nil {
+		catalog = m.dataset
 	}
-}
-
-// servingPlan resolves the plan for a serving pod or endpoint with a model.
-// A dedicated one lives in its DAC's namespace, so it is DacId-scoped; an
-// on-demand one is scoped by its base model's display name.
-func (m *Model) servingPlan(dedicated bool, namespace, model string) (telemetry.Filter, telemetry.Capability, bool, string) {
-	if dedicated {
-		ocid := models.DedicatedAICluster{Name: namespace}.OCID(m.environment.Realm, m.environment.Region)
-		filter := telemetry.Filter{Key: telemetry.FilterDacID, Value: ocid}
-		return m.dedicatedPlan(filter, m.dataset.FindModelByName(model))
-	}
-	bm := m.dataset.FindBaseModelByName(model)
-	if bm == nil {
-		return telemetry.Filter{}, telemetry.CapabilityChat, false, "model not found in base catalog"
-	}
-	capability := capabilityForModel(bm)
-	if !capability.Supported() {
-		return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not supported for this model"
-	}
-	return telemetry.Filter{Key: telemetry.FilterResourceID, Value: bm.DisplayName}, capability, true, ""
-}
-
-// dedicatedPlan finalizes a DacId-filtered (dedicated-mode) plan. A capability
-// with no dashboard at all is unsupported; an unfilterable capability (the
-// fixed, unfiltered moderation sets) cannot be DacId-scoped, so it has no
-// dedicated-mode dashboard. Either yields a no-op error toast.
-func (m *Model) dedicatedPlan(filter telemetry.Filter, model *models.BaseModel) (telemetry.Filter, telemetry.Capability, bool, string) {
-	capability := capabilityForModel(model)
+	plan, err := telemetry.PlanFor(item, m.environment, catalog)
 	switch {
-	case !capability.Supported():
-		return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not supported for this model"
-	case !capability.Filterable():
-		return telemetry.Filter{}, telemetry.CapabilityChat, false, "metrics not available for this model in dedicated mode"
+	case errors.Is(err, telemetry.ErrNoMetrics):
+		return telemetry.Filter{}, telemetry.CapabilityChat, false, ""
+	case err != nil:
+		return telemetry.Filter{}, telemetry.CapabilityChat, false, err.Error()
 	default:
-		return filter, capability, true, ""
+		return plan.Filter, plan.Capability, true, ""
 	}
 }
 
@@ -442,51 +329,5 @@ func (m *Model) launchMetrics(filter telemetry.Filter, capability telemetry.Capa
 // (region/type), an MQL filter, a capability, and a window ending at now.
 // Pure; unit-testable without launching a browser.
 func metricsURL(env models.Environment, filter telemetry.Filter, capability telemetry.Capability, now time.Time) string {
-	fleet := "generative-ai-service-api-" + env.Type
-	return telemetry.MetricsURL(filter, capability, env.Region, telemetry.Project, fleet,
-		now.Add(-metricsWindow), now)
-}
-
-// capabilityPrecedence maps a model-capability string to its telemetry
-// capability, in priority order: the first capability the model declares
-// wins. CHAT is highest; the four unsupported capabilities are last, so any
-// supported capability outranks them (a purely-unsupported model resolves to
-// CapabilityUnsupported). Synonyms (EMBEDDING, CONTENT_MODERATION,
-// IMAGE_TEXT_TO_TEXT) map to the same telemetry capability as their primary.
-var capabilityPrecedence = []struct {
-	flag string
-	cap  telemetry.Capability
-}{
-	{models.CapabilityChat, telemetry.CapabilityChat},
-	{models.CapabilityTextToText, telemetry.CapabilityChat},
-	{models.CapabilityImageTextToText, telemetry.CapabilityChat},
-	{models.CapabilityTextRerank, telemetry.CapabilityTextRerank},
-	{models.CapabilityTextEmbeddings, telemetry.CapabilityTextEmbeddings},
-	{models.CapabilityEmbedding, telemetry.CapabilityTextEmbeddings},
-	{models.CapabilityTextToImage, telemetry.CapabilityTextToImage},
-	{models.CapabilityImageTextToImage, telemetry.CapabilityImageTextToImage},
-	{models.CapabilityTextToAudio, telemetry.CapabilityTextToAudio},
-	{models.CapabilityAudioToText, telemetry.CapabilityAudioToText},
-	{models.CapabilityTextClassification, telemetry.CapabilityTextClassification},
-	{models.CapabilityContentModeration, telemetry.CapabilityTextClassification},
-	{models.CapabilityImageContentModeration, telemetry.CapabilityImageContentModeration},
-	{models.CapabilityTextGeneration, telemetry.CapabilityUnsupported},
-	{models.CapabilityAudioToAudio, telemetry.CapabilityUnsupported},
-	{models.CapabilityRealtime, telemetry.CapabilityUnsupported},
-	{models.CapabilityPromptInjectionProtection, telemetry.CapabilityUnsupported},
-}
-
-// capabilityForModel maps a resolved model to its metric capability via
-// capabilityPrecedence (first declared match wins). nil / finetune / a model
-// declaring no recognized capability fall back to CapabilityChat.
-func capabilityForModel(model *models.BaseModel) telemetry.Capability {
-	if model == nil || model.Type == "Fine-tuning" {
-		return telemetry.CapabilityChat
-	}
-	for _, p := range capabilityPrecedence {
-		if model.HasCapability(p.flag) {
-			return p.cap
-		}
-	}
-	return telemetry.CapabilityChat
+	return telemetry.DashboardURL(env, telemetry.Plan{Filter: filter, Capability: capability}, now)
 }

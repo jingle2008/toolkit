@@ -68,3 +68,34 @@ func TestFaultyDataset_LoadFailure(t *testing.T) {
 		"/repo", "/kube", models.Environment{}, domain.GPUNode)
 	require.ErrorContains(t, err, "load gpu nodes: cluster unreachable")
 }
+
+// metricsLoader is stubLoader with a DAC serving a base model.
+type metricsLoader struct{ stubLoader }
+
+func (metricsLoader) LoadDedicatedAIClusters(context.Context, string, models.Environment) (map[string][]models.DedicatedAICluster, error) {
+	return map[string][]models.DedicatedAICluster{"t1": {{Name: "amaaaaaadac1", ModelName: "gpt"}}}, nil
+}
+
+func (metricsLoader) LoadBaseModels(context.Context, string, models.Environment) ([]models.BaseModel, error) {
+	return []models.BaseModel{{Name: "gpt", Capabilities: []string{"CHAT"}}}, nil
+}
+
+// MetricsTarget finds the row as get-by-name does and loads the catalog
+// its plan needs.
+func TestMetricsTarget(t *testing.T) {
+	item, catalog, _, err := MetricsTarget(context.Background(), metricsLoader{}, "/repo", "/kube", models.Environment{},
+		domain.DedicatedAICluster, "amaaaaaadac1")
+	require.NoError(t, err)
+	dac, ok := item.(*models.DedicatedAICluster)
+	require.True(t, ok, "a pointer, as telemetry.PlanFor takes")
+	assert.Equal(t, "amaaaaaadac1", dac.Name)
+	require.NotNil(t, catalog.FindModelByName("gpt"), "the base catalog the DAC's model is in")
+
+	targetErr := func(cat domain.Category, name string) error {
+		_, _, _, err := MetricsTarget(context.Background(), metricsLoader{}, "/repo", "/kube", models.Environment{}, cat, name) //nolint:dogsled // only the error matters here
+		return err
+	}
+	require.ErrorContains(t, targetErr(domain.DedicatedAICluster, "nope"), `no DedicatedAICluster named "nope"`)
+	err = targetErr(domain.GPUNode, "n")
+	require.ErrorContains(t, err, "GPUNode rows have no metrics dashboard; metrics are for: dedicatedaicluster, importedmodel, gpuworkload, inferenceservice")
+}

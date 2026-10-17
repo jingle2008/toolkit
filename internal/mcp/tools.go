@@ -157,6 +157,12 @@ func registerTools(s *Server) {
 	}, s.handleGetItem)
 
 	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "metrics_url",
+		Annotations: readOnly(),
+		Description: metricsDescription,
+	}, s.handleMetricsURL)
+
+	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "check_integrity",
 		Annotations: readOnly(),
 		Description: checkIntegrityDescription,
