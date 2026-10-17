@@ -196,7 +196,7 @@ func newTestModel(t *testing.T) *Model {
 	require.NoError(t, err)
 	m.dataset = &models.Dataset{
 		Tenants: []models.Tenant{
-			{Name: "tenant1", IDs: []string{"id1"}},
+			{Name: "tenant1", ID: "id1"},
 		},
 		Environments: []models.Environment{
 			{Realm: "realm", Type: "type", Region: "region"},

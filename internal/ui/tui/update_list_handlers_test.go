@@ -156,7 +156,7 @@ func TestCopyItemJSON(t *testing.T) {
 	written := stubClipboard(t, "", nil)
 	m := newTestModel(t)
 
-	item := models.Tenant{Name: "tenant1", IDs: []string{"id1"}}
+	item := models.Tenant{Name: "tenant1", ID: "id1"}
 	cmd := m.copyItemJSON(item)
 	require.NotNil(t, cmd)
 	assert.Nil(t, cmd())

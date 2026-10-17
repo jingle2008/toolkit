@@ -30,7 +30,7 @@ Client implements all loader interfaces using the production utils package.
 type Client struct {
 	metadataFile    string
 	metadata        *models.Metadata
-	metadataLoadErr error // non-nil when an EXISTING metadata file failed to parse; blocks writes to avoid clobbering it
+	metadataLoadErr error // non-nil when an EXISTING metadata file failed to load or validate; blocks tenant loads and writes
 	tenancy         *tenancyCache
 }
 
@@ -66,6 +66,9 @@ func (l *Client) MetadataPath() string { return l.metadataFile }
 LoadDataset loads a dataset from the given repo and environment.
 */
 func (l Client) LoadDataset(ctx context.Context, repo string, env models.Environment) (*models.Dataset, error) {
+	if l.metadataLoadErr != nil {
+		return nil, l.metadataLoadErr
+	}
 	return configloader.LoadDataset(ctx, repo, env, l.metadata)
 }
 
@@ -150,6 +153,11 @@ func (Client) LoadInferenceServices(ctx context.Context, kubeCfg string, env mod
 // the tenant metadata change (see tenancyCache), so callers share it and
 // must not modify it.
 func (l Client) LoadTenancyOverrideGroup(ctx context.Context, repo string, env models.Environment) (models.TenancyOverrideGroup, error) {
+	// Metadata is the only source of tenant names: loading tenants
+	// without it would silently rename every tenant to its OCID.
+	if l.metadataLoadErr != nil {
+		return models.TenancyOverrideGroup{}, l.metadataLoadErr
+	}
 	fp, err := configloader.TenancyOverrideFingerprint(repo, env.Realm)
 	if err != nil {
 		logging.FromContext(ctx).Debugw("tenancy override fingerprint failed; loading uncached", "error", err)
@@ -212,7 +220,9 @@ func (l *Client) UpsertTenantMetadata(entry models.TenantMetadata) error {
 		next.Tenants = make([]models.TenantMetadata, len(l.metadata.Tenants))
 		copy(next.Tenants, l.metadata.Tenants)
 	}
-	configloader.UpsertTenant(next, entry)
+	if err := configloader.UpsertTenant(next, entry); err != nil {
+		return err
+	}
 	if err := configloader.SaveMetadata(l.metadataFile, next); err != nil {
 		return err
 	}

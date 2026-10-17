@@ -102,7 +102,7 @@ func TestTitlesFor(t *testing.T) {
 func TestRenderTable_Flat(t *testing.T) {
 	t.Parallel()
 	items := []models.Tenant{
-		{Name: "alpha", IDs: []string{"ocid1.tenancy.oc1..a"}, IsInternal: true, Note: "x"},
+		{Name: "alpha", ID: "ocid1.tenancy.oc1..a", IsInternal: true, Note: "x"},
 	}
 	headers, rows, err := RenderTable(domain.Tenant, items, nil)
 	if err != nil {
@@ -148,7 +148,7 @@ func TestRenderTable_Unregistered(t *testing.T) {
 func TestRenderTableForExport_ShortCircuit(t *testing.T) {
 	t.Parallel()
 	items := []models.Tenant{
-		{Name: "alpha", IDs: []string{"ocid1.tenancy.oc1..a"}},
+		{Name: "alpha", ID: "ocid1.tenancy.oc1..a"},
 	}
 	_, exportRows, err := RenderTableForExport(domain.Tenant, items, "", "", nil)
 	if err != nil {

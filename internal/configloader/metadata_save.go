@@ -40,12 +40,22 @@ func SaveMetadata(path string, m *models.Metadata) error {
 
 // UpsertTenant merges entry into m: if a tenant with the same ID
 // already exists it is replaced in place, otherwise entry is appended.
-func UpsertTenant(m *models.Metadata, entry models.TenantMetadata) {
+// It refuses, leaving m unchanged, a name another tenancy already has:
+// names map one to one to IDs.
+func UpsertTenant(m *models.Metadata, entry models.TenantMetadata) error {
+	if entry.Name != nil && *entry.Name != "" {
+		for _, t := range m.Tenants {
+			if t.ID != entry.ID && t.Name != nil && *t.Name == *entry.Name {
+				return fmt.Errorf("tenant name %q is already used by %s", *entry.Name, t.ID)
+			}
+		}
+	}
 	for i := range m.Tenants {
 		if m.Tenants[i].ID == entry.ID {
 			m.Tenants[i] = entry
-			return
+			return nil
 		}
 	}
 	m.Tenants = append(m.Tenants, entry)
+	return nil
 }

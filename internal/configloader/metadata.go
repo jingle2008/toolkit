@@ -17,12 +17,23 @@ func LoadMetadata(path string) (*models.Metadata, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
 	case ".json":
-		return jsonutil.LoadFile[models.Metadata](path)
+		return validated(jsonutil.LoadFile[models.Metadata](path))
 	case ".yaml", ".yml":
-		return loadYAML(path, ext)
+		return validated(loadYAML(path, ext))
 	default:
 		return nil, fmt.Errorf("unsupported metadata file extension: %s", ext)
 	}
+}
+
+// validated rejects metadata whose tenant names or IDs aren't unique.
+func validated(m *models.Metadata, err error) (*models.Metadata, error) {
+	if err != nil {
+		return nil, err
+	}
+	if err := m.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid tenant metadata: %w", err)
+	}
+	return m, nil
 }
 
 func loadYAML(path, ext string) (*models.Metadata, error) {

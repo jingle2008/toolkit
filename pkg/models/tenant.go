@@ -2,20 +2,17 @@ package models
 
 import (
 	"fmt"
-	"slices"
 )
 
-// Tenant represents a tenant entity.
+// Tenant represents a tenant entity: one tenancy OCID and its name. The
+// name comes from tenant metadata, the single source of truth for names;
+// a tenancy without a metadata name is named by its OCID. Names and IDs
+// are both unique, so the two map one to one.
 type Tenant struct {
-	Name       string   `json:"name"`
-	IDs        []string `json:"ids"`
-	IsInternal bool     `json:"is_internal"`
-	Note       string   `json:"note,omitempty"`
-	// SharedWith names the other tenants that claim one of this
-	// tenant's OCIDs — typically the same tenancy filed under two
-	// override directories (e.g. "OABCS1" and "oabcs1"). Populated by
-	// the config loader; a non-empty value marks the tenant faulty.
-	SharedWith []string `json:"shared_with,omitempty"`
+	Name       string `json:"name"`
+	ID         string `json:"id"`
+	IsInternal bool   `json:"is_internal"`
+	Note       string `json:"note,omitempty"`
 }
 
 // GetName returns the name of the tenant.
@@ -23,29 +20,25 @@ func (t Tenant) GetName() string {
 	return t.Name
 }
 
-// GetTenantID returns the tenant ID string.
+// GetTenantID returns the tenant's OCID.
 func (t Tenant) GetTenantID() string {
-	if len(t.IDs) > 1 {
-		return fmt.Sprintf("%s (+%d)", t.IDs[0], len(t.IDs)-1)
-	}
-	if len(t.IDs) == 1 {
-		return t.IDs[0]
-	}
-	return ""
+	return t.ID
+}
+
+// Named reports whether the tenant has a metadata name, rather than
+// being named by its OCID.
+func (t Tenant) Named() bool {
+	return t.Name != t.ID
 }
 
 // FilterableFields returns filterable fields for the tenant.
 func (t Tenant) FilterableFields() []string {
-	var fields []string
-	if len(t.IDs) > 1 {
-		fields = slices.Clone(t.IDs[1:])
-	}
-	fields = append(fields, t.SharedWith...)
-	return append(fields, t.GetTenantID(), t.Name, fmt.Sprint(t.IsInternal), t.Note)
+	return []string{t.ID, t.Name, fmt.Sprint(t.IsInternal), t.Note}
 }
 
-// IsFaulty returns true if the tenant has multiple IDs or shares an ID
-// with another tenant.
+// IsFaulty is always false: a tenant is one OCID with one name, so it
+// has no state of its own to be wrong. (It satisfies Faulty so the
+// Tenant list supports the faulty filter like every other category.)
 func (t Tenant) IsFaulty() bool {
-	return len(t.IDs) > 1 || len(t.SharedWith) > 0
+	return false
 }

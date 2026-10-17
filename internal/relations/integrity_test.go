@@ -42,7 +42,7 @@ func checkByName(t *testing.T, checks []Check, name string) Check {
 // integrityDataset is consistent except for the dangling rows each test
 // asserts on.
 func integrityDataset() *models.Dataset {
-	acme := &models.Tenant{Name: "Acme", IDs: []string{"ocid1.tenancy.oc1..acme"}}
+	acme := &models.Tenant{Name: "Acme", ID: "ocid1.tenancy.oc1..acme"}
 	return &models.Dataset{
 		Tenants:                           []models.Tenant{*acme},
 		LimitDefinitionGroup:              models.LimitDefinitionGroup{Values: []models.LimitDefinition{{Name: "l1"}}},

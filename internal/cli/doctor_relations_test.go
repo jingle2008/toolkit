@@ -55,7 +55,7 @@ type relationsLoader struct {
 }
 
 func (relationsLoader) LoadDataset(context.Context, string, models.Environment) (*models.Dataset, error) {
-	return &models.Dataset{Tenants: []models.Tenant{{Name: "Acme", IDs: []string{"ocid1.tenancy.oc1..acme"}}}}, nil
+	return &models.Dataset{Tenants: []models.Tenant{{Name: "Acme", ID: "ocid1.tenancy.oc1..acme"}}}, nil
 }
 
 func (l relationsLoader) LoadGPUPools(context.Context, string, models.Environment) ([]models.GPUPool, error) {

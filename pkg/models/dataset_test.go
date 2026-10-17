@@ -11,14 +11,13 @@ func TestBuildTenantIDSuffixMap(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{
 		Tenants: []Tenant{
-			{Name: "TenantA", IDs: []string{"ocid1.tenancy.oc1..aaaa", "ocid1.tenancy.oc1..aaab"}},
-			{Name: "TenantB", IDs: []string{"ocid1.tenancy.oc1..bbbb"}},
+			{Name: "TenantA", ID: "ocid1.tenancy.oc1..aaaa"},
+			{Name: "TenantB", ID: "ocid1.tenancy.oc1..bbbb"},
 		},
 	}
 	got := d.buildTenantIDSuffixMap()
 	want := map[string]int{
 		"aaaa": 0,
-		"aaab": 0,
 		"bbbb": 1,
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -26,22 +25,10 @@ func TestBuildTenantIDSuffixMap(t *testing.T) {
 	}
 }
 
-// TestBuildTenantIDSuffixMap_FirstClaimWins pins that an ID claimed by
-// several tenants resolves to the first one, so ownership doesn't depend
-// on which tenant happens to come last.
-func TestBuildTenantIDSuffixMap_FirstClaimWins(t *testing.T) {
-	t.Parallel()
-	d := &Dataset{Tenants: []Tenant{
-		{Name: "OABCS1", IDs: []string{"ocid1.tenancy.oc1..xxxx"}},
-		{Name: "oabcs1", IDs: []string{"ocid1.tenancy.oc1..xxxx"}},
-	}}
-	assert.Equal(t, map[string]int{"xxxx": 0}, d.buildTenantIDSuffixMap())
-}
-
 func TestSetDedicatedAIClusterMap(t *testing.T) {
 	t.Parallel()
-	tenantA := Tenant{Name: "TenantA", IDs: []string{"ocid1.tenancy.oc1..aaaa"}}
-	tenantB := Tenant{Name: "TenantB", IDs: []string{"ocid1.tenancy.oc1..bbbb"}}
+	tenantA := Tenant{Name: "TenantA", ID: "ocid1.tenancy.oc1..aaaa"}
+	tenantB := Tenant{Name: "TenantB", ID: "ocid1.tenancy.oc1..bbbb"}
 	d := &Dataset{
 		Tenants: []Tenant{tenantA, tenantB},
 	}
@@ -81,8 +68,8 @@ func TestSetDedicatedAIClusterMap(t *testing.T) {
 // the unmatched key is preserved and Owner stays nil.
 func TestSetImportedModelMap(t *testing.T) {
 	t.Parallel()
-	tenantA := Tenant{Name: "TenantA", IDs: []string{"ocid1.tenancy.oc1..aaaa"}}
-	tenantB := Tenant{Name: "TenantB", IDs: []string{"ocid1.tenancy.oc1..bbbb"}}
+	tenantA := Tenant{Name: "TenantA", ID: "ocid1.tenancy.oc1..aaaa"}
+	tenantB := Tenant{Name: "TenantB", ID: "ocid1.tenancy.oc1..bbbb"}
 	d := &Dataset{
 		Tenants: []Tenant{tenantA, tenantB},
 	}
@@ -120,7 +107,7 @@ func TestSetImportedModelMap(t *testing.T) {
 func TestSetGPUWorkloadMap_ResolvesOwnerKeepsNodeKey(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{
-		Tenants: []Tenant{{Name: "acme", IDs: []string{"ocid1.tenancy.oc1..suffix1"}}},
+		Tenants: []Tenant{{Name: "acme", ID: "ocid1.tenancy.oc1..suffix1"}},
 	}
 	d.SetGPUWorkloadMap(map[string][]GPUWorkload{
 		"node-a": {{Name: "p1", Node: "node-a", TenantID: "suffix1"}},
@@ -143,7 +130,7 @@ func TestSetGPUWorkloadMap_ResolvesOwnerKeepsNodeKey(t *testing.T) {
 func TestSetInferenceServiceMap_ResolvesOwnerKeepsNamespaceKey(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{
-		Tenants: []Tenant{{Name: "acme", IDs: []string{"ocid1.tenancy.oc1..suffix1"}}},
+		Tenants: []Tenant{{Name: "acme", ID: "ocid1.tenancy.oc1..suffix1"}},
 	}
 	d.SetInferenceServiceMap(map[string][]InferenceService{
 		"amaaaaaadac1": {{Name: "e1", Namespace: "amaaaaaadac1", TenantID: "suffix1"}},

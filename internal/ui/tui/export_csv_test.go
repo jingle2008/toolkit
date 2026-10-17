@@ -44,8 +44,8 @@ func TestExportTableCSV_Success(t *testing.T) {
 		environment: models.Environment{Region: "us-ashburn-1", Realm: "oc1"},
 		dataset: &models.Dataset{
 			Tenants: []models.Tenant{
-				{Name: "alice", IDs: []string{"ocid1.tenancy.oc1..a"}, IsInternal: true, Note: "n1"},
-				{Name: "bob", IDs: []string{"ocid1.tenancy.oc1..b"}, IsInternal: false, Note: "n2"},
+				{Name: "alice", ID: "ocid1.tenancy.oc1..a", IsInternal: true, Note: "n1"},
+				{Name: "bob", ID: "ocid1.tenancy.oc1..b", IsInternal: false, Note: "n2"},
 			},
 		},
 		loader: fakeLoader{dataset: &models.Dataset{}},
@@ -205,9 +205,9 @@ func TestExportTableCSV_IgnoresInteractiveSort(t *testing.T) {
 		environment: models.Environment{Region: "us-ashburn-1", Realm: "oc1"},
 		dataset: &models.Dataset{
 			Tenants: []models.Tenant{
-				{Name: "charlie", IDs: []string{"ocid1.tenancy.oc1..c"}},
-				{Name: "alice", IDs: []string{"ocid1.tenancy.oc1..a"}},
-				{Name: "bob", IDs: []string{"ocid1.tenancy.oc1..b"}},
+				{Name: "charlie", ID: "ocid1.tenancy.oc1..c"},
+				{Name: "alice", ID: "ocid1.tenancy.oc1..a"},
+				{Name: "bob", ID: "ocid1.tenancy.oc1..b"},
 			},
 		},
 		// Simulate the user having sorted by Name descending in the

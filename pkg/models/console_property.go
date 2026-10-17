@@ -85,7 +85,7 @@ func (o ConsolePropertyTenancyOverride) GetTenantID() string {
 	return o.TenantID
 }
 
-// SetTenantName stamps the tenant short name onto the override.
+// SetTenantName stamps the owning tenant's name onto the override.
 // See LimitTenancyOverride.SetTenantName.
 func (o *ConsolePropertyTenancyOverride) SetTenantName(name string) {
 	o.TenantName = name

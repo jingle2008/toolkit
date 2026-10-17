@@ -132,7 +132,7 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 	t.Helper()
 	switch cat { //nolint:exhaustive
 	case domain.Tenant:
-		return []models.Tenant{{Name: "alpha", IDs: []string{"ocid1.tenancy.oc1..a"}, IsInternal: true, Note: "n/a"}}
+		return []models.Tenant{{Name: "alpha", ID: "ocid1.tenancy.oc1..a", IsInternal: true, Note: "n/a"}}
 	case domain.LimitDefinition:
 		return []models.LimitDefinition{{Name: "compute-cores", Description: "max OCPUs", Scope: "TENANT", DefaultMin: "0", DefaultMax: "200"}}
 	case domain.ConsolePropertyDefinition:

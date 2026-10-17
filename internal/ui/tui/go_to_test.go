@@ -23,7 +23,7 @@ import (
 func newGoToModel(t *testing.T) *Model {
 	t.Helper()
 	m := newTestModel(t)
-	acme := models.Tenant{Name: "Acme", IDs: []string{"ocid1.tenancy.oc1..acme"}}
+	acme := models.Tenant{Name: "Acme", ID: "ocid1.tenancy.oc1..acme"}
 	m.dataset.Tenants = []models.Tenant{acme}
 	m.dataset.BaseModels = []models.BaseModel{{Name: "llama"}}
 	m.dataset.ServingRuntimes = []models.ServingRuntime{{Name: "vllm"}}

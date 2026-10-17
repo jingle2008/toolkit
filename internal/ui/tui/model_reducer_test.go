@@ -471,7 +471,7 @@ func TestHandleTenancyOverridesLoaded_ResolvesEarlierClusterRows(t *testing.T) {
 	require.Contains(t, m.dataset.DedicatedAIClusterMap, "sfx", "unresolved before tenants load")
 
 	m.handleTenancyOverridesLoaded(models.TenancyOverrideGroup{
-		Tenants: []models.Tenant{{Name: "Tenant X", IDs: []string{"ocid1.tenancy.oc1..sfx"}}},
+		Tenants: []models.Tenant{{Name: "Tenant X", ID: "ocid1.tenancy.oc1..sfx"}},
 	}, 1)
 
 	require.Len(t, m.dataset.DedicatedAIClusterMap["Tenant X"], 1)

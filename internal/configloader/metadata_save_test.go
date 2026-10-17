@@ -79,13 +79,40 @@ func TestSaveMetadata_UnsupportedExt(t *testing.T) {
 func TestUpsertTenant_AppendThenReplace(t *testing.T) {
 	t.Parallel()
 	m := &models.Metadata{}
-	UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A"), IsInternal: boolptr(true)})
-	UpsertTenant(m, models.TenantMetadata{ID: "id-b", Name: strptr("B"), IsInternal: boolptr(false)})
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A"), IsInternal: boolptr(true)}))
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-b", Name: strptr("B"), IsInternal: boolptr(false)}))
 	require.Len(t, m.Tenants, 2)
 	// Replace id-a in place.
-	UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A2"), IsInternal: boolptr(false)})
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A2"), IsInternal: boolptr(false)}))
 	require.Len(t, m.Tenants, 2, "replace should not append")
 	require.Equal(t, "id-a", m.Tenants[0].ID)
 	require.NotNil(t, m.Tenants[0].Name)
 	require.Equal(t, "A2", *m.Tenants[0].Name)
+}
+
+// Names map one to one to tenancies: an upsert giving a second tenancy an
+// existing name is refused and leaves m unchanged; keeping one's own name
+// is fine.
+func TestUpsertTenant_RejectsTakenName(t *testing.T) {
+	t.Parallel()
+	m := &models.Metadata{Tenants: []models.TenantMetadata{{ID: "id-a", Name: strptr("Acme")}}}
+	err := UpsertTenant(m, models.TenantMetadata{ID: "id-b", Name: strptr("Acme")})
+	require.ErrorContains(t, err, `"Acme" is already used by id-a`)
+	require.Len(t, m.Tenants, 1)
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("Acme"), Note: strptr("n")}))
+}
+
+// A metadata file giving two tenancies one name, or listing a tenancy
+// twice, fails to load.
+func TestLoadMetadata_RejectsDuplicates(t *testing.T) {
+	t.Parallel()
+	for name, body := range map[string]string{
+		"name": "tenants:\n- {id: id-a, name: Acme}\n- {id: id-b, name: Acme}\n",
+		"id":   "tenants:\n- {id: id-a, name: A}\n- {id: id-a, name: B}\n",
+	} {
+		path := filepath.Join(t.TempDir(), "metadata.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+		_, err := LoadMetadata(path)
+		require.ErrorContainsf(t, err, "invalid tenant metadata", "duplicate %s", name)
+	}
 }

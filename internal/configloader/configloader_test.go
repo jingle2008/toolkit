@@ -232,69 +232,44 @@ func TestLoadTenancyOverrides_Error(t *testing.T) {
 	require.Error(t, err)
 }
 
+// Each OCID is one tenant, named from metadata or, without a metadata
+// name, by its OCID; metadata-only tenancies are tenants too.
 func TestGetTenants(t *testing.T) {
 	t.Parallel()
-	m := map[string]idSet{
-		"Tenant2": map[string]struct{}{"id2": {}},
-		"Tenant1": map[string]struct{}{"id1b": {}, "id1a": {}},
-	}
-	tenants, dirToName := getTenants(m, nil)
-	require.Len(t, tenants, 2)
-	// Sorted by name, IDs sorted — independent of map iteration order.
-	assert.Equal(t, "Tenant1", tenants[0].Name)
-	assert.Equal(t, []string{"id1a", "id1b"}, tenants[0].IDs)
-	assert.Equal(t, "Tenant2", tenants[1].Name)
-	assert.Equal(t, []string{"id2"}, tenants[1].IDs)
-	assert.Equal(t, map[string]string{"Tenant1": "Tenant1", "Tenant2": "Tenant2"}, dirToName)
+	acme, external, note := "Acme", false, "n"
+	tenants := getTenants(
+		map[string]bool{"ocid1.tenancy.oc1..b": true, "ocid1.tenancy.oc1..a": true},
+		[]models.TenantMetadata{
+			{ID: "ocid1.tenancy.oc1..a", Name: &acme, IsInternal: &external, Note: &note},
+			{ID: "ocid1.tenancy.oc1..c"}, // metadata only, no name
+		},
+	)
+	assert.Equal(t, []models.Tenant{
+		{Name: "Acme", ID: "ocid1.tenancy.oc1..a", IsInternal: false, Note: "n"},
+		{Name: "ocid1.tenancy.oc1..b", ID: "ocid1.tenancy.oc1..b", IsInternal: true},
+		{Name: "ocid1.tenancy.oc1..c", ID: "ocid1.tenancy.oc1..c", IsInternal: true},
+	}, tenants, "sorted by name")
 }
 
-// TestGetTenants_SharedIDsFlagged pins that two override directories
-// carrying the same tenancy OCID (e.g. "OABCS1" and "oabcs1") stay
-// separate tenants but are both flagged faulty via SharedWith.
-func TestGetTenants_SharedIDsFlagged(t *testing.T) {
+// Overrides are grouped by the tenancy each record names, whatever
+// directory holds it: one tenancy across two directories is one group,
+// and a directory's name is never a tenant name.
+func TestGroupByTenant(t *testing.T) {
 	t.Parallel()
-	m := map[string]idSet{
-		"oabcs1": {"idX": {}},
-		"OABCS1": {"idX": {}},
-		"other":  {"idY": {}},
+	byDir := map[string][]models.LimitTenancyOverride{
+		"oabcs1": {{TenantID: "ocid1.tenancy.oc1..a", LimitRegionalOverride: models.LimitRegionalOverride{Name: "l1"}}},
+		"OABCS1": {{TenantID: "ocid1.tenancy.oc1..a", LimitRegionalOverride: models.LimitRegionalOverride{Name: "l2"}}},
+		"mixed":  {{TenantID: "ocid1.tenancy.oc1..b", LimitRegionalOverride: models.LimitRegionalOverride{Name: "l3"}}},
 	}
-	tenants, _ := getTenants(m, nil)
-	require.Len(t, tenants, 3)
-	assert.Equal(t, "OABCS1", tenants[0].Name)
-	assert.Equal(t, []string{"oabcs1"}, tenants[0].SharedWith)
-	assert.True(t, tenants[0].IsFaulty())
-	assert.Equal(t, "oabcs1", tenants[1].Name)
-	assert.Equal(t, []string{"OABCS1"}, tenants[1].SharedWith)
-	assert.Equal(t, "other", tenants[2].Name)
-	assert.Empty(t, tenants[2].SharedWith)
-	assert.False(t, tenants[2].IsFaulty())
-}
-
-// TestGetTenants_SameNameMerged pins that directories resolving to the
-// same tenant name through metadata collapse into one Tenant, and that
-// both directories map to it.
-func TestGetTenants_SameNameMerged(t *testing.T) {
-	t.Parallel()
-	m := map[string]idSet{
-		"rbcpreprod":  {"idR": {}},
-		"rbc_preprod": {"idR": {}},
+	nameOf := map[string]string{"ocid1.tenancy.oc1..a": "Acme", "ocid1.tenancy.oc1..b": "ocid1.tenancy.oc1..b"}
+	got := groupByTenant(byDir, nameOf, (*models.LimitTenancyOverride).SetTenantName)
+	require.Len(t, got, 2)
+	require.Len(t, got["Acme"], 2)
+	for _, o := range got["Acme"] {
+		assert.Equal(t, "Acme", o.TenantName)
 	}
-	name := "rbc-preprod"
-	internal := false
-	tenants, dirToName := getTenants(m, []models.TenantMetadata{{ID: "idR", Name: &name, IsInternal: &internal}})
-	require.Len(t, tenants, 1)
-	assert.Equal(t, name, tenants[0].Name)
-	assert.Equal(t, []string{"idR"}, tenants[0].IDs)
-	assert.Empty(t, tenants[0].SharedWith)
-	assert.False(t, tenants[0].IsInternal)
-	assert.Equal(t, map[string]string{"rbcpreprod": name, "rbc_preprod": name}, dirToName)
-}
-
-func TestRekeyByTenant(t *testing.T) {
-	t.Parallel()
-	m := map[string][]string{"b": {"b1"}, "a": {"a1", "a2"}, "keep": {"k"}}
-	got := rekeyByTenant(m, map[string]string{"a": "T", "b": "T"})
-	assert.Equal(t, map[string][]string{"T": {"a1", "a2", "b1"}, "keep": {"k"}}, got)
+	require.Len(t, got["ocid1.tenancy.oc1..b"], 1)
+	assert.Equal(t, "ocid1.tenancy.oc1..b", got["ocid1.tenancy.oc1..b"][0].TenantName)
 }
 
 type testOverride struct {
@@ -304,25 +279,14 @@ type testOverride struct {
 
 func (t testOverride) GetTenantID() string { return t.tenantID }
 
-func TestUpdateTenants(t *testing.T) {
+func TestCollectTenantIDs(t *testing.T) {
 	t.Parallel()
-	// Just test that it doesn't panic on empty input
-	updateTenants(map[string]idSet{}, map[string][]testOverride{})
-
-	// Test with actual data
-	tenantMap := make(map[string]idSet)
-	overrideMap := map[string][]testOverride{
-		"TenantA": {
-			{tenantID: "idA"},
-			{tenantID: "idB"},
-		},
-		"TenantB": {
-			{tenantID: "idC"},
-		},
-	}
-	updateTenants(tenantMap, overrideMap)
-	assert.Contains(t, tenantMap, "TenantA")
-	assert.Contains(t, tenantMap, "TenantB")
+	ids := map[string]bool{}
+	collectTenantIDs(ids, map[string][]testOverride{
+		"dirA": {{tenantID: "idA"}, {tenantID: "idB"}},
+		"dirB": {{tenantID: "idA"}, {tenantID: ""}},
+	})
+	assert.Equal(t, map[string]bool{"idA": true, "idB": true}, ids, "deduplicated; a record without an OCID adds none")
 }
 
 func TestGetEnvironments(t *testing.T) {
@@ -595,49 +559,11 @@ func TestMerge_PrimitivesAndPointers(t *testing.T) {
 	assert.False(t, merge(true, &bb))
 }
 
-func TestGetTenants_MergeAndUnmatched(t *testing.T) {
-	t.Parallel()
-	// tenantMap has two tenants, metadata has one matching and one extra
-	tenantMap := map[string]idSet{
-		"TenantA": {"idA": {}},
-		"TenantB": {"idB": {}},
-	}
-	name := "TenantA-override"
-	extra := "TenantC"
-	isInternal := false
-	note := "note"
-	tenantMeta := []models.TenantMetadata{
-		{ID: "idA", Name: &name, IsInternal: &isInternal, Note: &note},
-		{ID: "idC", Name: &extra, IsInternal: &isInternal, Note: &note},
-	}
-	tenants, dirToName := getTenants(tenantMap, tenantMeta)
-	// TenantA renamed by metadata, TenantB as is, idC as extra; sorted by name.
-	require.Len(t, tenants, 3)
-	assert.Equal(t, models.Tenant{Name: name, IDs: []string{"idA"}, IsInternal: isInternal, Note: note}, tenants[0])
-	assert.Equal(t, models.Tenant{Name: "TenantB", IDs: []string{"idB"}, IsInternal: true}, tenants[1])
-	assert.Equal(t, models.Tenant{Name: extra, IDs: []string{"idC"}, IsInternal: isInternal, Note: note}, tenants[2])
-	assert.Equal(t, map[string]string{"TenantA": name, "TenantB": "TenantB"}, dirToName)
-}
-
-// TestGetTenants_MetadataOnlyNameCollision pins that a metadata-only
-// entry whose name matches an existing tenant is merged into it rather
-// than producing two tenants with the same name.
-func TestGetTenants_MetadataOnlyNameCollision(t *testing.T) {
-	t.Parallel()
-	name := "TenantA"
-	internal := true
-	tenants, _ := getTenants(map[string]idSet{"TenantA": {"idA": {}}},
-		[]models.TenantMetadata{{ID: "idC", Name: &name, IsInternal: &internal}})
-	require.Len(t, tenants, 1)
-	assert.Equal(t, []string{"idA", "idC"}, tenants[0].IDs)
-	assert.True(t, tenants[0].IsFaulty())
-}
-
-// TestLoadTenancyOverrideGroup_RenamedTenantRekeysOverrides pins the fix
-// for metadata-renamed tenants: the override maps must be keyed by the
-// resolved Tenant.Name (the scope key), while each override's TenantName
-// keeps the source directory name.
-func TestLoadTenancyOverrideGroup_RenamedTenantRekeysOverrides(t *testing.T) {
+// TestLoadTenancyOverrideGroup_NamesFromMetadata pins that a tenant's
+// name comes from metadata, never from the directory holding its
+// overrides: the override maps are keyed by it and each override carries
+// it as TenantName.
+func TestLoadTenancyOverrideGroup_NamesFromMetadata(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	realm := "testrealm"
@@ -661,7 +587,7 @@ func TestLoadTenancyOverrideGroup_RenamedTenantRekeysOverrides(t *testing.T) {
 	assert.Equal(t, name, group.Tenants[0].Name)
 	require.Len(t, group.LimitTenancyOverrideMap[name], 1)
 	assert.NotContains(t, group.LimitTenancyOverrideMap, "tenant-dir")
-	assert.Equal(t, "tenant-dir", group.LimitTenancyOverrideMap[name][0].TenantName)
+	assert.Equal(t, name, group.LimitTenancyOverrideMap[name][0].TenantName)
 }
 
 // writeDefinitionRepo seeds the three oc1 definition files (and, when
