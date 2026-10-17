@@ -151,6 +151,12 @@ func registerTools(s *Server) {
 	}, s.handleListAliases)
 
 	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "get_item",
+		Annotations: readOnly(),
+		Description: getItemDescription,
+	}, s.handleGetItem)
+
+	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "check_integrity",
 		Annotations: readOnly(),
 		Description: checkIntegrityDescription,

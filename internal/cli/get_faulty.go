@@ -21,10 +21,13 @@ import (
 // needs.
 var faultyDatasetFn = resolve.FaultyDataset
 
-// validateFaulty checks `get --faulty` can run for cat: only some
-// categories have faulty rows, and deciding takes the cluster, whatever
-// cat itself needs.
-func validateFaulty(cfg config.Config, cat domain.Category) error {
+// validateFaulty checks `get --faulty` can run for cat (nothing to check
+// when faulty is off): only some categories have faulty rows, and
+// deciding takes the cluster, whatever cat itself needs.
+func validateFaulty(cfg config.Config, cat domain.Category, faulty bool) error {
+	if !faulty {
+		return nil
+	}
 	if !relations.IsFaultyCategory(cat) {
 		names := make([]string, 0, len(relations.FaultyCategories()))
 		for _, c := range relations.FaultyCategories() {

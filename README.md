@@ -169,7 +169,13 @@ toolkit get dac --related-to tenant/<tenant-name>
 # Only faulty rows — what the TUI's Ctrl+Z shows
 toolkit get gpunode --faulty
 toolkit get inferenceservice --faulty -o json
+
+# One row by name, as an object (default -o yaml)
+toolkit get dac <dac-name>
+toolkit get inferenceservice <namespace>/<name> -o json
 ```
+
+With a name, `get` prints just that row: the name must match the row's first column exactly, or be `<group>/<name>` when rows in different groups share it (an override's name across tenants, an endpoint's across namespaces). No match, or several, exits non-zero and says which; `--filter` is the loose match.
 
 `--related-to <category>/<name>` keeps the rows related to that parent row, using the relations the TUI drills through: a DAC's pods, a model's or runtime's endpoints, a tenant's DACs, pods and endpoints, a definition's overrides, and so on. The name must match the parent row's first column exactly (case-sensitive). The flag combines with `--filter`, and an unrelated category is rejected with the valid parents listed. Shell completion offers the valid `<category>/` prefixes.
 
@@ -263,6 +269,7 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | `list_related` | Rows of `category` related to one parent row (`parent_category` + `parent_name`), e.g. a DAC's pods or a runtime's endpoints. Same relations as the TUI drill-in and `toolkit get --related-to` |
 | `list_aliases` | Discovery — every category alias |
 
+| `get_item` | The rows of one `category` named exactly `name` — the full objects its list tool returns, without filtering a whole list. Usually one; several only when groups share the name. No match is an error |
 | `check_integrity` | Every relation checked, as `toolkit doctor --relations`: per relation, rows checked and every row naming a missing parent; `status` PASS / FAIL / WARN |
 
 The tools for the categories whose rows can be faulty (`list_base_models`, `list_tenants`, `list_gpu_pools`, `list_gpu_nodes`, `list_gpu_workloads`, `list_serving_runtimes`, `list_dacs`, `list_inference_services`) also take `faulty: true`: only the rows the TUI's Ctrl+Z shows, as `toolkit get --faulty`. `list_inference_services` with `faulty: true` is how an agent finds the orphaned endpoints `delete_inference_service` removes.

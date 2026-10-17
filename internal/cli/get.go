@@ -38,8 +38,8 @@ func addGetCommand(rootCmd *cobra.Command, cfgFile *string) {
 		faulty          bool
 	)
 	getCmd := &cobra.Command{
-		Use:   "get <category>",
-		Short: "Print a category's data to stdout (table/json/jsonl/yaml/csv/tsv)",
+		Use:   "get <category> [name]",
+		Short: "Print a category's data, or one row by name, to stdout (table/json/jsonl/yaml/csv/tsv)",
 		Long: `Headless equivalent of the TUI's category view.
 
 Examples:
@@ -56,12 +56,21 @@ Examples:
   toolkit get inferenceservice --related-to servingruntime/<runtime> -o json
   toolkit get gpunode --faulty
   toolkit get inferenceservice --faulty -o json   # e.g. orphans to delete
+  toolkit get dac <dac-name>                       # one row, as YAML
+  toolkit get inferenceservice <ns>/<name> -o json # <group>/<name> when a name is shared
+
+With a name, get prints that one row (default -o yaml): the name must
+match the row's first column exactly, or be <group>/<name> when rows in
+different groups share it. No match, or several, is an error.
 
 Category aliases match the TUI (e.g. "tenant"/"t", "gpunode"/"gn",
 "dac", "basemodel"/"bm"). Run with shell completion enabled to
 discover them.`,
-		Args: cobra.ExactArgs(1),
-		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		Args: cobra.RangeArgs(1, 2),
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
+			if len(args) > 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp // a row name: no completion
+			}
 			return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit, &selectedColumns, &relatedTo, &faulty),
@@ -120,6 +129,10 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		if err != nil {
 			return err
 		}
+		item, err := itemArg(cmd, args, cat, format)
+		if err != nil {
+			return err
+		}
 
 		// --columns help short-circuit: print key/title/default table, exit 0.
 		if *selectedColumns == "help" {
@@ -159,10 +172,8 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		if err := validateGetConfig(cfg, cat); err != nil {
 			return err
 		}
-		if *faulty {
-			if err := validateFaulty(cfg, cat); err != nil {
-				return err
-			}
+		if err := validateFaulty(cfg, cat, *faulty); err != nil {
+			return err
 		}
 
 		// Honor the same log_format / log_level config keys the TUI uses so
@@ -185,12 +196,13 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		ld := production.New(ctx, cfg.MetadataFile)
 
 		filter := strings.ToLower(strings.TrimSpace(cfg.Filter))
-		opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty}
+		opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty, Item: item}
 
+		emit := emitCategory
 		if *faulty {
-			return emitFaulty(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, related, *limit, opts, selected)
+			emit = emitFaulty
 		}
-		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, related, *limit, opts, selected)
+		return emit(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, related, *limit, opts, selected)
 	}
 }
 
@@ -559,6 +571,15 @@ func emitFlat[T models.NamedFilterable](
 }
 
 func writeSlice[T any](w writer, items []T, limit int, opts output.Options, cat domain.Category, env models.Environment, selected []string) error {
+	if opts.Item != "" {
+		it, err := pickFlat(cat, items, opts.Item)
+		if err != nil {
+			return err
+		}
+		return writeOne(w, it, opts, func(o output.Options) error {
+			return writeSlice(w, []T{it}, 0, o, cat, env, selected)
+		})
+	}
 	items = collections.TruncateSlice(items, limit)
 	switch opts.Format {
 	case output.FormatJSON:
@@ -605,6 +626,15 @@ func writeTableLike(w writer, headers []string, rows [][]string, opts output.Opt
 // columns.RenderTable; CSV/TSV route through RenderTableForExport
 // with env so OCID-shaped columns emit fully-qualified IDs.
 func writeMap[T any](w writer, grouped map[string][]T, limit int, opts output.Options, cat domain.Category, env models.Environment, selected []string) error {
+	if opts.Item != "" {
+		group, it, err := pickGrouped(cat, grouped, opts.Item)
+		if err != nil {
+			return err
+		}
+		return writeOne(w, it, opts, func(o output.Options) error {
+			return writeMap(w, map[string][]T{group: {it}}, 0, o, cat, env, selected)
+		})
+	}
 	switch opts.Format {
 	case output.FormatJSON, output.FormatJSONL, output.FormatYAML:
 		return writeEncoded(w, opts, collections.TruncateSlice(output.Flatten(grouped), limit))
