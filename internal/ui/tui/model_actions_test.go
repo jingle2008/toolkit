@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -62,10 +63,10 @@ func TestScaleUpGPUPool_InvalidItem(t *testing.T) {
 func TestCordonAndDrainNode_InvalidItem(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	if cmd := m.cordonNode(nil, nil); cmd != nil {
+	if cmd := m.cordonNode(nil, nil, mutation.CordonNode); cmd != nil {
 		t.Fatal("expected nil cmd for nil cordon item")
 	}
-	if cmd := m.cordonNode("not-a-node", nil); cmd != nil {
+	if cmd := m.cordonNode("not-a-node", nil, mutation.CordonNode); cmd != nil {
 		t.Fatal("expected nil cmd for invalid cordon item type")
 	}
 	if cmd := m.drainNode(nil, nil); cmd != nil {

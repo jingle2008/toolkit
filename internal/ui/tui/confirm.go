@@ -9,22 +9,10 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
-)
-
-// confirmTier classifies a destructive action by blast radius, which
-// determines how the confirmation modal gates it.
-type confirmTier int
-
-const (
-	// tierRecoverable actions can be undone or retried (cordon, drain,
-	// restart, scale); a single y/N confirms.
-	tierRecoverable confirmTier = iota
-	// tierIrreversible actions destroy state (delete DAC, terminate node);
-	// they require an explicit capital Y behind a DESTRUCTIVE warning.
-	tierIrreversible
 )
 
 // confirmOverlay holds the state of the destructive-action confirmation
@@ -32,7 +20,7 @@ const (
 // re-resolves its target at that time so a background reload cannot leave
 // it acting on a stale row. returnView restores the prior view on dismiss.
 type confirmOverlay struct {
-	tier       confirmTier
+	tier       mutation.Tier
 	action     string
 	kind       string
 	target     string
@@ -64,12 +52,10 @@ func (m *Model) dismissConfirm() {
 // overlay's tier. Recoverable: y/Y confirm; n/N/esc cancel. Irreversible:
 // only Y confirms; y/n/N/esc cancel (lowercase y never destroys state).
 func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
-	switch c.tier {
-	case tierIrreversible:
+	if c.tier == mutation.Irreversible {
 		return s == "Y", s == "y" || s == "n" || s == "N" || s == "esc"
-	default: // tierRecoverable
-		return s == "y" || s == "Y", s == "n" || s == "N" || s == "esc"
 	}
+	return s == "y" || s == "Y", s == "n" || s == "N" || s == "esc"
 }
 
 // confirmDelete builds the irreversible overlay for the Delete key. The
@@ -80,15 +66,18 @@ func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
 // extra — deleteItem already re-finds its target by key at execution time.
 func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmOverlay {
 	c := confirmOverlay{
-		tier:   tierIrreversible,
 		target: itemKeyString(itemKey),
 		run:    func() tea.Cmd { return m.deleteItem(itemKey) },
 	}
 	switch m.category {
 	case domain.GPUNode:
+		c.tier = mutation.TerminateNode.Tier
 		c.action, c.kind = "Terminate", "node"
 		c.warning = "Boot volume destroyed. Cannot undo."
 	case domain.InferenceService:
+		a := mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
+		c.tier = a.Tier
+		c.run = func() tea.Cmd { return m.deleteOrphanInferenceService(itemKey, a) }
 		c.action, c.kind = "Delete", "orphaned InferenceService"
 		c.warning = "Its DAC is gone. If it stays deleting, run again after 10m to force-delete."
 		if outcome == k8s.OrphanFinalized {
@@ -96,28 +85,35 @@ func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOu
 			c.warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
 		}
 	default: // DedicatedAICluster
+		c.tier = mutation.DeleteDAC.Tier
 		c.action, c.kind = "Delete", "DAC"
 		c.warning = "This is irreversible."
 	}
 	return c
 }
 
-// confirmCordon builds the recoverable overlay for the cordon toggle. The
-// run thunk re-resolves the item by key at confirm time so a background
-// reload cannot leave it acting on a stale row.
-func (m *Model) confirmCordon(itemKey models.ItemKey) confirmOverlay {
+// confirmCordon builds the recoverable overlay for the cordon key: it
+// cordons a schedulable node and uncordons a cordoned one, and says which.
+// The run thunk re-resolves the item by key at confirm time so a
+// background reload cannot leave it acting on a stale row; it sets the
+// state named here, so a node changed meanwhile ends up as confirmed.
+func (m *Model) confirmCordon(itemKey models.ItemKey, item any) confirmOverlay {
+	a, label := mutation.CordonNode, "Cordon"
+	if node, ok := item.(*models.GPUNode); ok && node != nil && node.IsSchedulingDisabled {
+		a, label = mutation.UncordonNode, "Uncordon"
+	}
 	return confirmOverlay{
-		tier:   tierRecoverable,
-		action: "Toggle cordon",
+		tier:   a.Tier,
+		action: label,
 		kind:   "node",
 		target: itemKeyString(itemKey),
-		run:    func() tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey) },
+		run:    func() tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey, a) },
 	}
 }
 
 func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
 	return confirmOverlay{
-		tier:   tierRecoverable,
+		tier:   mutation.DrainNode.Tier,
 		action: "Drain",
 		kind:   "node",
 		target: itemKeyString(itemKey),
@@ -132,13 +128,13 @@ func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
 // Other categories don't bind Restart.
 func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay {
 	c := confirmOverlay{
-		tier:   tierRecoverable,
+		tier:   mutation.RestartInferenceService.Tier,
 		action: "Restart",
 		target: itemKeyString(itemKey),
 	}
 	switch m.category {
 	case domain.GPUNode:
-		c.kind = "node"
+		c.tier, c.kind = mutation.RestartNode.Tier, "node"
 		c.run = func() tea.Cmd { return m.restartNode(findItem(m.dataset, m.category, itemKey), itemKey) }
 	default: // InferenceService
 		c.kind = "InferenceService"
@@ -152,7 +148,7 @@ func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay 
 
 func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
 	return confirmOverlay{
-		tier:   tierRecoverable,
+		tier:   mutation.ScaleGPUPool.Tier,
 		action: "Scale up",
 		kind:   "GPU pool",
 		target: itemKeyString(itemKey),
@@ -192,7 +188,7 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) confirmView() string {
 	c := m.confirm
 	var b strings.Builder
-	if c.tier == tierIrreversible {
+	if c.tier == mutation.Irreversible {
 		b.WriteString("⚠ DESTRUCTIVE\n\n")
 		fmt.Fprintf(&b, "%s %s  %s\n", c.action, c.kind, c.target)
 		if c.warning != "" {

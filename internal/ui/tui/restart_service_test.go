@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -38,7 +39,7 @@ func TestShiftR_InInferenceService_OpensRestartConfirm(t *testing.T) {
 
 	assert.Nil(t, m.handleItemActions(shiftR()))
 	require.Equal(t, common.ConfirmView, m.viewMode)
-	assert.Equal(t, tierRecoverable, m.confirm.tier)
+	assert.Equal(t, mutation.Recoverable, m.confirm.tier)
 	assert.Equal(t, "Restart", m.confirm.action)
 	assert.Equal(t, "InferenceService", m.confirm.kind)
 	assert.Equal(t, "ns1/svc1", m.confirm.target)

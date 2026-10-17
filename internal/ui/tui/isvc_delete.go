@@ -7,6 +7,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -69,21 +70,25 @@ func (m *Model) handleISVCDeletePlannedMsg(msg isvcDeletePlannedMsg) tea.Cmd {
 	return m.requestConfirm(m.confirmDelete(msg.key, msg.outcome))
 }
 
-// deleteOrphanInferenceService runs the delete; the delete re-checks the
-// target, so a change since the plan (say, the DAC came back) refuses.
-// The k8s watch removes the row.
-func (m *Model) deleteOrphanInferenceService(itemKey models.ItemKey) tea.Cmd {
+// deleteOrphanInferenceService runs the delete, audited as a, the action
+// the plan chose; the delete re-checks the target, so a change since the
+// plan (say, the DAC came back) refuses. The k8s watch removes the row.
+func (m *Model) deleteOrphanInferenceService(itemKey models.ItemKey, a mutation.Action) tea.Cmd {
 	svc, ok := findItem(m.dataset, domain.InferenceService, itemKey).(*models.InferenceService)
 	if !ok || svc == nil {
 		return m.showToast(itemKeyString(itemKey)+" is gone", toastInfo)
 	}
-	m.logger.Infow("action started", "action", "deleteOrphanInferenceService", "service", itemKeyString(itemKey))
 	namespace, name := svc.Namespace, svc.Name
 	kubeConfig, kubeContext := m.kubeConfig, m.environment.KubeContext()
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		outcome, err := deleteOrphanISVCFn(ctx, kubeConfig, kubeContext, namespace, name)
+		var outcome k8s.OrphanDeleteOutcome
+		err := audited(m.logger, a, namespace+"/"+name, func() error {
+			var err error
+			outcome, err = deleteOrphanISVCFn(ctx, kubeConfig, kubeContext, namespace, name)
+			return err
+		})
 		return isvcDeleteResultMsg{key: itemKey, outcome: outcome, err: err}
 	}
 }

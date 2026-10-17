@@ -14,6 +14,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -142,25 +143,20 @@ func withMutationSetup(
 // a perform closure; runMutation handles confirmation prompt,
 // dry-run short-circuit, and structured audit logging.
 type mutationPlan struct {
-	// Action is the verb (e.g. "cordon", "drain", "scale", "terminate").
-	Action string
-	// Kind is the resource type (e.g. "node", "gpu_pool", "dac").
-	Kind string
+	// Action is what the subcommand does. Its tier decides the
+	// confirmation: an Irreversible action (terminate, delete) can't
+	// be confirmed interactively — only --yes lets it proceed, since
+	// typing "y" by reflex is unsafe.
+	Action mutation.Action
 	// Target is a human-readable identifier (e.g. node name,
-	// "<tenant>/<dac>"). Used in prompts and audit fields.
+	// "<namespace>/<name>"). Used in prompts and audit fields.
 	Target string
-	// Surface is the entry point — "cli" today; "mcp" once exposed.
-	Surface string
 	// DryRun short-circuits before perform runs, prints a "would do X"
 	// line, and audits with dry_run=true.
 	DryRun bool
-	// Yes skips the interactive confirmation prompt. Required when
-	// RequireExplicitYes is true.
+	// Yes skips the interactive confirmation prompt. Required for an
+	// Irreversible action.
 	Yes bool
-	// RequireExplicitYes makes interactive prompting impossible: only
-	// --yes lets the action proceed. Used by destructive actions
-	// (terminate, delete dac) where typing "y" by reflex is unsafe.
-	RequireExplicitYes bool
 }
 
 // runMutation orchestrates the standard confirm / dry-run / audit /
@@ -181,23 +177,17 @@ func runMutation(
 	perform func(context.Context) error,
 ) error {
 	logger := logging.FromContext(ctx)
-	desc := fmt.Sprintf("%s %s/%s", plan.Action, plan.Kind, plan.Target)
+	a := plan.Action
+	desc := fmt.Sprintf("%s %s/%s", a.Verb, a.Kind, plan.Target)
 
 	if plan.DryRun {
 		_, _ = fmt.Fprintf(out, "DRY-RUN: would %s\n", desc)
-		logger.Infow(
-			"mutation",
-			"action", plan.Action,
-			"kind", plan.Kind,
-			"target", plan.Target,
-			"surface", plan.Surface,
-			"dry_run", true,
-		)
+		mutation.Audit(logger, surfaceCLI, a, plan.Target, mutation.PhaseDryRun, nil)
 		return nil
 	}
 
-	if plan.RequireExplicitYes && !plan.Yes {
-		return fmt.Errorf("%s requires explicit --yes (no interactive prompt for destructive actions)", plan.Action)
+	if a.Tier == mutation.Irreversible && !plan.Yes {
+		return fmt.Errorf("%s requires explicit --yes (no interactive prompt for destructive actions)", a.Verb)
 	}
 
 	if !plan.Yes {
@@ -211,39 +201,18 @@ func runMutation(
 		}
 	}
 
-	logger.Infow(
-		"mutation",
-		"action", plan.Action,
-		"kind", plan.Kind,
-		"target", plan.Target,
-		"surface", plan.Surface,
-		"dry_run", false,
-		"phase", "begin",
-	)
+	mutation.Audit(logger, surfaceCLI, a, plan.Target, mutation.PhaseBegin, nil)
 	if err := perform(ctx); err != nil {
-		logger.Errorw(
-			"mutation",
-			"action", plan.Action,
-			"kind", plan.Kind,
-			"target", plan.Target,
-			"surface", plan.Surface,
-			"phase", "failed",
-			"error", err,
-		)
+		mutation.Audit(logger, surfaceCLI, a, plan.Target, mutation.PhaseFailed, err)
 		return err
 	}
-	logger.Infow(
-		"mutation",
-		"action", plan.Action,
-		"kind", plan.Kind,
-		"target", plan.Target,
-		"surface", plan.Surface,
-		"dry_run", false,
-		"phase", "done",
-	)
+	mutation.Audit(logger, surfaceCLI, a, plan.Target, mutation.PhaseDone, nil)
 	_, _ = fmt.Fprintf(out, "%s: OK\n", desc)
 	return nil
 }
+
+// surfaceCLI is the audit record's surface for every CLI mutation.
+const surfaceCLI = "cli"
 
 // confirmAction reads one line from in and reports whether the user
 // said yes. Anything other than "y" / "yes" (case-insensitive,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -55,12 +56,10 @@ be unique; an ambiguous name errors with the candidate namespaces.`,
 					return err
 				}
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action:  "restart",
-					Kind:    "inference_service",
-					Target:  ns + "/" + name,
-					Surface: "cli",
-					DryRun:  dryRun,
-					Yes:     yes,
+					Action: mutation.RestartInferenceService,
+					Target: ns + "/" + name,
+					DryRun: dryRun,
+					Yes:    yes,
 				}, func(ctx context.Context) error {
 					return restartInferenceServiceFn(ctx, cfg.KubeConfig, env.KubeContext(), ns, name)
 				})
@@ -101,12 +100,10 @@ already know the instance OCID.`,
 			needsKube := ocid == ""
 			return withMutationSetup(cfgFile, needsKube, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action:  "restart",
-					Kind:    "node",
-					Target:  name,
-					Surface: "cli",
-					DryRun:  dryRun,
-					Yes:     yes,
+					Action: mutation.RestartNode,
+					Target: name,
+					DryRun: dryRun,
+					Yes:    yes,
 				}, func(ctx context.Context) error {
 					node, err := resolveGPUNode(ctx, cfg, env, name, ocid)
 					if err != nil {

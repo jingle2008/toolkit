@@ -9,6 +9,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -50,12 +51,10 @@ before terminating a node so workloads relocate cleanly.`,
 			nodeName := args[0]
 			return withMutationSetup(cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action:  "drain",
-					Kind:    "node",
-					Target:  nodeName,
-					Surface: "cli",
-					DryRun:  dryRun,
-					Yes:     yes,
+					Action: mutation.DrainNode,
+					Target: nodeName,
+					DryRun: dryRun,
+					Yes:    yes,
 				}, func(ctx context.Context) error {
 					// The drain can run for tens of minutes and the log goes to a
 					// file, so echo its milestones on stderr; stdout keeps only

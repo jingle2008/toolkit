@@ -11,6 +11,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -67,12 +68,10 @@ Examples:
 			}
 			return withMutationSetup(cfgFile, false, false, false, func(ctx context.Context, cfg config.Config, _ models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action:  "set",
-					Kind:    "tenant",
-					Target:  ocid,
-					Surface: "cli",
-					DryRun:  dryRun,
-					Yes:     yes,
+					Action: mutation.SetTenant,
+					Target: ocid,
+					DryRun: dryRun,
+					Yes:    yes,
 				}, func(ctx context.Context) error {
 					nameVal, internalVal := name, internal
 					entry := models.TenantMetadata{

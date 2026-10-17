@@ -258,19 +258,19 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 
 Every read tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments.
 
-**Mutation tools** — gated on `confirm: true`. The same safety model as the CLI: failures surface as a tool error (`isError` plus the underlying cause), every call writes to the audit log:
+**Mutation tools** — gated on `confirm: true`. The same safety model as the CLI: failures surface as a tool error (`isError` plus the underlying cause), every call writes to the audit log. `dry_run: true` (no `confirm` needed) looks the target up as a real call would and returns `status: "DRY_RUN"` with what it found under `resolved` (the node's instance, the pool's sizes, the InferenceService's namespace and planned delete vs force-delete) without acting. The irreversible tools — `terminate_node`, `delete_dac`, `delete_inference_service` — also need `confirm_target` set to the target, as named or as the dry run reports it: `confirm: true` alone is refused, as the CLI requires `--yes` and the TUI a capital `Y` for them.
 
 | Tool | Effect |
 | ---- | ------ |
-| `cordon_node` / `uncordon_node` | Toggle Kubernetes node scheduling |
+| `cordon_node` / `uncordon_node` | Mark a node unschedulable / schedulable |
 | `drain_node` | Start (or resume) the same safe drain as the CLI; returns at once and the server drives it in the background |
 | `get_drain_status` | Read-only, no `confirm` needed: a node's drain phase, deadline, what it still waits on, and any failure message |
 | `restart_node` | Soft-reset (restart) the node's underlying OCI instance |
 | `restart_inference_service` | Rolling-restart an OME InferenceService (`namespace` optional) |
 | `scale_gpu_pool` | Resize an OCI GPU instance pool |
-| `delete_dac` | Delete a dedicated AI cluster |
-| `delete_inference_service` | Delete an orphaned InferenceService (its DAC is gone); force-deletes one stuck deleting (`namespace` optional) |
-| `terminate_node` | Terminate the underlying OCI instance |
+| `delete_dac` | Delete a dedicated AI cluster (irreversible: needs `confirm_target`) |
+| `delete_inference_service` | Delete an orphaned InferenceService (its DAC is gone); force-deletes one stuck deleting (`namespace` optional; irreversible: needs `confirm_target`) |
+| `terminate_node` | Terminate the underlying OCI instance (irreversible: needs `confirm_target`) |
 
 By default, mutation tools ignore any per-call `env_type` / `env_region` / `env_realm` (MCP tool input fields — these stay snake_case as the JSON-schema field names) and only act in the startup env — the operator's credentials decide the maximum blast radius, not the agent. Pass `--mutation-env-override-allowed` at server start to opt in to per-call env routing.
 

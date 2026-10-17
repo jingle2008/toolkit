@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -45,12 +46,10 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 			name := args[0]
 			return withMutationSetup(cfgFile, true, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action:  "scale",
-					Kind:    "gpu_pool",
-					Target:  name,
-					Surface: "cli",
-					DryRun:  dryRun,
-					Yes:     yes,
+					Action: mutation.ScaleGPUPool,
+					Target: name,
+					DryRun: dryRun,
+					Yes:    yes,
 				}, func(ctx context.Context) error {
 					pool, err := resolveGPUPoolFn(ctx, cfg, env, name)
 					if err != nil {
