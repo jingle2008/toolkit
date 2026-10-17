@@ -19,19 +19,40 @@ import (
 // modal. run is the deferred command; it is invoked only on confirm and
 // re-resolves its target at that time so a background reload cannot leave
 // it acting on a stale row. returnView restores the prior view on dismiss.
-// act is the mutation: its tier gates the modal, and with auditTarget it
-// names the audit record a cancel writes (a confirm's records come from
-// the command it runs).
+// act is the mutation: its tier gates the modal, its labels (verb, noun)
+// name it on screen, and with auditTarget it names the audit record a
+// cancel writes (a confirm's records come from the command it runs).
 type confirmOverlay struct {
 	act         mutation.Action
 	auditTarget string
-	action      string
-	kind        string
 	target      string
 	warning     string
 	returnView  common.ViewMode
 	run         func() tea.Cmd
 }
+
+// confirmLabels is how the modal names each action it confirms — verb
+// and noun as an operator reads them, where mutation.Action carries the
+// audit record's (scale gpu_pool vs "Scale up GPU pool"). Every action the
+// modal can confirm has one (TestConfirmLabels_CoverModalActions).
+var confirmLabels = map[mutation.Action]struct{ verb, noun string }{
+	mutation.CordonNode:                  {"Cordon", "node"},
+	mutation.UncordonNode:                {"Uncordon", "node"},
+	mutation.DrainNode:                   {"Drain", "node"},
+	mutation.RestartNode:                 {"Restart", "node"},
+	mutation.TerminateNode:               {"Terminate", "node"},
+	mutation.ScaleGPUPool:                {"Scale up", "GPU pool"},
+	mutation.DeleteDAC:                   {"Delete", "DAC"},
+	mutation.RestartInferenceService:     {"Restart", "InferenceService"},
+	mutation.DeleteInferenceService:      {"Delete", "orphaned InferenceService"},
+	mutation.ForceDeleteInferenceService: {"Force-delete", "orphaned InferenceService"},
+}
+
+// verb is the modal's name for the action, e.g. "Scale up".
+func (c confirmOverlay) verb() string { return confirmLabels[c.act].verb }
+
+// noun is the modal's name for what it acts on, e.g. "GPU pool".
+func (c confirmOverlay) noun() string { return confirmLabels[c.act].noun }
 
 // requestConfirm opens the confirmation modal for a destructive action,
 // capturing the current view so dismissConfirm can restore it. It returns
@@ -63,7 +84,7 @@ func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
 }
 
 // confirmDelete builds the irreversible overlay for the Delete key. The
-// action label and warning depend on the category: a DAC is deleted, a GPU
+// action (and so its labels) and warning depend on the category: a DAC is deleted, a GPU
 // node's backing instance is terminated, an orphaned InferenceService is
 // deleted or — planned as k8s.OrphanFinalized — force-deleted (outcome is
 // the plan; empty for the other categories). run re-resolves nothing
@@ -77,21 +98,17 @@ func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOu
 	switch m.category {
 	case domain.GPUNode:
 		c.act = mutation.TerminateNode
-		c.action, c.kind = "Terminate", "node"
 		c.warning = "Boot volume destroyed. Cannot undo."
 	case domain.InferenceService:
 		a := mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
 		c.act = a
 		c.run = func() tea.Cmd { return m.deleteOrphanInferenceService(itemKey, a) }
-		c.action, c.kind = "Delete", "orphaned InferenceService"
 		c.warning = "Its DAC is gone. If it stays deleting, run again after 10m to force-delete."
 		if outcome == k8s.OrphanFinalized {
-			c.action = "Force-delete"
 			c.warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
 		}
 	default: // DedicatedAICluster
 		c.act = mutation.DeleteDAC
-		c.action, c.kind = "Delete", "DAC"
 		c.warning = "This is irreversible."
 	}
 	return c
@@ -103,14 +120,12 @@ func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOu
 // background reload cannot leave it acting on a stale row; it sets the
 // state named here, so a node changed meanwhile ends up as confirmed.
 func (m *Model) confirmCordon(itemKey models.ItemKey, item any) confirmOverlay {
-	a, label := mutation.CordonNode, "Cordon"
+	a := mutation.CordonNode
 	if node, ok := item.(*models.GPUNode); ok && node != nil && node.IsSchedulingDisabled {
-		a, label = mutation.UncordonNode, "Uncordon"
+		a = mutation.UncordonNode
 	}
 	return confirmOverlay{
 		act:         a,
-		action:      label,
-		kind:        "node",
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func() tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey, a) },
@@ -120,8 +135,6 @@ func (m *Model) confirmCordon(itemKey models.ItemKey, item any) confirmOverlay {
 func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
 	return confirmOverlay{
 		act:         mutation.DrainNode,
-		action:      "Drain",
-		kind:        "node",
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func() tea.Cmd { return m.drainNode(findItem(m.dataset, m.category, itemKey), itemKey) },
@@ -136,16 +149,14 @@ func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
 func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay {
 	c := confirmOverlay{
 		act:         mutation.RestartInferenceService,
-		action:      "Restart",
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 	}
 	switch m.category {
 	case domain.GPUNode:
-		c.act, c.kind = mutation.RestartNode, "node"
+		c.act = mutation.RestartNode
 		c.run = func() tea.Cmd { return m.restartNode(findItem(m.dataset, m.category, itemKey), itemKey) }
 	default: // InferenceService
-		c.kind = "InferenceService"
 		c.run = func() tea.Cmd { return m.restartInferenceService(findItem(m.dataset, m.category, itemKey), itemKey) }
 		if svc, ok := item.(*models.InferenceService); ok && svc != nil {
 			c.warning = "Ready: " + svc.Ready
@@ -157,8 +168,6 @@ func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay 
 func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
 	return confirmOverlay{
 		act:         mutation.ScaleGPUPool,
-		action:      "Scale up",
-		kind:        "GPU pool",
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func() tea.Cmd { return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey) },
@@ -203,15 +212,15 @@ func (m *Model) confirmView() string {
 	var b strings.Builder
 	if c.act.Tier == mutation.Irreversible {
 		b.WriteString("⚠ DESTRUCTIVE\n\n")
-		fmt.Fprintf(&b, "%s %s  %s\n", c.action, c.kind, c.target)
+		fmt.Fprintf(&b, "%s %s  %s\n", c.verb(), c.noun(), c.target)
 		if c.warning != "" {
 			fmt.Fprintf(&b, "%s\n", c.warning)
 		}
 		b.WriteString("\nPress Y to confirm   n/esc cancel")
 		return b.String()
 	}
-	fmt.Fprintf(&b, "Confirm %s\n\n", strings.ToLower(c.action))
-	fmt.Fprintf(&b, "%s %s  %s ?\n", c.action, c.kind, c.target)
+	fmt.Fprintf(&b, "Confirm %s\n\n", strings.ToLower(c.verb()))
+	fmt.Fprintf(&b, "%s %s  %s ?\n", c.verb(), c.noun(), c.target)
 	if c.warning != "" {
 		fmt.Fprintf(&b, "%s\n", c.warning)
 	}
