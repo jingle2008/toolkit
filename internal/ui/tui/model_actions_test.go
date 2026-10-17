@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -43,7 +42,7 @@ func TestHandleItemActions_Refresh(t *testing.T) {
 	m.updateColumns()
 	m.updateRows(true)
 
-	cmd := m.handleItemActions(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	cmd := m.handleItemActions(keyPress("r"))
 	if cmd == nil {
 		t.Fatal("expected refresh to return a cmd")
 	}

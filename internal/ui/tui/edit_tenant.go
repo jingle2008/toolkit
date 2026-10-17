@@ -210,17 +210,18 @@ func (m *Model) handleTenantSaveErrMsg(msg tenantSaveErrMsg) tea.Cmd {
 //nolint:cyclop // form key router; the per-key switch is inherent and splitting it further would obscure the routing surface.
 func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	f := m.editTenant
+	k := keyMsg.String()
 	switch {
-	case keyMsg.Type == tea.KeyCtrlC:
+	case k == "ctrl+c":
 		return m, tea.Quit
 	case key.Matches(keyMsg, keys.Back):
 		m.editTenant = nil
 		m.viewMode = common.ListView
 		return m, nil
-	case keyMsg.Type == tea.KeyTab, keyMsg.Type == tea.KeyDown:
+	case k == "tab", k == "down":
 		f.cycleFocus(1)
 		return m, nil
-	case keyMsg.Type == tea.KeyShiftTab, keyMsg.Type == tea.KeyUp:
+	case k == "shift+tab", k == "up":
 		f.cycleFocus(-1)
 		return m, nil
 	case key.Matches(keyMsg, keys.OpenPortal):
@@ -231,8 +232,7 @@ func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.showToast("name is required", toastWarn)
 		}
 		return m, m.saveTenantMetadataCmd(entry)
-	case f.focus == focusInternal &&
-		(keyMsg.Type == tea.KeySpace || keyMsg.Type == tea.KeyLeft || keyMsg.Type == tea.KeyRight):
+	case f.focus == focusInternal && isToggleKey(k):
 		f.toggleInternal()
 		return m, nil
 	}
@@ -410,4 +410,15 @@ func (m *Model) metadataPath() string {
 		return p.MetadataPath()
 	}
 	return "metadata file"
+}
+
+// isToggleKey reports whether k flips the Internal field. Space is " " in
+// bubbletea v1 and "space" in v2; both are accepted so the swap needs no
+// change here.
+func isToggleKey(k string) bool {
+	switch k {
+	case " ", "space", "left", "right":
+		return true
+	}
+	return false
 }

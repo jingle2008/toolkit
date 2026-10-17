@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -234,5 +235,15 @@ func TestHandleTenantSavedMsg_AfterFormDismissed(t *testing.T) {
 	}
 	if len(m.dataset.Tenants) != 1 {
 		t.Fatalf("save should have applied in memory; Tenants=%+v", m.dataset.Tenants)
+	}
+}
+
+func TestIsToggleKey(t *testing.T) {
+	t.Parallel()
+	for _, k := range []string{" ", "space", "left", "right"} {
+		assert.True(t, isToggleKey(k), k)
+	}
+	for _, k := range []string{"tab", "x", "enter"} {
+		assert.False(t, isToggleKey(k), k)
 	}
 }

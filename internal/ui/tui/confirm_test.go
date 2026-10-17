@@ -79,20 +79,13 @@ func armConfirm(m *Model, tier mutation.Tier) *bool {
 	return &ran
 }
 
-func keyMsg(s string) tea.KeyMsg {
-	if s == "esc" {
-		return tea.KeyMsg{Type: tea.KeyEsc}
-	}
-	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
-}
-
 func TestUpdateConfirmView_Recoverable(t *testing.T) {
 	t.Parallel()
 	t.Run("y confirms and dismisses", func(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
 		ran := armConfirm(m, mutation.Recoverable)
-		_, _ = m.updateConfirmView(keyMsg("y"))
+		_, _ = m.updateConfirmView(keyPress("y"))
 		assert.True(t, *ran, "y must run the action")
 		assert.Equal(t, common.ListView, m.viewMode)
 	})
@@ -100,7 +93,7 @@ func TestUpdateConfirmView_Recoverable(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
 		ran := armConfirm(m, mutation.Recoverable)
-		_, _ = m.updateConfirmView(keyMsg("n"))
+		_, _ = m.updateConfirmView(keyPress("n"))
 		assert.False(t, *ran, "n must not run the action")
 		assert.Equal(t, common.ListView, m.viewMode)
 	})
@@ -108,7 +101,7 @@ func TestUpdateConfirmView_Recoverable(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
 		ran := armConfirm(m, mutation.Recoverable)
-		_, _ = m.updateConfirmView(keyMsg("esc"))
+		_, _ = m.updateConfirmView(keyPress("esc"))
 		assert.False(t, *ran)
 		assert.Equal(t, common.ListView, m.viewMode)
 	})
@@ -116,7 +109,7 @@ func TestUpdateConfirmView_Recoverable(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
 		ran := armConfirm(m, mutation.Recoverable)
-		_, _ = m.updateConfirmView(keyMsg("x"))
+		_, _ = m.updateConfirmView(keyPress("x"))
 		assert.False(t, *ran)
 		assert.Equal(t, common.ConfirmView, m.viewMode, "stays in modal")
 	})
@@ -128,7 +121,7 @@ func TestUpdateConfirmView_Irreversible(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
 		ran := armConfirm(m, mutation.Irreversible)
-		_, _ = m.updateConfirmView(keyMsg("Y"))
+		_, _ = m.updateConfirmView(keyPress("Y"))
 		assert.True(t, *ran)
 		assert.Equal(t, common.ListView, m.viewMode)
 	})
@@ -136,7 +129,7 @@ func TestUpdateConfirmView_Irreversible(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
 		ran := armConfirm(m, mutation.Irreversible)
-		_, _ = m.updateConfirmView(keyMsg("y"))
+		_, _ = m.updateConfirmView(keyPress("y"))
 		assert.False(t, *ran, "lowercase y must not run an irreversible action")
 		assert.Equal(t, common.ListView, m.viewMode, "lowercase y cancels the modal")
 	})
@@ -146,7 +139,7 @@ func TestUpdateConfirmView_CtrlCQuits(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	armConfirm(m, mutation.Irreversible)
-	_, cmd := m.updateConfirmView(tea.KeyMsg{Type: tea.KeyCtrlC})
+	_, cmd := m.updateConfirmView(keyPress("ctrl+c"))
 	require.NotNil(t, cmd, "ctrl+c must return a command (tea.Quit)")
 }
 

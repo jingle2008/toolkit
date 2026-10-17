@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -81,7 +80,7 @@ func newLogModel(t *testing.T, ring *logging.RingSink) *Model {
 	return m
 }
 
-var backtick = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'`'}}
+var backtick = keyPress("`")
 
 func TestLogOverlay_ToggleFromList(t *testing.T) {
 	t.Parallel()
@@ -102,7 +101,7 @@ func TestLogOverlay_ReturnsToDetails(t *testing.T) {
 	m.viewMode = common.DetailsView
 	_, _ = m.Update(backtick)
 	assert.Equal(t, common.LogView, m.viewMode)
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, _ = m.Update(keyPress("esc"))
 	assert.Equal(t, common.DetailsView, m.viewMode)
 }
 
@@ -117,10 +116,10 @@ func TestLogOverlay_PauseAndResume(t *testing.T) {
 	_, _ = m.Update(backtick) // open → follows
 	assert.Contains(t, m.View(), "following")
 
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyPgUp}) // scroll up → pause
+	_, _ = m.Update(keyPress("pgup")) // scroll up → pause
 	assert.Contains(t, m.View(), "PAUSED")
 
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnd}) // back to bottom → follow
+	_, _ = m.Update(keyPress("end")) // back to bottom → follow
 	assert.Contains(t, m.View(), "following")
 }
 

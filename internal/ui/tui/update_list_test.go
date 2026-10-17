@@ -233,12 +233,12 @@ func TestBackForwardKeyBindings(t *testing.T) {
 	hist := []domain.Category{domain.Tenant, domain.GPUPool}
 	m := makeModelWithHistory(hist, 1)
 	// Simulate "[" key
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'['}}
+	msg := keyPress("[")
 	cmds := m.handleNormalKeys(msg)
 	assert.Equal(t, 0, m.historyIdx)
 	assert.NotNil(t, cmds)
 	// Simulate "]" key
-	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{']'}}
+	msg = keyPress("]")
 	cmds = m.handleNormalKeys(msg)
 	assert.Equal(t, 1, m.historyIdx)
 	assert.NotNil(t, cmds)

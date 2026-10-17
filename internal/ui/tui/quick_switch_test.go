@@ -95,7 +95,7 @@ func TestQuickSwitch_StaysInCategoryAndClearsScope(t *testing.T) {
 	m.watch.k8sActive = true
 	m.k8sVersion = "v1.30.0"
 
-	cmds := m.handleNormalKeys(keyMsg("1"))
+	cmds := m.handleNormalKeys(keyPress("1"))
 	require.Len(t, cmds, 1)
 	assert.NotNil(t, cmds[0])
 
@@ -123,7 +123,7 @@ func TestQuickSwitch_NoOps(t *testing.T) {
 			t.Parallel()
 			m := newQuickSwitchModel(t, "")
 			k := setup(m)
-			m.handleNormalKeys(keyMsg(k))
+			m.handleNormalKeys(keyPress(k))
 			assert.True(t, m.environment.Equals(envPHX))
 		})
 	}
@@ -133,7 +133,7 @@ func TestQuickSwitch_DigitsGoToFilterInEditMode(t *testing.T) {
 	t.Parallel()
 	m := newQuickSwitchModel(t, "")
 	m.enterFilterMode()
-	m.handleKeyMsg(keyMsg("1"))
+	m.handleKeyMsg(keyPress("1"))
 	assert.True(t, m.environment.Equals(envPHX))
 	assert.Equal(t, "1", m.textInput.Value())
 }

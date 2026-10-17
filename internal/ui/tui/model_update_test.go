@@ -35,7 +35,7 @@ func TestModelUpdate_QuitKey(t *testing.T) {
 		WithLoader(fakeLoader{}),
 		WithLogger(fakeLogger{}),
 	)
-	msg := tea.KeyMsg{Type: tea.KeyCtrlC}
+	msg := keyPress("ctrl+c")
 	_, cmd := m.Update(msg)
 	assert.NotNil(t, cmd)
 }
@@ -65,15 +65,15 @@ func TestModelReduce_ViewModes(t *testing.T) {
 	)
 	// HelpView
 	m.viewMode = common.HelpView
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("h")})
+	_, cmd := m.Update(keyPress("h"))
 	assert.Nil(t, cmd)
 	// ListView
 	m.viewMode = common.ListView
-	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")})
+	_, cmd = m.Update(keyPress("l"))
 	assert.Nil(t, cmd)
 	// DetailsView
 	m.viewMode = common.DetailsView
-	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	_, cmd = m.Update(keyPress("d"))
 	assert.Nil(t, cmd)
 }
 

@@ -173,13 +173,17 @@ func (m *Model) enterExportView() []tea.Cmd {
 
 	var cmd tea.Cmd
 	if m.dirPicker.Path != "" {
-		cmd = func() tea.Msg {
-			return tea.KeyMsg{Type: tea.KeyType(tea.KeyBackspace)}
-		}
+		cmd = func() tea.Msg { return backspaceKey() }
 	} else {
 		cmd = m.dirPicker.Init()
 	}
 	return []tea.Cmd{cmd}
+}
+
+// backspaceKey is the key event enterExportView sends to nudge a picker that
+// already has a path (its Back binding includes backspace).
+func backspaceKey() tea.KeyMsg {
+	return tea.KeyMsg{Type: tea.KeyBackspace}
 }
 
 func (*Model) pasteFilter() tea.Cmd {
@@ -235,7 +239,7 @@ func (m *Model) handleEditKeys(msg tea.KeyMsg) []tea.Cmd {
 	cmds = append(cmds, cmd)
 
 	switch {
-	case msg.Type == tea.KeyCtrlC:
+	case msg.String() == "ctrl+c":
 		cmds = append(cmds, tea.Quit)
 	case key.Matches(msg, keys.Confirm):
 		if m.editTarget == common.AliasTarget {

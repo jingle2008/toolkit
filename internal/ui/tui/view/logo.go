@@ -23,30 +23,31 @@ const LogoMargin = 1
 // LogoWidth is the rendered width of Logo, excluding LogoMargin.
 var LogoWidth = lipgloss.Width(Logo)
 
-// RenderLogo renders Logo with a top-to-bottom gradient between two
-// "#RRGGBB" colors. Every row is padded to LogoWidth plus LogoMargin so
-// the block keeps its shape when placed flush right.
-func RenderLogo(top, bottom lipgloss.Color) string {
+// RGB is a 24-bit color. The logo gradient interpolates on its channels
+// rather than parsing color strings, which keeps it independent of how
+// the styling library represents colors.
+type RGB struct{ R, G, B uint8 }
+
+// Hex formats c as "#RRGGBB".
+func (c RGB) Hex() string { return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B) }
+
+// RenderLogo renders Logo with a top-to-bottom gradient from top to
+// bottom. Every row is padded to LogoWidth plus LogoMargin so the block
+// keeps its shape when placed flush right.
+func RenderLogo(top, bottom RGB) string {
 	rows := strings.Split(Logo, "\n")
 	out := make([]string, len(rows))
 	for i, row := range rows {
 		t := float64(i) / float64(max(len(rows)-1, 1))
 		pad := strings.Repeat(" ", LogoWidth-lipgloss.Width(row)+LogoMargin)
-		out[i] = lipgloss.NewStyle().Foreground(blend(top, bottom, t)).Render(row) + pad
+		fg := lipgloss.Color(blend(top, bottom, t).Hex())
+		out[i] = lipgloss.NewStyle().Foreground(fg).Render(row) + pad
 	}
 	return strings.Join(out, "\n")
 }
 
-// blend linearly interpolates two "#RRGGBB" colors; t=0 is a, t=1 is b.
-// A malformed input yields a.
-func blend(a, b lipgloss.Color, t float64) lipgloss.Color {
-	var ar, ag, ab, br, bg, bb int
-	if _, err := fmt.Sscanf(string(a), "#%02x%02x%02x", &ar, &ag, &ab); err != nil {
-		return a
-	}
-	if _, err := fmt.Sscanf(string(b), "#%02x%02x%02x", &br, &bg, &bb); err != nil {
-		return a
-	}
-	mix := func(x, y int) int { return x + int(math.Round(float64(y-x)*t)) }
-	return lipgloss.Color(fmt.Sprintf("#%02X%02X%02X", mix(ar, br), mix(ag, bg), mix(ab, bb)))
+// blend linearly interpolates two colors; t=0 is a, t=1 is b.
+func blend(a, b RGB, t float64) RGB {
+	mix := func(x, y uint8) uint8 { return uint8(math.Round(float64(x) + (float64(y)-float64(x))*t)) }
+	return RGB{mix(a.R, b.R), mix(a.G, b.G), mix(a.B, b.B)}
 }

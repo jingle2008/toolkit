@@ -6,7 +6,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -87,8 +86,8 @@ func TestGoToPicker_NavigatesToChoice(t *testing.T) {
 	assert.Contains(t, view, "BaseModel           llama")
 	assert.Contains(t, view, "[enter] go")
 
-	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyUp})
-	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyEnter})
+	_, _ = m.updateRowPickerView(keyPress("up"))
+	_, _ = m.updateRowPickerView(keyPress("enter"))
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, domain.BaseModel, m.category)
 	assert.Equal(t, &domain.Scope{Category: domain.BaseModel, Name: "llama"}, m.scope)
@@ -98,7 +97,7 @@ func TestGoToPicker_EscCancels(t *testing.T) {
 	t.Parallel()
 	m := newGoToModel(t)
 	_ = m.openGoTo()
-	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyEsc})
+	_, _ = m.updateRowPickerView(keyPress("esc"))
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, domain.InferenceService, m.category)
 	assert.Empty(t, m.rowPicker.targets)
@@ -156,12 +155,12 @@ func TestGoToKey_PickerKeepsListCursor(t *testing.T) {
 	m.table.SetCursor(2)
 	require.Equal(t, "isvc-3", m.selectedRawRow()[0])
 
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("o")})
+	_, _ = m.Update(keyPress("o"))
 	require.Equal(t, common.RowPickerView, m.viewMode)
 	assert.Equal(t, domain.DedicatedAICluster, m.rowPicker.targets[m.rowPicker.cursor].Category,
 		"the picker starts on the endpoint's DAC, its structural parent")
 
-	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, _ = m.Update(keyPress("esc"))
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, "isvc-3", m.selectedRawRow()[0])
 }

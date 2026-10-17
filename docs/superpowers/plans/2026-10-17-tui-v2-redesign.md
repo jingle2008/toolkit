@@ -53,29 +53,29 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 ### Task 2.1: Test key helpers
 **Files:** `internal/ui/tui/keymsg_test.go` (new) and the 17 test files that build `tea.KeyMsg`.
-- [ ] Add `keyPress(s string) tea.Msg`, which parses `"y"`, `"esc"`, `"ctrl+c"`,
+- [x] Add `keyPress(s string) tea.Msg`, which parses `"y"`, `"esc"`, `"ctrl+c"`,
   `"shift+tab"`, `"space"`, `"up"` and similar. It should be the only place that builds
   `tea.KeyMsg{...}`.
-- [ ] Replace every `tea.KeyMsg{...}` literal (about 56) and the `keyMsg` helper in
+- [x] Replace every `tea.KeyMsg{...}` literal (about 56) and the `keyMsg` helper in
   `confirm_test.go:82` with calls to `keyPress`.
-- [ ] Check with `grep -rn 'tea.KeyMsg{' internal/` that the only hit is the helper.
+- [x] Check with `grep -rn 'tea.KeyMsg{' internal/` that the only hit is the helper.
 
 ### Task 2.2: `.Type` comparisons → `String()`
 **Files:** `edit_tenant.go:214-235` and `update_list.go:177,238`.
-- [ ] Switch on `msg.String()` (`"tab"`, `"shift+tab"`, `"up"`, `"down"`, `"left"`,
+- [x] Switch on `msg.String()` (`"tab"`, `"shift+tab"`, `"up"`, `"down"`, `"left"`,
   `"right"`, `"ctrl+c"`). For space, accept both `" "` and `"space"` so the same code
   works on v1 and v2.
-- [ ] `update_list.go:177` currently fakes a backspace key to drive the dirPicker. Replace
+- [x] `update_list.go:177` currently fakes a backspace key to drive the dirPicker. Replace
   that with a direct call to the dirPicker's back navigation if one is exposed. Otherwise,
   route it through the `keyPress("backspace")` constructor moved into non-test code
   (`keymsg.go`).
 
 ### Task 2.3: Logo gradient takes RGB
 **Files:** `view/logo.go`, `styles.go:20-21`, and `view/logo_test.go`.
-- [ ] Change `LogoTop` and `LogoBottom` to the type `struct{R, G, B uint8}`. Interpolate on
+- [x] Change `LogoTop` and `LogoBottom` to the type `struct{R, G, B uint8}`. Interpolate on
   the numbers and build the per-line color as a `#RRGGBB` string at render time. That
   removes the `string(lipgloss.Color)` + `Sscanf` parsing.
-- [ ] Goldens must stay unchanged.
+- [x] Goldens must stay unchanged.
 
 ## Phase 3: v2 swap (behavior-preserving)
 
