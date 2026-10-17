@@ -276,9 +276,10 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "terminate_node",
 		Arguments: map[string]any{
-			"node":    "node-a",
-			"ocid":    "ocid1.instance.fake",
-			"confirm": true,
+			"node":           "node-a",
+			"ocid":           "ocid1.instance.fake",
+			"confirm":        true,
+			"confirm_target": "node-a",
 		},
 	})
 	require.NoError(t, err)
@@ -403,10 +404,11 @@ func TestIntegration_MutationTool_HonorsEnvOverride_WhenAllowed(t *testing.T) {
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
 		Arguments: map[string]any{
-			"name":       "dac-x",
-			"confirm":    true,
-			"env_realm":  "oc2",
-			"env_region": "us-phoenix-1",
+			"name":           "dac-x",
+			"confirm":        true,
+			"confirm_target": "dac-x",
+			"env_realm":      "oc2",
+			"env_region":     "us-phoenix-1",
 		},
 	})
 	require.NoError(t, err)
@@ -435,10 +437,11 @@ func TestIntegration_MutationTool_IgnoresEnvOverride_WhenDisallowed(t *testing.T
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
 		Arguments: map[string]any{
-			"name":       "dac-x",
-			"confirm":    true,
-			"env_realm":  "oc2",          // requested
-			"env_region": "us-phoenix-1", // requested
+			"name":           "dac-x",
+			"confirm":        true,
+			"confirm_target": "dac-x",
+			"env_realm":      "oc2",          // requested
+			"env_region":     "us-phoenix-1", // requested
 		},
 	})
 	require.NoError(t, err)
@@ -498,10 +501,11 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	_, err = clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "terminate_node",
 		Arguments: map[string]any{
-			"node":      "node-a",
-			"ocid":      "ocid1.instance.fake",
-			"confirm":   true,
-			"env_realm": "oc2",
+			"node":           "node-a",
+			"ocid":           "ocid1.instance.fake",
+			"confirm":        true,
+			"confirm_target": "node-a",
+			"env_realm":      "oc2",
 		},
 	})
 	require.NoError(t, err)
@@ -552,8 +556,9 @@ func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
 		Arguments: map[string]any{
-			"name":    "dac-x",
-			"confirm": true,
+			"name":           "dac-x",
+			"confirm":        true,
+			"confirm_target": "dac-x",
 		},
 	})
 	require.NoError(t, err)
@@ -804,7 +809,7 @@ func TestIntegration_DeleteInferenceService_PlansThenDeletes(t *testing.T) {
 	clientSess := newTestPair(ctx, t, stubLoader{})
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "delete_inference_service",
-		Arguments: map[string]any{"name": "isvc-a", "confirm": true},
+		Arguments: map[string]any{"name": "isvc-a", "confirm": true, "confirm_target": "ns-resolved/isvc-a"},
 	})
 	require.NoError(t, err)
 	require.False(t, res.IsError, "expected success: %s", resultText(t, res))
@@ -835,7 +840,7 @@ func TestIntegration_DeleteInferenceService_RefusalSkipsDelete(t *testing.T) {
 	clientSess := newTestPair(ctx, t, stubLoader{})
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "delete_inference_service",
-		Arguments: map[string]any{"name": "isvc-a", "confirm": true},
+		Arguments: map[string]any{"name": "isvc-a", "confirm": true, "confirm_target": "isvc-a"},
 	})
 	require.NoError(t, err)
 	assert.True(t, res.IsError)

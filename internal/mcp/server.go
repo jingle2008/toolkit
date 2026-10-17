@@ -156,6 +156,9 @@ type mutationResult struct {
 	Action string `json:"action"`
 	Kind   string `json:"kind"`
 	Target string `json:"target"`
+	// Resolved is what a dry run looked up about the target (e.g. the
+	// node's instance, the InferenceService's namespace); dry runs only.
+	Resolved map[string]any `json:"resolved,omitempty"`
 }
 
 // jsonResult wraps items in the standard listResult envelope. Callers
