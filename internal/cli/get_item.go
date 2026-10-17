@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/output"
 )
 
 // itemArg returns `get <category> <name>`'s name, "" without one. A

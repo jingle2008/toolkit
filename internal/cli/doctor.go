@@ -12,8 +12,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/output"
 )
 
 // addDoctorCommand wires `toolkit doctor`, a read-only health check

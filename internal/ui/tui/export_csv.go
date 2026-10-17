@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/table"
 
-	"github.com/jingle2008/toolkit/internal/cli/output"
+	"github.com/jingle2008/toolkit/internal/output"
 )
 
 /*

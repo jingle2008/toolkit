@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/config"
@@ -20,6 +19,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"

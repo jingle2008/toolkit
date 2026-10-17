@@ -6,14 +6,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // increasePoolSizeFn is the seam tests use to fake the OCI call.
-var increasePoolSizeFn = actions.IncreasePoolSize
+var increasePoolSizeFn = oci.IncreasePoolSize
 
 // addScaleCommand wires `toolkit scale gpu-pool <name>`. Terraform is
 // the source of truth for size: the action reads pool.Size (loaded

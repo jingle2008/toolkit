@@ -1,5 +1,5 @@
 //nolint:paralleltest // tests use global state
-package actions
+package oci
 
 import (
 	"context"
@@ -52,10 +52,6 @@ func (f *fakeMgmtClient) UpdateInstancePool(ctx context.Context, req core.Update
 
 func (f *fakeMgmtClient) ListInstancePools(ctx context.Context, req core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error) {
 	return f.ListInstancePoolsFunc(ctx, req)
-}
-
-func makeEnv() models.Environment {
-	return models.Environment{Realm: "oc1", Region: "us-phoenix-1"}
 }
 
 func TestSoftResetInstance_Success(t *testing.T) {

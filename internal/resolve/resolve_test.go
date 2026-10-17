@@ -159,7 +159,7 @@ func fakePopulate(t *testing.T, ocid string, perr error) {
 		if perr != nil {
 			return perr
 		}
-		// Populate the slice in place, mirroring actions.PopulateGPUPools.
+		// Populate the slice in place, mirroring oci.PopulateGPUPools.
 		for i := range pools {
 			pools[i].ID = ocid
 			pools[i].ActualSize = 4

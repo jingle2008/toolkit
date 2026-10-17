@@ -11,6 +11,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/infra/telemetry"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
@@ -114,7 +115,7 @@ func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey) tea.Cmd {
 			ctx, cancel := m.opCtx()
 			defer cancel()
 			err := audited(m.logger, mutation.ScaleGPUPool, pool.Name, func() error {
-				return actions.IncreasePoolSize(ctx, pool, env, m.logger)
+				return oci.IncreasePoolSize(ctx, pool, env, m.logger)
 			})
 			return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env}
 		},

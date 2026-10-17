@@ -8,9 +8,9 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/models"
 )

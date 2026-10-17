@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 

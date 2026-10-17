@@ -1,7 +1,7 @@
 /*
 Package actions implements synchronous deletion of DedicatedAICluster via OCI Generative AI SDK.
 */
-package actions
+package oci
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 
-	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -27,7 +26,7 @@ type genAI interface {
 }
 
 var newGenAIClient = func(env models.Environment) (genAI, error) {
-	return oci.NewGenAIClient(env)
+	return NewGenAIClient(env)
 }
 
 // derefOr returns *p when p is non-nil, otherwise fallback. It guards against

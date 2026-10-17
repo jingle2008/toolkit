@@ -1,5 +1,5 @@
 //nolint:paralleltest
-package actions
+package oci
 
 import (
 	"context"
@@ -77,7 +77,7 @@ func TestDeleteDedicatedAICluster_Success(t *testing.T) {
 
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-	logger := &fakeLogger{}
+	logger := &testLogger{}
 	err := DeleteDedicatedAICluster(context.Background(), dac, env, logger)
 	require.NoError(t, err)
 }
@@ -117,7 +117,7 @@ func TestDeleteDedicatedAICluster_ClientError(t *testing.T) {
 
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-	logger := &fakeLogger{}
+	logger := &testLogger{}
 	err := DeleteDedicatedAICluster(context.Background(), dac, env, logger)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create GenerativeAI client")
@@ -151,7 +151,7 @@ func TestDeleteDedicatedAICluster_DeleteError_NilOpcRequestId(t *testing.T) {
 
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-	err := DeleteDedicatedAICluster(context.Background(), dac, env, &fakeLogger{})
+	err := DeleteDedicatedAICluster(context.Background(), dac, env, &testLogger{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to delete DedicatedAICluster")
 	assert.Contains(t, err.Error(), "boom")
@@ -177,7 +177,7 @@ func TestDeleteDedicatedAICluster_NilWorkRequestID(t *testing.T) {
 
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-	err := DeleteDedicatedAICluster(ctx, dac, env, &fakeLogger{})
+	err := DeleteDedicatedAICluster(ctx, dac, env, &testLogger{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "work request id is nil")
 }
@@ -205,7 +205,7 @@ func TestDeleteDedicatedAICluster_NilEndpointClusterID_Skipped(t *testing.T) {
 
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-	err := DeleteDedicatedAICluster(context.Background(), dac, env, &fakeLogger{})
+	err := DeleteDedicatedAICluster(context.Background(), dac, env, &testLogger{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "reached-delete")
 }
