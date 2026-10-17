@@ -195,7 +195,11 @@ func (Client) LoadPropertyRegionalOverrides(ctx context.Context, repo string, en
 
 // UpsertTenantMetadata merges entry into the metadata file (replacing
 // any entry with the same ID, else appending) and persists it,
-// creating the file if absent. The in-memory metadata is updated only
+// creating the file if absent. It merges into the file as it is now,
+// not as this process loaded it (configloader.UpdateMetadata), so it
+// keeps what other toolkit processes wrote since: another TUI or MCP
+// server's edits, `set tenant`, `tenant sync`. The in-memory metadata
+// becomes what was written, picking those up, and is updated only
 // after the write succeeds, so a failed write leaves memory and disk
 // consistent (the caller's error is the single source of truth).
 //
@@ -215,15 +219,10 @@ func (l *Client) UpsertTenantMetadata(entry models.TenantMetadata) error {
 	if l.metadataLoadErr != nil {
 		return fmt.Errorf("refusing to overwrite metadata: %w", l.metadataLoadErr)
 	}
-	next := &models.Metadata{}
-	if l.metadata != nil {
-		next.Tenants = make([]models.TenantMetadata, len(l.metadata.Tenants))
-		copy(next.Tenants, l.metadata.Tenants)
-	}
-	if err := configloader.UpsertTenant(next, entry); err != nil {
-		return err
-	}
-	if err := configloader.SaveMetadata(l.metadataFile, next); err != nil {
+	next, err := configloader.UpdateMetadata(l.metadataFile, func(m *models.Metadata) error {
+		return configloader.UpsertTenant(m, entry)
+	})
+	if err != nil {
 		return err
 	}
 	l.metadata = next

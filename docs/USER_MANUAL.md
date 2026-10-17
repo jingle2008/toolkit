@@ -716,9 +716,11 @@ toolkit tenant sync --write      # backs up the metadata file, then saves it
   settings (config file, `--repo-path` / `--metadata-file`, or `TOOLKIT_*`
   environment variables).
 
-Quit any running toolkit TUI or MCP server before `--write`. Each keeps the
-metadata it started with and would overwrite the synced file on its next
-tenant save.
+Every toolkit process writes the metadata file under a lock and merges into
+it as it is at that moment (a `<metadata-file>.lock` file sits next to it). So
+`--write` keeps tenant edits made while it ran, and a running TUI or MCP server
+keeps the synced entries when it next saves a tenant. A running TUI or MCP
+server shows the synced names and statuses only after a restart.
 
 ---
 
