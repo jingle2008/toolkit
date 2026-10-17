@@ -1,0 +1,25 @@
+Realm:   oc1                  <t>       Copy Tenant ID             | | | | |
+Type:    prod                 <ctrl+x>  Delete                   .-----------.
+Region:  us-ashburn-1         <shift+e> Edit Tenant             -|   _____   |-
+Context: dp-prod-iad          <o>       Go to related           -|  |_   _|  |-
+K8s:     v1.31.4              <m>       Open Metrics            -|    |_|    |-
+Version: v1.2.3               <?/h>     Help +5 more             '-----------'
+ DedicatedAICluster (all)  🐶>            Active: 2 • Failed: 1 • Size: 7 [1/3]
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Name ↑         Tenant ↕     Inte…  Us…  Ty…  Model  Shape/…  S…  A…  Status  │
+│──────────────────────────────────────────────────────────────────────────────│
+│ dac-alpha      acme         false  75%  Ho…         A100_8…  4   1…  Active  │
+│ dac-orphan     orphan              0%   Ho…         A10      1   4…  Active  │
+│ dac-日本語     acme         false  10…  Fi…         H100     2   3d  Failed  │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+ render failed: boom

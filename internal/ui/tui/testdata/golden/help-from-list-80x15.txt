@@ -1,0 +1,48 @@
+                   ┌────────────────────────────────────────┐
+                   │                                        │
+                   │  Resource Actions                      │
+                   │    <o>         Go to related           │
+                   │    <shift+f>   Sort Free               │
+                   │    <shift+t>   Sort Type               │
+                   │    <shift+a>   Sort Age                │
+                   │    <r>         Refresh                 │
+                   │    <shift+c>   Toggle Cordon           │
+                   │    <shift+d>   Drain                   │
+                   │    <ctrl+z>    Toggle Faulty           │
+                   │    <shift+r>   Restart                 │
+                   │    <ctrl+x>    Delete                  │
+                   │                                        │
+                   │  List View Actions                     │
+                   │    <[>         History Back            │
+                   │    <]>         History Forward         │
+                   │    <tab>       Next Category           │
+                   │    <shift+tab> Previous Category       │
+                   │    <:cmd>      Command mode            │
+                   │    </term>     Filter mode             │
+                   │    <p>         Paste Filter            │
+                   │    <shift+n>   Sort Name               │
+                   │    <enter>     View/Enter              │
+                   │    <ctrl+a>    Toggle Alias            │
+                   │    <e>         Export CSV              │
+                   │                                        │
+                   │  General Actions                       │
+                   │    <?/h>       Help                    │
+                   │    <y>         Toggle Details          │
+                   │    <c>         Copy                    │
+                   │    <`>         Toggle Log              │
+                   │    <esc>       Back/Clear              │
+                   │    <q>         Quit                    │
+                   │                                        │
+                   │  Table Actions                         │
+                   │    ↑/k         up                      │
+                   │    ↓/j         down                    │
+                   │    u           ½ page up               │
+                   │    d           ½ page down             │
+                   │    b/pgup      page up                 │
+                   │    f/pgdn      page down               │
+                   │    g/home      go to start             │
+                   │    end         go to end               │
+                   │                                        │
+                   │                                        │
+                   │                                        │
+                   └────────────────────────────────────────┘

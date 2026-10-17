@@ -1,0 +1,24 @@
+
+
+
+
+
+
+               ┌────────────────────────────────────────────────┐
+               │                                                │
+               │  Set tenant info for orphan                    │
+               │                                                │
+               │  > Name:                                       │
+               │    Internal: internal  (space/left/right to    │
+               │  toggle)                                       │
+               │    Note:                                       │
+               │                                                │
+               │  <enter> View/Enter …                          │
+               │                                                │
+               └────────────────────────────────────────────────┘
+
+
+
+
+
+
