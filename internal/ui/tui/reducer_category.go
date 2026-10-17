@@ -232,29 +232,6 @@ func (m *Model) changeCategory() tea.Cmd {
 	return tea.Sequence(m.updateCategory(category)...)
 }
 
-// jumpToParent navigates from a sub-category back to its parent category
-// and re-selects the parent row. The scope is kept/set so applyRows'
-// auto-select highlights the parent (computeTableRows ignores a scope
-// that does not scope its own category, so the full parent list shows).
-//
-// When we drilled in from a parent, the existing scope identifies the
-// parent unambiguously (it even disambiguates the tenancy overrides, which
-// have both a Tenant and a Definition parent). Otherwise — a sub-category
-// reached directly via tab/command with no context selected — the parent is
-// derived from the selected row, but only when it is unambiguous. It is a
-// no-op for categories that have no single parent.
-func (m *Model) jumpToParent() tea.Cmd {
-	if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {
-		return tea.Sequence(m.updateCategory(m.scope.Category)...)
-	}
-	parent, ok := parentScope(m.category, m.selectedRawRow())
-	if !ok {
-		return nil
-	}
-	m.scope = &parent
-	return tea.Sequence(m.updateCategory(parent.Category)...)
-}
-
 // enterContext moves the model into a new context based on the selected row.
 func (m *Model) enterContext() tea.Cmd {
 	row := m.selectedRawRow()

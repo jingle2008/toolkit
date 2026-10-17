@@ -32,8 +32,9 @@ func (m *Model) goToTargets() []domain.Scope {
 	return out
 }
 
-// openGoTo handles g in list view: no targets is a toast, one target
-// jumps straight there, several open the picker.
+// openGoTo handles o in list view: no targets is a toast, one target
+// jumps straight there, several open the picker with the cursor on the
+// parent (see goToParentIndex), so going up stays o, enter.
 func (m *Model) openGoTo() tea.Cmd {
 	targets := m.goToTargets()
 	switch len(targets) {
@@ -42,12 +43,35 @@ func (m *Model) openGoTo() tea.Cmd {
 	case 1:
 		return m.goTo(targets[0])
 	default:
-		return m.openRowPicker("Go to", "go", targets, m.goTo)
+		cmd := m.openRowPicker("Go to", "go", targets, m.goTo)
+		m.rowPicker.cursor = goToParentIndex(m.category, m.scope, targets)
+		return cmd
 	}
 }
 
+// goToParentIndex is the target the picker starts on: the scope drilled
+// in from when one is active, else the category's sole structural parent
+// (a GPUWorkload's node, an InferenceService's DAC), else the first.
+func goToParentIndex(category domain.Category, scope *domain.Scope, targets []domain.Scope) int {
+	var want domain.Category
+	switch parents := category.Parents(); {
+	case scope != nil && scope.Category.IsScopeOf(category):
+		want = scope.Category
+	case len(parents) == 1:
+		want = parents[0]
+	default:
+		return 0
+	}
+	for i, t := range targets {
+		if t.Category == want {
+			return i
+		}
+	}
+	return 0
+}
+
 // goTo navigates to t's category with t as the scope, so the list lands
-// on t's row — the same mechanism as the parent jump.
+// on t's row — the same mechanism as Enter's drill-in.
 func (m *Model) goTo(t domain.Scope) tea.Cmd {
 	m.scope = &t
 	return tea.Sequence(m.updateCategory(t.Category)...)

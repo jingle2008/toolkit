@@ -257,18 +257,17 @@ Press `Esc` to exit the scoped context and return to the parent. On a parent
 scope, `Enter` drills in rather than opening details; use `y` to view a row's
 details instead.
 
-`o` jumps to a row's parent. With a scope active it returns to the scope you
-drilled in from; without one it follows the row's structural parent — a
-GPUWorkload's node, an InferenceService's DAC. A DAC is not the structural
-parent of its pods, and a tenant, model or runtime is not the parent of the
-pods and endpoints that use it.
+`o` goes to a row's related rows, along every relation: it lists what the
+selected row relates to — an InferenceService's tenant, model, DAC and
+runtime, a GPUWorkload's tenant, node, DAC and runtime — and jumps to the one
+you pick (`↑/↓`, `Enter`; `Esc` cancels). With a single target it jumps
+straight there. The picker starts on the row's parent: the scope you drilled
+in from when one is active, otherwise the structural parent (a GPUWorkload's
+node, an InferenceService's DAC), so going up is `o`, `Enter`. A target that
+is known not to exist is left out (e.g. a shared-catalog endpoint's model is
+offered as a BaseModel, not an ImportedModel).
 
-`g` goes the other way along every relation: it lists the rows the selected
-row relates to — an InferenceService's tenant, model, DAC and runtime, a
-GPUWorkload's tenant, node, DAC and runtime — and jumps to the one you pick
-(`↑/↓`, `Enter`; `Esc` cancels). With a single target it jumps straight there.
-A target that is known not to exist is left out (e.g. a shared-catalog
-endpoint's model is offered as a BaseModel, not an ImportedModel).
+`g` / `Home` and `G` / `End` move to the first and last row.
 
 ---
 

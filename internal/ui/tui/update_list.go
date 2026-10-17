@@ -125,7 +125,6 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.FwdHist, func() []tea.Cmd { return []tea.Cmd{m.moveHistory(1)} }},
 		{keys.NextCategory, func() []tea.Cmd { return []tea.Cmd{m.handleNextCategory()} }},
 		{keys.PrevCategory, func() []tea.Cmd { return []tea.Cmd{m.handlePrevCategory()} }},
-		{keys.Parent, func() []tea.Cmd { return []tea.Cmd{m.jumpToParent()} }},
 		{keys.GoTo, func() []tea.Cmd { return []tea.Cmd{m.openGoTo()} }},
 		{keys.FilterMode, func() []tea.Cmd { return []tea.Cmd{m.enterFilterMode()} }},
 		{keys.PasteFilter, func() []tea.Cmd { return []tea.Cmd{m.pasteFilter()} }},

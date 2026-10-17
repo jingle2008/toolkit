@@ -8,8 +8,8 @@ import (
 
 // GPUWorkloadColumns is the canonical column set for domain.GPUWorkload.
 // 9 columns, ratios sum to 1.00. Node is the group key and MUST stay at
-// index 1: itemKeyFrom/parentScope derive the scoped key and parent
-// (GPUNode) from row[1] for grouped categories. Mode (deploymentMode) is
+// index 1: itemKeyFrom derives the scoped key (under GPUNode) from row[1]
+// for grouped categories. Mode (deploymentMode) is
 // dropped from the table as low-signal; it stays reachable via `-o json`.
 var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn[models.GPUWorkload]{
 	{

@@ -83,11 +83,11 @@ func TestGoToPicker_NavigatesToChoice(t *testing.T) {
 	require.Nil(t, m.openGoTo())
 	require.Equal(t, common.RowPickerView, m.viewMode)
 	view := m.rowPickerView()
-	assert.Contains(t, view, "> Tenant")
+	assert.Contains(t, view, "> DedicatedAICluster", "starts on the structural parent")
 	assert.Contains(t, view, "BaseModel           llama")
 	assert.Contains(t, view, "[enter] go")
 
-	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyDown})
+	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyUp})
 	_, _ = m.updateRowPickerView(tea.KeyMsg{Type: tea.KeyEnter})
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, domain.BaseModel, m.category)
@@ -126,13 +126,51 @@ func TestOpenGoTo_SingleAndNone(t *testing.T) {
 	assert.Equal(t, "no related rows to go to", m2.toasts.active.msg)
 }
 
-// g is advertised wherever o (Parent) is.
-func TestGoToShortcut_OfferedWithParent(t *testing.T) {
+// o is offered in list view on every category with a parent, never in
+// details view (where o is Copy Object), and not on parentless ones.
+func TestGoToShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 	t.Parallel()
 	for _, c := range domain.Categories {
-		km := keys.ResolveKeys(c, common.ListView)
-		assert.Equalf(t, contextHasParent(km), contextHas(km, keys.GoTo), "%s: g and o should be offered together", c)
+		_, hasRelated := rowSources[c]
+		hasRelated = hasRelated && rowSources[c].related != nil && len(rowSources[c].parents) > 0
+		assert.Equalf(t, hasRelated, contextHas(keys.ResolveKeys(c, common.ListView), keys.GoTo),
+			"%s: o offered iff the category has relations", c)
+		assert.Falsef(t, contextHas(keys.ResolveKeys(c, common.DetailsView), keys.GoTo),
+			"%s: o is Copy Object in details view", c)
 	}
+}
+
+// o reaches openGoTo through Update, and the table under the picker keeps
+// its cursor: when go-to was on g, the table's own g (go to top) also
+// fired, so esc returned to the first row instead of the selected one.
+func TestGoToKey_PickerKeepsListCursor(t *testing.T) {
+	t.Parallel()
+	m := newGoToModel(t)
+	owner := &m.dataset.Tenants[0]
+	m.dataset.InferenceServiceMap["dac-1"] = append(m.dataset.InferenceServiceMap["dac-1"],
+		models.InferenceService{Name: "isvc-2", Namespace: "dac-1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: owner},
+		models.InferenceService{Name: "isvc-3", Namespace: "dac-1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: owner})
+	m.updateRows(true)
+	m.viewMode = common.ListView
+	m.table.Focus()
+	m.table.SetCursor(2)
+	require.Equal(t, "isvc-3", m.selectedRawRow()[0])
+
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("o")})
+	require.Equal(t, common.RowPickerView, m.viewMode)
+	assert.Equal(t, domain.DedicatedAICluster, m.rowPicker.targets[m.rowPicker.cursor].Category,
+		"the picker starts on the endpoint's DAC, its structural parent")
+
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	assert.Equal(t, common.ListView, m.viewMode)
+	assert.Equal(t, "isvc-3", m.selectedRawRow()[0])
+}
+
+func TestGPUWorkloadKeys(t *testing.T) {
+	t.Parallel()
+	km := keys.ResolveKeys(domain.GPUWorkload, common.ListView)
+	assert.True(t, contextHas(km, keys.GoTo), "GPUWorkload list view should offer Go to related")
+	assert.True(t, contextHas(km, keys.SortTenant), "GPUWorkload list view should offer Sort Tenant")
 }
 
 func contextHas(km keys.KeyMap, b key.Binding) bool {

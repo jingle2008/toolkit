@@ -148,23 +148,6 @@ func TestItemKeyFrom_NonNilForEveryCategory(t *testing.T) {
 	}
 }
 
-func TestParentScope_ResolvesForScopedCategories(t *testing.T) {
-	t.Parallel()
-	row := table.Row{"a", "b", "c", "d"}
-	for _, c := range domain.Categories {
-		// parentScope resolves a parent only for single-parent categories:
-		// multi-parent categories (the tenancy overrides) can't disambiguate,
-		// and categories with no parent have no scope. Every single-parent
-		// category MUST resolve — a new one whose parent is not handled in
-		// parentScope's switch fails here, surfacing the drift.
-		if len(c.Parents()) != 1 {
-			continue
-		}
-		_, ok := parentScope(c, row)
-		assert.Truef(t, ok, "parentScope must resolve single-parent category %s (parent %s)", c, c.Parents()[0])
-	}
-}
-
 // Environment-scoped categories are exactly those an environment switch
 // reloads: the ones with a load handler or in the tenancy-override group.
 func TestEnvironmentScopedCategories_MatchLoadHandlers(t *testing.T) {

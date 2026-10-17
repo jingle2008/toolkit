@@ -6,9 +6,8 @@ import (
 
 // InferenceServiceColumns is the canonical column set for
 // domain.InferenceService. 8 columns, ratios sum to 1.00. Namespace is the
-// group key and MUST stay at index 1: itemKeyFrom/parentScope derive the
-// scoped key and parent (DedicatedAICluster) from row[1] for grouped
-// categories. deploymentMode is omitted: it is RawDeployment everywhere.
+// group key and MUST stay at index 1: itemKeyFrom derives the scoped key
+// (under DedicatedAICluster) from row[1] for grouped categories. deploymentMode is omitted: it is RawDeployment everywhere.
 // Type is omitted too: a dedicated row has a tenant and an amaaaaaa
 // namespace, so the column only crowded the table. It stays in -o json
 // and in filtering.

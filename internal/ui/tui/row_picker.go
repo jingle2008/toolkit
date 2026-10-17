@@ -15,7 +15,7 @@ import (
 
 // rowPickerState holds the modal row picker: a title, the rows to choose
 // from, the highlighted one, what choosing does, and the view to restore.
-// It backs go-to-related (g) and the DAC choice for an imported model's
+// It backs go-to-related (o) and the DAC choice for an imported model's
 // metrics (m). Not to be confused with the CSV export's path picker.
 type rowPickerState struct {
 	title      string
