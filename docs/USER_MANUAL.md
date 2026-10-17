@@ -688,6 +688,37 @@ Supported log formats: `console` (human-readable), `json` (structured), `slog` (
 | `toolkit completion <shell>` | Print shell completion script for `bash`, `zsh`, `fish`, or `powershell` |
 | `toolkit version [--check-updates]` | Print installed version; `--check-updates` fetches the latest release from GitHub and compares |
 
+### Syncing tenant names and status (`tenant-sync`)
+
+`tenant-sync` is a separate command that fills in the tenant metadata file
+from the account admin service, through the `oci-ops` CLI. It covers every
+oc1 tenancy in the repo's tenancy overrides plus the oc1 entries already in
+the metadata file. Other realms aren't supported.
+
+```bash
+go install github.com/jingle2008/toolkit/cmd/tenant-sync@latest
+tenant-sync                      # dry run: prints what would change
+tenant-sync -write               # backs up the metadata file, then saves it
+```
+
+- **Status** (`ACTIVE`, `DELETING`, `TERMINATED`, `ALWAYS_FREE_ONLY`) is
+  refreshed on every run.
+- **Name** and **internal flag** are only filled in when an entry has none.
+  Your values are never overwritten: where the service disagrees, or its name
+  is already used by another tenancy, the dry run lists it and leaves yours.
+- A failed lookup leaves the entry as it was. An expired `oci-ops` session
+  stops the run; re-authenticate (run any `oci-ops` command and accept the
+  prompt) and rerun.
+- `-cache-dir <dir>` saves each response and reuses it on the next run, so an
+  interrupted sync resumes without repeating lookups. Cached statuses are as
+  old as the files: use a fresh directory for current ones.
+- The repo and metadata paths default to `repo-path` and `metadata-file` in
+  `~/.config/toolkit/config.yaml`; `-repo` and `-metadata` override them.
+
+Quit any running toolkit TUI or MCP server before `-write`. Each keeps the
+metadata it started with and would overwrite the synced file on its next
+tenant save.
+
 ---
 
 ## Tips & Tricks
