@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/internal/resolve"
@@ -47,14 +46,9 @@ func relationChecks(ctx context.Context, cfg config.Config) []checkResult {
 		}}
 	}
 	checks := relations.CheckIntegrity(ds)
+	relations.NotePartialPools(checks, poolNote)
 	out := make([]checkResult, 0, len(checks))
 	for _, c := range checks {
-		if poolNote != "" && c.Child == domain.GPUNode && c.Parent == domain.GPUPool && len(c.Dangling) > 0 {
-			// Still FAIL, as the TUI flags these nodes faulty: a missing
-			// pool may just be unloaded, but a broken source needs fixing
-			// too, and the note names it.
-			c.Note = joinNonEmpty(c.Note, poolNote)
-		}
 		out = append(out, relationResult(c))
 	}
 	return out
@@ -77,17 +71,10 @@ func relationResult(c relations.Check) checkResult {
 		for _, d := range c.Dangling {
 			r.Items = append(r.Items, d.Row+" → "+d.Missing)
 		}
-		r.Hint = relationHint(c)
+		r.Hint = c.Hint()
 	}
 	r.Detail = joinNonEmpty(detail, c.Note)
 	return r
-}
-
-func relationHint(c relations.Check) string {
-	if c.Parent == domain.Tenant {
-		return "add the tenancies to the metadata file (TUI: edit tenant on an unresolved DAC/ImportedModel)"
-	}
-	return fmt.Sprintf("these %s rows name a %s that doesn't exist: clean them up or restore the %s", c.Child, c.Parent, c.Parent)
 }
 
 func joinNonEmpty(parts ...string) string {

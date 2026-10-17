@@ -63,6 +63,7 @@ type integrityCheck struct {
 	Checked  int                  `json:"checked"`
 	Dangling []relations.Dangling `json:"dangling,omitempty"`
 	Note     string               `json:"note,omitempty"`
+	Hint     string               `json:"hint,omitempty" jsonschema:"how to fix the dangling rows, as doctor --relations says"`
 }
 
 func (s *Server) handleCheckIntegrity(ctx context.Context, _ *sdk.CallToolRequest, in integrityInput) (*sdk.CallToolResult, listResult[integrityCheck], error) {
@@ -70,16 +71,15 @@ func (s *Server) handleCheckIntegrity(ctx context.Context, _ *sdk.CallToolReques
 	if err != nil {
 		return failTool[listResult[integrityCheck]]("check integrity", err)
 	}
-	var warnings []string
-	if poolNote != "" {
-		warnings = append(warnings, poolNote)
-	}
+	// As doctor --relations: a partial pool load is noted on the check it
+	// can explain, a node in a missing pool.
 	checks := relations.CheckIntegrity(ds)
+	relations.NotePartialPools(checks, poolNote)
 	out := make([]integrityCheck, 0, len(checks))
 	for _, c := range checks {
 		r := integrityCheck{
 			Name: c.Name, Parent: c.Parent.String(), Status: "PASS",
-			Checked: c.Checked, Dangling: c.Dangling, Note: c.Note,
+			Checked: c.Checked, Dangling: c.Dangling, Note: c.Note, Hint: c.Hint(),
 		}
 		if c.Child != domain.CategoryUnknown { // the tenancy rule spans categories
 			r.Child = c.Child.String()
@@ -89,11 +89,11 @@ func (s *Server) handleCheckIntegrity(ctx context.Context, _ *sdk.CallToolReques
 		}
 		out = append(out, r)
 	}
-	return jsonResult(out, warnings)
+	return jsonResult(out, nil)
 }
 
 const checkIntegrityDescription = "Check every relation between rows, as `toolkit doctor --relations` does: one item per relation" +
 	" (e.g. InferenceService → DedicatedAICluster) with how many rows were checked and every row naming a parent that doesn't exist" +
-	" (`dangling`, each {row, missing}). `status` is PASS, FAIL (missing parent rows: orphans, such as an endpoint whose DAC was deleted," +
+	" (`dangling`, each {row, missing}) and how to fix them (`hint`). `status` is PASS, FAIL (missing parent rows: orphans, such as an endpoint whose DAC was deleted," +
 	" which delete_inference_service removes) or WARN (a tenancy missing from the tenant metadata; fix with set_tenant)." +
 	" Loads every category. Accepts env_type/env_region/env_realm overrides."

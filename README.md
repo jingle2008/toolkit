@@ -270,9 +270,9 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | `list_aliases` | Discovery — every category alias |
 
 | `get_item` | The one row of `category` named exactly `name` — the full object its list tool returns, as `toolkit get <category> <name>`: a name shared across groups is refused with each candidate as `<group>/<name>`, which picks one. No match is an error |
-| `check_integrity` | Every relation checked, as `toolkit doctor --relations`: per relation, rows checked and every row naming a missing parent; `status` PASS / FAIL / WARN |
+| `check_integrity` | Every relation checked, as `toolkit doctor --relations`: per relation, rows checked, every row naming a missing parent, and a `hint` on fixing them; `status` PASS / FAIL / WARN |
 
-The tools for the categories whose rows can be faulty (`list_base_models`, `list_tenants`, `list_gpu_pools`, `list_gpu_nodes`, `list_gpu_workloads`, `list_serving_runtimes`, `list_dacs`, `list_inference_services`) also take `faulty: true`: only the rows the TUI's Ctrl+Z shows, as `toolkit get --faulty`. `list_inference_services` with `faulty: true` is how an agent finds the orphaned endpoints `delete_inference_service` removes.
+The tools for the categories whose rows can be faulty (`list_base_models`, `list_tenants`, `list_gpu_pools`, `list_gpu_nodes`, `list_gpu_workloads`, `list_serving_runtimes`, `list_dacs`, `list_inference_services`) also take `faulty: true`: only the rows the TUI's Ctrl+Z shows, as `toolkit get --faulty`. `list_inference_services` with `faulty: true` is how an agent finds the orphaned endpoints `delete_inference_service` removes. `list_related` takes `faulty: true` too, for the faulty rows within one parent (a DAC's unready endpoints), as `toolkit get --related-to … --faulty` and Ctrl+Z inside a TUI drill-in.
 
 Every read tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments.
 

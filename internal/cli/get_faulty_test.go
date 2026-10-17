@@ -83,7 +83,7 @@ func TestValidateFaulty(t *testing.T) {
 	cfg := config.Config{KubeConfig: kube}
 	require.NoError(t, validateFaulty(cfg, domain.Tenant, true))
 	require.NoError(t, validateFaulty(config.Config{}, domain.LimitDefinition, false), "off: nothing to check")
-	require.ErrorContains(t, validateFaulty(cfg, domain.LimitDefinition, true), "never faulty; it applies to: basemodel")
+	require.ErrorContains(t, validateFaulty(cfg, domain.LimitDefinition, true), "--faulty: LimitDefinition rows are never faulty; faulty applies to: basemodel")
 	require.ErrorContains(t, validateFaulty(config.Config{}, domain.Tenant, true), "--faulty needs --kubeconfig")
 	require.ErrorContains(t, validateFaulty(config.Config{KubeConfig: "/nonexistent"}, domain.Tenant, true), "not readable")
 }

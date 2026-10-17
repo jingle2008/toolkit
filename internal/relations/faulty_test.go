@@ -62,3 +62,36 @@ func TestFaultySlice(t *testing.T) {
 	assert.Equal(t, "short", got[0].Name)
 	assert.NotNil(t, FaultySlice(&models.Dataset{}, domain.GPUPool, []models.GPUPool{}), "empty, not nil")
 }
+
+func TestFaultyCategoryErr(t *testing.T) {
+	t.Parallel()
+	require.NoError(t, FaultyCategoryErr(domain.GPUNode))
+	assert.EqualError(t, FaultyCategoryErr(domain.LimitDefinition),
+		"LimitDefinition rows are never faulty; faulty applies to: basemodel, dedicatedaicluster, gpunode, gpupool, gpuworkload, inferenceservice, servingruntime, tenant")
+}
+
+func TestCheckHint(t *testing.T) {
+	t.Parallel()
+	dangling := []Dangling{{Row: "r", Missing: "m"}}
+	assert.Empty(t, Check{Child: domain.InferenceService, Parent: domain.DedicatedAICluster}.Hint(), "nothing to fix")
+	assert.Contains(t, Check{Child: domain.InferenceService, Parent: domain.DedicatedAICluster, Dangling: dangling}.Hint(),
+		"these InferenceService rows name a DedicatedAICluster that doesn't exist")
+	assert.Contains(t, Check{Parent: domain.Tenant, Dangling: dangling}.Hint(), "metadata file")
+}
+
+// A missing pool may just be one that failed to load: the GPUNode →
+// GPUPool check says so when it reports any.
+func TestNotePartialPools(t *testing.T) {
+	t.Parallel()
+	checks := []Check{
+		{Child: domain.GPUNode, Parent: domain.GPUPool, Dangling: []Dangling{{Row: "p/n", Missing: "p"}}, Note: "n1"},
+		{Child: domain.GPUWorkload, Parent: domain.GPUNode, Dangling: []Dangling{{Row: "n/w", Missing: "n"}}},
+	}
+	NotePartialPools(checks, "pools partly loaded")
+	assert.Equal(t, "n1; pools partly loaded", checks[0].Note)
+	assert.Empty(t, checks[1].Note)
+
+	clean := []Check{{Child: domain.GPUNode, Parent: domain.GPUPool}}
+	NotePartialPools(clean, "pools partly loaded")
+	assert.Empty(t, clean[0].Note, "no missing pool to explain")
+}

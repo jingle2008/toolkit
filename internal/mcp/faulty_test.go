@@ -39,6 +39,7 @@ func TestListTools_FaultyInputOnFaultyCategories(t *testing.T) {
 		require.True(t, ok, "no list tool mapped for %s", c)
 		want[name] = true
 	}
+	want["list_related"] = true // faulty rows within a parent
 	for _, tool := range listedTools(t) {
 		raw, err := json.Marshal(tool.InputSchema)
 		require.NoError(t, err)
@@ -128,8 +129,65 @@ func TestCheckIntegrity(t *testing.T) {
 	assert.Equal(t, "InferenceService", isvc["child"])
 	assert.Equal(t, []any{map[string]any{"row": "amaaaaaa-gone/isvc-orphan", "missing": "amaaaaaa-gone"}}, isvc["dangling"])
 
+	assert.Contains(t, isvc["hint"], "rows name a DedicatedAICluster that doesn't exist")
+
 	tenancy := byName["tenancy resolution"]
 	require.NotNil(t, tenancy)
 	assert.NotContains(t, tenancy, "child", "the tenancy rule spans categories")
 	assert.Equal(t, "Tenant", tenancy["parent"])
+}
+
+// As doctor --relations: a partial pool load is a note on the GPUNode →
+// GPUPool check it can explain, not a warning on the whole result.
+//
+//nolint:paralleltest // replaces mcpIntegrityDatasetFn
+func TestCheckIntegrity_PartialPoolsNoted(t *testing.T) {
+	orig := mcpIntegrityDatasetFn
+	t.Cleanup(func() { mcpIntegrityDatasetFn = orig })
+	mcpIntegrityDatasetFn = func(context.Context, loader.Composite, string, string, models.Environment) (*models.Dataset, string, error) {
+		return &models.Dataset{
+			GPUPools:   []models.GPUPool{{Name: "pool-a"}},
+			GPUNodeMap: map[string][]models.GPUNode{"pool-x": {{Name: "node-x", NodePool: "pool-x"}}},
+		}, "some GPU pool sources failed to load: oke", nil
+	}
+	res := callTool(t, "check_integrity", nil)
+	require.False(t, res.IsError, resultText(t, res))
+	sc := structured(t, res)
+	assert.NotContains(t, sc, "warnings")
+	for _, it := range sc["items"].([]any) { //nolint:forcetypeassert // listResult items
+		m := it.(map[string]any) //nolint:forcetypeassert // JSON object
+		if m["name"] == "GPUNode → GPUPool" {
+			assert.Equal(t, "FAIL", m["status"])
+			assert.Contains(t, m["note"], "some GPU pool sources failed to load")
+			return
+		}
+	}
+	t.Fatal("no GPUNode → GPUPool check")
+}
+
+// faulty=true on list_related keeps the related rows Ctrl+Z shows inside
+// a drill-in.
+//
+//nolint:paralleltest // replaces mcpFaultyDatasetFn
+func TestListRelated_Faulty(t *testing.T) {
+	stubFaultyDataset(t, &models.Dataset{
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{"acme": {{Name: "amaaaaaa-dac"}}},
+		InferenceServiceMap: map[string][]models.InferenceService{"amaaaaaa-dac": {
+			{Name: "isvc-ok", Namespace: "amaaaaaa-dac", Type: models.InferenceServiceDedicated, Ready: "True"},
+			{Name: "isvc-down", Namespace: "amaaaaaa-dac", Type: models.InferenceServiceDedicated, Ready: "False"},
+		}},
+	}, nil, nil)
+	_, sc := callStructured(t, "list_related", map[string]any{
+		"category": "inferenceservice", "parent_category": "dac", "parent_name": "amaaaaaa-dac", "faulty": true,
+	})
+	items, ok := sc["items"].([]any)
+	require.True(t, ok)
+	require.Len(t, items, 1)
+	assert.Equal(t, "isvc-down", items[0].(map[string]any)["name"]) //nolint:forcetypeassert // JSON object
+
+	res, _ := callStructured(t, "list_related", map[string]any{
+		"category": "limittenancyoverride", "parent_category": "tenant", "parent_name": "acme", "faulty": true,
+	})
+	require.True(t, res.IsError)
+	assert.Contains(t, resultText(t, res), "LimitTenancyOverride rows are never faulty")
 }

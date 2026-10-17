@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/collections"
@@ -28,12 +27,8 @@ func validateFaulty(cfg config.Config, cat domain.Category, faulty bool) error {
 	if !faulty {
 		return nil
 	}
-	if !relations.IsFaultyCategory(cat) {
-		names := make([]string, 0, len(relations.FaultyCategories()))
-		for _, c := range relations.FaultyCategories() {
-			names = append(names, strings.ToLower(c.String()))
-		}
-		return fmt.Errorf("--faulty: %s rows are never faulty; it applies to: %s", cat, strings.Join(names, ", "))
+	if err := relations.FaultyCategoryErr(cat); err != nil {
+		return fmt.Errorf("--faulty: %w", err)
 	}
 	if cfg.KubeConfig == "" {
 		return fmt.Errorf("--faulty needs --kubeconfig: a row naming a missing parent is found by loading every category")
