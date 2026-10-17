@@ -10,9 +10,9 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
+	"sigs.k8s.io/yaml"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"sigs.k8s.io/yaml"
 )
 
 func TestConfigCmd_YAML_DefaultPath(t *testing.T) {
