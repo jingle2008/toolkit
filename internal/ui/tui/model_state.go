@@ -276,6 +276,11 @@ func setDefaults(m *Model) {
 	}
 	if m.table == nil {
 		t := table.New(table.WithFocused(true))
+		// Release G: list view feeds every key to the table after our
+		// handlers, and G is Sort GPUs, so it would also jump to the
+		// last row. end still goes there.
+		t.KeyMap.GotoBottom.SetKeys("end")
+		t.KeyMap.GotoBottom.SetHelp("end", "go to end")
 		s := table.DefaultStyles()
 		s.Header = s.Header.
 			BorderStyle(lipgloss.NormalBorder()).

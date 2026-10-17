@@ -74,7 +74,9 @@ func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
-	if key.Matches(msg, keys.Back) {
+	// While typing, esc closes the input and clears an applied filter,
+	// but never drops the scope: that takes a second esc.
+	if key.Matches(msg, keys.Back) && (m.inputMode == common.NormalInput || m.filter != "") {
 		cmd := m.backToLastState()
 		if cmd != nil {
 			cmds = append(cmds, cmd)
