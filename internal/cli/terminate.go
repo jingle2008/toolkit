@@ -1,15 +1,10 @@
 package cli
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 
-	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
-	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // terminateInstanceFn is the seam tests use to fake the OCI call.
@@ -37,25 +32,10 @@ env triple required). Pass --ocid to skip the cluster lookup when you
 already know the instance OCID.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
-			needsKube := ocid == ""
-			return withMutationSetup(cfgFile, needsKube, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action: mutation.TerminateNode,
-					Target: name,
-					DryRun: dryRun,
-					Yes:    yes,
-				}, func(ctx context.Context) error {
-					node, err := resolveGPUNode(ctx, cfg, env, name, ocid)
-					if err != nil {
-						return err
-					}
-					return terminateInstanceFn(ctx, node, env, logging.FromContext(ctx))
-				})
-			})
+			return runNodeAction(cmd, cfgFile, mutation.TerminateNode, args[0], ocid, dryRun, yes, terminateInstanceFn)
 		},
 	}
-	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
+	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Required: this action has no interactive prompt")
 	cmd.Flags().StringVar(&ocid, "ocid", "", "Skip k8s lookup and target this instance OCID directly")
 	rootCmd.AddCommand(cmd)

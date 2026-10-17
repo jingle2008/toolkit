@@ -136,8 +136,10 @@ Typical output (pretty-printed):
 ```
 
 `phase` is `begin` / `done` / `failed`, or `dry_run` for a `--dry-run`
-preview (also flagged `dry_run: true`) and `refused` for a call that wasn't
-confirmed (MCP). `error` is set only on `phase: failed`. `surface` says
+preview (also flagged `dry_run: true`) and `refused` for one that wasn't
+confirmed: a declined prompt, a cancelled TUI modal, a missing `--yes` or
+MCP `confirm`. A `failed` with no `begin` before it is a target that
+couldn't be looked up, so nothing ran. `error` is set only on `phase: failed`. `surface` says
 where the mutation came from — `tui`, `cli` or `mcp` — so the same query
 covers all three.
 

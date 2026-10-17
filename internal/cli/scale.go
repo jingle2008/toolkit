@@ -45,22 +45,27 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			return withMutationSetup(cfgFile, true, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+				var pool *models.GPUPool
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action: mutation.ScaleGPUPool,
 					Target: name,
 					DryRun: dryRun,
 					Yes:    yes,
+					Resolve: func(ctx context.Context, p *mutationPlan) error {
+						found, err := resolveGPUPoolFn(ctx, cfg, env, name)
+						if err != nil {
+							return err
+						}
+						pool, p.Resolved = found, mutation.ResolvedPool(found.ID, found.Size, found.ActualSize)
+						return nil
+					},
 				}, func(ctx context.Context) error {
-					pool, err := resolveGPUPoolFn(ctx, cfg, env, name)
-					if err != nil {
-						return err
-					}
 					return increasePoolSizeFn(ctx, pool, env, logging.FromContext(ctx))
 				})
 			})
 		},
 	}
-	gpuPoolCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
+	gpuPoolCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")
 	gpuPoolCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
 
 	scaleCmd.AddCommand(gpuPoolCmd)

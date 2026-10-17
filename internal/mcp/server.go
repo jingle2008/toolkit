@@ -23,6 +23,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -158,7 +159,7 @@ type mutationResult struct {
 	Target string `json:"target"`
 	// Resolved is what a dry run looked up about the target (e.g. the
 	// node's instance, the InferenceService's namespace); dry runs only.
-	Resolved map[string]any `json:"resolved,omitempty"`
+	Resolved mutation.Resolved `json:"resolved,omitempty"`
 }
 
 // jsonResult wraps items in the standard listResult envelope. Callers

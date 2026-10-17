@@ -97,20 +97,27 @@ be unique. Destructive: requires explicit --yes.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			return withMutationSetup(cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				ns, err := resolveInferenceServiceFn(ctx, cfg.KubeConfig, env.KubeContext(), namespace, name)
-				if err != nil {
-					return err
-				}
-				outcome, err := planOrphanISVCDeleteFn(ctx, cfg.KubeConfig, env.KubeContext(), ns, name)
-				if err != nil {
-					return err
-				}
+				var ns string
+				resolveNS := resolveISVC(cfg, env, namespace, name, &ns)
 				out := cmd.OutOrStdout()
 				return runMutation(ctx, cmd.InOrStdin(), out, mutationPlan{
-					Action: mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized),
-					Target: ns + "/" + name,
+					Action: mutation.DeleteInferenceService,
+					Target: isvcTarget(namespace, name),
 					DryRun: dryRun,
 					Yes:    yes,
+					// Planning also checks it's an orphan, and picks delete
+					// or force-delete.
+					Resolve: func(ctx context.Context, p *mutationPlan) error {
+						if err := resolveNS(ctx, p); err != nil {
+							return err
+						}
+						outcome, err := planOrphanISVCDeleteFn(ctx, cfg.KubeConfig, env.KubeContext(), ns, name)
+						if err != nil {
+							return err
+						}
+						p.Action = mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
+						return nil
+					},
 				}, func(ctx context.Context) error {
 					done, err := deleteOrphanISVCFn(ctx, cfg.KubeConfig, env.KubeContext(), ns, name)
 					if err == nil {

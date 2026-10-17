@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/jingle2008/toolkit/internal/config"
@@ -38,6 +39,62 @@ func resolveGPUNode(ctx context.Context, cfg config.Config, env models.Environme
 		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
 	return resolveGPUNodeFn(ctx, cfg, env, name)
+}
+
+// resolveNode is a mutationPlan.Resolve for a GPU node: it looks the node
+// up (or, given --ocid, takes the instance as is) into *node.
+func resolveNode(cfg config.Config, env models.Environment, name, ocid string, node **models.GPUNode) func(context.Context, *mutationPlan) error {
+	return func(ctx context.Context, p *mutationPlan) error {
+		n, err := resolveGPUNode(ctx, cfg, env, name, ocid)
+		if err != nil {
+			return err
+		}
+		*node, p.Resolved = n, mutation.ResolvedNode(n.ID)
+		return nil
+	}
+}
+
+// runNodeAction is the RunE of `restart node` and `terminate`: act, an
+// OCI action on the instance backing GPU node name (or the --ocid
+// instance, which needs no cluster lookup).
+func runNodeAction(
+	cmd *cobra.Command, cfgFile *string, a mutation.Action, name, ocid string, dryRun, yes bool,
+	act func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error,
+) error {
+	return withMutationSetup(cfgFile, ocid == "", false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+		var node *models.GPUNode
+		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
+			Action:  a,
+			Target:  name,
+			DryRun:  dryRun,
+			Yes:     yes,
+			Resolve: resolveNode(cfg, env, name, ocid, &node),
+		}, func(ctx context.Context) error {
+			return act(ctx, node, env, logging.FromContext(ctx))
+		})
+	})
+}
+
+// resolveISVC is a mutationPlan.Resolve for an InferenceService: it
+// finds the namespace (searching all when namespace is empty) into *ns,
+// so the target, prompt and audit name <namespace>/<name>.
+func resolveISVC(cfg config.Config, env models.Environment, namespace, name string, ns *string) func(context.Context, *mutationPlan) error {
+	return func(ctx context.Context, p *mutationPlan) error {
+		found, err := resolveInferenceServiceFn(ctx, cfg.KubeConfig, env.KubeContext(), namespace, name)
+		if err != nil {
+			return err
+		}
+		*ns, p.Target, p.Resolved = found, found+"/"+name, mutation.ResolvedNamespace(found)
+		return nil
+	}
+}
+
+// isvcTarget is an InferenceService target as named on the command line.
+func isvcTarget(namespace, name string) string {
+	if namespace != "" {
+		return namespace + "/" + name
+	}
+	return name
 }
 
 // resolveGPUPoolFn is the seam tests use to fake gpu-pool resolution.
@@ -157,18 +214,36 @@ type mutationPlan struct {
 	// Yes skips the interactive confirmation prompt. Required for an
 	// Irreversible action.
 	Yes bool
+	// Resolve, when set, looks the target up without changing anything,
+	// before the dry run or the prompt — as MCP's plan step does — so a
+	// dry run proves the target exists and the prompt names what was
+	// found. It may refine the plan's Action and Target, and records in
+	// Resolved what a dry run reports. Its perform closure uses what it
+	// found.
+	Resolve func(ctx context.Context, p *mutationPlan) error
+	// Resolved is what Resolve found (mutation.ResolvedNode, ...).
+	Resolved mutation.Resolved
 }
 
-// runMutation orchestrates the standard confirm / dry-run / audit /
-// perform flow shared by every mutation subcommand.
+// runMutation orchestrates the standard refuse / resolve / dry-run /
+// confirm / audit / perform flow shared by every mutation subcommand, in
+// the order MCP's runMutationCall uses, with the same audit records:
+//
+//  1. An Irreversible action without --yes (and not a dry run): refused,
+//     before touching anything.
+//  2. Resolve looks the target up; a failure ends the call, audited as
+//     failed unless a dry run.
+//  3. --dry-run: report what would run and what was resolved.
+//  4. Without --yes, the prompt; declining is audited as refused.
+//  5. perform, audited begin, then done or failed.
 //
 // Output contract (writes to out):
-//   - dry-run: "DRY-RUN: would <action> <kind>/<target>\n"
+//   - dry-run: "DRY-RUN: would <action> <kind>/<target>[ (<resolved>)]\n"
 //   - interactive abort: "aborted\n"
 //   - success: "<action> <kind>/<target>: OK\n"
 //
-// Errors from perform are returned verbatim; callers should let
-// Cobra surface them.
+// Errors from Resolve and perform are returned verbatim; callers should
+// let Cobra surface them.
 func runMutation(
 	ctx context.Context,
 	in io.Reader,
@@ -177,17 +252,32 @@ func runMutation(
 	perform func(context.Context) error,
 ) error {
 	logger := logging.FromContext(ctx)
-	a := plan.Action
-	desc := fmt.Sprintf("%s %s/%s", a.Verb, a.Kind, plan.Target)
-
-	if plan.DryRun {
-		_, _ = fmt.Fprintf(out, "DRY-RUN: would %s\n", desc)
-		mutation.Audit(logger, surfaceCLI, a, plan.Target, mutation.PhaseDryRun, nil)
-		return nil
+	audit := func(phase mutation.Phase, err error) {
+		mutation.Audit(logger, surfaceCLI, plan.Action, plan.Target, phase, err)
 	}
 
-	if a.Tier == mutation.Irreversible && !plan.Yes {
-		return fmt.Errorf("%s requires explicit --yes (no interactive prompt for destructive actions)", a.Verb)
+	if plan.Action.Tier == mutation.Irreversible && !plan.Yes && !plan.DryRun {
+		audit(mutation.PhaseRefused, nil)
+		return fmt.Errorf("%s requires explicit --yes (no interactive prompt for destructive actions)", plan.Action.Verb)
+	}
+	if plan.Resolve != nil {
+		if err := plan.Resolve(ctx, &plan); err != nil {
+			if !plan.DryRun {
+				audit(mutation.PhaseFailed, err)
+			}
+			return err
+		}
+	}
+	desc := fmt.Sprintf("%s %s/%s", plan.Action.Verb, plan.Action.Kind, plan.Target)
+
+	if plan.DryRun {
+		line := "DRY-RUN: would " + desc
+		if r := plan.Resolved.String(); r != "" {
+			line += " (" + r + ")"
+		}
+		_, _ = fmt.Fprintln(out, line)
+		audit(mutation.PhaseDryRun, nil)
+		return nil
 	}
 
 	if !plan.Yes {
@@ -196,17 +286,18 @@ func runMutation(
 			return fmt.Errorf("read confirmation: %w", err)
 		}
 		if !ok {
+			audit(mutation.PhaseRefused, nil)
 			_, _ = fmt.Fprintln(out, "aborted")
 			return nil
 		}
 	}
 
-	mutation.Audit(logger, surfaceCLI, a, plan.Target, mutation.PhaseBegin, nil)
+	audit(mutation.PhaseBegin, nil)
 	if err := perform(ctx); err != nil {
-		mutation.Audit(logger, surfaceCLI, a, plan.Target, mutation.PhaseFailed, err)
+		audit(mutation.PhaseFailed, err)
 		return err
 	}
-	mutation.Audit(logger, surfaceCLI, a, plan.Target, mutation.PhaseDone, nil)
+	audit(mutation.PhaseDone, nil)
 	_, _ = fmt.Fprintf(out, "%s: OK\n", desc)
 	return nil
 }

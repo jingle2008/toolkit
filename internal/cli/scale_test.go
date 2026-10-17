@@ -25,6 +25,9 @@ func stageScaleEnv(t *testing.T) {
 
 func TestScaleGPUPool_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageScaleEnv(t)
+	defer swap(&resolveGPUPoolFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUPool, error) {
+		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 8, ActualSize: 4}, nil
+	})()
 	called := false
 	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, models.Environment, logging.Logger) error {
 		called = true
@@ -38,7 +41,9 @@ func TestScaleGPUPool_DryRun_DoesNotCallOCI(t *testing.T) {
 	if called {
 		t.Fatal("--dry-run must not call OCI")
 	}
-	if !strings.Contains(out, "DRY-RUN: would scale gpu_pool/pool-a") {
+	// The pool is looked up, as MCP's dry_run does, and the line says
+	// what was found.
+	if !strings.Contains(out, "DRY-RUN: would scale gpu_pool/pool-a (actual_size=4, pool_id=ocid1.instancepool.fake, size=8)") {
 		t.Errorf("expected DRY-RUN line, got: %q", out)
 	}
 }
@@ -96,6 +101,9 @@ func TestScaleGPUPool_MissingRepoPath(t *testing.T) {
 
 func TestScaleGPUPool_InteractiveBail(t *testing.T) {
 	stageScaleEnv(t)
+	defer swap(&resolveGPUPoolFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUPool, error) {
+		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 8, ActualSize: 4}, nil
+	})()
 	called := false
 	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, models.Environment, logging.Logger) error {
 		called = true

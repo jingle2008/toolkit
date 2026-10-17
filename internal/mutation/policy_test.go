@@ -87,3 +87,11 @@ func TestAudit_Record(t *testing.T) {
 	assert.Equal(t, true, fields(got[2])["dry_run"])
 	assert.Equal(t, "dry_run", fields(got[2])["phase"])
 }
+
+func TestResolved(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "actual_size=1, pool_id=p, size=2", ResolvedPool("p", 2, 1).String())
+	assert.Equal(t, "instance_id=i", ResolvedNode("i").String())
+	assert.Equal(t, "namespace=ns", ResolvedNamespace("ns").String())
+	assert.Empty(t, Resolved(nil).String())
+}
