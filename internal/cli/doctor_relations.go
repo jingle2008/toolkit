@@ -2,18 +2,14 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
-	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/loader/production"
-	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/internal/relations"
+	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -43,7 +39,7 @@ func relationChecks(ctx context.Context, cfg config.Config) []checkResult {
 		}}
 	}
 	env := models.Environment{Type: cfg.EnvType, Region: cfg.EnvRegion, Realm: cfg.EnvRealm}
-	ds, poolNote, err := loadIntegrityDataset(ctx, doctorLoaderFn(ctx, cfg.MetadataFile), cfg, env)
+	ds, poolNote, err := resolve.IntegrityDataset(ctx, doctorLoaderFn(ctx, cfg.MetadataFile), cfg.RepoPath, cfg.KubeConfig, env)
 	if err != nil {
 		return []checkResult{{
 			Name: "relations", Status: statusFail, Detail: err.Error(),
@@ -62,60 +58,6 @@ func relationChecks(ctx context.Context, cfg config.Config) []checkResult {
 		out = append(out, relationResult(c))
 	}
 	return out
-}
-
-// loadIntegrityDataset loads every category the relations touch,
-// concurrently, and resolves tenant owners as the TUI does. A partial
-// GPU-pool load is not fatal: poolNote describes it.
-func loadIntegrityDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) (ds *models.Dataset, poolNote string, err error) {
-	var (
-		bms    []models.BaseModel
-		srs    []models.ServingRuntime
-		ims    map[string][]models.ImportedModel
-		pools  []models.GPUPool
-		nodes  map[string][]models.GPUNode
-		pods   map[string][]models.GPUWorkload
-		dacs   map[string][]models.DedicatedAICluster
-		isvcs  map[string][]models.InferenceService
-		repoDS *models.Dataset
-	)
-	g, gctx := errgroup.WithContext(ctx)
-	load := func(what string, fn func() error) {
-		g.Go(func() error {
-			if err := fn(); err != nil {
-				return fmt.Errorf("load %s: %w", what, err)
-			}
-			return nil
-		})
-	}
-	load("dataset", func() (err error) { repoDS, err = ld.LoadDataset(gctx, cfg.RepoPath, env); return })
-	load("base models", func() (err error) { bms, err = ld.LoadBaseModels(gctx, cfg.KubeConfig, env); return })
-	load("serving runtimes", func() (err error) { srs, err = ld.LoadServingRuntimes(gctx, cfg.KubeConfig, env); return })
-	load("imported models", func() (err error) { ims, err = ld.LoadImportedModels(gctx, cfg.KubeConfig, env); return })
-	load("gpu nodes", func() (err error) { nodes, err = ld.LoadGPUNodesByPool(gctx, cfg.KubeConfig, env); return })
-	load("gpu workloads", func() (err error) { pods, err = ld.LoadGPUWorkloadsByNode(gctx, cfg.KubeConfig, env); return })
-	load("dedicated AI clusters", func() (err error) { dacs, err = ld.LoadDedicatedAIClusters(gctx, cfg.KubeConfig, env); return })
-	load("inference services", func() (err error) { isvcs, err = ld.LoadInferenceServices(gctx, cfg.KubeConfig, env); return })
-	load("gpu pools", func() error {
-		var err error
-		pools, err = ld.LoadGPUPools(gctx, cfg.RepoPath, env)
-		if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
-			poolNote = "some GPU pool sources failed to load: " + partial.Error()
-			return nil
-		}
-		return err
-	})
-	if err := g.Wait(); err != nil {
-		return nil, "", err
-	}
-
-	ds = repoDS
-	ds.BaseModels, ds.ServingRuntimes, ds.GPUPools, ds.GPUNodeMap = bms, srs, pools, nodes
-	ds.SetDedicatedAIClusterMap(dacs)
-	ds.SetImportedModelMap(ims)
-	ds.SetGPUWorkloadMap(pods)
-	ds.SetInferenceServiceMap(isvcs)
-	return ds, poolNote, nil
 }
 
 // relationResult renders one integrity check as a doctor row.
