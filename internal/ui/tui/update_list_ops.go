@@ -7,12 +7,16 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// restartInferenceServiceFn is the seam tests use to fake the restart patch.
-var restartInferenceServiceFn = k8s.RestartInferenceService
+// Seams tests use to fake the restart patch and the cordon.
+var (
+	restartInferenceServiceFn = k8s.RestartInferenceService
+	setCordonFn               = k8s.SetCordon
+)
 
 /*
 deleteItem handles the generic delete action based on the current category.
@@ -25,7 +29,7 @@ func (m *Model) deleteItem(itemKey models.ItemKey) tea.Cmd {
 	case domain.GPUNode:
 		return m.deleteGPUNode(itemKey)
 	case domain.InferenceService:
-		return m.deleteOrphanInferenceService(itemKey)
+		return m.deleteOrphanInferenceService(itemKey, mutation.DeleteInferenceService)
 	default:
 		// exhaustive
 	}
@@ -54,7 +58,10 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 		// timeout; use longOpCtx so the 30s one-shot cap doesn't cancel it
 		// after endpoint deletion but before the cluster delete completes.
 		ctx := m.longOpCtx()
-		if err := actions.DeleteDedicatedAICluster(ctx, dac, env, m.logger); err != nil {
+		err := audited(m.logger, mutation.DeleteDAC, dac.Name, func() error {
+			return actions.DeleteDedicatedAICluster(ctx, dac, env, m.logger)
+		})
+		if err != nil {
 			return deleteErrMsg{
 				err:       err,
 				category:  domain.DedicatedAICluster,
@@ -87,7 +94,10 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		if err := actions.TerminateInstance(ctx, node, env, m.logger); err != nil {
+		err := audited(m.logger, mutation.TerminateNode, node.Name, func() error {
+			return actions.TerminateInstance(ctx, node, env, m.logger)
+		})
+		if err != nil {
 			return deleteErrMsg{
 				err:      err,
 				category: domain.GPUNode,
@@ -126,7 +136,9 @@ func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		err := actions.SoftResetInstance(ctx, node, env, m.logger)
+		err := audited(m.logger, mutation.RestartNode, node.Name, func() error {
+			return actions.SoftResetInstance(ctx, node, env, m.logger)
+		})
 		return restartNodeResultMsg{key: itemKey, err: err, env: env}
 	}
 }
@@ -273,13 +285,14 @@ func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cm
 		m.logger.Errorw("unsupported item type for restart operation", "item", item)
 		return nil
 	}
-	m.logger.Infow("action started", "action", "restartInferenceService", "service", itemKeyString(itemKey))
 	namespace, name := svc.Namespace, svc.Name
 	kubeConfig, kubeContext := m.kubeConfig, m.environment.KubeContext()
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		err := restartInferenceServiceFn(ctx, kubeConfig, kubeContext, namespace, name)
+		err := audited(m.logger, mutation.RestartInferenceService, namespace+"/"+name, func() error {
+			return restartInferenceServiceFn(ctx, kubeConfig, kubeContext, namespace, name)
+		})
 		return restartServiceResultMsg{key: itemKey, err: err}
 	}
 }

@@ -135,9 +135,11 @@ Typical output (pretty-printed):
 { "ts": "...", "action": "drain",   "target": "gpu-node-42", "phase": "done",  "dry_run": false }
 ```
 
-`phase` is `begin` / `done` / `failed`; `dry_run: true` lines have no
-`phase` and are written by `--dry-run` previews. `error` is set only on
-`phase: failed`.
+`phase` is `begin` / `done` / `failed`, or `dry_run` for a `--dry-run`
+preview (also flagged `dry_run: true`) and `refused` for a call that wasn't
+confirmed (MCP). `error` is set only on `phase: failed`. `surface` says
+where the mutation came from — `tui`, `cli` or `mcp` — so the same query
+covers all three.
 
 ### Or do the same flow via MCP
 
@@ -145,7 +147,7 @@ If you've wired MCP per Recipe 1, ask the agent:
 
 > Drain gpu-node-42, restart it, and re-enable scheduling once it's back. Don't do anything until I say "confirm".
 
-The agent will call `cordon_node`, `drain_node`, etc. — but each call requires `confirm: true`. Without it, the call refuses, logs the refusal, and returns an error explaining that `confirm=true` is required. You can preview the plan before authorizing the destructive set.
+The agent will call `cordon_node`, `drain_node`, etc. — but each call requires `confirm: true`. Without it, the call refuses, logs the refusal, and returns an error explaining that `confirm=true` is required. Ask the agent to preview with `dry_run: true` first: it looks each target up and reports what would run without acting. Irreversible tools (`terminate_node`, `delete_dac`, `delete_inference_service`) also need `confirm_target` naming the target, so `confirm: true` alone never destroys anything.
 
 ---
 

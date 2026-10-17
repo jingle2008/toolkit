@@ -12,6 +12,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/telemetry"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -56,7 +57,7 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.Refresh):
 		return m.handleRefresh()
 	case key.Matches(msg, keys.ToggleCordon):
-		return m.requestConfirm(m.confirmCordon(itemKey))
+		return m.requestConfirm(m.confirmCordon(itemKey, item))
 	case key.Matches(msg, keys.DrainNode):
 		return m.requestConfirm(m.confirmDrain(itemKey))
 	case key.Matches(msg, keys.Delete):
@@ -106,14 +107,15 @@ func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey) tea.Cmd {
 		return nil
 	}
 
-	m.logger.Infow("action started", "action", "scaleUpGPUPool", "pool", itemKeyString(itemKey))
 	env := m.environment
 	return tea.Batch(
 		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey, env: env} },
 		func() tea.Msg {
 			ctx, cancel := m.opCtx()
 			defer cancel()
-			err := actions.IncreasePoolSize(ctx, pool, env, m.logger)
+			err := audited(m.logger, mutation.ScaleGPUPool, pool.Name, func() error {
+				return actions.IncreasePoolSize(ctx, pool, env, m.logger)
+			})
 			return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env}
 		},
 	)
@@ -124,7 +126,9 @@ func (m *Model) toggleFaultyList() tea.Cmd {
 	return m.updateRowsAsync()
 }
 
-func (m *Model) cordonNode(item any, itemKey models.ItemKey) tea.Cmd {
+// cordonNode sets the node's cordon as a (CordonNode or UncordonNode)
+// asks, as the CLI and MCP do; a node already there is left as is.
+func (m *Model) cordonNode(item any, itemKey models.ItemKey, a mutation.Action) tea.Cmd {
 	if item == nil {
 		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
 		return nil
@@ -134,13 +138,16 @@ func (m *Model) cordonNode(item any, itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
 		return nil
 	}
-	m.logger.Infow("action started", "action", "toggleCordon", "node", itemKeyString(itemKey))
 	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
+	unschedulable := a == mutation.CordonNode
 	return func() tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		state, err := k8s.ToggleCordon(ctx, kubeConfig, env.KubeContext(), name)
-		return cordonNodeResultMsg{key: itemKey, state: state, err: err, env: env}
+		err := audited(m.logger, a, name, func() error {
+			_, err := setCordonFn(ctx, kubeConfig, env.KubeContext(), name, unschedulable)
+			return err
+		})
+		return cordonNodeResultMsg{key: itemKey, state: unschedulable, err: err, env: env}
 	}
 }
 
@@ -154,13 +161,14 @@ func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
 		return nil
 	}
-	m.logger.Infow("action started", "action", "drainNode", "node", itemKeyString(itemKey))
 	kubeConfig, kubeContext, name := m.kubeConfig, m.environment.KubeContext(), node.Name
 	drain := func() tea.Msg {
 		// Draining restarts single-replica services and waits for them to
 		// reschedule, which can take tens of minutes under its own internal
 		// timeouts; the 30s one-shot cap would abort it midway.
-		err := k8s.DrainNode(m.longOpCtx(), kubeConfig, kubeContext, name)
+		err := audited(m.logger, mutation.DrainNode, name, func() error {
+			return k8s.DrainNode(m.longOpCtx(), kubeConfig, kubeContext, name)
+		})
 		return drainNodeResultMsg{key: itemKey, err: err}
 	}
 	return tea.Batch(m.showToast("draining "+itemKeyString(itemKey)+"…", toastInfo), drain)

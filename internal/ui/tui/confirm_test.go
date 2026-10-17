@@ -9,6 +9,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -37,7 +38,7 @@ func TestRequestConfirm_OpensModalAndCapturesReturnView(t *testing.T) {
 	m.viewMode = common.ListView
 
 	cmd := m.requestConfirm(confirmOverlay{
-		tier:   tierRecoverable,
+		tier:   mutation.Recoverable,
 		action: "Drain",
 		kind:   "node",
 		target: "gpu-1",
@@ -54,7 +55,7 @@ func TestDismissConfirm_RestoresViewAndClears(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	m.viewMode = common.ListView
-	m.requestConfirm(confirmOverlay{tier: tierRecoverable, action: "Drain", run: func() tea.Cmd { return nil }})
+	m.requestConfirm(confirmOverlay{tier: mutation.Recoverable, action: "Drain", run: func() tea.Cmd { return nil }})
 
 	m.dismissConfirm()
 
@@ -64,7 +65,7 @@ func TestDismissConfirm_RestoresViewAndClears(t *testing.T) {
 
 // armConfirm puts the model into ConfirmView with a run thunk that records
 // whether it fired, returning a pointer to that flag.
-func armConfirm(m *Model, tier confirmTier) *bool {
+func armConfirm(m *Model, tier mutation.Tier) *bool {
 	ran := false
 	m.confirm = confirmOverlay{
 		tier:       tier,
@@ -90,7 +91,7 @@ func TestUpdateConfirmView_Recoverable(t *testing.T) {
 	t.Run("y confirms and dismisses", func(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
-		ran := armConfirm(m, tierRecoverable)
+		ran := armConfirm(m, mutation.Recoverable)
 		_, _ = m.updateConfirmView(keyMsg("y"))
 		assert.True(t, *ran, "y must run the action")
 		assert.Equal(t, common.ListView, m.viewMode)
@@ -98,7 +99,7 @@ func TestUpdateConfirmView_Recoverable(t *testing.T) {
 	t.Run("n cancels without running", func(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
-		ran := armConfirm(m, tierRecoverable)
+		ran := armConfirm(m, mutation.Recoverable)
 		_, _ = m.updateConfirmView(keyMsg("n"))
 		assert.False(t, *ran, "n must not run the action")
 		assert.Equal(t, common.ListView, m.viewMode)
@@ -106,7 +107,7 @@ func TestUpdateConfirmView_Recoverable(t *testing.T) {
 	t.Run("esc cancels", func(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
-		ran := armConfirm(m, tierRecoverable)
+		ran := armConfirm(m, mutation.Recoverable)
 		_, _ = m.updateConfirmView(keyMsg("esc"))
 		assert.False(t, *ran)
 		assert.Equal(t, common.ListView, m.viewMode)
@@ -114,7 +115,7 @@ func TestUpdateConfirmView_Recoverable(t *testing.T) {
 	t.Run("unrelated key is swallowed", func(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
-		ran := armConfirm(m, tierRecoverable)
+		ran := armConfirm(m, mutation.Recoverable)
 		_, _ = m.updateConfirmView(keyMsg("x"))
 		assert.False(t, *ran)
 		assert.Equal(t, common.ConfirmView, m.viewMode, "stays in modal")
@@ -126,7 +127,7 @@ func TestUpdateConfirmView_Irreversible(t *testing.T) {
 	t.Run("capital Y confirms", func(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
-		ran := armConfirm(m, tierIrreversible)
+		ran := armConfirm(m, mutation.Irreversible)
 		_, _ = m.updateConfirmView(keyMsg("Y"))
 		assert.True(t, *ran)
 		assert.Equal(t, common.ListView, m.viewMode)
@@ -134,7 +135,7 @@ func TestUpdateConfirmView_Irreversible(t *testing.T) {
 	t.Run("lowercase y cancels (does not run)", func(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
-		ran := armConfirm(m, tierIrreversible)
+		ran := armConfirm(m, mutation.Irreversible)
 		_, _ = m.updateConfirmView(keyMsg("y"))
 		assert.False(t, *ran, "lowercase y must not run an irreversible action")
 		assert.Equal(t, common.ListView, m.viewMode, "lowercase y cancels the modal")
@@ -144,7 +145,7 @@ func TestUpdateConfirmView_Irreversible(t *testing.T) {
 func TestUpdateConfirmView_CtrlCQuits(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
-	armConfirm(m, tierIrreversible)
+	armConfirm(m, mutation.Irreversible)
 	_, cmd := m.updateConfirmView(tea.KeyMsg{Type: tea.KeyCtrlC})
 	require.NotNil(t, cmd, "ctrl+c must return a command (tea.Quit)")
 }
@@ -156,7 +157,7 @@ func TestConfirmDelete_TierByCategory(t *testing.T) {
 	m := newConfirmTestModel(t)
 	m.category = domain.DedicatedAICluster
 	dac := m.confirmDelete(key, "")
-	assert.Equal(t, tierIrreversible, dac.tier)
+	assert.Equal(t, mutation.Irreversible, dac.tier)
 	assert.Equal(t, "Delete", dac.action)
 	assert.Equal(t, "DAC", dac.kind)
 	assert.Equal(t, itemKeyString(key), dac.target)
@@ -165,13 +166,13 @@ func TestConfirmDelete_TierByCategory(t *testing.T) {
 
 	m.category = domain.GPUNode
 	node := m.confirmDelete(key, "")
-	assert.Equal(t, tierIrreversible, node.tier)
+	assert.Equal(t, mutation.Irreversible, node.tier)
 	assert.Equal(t, "Terminate", node.action)
 	assert.Equal(t, "node", node.kind)
 
 	m.category = domain.InferenceService
 	isvc := m.confirmDelete(key, k8s.OrphanDeleted)
-	assert.Equal(t, tierIrreversible, isvc.tier)
+	assert.Equal(t, mutation.Irreversible, isvc.tier)
 	assert.Equal(t, "Delete", isvc.action)
 	assert.Equal(t, "orphaned InferenceService", isvc.kind)
 	assert.Equal(t, "Force-delete", m.confirmDelete(key, k8s.OrphanFinalized).action)
@@ -189,14 +190,15 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 		action string
 		kind   string
 	}{
-		{"cordon", m.confirmCordon(key), "Toggle cordon", "node"},
+		{"cordon", m.confirmCordon(key, &models.GPUNode{Name: "gpu-1"}), "Cordon", "node"},
+		{"uncordon", m.confirmCordon(key, &models.GPUNode{Name: "gpu-1", IsSchedulingDisabled: true}), "Uncordon", "node"},
 		{"drain", m.confirmDrain(key), "Drain", "node"},
 		{"restart", m.confirmRestart(key, nil), "Restart", "node"},
 		{"scale", m.confirmScale(key), "Scale up", "GPU pool"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tierRecoverable, tc.got.tier)
+			assert.Equal(t, mutation.Recoverable, tc.got.tier)
 			assert.Equal(t, tc.action, tc.got.action)
 			assert.Equal(t, tc.kind, tc.got.kind)
 			assert.Empty(t, tc.got.warning, "recoverable actions carry no warning line")
@@ -208,7 +210,7 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 func TestConfirmView_RecoverableRender(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
-	m.confirm = confirmOverlay{tier: tierRecoverable, action: "Drain", kind: "node", target: "gpu-1"}
+	m.confirm = confirmOverlay{tier: mutation.Recoverable, action: "Drain", kind: "node", target: "gpu-1"}
 	out := m.confirmView()
 	assert.Contains(t, out, "Drain")
 	assert.Contains(t, out, "gpu-1")
@@ -220,7 +222,7 @@ func TestConfirmView_IrreversibleRender(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	m.confirm = confirmOverlay{
-		tier: tierIrreversible, action: "Terminate", kind: "node",
+		tier: mutation.Irreversible, action: "Terminate", kind: "node",
 		target: "gpu-1", warning: "Boot volume destroyed. Cannot undo.",
 	}
 	out := m.confirmView()

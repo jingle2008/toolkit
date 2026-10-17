@@ -12,6 +12,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
@@ -47,7 +48,7 @@ func TestCtrlX_InInferenceService_PlansThenConfirms(t *testing.T) {
 			assert.Equal(t, common.ListView, m.viewMode, "no modal before the plan lands")
 			m.handleISVCDeletePlannedMsg(cmd().(isvcDeletePlannedMsg))
 			require.Equal(t, common.ConfirmView, m.viewMode)
-			assert.Equal(t, tierIrreversible, m.confirm.tier)
+			assert.Equal(t, mutation.Irreversible, m.confirm.tier)
 			assert.Equal(t, tc.action, m.confirm.action)
 			assert.Equal(t, "ns1/svc1", m.confirm.target)
 		})

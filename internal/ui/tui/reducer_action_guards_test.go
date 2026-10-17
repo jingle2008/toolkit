@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -22,7 +23,7 @@ func TestActionGuards_NilItem(t *testing.T) {
 	m := newTestModel(t)
 	key := models.ItemKey("node-a")
 
-	assert.Nil(t, m.cordonNode(nil, key), "cordon must not dispatch without an item")
+	assert.Nil(t, m.cordonNode(nil, key, mutation.CordonNode), "cordon must not dispatch without an item")
 	assert.Nil(t, m.drainNode(nil, key), "drain must not dispatch without an item")
 	assert.Nil(t, m.restartNode(nil, key), "restart must not dispatch without an item")
 	assert.Nil(t, m.scaleUpGPUPool(nil, key), "scale must not dispatch without an item")
@@ -37,7 +38,7 @@ func TestActionGuards_WrongItemType(t *testing.T) {
 	// pool actions; the type assertion must reject it rather than panic.
 	wrong := &models.Tenant{Name: "tenant1"}
 
-	assert.Nil(t, m.cordonNode(wrong, key))
+	assert.Nil(t, m.cordonNode(wrong, key, mutation.CordonNode))
 	assert.Nil(t, m.drainNode(wrong, key))
 	assert.Nil(t, m.restartNode(wrong, key))
 	assert.Nil(t, m.scaleUpGPUPool(wrong, key))

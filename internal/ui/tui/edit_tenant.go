@@ -17,6 +17,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -272,7 +273,9 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 		if !ok {
 			return tenantSaveErrMsg{err: errors.New("loader does not support writing metadata")}
 		}
-		if err := writer.UpsertTenantMetadata(entry); err != nil {
+		if err := audited(m.logger, mutation.SetTenant, entry.ID, func() error {
+			return writer.UpsertTenantMetadata(entry)
+		}); err != nil {
 			return tenantSaveErrMsg{err: err}
 		}
 		return tenantSavedMsg{path: path, entry: entry}

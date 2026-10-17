@@ -470,7 +470,7 @@ Select a node in the `GPUNode` category:
 
 | Key | Operation | Description |
 |-----|-----------|-------------|
-| `Shift+C` | Toggle Cordon | Mark node unschedulable / schedulable |
+| `Shift+C` | Cordon / Uncordon | Cordon a schedulable node, uncordon a cordoned one (the modal says which) |
 | `Shift+D` | Drain | Evict all pods from the node |
 | `Shift+R` | Restart | Soft-reset (restart) the node's instance |
 | `Ctrl+X` | Delete | Terminate the node instance |
