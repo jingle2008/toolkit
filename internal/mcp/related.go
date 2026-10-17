@@ -18,6 +18,7 @@ type relatedInput struct {
 	Category       string `json:"category" jsonschema:"the category to list, as a name or alias (e.g. gpuworkload / gw, inferenceservice / is, dedicatedaicluster / dac); see list_aliases"`
 	ParentCategory string `json:"parent_category" jsonschema:"the parent row's category, as a name or alias (e.g. dac, tenant, servingruntime); must be related to category — the tool description lists the relations"`
 	ParentName     string `json:"parent_name" jsonschema:"the parent row's name, matched exactly (case-sensitive): the name field of its list_* item, e.g. a DAC's name, a tenant's name, a runtime's name"`
+	Faulty         bool   `json:"faulty,omitempty" jsonschema:"only faulty rows, as faulty=true on the list tools and the TUI's Ctrl+Z inside a drill-in; for gpunode, gpuworkload, dedicatedaicluster and inferenceservice. Loads every category, so it is slower."`
 	listInput
 }
 
@@ -72,7 +73,14 @@ func (s *Server) handleListRelated(ctx context.Context, _ *sdk.CallToolRequest, 
 	}
 
 	scope := &domain.Scope{Category: parent, Name: in.ParentName}
-	items, warnings, err := s.relatedItems(ctx, child, scope, s.envFor(in.envOverride), normFilter(in.Filter))
+	related := s.relatedItems
+	if in.Faulty {
+		if err := relations.FaultyCategoryErr(child); err != nil {
+			return failTool[listResult[any]]("list_related", fmt.Errorf("faulty: %w", err))
+		}
+		related = s.relatedFaultyItems
+	}
+	items, warnings, err := related(ctx, child, scope, s.envFor(in.envOverride), normFilter(in.Filter))
 	if err != nil {
 		return failTool[listResult[any]]("list_related", err)
 	}
@@ -153,6 +161,29 @@ func (s *Server) relatedItems(ctx context.Context, child domain.Category, scope 
 		return flattenRelated(relations.InferenceService, grouped, scope, filter), warnings, nil
 	default:
 		return nil, nil, fmt.Errorf("%s has no related rows", child)
+	}
+}
+
+// relatedFaultyItems is relatedItems for faulty=true: of the rows scope
+// relates to, only the faulty ones (relations.FaultyRows), from the full
+// load deciding them takes. Only the faulty categories with parents reach
+// here (handleListRelated validated the pair and the category).
+func (s *Server) relatedFaultyItems(ctx context.Context, child domain.Category, scope *domain.Scope, env models.Environment, filter string) ([]any, []string, error) {
+	ds, warnings, err := mcpFaultyDatasetFn(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, child)
+	if err != nil {
+		return nil, nil, err
+	}
+	switch child { //nolint:exhaustive // validated: the faulty categories with parents
+	case domain.GPUNode:
+		return flattenRelated(relations.GPUNode, relations.FaultyMap(ds, child, ds.GPUNodeMap), scope, filter), warnings, nil
+	case domain.GPUWorkload:
+		return flattenRelated(relations.GPUWorkload, relations.FaultyMap(ds, child, ds.GPUWorkloadMap), scope, filter), warnings, nil
+	case domain.DedicatedAICluster:
+		return flattenRelated(relations.DedicatedAICluster, relations.FaultyMap(ds, child, ds.DedicatedAIClusterMap), scope, filter), warnings, nil
+	case domain.InferenceService:
+		return flattenRelated(relations.InferenceService, relations.FaultyMap(ds, child, ds.InferenceServiceMap), scope, filter), warnings, nil
+	default:
+		return nil, nil, fmt.Errorf("%s has no faulty related rows", child)
 	}
 }
 

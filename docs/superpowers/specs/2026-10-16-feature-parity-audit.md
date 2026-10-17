@@ -39,6 +39,16 @@ What remains:
 | F8 minor gaps and layering | Partly fixed: the TUI sets cordon explicitly (#148); `ToggleCordon` removed (#149). The rest is open (plan Phase 6) |
 | F9 metadata lost updates | Fixed in #147 |
 
+A re-check of what those PRs added on more than one surface found new drift, now closed too:
+
+| Drift | Status |
+|---|---|
+| CLI `--dry-run` didn't look the target up; MCP `dry_run` did | Fixed in #152 (shared `mutation.Resolved`) |
+| Refusals audited on MCP only; lookup failures audited differently per surface | Fixed in #152 |
+| TUI Ctrl+Z flagged every GPU pool when OCI was unreachable | Fixed in #152 |
+| `get_item` returned every match; `get <name>` at most one | Fixed in #151 (shared `collections.PickByName`) |
+| `list_related` had no `faulty`; `check_integrity` lacked doctor's hints and pool note | Fixed by the integrity-parity PR (shared `Check.Hint`, `NotePartialPools`, `FaultyCategoryErr`) |
+
 The matrices below are the audit as found, before these fixes.
 
 ## Read / query matrix
