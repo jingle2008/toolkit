@@ -3,10 +3,10 @@ package tui
 import (
 	"testing"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/stopwatch"
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/textinput"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/stopwatch"
+	"charm.land/bubbles/v2/table"
+	"charm.land/bubbles/v2/textinput"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"

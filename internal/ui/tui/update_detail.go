@@ -4,9 +4,9 @@
 package tui
 
 import (
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"github.com/atotto/clipboard"
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -23,7 +23,7 @@ var (
 func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(keyMsg, keys.Quit):
 			m.cancelInFlight()

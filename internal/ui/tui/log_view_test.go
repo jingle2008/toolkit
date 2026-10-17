@@ -114,13 +114,13 @@ func TestLogOverlay_PauseAndResume(t *testing.T) {
 	m := newLogModel(t, ring)
 	m.viewMode = common.ListView
 	_, _ = m.Update(backtick) // open → follows
-	assert.Contains(t, m.View(), "following")
+	assert.Contains(t, m.render(), "following")
 
 	_, _ = m.Update(keyPress("pgup")) // scroll up → pause
-	assert.Contains(t, m.View(), "PAUSED")
+	assert.Contains(t, m.render(), "PAUSED")
 
 	_, _ = m.Update(keyPress("end")) // back to bottom → follow
-	assert.Contains(t, m.View(), "following")
+	assert.Contains(t, m.render(), "following")
 }
 
 func TestLogOverlay_TickStopsWhenClosed(t *testing.T) {
@@ -143,6 +143,6 @@ func TestLogOverlay_NilStoreDoesNotPanic(t *testing.T) {
 	m.viewMode = common.ListView
 	assert.NotPanics(t, func() {
 		_, _ = m.Update(backtick)
-		_ = m.View()
+		_ = m.render()
 	})
 }

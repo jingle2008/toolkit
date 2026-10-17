@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/table"
+	"charm.land/bubbles/v2/table"
 )
 
 func TestSortByInt(t *testing.T) {

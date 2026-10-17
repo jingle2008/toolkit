@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -219,7 +219,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		logger.Errorw("failed to create toolkit model", "error", err)
 		return fmt.Errorf("create toolkit model: %w", err)
 	}
-	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(ctx))
+	p := tea.NewProgram(model, tea.WithContext(ctx))
 	_, err = p.Run()
 	if err != nil && !errors.Is(err, context.Canceled) {
 		logger.Errorw("program error", "error", err)

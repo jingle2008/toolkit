@@ -3,8 +3,8 @@ package tui
 import (
 	"testing"
 
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/stopwatch"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/stopwatch"
 )
 
 type fakeErrMsg string

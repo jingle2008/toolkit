@@ -8,9 +8,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/table"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -318,7 +318,7 @@ func (m *Model) updateLayout(w, h int) {
 	if m.showLogo(w) {
 		reserved += view.LogoWidth + view.LogoMargin
 	}
-	m.help.Width = max(w-reserved-1, 0)
+	m.help.SetWidth(max(w-reserved-1, 0))
 	var borderStyle lipgloss.Border
 	if m.viewMode == common.DetailsView {
 		borderStyle = m.viewport.Style.GetBorderStyle()
@@ -331,8 +331,8 @@ func (m *Model) updateLayout(w, h int) {
 	infoHeight := lipgloss.Height(m.infoView())
 	top := statusHeight + infoHeight
 	if m.viewMode == common.DetailsView {
-		m.viewport.Width = w
-		m.viewport.Height = h - top
+		m.viewport.SetWidth(w)
+		m.viewport.SetHeight(h - top)
 	} else {
 		table.WithWidth(w - borderWidth)(m.table)
 		// updateColumns before WithHeight: WithHeight derives viewport.Height

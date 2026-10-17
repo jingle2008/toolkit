@@ -3,7 +3,7 @@ package tui
 import (
 	"context"
 
-	"github.com/charmbracelet/bubbles/table"
+	"charm.land/bubbles/v2/table"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"

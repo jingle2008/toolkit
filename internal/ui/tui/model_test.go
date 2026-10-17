@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/table"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -214,9 +214,9 @@ func TestUpdateLayoutAndView(t *testing.T) {
 	m.updateLayout(80, 24)
 	require.Equal(t, 80, m.viewWidth)
 	require.Equal(t, 24, m.viewHeight)
-	_ = m.View()
+	_ = m.render()
 	m.enterDetailView()
-	_ = m.View()
+	_ = m.render()
 }
 
 func TestContextStringAndStatusView(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/require"
 
@@ -185,7 +185,7 @@ var goldenViews = []struct {
 	{"log-paused", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
 		m.viewMode = common.LogView
-		_ = m.View() // first render follows the tail
+		_ = m.render() // first render follows the tail
 		m.log.viewport.SetYOffset(0)
 	}},
 	{"confirm-recoverable", func(t *testing.T, m *Model) {
@@ -225,7 +225,7 @@ func TestGolden(t *testing.T) {
 				t.Parallel()
 				m := newGoldenModel(t, sz.w, sz.h)
 				v.setup(t, m)
-				out := m.View()
+				out := ansi.Strip(m.render())
 				switch {
 				case strings.HasPrefix(v.name, "log-"):
 					out = logClock.ReplaceAllString(out, "hh:mm:ss")
@@ -245,5 +245,5 @@ func TestGolden_HelpShortTerminal(t *testing.T) {
 	m := newGoldenModel(t, 80, 15)
 	showCategory(t, m, domain.GPUNode)
 	m.enterHelpView()
-	assertGolden(t, "help-from-list-80x15", m.View())
+	assertGolden(t, "help-from-list-80x15", m.render())
 }

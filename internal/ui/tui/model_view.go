@@ -8,11 +8,11 @@ import (
 	"sort"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/mattn/go-runewidth"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	"charm.land/lipgloss/v2"
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -107,7 +107,7 @@ func (m *Model) statusView() string {
 	inputWidth := max(m.viewWidth-w(contextCell)-w(loadingCell)-w(liveCell)-w(statsCell)-
 		w(m.textInput.Prompt)-1, 0)
 	ti := *m.textInput
-	ti.Width = inputWidth
+	ti.SetWidth(inputWidth)
 	inputCell := ti.View()
 
 	return lipgloss.JoinHorizontal(
@@ -160,14 +160,21 @@ func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea
 	return nil
 }
 
-// View renders the current state of the model as a string.
+// View renders the current state of the model as a full-screen frame.
+func (m *Model) View() tea.View {
+	v := tea.NewView(m.render())
+	v.AltScreen = true
+	return v
+}
+
+// render draws the active view as a string.
 //
 // When a toast is up we append it under the active view's body rather
 // than budget a row for it in updateLayout. The terminal scrolls one
 // row to accommodate, briefly clipping the table's bottom border —
 // acceptable for an 8s transient banner, and far simpler than running
 // layout twice per toast-set/dismiss.
-func (m *Model) View() string {
+func (m *Model) render() string {
 	body := m.renderActiveView()
 	if m.toasts.active == nil {
 		return body
@@ -230,14 +237,14 @@ func (m *Model) frame(main string) string {
 	// which would cap the measurement and hide overflow from HeaderHelp.
 	measure := func(cols [][]key.Binding) int {
 		h := *m.help
-		h.Width = 0
+		h.SetWidth(0)
 		return lipgloss.Width(h.FullHelpView(cols))
 	}
 	// A zero budget means no room, but bubbles and HeaderHelp both read
 	// Width 0 as unbounded, so skip help rather than render it all.
 	var helpView string
-	if m.help.Width > 0 {
-		helpView = m.help.FullHelpView(km.HeaderHelp(m.help.Width, measure))
+	if m.help.Width() > 0 {
+		helpView = m.help.FullHelpView(km.HeaderHelp(m.help.Width(), measure))
 	}
 	header := lipgloss.JoinHorizontal(lipgloss.Top, m.headerInfo(), helpView)
 	if m.showLogo(m.viewWidth) {
@@ -288,7 +295,7 @@ func (m *Model) fullHelpView() string {
 	case common.LoadingView, common.HelpView, common.ExportView, common.EditTenantView:
 		// No additional sections for these view modes
 	}
-	return m.theme.HelpBorder.Width(m.viewWidth / 2).Render(b.String())
+	return boxWidth(m.theme.HelpBorder, m.viewWidth/2).Render(b.String())
 }
 
 func (m *Model) tableBinding() []key.Binding {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 /*

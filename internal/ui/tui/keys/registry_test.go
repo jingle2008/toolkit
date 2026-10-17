@@ -3,8 +3,8 @@ package keys
 import (
 	"testing"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -70,7 +70,7 @@ func TestToggleLogInGlobalKeys(t *testing.T) {
 	km := ResolveKeys(domain.Tenant, common.ListView)
 	found := false
 	for _, b := range km.Global {
-		if key.Matches(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'`'}}, b) {
+		if key.Matches(tea.KeyPressMsg{Code: '`', Text: "`"}, b) {
 			found = true
 		}
 	}

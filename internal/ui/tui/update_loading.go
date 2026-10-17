@@ -1,11 +1,11 @@
 package tui
 
 import (
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/stopwatch"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/stopwatch"
+	tea "charm.land/bubbletea/v2"
 
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
@@ -14,7 +14,7 @@ import (
 // Tick messages, data messages, and errors are intercepted at the top of
 // Update; the only thing left to do here is honor Quit.
 func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if keyMsg, ok := msg.(tea.KeyMsg); ok && key.Matches(keyMsg, keys.Quit) {
+	if keyMsg, ok := msg.(tea.KeyPressMsg); ok && key.Matches(keyMsg, keys.Quit) {
 		m.cancelInFlight()
 		return m, tea.Quit
 	}

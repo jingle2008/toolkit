@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 )
 
 // KeyMap holds key bindings for the TUI, composed of global, mode, and context (category+mode) keys.

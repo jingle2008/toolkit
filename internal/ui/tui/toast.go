@@ -8,8 +8,8 @@ package tui
 import (
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // toastTTL is how long a toast stays before auto-dismiss. 8s ≈ enough
