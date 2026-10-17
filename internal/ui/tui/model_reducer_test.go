@@ -2,6 +2,8 @@ package tui
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -254,6 +256,44 @@ func TestGetCompartmentID_FromDataset(t *testing.T) {
 	}
 	if got != "ocid1.compartment" {
 		t.Fatalf("got compartment %q", got)
+	}
+}
+
+//nolint:paralleltest // swaps the package-level compartmentIDFn seam
+func TestLookupCompartmentID_KnownSkipsClusterLookup(t *testing.T) {
+	orig := compartmentIDFn
+	t.Cleanup(func() { compartmentIDFn = orig })
+	compartmentIDFn = func(context.Context, string, models.Environment) (string, error) {
+		t.Fatal("cluster lookup ran although the compartment was known")
+		return "", nil
+	}
+
+	got, err := lookupCompartmentID(context.Background(), "ocid1.compartment", "", models.Environment{})
+	if err != nil || got != "ocid1.compartment" {
+		t.Fatalf("got (%q, %v)", got, err)
+	}
+}
+
+// With no loaded node the lookup falls back to the shared resolver, so a
+// cluster without GPU nodes is an error rather than an empty compartment
+// handed on to the OCI call.
+//
+//nolint:paralleltest // swaps the package-level compartmentIDFn seam
+func TestUpdateGPUPoolState_NoCompartmentIsAnError(t *testing.T) {
+	orig := compartmentIDFn
+	t.Cleanup(func() { compartmentIDFn = orig })
+	compartmentIDFn = func(context.Context, string, models.Environment) (string, error) {
+		return "", errors.New("no GPU nodes in cluster (cannot resolve compartment ID)")
+	}
+
+	m := newTestModel(t)
+	m.dataset.GPUPools = []models.GPUPool{{Name: "a"}}
+	msg, ok := m.updateGPUPoolState()().(updateDoneMsg)
+	if !ok {
+		t.Fatal("expected updateDoneMsg")
+	}
+	if msg.err == nil || !strings.Contains(msg.err.Error(), "no GPU nodes") {
+		t.Fatalf("got err %v, want the resolver's no-GPU-nodes error", msg.err)
 	}
 }
 

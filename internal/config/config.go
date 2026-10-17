@@ -34,6 +34,11 @@ type Config struct {
 	MutationEnvOverrideAllowed bool `mapstructure:"mutation-env-override-allowed"`
 }
 
+// FlagMutationEnvOverrideAllowed is the flag (and config key) behind
+// MutationEnvOverrideAllowed, named once so the MCP tool descriptions
+// that tell agents about it cannot drift from the real flag.
+const FlagMutationEnvOverrideAllowed = "mutation-env-override-allowed"
+
 /*
 Normalize canonicalizes the user-supplied env values in place: short
 region codes expand to full OCI region identifiers ("phx" ->

@@ -8,6 +8,7 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/resolve"
@@ -450,7 +451,7 @@ func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, 
 // env-scoped tools whenever the policy is revisited.
 const mutationToolFooter = " Mutating: requires confirm=true to execute, otherwise refuses without acting." +
 	" Accepts env_type/env_region/env_realm, but per-call overrides take effect ONLY if the server" +
-	" was started with --mutation_env_override_allowed. By default override fields are ignored" +
+	" was started with --" + config.FlagMutationEnvOverrideAllowed + ". By default override fields are ignored" +
 	" (audit-logged at info) and the startup env is used."
 
 // registerMutationTools adds the mutating tools. Each requires
@@ -461,7 +462,7 @@ func registerMutationTools(s *Server) {
 	// Every mutation tool's input schema includes env_type/env_region/
 	// env_realm for parity with the read-only list_* tools, but the
 	// override only takes effect when the operator started this server
-	// with --mutation_env_override_allowed. By default the agent's
+	// with --mutation-env-override-allowed. By default the agent's
 	// override fields are ignored (and audit-logged at info), so the
 	// safety story remains: the operator's startup-env choice caps
 	// blast radius, and confirm=true gates each individual mutation.
@@ -469,16 +470,19 @@ func registerMutationTools(s *Server) {
 	// flip the flag — the risk is documented on the flag itself.
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "cordon_node",
+		Annotations: idempotent(),
 		Description: "Cordon (mark unschedulable) a Kubernetes node. Idempotent." + mutationToolFooter,
 	}, s.handleCordonNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "uncordon_node",
+		Annotations: idempotent(),
 		Description: "Uncordon (mark schedulable) a Kubernetes node. Idempotent." + mutationToolFooter,
 	}, s.handleUncordonNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
-		Name: "drain_node",
+		Name:        "drain_node",
+		Annotations: idempotent(),
 		Description: "Safely drain a node: cordon; refuse if it runs fine-tuning, training, or replicationJob pods;" +
 			" restart InferenceServices with minReplicas<=1 and wait (up to 20m) for them to reschedule elsewhere;" +
 			" then evict the rest (up to 10m). On failure before eviction, uncordons the node unless it was already cordoned; once eviction starts it stays cordoned." +
@@ -488,7 +492,8 @@ func registerMutationTools(s *Server) {
 	}, s.handleDrainNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
-		Name: "get_drain_status",
+		Name:        "get_drain_status",
+		Annotations: readOnly(),
 		Description: "Read-only: report a node's drain as recorded on the Node by drain_node (or the CLI/TUI): phase" +
 			" (none/starting/waiting/evicting/done/failed), startedAt, the restarted InferenceServices, the current phase's deadline," +
 			" what it still waits on (remaining), and the failure message. Does not advance the drain: if the phase stays" +
@@ -498,32 +503,38 @@ func registerMutationTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "restart_node",
+		Annotations: recoverable(),
 		Description: "Soft-reset the OCI instance backing a GPU node. Fire-and-forget." + mutationToolFooter,
 	}, s.handleRestartNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "terminate_node",
+		Annotations: destructive(),
 		Description: "Terminate the OCI instance backing a GPU node (boot volume destroyed). DESTRUCTIVE." + mutationToolFooter,
 	}, s.handleTerminateNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "scale_gpu_pool",
+		Annotations: idempotent(),
 		Description: "Push the Terraform-declared pool.Size to OCI for the named GPU pool. No size override: Terraform is the source of truth." + mutationToolFooter,
 	}, s.handleScaleGPUPool)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "delete_dac",
+		Annotations: destructive(),
 		Description: "Delete a dedicated AI cluster and its endpoints (synchronous, polls the work request). DESTRUCTIVE." + mutationToolFooter,
 	}, s.handleDeleteDAC)
 
 	sdk.AddTool(s.server, &sdk.Tool{
-		Name: "restart_inference_service",
+		Name:        "restart_inference_service",
+		Annotations: recoverable(),
 		Description: "Trigger a rolling restart of an OME InferenceService by bumping its restartedAt annotation. Fire-and-forget." +
 			" Omit namespace to search all namespaces; an ambiguous name is refused." + mutationToolFooter,
 	}, s.handleRestartInferenceService)
 
 	sdk.AddTool(s.server, &sdk.Tool{
-		Name: "delete_inference_service",
+		Name:        "delete_inference_service",
+		Annotations: destructive(),
 		Description: "Delete an orphaned OME InferenceService: a dedicated endpoint whose DAC no longer exists (doctor --relations reports it dangling)." +
 			" Refused for shared endpoints and for endpoints whose DAC exists (delete_dac owns those)." +
 			" An endpoint stuck deleting for over 10 minutes is force-deleted by removing its finalizer; summary says when a second call is needed." +
@@ -531,7 +542,8 @@ func registerMutationTools(s *Server) {
 	}, s.handleDeleteInferenceService)
 
 	sdk.AddTool(s.server, &sdk.Tool{
-		Name: "set_tenant",
+		Name:        "set_tenant",
+		Annotations: idempotent(),
 		Description: "Create or update a tenancy's metadata (name / internal flag / note), keyed by full tenancy OCID in the global metadata file." +
 			" Mutating: requires confirm=true to execute, otherwise refuses without acting." +
 			" Not env-scoped: env_type/env_region/env_realm do not apply.",

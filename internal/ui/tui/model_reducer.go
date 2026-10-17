@@ -14,7 +14,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/jingle2008/toolkit/internal/domain"
-	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/internal/ui/tui/view"
@@ -37,23 +37,18 @@ func (m *Model) knownCompartmentID() string {
 	return ""
 }
 
-// lookupCompartmentID returns known, or else the compartment of a GPU node
-// listed from env's cluster. It reads no Model state, so it is safe off the
-// Update loop.
+// compartmentIDFn is the seam tests use to fake the cluster lookup.
+var compartmentIDFn = resolve.CompartmentID
+
+// lookupCompartmentID returns known, or else env's cluster compartment as
+// resolved (and cached) by resolve.CompartmentID, the lookup the CLI and
+// MCP use; a cluster without GPU nodes is an error. It reads no Model
+// state, so it is safe off the Update loop.
 func lookupCompartmentID(ctx context.Context, known, kubeConfig string, env models.Environment) (string, error) {
 	if known != "" {
 		return known, nil
 	}
-	clientset, err := k8s.NewClientsetFromKubeConfig(kubeConfig, env.KubeContext())
-	if err != nil {
-		return "", err
-	}
-	nodes, err := k8s.ListGPUNodes(ctx, clientset, 1)
-	if err != nil || len(nodes) == 0 {
-		return "", err
-	}
-
-	return nodes[0].CompartmentID, nil
+	return compartmentIDFn(ctx, kubeConfig, env)
 }
 
 // updateGPUPoolState enriches the GPU pools with their OCI instance-pool
