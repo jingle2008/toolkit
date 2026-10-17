@@ -12,22 +12,11 @@ import (
 )
 
 /*
-ToggleCordon uses kubectl's drain.Helper to cordon or uncordon a node.
-Returns true if node is cordoned after the call, false if uncordoned.
-*/
-func ToggleCordon(ctx context.Context, kubeconfig, contextName, nodeName string) (bool, error) {
-	clientset, err := NewClientsetFromKubeConfig(kubeconfig, contextName)
-	if err != nil {
-		return false, err
-	}
-	return toggleCordon(ctx, clientset, nodeName)
-}
-
-/*
 SetCordon brings the node to the requested cordon state. Idempotent:
 when the node is already in `want`, no API call is made and changed
-is false. Otherwise the node is updated and changed is true. Use this
-instead of ToggleCordon for repeatable scripted / agent calls.
+is false. Otherwise the node is updated and changed is true. Every
+surface (TUI, CLI, MCP) cordons through it, naming the state it wants
+rather than flipping whatever the live state is.
 */
 func SetCordon(ctx context.Context, kubeconfig, contextName, nodeName string, want bool) (changed bool, err error) {
 	clientset, err := NewClientsetFromKubeConfig(kubeconfig, contextName)
@@ -45,25 +34,6 @@ func (w logWriter) Write(p []byte) (int, error) {
 }
 
 var runCordonOrUncordon = drain.RunCordonOrUncordon
-
-func toggleCordon(ctx context.Context, clientset kubernetes.Interface, nodeName string) (bool, error) {
-	helper := &drain.Helper{
-		Ctx:    ctx,
-		Client: clientset,
-	}
-
-	// Get the current node
-	node, err := clientset.CoreV1().Nodes().Get(ctx, nodeName, v1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-
-	// Determine new cordon state (toggle current value)
-	cordonState := !node.Spec.Unschedulable
-
-	// Apply the new state
-	return cordonState, runCordonOrUncordon(helper, node, cordonState)
-}
 
 // setCordon is the testable inner of SetCordon. Returns (changed, err)
 // where changed is false when the node was already in the requested

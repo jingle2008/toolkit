@@ -150,6 +150,21 @@ func registerTools(s *Server) {
 		Description: "Discovery tool. Lists each registered alias and its canonical category name. Useful for an agent that wants to confirm short codes before calling other tools.",
 	}, s.handleListAliases)
 
+	// Read-only, but reports what drain_node started (or the CLI/TUI), so
+	// a read-only server can still watch a drain.
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "get_drain_status",
+		Annotations: readOnly(),
+		Description: "Read-only: report a node's drain as recorded on the Node by drain_node (or the CLI/TUI): phase" +
+			" (none/starting/waiting/evicting/done/failed), startedAt, the restarted InferenceServices, the current phase's deadline," +
+			" what it still waits on (remaining), and the failure message. Does not advance the drain: if the phase stays" +
+			" in progress past its deadline, no process is driving it, so call drain_node again to resume." +
+			" Accepts env_type/env_region/env_realm overrides.",
+	}, s.handleDrainStatus)
+
+	if s.cfg.MCPReadOnly {
+		return
+	}
 	registerMutationTools(s)
 }
 

@@ -129,6 +129,7 @@ toolkit --help                # all global flags
 | `--log-format` | `console` | Log format: `console`, `json`, or `slog` |
 | `--log-level` | | Minimum log level: `debug`, `info`, `warn`, `error` (empty uses `--debug` flag) |
 | `--mutation-env-override-allowed` | `false` | Allow MCP mutation tools to override the startup env per call (off by default for safety) |
+| `--mcp-read-only` | `false` | Start `toolkit mcp` with only the read tools (plus `get_drain_status`); mutation tools aren't registered |
 
 *(See `internal/cli/flags.go` for the authoritative list.)*
 
@@ -273,6 +274,8 @@ Every read tool takes an optional `filter` (fuzzy substring) and optional `env_t
 | `terminate_node` | Terminate the underlying OCI instance (irreversible: needs `confirm_target`) |
 
 By default, mutation tools ignore any per-call `env_type` / `env_region` / `env_realm` (MCP tool input fields — these stay snake_case as the JSON-schema field names) and only act in the startup env — the operator's credentials decide the maximum blast radius, not the agent. Pass `--mutation-env-override-allowed` at server start to opt in to per-call env routing.
+
+To give an agent read access only, start the server with `--mcp-read-only` (or `mcp-read-only: true` in the config file, or `TOOLKIT_MCP_READ_ONLY=true`). The mutation tools are then not registered at all, so no prompt can reach one; `get_drain_status` stays, so the agent can still watch a drain started elsewhere.
 
 ---
 

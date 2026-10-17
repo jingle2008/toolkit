@@ -87,6 +87,7 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 			"env_type", cfg.EnvType,
 			"env_region", cfg.EnvRegion,
 			"env_realm", cfg.EnvRealm,
+			"read_only", cfg.MCPReadOnly,
 		)
 		return srv.Run(ctx)
 	}

@@ -10,45 +10,7 @@ import (
 	"k8s.io/kubectl/pkg/drain"
 )
 
-func TestToggleCordon_TogglesState(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
-	ctx := context.Background()
-	cs := fake.NewSimpleClientset()
-	node := &corev1.Node{
-		ObjectMeta: v1.ObjectMeta{Name: "n1"},
-		Spec:       corev1.NodeSpec{Unschedulable: false},
-	}
-	_ = cs.Tracker().Add(node)
-	// First toggle: should cordon (set Unschedulable true)
-	_, err := toggleCordon(ctx, cs, "n1")
-	if err != nil {
-		t.Fatalf("toggleCordon failed: %v", err)
-	}
-	got, _ := cs.CoreV1().Nodes().Get(ctx, "n1", v1.GetOptions{})
-	if !got.Spec.Unschedulable {
-		t.Error("expected node to be cordoned")
-	}
-	// Second toggle: should uncordon (set Unschedulable false)
-	_, err = toggleCordon(ctx, cs, "n1")
-	if err != nil {
-		t.Fatalf("toggleCordon failed: %v", err)
-	}
-	got, _ = cs.CoreV1().Nodes().Get(ctx, "n1", v1.GetOptions{})
-	if got.Spec.Unschedulable {
-		t.Error("expected node to be uncordoned")
-	}
-}
-
-func TestToggleCordon_NodeNotFound(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	cs := fake.NewSimpleClientset()
-	_, err := toggleCordon(ctx, cs, "missing-node")
-	if err == nil {
-		t.Error("expected error for missing node")
-	}
-}
-
-func TestToggleCordon_CordonOrUncordonError(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
+func TestSetCordon_CordonOrUncordonError(t *testing.T) { //nolint:paralleltest // shared global runCordonOrUncordon
 	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	node := &corev1.Node{
@@ -63,8 +25,7 @@ func TestToggleCordon_CordonOrUncordonError(t *testing.T) { //nolint:paralleltes
 		return context.DeadlineExceeded
 	}
 
-	_, err := toggleCordon(ctx, cs, "n2")
-	if err == nil {
+	if _, err := setCordon(ctx, cs, "n2", true); err == nil {
 		t.Error("expected error from runCordonOrUncordon")
 	}
 }
