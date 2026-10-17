@@ -1,0 +1,24 @@
+                   ┌────────────────────────────────────────┐
+                   │                                        │
+                   │  Details View Actions                  │
+                   │    <o>         Copy Object             │
+                   │                                        │
+                   │  General Actions                       │
+                   │    <?/h>       Help                    │
+                   │    <y>         Toggle Details          │
+                   │    <c>         Copy                    │
+                   │    <`>         Toggle Log              │
+                   │    <esc>       Back/Clear              │
+                   │    <q>         Quit                    │
+                   │                                        │
+                   │  Viewport Actions                      │
+                   │    ↑/k         up                      │
+                   │    ↓/j         down                    │
+                   │    u           ½ page up               │
+                   │    d           ½ page down             │
+                   │    b/pgup      page up                 │
+                   │    f/pgdn      page down               │
+                   │                                        │
+                   │                                        │
+                   │                                        │
+                   └────────────────────────────────────────┘

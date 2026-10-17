@@ -1,0 +1,24 @@
+Realm:   oc1                  <t>      Copy Tenant ID              | | | | |
+Type:    prod                 <ctrl+z> Toggle Faulty             .-----------.
+Region:  us-ashburn-1         <esc>    Back/Clear               -|   _____   |-
+Context: dp-prod-iad          <:cmd>   Command mode             -|  |_   _|  |-
+K8s:     v1.31.4              </term>  Filter mode              -|    |_|    |-
+Version: v1.2.3               <?/h>    Help                      '-----------'
+ Tenant (all)  🐶>                                                        [1/3]
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Name ↑         OCID                                   Inte…  Stat…  Note     │
+│──────────────────────────────────────────────────────────────────────────────│
+│ acme           ocid1.tenancy.oc1..acme                false  ACTI…           │
+│ globex         ocid1.tenancy.oc1..globex              true   ACTI…           │
+│ initech        ocid1.tenancy.oc1..initech             false  DELE…           │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘

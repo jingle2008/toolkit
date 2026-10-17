@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                     ⚠ DESTRUCTIVE
+
+                                                 Delete DAC  dac-alpha
+                                This permanently deletes the cluster and its endpoints.
+
+                                           Press Y to confirm   n/esc cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -33,20 +33,20 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 ### Task 1.1: Golden harness
 **Files:** Create `internal/ui/tui/golden_test.go` and `internal/ui/tui/testdata/golden/`.
-- [ ] Add a helper `assertGolden(t, name, s string)` that runs `ansi.Strip`, normalizes
+- [x] Add a helper `assertGolden(t, name, s string)` that runs `ansi.Strip`, normalizes
   trailing spaces, and compares the result against `testdata/golden/<name>.txt`. Running
   with `-update` rewrites the file.
-- [ ] Add a fixture builder that produces a deterministic dataset: one row per category,
+- [x] Add a fixture builder that produces a deterministic dataset: one row per category,
   including one faulty row and one row with wide runes. Pin the clock, version and
   k8sVersion. Disable the spinner.
 
 ### Task 1.2: Snapshot every view
-- [ ] Render List (DAC, GPU node, tenant), Details, Loading, Help (from List and from
+- [x] Render List (DAC, GPU node, tenant), Details, Loading, Help (from List and from
   Details), Export, EditTenant, Log (following and paused), Confirm (both tiers),
   RowPicker, and a toast.
-- [ ] Render each at 80×24, 120×40 and 200×50. Also add help at 80×15, which documents the
+- [x] Render each at 80×24, 120×40 and 200×50. Also add help at 80×15, which documents the
   current truncation.
-- [ ] Run `go test ./internal/ui/tui/... -run Golden -update`, then a second time without
+- [x] Run `go test ./internal/ui/tui/... -run Golden -update`, then a second time without
   `-update` to confirm the output is stable.
 
 ## Phase 2: v1 prep (shrink the swap)
