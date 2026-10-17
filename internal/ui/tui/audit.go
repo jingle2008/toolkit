@@ -1,8 +1,10 @@
 package tui
 
 import (
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // surfaceTUI is the audit record's surface for every TUI mutation.
@@ -21,4 +23,18 @@ func audited(logger logging.Logger, a mutation.Action, target string, perform fu
 	}
 	mutation.Audit(logger, surfaceTUI, a, target, mutation.PhaseDone, nil)
 	return nil
+}
+
+// auditName is the audit target for the current category's row at key:
+// the resource's own name, <namespace>/<name> for an InferenceService,
+// as the commands' records and the CLI and MCP name it.
+func (m *Model) auditName(key models.ItemKey) string {
+	k, ok := key.(models.ScopedItemKey)
+	if !ok {
+		return itemKeyString(key)
+	}
+	if m.category == domain.InferenceService {
+		return k.Scope + "/" + k.Name
+	}
+	return k.Name
 }

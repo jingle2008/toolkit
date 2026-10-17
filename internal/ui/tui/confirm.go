@@ -19,14 +19,18 @@ import (
 // modal. run is the deferred command; it is invoked only on confirm and
 // re-resolves its target at that time so a background reload cannot leave
 // it acting on a stale row. returnView restores the prior view on dismiss.
+// act is the mutation: its tier gates the modal, and with auditTarget it
+// names the audit record a cancel writes (a confirm's records come from
+// the command it runs).
 type confirmOverlay struct {
-	tier       mutation.Tier
-	action     string
-	kind       string
-	target     string
-	warning    string
-	returnView common.ViewMode
-	run        func() tea.Cmd
+	act         mutation.Action
+	auditTarget string
+	action      string
+	kind        string
+	target      string
+	warning     string
+	returnView  common.ViewMode
+	run         func() tea.Cmd
 }
 
 // requestConfirm opens the confirmation modal for a destructive action,
@@ -52,7 +56,7 @@ func (m *Model) dismissConfirm() {
 // overlay's tier. Recoverable: y/Y confirm; n/N/esc cancel. Irreversible:
 // only Y confirms; y/n/N/esc cancel (lowercase y never destroys state).
 func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
-	if c.tier == mutation.Irreversible {
+	if c.act.Tier == mutation.Irreversible {
 		return s == "Y", s == "y" || s == "n" || s == "N" || s == "esc"
 	}
 	return s == "y" || s == "Y", s == "n" || s == "N" || s == "esc"
@@ -66,17 +70,18 @@ func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
 // extra — deleteItem already re-finds its target by key at execution time.
 func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmOverlay {
 	c := confirmOverlay{
-		target: itemKeyString(itemKey),
-		run:    func() tea.Cmd { return m.deleteItem(itemKey) },
+		target:      itemKeyString(itemKey),
+		auditTarget: m.auditName(itemKey),
+		run:         func() tea.Cmd { return m.deleteItem(itemKey) },
 	}
 	switch m.category {
 	case domain.GPUNode:
-		c.tier = mutation.TerminateNode.Tier
+		c.act = mutation.TerminateNode
 		c.action, c.kind = "Terminate", "node"
 		c.warning = "Boot volume destroyed. Cannot undo."
 	case domain.InferenceService:
 		a := mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
-		c.tier = a.Tier
+		c.act = a
 		c.run = func() tea.Cmd { return m.deleteOrphanInferenceService(itemKey, a) }
 		c.action, c.kind = "Delete", "orphaned InferenceService"
 		c.warning = "Its DAC is gone. If it stays deleting, run again after 10m to force-delete."
@@ -85,7 +90,7 @@ func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOu
 			c.warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
 		}
 	default: // DedicatedAICluster
-		c.tier = mutation.DeleteDAC.Tier
+		c.act = mutation.DeleteDAC
 		c.action, c.kind = "Delete", "DAC"
 		c.warning = "This is irreversible."
 	}
@@ -103,21 +108,23 @@ func (m *Model) confirmCordon(itemKey models.ItemKey, item any) confirmOverlay {
 		a, label = mutation.UncordonNode, "Uncordon"
 	}
 	return confirmOverlay{
-		tier:   a.Tier,
-		action: label,
-		kind:   "node",
-		target: itemKeyString(itemKey),
-		run:    func() tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey, a) },
+		act:         a,
+		action:      label,
+		kind:        "node",
+		target:      itemKeyString(itemKey),
+		auditTarget: m.auditName(itemKey),
+		run:         func() tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey, a) },
 	}
 }
 
 func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
 	return confirmOverlay{
-		tier:   mutation.DrainNode.Tier,
-		action: "Drain",
-		kind:   "node",
-		target: itemKeyString(itemKey),
-		run:    func() tea.Cmd { return m.drainNode(findItem(m.dataset, m.category, itemKey), itemKey) },
+		act:         mutation.DrainNode,
+		action:      "Drain",
+		kind:        "node",
+		target:      itemKeyString(itemKey),
+		auditTarget: m.auditName(itemKey),
+		run:         func() tea.Cmd { return m.drainNode(findItem(m.dataset, m.category, itemKey), itemKey) },
 	}
 }
 
@@ -128,13 +135,14 @@ func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
 // Other categories don't bind Restart.
 func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay {
 	c := confirmOverlay{
-		tier:   mutation.RestartInferenceService.Tier,
-		action: "Restart",
-		target: itemKeyString(itemKey),
+		act:         mutation.RestartInferenceService,
+		action:      "Restart",
+		target:      itemKeyString(itemKey),
+		auditTarget: m.auditName(itemKey),
 	}
 	switch m.category {
 	case domain.GPUNode:
-		c.tier, c.kind = mutation.RestartNode.Tier, "node"
+		c.act, c.kind = mutation.RestartNode, "node"
 		c.run = func() tea.Cmd { return m.restartNode(findItem(m.dataset, m.category, itemKey), itemKey) }
 	default: // InferenceService
 		c.kind = "InferenceService"
@@ -148,11 +156,12 @@ func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay 
 
 func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
 	return confirmOverlay{
-		tier:   mutation.ScaleGPUPool.Tier,
-		action: "Scale up",
-		kind:   "GPU pool",
-		target: itemKeyString(itemKey),
-		run:    func() tea.Cmd { return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey) },
+		act:         mutation.ScaleGPUPool,
+		action:      "Scale up",
+		kind:        "GPU pool",
+		target:      itemKeyString(itemKey),
+		auditTarget: m.auditName(itemKey),
+		run:         func() tea.Cmd { return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey) },
 	}
 }
 
@@ -177,6 +186,10 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, run()
 	}
 	if cancel {
+		if c := m.confirm; c.act.Verb != "" {
+			// Declining is audited, as declining the CLI's prompt is.
+			mutation.Audit(m.logger, surfaceTUI, c.act, c.auditTarget, mutation.PhaseRefused, nil)
+		}
 		m.dismissConfirm()
 	}
 	return m, nil
@@ -188,7 +201,7 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) confirmView() string {
 	c := m.confirm
 	var b strings.Builder
-	if c.tier == mutation.Irreversible {
+	if c.act.Tier == mutation.Irreversible {
 		b.WriteString("⚠ DESTRUCTIVE\n\n")
 		fmt.Fprintf(&b, "%s %s  %s\n", c.action, c.kind, c.target)
 		if c.warning != "" {

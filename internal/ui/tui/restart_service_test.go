@@ -39,7 +39,7 @@ func TestShiftR_InInferenceService_OpensRestartConfirm(t *testing.T) {
 
 	assert.Nil(t, m.handleItemActions(shiftR()))
 	require.Equal(t, common.ConfirmView, m.viewMode)
-	assert.Equal(t, mutation.Recoverable, m.confirm.tier)
+	assert.Equal(t, mutation.Recoverable, m.confirm.act.Tier)
 	assert.Equal(t, "Restart", m.confirm.action)
 	assert.Equal(t, "InferenceService", m.confirm.kind)
 	assert.Equal(t, "ns1/svc1", m.confirm.target)
