@@ -269,7 +269,7 @@ See [docs/recipes.md](docs/recipes.md) for the per-client file paths and first p
 | `list_related` | Rows of `category` related to one parent row (`parent_category` + `parent_name`), e.g. a DAC's pods or a runtime's endpoints. Same relations as the TUI drill-in and `toolkit get --related-to` |
 | `list_aliases` | Discovery — every category alias |
 
-| `get_item` | The rows of one `category` named exactly `name` — the full objects its list tool returns, without filtering a whole list. Usually one; several only when groups share the name. No match is an error |
+| `get_item` | The one row of `category` named exactly `name` — the full object its list tool returns, as `toolkit get <category> <name>`: a name shared across groups is refused with each candidate as `<group>/<name>`, which picks one. No match is an error |
 | `check_integrity` | Every relation checked, as `toolkit doctor --relations`: per relation, rows checked and every row naming a missing parent; `status` PASS / FAIL / WARN |
 
 The tools for the categories whose rows can be faulty (`list_base_models`, `list_tenants`, `list_gpu_pools`, `list_gpu_nodes`, `list_gpu_workloads`, `list_serving_runtimes`, `list_dacs`, `list_inference_services`) also take `faulty: true`: only the rows the TUI's Ctrl+Z shows, as `toolkit get --faulty`. `list_inference_services` with `faulty: true` is how an agent finds the orphaned endpoints `delete_inference_service` removes.

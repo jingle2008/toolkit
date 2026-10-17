@@ -251,16 +251,11 @@ func (s *Server) handleListServingRuntimes(ctx context.Context, req *sdk.CallToo
 }
 
 func (s *Server) handleListImportedModels(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ImportedModel], error) {
-	env := s.envFor(in.envOverride)
-	grouped, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, env)
+	grouped, warnings, err := s.importedModels(ctx, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.ImportedModel]]("load imported models", err)
+		return nil, listResult[models.ImportedModel]{}, err
 	}
-	// Each item carries its own `tenantId`; resolution adds `owner` and
-	// lets the filter match the tenant name (the re-keyed group key).
-	ds, warnings := s.tenantDataset(ctx, env)
-	ds.SetImportedModelMap(grouped)
-	return jsonResult(flattenGrouped(ds.ImportedModelMap, in.Filter, in.Limit), warnings)
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), warnings)
 }
 
 func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.GPUPool], error) {
@@ -299,12 +294,12 @@ func (s *Server) handleListGPUNodes(ctx context.Context, req *sdk.CallToolReques
 	if in.Faulty {
 		return faultyGrouped(ctx, s, domain.GPUNode, in, func(ds *models.Dataset) map[string][]models.GPUNode { return ds.GPUNodeMap })
 	}
-	grouped, err := s.loader.LoadGPUNodesByPool(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride))
-	if err != nil {
-		return failTool[listResult[models.GPUNode]]("load gpu nodes", err)
-	}
 	// No wrapper: GPUNode.NodePool (JSON `poolName`) already carries
 	// the group key. Wrapping would duplicate.
+	grouped, err := s.gpuNodes(ctx, s.envFor(in.envOverride))
+	if err != nil {
+		return nil, listResult[models.GPUNode]{}, err
+	}
 	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
@@ -312,49 +307,37 @@ func (s *Server) handleListGPUWorkloads(ctx context.Context, req *sdk.CallToolRe
 	if in.Faulty {
 		return faultyGrouped(ctx, s, domain.GPUWorkload, in, func(ds *models.Dataset) map[string][]models.GPUWorkload { return ds.GPUWorkloadMap })
 	}
-	env := s.envFor(in.envOverride)
-	grouped, err := s.loader.LoadGPUWorkloadsByNode(ctx, s.cfg.KubeConfig, env)
-	if err != nil {
-		return failTool[listResult[models.GPUWorkload]]("load gpu workloads", err)
-	}
 	// No wrapper: GPUWorkload.Node (JSON `node`) already carries the
 	// group key. Wrapping would duplicate. Owners are resolved in place.
-	ds, warnings := s.tenantDataset(ctx, env)
-	ds.SetGPUWorkloadMap(grouped)
-	return jsonResult(flattenGrouped(ds.GPUWorkloadMap, in.Filter, in.Limit), warnings)
+	grouped, warnings, err := s.gpuWorkloads(ctx, s.envFor(in.envOverride))
+	if err != nil {
+		return nil, listResult[models.GPUWorkload]{}, err
+	}
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), warnings)
 }
 
 func (s *Server) handleListDACs(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.DedicatedAICluster], error) {
 	if in.Faulty {
 		return faultyGrouped(ctx, s, domain.DedicatedAICluster, in, func(ds *models.Dataset) map[string][]models.DedicatedAICluster { return ds.DedicatedAIClusterMap })
 	}
-	env := s.envFor(in.envOverride)
-	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, env)
+	grouped, warnings, err := s.dacs(ctx, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.DedicatedAICluster]]("load dedicated AI clusters", err)
+		return nil, listResult[models.DedicatedAICluster]{}, err
 	}
-	// No wrapper: each value carries its raw `tenantId`. Resolution
-	// re-keys by tenant name (so the filter matches it) and adds `owner`.
-	ds, warnings := s.tenantDataset(ctx, env)
-	ds.SetDedicatedAIClusterMap(grouped)
-	return jsonResult(flattenGrouped(ds.DedicatedAIClusterMap, in.Filter, in.Limit), warnings)
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), warnings)
 }
 
 func (s *Server) handleListInferenceServices(ctx context.Context, req *sdk.CallToolRequest, in faultyListInput) (*sdk.CallToolResult, listResult[models.InferenceService], error) {
 	if in.Faulty {
 		return faultyGrouped(ctx, s, domain.InferenceService, in, func(ds *models.Dataset) map[string][]models.InferenceService { return ds.InferenceServiceMap })
 	}
-	env := s.envFor(in.envOverride)
-	grouped, err := s.loader.LoadInferenceServices(ctx, s.cfg.KubeConfig, env)
-	if err != nil {
-		return failTool[listResult[models.InferenceService]]("load inference services", err)
-	}
 	// No wrapper: InferenceService.Namespace (JSON `namespace`) already
-	// carries the group key. Wrapping would duplicate. Owners are
-	// resolved in place.
-	ds, warnings := s.tenantDataset(ctx, env)
-	ds.SetInferenceServiceMap(grouped)
-	return jsonResult(flattenGrouped(ds.InferenceServiceMap, in.Filter, in.Limit), warnings)
+	// carries the group key. Owners are resolved in place.
+	grouped, warnings, err := s.inferenceServices(ctx, s.envFor(in.envOverride))
+	if err != nil {
+		return nil, listResult[models.InferenceService]{}, err
+	}
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), warnings)
 }
 
 func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Environment], error) {
@@ -374,13 +357,13 @@ func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallTo
 }
 
 func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ModelArtifact], error) {
-	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
-	if err != nil {
-		return failTool[listResult[models.ModelArtifact]]("load dataset", err)
-	}
 	// No wrapper: ModelArtifact.ModelName (JSON `model_name`) already
 	// carries the group key.
-	return jsonResult(flattenGrouped(dataset.ModelArtifactMap, in.Filter, in.Limit), nil)
+	grouped, err := s.modelArtifacts(ctx, s.envFor(in.envOverride))
+	if err != nil {
+		return nil, listResult[models.ModelArtifact]{}, err
+	}
+	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), nil)
 }
 
 func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
@@ -405,9 +388,9 @@ func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolReq
 }
 
 func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
-	grp, err := s.loader.LoadTenancyOverrideGroup(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
+	grp, err := s.tenancyGroup(ctx, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[any]]("load tenancy override group", err)
+		return nil, listResult[any]{}, err
 	}
 	switch in.Kind {
 	case "limit":

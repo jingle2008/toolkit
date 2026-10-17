@@ -37,25 +37,32 @@ func getItem(t *testing.T, args map[string]any) *sdk.CallToolResult {
 	return res
 }
 
-func TestGetItem_ExactName(t *testing.T) {
+// get_item answers as `toolkit get <category> <name>` does: one row; a
+// name groups share is refused with the candidates, and <group>/<name>
+// picks one.
+func TestGetItem_OneRow(t *testing.T) {
 	t.Parallel()
 	res := getItem(t, map[string]any{"category": "dac", "name": "dac-a"})
 	require.False(t, res.IsError, resultText(t, res))
-	sc := structured(t, res)
-	assert.InDelta(t, 1, sc["count"], 0)
-	assert.Equal(t, "dac-a", sc["items"].([]any)[0].(map[string]any)["name"]) //nolint:forcetypeassert // JSON
+	item, ok := structured(t, res)["item"].(map[string]any)
+	require.True(t, ok, "item is one object")
+	assert.Equal(t, "dac-a", item["name"])
 
-	// A name two namespaces share: both rows, told apart by namespace.
-	sc = structured(t, getItem(t, map[string]any{"category": "inferenceservice", "name": "svc"}))
-	assert.InDelta(t, 2, sc["count"], 0)
+	res = getItem(t, map[string]any{"category": "inferenceservice", "name": "svc"})
+	require.True(t, res.IsError, "a name two namespaces share")
+	assert.Contains(t, resultText(t, res), `2 InferenceService rows are named "svc": ns-a/svc, ns-b/svc; name one as <group>/<name>`)
+
+	res = getItem(t, map[string]any{"category": "inferenceservice", "name": "ns-b/svc"})
+	require.False(t, res.IsError, resultText(t, res))
+	assert.Equal(t, "ns-b", structured(t, res)["item"].(map[string]any)["namespace"]) //nolint:forcetypeassert // JSON
 
 	res = getItem(t, map[string]any{"category": "dac", "name": "dac"})
 	require.True(t, res.IsError, "a near-miss is not a match")
-	assert.Contains(t, resultText(t, res), `no DedicatedAICluster named "dac"`)
+	assert.Contains(t, resultText(t, res), `no DedicatedAICluster named "dac" (the name must match exactly`)
 }
 
-// Every category but Alias can be got by name, through its list tool:
-// listAll's switch must not fall through for any of them.
+// Every category but Alias can be got by name, from its groups or its
+// list tool: pickItem must not fall through for any of them.
 func TestGetItem_EveryCategory(t *testing.T) {
 	t.Parallel()
 	for _, c := range domain.Categories {

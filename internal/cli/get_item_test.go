@@ -64,22 +64,6 @@ func TestGetItem_NotFound(t *testing.T) {
 	require.ErrorContains(t, err, `no GPUNode named "node" (the name must match exactly`)
 }
 
-// A name shared across groups is ambiguous; <group>/<name> picks one.
-func TestPickGrouped_SharedName(t *testing.T) {
-	t.Parallel()
-	grouped := map[string][]models.InferenceService{
-		"ns-b": {{Name: "svc", Namespace: "ns-b"}},
-		"ns-a": {{Name: "svc", Namespace: "ns-a"}, {Name: "other", Namespace: "ns-a"}},
-	}
-	_, _, err := pickGrouped(domain.InferenceService, grouped, "svc")
-	require.EqualError(t, err, `2 InferenceService rows are named "svc": ns-a/svc, ns-b/svc; name one as <group>/<name>`)
-
-	group, it, err := pickGrouped(domain.InferenceService, grouped, "ns-b/svc")
-	require.NoError(t, err)
-	assert.Equal(t, "ns-b", group)
-	assert.Equal(t, "ns-b", it.Namespace)
-}
-
 //nolint:paralleltest // NewRootCmd uses cobra/viper global state
 func TestGetCmd_NameArgs(t *testing.T) {
 	_, err := runRootCmd(t, []string{"get", "alias", "tenant"}, "")
