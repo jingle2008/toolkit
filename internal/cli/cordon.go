@@ -8,6 +8,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -33,6 +34,10 @@ func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, verb string, u
 		dryRun bool
 		yes    bool
 	)
+	action := mutation.CordonNode
+	if !unschedulable {
+		action = mutation.UncordonNode
+	}
 	long := `Mark a Kubernetes node unschedulable. Existing pods stay
 where they are; new pods skip the node.
 
@@ -66,12 +71,10 @@ Examples:
 			return withMutationSetup(cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				out := cmd.OutOrStdout()
 				return runMutation(ctx, cmd.InOrStdin(), out, mutationPlan{
-					Action:  verb,
-					Kind:    "node",
-					Target:  nodeName,
-					Surface: "cli",
-					DryRun:  dryRun,
-					Yes:     yes,
+					Action: action,
+					Target: nodeName,
+					DryRun: dryRun,
+					Yes:    yes,
 				}, func(ctx context.Context) error {
 					changed, err := setCordonFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName, unschedulable)
 					if err != nil {

@@ -7,7 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 func TestConfirmAction(t *testing.T) {
@@ -46,7 +50,7 @@ func TestConfirmAction(t *testing.T) {
 
 func TestRunMutation_DryRun(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli", DryRun: true}
+	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1", DryRun: true}
 	called := false
 	var out bytes.Buffer
 	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
@@ -66,7 +70,7 @@ func TestRunMutation_DryRun(t *testing.T) {
 
 func TestRunMutation_YesSkipsPrompt(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli", Yes: true}
+	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1", Yes: true}
 	called := false
 	var out bytes.Buffer
 	// Stdin reader intentionally empty — Yes must not consume it.
@@ -90,7 +94,7 @@ func TestRunMutation_YesSkipsPrompt(t *testing.T) {
 
 func TestRunMutation_InteractiveBail(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli"}
+	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1"}
 	called := false
 	var out bytes.Buffer
 	err := runMutation(context.Background(), strings.NewReader("n\n"), &out, plan, func(context.Context) error {
@@ -113,7 +117,7 @@ func TestRunMutation_InteractiveBail(t *testing.T) {
 
 func TestRunMutation_InteractiveYes(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli"}
+	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1"}
 	called := false
 	var out bytes.Buffer
 	err := runMutation(context.Background(), strings.NewReader("y\n"), &out, plan, func(context.Context) error {
@@ -128,22 +132,21 @@ func TestRunMutation_InteractiveYes(t *testing.T) {
 	}
 }
 
-func TestRunMutation_RequireExplicitYes_NoPrompt(t *testing.T) {
+func TestRunMutation_Irreversible_NoPrompt(t *testing.T) {
 	t.Parallel()
 	plan := mutationPlan{
-		Action: "terminate", Kind: "node", Target: "n1",
-		Surface: "cli", RequireExplicitYes: true,
+		Action: mutation.TerminateNode, Target: "n1",
 	}
 	called := false
 	var out bytes.Buffer
-	// Stdin says "y" — should still fail because RequireExplicitYes
+	// Stdin says "y" — should still fail because an irreversible action
 	// blocks interactive consent.
 	err := runMutation(context.Background(), strings.NewReader("y\n"), &out, plan, func(context.Context) error {
 		called = true
 		return nil
 	})
 	if err == nil {
-		t.Fatal("expected error when RequireExplicitYes && !Yes")
+		t.Fatal("expected error when an irreversible action without --yes")
 	}
 	if !strings.Contains(err.Error(), "--yes") {
 		t.Errorf("error should mention --yes, got: %v", err)
@@ -153,11 +156,10 @@ func TestRunMutation_RequireExplicitYes_NoPrompt(t *testing.T) {
 	}
 }
 
-func TestRunMutation_RequireExplicitYes_PassesWithYes(t *testing.T) {
+func TestRunMutation_Irreversible_PassesWithYes(t *testing.T) {
 	t.Parallel()
 	plan := mutationPlan{
-		Action: "terminate", Kind: "node", Target: "n1",
-		Surface: "cli", RequireExplicitYes: true, Yes: true,
+		Action: mutation.TerminateNode, Target: "n1", Yes: true,
 	}
 	called := false
 	var out bytes.Buffer
@@ -169,13 +171,13 @@ func TestRunMutation_RequireExplicitYes_PassesWithYes(t *testing.T) {
 		t.Fatalf("runMutation: %v", err)
 	}
 	if !called {
-		t.Fatal("perform must run when both RequireExplicitYes and Yes are set")
+		t.Fatal("perform must run for an irreversible action with --yes")
 	}
 }
 
 func TestRunMutation_PerformError(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: "cordon", Kind: "node", Target: "n1", Surface: "cli", Yes: true}
+	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1", Yes: true}
 	want := errors.New("kube unreachable")
 	var out bytes.Buffer
 	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
@@ -226,4 +228,32 @@ func TestWithMutationSetup_InitLoggerError(t *testing.T) {
 	if !strings.Contains(err.Error(), "log-format") {
 		t.Errorf("error should mention log_format, got: %v", err)
 	}
+}
+
+// Every CLI mutation writes the shared audit record: begin, then done or
+// failed, from surface cli; a dry run writes one dry_run record.
+func TestRunMutation_Audits(t *testing.T) {
+	t.Parallel()
+	phases := func(plan mutationPlan, perform func(context.Context) error) []string {
+		sink := logging.NewRingSink(8)
+		ctx := logging.WithContext(context.Background(), sink)
+		_ = runMutation(ctx, strings.NewReader(""), &bytes.Buffer{}, plan, perform)
+		var got []string
+		for _, e := range sink.Snapshot() {
+			kv := map[any]any{}
+			for i := 0; i+1 < len(e.Fields); i += 2 {
+				kv[e.Fields[i]] = e.Fields[i+1]
+			}
+			if e.Message == "mutation" && kv["surface"] == "cli" && kv["action"] == plan.Action.Verb {
+				got = append(got, kv["phase"].(string)) //nolint:forcetypeassert // Audit writes a string
+			}
+		}
+		return got
+	}
+	ok := func(context.Context) error { return nil }
+	fail := func(context.Context) error { return errors.New("boom") }
+
+	assert.Equal(t, []string{"begin", "done"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true}, ok))
+	assert.Equal(t, []string{"begin", "failed"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true}, fail))
+	assert.Equal(t, []string{"dry_run"}, phases(mutationPlan{Action: mutation.TerminateNode, Target: "n1", DryRun: true}, ok))
 }

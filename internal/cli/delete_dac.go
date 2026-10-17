@@ -8,6 +8,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -46,13 +47,10 @@ deliberately disabled to prevent reflex "y" answers.`,
 			name := args[0]
 			return withMutationSetup(cfgFile, false, false, true, func(ctx context.Context, _ config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action:             "delete",
-					Kind:               "dac",
-					Target:             name,
-					Surface:            "cli",
-					DryRun:             dryRun,
-					Yes:                yes,
-					RequireExplicitYes: true,
+					Action: mutation.DeleteDAC,
+					Target: name,
+					DryRun: dryRun,
+					Yes:    yes,
 				}, func(ctx context.Context) error {
 					dac := &models.DedicatedAICluster{Name: name}
 					return deleteDACFn(ctx, dac, env, logging.FromContext(ctx))
@@ -109,13 +107,10 @@ be unique. Destructive: requires explicit --yes.`,
 				}
 				out := cmd.OutOrStdout()
 				return runMutation(ctx, cmd.InOrStdin(), out, mutationPlan{
-					Action:             outcome.Action(),
-					Kind:               "inference_service",
-					Target:             ns + "/" + name,
-					Surface:            "cli",
-					DryRun:             dryRun,
-					Yes:                yes,
-					RequireExplicitYes: true,
+					Action: mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized),
+					Target: ns + "/" + name,
+					DryRun: dryRun,
+					Yes:    yes,
 				}, func(ctx context.Context) error {
 					done, err := deleteOrphanISVCFn(ctx, cfg.KubeConfig, env.KubeContext(), ns, name)
 					if err == nil {
