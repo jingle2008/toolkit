@@ -8,6 +8,8 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/relations"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
 // noContextKeys are categories that intentionally have no per-category key
@@ -64,4 +66,19 @@ func TestCatContext_EveryCategoryAccountedFor(t *testing.T) {
 			"%s must be in exactly one of catContext / noContextKeys (hasKeys=%v excluded=%v)",
 			c, hasKeys, excluded)
 	}
+}
+
+// Ctrl+Z is bound on exactly the categories whose rows can be faulty, the
+// set `toolkit get --faulty` and MCP's faulty input accept too.
+func TestToggleFaulty_BoundOnFaultyCategories(t *testing.T) {
+	t.Parallel()
+	var bound []domain.Category
+	for c, byMode := range catContext {
+		for _, b := range byMode[common.ListView] {
+			if b.Help() == ToggleFaulty.Help() {
+				bound = append(bound, c)
+			}
+		}
+	}
+	assert.ElementsMatch(t, relations.FaultyCategories(), bound)
 }

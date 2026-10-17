@@ -231,6 +231,18 @@ toolkit doctor --relations -o json \
   | jq -r '.[] | select(.name == "relations: tenancy resolution") | .items[] | split(" → ")[1]' | sort -u
 ```
 
+To act on what the audit finds, list the faulty rows of one category as full objects — the rows the TUI's Ctrl+Z shows — and feed them to a mutation:
+
+```bash
+# Faulty endpoints: unready ones, and orphans whose DAC is gone
+toolkit get inferenceservice --faulty -o json | jq -r '.[] | "\(.namespace)/\(.name) ready=\(.ready)"'
+
+# Delete an orphan; the command refuses an endpoint whose DAC still exists
+toolkit delete inference-service <name> --namespace <namespace> -y
+```
+
+Over MCP the same pair is `check_integrity` (the audit) and `list_inference_services` with `faulty: true`.
+
 ### Compare two environments
 
 ```bash

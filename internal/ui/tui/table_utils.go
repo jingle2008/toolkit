@@ -34,18 +34,13 @@ var statsColumns = map[domain.Category][]string{
 type faultyGate func(group string, it models.Faulty) bool
 
 // faultyGateFor returns the Ctrl+Z test for category's rows, nil when
-// faultyOnly is off. A row is faulty when its own state is (IsFaulty) or
-// it names a parent row that doesn't exist — what `doctor --relations`
-// reports as FAIL (relations.DanglingRows). Tenancy gaps (doctor's WARN)
-// don't count.
+// faultyOnly is off: relations.FaultyRows, the test `toolkit get
+// --faulty` and MCP's faulty input apply too.
 func faultyGateFor(faultyOnly bool, ds *models.Dataset, category domain.Category) faultyGate {
 	if !faultyOnly {
 		return nil
 	}
-	dangling := relations.DanglingRows(ds, category)
-	return func(group string, it models.Faulty) bool {
-		return it.IsFaulty() || (dangling != nil && dangling(group, it))
-	}
+	return relations.FaultyRows(ds, category)
 }
 
 func headersFromSet[T any](cols []columns.Column[T]) []header {

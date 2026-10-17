@@ -629,6 +629,7 @@ func registerMutationTools(s *Server) {
 		Description: "Delete an orphaned OME InferenceService: a dedicated endpoint whose DAC no longer exists (doctor --relations reports it dangling)." +
 			" Refused for shared endpoints and for endpoints whose DAC exists (delete_dac owns those)." +
 			" An endpoint stuck deleting for over 10 minutes is force-deleted by removing its finalizer; summary says when a second call is needed." +
+			" Find candidates with list_inference_services faulty=true or check_integrity." +
 			" Omit namespace to search all namespaces; an ambiguous name is refused. DESTRUCTIVE." + mutationToolFooter + irreversibleFooter,
 	}, s.handleDeleteInferenceService)
 
