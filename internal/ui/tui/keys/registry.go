@@ -218,6 +218,11 @@ var (
 		key.WithKeys("C"),
 		key.WithHelp("<shift+c>", SortPrefix+common.ContextCol),
 	)
+	// SortStatus is a key binding for sorting by the "Status" column.
+	SortStatus = key.NewBinding(
+		key.WithKeys("S"),
+		key.WithHelp("<shift+s>", SortPrefix+common.StatusCol),
+	)
 	// SortSize is a key binding for sorting by the "Size" column.
 	SortSize = key.NewBinding(
 		key.WithKeys("S"),
@@ -283,7 +288,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortSize, SortContext, ToggleFaulty, Refresh},
 	},
 	domain.Tenant: {
-		common.ListView: {SortInternal, CopyTenant, ToggleFaulty},
+		common.ListView: {SortInternal, SortStatus, CopyTenant, ToggleFaulty},
 	},
 	domain.ConsolePropertyDefinition: {
 		common.ListView: {SortValue},

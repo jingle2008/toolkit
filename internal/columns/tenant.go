@@ -14,12 +14,16 @@ var TenantColumns = Set[models.Tenant]{Columns: []Column[models.Tenant]{
 		Render: func(t models.Tenant) string { return t.Name },
 	},
 	{
-		Title: "OCID", Key: "ocid", Ratio: 0.60, TruncateMiddle: true,
+		Title: "OCID", Key: "ocid", Ratio: 0.50, TruncateMiddle: true,
 		Render: func(t models.Tenant) string { return t.ID },
 	},
 	{
 		Title: "Internal", Key: "internal", Ratio: 0.10,
 		Render: func(t models.Tenant) string { return fmt.Sprint(t.IsInternal) },
+	},
+	{
+		Title: "Status", Key: "status", Ratio: 0.10,
+		Render: func(t models.Tenant) string { return t.Status },
 	},
 	{
 		Title: "Note", Key: "note", Ratio: 0.10,

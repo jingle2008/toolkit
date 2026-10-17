@@ -139,7 +139,7 @@ func getTenants(ids map[string]bool, tenantMeta []models.TenantMetadata) []model
 		byID[id] = models.Tenant{ID: id, Name: id, IsInternal: true}
 	}
 	for _, m := range tenantMeta {
-		t := models.Tenant{ID: m.ID, Name: m.ID, IsInternal: merge(true, m.IsInternal), Note: merge("", m.Note)}
+		t := models.Tenant{ID: m.ID, Name: m.ID, IsInternal: merge(true, m.IsInternal), Note: merge("", m.Note), Status: m.Status}
 		if m.Name != nil && *m.Name != "" {
 			t.Name = *m.Name
 		}

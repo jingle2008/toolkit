@@ -1,2 +1,2 @@
-NAME,OCID,INTERNAL,NOTE
-alpha,ocid1.tenancy.oc1..a,true,n/a
+NAME,OCID,INTERNAL,STATUS,NOTE
+alpha,ocid1.tenancy.oc1..a,true,,n/a

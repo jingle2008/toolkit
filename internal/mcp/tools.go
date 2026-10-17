@@ -50,7 +50,7 @@ func flattenSorted[T any](grouped map[string][]T) []T {
 func registerTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_tenants",
-		Description: "List tenants in the configured realm: one per tenancy OCID found in tenancy overrides or tenant metadata, named by its metadata name or, without one, by its OCID. Returns Tenant objects {name, id, is_internal, note}. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List tenants in the configured realm: one per tenancy OCID found in tenancy overrides or tenant metadata, named by its metadata name or, without one, by its OCID. Returns Tenant objects {name, id, is_internal, note, status}; `status` is the tenancy account state recorded by `toolkit tenant sync` (ACTIVE, DELETING, TERMINATED, ALWAYS_FREE_ONLY), omitted when unknown. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListTenants)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -65,7 +65,7 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_imported_models",
-		Description: "List tenant-imported models as a flat array (same shape as `list_dacs`); the owning tenant is preserved on each item as `tenantId`. When the tenancy is known to the repo's tenant list (the tenancies in tenancy overrides plus metadata), the item also carries `owner` ({name, id, is_internal, note}) and `filter` matches the tenant name; otherwise `owner` is omitted. Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label. Every item carries a non-empty `tenantId` — the label value, or `\"UNKNOWN_TENANCY\"` for orphans (namespaced CRs missing the label, treated as a config error). `namespace` (K8s scope) is orthogonal: empty for cluster-scoped CRs, non-empty for namespaced CRs; a namespaced CR may still carry an arbitrary `tenancy-id` label that the label authoritatively defines. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. A model copied into several namespaces (its `default` library copy plus copies made into DAC namespaces for serving) is one item: `namespace` is the primary copy (`default` when present) and `copies` lists the other namespaces. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List tenant-imported models as a flat array (same shape as `list_dacs`); the owning tenant is preserved on each item as `tenantId`. When the tenancy is known to the repo's tenant list (the tenancies in tenancy overrides plus metadata), the item also carries `owner` ({name, id, is_internal, note, status}) and `filter` matches the tenant name; otherwise `owner` is omitted. Sources: (1) ome.io BaseModel CRs across all namespaces (originating namespace on `namespace`); (2) ClusterBaseModel CRs carrying a `tenancy-id` label. Every item carries a non-empty `tenantId` — the label value, or `\"UNKNOWN_TENANCY\"` for orphans (namespaced CRs missing the label, treated as a config error). `namespace` (K8s scope) is orthogonal: empty for cluster-scoped CRs, non-empty for namespaced CRs; a namespaced CR may still carry an arbitrary `tenancy-id` label that the label authoritatively defines. All BaseModel fields (name, displayName, vendor, version, status, storageUri, …) are flattened at the top level. A model copied into several namespaces (its `default` library copy plus copies made into DAC namespaces for serving) is one item: `namespace` is the primary copy (`default` when present) and `copies` lists the other namespaces. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListImportedModels)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -80,17 +80,17 @@ func registerTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_gpu_workloads",
-		Description: "List GPU-consuming pods (workloads) across all nodes as a flat array. The hosting node is preserved on each item as `node`. Each item is {name, node, tenantId, namespace, model, runtime, gpus, mode}; model/runtime/mode are best-effort and blank for non-serving GPU pods. Items whose tenancy is known also carry `owner` ({name, id, is_internal, note}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+		Description: "List GPU-consuming pods (workloads) across all nodes as a flat array. The hosting node is preserved on each item as `node`. Each item is {name, node, tenantId, namespace, model, runtime, gpus, mode}; model/runtime/mode are best-effort and blank for non-serving GPU pods. Items whose tenancy is known also carry `owner` ({name, id, is_internal, note, status}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListGPUWorkloads)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_dacs",
-		Description: "List dedicated AI clusters as a flat array. The owning tenant is preserved on each item as `tenantId`. When the tenancy is known to the repo's tenant list (the tenancies in tenancy overrides plus metadata), the item also carries `owner` ({name, id, is_internal, note}) and `filter` matches the tenant name; otherwise `owner` is omitted. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+		Description: "List dedicated AI clusters as a flat array. The owning tenant is preserved on each item as `tenantId`. When the tenancy is known to the repo's tenant list (the tenancies in tenancy overrides plus metadata), the item also carries `owner` ({name, id, is_internal, note, status}) and `filter` matches the tenant name; otherwise `owner` is omitted. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListDACs)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_inference_services",
-		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the endpoint serves a tenant-imported model (a namespaced BaseModel ref, or a tenant-labelled ClusterBaseModel, whose name is an OCID resource id). `ready` is the Ready condition status (True/False/Unknown). Items whose tenancy is known also carry `owner` ({name, id, is_internal, note}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the endpoint serves a tenant-imported model (a namespaced BaseModel ref, or a tenant-labelled ClusterBaseModel, whose name is an OCID resource id). `ready` is the Ready condition status (True/False/Unknown). Items whose tenancy is known also carry `owner` ({name, id, is_internal, note, status}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListInferenceServices)
 
 	sdk.AddTool(s.server, &sdk.Tool{
