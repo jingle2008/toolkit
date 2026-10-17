@@ -35,6 +35,7 @@ func addGetCommand(rootCmd *cobra.Command, cfgFile *string) {
 		limit           int
 		selectedColumns string
 		relatedTo       string
+		faulty          bool
 	)
 	getCmd := &cobra.Command{
 		Use:   "get <category>",
@@ -53,6 +54,8 @@ Examples:
   toolkit get basemodel --columns help
   toolkit get gpuworkload --related-to dac/<dac-name>
   toolkit get inferenceservice --related-to servingruntime/<runtime> -o json
+  toolkit get gpunode --faulty
+  toolkit get inferenceservice --faulty -o json   # e.g. orphans to delete
 
 Category aliases match the TUI (e.g. "tenant"/"t", "gpunode"/"gn",
 "dac", "basemodel"/"bm"). Run with shell completion enabled to
@@ -61,7 +64,7 @@ discover them.`,
 		ValidArgsFunction: func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 			return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
 		},
-		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit, &selectedColumns, &relatedTo),
+		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit, &selectedColumns, &relatedTo, &faulty),
 	}
 	getCmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|jsonl|yaml|csv|tsv")
 	getCmd.Flags().BoolVar(&noHeaders, "no-headers", false, "omit header row (table/csv/tsv only)")
@@ -72,6 +75,10 @@ discover them.`,
 			"the same relations as the TUI's drill-in. The name matches the parent row's first column exactly (case-sensitive). "+
 			"Combines with --filter.")
 	_ = getCmd.RegisterFlagCompletionFunc("related-to", completeRelatedTo)
+	getCmd.Flags().BoolVar(&faulty, "faulty", false,
+		"only faulty rows, as the TUI's Ctrl+Z shows them: rows in a bad state (an unready endpoint, a pool short of its size, "+
+			"a deleting tenant, ...) or naming a parent row that doesn't exist (what doctor --relations reports). "+
+			"Loads every category, so it needs the cluster. Combines with --filter and --related-to.")
 	getCmd.Flags().StringVar(&selectedColumns, "columns", "",
 		"comma-separated column keys (table/csv/tsv only; default: all columns). Use --columns help to list valid keys.")
 	_ = getCmd.RegisterFlagCompletionFunc("output", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
@@ -103,7 +110,7 @@ discover them.`,
 // messages; splitting them into helpers would just shuffle state.
 //
 //nolint:cyclop // sequential CLI orchestration with one branch per failure mode
-func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int, selectedColumns, relatedTo *string) func(cmd *cobra.Command, args []string) error {
+func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int, selectedColumns, relatedTo *string, faulty *bool) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		cat, err := domain.ParseCategory(args[0])
 		if err != nil {
@@ -152,6 +159,11 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		if err := validateGetConfig(cfg, cat); err != nil {
 			return err
 		}
+		if *faulty {
+			if err := validateFaulty(cfg, cat); err != nil {
+				return err
+			}
+		}
 
 		// Honor the same log_format / log_level config keys the TUI uses so
 		// users who configured `log-format: json` for scripting actually get
@@ -175,6 +187,9 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		filter := strings.ToLower(strings.TrimSpace(cfg.Filter))
 		opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty}
 
+		if *faulty {
+			return emitFaulty(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, related, *limit, opts, selected)
+		}
 		return emitCategory(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, related, *limit, opts, selected)
 	}
 }
