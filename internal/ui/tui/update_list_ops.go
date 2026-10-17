@@ -7,8 +7,8 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -59,7 +59,7 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 		// after endpoint deletion but before the cluster delete completes.
 		ctx := m.longOpCtx()
 		err := audited(m.logger, mutation.DeleteDAC, dac.Name, func() error {
-			return actions.DeleteDedicatedAICluster(ctx, dac, env, m.logger)
+			return oci.DeleteDedicatedAICluster(ctx, dac, env, m.logger)
 		})
 		if err != nil {
 			return deleteErrMsg{
@@ -95,7 +95,7 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := audited(m.logger, mutation.TerminateNode, node.Name, func() error {
-			return actions.TerminateInstance(ctx, node, env, m.logger)
+			return oci.TerminateInstance(ctx, node, env, m.logger)
 		})
 		if err != nil {
 			return deleteErrMsg{
@@ -137,7 +137,7 @@ func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := audited(m.logger, mutation.RestartNode, node.Name, func() error {
-			return actions.SoftResetInstance(ctx, node, env, m.logger)
+			return oci.SoftResetInstance(ctx, node, env, m.logger)
 		})
 		return restartNodeResultMsg{key: itemKey, err: err, env: env}
 	}

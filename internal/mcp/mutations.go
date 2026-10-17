@@ -11,9 +11,9 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/resolve"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -28,10 +28,10 @@ var (
 	mcpStartDrainFn       = k8s.StartDrain
 	mcpAwaitDrainFn       = k8s.AwaitDrain
 	mcpDrainStatusFn      = k8s.GetDrainStatus
-	mcpSoftResetFn        = actions.SoftResetInstance
-	mcpTerminateFn        = actions.TerminateInstance
-	mcpIncreasePoolSizeFn = actions.IncreasePoolSize
-	mcpDeleteDACFn        = actions.DeleteDedicatedAICluster
+	mcpSoftResetFn        = oci.SoftResetInstance
+	mcpTerminateFn        = oci.TerminateInstance
+	mcpIncreasePoolSizeFn = oci.IncreasePoolSize
+	mcpDeleteDACFn        = oci.DeleteDedicatedAICluster
 	mcpResolveISVCFn      = k8s.ResolveInferenceService
 	mcpRestartISVCFn      = k8s.RestartInferenceService
 	mcpPlanOrphanISVCFn   = k8s.PlanOrphanInferenceServiceDelete

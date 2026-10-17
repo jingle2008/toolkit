@@ -4,9 +4,13 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 )
@@ -107,4 +111,37 @@ func TestDrainCmd_EchoesProgressOnStderr(t *testing.T) {
 	if strings.Contains(stdout.String(), "drain: started") {
 		t.Errorf("progress leaked onto stdout: %q", stdout.String())
 	}
+}
+
+// --status prints the recorded drain and drains nothing.
+func TestDrainCmd_Status(t *testing.T) {
+	stageMutationEnv(t)
+	defer swap(&drainNodeFn, func(context.Context, string, string, string) error {
+		t.Fatal("--status must not drain")
+		return nil
+	})()
+	defer swap(&drainStatusFn, func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+		return k8s.DrainStatus{Node: node, Remaining: []string{"ns/isvc-a"}}, nil
+	})()
+
+	out, err := runRootCmd(t, []string{"drain", "node-a", "--status", "-o", "json"}, "")
+	require.NoError(t, err)
+	var got map[string]any
+	require.NoError(t, json.Unmarshal([]byte(out), &got), out)
+	assert.Equal(t, "node-a", got["node"])
+	assert.Equal(t, []any{"ns/isvc-a"}, got["remaining"])
+
+	out, err = runRootCmd(t, []string{"drain", "node-a", "--status"}, "")
+	require.NoError(t, err)
+	assert.Contains(t, out, "node: node-a", "yaml by default")
+}
+
+func TestDrainCmd_StatusFlagErrors(t *testing.T) {
+	stageMutationEnv(t)
+	_, err := runRootCmd(t, []string{"drain", "node-a", "-o", "json"}, "")
+	require.ErrorContains(t, err, "-o applies only with --status")
+	_, err = runRootCmd(t, []string{"drain", "node-a", "--status", "-n"}, "")
+	require.ErrorContains(t, err, "--dry-run doesn't apply")
+	_, err = runRootCmd(t, []string{"drain", "node-a", "--status", "-o", "table"}, "")
+	require.ErrorContains(t, err, "--status prints yaml or json")
 }

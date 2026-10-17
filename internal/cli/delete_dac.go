@@ -8,15 +8,15 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // Seams tests use to fake the OCI call and the cluster calls.
 var (
-	deleteDACFn            = actions.DeleteDedicatedAICluster
+	deleteDACFn            = oci.DeleteDedicatedAICluster
 	planOrphanISVCDeleteFn = k8s.PlanOrphanInferenceServiceDelete
 	deleteOrphanISVCFn     = k8s.DeleteOrphanInferenceService
 )

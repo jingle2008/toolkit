@@ -3,12 +3,12 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 )
 
 // terminateInstanceFn is the seam tests use to fake the OCI call.
-var terminateInstanceFn = actions.TerminateInstance
+var terminateInstanceFn = oci.TerminateInstance
 
 func addTerminateCommand(rootCmd *cobra.Command, cfgFile *string) {
 	var (

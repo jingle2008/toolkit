@@ -319,7 +319,7 @@ Toolkit organises data into 22 categories:
 | **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode, or by DedicatedAICluster (the pods in its namespace). Pods serving a legacy `ome.oracle.com/v1alpha1` endpoint match `/legacy`; their runtime is a legacy one, so they aren't related to a ServingRuntime |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters; press `Enter` to see the inference services running on one |
 | **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty. Legacy `ome.oracle.com/v1alpha1` endpoints (on legacy DACs) are listed too and match `/legacy` |
-| **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty. `Enter` lists the inference services naming the runtime; with that scope active, `:gw` lists the pods running it, including endpoints whose runtime OME selected at deploy time (`y` opens details) |
+| **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty. The TUI's columns are a slimmer set than `toolkit get servingruntime`'s (see [Exporting Data](#exporting-data)). `Enter` lists the inference services naming the runtime; with that scope active, `:gw` lists the pods running it, including endpoints whose runtime OME selected at deploy time (`y` opens details) |
 
 ### Meta
 
@@ -575,7 +575,13 @@ things deliberately differ from what's on screen:
   on GPUWorkload / InferenceService), the CSV carries the fully-qualified OCID so the file is ready
   for downstream OCI tooling.
 
-`toolkit get <category> -o csv` produces the same bytes for the same filter.
+`toolkit get <category> -o csv` produces the same bytes for the same filter, with
+one deliberate exception: **ServingRuntime**. The TUI shows a slimmer set built for
+scanning placement and rollout — Name, Hardware (GPU families only), GPUs, Image,
+Status — and exports that. `toolkit get servingruntime` keeps the full set — Name,
+Hardware (`ac:`/`it:` constraint), Image, Size Range, CPU/Mem, GPUs, Auto-Select,
+Disabled — so scripts and `--columns` keys don't change underneath them. Size range
+and CPU/memory remain in the TUI's detail view (`y`).
 
 ---
 

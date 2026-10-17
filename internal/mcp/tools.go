@@ -8,9 +8,9 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/jingle2008/toolkit/internal/cli/output"
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -147,7 +147,7 @@ func registerTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_aliases",
 		Annotations: readOnly(),
-		Description: "Discovery tool. Lists each registered alias and its canonical category name. Useful for an agent that wants to confirm short codes before calling other tools.",
+		Description: "Discovery tool. Lists every category with the aliases it answers to, as {name, aliases} (the rows of `toolkit get alias`). Useful for an agent that wants to confirm short codes before calling other tools.",
 	}, s.handleListAliases)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -155,6 +155,12 @@ func registerTools(s *Server) {
 		Annotations: readOnly(),
 		Description: getItemDescription,
 	}, s.handleGetItem)
+
+	sdk.AddTool(s.server, &sdk.Tool{
+		Name:        "metrics_url",
+		Annotations: readOnly(),
+		Description: metricsDescription,
+	}, s.handleMetricsURL)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "check_integrity",
@@ -438,28 +444,12 @@ func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallT
 	}
 }
 
-// aliasItem is the MCP-specific shape for list_aliases: one entry per
-// alias. Distinct from `toolkit get alias -o json` which emits one
-// entry per category (canonical column set). Kept here for backward
-// compatibility with existing agent prompts.
-type aliasItem struct {
-	Alias    string `json:"alias"`
-	Category string `json:"category"`
-}
-
 // noInput is used by tools that take no arguments; the SDK requires
 // a concrete type even when the schema is empty.
 type noInput struct{}
 
-func (s *Server) handleListAliases(_ context.Context, _ *sdk.CallToolRequest, _ noInput) (*sdk.CallToolResult, listResult[aliasItem], error) {
-	items := make([]aliasItem, 0, len(domain.Aliases))
-	for _, a := range domain.Aliases {
-		cat, err := domain.ParseCategory(a)
-		if err != nil {
-			continue
-		}
-		items = append(items, aliasItem{Alias: a, Category: cat.String()})
-	}
-	sort.Slice(items, func(i, j int) bool { return items[i].Alias < items[j].Alias })
-	return jsonResult(items, nil)
+// handleListAliases lists every category with its aliases — the rows of
+// `toolkit get alias` and the TUI's Alias view (domain.AliasEntries).
+func (s *Server) handleListAliases(_ context.Context, _ *sdk.CallToolRequest, _ noInput) (*sdk.CallToolResult, listResult[domain.AliasEntry], error) {
+	return jsonResult(domain.AliasEntries(), nil)
 }

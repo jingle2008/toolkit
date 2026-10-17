@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -351,6 +352,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 		"list_aliases",
 		"check_integrity",
 		"get_item",
+		"metrics_url",
 		"get_drain_status",
 		// Mutation tools (all gated on confirm=true; see mutations.go).
 		"cordon_node",
@@ -382,18 +384,19 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 
 	var envelope struct {
 		Items []struct {
-			Alias    string `json:"alias"`
-			Category string `json:"category"`
+			Name    string   `json:"name"`
+			Aliases []string `json:"aliases"`
 		} `json:"items"`
 		Count    int      `json:"count"`
 		Warnings []string `json:"warnings,omitempty"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(textBlock.Text), &envelope), "envelope is valid JSON")
 	assert.Equal(t, envelope.Count, len(envelope.Items), "count must match items length")
-	assert.NotEmpty(t, envelope.Items, "list_aliases should return at least one alias")
+	// One row per category with its aliases, as `toolkit get alias`.
+	assert.Len(t, envelope.Items, len(domain.AliasEntries()))
 	for _, it := range envelope.Items {
-		assert.NotEmpty(t, it.Alias)
-		assert.NotEmpty(t, it.Category)
+		assert.NotEmpty(t, it.Name)
+		assert.NotEmpty(t, it.Aliases)
 	}
 
 	// Modern MCP clients prefer StructuredContent. Verify the SDK
@@ -405,8 +408,8 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 	require.NoError(t, err)
 	var scEnvelope struct {
 		Items []struct {
-			Alias    string `json:"alias"`
-			Category string `json:"category"`
+			Name    string   `json:"name"`
+			Aliases []string `json:"aliases"`
 		} `json:"items"`
 		Count int `json:"count"`
 	}

@@ -14,8 +14,8 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -23,7 +23,7 @@ import (
 // Seam variables — tests in this package swap them to avoid touching
 // a live cluster or OCI tenancy. Each defaults to the real upstream.
 var (
-	populateGPUPoolsFn          = actions.PopulateGPUPools
+	populateGPUPoolsFn          = oci.PopulateGPUPools
 	newClientsetFromKubeFn      = k8s.NewClientsetFromKubeConfig
 	listGPUNodesByCompartmentFn = k8s.ListGPUNodes
 )

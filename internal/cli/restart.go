@@ -7,8 +7,8 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -17,7 +17,7 @@ import (
 var (
 	resolveInferenceServiceFn = k8s.ResolveInferenceService
 	restartInferenceServiceFn = k8s.RestartInferenceService
-	softResetInstanceFn       = actions.SoftResetInstance
+	softResetInstanceFn       = oci.SoftResetInstance
 )
 
 // addRestartCommand wires `toolkit restart node <node>` and

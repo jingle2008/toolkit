@@ -1,4 +1,4 @@
-package actions
+package oci
 
 import (
 	"context"
@@ -7,17 +7,16 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 
-	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 var (
 	newComputeClient func(models.Environment) (computeClient, error) = func(env models.Environment) (computeClient, error) {
-		return oci.NewComputeClient(env)
+		return NewComputeClient(env)
 	}
 	newComputeMgmtClient func(models.Environment) (computeMgmtClient, error) = func(env models.Environment) (computeMgmtClient, error) {
-		return oci.NewComputeManagementClient(env)
+		return NewComputeManagementClient(env)
 	}
 )
 

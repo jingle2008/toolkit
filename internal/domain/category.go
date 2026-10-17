@@ -242,3 +242,22 @@ func ParseCategory(s string) (Category, error) {
 	}
 	return CategoryUnknown, fmt.Errorf("parse category %q: %w", s, ErrUnknownCategory)
 }
+
+// AliasEntry is one category and the names it answers to: a row of `toolkit
+// get alias`, of MCP's list_aliases, and of the TUI's Alias view.
+type AliasEntry struct {
+	Name    string   `json:"name"`
+	Aliases []string `json:"aliases"`
+}
+
+// AliasEntries lists every category with its aliases, in category order.
+func AliasEntries() []AliasEntry {
+	out := make([]AliasEntry, 0, len(Categories))
+	for _, c := range Categories {
+		if c == CategoryUnknown {
+			continue
+		}
+		out = append(out, AliasEntry{Name: c.String(), Aliases: c.Aliases()})
+	}
+	return out
+}

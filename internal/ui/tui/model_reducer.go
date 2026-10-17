@@ -14,8 +14,8 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/resolve"
-	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -67,7 +67,7 @@ func (m *Model) updateGPUPoolState() tea.Cmd {
 		defer cancel()
 		compartmentID, err := lookupCompartmentID(ctx, known, kubeConfig, env)
 		if err == nil {
-			err = actions.PopulateGPUPools(ctx, pools, env, compartmentID)
+			err = oci.PopulateGPUPools(ctx, pools, env, compartmentID)
 		}
 		return updateDoneMsg{err: err, category: domain.GPUPool, env: env, pools: pools}
 	}
