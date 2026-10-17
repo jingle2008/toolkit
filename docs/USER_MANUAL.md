@@ -267,7 +267,8 @@ node, an InferenceService's DAC), so going up is `o`, `Enter`. A target that
 is known not to exist is left out (e.g. a shared-catalog endpoint's model is
 offered as a BaseModel, not an ImportedModel).
 
-`g` / `Home` and `G` / `End` move to the first and last row.
+`g` / `Home` moves to the first row and `End` to the last (`G` is Sort GPUs
+on the categories that have it).
 
 ---
 

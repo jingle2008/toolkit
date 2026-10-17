@@ -137,6 +137,10 @@ func (m *Model) interceptToggleLog(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	if m.viewMode != common.ListView && m.viewMode != common.DetailsView {
 		return m, nil, false
 	}
+	// A backtick typed into the filter or alias input is text.
+	if m.viewMode == common.ListView && m.inputMode != common.NormalInput {
+		return m, nil, false
+	}
 	m.log.returnView = m.viewMode
 	m.viewMode = common.LogView
 	return m, logTickCmd(), true
