@@ -402,14 +402,14 @@ func (m *Model) editTenantView() string {
 	p := m.theme.Palette
 	marker := func(i int) string {
 		if f.focus == i {
-			return lipgloss.NewStyle().Foreground(p.Primary).Render("▌ ")
+			return lipgloss.NewStyle().Foreground(p.Accent).Render("▌ ")
 		}
 		return "  "
 	}
 	label := lipgloss.NewStyle().Foreground(p.Muted).Width(10)
 	radio := func(on bool, text string) string {
 		if on {
-			return lipgloss.NewStyle().Foreground(p.Primary).Render("(•)") + " " + text
+			return lipgloss.NewStyle().Foreground(p.Accent).Render("(•)") + " " + text
 		}
 		return "( ) " + text
 	}
@@ -432,7 +432,7 @@ func (m *Model) editTenantView() string {
 		marker(focusNote) + label.Render("Note") + f.note.View(),
 	}
 	hints := "tab/enter next · space toggle · ^s save · esc cancel"
-	return m.modal("Set tenant info", strings.Join(lines, "\n"), hints, p.Focus, width)
+	return m.modal("Set tenant info", strings.Join(lines, "\n"), hints, p.Accent, width)
 }
 
 // metadataPath returns the configured metadata file path for display,

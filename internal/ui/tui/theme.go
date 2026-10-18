@@ -3,6 +3,7 @@ package tui
 import (
 	"image/color"
 
+	"charm.land/bubbles/v2/filepicker"
 	"charm.land/bubbles/v2/table"
 	"charm.land/lipgloss/v2"
 
@@ -11,35 +12,31 @@ import (
 
 // Palette names the TUI's colors by role. Views take colors from roles,
 // never literals, so a light terminal or a retune changes them in one
-// place.
+// place. Each hue has one meaning:
 //
-// A role drawn as text and one drawn as a fill behind OnAccent text need
-// different shades on a dark background — a color bright enough to read
-// as text is too bright to carry white text — so the *Fill roles hold
-// the fills. Every text role reaches 4.5:1 on common terminal
-// backgrounds and every fill 4.5:1 under OnAccent (TestPalette_Contrast).
+//   - Primary (orange) marks a key you can press, and nothing else.
+//   - Accent marks focus: modal borders, cursors, the selection marker,
+//     matched text, the spinner.
+//   - Success, Warn and Danger are status; Danger's fill (DangerFill) is
+//     reserved for production and irreversible actions.
+//   - Selection is the selected row's background: a quiet tint, so the
+//     status colors stay readable on it.
+//
+// Every text role reaches 4.5:1 on common terminal backgrounds and on
+// Selection, and every fill 4.5:1 under its text (TestPalette_Contrast).
 type Palette struct {
-	Primary   color.Color // keys, info labels, section headers
-	Accent    color.Color // spinner, logo bottom
-	Secondary color.Color // breadcrumb chips
-	Text      color.Color // body text
-	OnAccent  color.Color // text on the *Fill roles
-	Muted     color.Color // hints, debug lines, dim text
-	Border    color.Color // unfocused borders, separators
-	Focus     color.Color // modal and details borders
-	Surface   color.Color // status bar fill
-	OnSurface color.Color // status bar text
-	Success   color.Color // LIVE, ready
-	Warn      color.Color // warnings, paused log
-	OnWarn    color.Color // text on Warn fills
-	Danger    color.Color // errors, irreversible actions, faulty
-	Info      color.Color // info toasts, help keys
-
-	AccentFill    color.Color // selected row, context chip
-	SecondaryFill color.Color // stats chip, picker badges
-	SuccessFill   color.Color // LIVE
-	DangerFill    color.Color // PROD badge, irreversible confirm button
-	InfoFill      color.Color // following log
+	Primary    color.Color // keys
+	Accent     color.Color // focus: modal borders, cursors, selection marker, matches
+	Text       color.Color // body text, titles
+	Muted      color.Color // hints, labels, dim text
+	Border     color.Color // panel borders, separators
+	Selection  color.Color // the selected row's background
+	Success    color.Color // healthy status, LIVE
+	Warn       color.Color // transitional status, warnings, paused log
+	OnWarn     color.Color // text on a Warn fill (the focused recoverable button)
+	Danger     color.Color // failed status, errors
+	DangerFill color.Color // PROD, PRODUCTION, the focused irreversible button
+	OnAccent   color.Color // text on DangerFill
 }
 
 // NewPalette returns the role colors for a dark (isDark) or light
@@ -49,27 +46,18 @@ func NewPalette(isDark bool) Palette {
 		return lipgloss.LightDark(isDark)(lipgloss.Color(light), lipgloss.Color(dark))
 	}
 	return Palette{
-		Primary:   c("#B54D00", "#FF8700"),
-		Accent:    c("#D7005F", "#FF5F87"),
-		Secondary: c("#8700AF", "#BC8CFF"),
-		Text:      c("#262626", "#E4E4E4"),
-		OnAccent:  c("#FFFDF5", "#FFFDF5"),
-		Muted:     c("#6C6C6C", "#9E9E9E"),
-		Border:    c("#BCBCBC", "#585858"),
-		Focus:     c("#5F5FAF", "#8787FF"),
-		Surface:   c("#D9DCCF", "#353533"),
-		OnSurface: c("#343433", "#C1C6B2"),
-		Success:   c("#1A7F37", "#3FB950"),
-		Warn:      c("#8A5A00", "#FFAF00"),
-		OnWarn:    c("#FFFDF5", "#000000"),
-		Danger:    c("#CF222E", "#FF6B6B"),
-		Info:      c("#0969DA", "#58A6FF"),
-
-		AccentFill:    c("#D7005F", "#C2185B"),
-		SecondaryFill: c("#8700AF", "#8250DF"),
-		SuccessFill:   c("#1A7F37", "#238636"),
-		DangerFill:    c("#CF222E", "#D70000"),
-		InfoFill:      c("#0969DA", "#1F6FEB"),
+		Primary:    c("#A04400", "#FF8F1A"),
+		Accent:     c("#5252A3", "#A3A3FF"),
+		Text:       c("#262626", "#E4E4E4"),
+		Muted:      c("#5C5C5C", "#ADADAD"),
+		Border:     c("#BCBCBC", "#585858"),
+		Selection:  c("#DCE8F7", "#203A5C"),
+		Success:    c("#166B2E", "#4CC85C"),
+		Warn:       c("#7A5000", "#FFAF00"),
+		OnWarn:     c("#FFFDF5", "#000000"),
+		Danger:     c("#B71C26", "#FF8080"),
+		DangerFill: c("#CF222E", "#D70000"),
+		OnAccent:   c("#FFFDF5", "#FFFDF5"),
 	}
 }
 
@@ -82,8 +70,8 @@ type Styles struct {
 	// support): focus is drawn in reverse video, since its fills vanish.
 	Monochrome bool
 
-	// Frame chips: the breadcrumb's category path and row stats, and the
-	// env bar's LIVE marker and production badge.
+	// Frame text: the breadcrumb's category path and row stats, the env
+	// bar's LIVE marker, and the production badge — the frame's one fill.
 	Context lipgloss.Style
 	Stats   lipgloss.Style
 	Live    lipgloss.Style
@@ -103,7 +91,7 @@ type Styles struct {
 	Viewport lipgloss.Style
 	Spinner  lipgloss.Style
 
-	// Log overlay: title bar by state, hint line, and entry colors.
+	// Log: the state chip (following, paused), hint line, entry colors.
 	LogFollowing lipgloss.Style
 	LogPaused    lipgloss.Style
 	LogHint      lipgloss.Style
@@ -117,11 +105,7 @@ type Styles struct {
 func DefaultStyles(isDark bool) Styles {
 	p := NewPalette(isDark)
 	fg := func(c color.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c) }
-	fill := func(bg, text color.Color) lipgloss.Style {
-		return lipgloss.NewStyle().Background(bg).Foreground(text)
-	}
-
-	chip := fg(p.OnAccent).Padding(0, 1)
+	pad := lipgloss.NewStyle().Padding(0, 1)
 
 	tbl := table.DefaultStyles()
 	tbl.Header = tbl.Header.
@@ -129,33 +113,30 @@ func DefaultStyles(isDark bool) Styles {
 		BorderForeground(p.Border).
 		BorderBottom(true).
 		Bold(true)
-	tbl.Selected = tbl.Selected.
-		Foreground(p.OnAccent).
-		Background(p.AccentFill).
-		Bold(true)
-
-	logBar := lipgloss.NewStyle().Bold(true)
+	// No foreground: cells keep their own colors (statuses, dashes) and
+	// the rest the terminal's text color, all readable on Selection.
+	tbl.Selected = lipgloss.NewStyle().Background(p.Selection).Bold(true)
 
 	return Styles{
 		Palette: p,
 
-		Context:    chip.Background(p.AccentFill).Bold(true),
-		Stats:      chip.Background(p.SecondaryFill).Align(lipgloss.Right),
-		Live:       chip.Background(p.SuccessFill).Bold(true),
-		Prod:       chip.Background(p.DangerFill).Bold(true),
+		Context:    pad.Foreground(p.Text).Bold(true),
+		Stats:      pad.Foreground(p.Muted).Align(lipgloss.Right),
+		Live:       pad.Foreground(p.Success).Bold(true),
+		Prod:       pad.Background(p.DangerFill).Foreground(p.OnAccent).Bold(true),
 		LogoTop:    toRGB(p.Primary),
 		LogoBottom: toRGB(p.Accent),
 
-		HelpHeader: fg(p.Primary).Underline(true),
-		HelpKey:    fg(p.Info),
+		HelpHeader: lipgloss.NewStyle().Foreground(p.Text).Bold(true),
+		HelpKey:    fg(p.Primary),
 		HelpDesc:   lipgloss.NewStyle(),
 
 		Table:    tbl,
 		Viewport: lipgloss.NewStyle(), // the frame's panel draws the border
 		Spinner:  fg(p.Accent),
 
-		LogFollowing: logBar.Inherit(fill(p.InfoFill, p.OnAccent)),
-		LogPaused:    logBar.Inherit(fill(p.Warn, p.OnWarn)),
+		LogFollowing: fg(p.Accent).Bold(true),
+		LogPaused:    fg(p.Warn).Bold(true),
 		LogHint:      fg(p.Muted),
 		LogWarn:      fg(p.Warn),
 		LogError:     fg(p.Danger),
@@ -170,6 +151,25 @@ func (s Styles) monochrome() Styles {
 	s.Monochrome = true
 	s.Table.Selected = lipgloss.NewStyle().Bold(true).Reverse(true)
 	return s
+}
+
+// pickerStyles themes the export folder list, which otherwise draws in
+// the filepicker's own pink and purple: folders in Text, the highlighted
+// one and its cursor in Accent, files and details Muted.
+func pickerStyles(st filepicker.Styles, p Palette) filepicker.Styles {
+	fg := func(c color.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c) }
+	st.Cursor = fg(p.Accent)
+	st.Selected = fg(p.Accent).Bold(true)
+	st.Directory = fg(p.Text)
+	st.File = fg(p.Muted)
+	st.Symlink = fg(p.Muted)
+	st.DisabledCursor = fg(p.Muted)
+	st.DisabledFile = fg(p.Muted)
+	st.DisabledSelected = fg(p.Muted)
+	st.Permission = fg(p.Muted)
+	st.FileSize = fg(p.Muted)
+	st.EmptyDirectory = st.EmptyDirectory.Foreground(p.Muted)
+	return st
 }
 
 // toRGB converts c to the logo's 24-bit color.

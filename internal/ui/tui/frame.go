@@ -30,7 +30,7 @@ func (m *Model) centered(msg string) string {
 // key hints.
 func (m *Model) frame(title, main string) string {
 	p := m.theme.Palette
-	titleStyle := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
+	titleStyle := lipgloss.NewStyle().Foreground(p.Text).Bold(true)
 	statusStyle := lipgloss.NewStyle().Foreground(p.Muted)
 	status := m.positionText()
 	var panel string
@@ -220,7 +220,7 @@ func (m *Model) detailPosition() string {
 // navigation history, and a pending prefix key.
 func (m *Model) breadcrumbChips() string {
 	p := m.theme.Palette
-	chip := lipgloss.NewStyle().Foreground(p.Secondary)
+	chip := lipgloss.NewStyle().Foreground(p.Accent)
 	var chips []string
 	if m.filter != "" {
 		chips = append(chips, chip.Render("⟨/"+m.filter+"⟩"))

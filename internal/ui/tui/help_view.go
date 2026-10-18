@@ -101,17 +101,48 @@ func sentenceCase(bind []key.Binding) []key.Binding {
 // helpLines lays the sections out in as many columns (up to three) as the
 // modal's width allows and returns the resulting body lines.
 func (m *Model) helpLines() []string {
+	columns, secW, _ := m.helpColumns()
+	return joinHelpColumns(columns, secW)
+}
+
+// helpColumns packs the sections into columns, returning them with their
+// width and the set of section-title lines.
+func (m *Model) helpColumns() (columns [][]string, secW int, titles map[string]bool) {
 	secs := m.helpSections()
-	secW := 0
+	titles = make(map[string]bool, len(secs))
 	for _, sec := range secs {
+		titles[sec[0]] = true
 		for _, l := range sec {
 			secW = max(secW, lipgloss.Width(l))
 		}
 	}
 	inner := m.viewWidth*9/10 - 4 // modal border and padding
 	cols := min(max((inner+helpColGap)/(secW+helpColGap), 1), helpMaxColumn)
-	columns := packColumns(secs, cols)
+	return packColumns(secs, cols), secW, titles
+}
 
+// helpWindowLines is the help body scrolled to off, rows lines tall. A
+// section title that would be the window's last line — its keys below it,
+// out of view — is left for the next page, so no title shows alone.
+func (m *Model) helpWindowLines(off, rows int) []string {
+	columns, secW, titles := m.helpColumns()
+	window := make([][]string, len(columns))
+	for i, col := range columns {
+		lo, hi := min(off, len(col)), min(off+rows, len(col))
+		window[i] = slices.Clone(col[lo:hi])
+		if n := len(window[i]); n == rows && titles[window[i][n-1]] {
+			window[i][n-1] = ""
+		}
+	}
+	lines := joinHelpColumns(window, secW)
+	for len(lines) < rows {
+		lines = append(lines, "")
+	}
+	return lines[:rows]
+}
+
+// joinHelpColumns sets columns side by side, each secW wide.
+func joinHelpColumns(columns [][]string, secW int) []string {
 	pad := lipgloss.NewStyle().Width(secW)
 	parts := make([]string, 0, 2*len(columns))
 	for i, col := range columns {
@@ -174,7 +205,11 @@ func (m *Model) fullHelpView() string {
 	}
 	rows, maxScroll := m.helpWindow(len(lines))
 	off := min(max(m.helpScroll, 0), maxScroll)
-	body := m.helpHead(strings.Join(lines[off:off+rows], "\n"), len(lines), maxScroll)
+	window := lines[off : off+rows]
+	if !filtering || len(m.helpSections()) > 0 {
+		window = m.helpWindowLines(off, rows)
+	}
+	body := m.helpHead(strings.Join(window, "\n"), len(lines), maxScroll)
 	hints := m.helpHints(maxScroll)
 	if maxScroll > 0 {
 		var where string
@@ -188,7 +223,7 @@ func (m *Model) fullHelpView() string {
 		}
 		body += "\n" + muted.Render(fmt.Sprintf("%s · %d%%", where, off*100/maxScroll))
 	}
-	return m.modal("Keys · "+m.lastViewMode.String()+" view", body, hints, p.Focus, 0)
+	return m.modal("Keys · "+m.lastViewMode.String()+" view", body, hints, p.Accent, 0)
 }
 
 // helpHead tops body with the filter input or chip, or, unfiltered, the
@@ -198,7 +233,7 @@ func (m *Model) helpHead(body string, lines, maxScroll int) string {
 	case m.helpTyping:
 		return m.helpInput.View() + "\n\n" + body
 	case m.helpFilter != "":
-		return lipgloss.NewStyle().Foreground(m.theme.Palette.Secondary).Render("⟨/"+m.helpFilter+"⟩") + "\n\n" + body
+		return lipgloss.NewStyle().Foreground(m.theme.Palette.Accent).Render("⟨/"+m.helpFilter+"⟩") + "\n\n" + body
 	}
 	if logoH := lipgloss.Height(view.Logo) + 1; maxScroll == 0 && lines+logoH <= m.modalMaxBody() {
 		logo := view.RenderLogo(m.theme.LogoTop, m.theme.LogoBottom)

@@ -58,7 +58,7 @@ func (m *Model) previewPanel(height int) string {
 		lines = append(lines, "")
 	}
 	return view.Box(title, strings.Join(lines, "\n"), p.Border,
-		lipgloss.NewStyle().Foreground(p.Primary).Bold(true), width)
+		lipgloss.NewStyle().Foreground(p.Text).Bold(true), width)
 }
 
 // previewBody is the selected item's fields, width columns wide: one
@@ -92,6 +92,6 @@ func (m *Model) fieldStyles() fieldStyles {
 	p := m.theme.Palette
 	return fieldStyles{
 		label:   lipgloss.NewStyle().Foreground(p.Muted),
-		section: lipgloss.NewStyle().Foreground(p.Primary).Bold(true),
+		section: lipgloss.NewStyle().Foreground(p.Text).Bold(true),
 	}
 }

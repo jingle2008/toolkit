@@ -5,6 +5,7 @@ package tui
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -68,8 +69,8 @@ func (m *Model) updateContentAsync() tea.Cmd {
 		if err != nil {
 			content = err.Error()
 		}
-		str, err := renderer.RenderJSON(content, width)
-		return detailContentRenderedMsg{Content: str, Err: err, Gen: gen}
+		str, err := renderer.RenderJSON(content, max(width-2, 1))
+		return detailContentRenderedMsg{Content: indentLines(str, " "), Err: err, Gen: gen} // the fields layout's margin
 	}
 }
 
@@ -176,10 +177,10 @@ func (m *Model) viewportBinding() []key.Binding {
 // listBody is the table, or, when it has no rows, its header over a
 // message saying why it is empty and what to do about it.
 func (m *Model) listBody() string {
-	body := m.table.View()
 	if len(m.table.Rows()) > 0 {
-		return body
+		return m.markedTableView()
 	}
+	body := m.table.View()
 	lines := strings.Split(body, "\n")
 	const header = 2 // column titles and their rule
 	// A table too short for any row below its header has no room for the
@@ -192,6 +193,39 @@ func (m *Model) listBody() string {
 		Render(truncateString(m.emptyMessage(), max(width, 1)))
 	lines[header+(len(lines)-header)/3] = lipgloss.PlaceHorizontal(width, lipgloss.Center, msg)
 	return strings.Join(lines, "\n")
+}
+
+// selectionMarker sits in the selected row's left padding, in Accent, so
+// the selection reads at a glance on its quiet Selection tint.
+const selectionMarker = "▌"
+
+// rowTag is a zero-width mark set before the selected row's first cell so
+// its padding can be found in the rendered table.
+const rowTag = "\u200b"
+
+// taggedPad matches the padding before rowTag, with any styling between.
+var taggedPad = regexp.MustCompile(" ((?:\x1b\\[[0-9;:]*m)*)" + rowTag)
+
+// markedTableView is the table with the selection marker in the selected
+// row's left padding cell, so the row's text stays aligned with the rest.
+func (m *Model) markedTableView() string {
+	rows, c := m.table.Rows(), m.table.Cursor()
+	if c < 0 || c >= len(rows) || len(rows[c]) == 0 {
+		return m.table.View()
+	}
+	marker := selectionMarker
+	if a := m.theme.Palette.Accent; a != nil {
+		marker = fgSeq(a) + selectionMarker + "\x1b[39m"
+	}
+	// The table renders its visible rows ahead of View, so re-render with
+	// the tag, then again without it to leave the table as it was.
+	saved := rows[c][0]
+	rows[c][0] = rowTag + saved
+	m.table.UpdateViewport()
+	view := m.table.View()
+	rows[c][0] = saved
+	m.table.UpdateViewport()
+	return taggedPad.ReplaceAllString(view, marker+"$1")
 }
 
 // emptyMessage says why the list has no rows: still loading, the filter

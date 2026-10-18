@@ -122,7 +122,7 @@ func (m *Model) logView() string {
 		m.log.viewport.GotoBottom()
 	}
 
-	titleStyle := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
+	titleStyle := lipgloss.NewStyle().Foreground(p.Text).Bold(true)
 	status := fmt.Sprintf("%d entries", total)
 	if shown < total {
 		status = fmt.Sprintf("%d of %d", shown, total)
@@ -150,7 +150,7 @@ func (m *Model) logCrumb() string {
 		ti.SetWidth(max(m.viewWidth-w(left)-w(ti.Prompt)-2, 0))
 		middle = " " + ti.View()
 	} else {
-		chip := lipgloss.NewStyle().Foreground(m.theme.Palette.Secondary)
+		chip := lipgloss.NewStyle().Foreground(m.theme.Palette.Accent)
 		if m.log.minLevel > logging.LevelDebug {
 			middle += " " + chip.Render("⟨≥"+strings.ToLower(levelLabel(m.log.minLevel))+"⟩")
 		}

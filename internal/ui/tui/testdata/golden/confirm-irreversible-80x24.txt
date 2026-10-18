@@ -3,7 +3,7 @@
 ╭─ 1 column hidden ────────────────────────────────────────────────────────────╮
 │ Name ↑      Tenant  Inter…  Usage  Type         Mod…  Shape/P…  Size  Status │
 │──────────────────────────────────────────────────────────────────────────────│
-│ dac-alpha   acme    false   75%    Hosting      —     A100_80G  4     Active │
+│▌dac-alpha   acme    false   75%    Hosting      —     A100_80G  4     Active │
 │ dac-orphan╭─ ⚠ Delete DAC ───────────────────────────────────────╮    Active │
 │ dac-日本語│ Kind     DedicatedAICluster                          │    Failed │
 │           │ Name     dac-alpha                                   │           │

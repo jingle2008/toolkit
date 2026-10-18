@@ -3,7 +3,7 @@
 ╭─ 1 column hidden ────────────────────────────────────────────────────────────╮
 │ Name ↑    ╭─ Go to ─────────────────────────────────────────────╮ize  Status │
 │───────────│ filter: █                                           │────────────│
-│ dac-alpha │                                                     │     Active │
+│▌dac-alpha │                                                     │     Active │
 │ dac-orphan│ ▸  Tenant   row-00                                  │     Active │
 │ dac-日本語│    Tenant   row-01                                  │     Failed │
 │           │    Tenant   row-02                                  │            │

@@ -157,7 +157,7 @@ func (m *Model) renderToast(width int) string {
 // maxErrorLines, with how to dismiss it and where its details are.
 func (m *Model) toastBox(t toastState, width int) string {
 	p := m.theme.Palette
-	border, title := p.Info, "Info"
+	border, title := p.Accent, "Info"
 	switch t.sev {
 	case toastError:
 		border, title = p.Danger, "✗ Error"

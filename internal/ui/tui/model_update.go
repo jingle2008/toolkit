@@ -14,6 +14,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
 /*
@@ -44,7 +45,11 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.BackgroundColorMsg:
 		m.lightBg = !msg.IsDark()
 		setStyles(m, DefaultStyles(msg.IsDark()))
-		return m, nil
+		if r, ok := m.renderer.(view.ProductionRenderer); ok {
+			r.Light = m.lightBg // the JSON view follows the background
+			m.renderer = r
+		}
+		return m, m.updateContentAsync()
 	case tea.ColorProfileMsg:
 		m.colorless = msg.Profile == colorprofile.NoTTY || msg.Profile == colorprofile.ASCII
 		setStyles(m, DefaultStyles(!m.lightBg))

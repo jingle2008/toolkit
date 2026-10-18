@@ -3,7 +3,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ Name ↑       OCID                                Internal   Status     Note  │
 │──────────────────────────────────────────────────────────────────────────────│
-│ acme         ocid1.tenancy.oc1..acme             false      ACTIVE     —     │
+│▌acme         ocid1.tenancy.oc1..acme             false      ACTIVE     —     │
 │ globex       ocid1.tenancy.oc1..globex           true       ACTIVE     —     │
 │ initech      ocid1.tenancy.oc1..initech          false      DELETING   —     │
 │                                                                              │

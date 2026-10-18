@@ -3,7 +3,7 @@
 ╭─ 1╭─ Command palette ────────────────────────────────────────────────────╮───╮
 │ Na│ ›                                                                    │us │
 │───│                                                                      │───│
-│ da│ ▸ Tenant                                                 t  category │ve │
+│▌da│ ▸ Tenant                                                 t  category │ve │
 │ da│   LimitDefinition                                       ld           │ve │
 │ da│   ConsolePropertyDefinition                            cpd           │ed │
 │   │   PropertyDefinition                                    pd           │   │

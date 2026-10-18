@@ -52,5 +52,5 @@ func (m *Model) dismissKeysHint() tea.Cmd {
 // keysHintBox draws the hint for the bottom-right corner.
 func (m *Model) keysHintBox() string {
 	p := m.theme.Palette
-	return view.Box("Keys changed", strings.Join(keysHintLines, "\n"), p.Info, lipgloss.NewStyle().Foreground(p.Info).Bold(true), 0)
+	return view.Box("Keys changed", strings.Join(keysHintLines, "\n"), p.Accent, lipgloss.NewStyle().Foreground(p.Accent).Bold(true), 0)
 }
