@@ -92,14 +92,30 @@ func TestEnvBar_QuickSwitchStrip(t *testing.T) {
 	assert.NotContains(t, ansi.Strip(m.envBar()), strip, "dropped when it doesn't fit")
 }
 
-func TestStatusTone(t *testing.T) {
+// Every value a Status column produces has a pinned tone; anything else
+// stays plain.
+func TestToneOf(t *testing.T) {
 	t.Parallel()
-	p := NewPalette(true)
-	for cell, want := range map[string]any{
-		"Failed": p.Danger, "DELETING": p.Danger, "WARN: CORDONED": p.Warn,
-		"Active": p.Success, "OK": p.Success, "": nil, "dedicated": nil,
+	for cell, want := range map[string]statusTone{
+		// Tenant
+		"ACTIVE": toneSuccess, "DELETING": toneDanger, "TERMINATED": toneDanger, "ALWAYS_FREE_ONLY": tonePlain,
+		// DAC
+		"Active": toneSuccess, "Failed": toneDanger, "Deleting": toneDanger, "pending": toneWarn,
+		// BaseModel, ImportedModel
+		"Ready": toneSuccess, "Creating": toneWarn, "Unknown": toneWarn,
+		// GPU node
+		"OK": toneSuccess, "WARN: CORDONED": toneWarn, "ERROR: Missing GPUs": toneDanger,
+		"ERROR: Unhealthy": toneDanger, "ERROR: Not ready": toneDanger,
+		// GPU pool
+		"RUNNING": toneSuccess, "SCALING": toneWarn, "PROVISIONING": toneWarn, "STARTING": toneWarn,
+		"STOPPING": toneWarn, "STOPPED": tonePlain, "TERMINATING": toneWarn, "FAILED": toneDanger,
+		"UNKNOWN": toneWarn, "NONEXIST": toneDanger, "...": toneWarn,
+		// ServingRuntime
+		"live": toneSuccess, "off": tonePlain, "disabled": tonePlain,
+		// Unlisted values stay plain, including look-alikes.
+		"": tonePlain, "INACTIVE": tonePlain, "BROKEN": tonePlain, "Updating": tonePlain,
 	} {
-		assert.Equal(t, want, statusTone(p, cell), cell)
+		assert.Equal(t, want, toneOf(cell), "%q", cell)
 	}
 }
 

@@ -236,7 +236,7 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 **Phase 7 deviations:**
 - **Faulty gutter (`▌`) deferred.** Rows reach the table as plain strings, and knowing which ones are faulty would mean threading a flag through every row builder in `computeTableRows`. The `⟨faulty⟩` chip and the Danger-tinted Status cells cover most of it. Follow-up if wanted.
-- **Usage cells aren't colored.** A busy DAC isn't a problem, so there is no clear meaning to color. Only Status cells are tinted (Danger/Warn/Success by keyword), using foreground-only SGR so the selected row's fill stays continuous.
+- **Usage cells aren't colored.** A busy DAC isn't a problem, so there is no clear meaning to color. Only Status cells are tinted (Danger/Warn/Success), using foreground-only SGR so the selected row's fill stays continuous. Tones come from an exact table of the values each Status column produces, plus `ERROR:`/`WARN:` prefixes for GPU nodes. Unlisted values stay plain (`cell_tone.go`).
 - **Quick-switch slots** (`1 dp-prod-ord`) show on the env bar when they fit. Without this, the digits would only be discoverable through help, since the header grid that listed them is gone.
 - The breadcrumb keeps the name `statusView`. On narrow terminals its stats collapse to `[n/m]` and then the category chip shrinks.
 - The `Selection` roles are gone: the selected row uses Accent/OnAccent. The unused `Base`, `StatusNugget`, `StatusBar`, `StatusText`, `InfoKey` and `InfoValue` styles are removed.
