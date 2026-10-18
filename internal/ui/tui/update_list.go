@@ -180,25 +180,6 @@ func (m *Model) toggleAliases() []tea.Cmd {
 	return m.updateCategory(domain.Alias)
 }
 
-func (m *Model) enterExportView() []tea.Cmd {
-	m.lastViewMode = m.viewMode
-	m.viewMode = common.ExportView
-
-	var cmd tea.Cmd
-	if m.dirPicker.Path != "" {
-		cmd = func() tea.Msg { return backspaceKey() }
-	} else {
-		cmd = m.dirPicker.Init()
-	}
-	return []tea.Cmd{cmd}
-}
-
-// backspaceKey is the key event enterExportView sends to nudge a picker that
-// already has a path (its Back binding includes backspace).
-func backspaceKey() tea.KeyMsg {
-	return tea.KeyPressMsg{Code: tea.KeyBackspace}
-}
-
 func (*Model) pasteFilter() tea.Cmd {
 	return func() tea.Msg {
 		clip, err := clipboardReadAll()

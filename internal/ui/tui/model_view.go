@@ -53,8 +53,19 @@ func (m *Model) updateContentAsync() tea.Cmd {
 	item := findItem(m.dataset, m.category, m.selectedKey)
 	width := m.detailRenderWidth()
 	renderer := m.renderer
+	asJSON := m.detailJSON
+	styles := m.fieldStyles()
 
 	return func() tea.Msg {
+		if !asJSON {
+			tree, err := itemFields(item)
+			if err != nil {
+				return detailContentRenderedMsg{Err: err, Gen: gen}
+			}
+			// A column of margin each side, as the JSON's code block has.
+			body := renderFields(tree, max(width-2, 1), 0, true, true, styles)
+			return detailContentRenderedMsg{Content: indentLines(body, " "), Gen: gen}
+		}
 		content, err := jsonutil.Pretty(item)
 		if err != nil {
 			content = err.Error()
@@ -73,6 +84,11 @@ func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea
 	}
 	m.viewport.SetContent(msg.Content)
 	return nil
+}
+
+// indentLines prefixes every line of s with pad.
+func indentLines(s, pad string) string {
+	return pad + strings.ReplaceAll(s, "\n", "\n"+pad)
 }
 
 // View renders the current state of the model as a full-screen frame.

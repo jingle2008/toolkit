@@ -147,9 +147,16 @@ var listModeKeys = []key.Binding{
 
 var detailsModeKeys = []key.Binding{
 	CopyObject,
+	ToggleJSON,
 }
 
 var (
+	// ToggleJSON switches the details view between its fields layout and
+	// the item's raw JSON.
+	ToggleJSON = key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "Fields/JSON"),
+	)
 	// CopyObject is a key binding for copying the value of an item in the details view.
 	CopyObject = key.NewBinding(
 		key.WithKeys("o"),

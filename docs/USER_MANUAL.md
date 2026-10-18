@@ -278,7 +278,7 @@ offered as a BaseModel, not an ImportedModel).
 
 ### Preview pane
 
-On a terminal at least 160 columns wide, `v` splits the panel: the table on the left, and on the right a summary of the selected row's fields (the same names as the detail view; nested objects collapse to `{…}`, lists to `[n]`). It follows the cursor. Press `v` again to close it. It stays on for the session: narrowing the terminal hides it, and widening brings it back. On a narrower terminal, `v` says how many columns it needs.
+On a terminal at least 160 columns wide, `v` splits the panel: the table on the left, and on the right the selected row's fields, laid out as in the detail view: plain values first, then one level of nested objects as indented sections (deeper ones collapse to `{…}`, lists of objects to `[n]`), each value on one line. It follows the cursor. Press `v` again to close it. It stays on for the session: narrowing the terminal hides it, and widening brings it back. On a narrower terminal, `v` says how many columns it needs.
 
 ---
 
@@ -411,28 +411,26 @@ Ctrl+A    → toggle between full category names and short aliases in the UI
 
 ## Detail View
 
-Press `y` on any selected row to open the **Detail View**, which shows the full JSON object for that item.
+Press `y` on any selected row to open the **Detail View**. It shows the item's fields with readable labels: plain values first, then each nested object as a titled, indented section, and each list of objects as numbered entries. Lists of plain values are joined on one line, and long values wrap. `Tab` switches to the raw JSON (the same JSON `o` copies) and back.
 
 ```
-┌─────────────────────────────────────────────────┐
-│  DETAIL — acme-corp (Tenant)                    │
-├─────────────────────────────────────────────────┤
-│  {                                              │
-│    "name":     "acme-corp",                     │
-│    "internal": false,                           │
-│    "status":   "Active",                        │
-│    "region":   "us-phoenix-1",                  │
-│    ...                                          │
-│  }                                              │
-├─────────────────────────────────────────────────┤
-│  [y/esc] Back  [c] Copy Name  [o] Copy Object  │
-└─────────────────────────────────────────────────┘
+ Tenant › acme-corp                                                       [fields]
+╭─ acme-corp ──────────────────────────────────────────────────────────────────────╮
+│ Name         acme-corp                                                           │
+│ ID           ocid1.tenancy.oc1..aaaa…                                            │
+│ Is internal  false                                                               │
+│ Status       ACTIVE                                                              │
+╰──────────────────────────────────────────────────────────────────────────────────╯
+ o copy object  tab fields/JSON  ? more
 ```
+
+The breadcrumb's right side shows the layout and, when the content is taller than the panel, how far down you are (`[JSON · 40%]`).
 
 | Key | Action |
 |-----|--------|
 | `y` or `Esc` | Return to list view |
-| `↑` / `↓` | Scroll the JSON content |
+| `↑` / `↓` | Scroll |
+| `Tab` | Switch between fields and JSON |
 | `c` | Copy the item's name to clipboard |
 | `o` | Copy the **entire JSON object** to clipboard |
 
@@ -542,11 +540,13 @@ shows up on screen within a few seconds without pressing a key.
 
 ## Exporting Data
 
-Press `e` in any list view to open the **Export CSV** dialog.
+Press `e` in any list view to open the **Export CSV** dialog. It shows the **Folder** the file goes to (starting in your home directory, then wherever you last exported), the file **Name** (`<region>-<category>.csv`), and the folders inside.
 
-1. A file picker appears — navigate to your desired output directory.
-2. Select or type a filename ending in `.csv`.
-3. Press `Enter` to confirm.
+1. Move into a folder with `→` (or `l`) and back out with `←` (or `h`).
+2. To change the name, press `Tab`, type, and `Tab` back (or just press `Enter`).
+3. Press `Enter` to export into the folder shown. A notification says where the file went.
+
+`Esc` cancels. A blank name, or one containing `/`, is refused with a warning.
 
 The exported CSV reflects the **current filter** and the faulty-toggle state. Two
 things deliberately differ from what's on screen:
@@ -615,6 +615,7 @@ and CPU/memory remain in the TUI's detail view (`y`).
 |-----|--------|
 | `y` / `Esc` | Return to list |
 | `↑` / `↓` | Scroll content |
+| `Tab` | Switch between fields and JSON |
 | `c` | Copy item name |
 | `o` | Copy full JSON object |
 

@@ -302,7 +302,8 @@ func TestExportView_ContainsFilenameAndPrompt(t *testing.T) {
 		logger:      fakeLogger{},
 	}
 	setDefaults(m)
+	m.enterExportView()
 	view := ansi.Strip(m.exportView())
-	assert.Contains(t, view, m.exportFilename())
-	assert.Contains(t, view, "Pick a directory:")
+	assert.Contains(t, view, "Name    "+m.exportFilename())
+	assert.Contains(t, view, "Folder  ")
 }

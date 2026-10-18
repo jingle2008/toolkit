@@ -73,7 +73,7 @@ const helpRows = 6
 
 // footerCore lists the non-context bindings the footer keeps after a
 // category's actions, each shown only if the active KeyMap carries it.
-var footerCore = []key.Binding{CopyObject, FilterMode, CommandMode}
+var footerCore = []key.Binding{CopyObject, ToggleJSON, FilterMode, CommandMode}
 
 // sortHint stands for every sort declaration in the footer: the column
 // headers show the individual keys once s is pressed.

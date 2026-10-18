@@ -181,8 +181,14 @@ type Model struct {
 	// width; the panel title says so.
 	hiddenColumns int
 
-	// Export CSV popup state
-	dirPicker *filepicker.Model
+	// detailJSON shows the details view as raw JSON instead of fields.
+	detailJSON bool
+
+	// Export CSV popup state: the folder list, and the file name with
+	// whether it has focus.
+	dirPicker  *filepicker.Model
+	exportName textinput.Model
+	naming     bool
 
 	// Tenant-metadata entry form state (EditTenantView).
 	editTenant *editTenantForm
@@ -336,10 +342,18 @@ func setDefaults(m *Model) {
 		p.CurrentDirectory = homeDir
 		p.DirAllowed = true
 		p.FileAllowed = false
-		p.SetHeight(15)
+		p.Cursor = "▸" // as the other lists mark their cursor
+		p.ShowPermissions = false
+		p.ShowSize = false
+		p.SetHeight(exportListMax)
 		// Release esc so updateExportView can use it to dismiss the popup;
-		// h/backspace/left still go up a directory.
+		// h/backspace/left still go up a directory. enter is the modal's
+		// export key, so it no longer opens or selects a folder: l/right
+		// open one, and the export goes to the folder being shown.
 		p.KeyMap.Back.SetKeys("h", "backspace", "left")
+		p.KeyMap.Open.SetKeys("l", "right")
+		p.KeyMap.Select.SetEnabled(false)
+		p.Styles.EmptyDirectory = p.Styles.EmptyDirectory.SetString("no folders here")
 		m.dirPicker = &p
 	}
 	setStyles(m, m.theme)

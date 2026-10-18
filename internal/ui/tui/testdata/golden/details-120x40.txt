@@ -1,25 +1,25 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                                                         v1.2.3
- DedicatedAICluster › acme/dac-alpha                                              Active: 2 • Failed: 1 • Size: 7 [1/3]
+ DedicatedAICluster › acme/dac-alpha                                                                           [fields]
 ╭─ acme/dac-alpha ─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Name            dac-alpha                                                                                            │
+│ Status          Active                                                                                               │
+│ Tenant ID       acme                                                                                                 │
+│ Type            Hosting                                                                                              │
+│ Unit shape      A100_80G                                                                                             │
+│ Size            4                                                                                                    │
+│ Total replicas  4                                                                                                    │
+│ Idle replicas   1                                                                                                    │
+│ Age             12d                                                                                                  │
+│                                                                                                                      │
+│ Owner                                                                                                                │
+│   Name         acme                                                                                                  │
+│   ID           ocid1.tenancy.oc1..acme                                                                               │
+│   Is internal  false                                                                                                 │
+│   Status       ACTIVE                                                                                                │
 │                                                                                                                      │
 │                                                                                                                      │
-│    {                                                                                                                 │
-│        "name": "dac-alpha",                                                                                          │
-│        "status": "Active",                                                                                           │
-│        "tenantId": "acme",                                                                                           │
-│        "type": "Hosting",                                                                                            │
-│        "unitShape": "A100_80G",                                                                                      │
-│        "size": 4,                                                                                                    │
-│        "owner": {                                                                                                    │
-│            "name": "acme",                                                                                           │
-│            "id": "ocid1.tenancy.oc1..acme",                                                                          │
-│            "is_internal": false,                                                                                     │
-│            "status": "ACTIVE"                                                                                        │
-│        },                                                                                                            │
-│        "totalReplicas": 4,                                                                                           │
-│        "idleReplicas": 1,                                                                                            │
-│        "age": "12d"                                                                                                  │
-│    }                                                                                                                 │
+│                                                                                                                      │
+│                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
@@ -37,4 +37,4 @@
 │                                                                                                                      │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
- o copy object  ? more
+ o copy object  tab fields/JSON  ? more

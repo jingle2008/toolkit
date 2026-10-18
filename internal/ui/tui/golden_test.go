@@ -6,11 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/mattn/go-runewidth"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -34,9 +36,9 @@ var updateGolden = flag.Bool("update", false, "rewrite golden files")
 // sink stamps at record time.
 var logClock = regexp.MustCompile(`\b\d{2}:\d{2}:\d{2}\b`)
 
-// dirStat masks the export picker's mode and size columns, which vary by
-// OS and filesystem (64B on APFS, 4.0K on ext4).
-var dirStat = regexp.MustCompile(`d[rwx-]{9}\s+\S+ `)
+// exportFolder masks the export modal's folder, a fresh temp directory
+// on every run.
+var exportFolder = regexp.MustCompile(`Folder  \S+`)
 
 // assertGolden compares the ANSI-stripped render against
 // testdata/golden/<name>.txt, rewriting it under -update.
@@ -64,7 +66,18 @@ func normalizeRender(s string) string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
-var goldenSizes = []struct{ w, h int }{{80, 24}, {120, 40}, {200, 50}}
+type goldenSize struct{ w, h int }
+
+// goldenSizes are the sizes every view is snapshotted at: a narrow
+// terminal, where things give way, and a typical one.
+var goldenSizes = []goldenSize{{80, 24}, {120, 40}}
+
+// wideGolden is the extra size for wideGoldenViews, which only differ on
+// a wide terminal (the preview pane needs 160 columns).
+var (
+	wideGolden      = goldenSize{200, 50}
+	wideGoldenViews = map[string]bool{"list-dac-preview": true}
+)
 
 // newGoldenModel builds a deterministic model: fixed env, version and k8s
 // version, and one row set per snapshotted category, including a faulty
@@ -246,7 +259,11 @@ func nopRun() tea.Cmd { return nil }
 func TestGolden(t *testing.T) {
 	t.Parallel()
 	for _, v := range goldenViews {
-		for _, sz := range goldenSizes {
+		sizes := goldenSizes
+		if wideGoldenViews[v.name] {
+			sizes = append(slices.Clone(goldenSizes), wideGolden)
+		}
+		for _, sz := range sizes {
 			name := fmt.Sprintf("%s-%dx%d", v.name, sz.w, sz.h)
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
@@ -257,7 +274,9 @@ func TestGolden(t *testing.T) {
 				case strings.HasPrefix(v.name, "log-"):
 					out = logClock.ReplaceAllString(out, "hh:mm:ss")
 				case v.name == "export":
-					out = dirStat.ReplaceAllString(out, "drwxr-xr-x  <size> ")
+					out = exportFolder.ReplaceAllStringFunc(out, func(f string) string {
+						return fmt.Sprintf("%-*s", runewidth.StringWidth(f), "Folder  <tmp>") // keep the width
+					})
 				}
 				assertGolden(t, name, out)
 			})

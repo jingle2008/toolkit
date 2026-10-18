@@ -2,12 +2,12 @@ package tui
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
@@ -61,84 +61,37 @@ func (m *Model) previewPanel(height int) string {
 		lipgloss.NewStyle().Foreground(p.Primary).Bold(true), width)
 }
 
-// previewBody is the condensed key/value summary of the selected item,
-// width columns wide.
+// previewBody is the selected item's fields, width columns wide: one
+// level of nested objects as indented sections, deeper ones collapsed,
+// each value cut to one line.
 func (m *Model) previewBody(width int) string {
+	muted := lipgloss.NewStyle().Foreground(m.theme.Palette.Muted)
 	item := findItem(m.dataset, m.category, itemKeyFrom(m.category, m.selectedRawRow()))
 	if item == nil {
-		return lipgloss.NewStyle().Foreground(m.theme.Palette.Muted).Render("nothing selected")
+		return muted.Render("nothing selected")
 	}
-	pairs := summarize(item)
-	keyW := 0
-	for _, kv := range pairs {
-		keyW = max(keyW, lipgloss.Width(kv[0]))
+	tree, err := itemFields(item)
+	if err != nil {
+		return muted.Render(err.Error())
 	}
-	keyW = min(keyW, width/2)
-	label := lipgloss.NewStyle().Foreground(m.theme.Palette.Muted).Width(keyW + 2)
-	out := make([]string, 0, len(pairs))
-	for _, kv := range pairs {
-		out = append(out, label.Render(truncateString(kv[0], keyW))+truncateString(kv[1], max(width-keyW-2, 1)))
-	}
-	return strings.Join(out, "\n")
+	return renderFields(tree, width, 1, false, false, m.fieldStyles())
 }
 
-// summarize lists item's exported fields as (json name, value) pairs in
-// declaration order: scalars as they print, nil as —, nested structs as
-// {…} and slices or maps as [n].
-func summarize(item any) [][2]string {
-	v := reflect.ValueOf(item)
-	for v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface {
-		if v.IsNil() {
-			return nil
-		}
-		v = v.Elem()
+// itemFields is item's JSON, as the details view and copy show it, as a
+// node tree.
+func itemFields(item any) (node, error) {
+	content, err := jsonutil.Pretty(item)
+	if err != nil {
+		return node{}, err
 	}
-	if v.Kind() != reflect.Struct {
-		return [][2]string{{"value", fmt.Sprint(v.Interface())}}
-	}
-	t := v.Type()
-	var out [][2]string
-	for i := range t.NumField() {
-		f := t.Field(i)
-		if !f.IsExported() {
-			continue
-		}
-		name := f.Name
-		if tag, _, _ := strings.Cut(f.Tag.Get("json"), ","); tag == "-" {
-			continue
-		} else if tag != "" {
-			name = tag
-		}
-		if f.Anonymous && f.Type.Kind() == reflect.Struct {
-			out = append(out, summarize(v.Field(i).Interface())...)
-			continue
-		}
-		out = append(out, [2]string{name, summaryValue(v.Field(i))})
-	}
-	return out
+	return parseFields([]byte(content))
 }
 
-// summaryValue is one field's condensed value.
-func summaryValue(v reflect.Value) string {
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface:
-		if v.IsNil() {
-			return "—"
-		}
-		return summaryValue(v.Elem())
-	case reflect.Struct:
-		if s, ok := v.Interface().(fmt.Stringer); ok {
-			return s.String()
-		}
-		return "{…}"
-	case reflect.Slice, reflect.Array, reflect.Map:
-		return fmt.Sprintf("[%d]", v.Len())
-	case reflect.String:
-		if v.String() == "" {
-			return "—"
-		}
-		return v.String()
-	default:
-		return fmt.Sprint(v.Interface())
+// fieldStyles colors a fields layout from the theme.
+func (m *Model) fieldStyles() fieldStyles {
+	p := m.theme.Palette
+	return fieldStyles{
+		label:   lipgloss.NewStyle().Foreground(p.Muted),
+		section: lipgloss.NewStyle().Foreground(p.Primary).Bold(true),
 	}
 }
