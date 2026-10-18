@@ -25,6 +25,7 @@ import (
 // cancel writes (a confirm's records come from the command it runs).
 type confirmOverlay struct {
 	act         mutation.Action
+	kind        string // the category acted on, for the Kind row
 	auditTarget string
 	target      string
 	warning     string
@@ -67,6 +68,7 @@ func (c confirmOverlay) noun() string { return confirmLabels[c.act].noun }
 //nolint:unparam // returns nil so destructive-action handlers can `return m.requestConfirm(...)`
 func (m *Model) requestConfirm(c confirmOverlay) tea.Cmd {
 	c.returnView = m.viewMode
+	c.kind = m.category.String()
 	m.confirm = c
 	m.viewMode = common.ConfirmView
 	return nil
@@ -281,7 +283,7 @@ func (m *Model) confirmView() string {
 		context = m.theme.Prod.Render("PRODUCTION") + context // the badge pads itself
 	}
 	rows := []string{
-		label.Render("Kind") + c.noun(),
+		label.Render("Kind") + c.kind,
 		label.Render("Name") + c.target,
 		label.Render("Context") + context,
 	}

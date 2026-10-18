@@ -198,6 +198,7 @@ func (m *Model) enterHelpView() {
 	m.lastViewMode = m.viewMode
 	m.viewMode = common.HelpView
 	m.helpScroll = 0
+	m.helpFilter, m.helpTyping = "", false
 }
 
 func (m *Model) handleNextCategory() tea.Cmd {

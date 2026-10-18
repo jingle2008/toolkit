@@ -277,3 +277,13 @@ func TestConfirmView_ProductionContext(t *testing.T) {
 	m.environment.Type = "prod"
 	assert.Contains(t, ansi.Strip(m.confirmView()), "PRODUCTION dp-prod-phx")
 }
+
+// The Kind row names the category acted on, as everywhere else does.
+func TestConfirmView_KindIsCategory(t *testing.T) {
+	t.Parallel()
+	m := newConfirmTestModel(t)
+	m.updateLayout(120, 40)
+	m.category = domain.GPUNode
+	m.requestConfirm(confirmOverlay{act: mutation.DrainNode, target: "n1", run: func() tea.Cmd { return nil }})
+	assert.Contains(t, ansi.Strip(m.confirmView()), "Kind     GPUNode")
+}

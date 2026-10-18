@@ -15,14 +15,14 @@
 │                                                                                                                      │
 │                       ╭─ Set tenant info ────────────────────────────────────────────────────╮                       │
 │                       │   Tenancy   orphan                                                   │                       │
+│                       │             ^o opens its page in the DevOps portal                   │                       │
 │                       │                                                                      │                       │
 │                       │ ▌ Name      required                                                 │                       │
 │                       │   Internal  (•) internal  ( ) external                               │                       │
 │                       │   Note      optional                                                 │                       │
 │                       │                                                                      │                       │
-│                       │ tab/enter next · space toggle · ^s save · ^o portal · esc cancel     │                       │
+│                       │ tab/enter next · space toggle · ^s save · esc cancel                 │                       │
 │                       ╰──────────────────────────────────────────────────────────────────────╯                       │
-│                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │

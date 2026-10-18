@@ -2,6 +2,7 @@ package tui
 
 import (
 	"image/color"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 
@@ -38,14 +39,25 @@ func (m *Model) modal(title, body, hints string, border color.Color, width int) 
 
 // overlayModal draws modal centered over the view it was opened from,
 // which is dimmed so the modal stands out while its context stays
-// visible.
+// visible. A modal within modalFullMargin rows of the screen's height
+// draws on a blank screen instead: the view would only show around it
+// in fragments ("GPUN", "1/2]") that read as broken.
 func (m *Model) overlayModal(under common.ViewMode, modal string) string {
 	if isModalView(under) {
 		under = common.ListView
 	}
-	base := view.Dim(m.renderMode(under), m.theme.Palette.Muted)
+	// The compositor sizes the screen to the base, so a blank one still
+	// spans it.
+	base := strings.TrimSuffix(strings.Repeat(strings.Repeat(" ", m.viewWidth)+"\n", m.viewHeight), "\n")
+	if lipgloss.Height(modal) < m.viewHeight-modalFullMargin {
+		base = view.Dim(m.renderMode(under), m.theme.Palette.Muted)
+	}
 	return view.Overlay(base, modal, m.viewWidth, m.viewHeight)
 }
+
+// modalFullMargin is how many rows a modal must leave free for the view
+// it was opened from to show around it.
+const modalFullMargin = 4
 
 // isModalView reports whether mode draws over another view rather than
 // filling the screen itself.

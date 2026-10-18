@@ -109,7 +109,7 @@ var (
 	// tenant-metadata form's Name/Note text fields.
 	OpenPortal = key.NewBinding(
 		key.WithKeys("ctrl+o"),
-		key.WithHelp("^o", "Open in portal"),
+		key.WithHelp("^o", "Open in DevOps portal"),
 	)
 	// GoTo opens a picker of the rows the selected row relates to (its
 	// DAC, model, runtime, tenant, ...) and jumps to the chosen one. Not

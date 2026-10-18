@@ -13,7 +13,7 @@
 │                                                                                                                      │
 │                                                                                                                      │
 │                               ╭─ ⚠ Delete DAC ───────────────────────────────────────╮                               │
-│                               │ Kind     DAC                                         │                               │
+│                               │ Kind     DedicatedAICluster                          │                               │
 │                               │ Name     dac-alpha                                   │                               │
 │                               │ Context   PRODUCTION dp-prod-iad                     │                               │
 │                               │                                                      │                               │

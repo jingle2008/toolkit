@@ -186,3 +186,74 @@ func TestRowPicker_HintSaysTypeToFilter(t *testing.T) {
 	m.openRowPicker("Go to", "go", pickerTargets(12), nil)
 	assert.Contains(t, ansi.Strip(m.rowPickerView()), "type to filter")
 }
+
+// / filters help by key or description; a group whose title matches is
+// kept whole; enter keeps the filter and esc clears it before closing.
+func TestHelp_Filter(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 40)
+	showCategory(t, m, domain.GPUNode)
+	m.enterHelpView()
+
+	m.updateHelpView(keyPress("/"))
+	require.True(t, m.helpTyping)
+	for _, r := range "drain" {
+		m.updateHelpView(keyPress(string(r)))
+	}
+	view := ansi.Strip(m.fullHelpView())
+	assert.Contains(t, view, "Drain")
+	assert.NotContains(t, view, "Refresh")
+	assert.NotContains(t, view, "General", "groups with no match are left out")
+	assert.Contains(t, view, "/drain")
+
+	m.updateHelpView(keyPress("enter"))
+	assert.False(t, m.helpTyping)
+	assert.Contains(t, ansi.Strip(m.fullHelpView()), "⟨/drain⟩")
+
+	m.updateHelpView(keyPress("esc"))
+	assert.Empty(t, m.helpFilter)
+	assert.Equal(t, common.HelpView, m.viewMode, "the first esc clears the filter")
+	m.updateHelpView(keyPress("esc"))
+	assert.Equal(t, common.ListView, m.viewMode)
+}
+
+func TestHelp_FilterKeepsMatchingGroupAndSaysNone(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 40)
+	showCategory(t, m, domain.GPUNode)
+	m.enterHelpView()
+	m.helpFilter = "sort"
+	view := ansi.Strip(m.fullHelpView())
+	assert.Contains(t, view, "s f         Free", "the Sort group's entries are labeled by column")
+
+	m.helpFilter = "zzz"
+	assert.Contains(t, ansi.Strip(m.fullHelpView()), "no keys match · esc clears the filter")
+}
+
+// h and ? are text while typing a help filter, not close keys.
+func TestHelp_FilterTakesKeysAsText(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 40)
+	showCategory(t, m, domain.GPUNode)
+	m.enterHelpView()
+	m.updateHelpView(keyPress("/"))
+	m.updateHelpView(keyPress("h"))
+	m.updateHelpView(keyPress("?"))
+	assert.Equal(t, "h?", m.helpFilter)
+	assert.Equal(t, common.HelpView, m.viewMode)
+}
+
+// A modal nearly as tall as the screen draws on a blank screen, not over
+// fragments of the view; a smaller one keeps the dimmed view around it.
+func TestOverlayModal_BlankBehindFullHeight(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 80, 15)
+	showCategory(t, m, domain.GPUNode)
+	tall := strings.TrimSuffix(strings.Repeat("x\n", 13), "\n")
+	out := ansi.Strip(m.overlayModal(common.ListView, tall))
+	assert.NotContains(t, out, "GPUNode")
+	assert.Len(t, strings.Split(out, "\n"), 15, "still a full screen")
+
+	short := ansi.Strip(m.overlayModal(common.ListView, "x"))
+	assert.Contains(t, short, "GPUNode")
+}
