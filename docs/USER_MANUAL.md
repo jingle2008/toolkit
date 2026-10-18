@@ -294,7 +294,7 @@ Toolkit organises data into 22 categories:
 
 | Category | Description |
 |----------|-------------|
-| **Tenant** | One row per tenancy OCID found in the tenancy overrides or the tenant metadata file, with its internal flag and note; scopes into the tenant's overrides and resources. The name comes from the metadata file only (override directory names are ignored); a tenancy without a metadata name is named by its OCID. Names must be unique: a metadata file that gives two tenancies the same name fails to load. **Status** is the tenancy's account state (`ACTIVE`, `DELETING`, `TERMINATED`, `ALWAYS_FREE_ONLY`) as last recorded by `toolkit tenant sync`, blank when unknown; a `DELETING` or `TERMINATED` tenant is reported as faulty |
+| **Tenant** | One row per tenancy OCID found in the tenancy overrides or the tenant metadata file, with its internal flag and note; scopes into the tenant's overrides and resources. The name comes from the metadata file only (override directory names are ignored); a tenancy without a metadata name is named by its OCID. Names must be unique within a realm: a metadata file that gives two tenancies in one realm the same name fails to load. **Status** is the tenancy's account state (`ACTIVE`, `DELETING`, `TERMINATED`, `ALWAYS_FREE_ONLY`) as last recorded by `toolkit tenant sync`, blank when unknown; a `DELETING` or `TERMINATED` tenant is reported as faulty |
 | **Environment** | Cloud environment configurations |
 | **ServiceTenancy** | Service-to-tenancy mappings |
 

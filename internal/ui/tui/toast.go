@@ -27,7 +27,8 @@ import (
 const toastTTL = 8 * time.Second
 
 // maxStackedToasts caps how many toasts show at once; a new one pushes
-// out the oldest.
+// out the oldest info or warning toast, or the oldest error when only
+// errors remain.
 const maxStackedToasts = 3
 
 // maxErrorLines caps how many lines an error toast wraps its message to.
@@ -55,8 +56,9 @@ func (m *Model) showToast(msg string, sev toastSeverity) tea.Cmd {
 	id := m.toasts.seq
 	if m.toasts.active != nil {
 		m.toasts.older = append(m.toasts.older, *m.toasts.active)
-		if n := len(m.toasts.older) - (maxStackedToasts - 1); n > 0 {
-			m.toasts.older = m.toasts.older[n:]
+		for len(m.toasts.older) > maxStackedToasts-1 {
+			i := slices.IndexFunc(m.toasts.older, func(o toastState) bool { return o.sev != toastError })
+			m.toasts.older = slices.Delete(m.toasts.older, max(i, 0), max(i, 0)+1)
 		}
 	}
 	m.toasts.active = &toastState{msg: msg, sev: sev, id: id}

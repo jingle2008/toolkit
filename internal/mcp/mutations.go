@@ -276,7 +276,7 @@ type deleteInferenceServiceResult struct {
 type setTenantInput struct {
 	OCID       string `json:"ocid" jsonschema:"the full tenancy OCID (the metadata entry key); must start with ocid1.tenancy."`
 	Name       string `json:"name" jsonschema:"friendly tenant name (required)"`
-	IsInternal *bool  `json:"is_internal,omitempty" jsonschema:"mark tenant internal; defaults to true when omitted"`
+	IsInternal *bool  `json:"is_internal,omitempty" jsonschema:"mark tenant internal; when omitted, keeps the recorded flag (a new tenant defaults to internal)"`
 	Note       string `json:"note,omitempty" jsonschema:"optional free-form note"`
 	confirmGate
 }
@@ -521,12 +521,10 @@ func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, 
 		return failTool[mutationResult]("set tenant",
 			fmt.Errorf("invalid tenancy OCID %q: must start with \"ocid1.tenancy.\"", in.OCID))
 	}
-	internal := true
-	if in.IsInternal != nil {
-		internal = *in.IsInternal
-	}
 	name := in.Name
-	entry := models.TenantMetadata{ID: in.OCID, Name: &name, IsInternal: &internal}
+	// A nil is_internal keeps the recorded flag; a new tenant then defaults
+	// to internal.
+	entry := models.TenantMetadata{ID: in.OCID, Name: &name, IsInternal: in.IsInternal}
 	if in.Note != "" {
 		note := in.Note
 		entry.Note = &note
@@ -544,7 +542,7 @@ func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, 
 // mutationToolFooter is appended to every mutation tool's description.
 // Centralized so the env-override semantics stay in sync across all
 // env-scoped tools whenever the policy is revisited.
-const mutationToolFooter = " Mutating: requires confirm=true to execute, otherwise refuses without acting; dry_run=true reports what it would do instead." +
+const mutationToolFooter = " Mutating: requires confirm=true to execute, otherwise refuses without acting;" +
 	" dry_run=true instead reports what it would do (status DRY_RUN, with the looked-up target under resolved)." +
 	" Accepts env_type/env_region/env_realm, but per-call overrides take effect ONLY if the server" +
 	" was started with --" + config.FlagMutationEnvOverrideAllowed + ". By default override fields are ignored" +

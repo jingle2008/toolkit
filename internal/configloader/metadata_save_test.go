@@ -102,6 +102,14 @@ func TestUpsertTenant_RejectsTakenName(t *testing.T) {
 	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("Acme"), Note: strptr("n")}))
 }
 
+// A name another realm's tenancy has is not taken.
+func TestUpsertTenant_NamesPerRealm(t *testing.T) {
+	t.Parallel()
+	m := &models.Metadata{Tenants: []models.TenantMetadata{{ID: "ocid1.tenancy.oc1..a", Name: strptr("Acme")}}}
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "ocid1.tenancy.oc4..b", Name: strptr("Acme")}))
+	require.Len(t, m.Tenants, 2)
+}
+
 // A metadata file giving two tenancies one name, or listing a tenancy
 // twice, fails to load.
 func TestLoadMetadata_RejectsDuplicates(t *testing.T) {
@@ -128,4 +136,15 @@ func TestUpsertTenant_KeepsStatus(t *testing.T) {
 	require.Equal(t, "A2", *m.Tenants[0].Name)
 	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A2"), Status: "DELETING"}))
 	require.Equal(t, "DELETING", m.Tenants[0].Status)
+}
+
+// An edit without an internal flag (`set tenant` without --internal) keeps
+// the recorded one, e.g. the flag `tenant sync` set; one with it replaces it.
+func TestUpsertTenant_KeepsInternalFlag(t *testing.T) {
+	t.Parallel()
+	m := &models.Metadata{Tenants: []models.TenantMetadata{{ID: "id-a", Name: strptr("A"), IsInternal: boolptr(false)}}}
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A2")}))
+	require.Equal(t, boolptr(false), m.Tenants[0].IsInternal)
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("A2"), IsInternal: boolptr(true)}))
+	require.Equal(t, boolptr(true), m.Tenants[0].IsInternal)
 }

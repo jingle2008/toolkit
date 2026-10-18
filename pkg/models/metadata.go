@@ -22,12 +22,13 @@ type Metadata struct {
 	Tenants []TenantMetadata `json:"tenants"`
 }
 
-// Validate enforces that tenant IDs and tenant names are each unique, so
-// a name maps to exactly one tenancy. An entry without a name is allowed
-// (its tenant is named by its OCID).
+// Validate enforces that tenant IDs are unique and that tenant names are
+// unique within a realm, so a name maps to exactly one tenancy wherever
+// tenants are listed (always per realm). An entry without a name is
+// allowed (its tenant is named by its OCID).
 func (m *Metadata) Validate() error {
 	ids := make(map[string]bool, len(m.Tenants))
-	names := make(map[string]string, len(m.Tenants))
+	names := make(map[[2]string]string, len(m.Tenants))
 	var errs []error
 	for _, t := range m.Tenants {
 		if ids[t.ID] {
@@ -37,21 +38,31 @@ func (m *Metadata) Validate() error {
 		if t.Name == nil || *t.Name == "" {
 			continue
 		}
-		if other, ok := names[*t.Name]; ok && other != t.ID {
+		key := [2]string{TenancyRealm(t.ID), *t.Name}
+		if other, ok := names[key]; ok && other != t.ID {
 			errs = append(errs, fmt.Errorf("tenant name %q is used by both %s and %s", *t.Name, other, t.ID))
 			continue
 		}
-		names[*t.Name] = t.ID
+		names[key] = t.ID
 	}
 	return errors.Join(errs...)
+}
+
+// TenancyRealm returns the realm segment of a tenancy OCID
+// (ocid1.tenancy.<realm>..<id>), or "" when id has none.
+func TenancyRealm(id string) string {
+	parts := strings.Split(id, ".")
+	if len(parts) >= 3 {
+		return parts[2]
+	}
+	return ""
 }
 
 // GetTenants returns all tenants for a given realm.
 func (m *Metadata) GetTenants(realm string) []TenantMetadata {
 	var out []TenantMetadata
 	for _, t := range m.Tenants {
-		parts := strings.Split(t.ID, ".")
-		if len(parts) >= 3 && parts[2] == realm {
+		if TenancyRealm(t.ID) == realm {
 			out = append(out, t)
 		}
 	}

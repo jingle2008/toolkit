@@ -73,11 +73,13 @@ Examples:
 					DryRun: dryRun,
 					Yes:    yes,
 				}, func(ctx context.Context) error {
-					nameVal, internalVal := name, internal
-					entry := models.TenantMetadata{
-						ID:         ocid,
-						Name:       &nameVal,
-						IsInternal: &internalVal,
+					nameVal := name
+					entry := models.TenantMetadata{ID: ocid, Name: &nameVal}
+					// Without --internal, keep the recorded flag (e.g. one
+					// `tenant sync` set); a new tenant then defaults to internal.
+					if cmd.Flags().Changed("internal") {
+						internalVal := internal
+						entry.IsInternal = &internalVal
 					}
 					if note != "" {
 						noteVal := note
@@ -89,7 +91,7 @@ Examples:
 		},
 	}
 	tenantCmd.Flags().StringVar(&name, "name", "", "Friendly tenant name (required)")
-	tenantCmd.Flags().BoolVar(&internal, "internal", true, "Mark the tenant internal (--internal=false for external)")
+	tenantCmd.Flags().BoolVar(&internal, "internal", true, "Mark the tenant internal (--internal=false for external); omitted keeps the recorded flag, new tenants default to internal")
 	tenantCmd.Flags().StringVar(&note, "note", "", "Optional free-form note")
 	tenantCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
 	tenantCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
