@@ -16,9 +16,8 @@ import (
 // bindings. A new category must be added here OR to catContext — never
 // silently neither. Keep in sync with catContext (registry.go).
 var noContextKeys = map[domain.Category]struct{}{
-	domain.LimitDefinition: {},
-	domain.ModelArtifact:   {},
-	domain.Alias:           {},
+	domain.ModelArtifact: {},
+	domain.Alias:         {},
 }
 
 /*

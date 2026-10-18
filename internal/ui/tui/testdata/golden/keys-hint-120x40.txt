@@ -29,8 +29,8 @@
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                                                                                      │
 │                                                           ╭─ Keys changed ─────────────────────────────────────────╮ │
+│                                                           │ s z sorts by Size; s s is Status everywhere            │ │
 │                                                           │ Sorting moved to s + the column's letter (s n, s t, …) │ │
 │                                                           │ G goes to the bottom · : opens the command palette     │ │
 │                                                           │ v shows a preview pane on wide terminals               │ │

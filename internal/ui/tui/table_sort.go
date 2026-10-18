@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"slices"
 	"strconv"
 	"strings"
@@ -28,7 +29,10 @@ func sortRows(rows []table.Row, headers []header, sortColumn string, asc bool) {
 		// 1, 16, 2, 32, 4, 8. Blank cells parse as 0 and sort with the
 		// smallest, matching how the other numeric sorts treat values
 		// they can't parse.
-		common.GpusCol: {},
+		common.GpusCol:     {},
+		common.RestartsCol: {},
+		common.MinCol:      {},
+		common.MaxCol:      {},
 	}
 
 	switch {
@@ -45,25 +49,33 @@ func sortRows(rows []table.Row, headers []header, sortColumn string, asc bool) {
 	}
 }
 
-func sortByAge(rows []table.Row, colIdx int, asc bool) {
+// sortByKey sorts rows by column colIdx under cmp, ascending or
+// descending. Rows that tie are ordered by their cells left to right,
+// ascending whatever the direction, so ties land in the same order on
+// every refresh: grouped categories build their rows from a map, whose
+// order changes from one load to the next.
+func sortByKey(rows []table.Row, colIdx int, asc bool, cmpCells func(a, b string) int) {
 	slices.SortFunc(rows, func(a, b table.Row) int {
-		av := k8stime.ParseAge(a[colIdx])
-		bv := k8stime.ParseAge(b[colIdx])
-		if asc {
-			return int(av - bv)
+		c := cmpCells(a[colIdx], b[colIdx])
+		if !asc {
+			c = -c
 		}
-		return int(bv - av)
+		if c != 0 {
+			return c
+		}
+		return slices.Compare(a, b)
+	})
+}
+
+func sortByAge(rows []table.Row, colIdx int, asc bool) {
+	sortByKey(rows, colIdx, asc, func(a, b string) int {
+		return cmp.Compare(k8stime.ParseAge(a), k8stime.ParseAge(b))
 	})
 }
 
 func sortByInt(rows []table.Row, colIdx int, asc bool) {
-	slices.SortFunc(rows, func(a, b table.Row) int {
-		av := parseCount(a[colIdx])
-		bv := parseCount(b[colIdx])
-		if asc {
-			return int(av - bv)
-		}
-		return int(bv - av)
+	sortByKey(rows, colIdx, asc, func(a, b string) int {
+		return cmp.Compare(parseCount(a), parseCount(b))
 	})
 }
 
@@ -82,25 +94,19 @@ func parseCount(s string) int64 {
 }
 
 func sortByPercent(rows []table.Row, colIdx int, asc bool) {
-	slices.SortFunc(rows, func(a, b table.Row) int {
-		av, _ := parsePercent(a[colIdx])
-		bv, _ := parsePercent(b[colIdx])
-		if asc {
-			return int(av - bv)
-		}
-		return int(bv - av)
+	sortByKey(rows, colIdx, asc, func(a, b string) int {
+		av, _ := parsePercent(a)
+		bv, _ := parsePercent(b)
+		return cmp.Compare(av, bv)
 	})
 }
 
 // sortBySize sorts rows by size strings like "6B", "3.5M", "1.2T".
 func sortBySize(rows []table.Row, colIdx int, asc bool) {
-	slices.SortFunc(rows, func(a, b table.Row) int {
-		av, _ := parseSize(a[colIdx])
-		bv, _ := parseSize(b[colIdx])
-		if asc {
-			return int(av - bv)
-		}
-		return int(bv - av)
+	sortByKey(rows, colIdx, asc, func(a, b string) int {
+		av, _ := parseSize(a)
+		bv, _ := parseSize(b)
+		return cmp.Compare(av, bv)
 	})
 }
 
@@ -136,12 +142,7 @@ func parseSize(s string) (int64, error) {
 }
 
 func sortByString(rows []table.Row, colIdx int, asc bool) {
-	slices.SortFunc(rows, func(a, b table.Row) int {
-		if asc {
-			return strings.Compare(a[colIdx], b[colIdx])
-		}
-		return strings.Compare(b[colIdx], a[colIdx])
-	})
+	sortByKey(rows, colIdx, asc, strings.Compare)
 }
 
 // hasIntHeader checks if the header is in the intHeaders set (case-insensitive).

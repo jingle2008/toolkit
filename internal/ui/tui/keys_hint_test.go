@@ -77,3 +77,16 @@ func runCmd(cmd tea.Cmd) {
 	case <-time.After(time.Second):
 	}
 }
+
+// The hint lists every change since the version the user last saw, and
+// only those.
+func TestKeysHint_ListsChangesSinceSaved(t *testing.T) {
+	t.Parallel()
+	m, _ := newHintModel(t, 2)
+	out := ansi.Strip(m.render())
+	assert.Contains(t, out, "s z sorts by Size")
+	assert.NotContains(t, out, "Sorting moved to s")
+
+	assert.Contains(t, keysHintLines(0), "Sorting moved to s + the column's letter (s n, s t, …)")
+	assert.Contains(t, keysHintLines(0), "s z sorts by Size; s s is Status everywhere")
+}

@@ -11,27 +11,37 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
-// The spec's sort-key table: every key is its column's first letter.
+// The spec's sort-key table: every key is its column's first letter,
+// except the pinned ones (s Status, z siZe, x maX) in every category.
 func TestSortKeys_FirstLetters(t *testing.T) {
 	t.Parallel()
 	for cat, want := range map[domain.Category]map[string]string{
-		domain.DedicatedAICluster: {"Name": "n", "Tenant": "t", "Internal": "i", "Usage": "u", "Size": "s", "Age": "a"},
-		domain.ImportedModel:      {"Name": "n", "Tenant": "t", "Size": "s", "Context": "c", "Vendor": "v"},
-		domain.GPUNode:            {"Name": "n", "Free": "f", "Type": "t", "Age": "a"},
-		domain.GPUPool:            {"Name": "n", "Size": "s", "GPUs": "g"},
-		domain.Tenant:             {"Name": "n", "Internal": "i", "Status": "s"},
-		domain.Environment:        {"Name": "n", "Type": "t"},
+		domain.DedicatedAICluster:    {"Name": "n", "Tenant": "t", "Internal": "i", "Usage": "u", "Size": "z", "Age": "a", "Status": "s"},
+		domain.ImportedModel:         {"Name": "n", "Tenant": "t", "Size": "z", "Context": "c", "Vendor": "v"},
+		domain.GPUNode:               {"Name": "n", "Free": "f", "Type": "t", "Age": "a"},
+		domain.GPUPool:               {"Name": "n", "Size": "z", "GPUs": "g"},
+		domain.GPUWorkload:           {"Name": "n", "Tenant": "t", "GPUs": "g", "Restarts": "r", "Age": "a"},
+		domain.InferenceService:      {"Name": "n", "Tenant": "t", "Ready": "r", "Age": "a"},
+		domain.LimitDefinition:       {"Name": "n", "Min": "m", "Max": "x"},
+		domain.LimitTenancyOverride:  {"Name": "n", "Tenant": "t", "Regions": "r", "Min": "m", "Max": "x"},
+		domain.LimitRegionalOverride: {"Name": "n", "Regions": "r", "Min": "m", "Max": "x"},
+		domain.Tenant:                {"Name": "n", "Internal": "i", "Status": "s"},
+		domain.Environment:           {"Name": "n", "Type": "t"},
 	} {
 		assert.Equal(t, want, SortKeys(cat), "%s", cat)
 	}
 }
 
-// A clash takes the next free letter of the later column's name.
+// A clash takes the next free letter of the later column's name; a
+// pinned column keeps its key whatever comes before it.
 func TestDeriveSortKeys_Fallback(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t,
-		map[string]string{"Status": "s", "Size": "i", "Sizzle": "z"},
-		deriveSortKeys([]string{"Status", "Size", "Sizzle"}))
+		map[string]string{"Sizzle": "i", "Size": "z", "Status": "s"},
+		deriveSortKeys([]string{"Sizzle", "Size", "Status"}))
+	assert.Equal(t,
+		map[string]string{"Type": "t", "Tenant": "e"},
+		deriveSortKeys([]string{"Type", "Tenant"}))
 }
 
 // Every sort key is unique within its category, so s⟨key⟩ is unambiguous.
