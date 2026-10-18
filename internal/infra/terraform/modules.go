@@ -1,9 +1,11 @@
 package terraform
 
 import (
+	"cmp"
 	"context"
 	"maps"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -31,15 +33,19 @@ var moduleMetaArgs = map[string]bool{
 // resolveLocalsAndModules resolves attributes (dirPath's locals) together
 // with dirPath's module calls, which may feed each other: a local can read
 // module.<name>.<output>, and a call's inputs can read local.<name> or
-// another call's outputs. It alternates — evaluate every call whose
-// inputs are ready, then resolve locals — until a round settles
-// neither a call nor a local, keeping evalCtx's `module` object current. Only local sources
-// (./, ../) are followed. A call's inputs are layered over the module's
-// variable defaults; an input naming a local or module that hasn't
-// resolved yet defers the whole call rather than falling back to the
-// default, so no output is computed from a stand-in value. A call that never becomes ready, or can't be evaluated,
-// is left out, so references to it stay unresolved, as any other
-// unresolvable expression does. Returns the final `local` object.
+// another call's outputs. Only local sources (./, ../) are followed.
+//
+// A local or call is evaluated only once every local and call it reads has
+// settled (resolved, or found unresolvable), so try(), can() and lookup()
+// never settle on a fallback for a value that is merely not ready yet. A
+// call's inputs are layered over the module's variable defaults: an input
+// that doesn't resolve falls back to the default. When nothing is ready but
+// something is pending, the references form a cycle; it is broken by
+// evaluating one item against what has resolved so far.
+//
+// It deletes every local it resolves from attributes, so whatever remains
+// could not be evaluated, and keeps evalCtx's `local` and `module` objects
+// current. Returns the final `local` object.
 func resolveLocalsAndModules(
 	ctx context.Context,
 	dirPath string,
@@ -48,39 +54,166 @@ func resolveLocalsAndModules(
 	attributes hclsyntax.Attributes,
 	depth int,
 ) cty.Value {
-	calls := moduleCalls(ctx, dirPath, depth)
-	outputs := make(map[string]cty.Value, len(calls))
+	r := &resolver{
+		dirPath: dirPath, evalCtx: evalCtx, depth: depth,
+		local:   localObject,
+		locals:  maps.Clone(attributes),
+		calls:   moduleCalls(ctx, dirPath, depth),
+		outputs: make(map[string]cty.Value),
+	}
+	evalCtx.Variables[localKey] = localObject
 	evalCtx.Variables[moduleKey] = cty.EmptyObjectVal
-	for {
-		progress := false
-		for name, call := range calls {
-			inputs, ready := moduleInputs(ctx, name, call.block, evalCtx)
-			if !ready {
-				continue
-			}
-			delete(calls, name)
-			progress = true
-			out, err := evalModule(ctx, filepath.Join(dirPath, call.source), inputs, evalCtx, depth+1)
-			if err != nil {
-				logging.FromContext(ctx).Warnw("cannot evaluate module", "module", name, "source", call.source, "error", err)
-				continue
-			}
-			outputs[name] = out
-			evalCtx.Variables[moduleKey] = cty.ObjectVal(outputs)
-		}
-		pending := len(attributes)
-		localObject = resolveLocals(ctx, evalCtx, localObject, attributes)
-		if len(attributes) < pending {
-			progress = true
-		}
-		if !progress || len(calls) == 0 {
-			break
+	for r.resolveReady(ctx) || r.breakCycle(ctx) {
+	}
+	for key := range attributes {
+		if r.resolved[key] {
+			delete(attributes, key)
 		}
 	}
-	for name := range calls {
-		logging.FromContext(ctx).Debugw("module inputs never resolved; skipping", "module", name, "dir", dirPath)
+	return r.local
+}
+
+// resolver holds resolveLocalsAndModules' state: the locals and calls not
+// yet settled, and what has resolved.
+type resolver struct {
+	dirPath  string
+	evalCtx  *hcl.EvalContext
+	depth    int
+	local    cty.Value
+	locals   hclsyntax.Attributes  // unsettled locals
+	calls    map[string]moduleCall // unsettled calls
+	outputs  map[string]cty.Value
+	resolved map[string]bool // locals that resolved
+}
+
+// resolveReady settles every local and call whose references have all
+// settled, until none is left; it reports whether it settled any.
+func (r *resolver) resolveReady(ctx context.Context) bool {
+	settled := false
+	for progress := true; progress; {
+		progress = false
+		for _, key := range r.localOrder() {
+			if !r.readsPending(r.locals[key].Expr) {
+				r.settleLocal(key)
+				progress = true
+			}
+		}
+		for _, name := range slices.Sorted(maps.Keys(r.calls)) {
+			if !r.callReadsPending(r.calls[name]) {
+				r.settleCall(ctx, name)
+				progress = true
+			}
+		}
+		settled = settled || progress
 	}
-	return localObject
+	return settled
+}
+
+// breakCycle settles one item of a reference cycle against what has
+// resolved so far: the first local (fewest references first) that
+// resolves that way, else the first call. With only unresolvable locals
+// left, it settles them all and reports false.
+func (r *resolver) breakCycle(ctx context.Context) bool {
+	for _, key := range r.localOrder() {
+		if v, ok := r.evalLocal(key); ok {
+			logging.FromContext(ctx).Debugw("breaking a reference cycle", "local", key, "dir", r.dirPath)
+			r.setLocal(key, v)
+			return true
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(r.calls)) {
+		logging.FromContext(ctx).Debugw("breaking a reference cycle", "module", name, "dir", r.dirPath)
+		r.settleCall(ctx, name)
+		return true
+	}
+	clear(r.locals)
+	return false
+}
+
+// localOrder returns the unsettled locals, fewest references first, then
+// by name.
+func (r *resolver) localOrder() []string {
+	keys := slices.Collect(maps.Keys(r.locals))
+	slices.SortFunc(keys, func(a, b string) int {
+		return cmp.Or(
+			cmp.Compare(len(r.locals[a].Expr.Variables()), len(r.locals[b].Expr.Variables())),
+			cmp.Compare(a, b),
+		)
+	})
+	return keys
+}
+
+func (r *resolver) evalLocal(key string) (cty.Value, bool) {
+	v, diags := r.locals[key].Expr.Value(r.evalCtx)
+	return v, !diags.HasErrors() && v.IsWhollyKnown()
+}
+
+// settleLocal evaluates a local; one that doesn't resolve is settled as
+// unresolvable (its references have all settled, so it never will).
+func (r *resolver) settleLocal(key string) {
+	if v, ok := r.evalLocal(key); ok {
+		r.setLocal(key, v)
+		return
+	}
+	delete(r.locals, key)
+}
+
+func (r *resolver) setLocal(key string, v cty.Value) {
+	delete(r.locals, key)
+	r.local = mergeObject(r.local, key, v)
+	r.evalCtx.Variables[localKey] = r.local
+	if r.resolved == nil {
+		r.resolved = make(map[string]bool)
+	}
+	r.resolved[key] = true
+}
+
+// settleCall evaluates a module call with its inputs as they resolve now.
+func (r *resolver) settleCall(ctx context.Context, name string) {
+	call := r.calls[name]
+	delete(r.calls, name)
+	inputs := moduleInputs(ctx, name, call.block, r.evalCtx)
+	out, err := evalModule(ctx, filepath.Join(r.dirPath, call.source), inputs, r.evalCtx, r.depth+1)
+	if err != nil {
+		logging.FromContext(ctx).Warnw("cannot evaluate module", "module", name, "source", call.source, "error", err)
+		return
+	}
+	r.outputs[name] = out
+	r.evalCtx.Variables[moduleKey] = cty.ObjectVal(r.outputs)
+}
+
+// readsPending reports whether expr reads an unsettled local or call. A
+// reference that doesn't name one (local["x"]) counts as pending while
+// any of its kind is.
+func (r *resolver) readsPending(expr hclsyntax.Expression) bool {
+	for _, tr := range expr.Variables() {
+		var name string
+		if len(tr) > 1 {
+			if a, ok := tr[1].(hcl.TraverseAttr); ok {
+				name = a.Name
+			}
+		}
+		switch tr.RootName() {
+		case localKey:
+			if _, ok := r.locals[name]; ok || (name == "" && len(r.locals) > 0) {
+				return true
+			}
+		case moduleKey:
+			if _, ok := r.calls[name]; ok || (name == "" && len(r.calls) > 0) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (r *resolver) callReadsPending(call moduleCall) bool {
+	for key, attr := range call.block.Body.Attributes {
+		if !moduleMetaArgs[key] && r.readsPending(attr.Expr) {
+			return true
+		}
+	}
+	return false
 }
 
 type moduleCall struct {
@@ -132,36 +265,21 @@ func localModuleSource(ctx context.Context, call *hclsyntax.Block) (name, source
 
 // moduleInputs evaluates a module call's input attributes against parent.
 // An input that doesn't resolve is left out, so the module's default (if
-// any) applies — unless it names a local or module, which may still
-// resolve: then ready is false and the call should wait.
-func moduleInputs(ctx context.Context, name string, call *hclsyntax.Block, parent *hcl.EvalContext) (inputs map[string]cty.Value, ready bool) {
-	inputs = make(map[string]cty.Value)
+// any) applies.
+func moduleInputs(ctx context.Context, name string, call *hclsyntax.Block, parent *hcl.EvalContext) map[string]cty.Value {
+	inputs := make(map[string]cty.Value)
 	for key, attr := range call.Body.Attributes {
 		if moduleMetaArgs[key] {
 			continue
 		}
 		v, diags := attr.Expr.Value(parent)
 		if diags.HasErrors() || !v.IsWhollyKnown() {
-			if referencesPending(attr.Expr) {
-				return nil, false
-			}
 			logging.FromContext(ctx).Debugw("module input unresolved", "module", name, "input", key, "errors", diags.Errs())
 			continue
 		}
 		inputs[key] = v
 	}
-	return inputs, true
-}
-
-// referencesPending reports whether expr reads a local or a module
-// output — values resolveLocalsAndModules may not have resolved yet.
-func referencesPending(expr hclsyntax.Expression) bool {
-	for _, tr := range expr.Variables() {
-		if root := tr.RootName(); root == localKey || root == moduleKey {
-			return true
-		}
-	}
-	return false
+	return inputs
 }
 
 // evalModule evaluates the module in dir — its locals, then its

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
@@ -288,8 +289,10 @@ func WatchInferenceServices(ctx context.Context, client dynamic.Interface) (<-ch
 }
 
 // legacyCRWatchOpener is crWatchOpener for a legacy ome.oracle.com GVR:
-// when the API is unavailable (legacyAPIUnavailable) it returns a watch
-// that never fires instead of failing the whole trigger.
+// when the API is unavailable (legacyAPIUnavailable) — at the initial list,
+// or later on the watch itself (a role that may list but not watch, or a
+// CRD removed while watching) — it goes quiet instead of failing the whole
+// trigger, which would drop the ome.io watch with it.
 func legacyCRWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) func(context.Context) (watch.Interface, error) {
 	open := crWatchOpener(client, gvr)
 	return func(ctx context.Context) (watch.Interface, error) {
@@ -298,8 +301,50 @@ func legacyCRWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResour
 			logging.FromContext(ctx).Debugw("legacy API unavailable; not watching", "resource", gvr.String(), "error", err)
 			return watch.NewFake(), nil
 		}
-		return w, err
+		if err != nil {
+			return nil, err
+		}
+		return quietWhenUnavailable(ctx, w, gvr), nil
 	}
+}
+
+// quietWatcher forwards a legacy watch's events until the watch reports the
+// API unavailable; from then on it stays open without firing until Stop.
+type quietWatcher struct {
+	inner watch.Interface
+	out   chan watch.Event
+	stop  chan struct{}
+	once  sync.Once
+}
+
+func quietWhenUnavailable(ctx context.Context, inner watch.Interface, gvr schema.GroupVersionResource) watch.Interface {
+	q := &quietWatcher{inner: inner, out: make(chan watch.Event), stop: make(chan struct{})}
+	go func() {
+		defer close(q.out)
+		for ev := range inner.ResultChan() {
+			if ev.Type == watch.Error && legacyAPIUnavailable(apierrors.FromObject(ev.Object)) {
+				logging.FromContext(ctx).Debugw("legacy API became unavailable; not watching",
+					"resource", gvr.String(), "error", apierrors.FromObject(ev.Object))
+				<-q.stop
+				return
+			}
+			select {
+			case q.out <- ev:
+			case <-q.stop:
+				return
+			}
+		}
+	}()
+	return q
+}
+
+func (q *quietWatcher) ResultChan() <-chan watch.Event { return q.out }
+
+func (q *quietWatcher) Stop() {
+	q.once.Do(func() {
+		close(q.stop)
+		q.inner.Stop()
+	})
 }
 
 // WatchServingRuntimes triggers on ClusterServingRuntime CR changes.

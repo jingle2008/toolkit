@@ -179,11 +179,13 @@ func workloadDAC(w models.GPUWorkload) string {
 	return w.Namespace
 }
 
-// endpointDAC returns the DAC a dedicated endpoint runs on (its
-// namespace), or "" for an on-demand one, whose namespace is the model
-// name.
+// endpointDAC returns the DAC an endpoint runs on — its namespace, when
+// that is named after a DAC — or "", as workloadDAC does for its pods. An
+// endpoint marked dedicated only by its DAC annotation or reference, in a
+// namespace not named after a DAC, isn't keyed by that namespace: it would
+// read as naming a DAC that doesn't exist.
 func endpointDAC(s models.InferenceService) string {
-	if s.Type != models.InferenceServiceDedicated {
+	if !models.IsDACName(s.Namespace) {
 		return ""
 	}
 	return s.Namespace

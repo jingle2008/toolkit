@@ -4,14 +4,12 @@ Package terraform provides functions for loading and managing infrastructure dat
 package terraform
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -222,73 +220,6 @@ func mergeObject(object cty.Value, key string, value cty.Value) cty.Value {
 	}
 	valueMap[key] = value
 	return cty.ObjectVal(valueMap)
-}
-
-// resolveLocals iteratively evaluates locals attributes against evalCtx,
-// merging each newly-known value into evalCtx's `local` object so later
-// passes can resolve attributes that reference earlier ones (in any
-// declaration order). It mutates `attributes`, deleting every entry it
-// resolves; whatever remains afterwards could not be evaluated. Returns
-// the final `local` object.
-func resolveLocals(
-	ctx context.Context,
-	evalCtx *hcl.EvalContext,
-	localObject cty.Value,
-	attributes hclsyntax.Attributes,
-) cty.Value {
-	keys := make([]string, 0, len(attributes))
-	for key := range attributes {
-		keys = append(keys, key)
-	}
-
-	// Evaluate attributes with the fewest references first so simple
-	// literals land before the expressions that depend on them.
-	slices.SortFunc(keys, func(a, b string) int {
-		vi := len(attributes[a].Expr.Variables())
-		vj := len(attributes[b].Expr.Variables())
-		return cmp.Compare(vi, vj)
-	})
-
-	const maxIterations = 100
-	progress := true
-	iterations := 0
-	for len(attributes) > 0 && progress && iterations < maxIterations {
-		knownKeys := make(map[string]struct{})
-		for _, key := range keys {
-			attr, ok := attributes[key]
-			if !ok {
-				continue
-			}
-
-			value, diags := attr.Expr.Value(evalCtx)
-			if diags.HasErrors() {
-				continue
-			}
-
-			if value.IsWhollyKnown() {
-				localObject = mergeObject(localObject, key, value)
-				evalCtx.Variables[localKey] = localObject
-				knownKeys[key] = struct{}{}
-			}
-		}
-
-		progress = len(knownKeys) > 0
-		for key := range knownKeys {
-			delete(attributes, key)
-		}
-		iterations++
-	}
-	if iterations == maxIterations && len(attributes) > 0 {
-		unresolved := make([]string, 0, len(attributes))
-		for key := range attributes {
-			unresolved = append(unresolved, key)
-		}
-		logging.FromContext(ctx).Errorw(
-			"max iterations reached while resolving locals; possible cyclic dependency",
-			"unresolved", unresolved,
-		)
-	}
-	return localObject
 }
 
 func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environment) (map[string]cty.Value, error) {

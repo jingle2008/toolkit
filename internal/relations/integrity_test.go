@@ -111,6 +111,20 @@ func TestCheckIntegrity(t *testing.T) {
 	}
 }
 
+// An endpoint marked dedicated by its DAC annotation but living in a
+// namespace not named after a DAC isn't keyed by that namespace, as its
+// pods aren't, so it isn't flagged as naming a missing DAC.
+func TestCheckIntegrity_DedicatedOutsideDACNamespace(t *testing.T) {
+	t.Parallel()
+	ds := integrityDataset()
+	ds.InferenceServiceMap["tenant-ns"] = []models.InferenceService{
+		{Name: "isvc-5", Namespace: "tenant-ns", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm"},
+	}
+	isvcDAC := checkByName(t, CheckIntegrity(ds), "InferenceService → DedicatedAICluster")
+	assert.Equal(t, 3, isvcDAC.Checked)
+	assert.NotContains(t, isvcDAC.Dangling, Dangling{Row: "tenant-ns/isvc-5", Missing: "tenant-ns"})
+}
+
 func TestCheckIntegrity_Tenancy(t *testing.T) {
 	t.Parallel()
 	checks := CheckIntegrity(integrityDataset())

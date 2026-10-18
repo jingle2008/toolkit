@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,8 +59,11 @@ func LoadInferenceServices(ctx context.Context, client dynamic.Interface) (map[s
 func listLegacyInferenceServices(ctx context.Context, client dynamic.Interface) ([]unstructured.Unstructured, error) {
 	list, err := client.Resource(inferenceServiceV1GVR).List(ctx, v1.ListOptions{})
 	if legacyAPIUnavailable(err) {
+		// Warn once: every reload hits the same, expected Forbidden.
 		if apierrors.IsForbidden(err) {
-			logging.FromContext(ctx).Warnw("not allowed to list legacy InferenceServices; skipping them", "error", err)
+			log := logging.FromContext(ctx).Debugw
+			legacyForbiddenOnce.Do(func() { log = logging.FromContext(ctx).Warnw })
+			log("not allowed to list legacy InferenceServices; skipping them", "error", err)
 		}
 		return nil, nil
 	}
@@ -68,6 +72,10 @@ func listLegacyInferenceServices(ctx context.Context, client dynamic.Interface) 
 	}
 	return list.Items, nil
 }
+
+// legacyForbiddenOnce makes the Forbidden warning on the legacy list a
+// once-per-process message.
+var legacyForbiddenOnce sync.Once
 
 // legacyAPIUnavailable reports whether err means the legacy
 // ome.oracle.com API can't be read at all — the CRD isn't installed

@@ -230,3 +230,105 @@ func TestAllTrue_UnknownElement(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, cty.False, got, "a false element before the unknown one decides it")
 }
+
+// echoModule writes a module that outputs its input `value`, defaulting
+// to "default".
+func echoModule(t *testing.T, root string) {
+	t.Helper()
+	writeTfFile(t, mkdir(t, root, "echo"), "main.tf", `
+variable "value" {
+  default = "default"
+}
+
+output "value" {
+  value = var.value
+}
+`)
+}
+
+// A local reading a module output through try() waits for the module
+// instead of settling on its fallback while the call is still deferred.
+func TestModuleOutputs_TryLocalWaitsForModule(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	parent := mkdir(t, root, "parent")
+	writeTfFile(t, parent, "main.tf", `
+module "m" {
+  source = "../echo"
+  value  = local.region
+}
+
+locals {
+  region = "us-${var.environment}-1"
+  x      = try(module.m.value, "fb")
+}
+`)
+	echoModule(t, root)
+	vals, err := loadLocalValueMap(context.Background(), parent, models.Environment{Type: "prod", Region: "us-chicago-1", Realm: "oc1"})
+	require.NoError(t, err)
+	assert.Equal(t, "us-prod-1", vals["x"].AsString())
+}
+
+// A module input reading a local through try() waits for the local
+// instead of running the call with the fallback.
+func TestModuleOutputs_TryInputWaitsForLocal(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	parent := mkdir(t, root, "parent")
+	writeTfFile(t, parent, "main.tf", `
+module "a" {
+  source = "../echo"
+  value  = try(local.region, "fb")
+}
+
+locals {
+  base   = "us-${var.environment}"
+  region = "${local.base}-1"
+  out    = module.a.value
+}
+`)
+	echoModule(t, root)
+	vals, err := loadLocalValueMap(context.Background(), parent, models.Environment{Type: "prod", Region: "us-chicago-1", Realm: "oc1"})
+	require.NoError(t, err)
+	assert.Equal(t, "us-prod-1", vals["out"].AsString())
+}
+
+// An input reading a local that never resolves falls back to the
+// variable's default; the call isn't dropped, so its outputs resolve.
+func TestModuleOutputs_UnresolvableInputUsesDefault(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	parent := mkdir(t, root, "parent")
+	writeTfFile(t, parent, "main.tf", `
+module "a" {
+  source = "../echo"
+  value  = local.broken
+}
+
+locals {
+  broken = var.missing
+  out    = module.a.value
+}
+`)
+	echoModule(t, root)
+	vals, err := loadLocalValueMap(context.Background(), parent, models.Environment{Type: "prod", Region: "us-chicago-1", Realm: "oc1"})
+	require.NoError(t, err)
+	assert.Equal(t, "default", vals["out"].AsString())
+}
+
+// Locals that reference each other in a cycle still terminate, and a
+// try() in the cycle lands on its fallback.
+func TestResolveLocals_CycleFallsBack(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeTfFile(t, dir, "main.tf", `
+locals {
+  a = try(local.b, "fa")
+  b = local.a
+}
+`)
+	vals, err := loadLocalValueMap(context.Background(), dir, models.Environment{Type: "prod", Region: "us-chicago-1", Realm: "oc1"})
+	require.NoError(t, err)
+	assert.Equal(t, "fa", vals["a"].AsString())
+	assert.Equal(t, "fa", vals["b"].AsString())
+}
