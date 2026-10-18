@@ -44,13 +44,23 @@ func compose(bg, fg string, x, y int) string {
 // body, widened if need be so the title isn't cut. Body lines get one
 // column of padding on each side.
 func Box(title, body string, border color.Color, titleStyle lipgloss.Style, width int) string {
-	inner := lipgloss.NewStyle().Padding(0, 1)
+	return frameBox(title, body, border, titleStyle, width, 1)
+}
+
+// Panel is Box without the padding, for full-width content such as a
+// table that draws its own cell spacing.
+func Panel(title, body string, border color.Color, titleStyle lipgloss.Style, width int) string {
+	return frameBox(title, body, border, titleStyle, width, 0)
+}
+
+func frameBox(title, body string, border color.Color, titleStyle lipgloss.Style, width, pad int) string {
+	inner := lipgloss.NewStyle().Padding(0, pad)
 	switch {
 	case width > 0:
 		inner = inner.Width(max(width-2, 0))
 	case title != "":
 		// The top edge needs 6 cells around the title: ╭─ ␣title␣ ─╮.
-		inner = inner.Width(max(lipgloss.Width(body)+2, lipgloss.Width(title)+4))
+		inner = inner.Width(max(lipgloss.Width(body)+2*pad, lipgloss.Width(title)+4))
 	}
 	edge := lipgloss.NewStyle().Foreground(border)
 	boxed := lipgloss.NewStyle().

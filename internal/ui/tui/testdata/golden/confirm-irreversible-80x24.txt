@@ -1,16 +1,16 @@
-Realm:   oc1                  <t>       Copy Tenant ID             | | | | |
-Type:    prod                 <ctrl+x>  Delete                   .-----------.
-Region:  us-ashburn-1         <shift+e> Edit Tenant             -|   _____   |-
-Context: dp-prod-iad          <o>       Go to related           -|  |_   _|  |-
-K8s:     v1.31.4              <m>       Open Metrics            -|    |_|    |-
-Version: v1.2.3               <?/h>     Help +5 more             '-----------'
- DedicatedAI╭─ ⚠ Delete DAC ───────────────────────────────────────╮ze: 7 [1/3]
-┌───────────│ Kind     DAC                                         │───────────┐
-│ Name ↑    │ Name     dac-alpha                                   │…  Status  │
-│───────────│ Context  dp-prod-iad                                 │───────────│
-│ dac-alpha │                                                      │…  Active  │
-│ dac-orphan│ This permanently deletes the cluster and its         │…  Active  │
-│ dac-日本語│ endpoints.                                           │d  Failed  │
+ oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                   v1.2.3
+ DedicatedAICluster                       Active: 2 • Failed: 1 • Size: 7 [1/3]
+╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────╮
+│ Name ↑         Tenant ↕     Inte…  Us…  Ty…  Model  Shape/…  S…  A…  Status  │
+│──────────────────────────────────────────────────────────────────────────────│
+│ dac-alpha      acme         false  75%  Ho…         A100_8…  4   1…  Active  │
+│ dac-orphan╭─ ⚠ Delete DAC ───────────────────────────────────────╮…  Active  │
+│ dac-日本語│ Kind     DAC                                         │d  Failed  │
+│           │ Name     dac-alpha                                   │           │
+│           │ Context  dp-prod-iad                                 │           │
+│           │                                                      │           │
+│           │ This permanently deletes the cluster and its         │           │
+│           │ endpoints.                                           │           │
 │           │                                                      │           │
 │           │              [ Cancel ]     [ Delete ]               │           │
 │           │                                                      │           │
@@ -20,5 +20,5 @@ Version: v1.2.3               <?/h>     Help +5 more             '-----------'
 │                                                                              │
 │                                                                              │
 │                                                                              │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+╰──────────────────────────────────────────────────────────────────────────────╯
+ o go to related  t copy tenant id  E edit tenant  m open metrics  ? more

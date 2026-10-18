@@ -10,6 +10,7 @@ import (
 	"charm.land/bubbles/v2/table"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -223,7 +224,7 @@ func TestContextStringAndStatusView(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	s := m.contextString()
-	require.Contains(t, s, "all")
+	require.Equal(t, "Tenant", s, "an unscoped list shows just the category")
 	status := m.statusView()
 	require.NotEmpty(t, status)
 	m.enterDetailView()
@@ -339,10 +340,10 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 	assert.Contains(t, cs, "LimitTenancyOverride")
 	assert.Contains(t, cs, "scopeA")
 
-	info := m.infoView()
-	assert.Contains(t, info, "Realm:")
-	assert.Contains(t, info, "Type:")
-	assert.Contains(t, info, "Region:")
+	m.viewWidth = 120
+	bar := ansi.Strip(m.envBar())
+	assert.Contains(t, bar, m.environment.Realm)
+	assert.Contains(t, bar, m.environment.Region)
 }
 
 func TestModel_DetailView_and_ExitDetailView(t *testing.T) {

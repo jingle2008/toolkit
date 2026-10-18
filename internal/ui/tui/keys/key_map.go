@@ -2,7 +2,6 @@
 package keys
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 
@@ -69,82 +68,46 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return rows
 }
 
-// helpRows is the height of one help column; it matches the six-line info
-// block the header sits beside.
+// helpRows is the height of one FullHelp column.
 const helpRows = 6
 
-// headerCore lists the non-context bindings the header bar keeps beside a
-// category's actions: the universal entry points, plus details view's one
-// action. Each is shown only if the active KeyMap carries it. Everything
-// else (navigation, history, toggles) lives on the ? screen. Help is not
-// listed here — HeaderHelp pins it last.
-var headerCore = []key.Binding{CopyObject, FilterMode, CommandMode, Back}
+// footerCore lists the non-context bindings the footer keeps after a
+// category's actions, each shown only if the active KeyMap carries it.
+var footerCore = []key.Binding{CopyObject, FilterMode, CommandMode}
+
+// sortHint stands for every sort declaration in the footer: the column
+// headers show the individual keys once s is pressed.
+var sortHint = key.NewBinding(key.WithKeys(SortLeader), key.WithHelp(SortLeader, "sort"))
 
 /*
-HeaderHelp returns the header bar's help columns, fitted to width.
-
-Bindings are ranked rather than sorted globally: category actions
-(Context, minus Sort* keys, which the column headers already advertise)
-first, then the headerCore keys this KeyMap carries, each tier sorted by
-description. When the columns don't fit, bindings are dropped from the
-tail — core before actions — and the pinned Help entry reports how many
-were hidden, so overflow is never silent. QuickSwitch keeps its leading
-column; if even QuickSwitch and Help overflow, nothing is returned.
-measure reports the rendered width of a column set; width <= 0 disables
-fitting.
+FooterBindings returns the bindings the footer advertises, most useful
+first: the category's actions in registry order (sort declarations
+collapse into one "s sort"), then the footerCore keys this KeyMap
+carries. The caller appends help and drops from the tail to fit.
 */
-func (k KeyMap) HeaderHelp(width int, measure func([][]key.Binding) int) [][]key.Binding {
-	byDesc := func(c1, c2 key.Binding) int {
-		return strings.Compare(c1.Help().Desc, c2.Help().Desc)
+func (k KeyMap) FooterBindings() []key.Binding {
+	var out []key.Binding
+	sortable := false
+	for _, b := range slices.Concat(k.Context, k.Mode) {
+		if strings.HasPrefix(b.Help().Desc, SortPrefix) {
+			sortable = true
+		}
 	}
-	actions := slices.DeleteFunc(slices.Clone(k.Context), func(b key.Binding) bool {
-		return strings.HasPrefix(b.Help().Desc, SortPrefix)
-	})
-	slices.SortStableFunc(actions, byDesc)
-
+	for _, b := range k.Context {
+		if !strings.HasPrefix(b.Help().Desc, SortPrefix) {
+			out = append(out, b)
+		}
+	}
+	if sortable {
+		out = append(out, sortHint)
+	}
 	active := slices.Concat(k.Global, k.Mode)
-	var core []key.Binding
-	for _, c := range headerCore {
+	for _, c := range footerCore {
 		if slices.ContainsFunc(active, func(b key.Binding) bool { return b.Help() == c.Help() }) {
-			core = append(core, c)
+			out = append(out, c)
 		}
 	}
-	slices.SortStableFunc(core, byDesc)
-
-	items := slices.Concat(actions, core)
-	for n := len(items); n >= 0; n-- {
-		cols := k.headerColumns(items[:n], len(items)-n)
-		if width <= 0 || measure(cols) <= width {
-			return cols
-		}
-	}
-	// Not even Help fits. Return nothing: handing bubbles an oversized
-	// column makes it skip its ellipsis and render the column anyway.
-	return nil
-}
-
-// headerColumns lays out the QuickSwitch column, then items followed by
-// the Help binding, chunked into helpRows-tall columns. hidden > 0 tags
-// Help with the number of bindings that were dropped to fit.
-func (k KeyMap) headerColumns(items []key.Binding, hidden int) [][]key.Binding {
-	if h := k.Help(); h.Enabled() {
-		if hidden > 0 {
-			hh := h.Help()
-			h = key.NewBinding(
-				key.WithKeys(h.Keys()...),
-				key.WithHelp(hh.Key, fmt.Sprintf("%s +%d more", hh.Desc, hidden)),
-			)
-		}
-		items = append(slices.Clone(items), h)
-	}
-	cols := [][]key.Binding{}
-	if len(k.QuickSwitch) > 0 {
-		cols = append(cols, k.QuickSwitch)
-	}
-	for chunk := range slices.Chunk(items, helpRows) {
-		cols = append(cols, chunk)
-	}
-	return cols
+	return out
 }
 
 /*

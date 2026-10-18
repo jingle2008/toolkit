@@ -58,27 +58,27 @@ func makeTestModel() *Model {
 	return m
 }
 
-func TestInfoView(t *testing.T) {
+func TestEnvBar(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
-	out := m.infoView()
-	assert.Contains(t, out, "Realm:")
-	assert.Contains(t, out, "oc1")
-	assert.Contains(t, out, "K8s:")
-	assert.Equal(t, 6, lipgloss.Height(out))
+	out := ansi.Strip(m.envBar())
+	assert.Contains(t, out, "oc1 › dev › us-phx-1")
+	assert.Contains(t, out, "k8s")
+	assert.Equal(t, 1, lipgloss.Height(out))
+	assert.Equal(t, m.viewWidth, lipgloss.Width(out))
 }
 
 func TestHandleKubeVersionMsg(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
-	assert.Contains(t, m.infoView(), "…", "placeholder before fetch")
+	assert.Contains(t, ansi.Strip(m.envBar()), "k8s …", "placeholder before fetch")
 
 	m.handleKubeVersionMsg(kubeVersionMsg{Context: "stale-ctx", Version: "v1.0.0"})
 	assert.Empty(t, m.k8sVersion, "stale context must be ignored")
 
 	m.handleKubeVersionMsg(kubeVersionMsg{Context: m.environment.KubeContext(), Version: "v1.30.1"})
 	assert.Equal(t, "v1.30.1", m.k8sVersion)
-	assert.Contains(t, m.infoView(), "v1.30.1")
+	assert.Contains(t, ansi.Strip(m.envBar()), "v1.30.1")
 }
 
 func TestContextString(t *testing.T) {
@@ -105,10 +105,10 @@ func TestStatusView(t *testing.T) {
 	m := makeTestModel()
 	m.theme.Context = lipgloss.NewStyle()
 	m.theme.Stats = lipgloss.NewStyle()
-	m.theme.StatusText = lipgloss.NewStyle()
 	m.textInput.SetValue("input")
-	out := m.statusView()
-	assert.Contains(t, out, "input")
+	assert.NotContains(t, m.statusView(), "input", "the input shows only while typing")
+	m.inputMode = common.EditInput
+	assert.Contains(t, m.statusView(), "input")
 }
 
 func TestUpdateContent_DetailsView(t *testing.T) {
@@ -163,23 +163,22 @@ func TestView_LoadingView(t *testing.T) {
 	m := makeTestModel()
 	m.dataset = nil // full-screen LoadingView is only used while the first dataset is still loading
 	m.viewMode = common.LoadingView
-	out := m.render()
-	assert.Contains(t, out, "Loading data")
+	out := ansi.Strip(m.render())
+	assert.Contains(t, out, "Loading Tenant")
+	assert.Contains(t, out, "|_   _|", "the logo heads the loading screen")
 }
 
-func TestStatusView_LoadingNugget(t *testing.T) {
+func TestEnvBar_LoadingNugget(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
-	m.theme.Stats = lipgloss.NewStyle()
 	m.pendingTasks = 1
-	out := m.statusView()
+	out := m.envBar()
 	// The stopwatch renders elapsed time; pendingTasks>0 means the
 	// inline loading cell should appear with a duration token like "0s".
-	assert.Contains(t, out, "s")
+	assert.Contains(t, ansi.Strip(out), "0s")
 	// Sanity-check that pendingTasks=0 omits the nugget.
 	m.pendingTasks = 0
-	bareOut := m.statusView()
-	assert.NotEqual(t, out, bareOut)
+	assert.NotContains(t, ansi.Strip(m.envBar()), "0s")
 }
 
 func TestView_HelpView(t *testing.T) {

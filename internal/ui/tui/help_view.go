@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
 const (
@@ -121,6 +122,11 @@ func (m *Model) fullHelpView() string {
 	rows, maxScroll := m.helpWindow(len(lines))
 	off := min(max(m.helpScroll, 0), maxScroll)
 	body := strings.Join(lines[off:off+rows], "\n")
+	// The logo heads help when it fits without making help scroll.
+	if logoH := lipgloss.Height(view.Logo) + 1; maxScroll == 0 && len(lines)+logoH <= m.modalMaxBody() {
+		logo := view.RenderLogo(m.theme.LogoTop, m.theme.LogoBottom)
+		body = lipgloss.PlaceHorizontal(lipgloss.Width(body), lipgloss.Center, logo) + "\n" + body
+	}
 	hints := "esc close"
 	if maxScroll > 0 {
 		hints = "j/k pgup/pgdn home/end scroll · esc close"

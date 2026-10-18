@@ -1,14 +1,17 @@
-Realm:   oc1                  <esc> Back/Clear                     | | | | |
-Type:    prod                 <o>   Copy Object                  .-----------.
-Region:  us-ashburn-1         <?/h> Help                        -|   _____   |-
-Context: dp-prod-iad                                            -|  |_   _|  |-
-K8s:     v1.31.4                                                -|    |_|    |-
-Version:╭─ Keys · Details view ────────────────────────────────────────╮-----'
- Dedicat│ Details View Actions            Viewport Actions             │7 [1/3]
-┌───────│   <o>         Copy Object         ↑/k         up             │───────┐
+ oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                   v1.2.3
+ DedicatedAICluster                       Active: 2 • Failed: 1 • Size: 7 [1/3]
+╭─ acme/╭─ Keys · Details view ────────────────────────────────────────╮───────╮
+│       │                          | | | | |                           │       │
+│       │                        .-----------.                         │       │
+│    {  │                       -|   _____   |-                        │       │
+│       │                       -|  |_   _|  |-                        │       │
+│       │                       -|    |_|    |-                        │       │
+│       │                        '-----------'                         │       │
+│       │ Details View Actions            Viewport Actions             │       │
+│       │   <o>         Copy Object         ↑/k         up             │       │
 │       │                                   ↓/j         down           │       │
 │       │ General Actions                   u           ½ page up      │       │
-│    {  │   <?/h>       Help                d           ½ page down    │       │
+│       │   <?/h>       Help                d           ½ page down    │       │
 │       │   <y>         Toggle Details      b/pgup      page up        │       │
 │       │   <c>         Copy                f/pgdn      page down      │       │
 │       │   <`>         Toggle Log                                     │       │
@@ -16,9 +19,6 @@ Version:╭─ Keys · Details view ──────────────�
 │       │   <q>         Quit                                           │       │
 │       │                                                              │       │
 │       │ esc close                                                    │       │
-│       ╰──────────────────────────────────────────────────────────────╯       │
-│            "id": "ocid1.tenancy.oc1..acme",                                  │
-│            "is_internal": false,                                             │
-│            "status": "ACTIVE"                                                │
-│        },                                                                    │
-└──────────────────────────────────────────────────────────────────────────────┘
+│    }  ╰──────────────────────────────────────────────────────────────╯       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ o copy object  ? more

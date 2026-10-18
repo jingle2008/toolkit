@@ -69,7 +69,6 @@ copy IDs — revisit behind a flag later); any CLI/MCP change; v2 keyboard enhan
 | `Muted` | `#8A8A8A` | `#6C6C6C` | hints, debug lines, dim backdrop |
 | `Border` | `#585858` | `#BCBCBC` | unfocused borders, header rule |
 | `Focus` | `#5F5FD7` | `#5F5FAF` | modal and details borders |
-| `Selection` / `OnSelection` | `#5F00FF` / `#FFFFAF` | same | selected row (until Phase 7) |
 | `Surface` / `OnSurface` | `#353533` / `#C1C6B2` | `#D9DCCF` / `#343433` | bars, modal background |
 | `Success` | `#2EA043` | `#1A7F37` | LIVE, ready |
 | `Warn` / `OnWarn` | `#FFAF00` / `#000000` | `#9A6700` / `#FFFDF5` | recoverable confirm, pending/draining, paused log, log warnings |

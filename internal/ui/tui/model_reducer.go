@@ -10,7 +10,6 @@ import (
 
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -18,7 +17,6 @@ import (
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
-	"github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -131,6 +129,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	m.stats = stats
 	m.rawRows = cloneRows(rows)
 	m.applyMiddleTruncation(rows)
+	m.toneStatusCells(rows)
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
@@ -324,40 +323,21 @@ func (m *Model) updateLayout(w, h int) {
 	if m.dirPicker != nil {
 		m.dirPicker.SetHeight(min(15, max(m.modalMaxBody()-4, 3)))
 	}
-	// Budget the info column (and the logo, when it fits) out of the help
-	// bubble's width so the header in frame() doesn't exceed the terminal
-	// and soft-wrap. The extra -1 dodges a bubbles/help edge case: when
-	// columns sum to exactly m.help.Width, the next column still triggers
-	// truncation (>) but the ellipsis-fits check (<) fails, so the bubble
-	// falls through and renders the column uncondensed.
-	reserved := lipgloss.Width(m.headerInfo())
-	if m.showLogo(w) {
-		reserved += view.LogoWidth + view.LogoMargin
-	}
-	m.help.SetWidth(max(w-reserved-1, 0))
-	var borderStyle lipgloss.Border
+	// The frame draws its panel's border itself: two columns and two rows
+	// around the table or details body, plus frameChrome rows of bars.
+	inner, body := max(w-2, 0), max(h-frameChrome-2, 1)
 	if m.viewMode == common.DetailsView {
-		borderStyle = m.viewport.Style.GetBorderStyle()
+		m.viewport.SetWidth(inner)
+		m.viewport.SetHeight(body)
 	} else {
-		borderStyle = m.theme.Base.GetBorderStyle()
-	}
-	borderWidth := borderStyle.GetLeftSize() + borderStyle.GetRightSize()
-	borderHeight := borderStyle.GetTopSize() + borderStyle.GetBottomSize()
-	statusHeight := lipgloss.Height(m.statusView())
-	infoHeight := lipgloss.Height(m.infoView())
-	top := statusHeight + infoHeight
-	if m.viewMode == common.DetailsView {
-		m.viewport.SetWidth(w)
-		m.viewport.SetHeight(h - top)
-	} else {
-		table.WithWidth(w - borderWidth)(m.table)
+		table.WithWidth(inner)(m.table)
 		// updateColumns before WithHeight: WithHeight derives viewport.Height
 		// from lipgloss.Height(headersView()), so columns must be set first
 		// (otherwise an empty header is measured as 1 line and the viewport
 		// ends up 1 line too tall once columns are populated — the top header
 		// row gets clipped by bubbletea's renderer until a manual resize).
 		m.updateColumns()
-		table.WithHeight(h - borderHeight - top)(m.table)
+		table.WithHeight(body)(m.table)
 		m.table.UpdateViewport()
 	}
 }

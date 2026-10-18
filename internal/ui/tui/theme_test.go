@@ -37,8 +37,7 @@ func TestBackgroundColorMsg_RestylesComponents(t *testing.T) {
 	_, _ = m.Update(tea.BackgroundColorMsg{Color: color.White})
 	light := NewPalette(false)
 	require.Equal(t, light, m.theme.Palette)
-	assert.Equal(t, light.Focus, m.viewport.Style.GetBorderTopForeground())
 	assert.Equal(t, light.Accent, m.loadingSpinner.Style.GetForeground())
 	assert.Equal(t, light.Info, m.help.Styles.FullKey.GetForeground())
-	assert.Equal(t, light.Selection, m.styles.Selected.GetBackground())
+	assert.Equal(t, light.Accent, m.styles.Selected.GetBackground())
 }
