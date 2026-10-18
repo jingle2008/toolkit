@@ -57,23 +57,26 @@ copy IDs — revisit behind a flag later); any CLI/MCP change; v2 keyboard enhan
 
 ### Theme roles
 
-`Theme` replaces `Styles`. Every view takes colors from roles, never literals.
+`Palette` (in `theme.go`) holds the roles, and `Styles` is built from it. Every view takes colors from roles, never literals.
 
 | Role | Dark | Light | Use |
 |---|---|---|---|
-| `Primary` | `#FF8700` | `#D75F00` | keys, info labels, focused borders |
-| `Accent` | `#FF5F87` | `#D7005F` | context chip, selected row, logo bottom |
+| `Primary` | `#FF8700` | `#D75F00` | info labels, section headers (keys from Phase 5) |
+| `Accent` | `#FF5F87` | `#D7005F` | context chip, spinner, logo bottom, selected row (Phase 7) |
 | `Secondary` | `#A550DF` | `#8700AF` | counters, stats chip |
 | `Text` | `#E4E4E4` | `#262626` | body |
-| `Muted` | `#808080` | `#6C6C6C` | hints, separators, dim backdrop |
-| `Border` | `#585858` | `#BCBCBC` | unfocused borders |
-| `Surface` | `#303030` | `#E4E4E4` | bars, modal background |
+| `OnAccent` | `#FFFDF5` | `#FFFDF5` | text on Accent/Secondary/Success/Info/Danger fills |
+| `Muted` | `#8A8A8A` | `#6C6C6C` | hints, debug lines, dim backdrop |
+| `Border` | `#585858` | `#BCBCBC` | unfocused borders, header rule |
+| `Focus` | `#5F5FD7` | `#5F5FAF` | modal and details borders |
+| `Selection` / `OnSelection` | `#5F00FF` / `#FFFFAF` | same | selected row (until Phase 7) |
+| `Surface` / `OnSurface` | `#353533` / `#C1C6B2` | `#D9DCCF` / `#343433` | bars, modal background |
 | `Success` | `#2EA043` | `#1A7F37` | LIVE, ready |
-| `Warn` | `#FFAF00` | `#9A6700` | recoverable confirm, pending/draining, paused log |
+| `Warn` / `OnWarn` | `#FFAF00` / `#000000` | `#9A6700` / `#FFFDF5` | recoverable confirm, pending/draining, paused log, log warnings |
 | `Danger` | `#D70000` | `#CF222E` | irreversible confirm, faulty, errors |
-| `Info` | `#0087FF` | `#0969DA` | info toasts |
+| `Info` | `#0087FF` | `#0969DA` | info toasts, following log, help keys |
 
-Exact hex values are tuned during the theme phase; the roles and their uses are fixed.
+Phase 4 picked these values to keep the current look. The roles and their uses are fixed; the values can be tuned later.
 
 ### Frame (list view)
 

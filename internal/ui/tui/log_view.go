@@ -30,14 +30,14 @@ func levelLabel(l logging.Level) string {
 }
 
 // levelStyle returns the color style for a log level.
-func levelStyle(l logging.Level) lipgloss.Style {
+func (s Styles) levelStyle(l logging.Level) lipgloss.Style {
 	switch l {
 	case logging.LevelWarn:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("220"))
+		return s.LogWarn
 	case logging.LevelError:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+		return s.LogError
 	case logging.LevelDebug:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+		return s.LogDebug
 	default:
 		return lipgloss.NewStyle()
 	}
@@ -71,7 +71,7 @@ func (m *Model) renderLogEntries(width int) string {
 	}
 	lines := make([]string, len(entries))
 	for i, e := range entries {
-		style := levelStyle(e.Level)
+		style := m.theme.levelStyle(e.Level)
 		if width > 0 {
 			style = style.Width(width) // wrap to the view width
 		}
@@ -101,21 +101,14 @@ func (m *Model) logView() string {
 	}
 
 	// Highlighted, full-width title bar — also the visual separator between
-	// the header and the scrolling body. The bar color tracks state: teal
-	// while following the tail, amber when paused (scrolled up).
-	state := "following"
-	barColor := lipgloss.Color("24") // teal: live tail
+	// the header and the scrolling body. The bar color tracks state: Info
+	// while following the tail, Warn when paused (scrolled up).
+	state, bar := "following", m.theme.LogFollowing
 	if !m.log.viewport.AtBottom() {
-		state = "PAUSED"
-		barColor = lipgloss.Color("130") // amber: paused
+		state, bar = "PAUSED", m.theme.LogPaused
 	}
-	title := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("231")).
-		Background(barColor).
-		Width(width).
-		Render(fmt.Sprintf("LOG — %s", state))
-	hint := lipgloss.NewStyle().Foreground(lipgloss.Color("245")).
+	title := bar.Width(width).Render(fmt.Sprintf("LOG — %s", state))
+	hint := m.theme.LogHint.
 		Render("↑↓/pgup/pgdn scroll · end follow · home top · ` close")
 	return lipgloss.JoinVertical(lipgloss.Left, title, m.log.viewport.View(), hint)
 }
