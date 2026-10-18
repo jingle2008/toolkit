@@ -51,6 +51,12 @@ type logOverlay struct {
 	store      *logging.RingSink
 	viewport   *viewport.Model
 	returnView common.ViewMode
+	// minLevel hides entries below it; filter keeps entries containing it
+	// (case-insensitive), typed into input while typing.
+	minLevel logging.Level
+	filter   string
+	input    textinput.Model
+	typing   bool
 }
 
 // toastManager holds the transient banners shown over the active view.

@@ -53,3 +53,13 @@ nothing". It already redraws the hint as "press capital Y to delete"
   level) with humanized labels.
 - [x] Goldens trimmed to 80×24 and 120×40; only the preview keeps
   200×50 (`wideGoldenViews`).
+
+## Batch 4 — log view
+
+- [x] The log renders in the frame (env bar, breadcrumb with state,
+  filter chips and `[shown/total]`, titled panel, key footer).
+- [x] `/` text filter and `l` minimum-level cycle; `esc` clears the
+  filters before closing.
+
+Dropped from the review: "the help logo costs space on short terminals".
+Help already draws it only when it fits without making help scroll.

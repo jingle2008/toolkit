@@ -590,6 +590,7 @@ and CPU/memory remain in the TUI's detail view (`y`).
 | `Esc` | Back / Clear filter |
 | `y` | Toggle detail view |
 | `c` | Copy item name / ID |
+| `` ` `` | Open the [in-app log](#in-app-log) |
 
 ### List view
 
@@ -670,6 +671,19 @@ toolkit --log-level warn
 Supported log levels (from most to least verbose): `debug` → `info` → `warn` → `error`.
 
 Supported log formats: `console` (human-readable), `json` (structured), `slog` (Go slog).
+
+### In-app log
+
+Press `` ` `` in the list or detail view to see the session's recent log entries without leaving the TUI. It sits in the usual frame: the breadcrumb shows `following` while it tails new entries, `PAUSED` once you scroll up, the active filters, and how many entries show (`[11/60]`).
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓`, `PgUp` / `PgDn` | Scroll (scrolling up pauses the tail) |
+| `End` / `Home` | Follow the tail / jump to the oldest entry |
+| `/` | Filter entries by text, case-insensitive (`Enter` keeps it, `Esc` clears it) |
+| `l` | Cycle the minimum level: all → info → warn → error |
+| `Esc` | Clear the filters; with none, close the log |
+| `` ` `` | Close the log |
 
 ---
 
