@@ -168,6 +168,9 @@ func (m *Model) rowPickerView() string {
 	badge := lipgloss.NewStyle().Foreground(p.Muted).Width(catWidth).Padding(0, 1)
 	cursorStyle := lipgloss.NewStyle().Foreground(p.Accent).Bold(true)
 
+	row := func(marker, name string, t domain.Scope) string {
+		return marker + badge.Render(t.Category.String()) + "  " + name
+	}
 	var lines []string
 	if g.filterable() {
 		lines = append(lines, lipgloss.NewStyle().Foreground(p.Muted).Render("filter: ")+g.filter+"█", "")
@@ -178,7 +181,7 @@ func (m *Model) rowPickerView() string {
 		if i == g.cursor {
 			marker, name = cursorStyle.Render("▸ "), cursorStyle.Render(t.Name)
 		}
-		lines = append(lines, marker+badge.Render(t.Category.String())+"  "+name)
+		lines = append(lines, row(marker, name, t))
 	}
 	if len(rows) == 0 {
 		lines = append(lines, lipgloss.NewStyle().Foreground(p.Muted).Render("  no matches"))
@@ -191,5 +194,17 @@ func (m *Model) rowPickerView() string {
 	if g.filterable() {
 		hints = fmt.Sprintf("type to filter · ↑/↓ select · enter %s · esc cancel", g.verb)
 	}
-	return m.modal(g.title, strings.Join(lines, "\n"), hints, p.Accent, 0)
+	// As wide as every target's row and as tall as the unfiltered list, so
+	// filtering neither narrows nor shortens the box.
+	bodyW, bodyH := 0, min(n, len(g.targets))
+	for _, t := range g.targets {
+		bodyW = max(bodyW, lipgloss.Width(row("  ", t.Name, t)))
+	}
+	if g.filterable() {
+		bodyH += 2
+	}
+	if len(g.targets) > n {
+		bodyH++
+	}
+	return m.fixedModal(g.title, strings.Join(lines, "\n"), hints, p.Accent, 0, bodyW, bodyH)
 }

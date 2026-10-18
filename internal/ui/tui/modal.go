@@ -37,6 +37,20 @@ func (m *Model) modal(title, body, hints string, border color.Color, width int) 
 	return view.Box(title, body, border, titleStyle, width)
 }
 
+// fixedModal is modal for a body that a filter narrows as it is typed:
+// body is padded to bodyH lines and bodyW columns, the size the unfiltered
+// body takes, so the box keeps its size while filtering — and, centered,
+// its place: the line being typed into doesn't move under the cursor.
+func (m *Model) fixedModal(title, body, hints string, border color.Color, width, bodyW, bodyH int) string {
+	if n := lipgloss.Height(body); n < bodyH {
+		body += strings.Repeat("\n", bodyH-n)
+	}
+	if lipgloss.Width(body) < bodyW {
+		body = lipgloss.NewStyle().Width(bodyW).Render(body)
+	}
+	return m.modal(title, body, hints, border, width)
+}
+
 // overlayModal draws modal centered over the view it was opened from,
 // which is dimmed so the modal stands out while its context stays
 // visible. A modal within modalFullMargin rows of the screen's height
