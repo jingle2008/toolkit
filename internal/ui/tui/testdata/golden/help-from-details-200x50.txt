@@ -1,50 +1,50 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                                 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
-                                                 │                                                                                                    │
-                                                 │  Details View Actions                                                                              │
-                                                 │    <o>         Copy Object                                                                         │
-                                                 │                                                                                                    │
-                                                 │  General Actions                                                                                   │
-                                                 │    <?/h>       Help                                                                                │
-                                                 │    <y>         Toggle Details                                                                      │
-                                                 │    <c>         Copy                                                                                │
-                                                 │    <`>         Toggle Log                                                                          │
-                                                 │    <esc>       Back/Clear                                                                          │
-                                                 │    <q>         Quit                                                                                │
-                                                 │                                                                                                    │
-                                                 │  Viewport Actions                                                                                  │
-                                                 │    ↑/k         up                                                                                  │
-                                                 │    ↓/j         down                                                                                │
-                                                 │    u           ½ page up                                                                           │
-                                                 │    d           ½ page down                                                                         │
-                                                 │    b/pgup      page up                                                                             │
-                                                 │    f/pgdn      page down                                                                           │
-                                                 │                                                                                                    │
-                                                 │                                                                                                    │
-                                                 │                                                                                                    │
-                                                 └────────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-
-
-
-
-
-
-
-
-
-
-
+Realm:   oc1                  <esc> Back/Clear                                                                                                                                             | | | | |
+Type:    prod                 <o>   Copy Object                                                                                                                                          .-----------.
+Region:  us-ashburn-1         <?/h> Help                                                                                                                                                -|   _____   |-
+Context: dp-prod-iad                                                                                                                                                                    -|  |_   _|  |-
+K8s:     v1.31.4                                                                                                                                                                        -|    |_|    |-
+Version: v1.2.3                                                                                                                                                                          '-----------'
+ DedicatedAICluster (all)  🐶>                                                                                                                                    Active: 2 • Failed: 1 • Size: 7 [1/3]
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│    {                                                                                                                                                                                                 │
+│        "name": "dac-alpha",                                                                                                                                                                          │
+│        "status": "Active",                                                                                                                                                                           │
+│        "tenantId": "acme",                                                                                                                                                                           │
+│        "type": "Hosting",                                                                                                                                                                            │
+│        "unitShape": "A100_80G",                                                                                                                                                                      │
+│        "size": 4,                                                                                                                                                                                    │
+│        "owner": {                                                                                                                                                                                    │
+│            "name": "acme",                                                                                                                                                                           │
+│            "id": "ocid1.tenancy.oc1..acme",       ╭─ Keys · Details view ────────────────────────────────────────────────────────────────────────╮                                                   │
+│            "is_internal": false,                  │ Details View Actions            General Actions                 Viewport Actions             │                                                   │
+│            "status": "ACTIVE"                     │   <o>         Copy Object         <?/h>       Help                ↑/k         up             │                                                   │
+│        },                                         │                                   <y>         Toggle Details      ↓/j         down           │                                                   │
+│        "totalReplicas": 4,                        │                                   <c>         Copy                u           ½ page up      │                                                   │
+│        "idleReplicas": 1,                         │                                   <`>         Toggle Log          d           ½ page down    │                                                   │
+│        "age": "12d"                               │                                   <esc>       Back/Clear          b/pgup      page up        │                                                   │
+│    }                                              │                                   <q>         Quit                f/pgdn      page down      │                                                   │
+│                                                   │                                                                                              │                                                   │
+│                                                   │ esc close                                                                                    │                                                   │
+│                                                   ╰──────────────────────────────────────────────────────────────────────────────────────────────╯                                                   │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

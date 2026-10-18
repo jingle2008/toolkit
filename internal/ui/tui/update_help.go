@@ -9,11 +9,14 @@ import (
 
 func (m *Model) updateHelpView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
-		if key.Matches(keyMsg, keys.Back, keys.Help) {
+		switch {
+		case key.Matches(keyMsg, keys.Back, keys.Help):
 			m.viewMode = m.lastViewMode
-		} else if key.Matches(keyMsg, keys.Quit) {
+		case key.Matches(keyMsg, keys.Quit):
 			m.cancelInFlight()
 			return m, tea.Quit
+		default:
+			m.scrollHelp(keyMsg.String())
 		}
 	}
 

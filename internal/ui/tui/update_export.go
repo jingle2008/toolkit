@@ -7,6 +7,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -62,20 +63,21 @@ func (m *Model) exportFilename() string {
 }
 
 func (m *Model) exportView() string {
+	p := m.theme.Palette
 	var s strings.Builder
-	s.WriteString("Export file name: ")
-	s.WriteString(m.dirPicker.Styles.Selected.Render(m.exportFilename()))
-	s.WriteString("\n\nPick an export path:\n\n")
-	s.WriteString(m.dirPicker.View() + "\n")
-	s.WriteString(m.exportHelpView())
-	return boxWidth(m.theme.HelpBorder, m.viewWidth*4/5).Render(s.String())
+	s.WriteString(lipgloss.NewStyle().Foreground(p.Muted).Render("File  "))
+	s.WriteString(lipgloss.NewStyle().Foreground(p.Primary).Bold(true).Render(m.exportFilename()))
+	s.WriteString("\n\n")
+	s.WriteString(lipgloss.NewStyle().Foreground(p.Muted).Render("Pick a directory:"))
+	s.WriteString("\n\n")
+	s.WriteString(m.dirPicker.View())
+	return m.modal("Export CSV", s.String(), m.exportHelpView(), p.Focus, m.modalMaxWidth())
 }
 
 func (m *Model) exportHelpView() string {
 	km := m.dirPicker.KeyMap
-	bindings := []key.Binding{
-		km.Up, km.Down, km.GoToTop, km.GoToLast,
-		km.PageUp, km.PageDown, km.Select, km.Open, km.Back,
-	}
-	return m.help.ShortHelpView(bindings)
+	// An unbounded copy: m.help is sized for the header, not the modal.
+	h := *m.help
+	h.SetWidth(0)
+	return h.ShortHelpView([]key.Binding{km.Up, km.Down, km.Select, km.Open, km.Back}) + " • esc cancel"
 }

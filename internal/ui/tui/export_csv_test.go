@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"charm.land/bubbles/v2/table"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -301,7 +302,7 @@ func TestExportView_ContainsFilenameAndPrompt(t *testing.T) {
 		logger:      fakeLogger{},
 	}
 	setDefaults(m)
-	view := m.exportView()
+	view := ansi.Strip(m.exportView())
 	assert.Contains(t, view, m.exportFilename())
-	assert.Contains(t, view, "Pick an export path:")
+	assert.Contains(t, view, "Pick a directory:")
 }

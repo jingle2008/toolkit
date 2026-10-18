@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/table"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -81,10 +82,11 @@ func TestGoToPicker_NavigatesToChoice(t *testing.T) {
 
 	require.Nil(t, m.openGoTo())
 	require.Equal(t, common.RowPickerView, m.viewMode)
-	view := m.rowPickerView()
-	assert.Contains(t, view, "> DedicatedAICluster", "starts on the structural parent")
-	assert.Contains(t, view, "BaseModel           llama")
-	assert.Contains(t, view, "[enter] go")
+	view := ansi.Strip(m.rowPickerView())
+	assert.Contains(t, lineWith(view, "DedicatedAICluster"), "▸", "starts on the structural parent")
+	assert.Contains(t, lineWith(view, "BaseModel"), "llama")
+	assert.NotContains(t, lineWith(view, "BaseModel"), "▸")
+	assert.Contains(t, view, "enter go")
 
 	_, _ = m.updateRowPickerView(keyPress("up"))
 	_, _ = m.updateRowPickerView(keyPress("enter"))

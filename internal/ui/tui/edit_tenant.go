@@ -15,6 +15,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/mutation"
@@ -380,26 +381,30 @@ func (m *Model) editTenantView() string {
 	if f == nil {
 		return ""
 	}
+	p := m.theme.Palette
 	marker := func(i int) string {
 		if f.focus == i {
-			return "> "
+			return lipgloss.NewStyle().Foreground(p.Primary).Render("▌ ")
 		}
 		return "  "
 	}
-	internal := "external"
-	if f.isInternal {
-		internal = "internal"
+	label := lipgloss.NewStyle().Foreground(p.Muted).Width(10)
+	radio := func(on bool, text string) string {
+		if on {
+			return lipgloss.NewStyle().Foreground(p.Primary).Render("(•)") + " " + text
+		}
+		return "( ) " + text
 	}
 	lines := []string{
-		fmt.Sprintf("Set tenant info for %s", f.tenantID),
+		"Tenancy " + lipgloss.NewStyle().Bold(true).Render(f.tenantID),
 		"",
-		marker(focusName) + "Name:     " + f.name.View(),
-		marker(focusInternal) + "Internal: " + internal + "  (space/left/right to toggle)",
-		marker(focusNote) + "Note:     " + f.note.View(),
-		"",
-		m.help.ShortHelpView([]key.Binding{keys.Confirm, keys.OpenPortal, keys.Back}),
+		marker(focusName) + label.Render("Name") + f.name.View(),
+		marker(focusInternal) + label.Render("Internal") +
+			radio(f.isInternal, "internal") + "  " + radio(!f.isInternal, "external"),
+		marker(focusNote) + label.Render("Note") + f.note.View(),
 	}
-	return boxWidth(m.theme.HelpBorder, m.viewWidth*3/5).Render(strings.Join(lines, "\n"))
+	hints := "tab move · space toggle · enter save · ctrl+o portal · esc cancel"
+	return m.modal("Set tenant info", strings.Join(lines, "\n"), hints, p.Focus, min(m.modalMaxWidth(), 72))
 }
 
 // metadataPath returns the configured metadata file path for display,

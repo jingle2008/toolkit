@@ -114,7 +114,6 @@ func TestInitStyles(t *testing.T) {
 	assert.NotNil(t, m.theme.StatusText)
 	assert.NotNil(t, m.theme.InfoKey)
 	assert.NotNil(t, m.theme.InfoValue)
-	assert.NotNil(t, m.theme.HelpBorder)
 	assert.NotNil(t, m.theme.HelpHeader)
 	assert.NotNil(t, m.theme.HelpKey)
 	assert.NotNil(t, m.theme.HelpDesc)

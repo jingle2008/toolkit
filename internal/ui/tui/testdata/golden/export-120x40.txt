@@ -1,40 +1,40 @@
-
-
-
-
-
-
-
-           ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
-           │                                                                                                │
-           │  Export file name: us-ashburn-1-DedicatedAICluster.csv                                         │
-           │                                                                                                │
-           │  Pick an export path:                                                                          │
-           │                                                                                                │
-           │  > drwxr-xr-x  <size> alpha                                                                     │
-           │    drwxr-xr-x  <size> beta                                                                      │
-           │    drwxr-xr-x  <size> gamma                                                                     │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │                                                                                                │
-           │  k up • j down • g first • G last • pgup page up • pgdown page down …                          │
-           │                                                                                                │
-           └────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-
-
-
-
-
-
+Realm:   oc1                  <t>       Copy Tenant ID    <ctrl+z> Toggle Faulty                           | | | | |
+Type:    prod                 <ctrl+x>  Delete            <esc>    Back/Clear                            .-----------.
+Region:  us-ashburn-1         <shift+e> Edit Tenant       <:cmd>   Command mode                         -|   _____   |-
+Context: dp-prod-iad          <o>       Go to related     </term>  Filter mode                          -|  |_   _|  |-
+K8s:     v1.31.4              <m>       Open Metrics      <?/h>    Help                                 -|    |_|    |-
+Version: v1.2.3               <r>       Refresh                                                          '-----------'
+ DedicatedAICluster (all)  🐶>                                                    Active: 2 • Failed: 1 • Size: 7 [1/3]
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Name ↑            ╭─ Export CSV ─────────────────────────────────────────────────────────────────╮…  Age ↕  Status   │
+│───────────────────│ File  us-ashburn-1-DedicatedAICluster.csv                                    │───────────────────│
+│ dac-alpha         │                                                                              │   12d    Active   │
+│ dac-orphan        │ Pick a directory:                                                            │   41d    Active   │
+│ dac-日本語        │                                                                              │   3d     Failed   │
+│                   │ > drwxr-xr-x  <size> alpha                                                    │                   │
+│                   │   drwxr-xr-x  <size> beta                                                     │                   │
+│                   │   drwxr-xr-x  <size> gamma                                                    │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │                                                                              │                   │
+│                   │ k up • j down • enter select • l open • h back • esc cancel                  │                   │
+│                   ╰──────────────────────────────────────────────────────────────────────────────╯                   │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

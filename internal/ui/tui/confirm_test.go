@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -204,11 +205,12 @@ func TestConfirmView_RecoverableRender(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	m.confirm = confirmOverlay{act: mutation.DrainNode, target: "gpu-1"}
-	out := m.confirmView()
-	assert.Contains(t, out, "Drain")
+	out := ansi.Strip(m.confirmView())
+	assert.Contains(t, out, "Drain node")
 	assert.Contains(t, out, "gpu-1")
-	assert.Contains(t, out, "[y]")
-	assert.NotContains(t, out, "DESTRUCTIVE")
+	assert.Contains(t, out, "y confirm")
+	assert.Contains(t, out, "[ Cancel ]")
+	assert.NotContains(t, out, "⚠")
 }
 
 func TestConfirmView_IrreversibleRender(t *testing.T) {
@@ -217,12 +219,12 @@ func TestConfirmView_IrreversibleRender(t *testing.T) {
 	m.confirm = confirmOverlay{
 		act: mutation.TerminateNode, target: "gpu-1", warning: "Boot volume destroyed. Cannot undo.",
 	}
-	out := m.confirmView()
-	assert.Contains(t, out, "DESTRUCTIVE")
-	assert.Contains(t, out, "Terminate")
+	out := ansi.Strip(m.confirmView())
+	assert.Contains(t, out, "⚠ Terminate node")
 	assert.Contains(t, out, "gpu-1")
 	assert.Contains(t, out, "Boot volume destroyed. Cannot undo.")
-	assert.Contains(t, out, "Press Y")
+	assert.Contains(t, out, "Y confirm")
+	assert.Contains(t, out, "[ Terminate ]")
 }
 
 // The modal names every action it can confirm — all but set tenant,

@@ -167,44 +167,41 @@ func (m *Model) View() tea.View {
 	return v
 }
 
-// render draws the active view as a string.
-//
-// When a toast is up we append it under the active view's body rather
-// than budget a row for it in updateLayout. The terminal scrolls one
-// row to accommodate, briefly clipping the table's bottom border —
-// acceptable for an 8s transient banner, and far simpler than running
-// layout twice per toast-set/dismiss.
+// render draws the active view as a string, with any toasts composited
+// over its bottom-right corner so they never shift the layout.
 func (m *Model) render() string {
-	body := m.renderActiveView()
+	body := m.renderMode(m.viewMode)
 	if m.toasts.active == nil {
 		return body
 	}
-	return lipgloss.JoinVertical(lipgloss.Left, body, m.renderToast(m.viewWidth))
+	return view.Corner(body, m.renderToasts(), m.viewWidth, m.viewHeight)
 }
 
-func (m *Model) renderActiveView() string {
+// renderMode draws one view mode. Modal modes draw over the view they
+// were opened from.
+func (m *Model) renderMode(mode common.ViewMode) string {
 	// exhaustive:common.ViewMode
-	switch m.viewMode {
+	switch mode {
 	case common.LoadingView:
 		spin := m.loadingSpinner.View()
 		sw := m.loadingTimer.View()
 		return m.centered(fmt.Sprintf("%s Loading data: %s … %s", spin, m.category.String(), sw))
 	case common.HelpView:
-		return m.centered(m.fullHelpView())
+		return m.overlayModal(m.lastViewMode, m.fullHelpView())
 	case common.ListView:
 		return m.frame(m.theme.Base.Render(m.table.View()))
 	case common.DetailsView:
 		return m.frame(m.viewport.View())
 	case common.ExportView:
-		return m.centered(m.exportView())
+		return m.overlayModal(m.lastViewMode, m.exportView())
 	case common.EditTenantView:
-		return m.centered(m.editTenantView())
+		return m.overlayModal(m.lastViewMode, m.editTenantView())
 	case common.LogView:
 		return m.logView()
 	case common.ConfirmView:
-		return m.centered(m.confirmView())
+		return m.overlayModal(m.confirm.returnView, m.confirmView())
 	case common.RowPickerView:
-		return m.centered(m.rowPickerView())
+		return m.overlayModal(m.rowPicker.returnView, m.rowPickerView())
 	default:
 		return ""
 	}
@@ -254,48 +251,6 @@ func (m *Model) frame(main string) string {
 	}
 	status := m.statusView()
 	return lipgloss.JoinVertical(lipgloss.Left, header, status, main)
-}
-
-/*
-fullHelpView renders all key bindings in sections for the help screen,
-with improved formatting and styling.
-*/
-func (m *Model) fullHelpView() string {
-	const keyCol = 12
-	var b strings.Builder
-
-	renderRow := func(k, d string) {
-		fmt.Fprintf(&b, "  %s%s\n",
-			m.theme.HelpKey.Render(fmt.Sprintf("%-*s", keyCol, k)),
-			m.theme.HelpDesc.Render(d))
-	}
-	renderSection := func(title string, bind []key.Binding) {
-		if len(bind) == 0 {
-			return
-		}
-		fmt.Fprintln(&b, m.theme.HelpHeader.Render(title))
-		for _, bb := range bind {
-			h := bb.Help()
-			if h.Key == "" && h.Desc == "" {
-				continue
-			}
-			renderRow(h.Key, h.Desc)
-		}
-		b.WriteString("\n")
-	}
-	renderSection("Quick Switch", m.quickSwitchBindings(m.lastViewMode))
-	renderSection("Resource Actions", m.keys.Context)
-	renderSection(fmt.Sprintf("%s View Actions", m.lastViewMode), m.keys.Mode)
-	renderSection("General Actions", m.keys.Global)
-	switch m.lastViewMode {
-	case common.ListView:
-		renderSection("Table Actions", m.tableBinding())
-	case common.DetailsView:
-		renderSection("Viewport Actions", m.viewportBinding())
-	case common.LoadingView, common.HelpView, common.ExportView, common.EditTenantView:
-		// No additional sections for these view modes
-	}
-	return boxWidth(m.theme.HelpBorder, m.viewWidth/2).Render(b.String())
 }
 
 func (m *Model) tableBinding() []key.Binding {

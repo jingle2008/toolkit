@@ -1,50 +1,50 @@
-
-
-
-
-
-
-
-
-
-
-
-
-                   ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-                   │                                                                                                                                                                │
-                   │  Export file name: us-ashburn-1-DedicatedAICluster.csv                                                                                                         │
-                   │                                                                                                                                                                │
-                   │  Pick an export path:                                                                                                                                          │
-                   │                                                                                                                                                                │
-                   │  > drwxr-xr-x  <size> alpha                                                                                                                                     │
-                   │    drwxr-xr-x  <size> beta                                                                                                                                      │
-                   │    drwxr-xr-x  <size> gamma                                                                                                                                     │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │                                                                                                                                                                │
-                   │  k up • j down • g first • G last • pgup page up • pgdown page down • enter select • l open • h back                                                           │
-                   │                                                                                                                                                                │
-                   └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-
-
-
-
-
-
-
-
-
-
-
-
-
+Realm:   oc1                  <t>       Copy Tenant ID    <ctrl+z> Toggle Faulty                                                                                                           | | | | |
+Type:    prod                 <ctrl+x>  Delete            <esc>    Back/Clear                                                                                                            .-----------.
+Region:  us-ashburn-1         <shift+e> Edit Tenant       <:cmd>   Command mode                                                                                                         -|   _____   |-
+Context: dp-prod-iad          <o>       Go to related     </term>  Filter mode                                                                                                          -|  |_   _|  |-
+K8s:     v1.31.4              <m>       Open Metrics      <?/h>    Help                                                                                                                 -|    |_|    |-
+Version: v1.2.3               <r>       Refresh                                                                                                                                          '-----------'
+ DedicatedAICluster (all)  🐶>                                                                                                                                    Active: 2 • Failed: 1 • Size: 7 [1/3]
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Name ↑                                 Tenant ↕                         Internal ↕       Usage ↕      Type         Model              Shape/Profile          Size ↕     Age ↕      Status            │
+│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ dac-alpha                              acme                             false            75%          Hosting                         A100_80G               4          12d        Active            │
+│ dac-orphan                             orphan                                            0%           Hosting                         A10                    1          41d        Active            │
+│ dac-日本語                             acme                             false            100%         Fine-tuning                     H100                   2          3d         Failed            │
+│                                                           ╭─ Export CSV ─────────────────────────────────────────────────────────────────╮                                                           │
+│                                                           │ File  us-ashburn-1-DedicatedAICluster.csv                                    │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │ Pick a directory:                                                            │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │ > drwxr-xr-x  <size> alpha                                                    │                                                           │
+│                                                           │   drwxr-xr-x  <size> beta                                                     │                                                           │
+│                                                           │   drwxr-xr-x  <size> gamma                                                    │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │                                                                              │                                                           │
+│                                                           │ k up • j down • enter select • l open • h back • esc cancel                  │                                                           │
+│                                                           ╰──────────────────────────────────────────────────────────────────────────────╯                                                           │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘

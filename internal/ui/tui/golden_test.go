@@ -208,6 +208,10 @@ var goldenViews = []struct {
 		}, nil)
 		m.rowPicker.cursor = 1
 	}},
+	{"row-picker-long", func(t *testing.T, m *Model) {
+		showCategory(t, m, domain.DedicatedAICluster)
+		m.openRowPicker("Go to", "go", pickerTargets(12), nil)
+	}},
 	{"toast-error", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
 		m.showToast("render failed: boom", toastError)

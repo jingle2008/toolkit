@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -264,8 +265,9 @@ func TestOpenMetrics_ImportedModelOnSeveralDACsPicks(t *testing.T) {
 		{Category: domain.DedicatedAICluster, Name: "amaaaaaadac1"},
 		{Category: domain.DedicatedAICluster, Name: "amaaaaaadac2"},
 	}, m.rowPicker.targets)
-	assert.Contains(t, m.rowPickerView(), "Open metrics for amaaaaaaim on")
-	assert.Contains(t, m.rowPickerView(), "[enter] open metrics")
+	view := ansi.Strip(m.rowPickerView())
+	assert.Contains(t, view, "Open metrics for amaaaaaaim on")
+	assert.Contains(t, view, "enter open metrics")
 
 	// The real choose: it returns the dashboard launch (built, not run),
 	// with no error toast.

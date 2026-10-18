@@ -1,40 +1,40 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                        Go to
-
-                                          Tenant          acme
-                                        > BaseModel       llama-3.1-70b
-                                          ServingRuntime  vllm
-
-                                        [↑/↓] select   [enter] go   [esc] cancel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Realm:   oc1                  <t>       Copy Tenant ID    <ctrl+z> Toggle Faulty                           | | | | |
+Type:    prod                 <ctrl+x>  Delete            <esc>    Back/Clear                            .-----------.
+Region:  us-ashburn-1         <shift+e> Edit Tenant       <:cmd>   Command mode                         -|   _____   |-
+Context: dp-prod-iad          <o>       Go to related     </term>  Filter mode                          -|  |_   _|  |-
+K8s:     v1.31.4              <m>       Open Metrics      <?/h>    Help                                 -|    |_|    |-
+Version: v1.2.3               <r>       Refresh                                                          '-----------'
+ DedicatedAICluster (all)  🐶>                                                    Active: 2 • Failed: 1 • Size: 7 [1/3]
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Name ↑                 Tenant ↕            Interna…  Usage…  Type    Model      Shape/Profi…  Size…  Age ↕  Status   │
+│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ dac-alpha              acme                false     75%     Hosti…             A100_80G      4      12d    Active   │
+│ dac-orphan             orphan                        0%      Hosti…             A10           1      41d    Active   │
+│ dac-日本語             acme                false     100%    Fine-…             H100          2      3d     Failed   │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                        ╭─ Go to ────────────────────────────╮                                        │
+│                                        │        Tenant       acme           │                                        │
+│                                        │ ▸    BaseModel      llama-3.1-70b  │                                        │
+│                                        │    ServingRuntime   vllm           │                                        │
+│                                        │                                    │                                        │
+│                                        │ ↑/↓ select · enter go · esc cancel │                                        │
+│                                        ╰────────────────────────────────────╯                                        │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
