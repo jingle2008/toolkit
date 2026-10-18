@@ -53,7 +53,8 @@ func TestCorner_BottomRight(t *testing.T) {
 	t.Parallel()
 	out := strings.Split(ansi.Strip(Corner(grid(8, 4, "."), "ok", 8, 4)), "\n")
 	require.Len(t, out, 4)
-	assert.Equal(t, "....ok..", out[2])
+	assert.Equal(t, "....ok..", out[1])
+	assert.Equal(t, "........", out[2])
 	assert.Equal(t, "........", out[3])
 }
 

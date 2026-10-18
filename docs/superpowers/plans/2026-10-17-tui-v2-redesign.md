@@ -281,14 +281,20 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 **Files:** `internal/uistate/` (new, beside `recentenv`), `internal/cli/root.go`,
 `USER_MANUAL.md`, `docs/guide/`, `CHANGELOG.md`, and `README.md`.
-- [ ] Add `uistate.Load/Save` with `{"keymapVersion": N}`, stored next to the recent-envs
+- [x] Add `uistate.Load/Save` with `{"keymapVersion": N}`, stored next to the recent-envs
   path and written atomically (`fileutil.WriteFileAtomic`).
-- [ ] When the saved version is older than the binary's `KeymapVersion`, show a dismissible
+- [x] When the saved version is older than the binary's `KeymapVersion`, show a dismissible
   hint overlay on the first frame. Dismissing it saves the version. A missing or corrupt
   file means show the hint once.
-- [ ] Docs: the keymap table, the palette, the preview, and screenshots.
+- [x] Docs: the keymap table, the palette, the preview, and screenshots.
 
 ---
+
+**Phase 10 notes:**
+- The UI state lives in its own `~/.config/toolkit/ui.yaml` rather than in `state.yaml`, so the two writers never clobber each other's file.
+- The first key after the hint both dismisses it and does its usual job.
+- `docs/guide/` has no TUI content, so it needed no changes. The keyboard docs live in `docs/USER_MANUAL.md`. Its sort table is generated from `keys.SortKeys`.
+- The corner overlay (toasts, the hint) is inset one more row, clear of the panel's bottom border. Phase 7's footer had moved that border up a row.
 
 ## Verification (every phase)
 

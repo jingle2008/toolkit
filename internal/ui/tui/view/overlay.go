@@ -24,11 +24,11 @@ func Overlay(bg, fg string, w, h int) string {
 }
 
 // Corner composites fg near bg's bottom-right corner in a w×h screen,
-// inset one row and two columns so it floats inside a full-screen frame
-// rather than over its border.
+// inset two rows and two columns so it floats inside the frame's panel,
+// clear of its bottom border and the footer below it.
 func Corner(bg, fg string, w, h int) string {
 	x := max(w-lipgloss.Width(fg)-2, 0)
-	y := max(h-lipgloss.Height(fg)-1, 0)
+	y := max(h-lipgloss.Height(fg)-2, 0)
 	return compose(bg, fg, x, y)
 }
 

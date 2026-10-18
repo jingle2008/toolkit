@@ -16,11 +16,23 @@ import (
 )
 
 /*
-Update implements the tea.Model interface and updates the Model state in response to a message.
+Update implements the tea.Model interface and updates the Model state in
+response to a message. While the keys-changed hint is up, the first key
+press dismisses it and is then handled as usual.
 */
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if _, ok := msg.(tea.KeyPressMsg); ok && m.keysHint {
+		hint := m.dismissKeysHint()
+		model, cmd := m.route(msg)
+		return model, tea.Batch(hint, cmd)
+	}
+	return m.route(msg)
+}
+
+// route dispatches msg to its handler.
 //
 //nolint:cyclop // top-level message router; the per-message-type switch is intentionally exhaustive — splitting it into helpers would obscure the routing surface without reducing real complexity.
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.onResize(msg)

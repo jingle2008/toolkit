@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 
 	"charm.land/bubbles/v2/key"
@@ -79,14 +80,22 @@ func (m *Model) View() tea.View {
 	return v
 }
 
-// render draws the active view as a string, with any toasts composited
-// over its bottom-right corner so they never shift the layout.
+// render draws the active view as a string, with the keys-changed hint
+// and any toasts composited over its bottom-right corner so they never
+// shift the layout.
 func (m *Model) render() string {
 	body := m.renderMode(m.viewMode)
-	if m.toasts.active == nil {
+	var corner []string
+	if m.keysHint {
+		corner = append(corner, m.keysHintBox())
+	}
+	if m.toasts.active != nil {
+		corner = append(corner, m.renderToasts())
+	}
+	if len(corner) == 0 {
 		return body
 	}
-	return view.Corner(body, m.renderToasts(), m.viewWidth, m.viewHeight)
+	return view.Corner(body, lipgloss.JoinVertical(lipgloss.Right, corner...), m.viewWidth, m.viewHeight)
 }
 
 // renderMode draws one view mode. Modal modes draw over the view they

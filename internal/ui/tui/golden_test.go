@@ -17,6 +17,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/uistate"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -224,6 +225,10 @@ var goldenViews = []struct {
 	{"palette-query", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
 		typePalette(m, "gpu")
+	}},
+	{"keys-hint", func(t *testing.T, m *Model) {
+		showCategory(t, m, domain.DedicatedAICluster)
+		WithUIState(uistate.State{}, filepath.Join(t.TempDir(), "ui.yaml"))(m)
 	}},
 	{"toast-error", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)

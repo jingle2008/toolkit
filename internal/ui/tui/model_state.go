@@ -24,6 +24,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
+	"github.com/jingle2008/toolkit/internal/uistate"
 	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -122,6 +123,9 @@ type Model struct {
 	rowPicker     rowPickerState  // modal row picker state (go to, metrics DAC)
 	palette       paletteState    // command palette state
 	preview       bool            // preview pane toggled on (shown when wide enough)
+	uiState       uistate.State   // persisted UI preferences
+	uiStatePath   string          // where uiState is saved ("" disables saving and the hint)
+	keysHint      bool            // the keys-changed hint is showing
 	selectedKey   models.ItemKey
 	viewport      *viewport.Model
 	renderer      view.Renderer
