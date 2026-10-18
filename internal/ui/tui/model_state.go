@@ -17,7 +17,6 @@ import (
 	"charm.land/bubbles/v2/table"
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
-	"charm.land/lipgloss/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
@@ -226,9 +225,27 @@ func initStyles(m *Model) {
 	setStyles(m, DefaultStyles(true))
 }
 
-// setStyles applies a Styles set to the model's theme.
+// setStyles makes s the model's theme and pushes its component styles
+// into whichever bubbles exist yet; setDefaults calls it again once they
+// all do, and a tea.BackgroundColorMsg restyles everything through it.
 func setStyles(m *Model, s Styles) {
 	m.theme = s
+	if m.table != nil {
+		m.table.SetStyles(s.Table)
+		m.styles = s.Table
+	}
+	if m.viewport != nil {
+		m.viewport.Style = s.Viewport
+	}
+	if m.help != nil {
+		m.help.Styles.FullKey = s.HelpKey
+		m.help.Styles.FullDesc = s.HelpDesc
+		m.help.Styles.ShortKey = s.HelpKey
+		m.help.Styles.ShortDesc = s.HelpDesc
+	}
+	if m.loadingSpinner != nil {
+		m.loadingSpinner.Style = s.Spinner
+	}
 }
 
 // applyOptions applies all ModelOption functions to the model.
@@ -283,19 +300,7 @@ func setDefaults(m *Model) {
 		// last row. end still goes there.
 		t.KeyMap.GotoBottom.SetKeys("end")
 		t.KeyMap.GotoBottom.SetHelp("end", "go to end")
-		s := table.DefaultStyles()
-		s.Header = s.Header.
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240")).
-			BorderBottom(true).
-			Bold(true)
-		s.Selected = s.Selected.
-			Foreground(lipgloss.Color("229")).
-			Background(lipgloss.Color("57")).
-			Bold(false)
-		t.SetStyles(s)
 		m.table = &t
-		m.styles = s
 	}
 	if m.textInput == nil {
 		ti := textinput.New()
@@ -305,9 +310,6 @@ func setDefaults(m *Model) {
 	}
 	if m.viewport == nil {
 		vp := viewport.New(viewport.WithWidth(20), viewport.WithHeight(20))
-		vp.Style = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("62"))
 		disableHorizontalScroll(&vp)
 		m.viewport = &vp
 	}
@@ -320,23 +322,12 @@ func setDefaults(m *Model) {
 		m.recentEnvs = &recentenv.List{}
 	}
 	if m.help == nil {
-		keyStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("33"))
-		descStyle := lipgloss.NewStyle()
 		hm := help.New()
 		hm.ShowAll = true
-		hm.Styles.FullKey = keyStyle
-		hm.Styles.FullDesc = descStyle
-		hm.Styles.ShortKey = keyStyle
-		hm.Styles.ShortDesc = descStyle
 		m.help = &hm
 	}
 	if m.loadingSpinner == nil {
-		loadingSpinner := spinner.New(
-			spinner.WithSpinner(spinner.Points),
-			spinner.WithStyle(lipgloss.NewStyle().
-				Foreground(lipgloss.Color("205"))),
-		)
+		loadingSpinner := spinner.New(spinner.WithSpinner(spinner.Points))
 		m.loadingSpinner = &loadingSpinner
 	}
 	if m.loadingTimer == nil {
@@ -355,6 +346,7 @@ func setDefaults(m *Model) {
 		p.KeyMap.Back.SetKeys("h", "backspace", "left")
 		m.dirPicker = &p
 	}
+	setStyles(m, m.theme)
 }
 
 // cancelInFlight cancels any in-flight async operations (loads, actions).

@@ -119,13 +119,15 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 **Files:** `styles.go` → `theme.go`, plus every view that uses color literals
 (`toast.go`, `log_view.go`, `model_state.go`, `edit_tenant.go`, `update_export.go`).
-- [ ] Add `Theme` with the roles from the spec, built by `NewTheme(isDark bool)` using
-  `lipgloss.LightDark`.
-- [ ] Handle `tea.BackgroundColorMsg` by rebuilding the theme. Request the background color
-  in `Init`. Default to dark until the reply arrives.
-- [ ] Replace every `lipgloss.Color("…")` literal outside `theme.go`. Check with
+- [x] Add `Palette` with the roles from the spec, built by `NewPalette(isDark bool)` using
+  `lipgloss.LightDark`. `DefaultStyles(isDark)` builds every style from it, including the
+  component styles that `setStyles` pushes into the table, viewport, help and spinner.
+- [x] Handle `tea.BackgroundColorMsg` by rebuilding the theme. Request the background color
+  in `Init`. Default to dark until the reply arrives. *(Already wired in Phase 3; now it
+  restyles the components too.)*
+- [x] Replace every `lipgloss.Color("…")` literal outside `theme.go`. Check with
   `grep -rn 'lipgloss.Color(' internal/ui/tui | grep -v theme.go`, which should print nothing.
-- [ ] Goldens are unchanged (they're stripped of ANSI). Add one ANSI-preserving test
+- [x] Goldens are unchanged (they're stripped of ANSI). Add one ANSI-preserving test
   asserting that the Danger role reaches the error toast.
 
 ## Phase 5: Overlay and modal chrome (fixes help and modals)

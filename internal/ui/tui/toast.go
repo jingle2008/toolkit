@@ -9,7 +9,6 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 )
 
 // toastTTL is how long a toast stays before auto-dismiss. 8s ≈ enough
@@ -53,21 +52,13 @@ func (m *Model) renderToast(width int) string {
 	if m.toasts.active == nil || width <= 0 {
 		return ""
 	}
-	var style lipgloss.Style
+	style := m.theme.ToastInfo
 	switch m.toasts.active.sev {
 	case toastError:
-		style = lipgloss.NewStyle().
-			Background(lipgloss.Color("160")).
-			Foreground(lipgloss.Color("231")).
-			Bold(true)
+		style = m.theme.ToastError
 	case toastWarn:
-		style = lipgloss.NewStyle().
-			Background(lipgloss.Color("214")).
-			Foreground(lipgloss.Color("16"))
-	default:
-		style = lipgloss.NewStyle().
-			Background(lipgloss.Color("33")).
-			Foreground(lipgloss.Color("231"))
+		style = m.theme.ToastWarn
+	case toastInfo:
 	}
 	style = style.Padding(0, 1).Width(width)
 	// Width(width) includes padding; truncate the message to avoid
