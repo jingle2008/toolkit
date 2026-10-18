@@ -104,7 +104,8 @@ func (m *Model) statusView() string {
 	// it here rather than in updateLayout. We deliberately operate on
 	// a copy of the textinput so View() stays pure — the original
 	// *m.textInput owned by the reducer is never mutated.
-	inputWidth := max(m.viewWidth-w(contextCell)-w(loadingCell)-w(liveCell)-w(statsCell)-
+	prefixCell := m.prefixCell()
+	inputWidth := max(m.viewWidth-w(contextCell)-w(prefixCell)-w(loadingCell)-w(liveCell)-w(statsCell)-
 		w(m.textInput.Prompt)-1, 0)
 	ti := *m.textInput
 	ti.SetWidth(inputWidth)
@@ -114,6 +115,7 @@ func (m *Model) statusView() string {
 		lipgloss.Top,
 		contextCell,
 		inputCell,
+		prefixCell,
 		loadingCell,
 		liveCell,
 		statsCell,

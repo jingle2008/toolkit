@@ -117,6 +117,7 @@ type Model struct {
 	viewMode      common.ViewMode
 	lastViewMode  common.ViewMode // for toggling help view
 	helpScroll    int             // first help body line shown when help scrolls
+	prefix        string          // pending prefix key (keys.SortLeader) or ""
 	confirm       confirmOverlay  // destructive-action confirmation modal state
 	rowPicker     rowPickerState  // modal row picker state (go to, metrics DAC)
 	selectedKey   models.ItemKey
@@ -299,11 +300,6 @@ func setDefaults(m *Model) {
 	}
 	if m.table == nil {
 		t := table.New(table.WithFocused(true))
-		// Release G: list view feeds every key to the table after our
-		// handlers, and G is Sort GPUs, so it would also jump to the
-		// last row. end still goes there.
-		t.KeyMap.GotoBottom.SetKeys("end")
-		t.KeyMap.GotoBottom.SetHelp("end", "go to end")
 		m.table = &t
 	}
 	if m.textInput == nil {
