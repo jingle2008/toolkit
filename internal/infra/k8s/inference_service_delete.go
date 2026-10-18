@@ -41,6 +41,23 @@ var dacGVRs = []schema.GroupVersionResource{
 // endpoint that isn't an orphan.
 var ErrNotOrphan = errors.New("not an orphaned InferenceService")
 
+// ErrDeleteDeferred matches the refusals of an orphan whose deletion is
+// already pending but not yet safe to finalize: too recent, held by an
+// unknown finalizer, or held by none. Like ErrNotOrphan, nothing failed;
+// the delete declined.
+var ErrDeleteDeferred = errors.New("orphan delete deferred")
+
+// deferredError is a refusal that matches ErrDeleteDeferred while
+// keeping its own message, so callers that print it see it unchanged.
+type deferredError struct{ msg string }
+
+func (e deferredError) Error() string      { return e.msg }
+func (deferredError) Is(target error) bool { return target == ErrDeleteDeferred }
+
+func deferred(format string, args ...any) error {
+	return deferredError{msg: fmt.Sprintf(format, args...)}
+}
+
 // OrphanDeleteOutcome says what DeleteOrphanInferenceService did.
 type OrphanDeleteOutcome string
 
@@ -125,15 +142,15 @@ func planOrphanDelete(ctx context.Context, client dynamic.Interface, namespace, 
 	}
 	target := namespace + "/" + name
 	if pending := now.Sub(deleting.Time); pending < orphanFinalizeAfter {
-		return orphanDeletePlan{}, fmt.Errorf("InferenceService %s: deletion requested %s ago; the controller may still be finalizing it — retry after %s",
+		return orphanDeletePlan{}, deferred("InferenceService %s: deletion requested %s ago; the controller may still be finalizing it — retry after %s",
 			target, pending.Round(time.Second), orphanFinalizeAfter)
 	}
 	finalizers := obj.GetFinalizers()
 	if unknown := slices.DeleteFunc(slices.Clone(finalizers), func(f string) bool { return f == inferenceServiceFinalizer }); len(unknown) > 0 {
-		return orphanDeletePlan{}, fmt.Errorf("InferenceService %s: unknown finalizers %s; not removing them", target, strings.Join(unknown, ", "))
+		return orphanDeletePlan{}, deferred("InferenceService %s: unknown finalizers %s; not removing them", target, strings.Join(unknown, ", "))
 	}
 	if len(finalizers) == 0 {
-		return orphanDeletePlan{}, fmt.Errorf("InferenceService %s: deletion is pending but no finalizer holds it", target)
+		return orphanDeletePlan{}, deferred("InferenceService %s: deletion is pending but no finalizer holds it", target)
 	}
 	p.outcome = OrphanFinalized
 	return p, nil

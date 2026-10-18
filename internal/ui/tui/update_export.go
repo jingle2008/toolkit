@@ -51,7 +51,7 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.showToast("exported to "+tildePath(msg.path), toastInfo)
 	case exportErrMsg:
 		m.viewMode = m.lastViewMode
-		return m, m.showToast(fmt.Sprintf("export failed: %v", msg.err), toastError)
+		return m, m.showErrorWithNext(fmt.Sprintf("export failed: %v", msg.err), keys.ExportCSV.Help().Key+" pick another folder")
 	}
 
 	if km, ok := msg.(tea.KeyPressMsg); ok {

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 
 	tea "charm.land/bubbletea/v2"
@@ -9,6 +10,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -62,7 +64,12 @@ func (m *Model) handleISVCDeletePlannedMsg(msg isvcDeletePlannedMsg) tea.Cmd {
 	}
 	target := itemKeyString(msg.key)
 	if msg.err != nil {
-		return m.showToast(fmt.Sprintf("can't delete %s: %v", target, msg.err), toastError)
+		text := fmt.Sprintf("can't delete %s: %v", target, msg.err)
+		// A refusal is the check working, not a failure: it fades.
+		if errors.Is(msg.err, k8s.ErrNotOrphan) || errors.Is(msg.err, k8s.ErrDeleteDeferred) {
+			return m.showToast(text, toastWarn)
+		}
+		return m.showErrorWithNext(text, keys.Delete.Help().Key+" retry")
 	}
 	if m.category != domain.InferenceService || m.viewMode != common.ListView {
 		return nil
@@ -97,7 +104,7 @@ func (m *Model) handleISVCDeleteResultMsg(msg isvcDeleteResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key)
 	if msg.err != nil {
 		m.logger.Errorw("failed to delete inference service", "key", msg.key, "error", msg.err)
-		return m.showToast(fmt.Sprintf("delete %s failed: %v", target, msg.err), toastError)
+		return m.showErrorWithNext(fmt.Sprintf("delete %s failed: %v", target, msg.err), keys.Delete.Help().Key+" retry")
 	}
 	return m.showToast(msg.outcome.Summary(target), toastInfo)
 }

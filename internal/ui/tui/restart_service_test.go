@@ -102,6 +102,7 @@ func TestHandleRestartServiceResultMsg_Toasts(t *testing.T) {
 	m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key, err: errors.New("forbidden")})
 	assert.Equal(t, "restart ns1/svc1 failed: forbidden", m.toasts.active.msg)
 	assert.Equal(t, toastError, m.toasts.active.sev)
+	assert.Equal(t, "R retry", m.toasts.active.next)
 }
 
 // TestRestartInferenceService_LegacyDispatches pins that a legacy
@@ -140,4 +141,5 @@ func TestHandleDrainNodeResultMsg_Toasts(t *testing.T) {
 	m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, err: errors.New("pdb violation (node uncordoned)")})
 	assert.Equal(t, "drain pool1/node1 failed: pdb violation (node uncordoned)", m.toasts.active.msg)
 	assert.Equal(t, toastError, m.toasts.active.sev)
+	assert.Equal(t, "D retry (resumes)", m.toasts.active.next, "the drain is recorded on the node")
 }

@@ -42,8 +42,7 @@ func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
 	case filterApplyMsg:
 		return []tea.Cmd{m.handleFilterApplyMsg(msg)}
 	case deleteErrMsg:
-		m.handleDeleteErrMsg(msg)
-		return nil
+		return []tea.Cmd{m.handleDeleteErrMsg(msg)}
 	case deleteDoneMsg:
 		m.handleDeleteDoneMsg(msg)
 		return nil

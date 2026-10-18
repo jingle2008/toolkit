@@ -285,7 +285,7 @@ func (m *Model) finishMetrics(item any) tea.Cmd {
 		if reason == "" {
 			return nil
 		}
-		return m.showToast(reason, toastError)
+		return m.showToast(reason, toastWarn) // the row has no dashboard: not a failure
 	}
 	return m.launchMetrics(filter, capability)
 }

@@ -78,7 +78,12 @@ func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea
 		return nil
 	}
 	if msg.Err != nil {
-		return m.showToast(fmt.Sprintf("render failed: %v", msg.Err), toastError)
+		// The other layout renders without what failed.
+		other := "tab shows JSON"
+		if m.detailJSON {
+			other = "tab shows fields"
+		}
+		return m.showErrorWithNext(fmt.Sprintf("render failed: %v", msg.Err), other)
 	}
 	m.viewport.SetContent(msg.Content)
 	return nil
