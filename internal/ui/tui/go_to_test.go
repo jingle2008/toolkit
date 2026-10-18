@@ -28,9 +28,9 @@ func newGoToModel(t *testing.T) *Model {
 	m.dataset.BaseModels = []models.BaseModel{{Name: "llama"}}
 	m.dataset.ServingRuntimes = []models.ServingRuntime{{Name: "vllm"}}
 	m.dataset.ImportedModelMap = map[string][]models.ImportedModel{"Acme": {{BaseModel: models.BaseModel{Name: "amaaaaaa-other"}}}}
-	m.dataset.DedicatedAIClusterMap = map[string][]models.DedicatedAICluster{"Acme": {{Name: "dac-1"}}}
+	m.dataset.DedicatedAIClusterMap = map[string][]models.DedicatedAICluster{"Acme": {{Name: "amaaaaaa-dac1"}}}
 	m.dataset.InferenceServiceMap = map[string][]models.InferenceService{
-		"dac-1": {{Name: "isvc-1", Namespace: "dac-1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: &m.dataset.Tenants[0]}},
+		"amaaaaaa-dac1": {{Name: "isvc-1", Namespace: "amaaaaaa-dac1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: &m.dataset.Tenants[0]}},
 	}
 	m.category = domain.InferenceService
 	m.keys = keys.ResolveKeys(m.category, common.ListView)
@@ -47,7 +47,7 @@ func TestGoToTargets_InferenceService(t *testing.T) {
 		{Category: domain.Tenant, Name: "Acme"},
 		{Category: domain.BaseModel, Name: "llama"},
 		// ImportedModel "llama" is dropped: that category is loaded and has no such row.
-		{Category: domain.DedicatedAICluster, Name: "dac-1"},
+		{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"},
 		{Category: domain.ServingRuntime, Name: "vllm"},
 	}, m.goToTargets())
 }
@@ -148,9 +148,9 @@ func TestGoToKey_PickerKeepsListCursor(t *testing.T) {
 	t.Parallel()
 	m := newGoToModel(t)
 	owner := &m.dataset.Tenants[0]
-	m.dataset.InferenceServiceMap["dac-1"] = append(m.dataset.InferenceServiceMap["dac-1"],
-		models.InferenceService{Name: "isvc-2", Namespace: "dac-1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: owner},
-		models.InferenceService{Name: "isvc-3", Namespace: "dac-1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: owner})
+	m.dataset.InferenceServiceMap["amaaaaaa-dac1"] = append(m.dataset.InferenceServiceMap["amaaaaaa-dac1"],
+		models.InferenceService{Name: "isvc-2", Namespace: "amaaaaaa-dac1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: owner},
+		models.InferenceService{Name: "isvc-3", Namespace: "amaaaaaa-dac1", Type: models.InferenceServiceDedicated, Model: "llama", Runtime: "vllm", Owner: owner})
 	m.updateRows(true)
 	m.viewMode = common.ListView
 	m.table.Focus()

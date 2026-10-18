@@ -373,13 +373,78 @@ func TestWatchInferenceServices_NoLegacyCRD(t *testing.T) {
 	isvc := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "ome.io/v1beta1",
 		"kind":       "InferenceService",
-		"metadata":   map[string]any{"name": "e1", "namespace": "ns"},
+		// RetryWatcher stops on an event without a resourceVersion, which
+		// the fake tracker doesn't assign.
+		"metadata": map[string]any{"name": "e1", "namespace": "ns", "resourceVersion": "2"},
 	}}
 	_, err = client.Resource(inferenceServiceGVR).Namespace("ns").Create(ctx, isvc, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	select {
-	case <-trig:
+	case _, ok := <-trig:
+		require.True(t, ok, "trigger closed instead of ticking")
+	case <-time.After(time.Second):
+		cancel()
+		t.Fatal("expected a trigger tick after InferenceService create")
+	}
+
+	cancel()
+	for range trig { //nolint:revive // intentional: drain until watchTrigger closes the channel
+	}
+}
+
+// A role that may list the legacy InferenceServices but not watch them
+// leaves the ome.io watch live: the legacy watch goes quiet instead of
+// closing the shared trigger.
+//
+//nolint:paralleltest // mutates package-global DebounceWindow; must not run in parallel
+func TestWatchInferenceServices_LegacyWatchForbidden(t *testing.T) {
+	old := DebounceWindow
+	DebounceWindow = 50 * time.Millisecond
+	defer func() { DebounceWindow = old }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
+		map[schema.GroupVersionResource]string{
+			inferenceServiceGVR:   "InferenceServiceList",
+			inferenceServiceV1GVR: "InferenceServiceList",
+		})
+	legacyWatched := make(chan struct{}, 1)
+	client.PrependWatchReactor("inferenceservices", func(action cgotesting.Action) (bool, watch.Interface, error) {
+		if action.GetResource().Group != inferenceServiceV1GVR.Group {
+			return false, nil, nil
+		}
+		select {
+		case legacyWatched <- struct{}{}:
+		default:
+		}
+		return true, nil, apierrors.NewForbidden(inferenceServiceV1GVR.GroupResource(), "", nil)
+	})
+
+	trig, err := WatchInferenceServices(ctx, client)
+	require.NoError(t, err)
+	select {
+	case <-legacyWatched:
+	case <-time.After(2 * time.Second):
+		cancel()
+		t.Fatal("legacy watch never opened")
+	}
+	// Let the forbidden legacy watch settle (the old code closed trig here).
+	time.Sleep(200 * time.Millisecond)
+
+	isvc := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "ome.io/v1beta1",
+		"kind":       "InferenceService",
+		// RetryWatcher stops on an event without a resourceVersion, which
+		// the fake tracker doesn't assign.
+		"metadata": map[string]any{"name": "e1", "namespace": "ns", "resourceVersion": "2"},
+	}}
+	_, err = client.Resource(inferenceServiceGVR).Namespace("ns").Create(ctx, isvc, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	select {
+	case _, ok := <-trig:
+		require.True(t, ok, "trigger closed: the forbidden legacy watch took the ome.io watch down")
 	case <-time.After(time.Second):
 		cancel()
 		t.Fatal("expected a trigger tick after InferenceService create")

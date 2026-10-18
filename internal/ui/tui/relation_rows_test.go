@@ -78,10 +78,10 @@ func TestComputeTableRows_DACScopesGPUWorkloads(t *testing.T) {
 func TestComputeTableRows_BaseModelScopesInferenceServices(t *testing.T) {
 	t.Parallel()
 	ds := &models.Dataset{InferenceServiceMap: map[string][]models.InferenceService{
-		"dac-1":             {{Name: "isvc-1", Namespace: "dac-1", Type: models.InferenceServiceDedicated, Model: "llama"}},
-		"dac-2":             {{Name: "isvc-2", Namespace: "dac-2", Type: models.InferenceServiceDedicated, Model: "cohere"}},
+		"amaaaaaa-dac1":     {{Name: "isvc-1", Namespace: "amaaaaaa-dac1", Type: models.InferenceServiceDedicated, Model: "llama"}},
+		"amaaaaaa-dac2":     {{Name: "isvc-2", Namespace: "amaaaaaa-dac2", Type: models.InferenceServiceDedicated, Model: "cohere"}},
 		"llama":             {{Name: "isvc-3", Namespace: "llama", Model: "llama"}},
-		"dac-3":             {{Name: "isvc-4", Namespace: "dac-3", Type: models.InferenceServiceDedicated, Model: "llama", ImportedModel: true}},
+		"amaaaaaa-dac3":     {{Name: "isvc-4", Namespace: "amaaaaaa-dac3", Type: models.InferenceServiceDedicated, Model: "llama", ImportedModel: true}},
 		"content-moderator": {{Name: "isvc-5", Namespace: "content-moderator", Model: "llama", Legacy: true}},
 	}}
 	scope := &domain.Scope{Category: domain.BaseModel, Name: "llama"}
@@ -90,7 +90,7 @@ func TestComputeTableRows_BaseModelScopesInferenceServices(t *testing.T) {
 	assert.Equal(t, []string{"isvc-1", "isvc-3"}, rowNames(rows))
 
 	// The DAC scope is unchanged: the namespace's endpoints only.
-	rows, _ = computeTableRows(ds, domain.InferenceService, &domain.Scope{Category: domain.DedicatedAICluster, Name: "dac-1"}, "", "", true, false)
+	rows, _ = computeTableRows(ds, domain.InferenceService, &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}, "", "", true, false)
 	assert.Equal(t, []string{"isvc-1"}, rowNames(rows))
 }
 
