@@ -130,10 +130,10 @@ type Model struct {
 	// paletteRecent names the palette items run this session, newest
 	// first (paletteRecentMax at most), by paletteItem.id.
 	paletteRecent []string
-	preview       bool            // preview pane toggled on (shown when wide enough)
-	uiState       uistate.State   // persisted UI preferences
-	uiStatePath   string          // where uiState is saved ("" disables saving and the hint)
-	keysHint      bool            // the keys-changed hint is showing
+	preview       bool          // preview pane toggled on (shown when wide enough)
+	uiState       uistate.State // persisted UI preferences
+	uiStatePath   string        // where uiState is saved ("" disables saving and the hint)
+	keysHint      bool          // the keys-changed hint is showing
 	selectedKey   models.ItemKey
 	viewport      *viewport.Model
 	renderer      view.Renderer

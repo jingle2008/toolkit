@@ -301,6 +301,9 @@ func (m *Model) confirmView() string {
 	body += "\n\n" + lipgloss.PlaceHorizontal(inner, lipgloss.Center, buttons)
 
 	hints := yes + " confirm · n/esc cancel · ←/→ select"
+	if irreversible {
+		hints = "Y (shift+y) confirm · y/n/esc cancel · ←/→ select"
+	}
 	if c.nudge {
 		hints = lipgloss.NewStyle().Foreground(border).Bold(true).
 			Render("press capital Y to " + strings.ToLower(c.verb()) + ", or esc to cancel")

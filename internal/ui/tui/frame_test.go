@@ -39,7 +39,7 @@ func TestFrame_Layout(t *testing.T) {
 	assert.Contains(t, lines[0], "oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4", "prod is a badge")
 	assert.Contains(t, lines[0], "v1.2.3")
 	assert.True(t, strings.HasPrefix(lines[1], " DedicatedAICluster "), lines[1])
-	assert.True(t, strings.HasPrefix(lines[2], "╭─ DedicatedAICluster (3) ─"), lines[2])
+	assert.True(t, strings.HasPrefix(lines[2], "╭─ 3 rows ─"), "the breadcrumb names the category; the panel counts: %s", lines[2])
 	assert.True(t, strings.HasSuffix(strings.TrimRight(lines[len(lines)-1], " "), "? more"), lines[len(lines)-1])
 	assert.NotContains(t, strings.Join(lines, "\n"), "|_   _|", "no logo in the frame")
 }

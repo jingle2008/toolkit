@@ -88,6 +88,7 @@ type editTenantForm struct {
 	note       textinput.Model
 	isInternal bool
 	focus      int
+	nameErr    string // shown beside Name after a save without one
 }
 
 // tenantSavedMsg / tenantSaveErrMsg report the async upsert result.
@@ -105,10 +106,12 @@ func newEditTenantForm(t editTarget) *editTenantForm {
 	name := textinput.New()
 	name.CharLimit = 128
 	name.Prompt = ""
+	name.Placeholder = "required"
 	name.Focus()
 	note := textinput.New()
 	note.CharLimit = 256
 	note.Prompt = ""
+	note.Placeholder = "optional"
 	return &editTenantForm{
 		ocid:       t.ocid,
 		tenantID:   t.tenantID,
@@ -140,7 +143,12 @@ func (f *editTenantForm) toEntry() (models.TenantMetadata, bool) {
 
 // cycleFocus moves focus by dir (+1/-1) and updates textinput focus.
 func (f *editTenantForm) cycleFocus(dir int) {
-	f.focus = (f.focus + dir + focusCount) % focusCount
+	f.focusOn((f.focus + dir + focusCount) % focusCount)
+}
+
+// focusOn moves focus to field i, focusing its text input if it has one.
+func (f *editTenantForm) focusOn(i int) {
+	f.focus = i
 	if f.focus == focusName {
 		f.name.Focus()
 	} else {
@@ -204,9 +212,11 @@ func (m *Model) handleTenantSaveErrMsg(msg tenantSaveErrMsg) tea.Cmd {
 	return m.showToast(fmt.Sprintf("save failed: %v", msg.err), toastError)
 }
 
-// handleEditTenantKey routes a key event while the form is open: nav
-// keys cycle focus, Confirm validates+saves, Back cancels, and the
-// remaining keys feed the focused text field.
+// handleEditTenantKey routes a key event while the form is open: tab
+// and the arrows cycle focus, enter moves to the next field and saves on
+// the last, ctrl+s saves from any field, Back cancels, and the remaining
+// keys feed the focused text field. Saving without a name marks the Name
+// field and focuses it.
 //
 //nolint:cyclop // form key router; the per-key switch is inherent and splitting it further would obscure the routing surface.
 func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -227,12 +237,17 @@ func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case key.Matches(keyMsg, keys.OpenPortal):
 		return m, m.openPortalCmd()
-	case key.Matches(keyMsg, keys.Confirm):
+	case k == "ctrl+s" || (key.Matches(keyMsg, keys.Confirm) && f.focus == focusCount-1):
 		entry, valid := f.toEntry()
 		if !valid {
-			return m, m.showToast("name is required", toastWarn)
+			f.nameErr = "required"
+			f.focusOn(focusName)
+			return m, nil
 		}
 		return m, m.saveTenantMetadataCmd(entry)
+	case key.Matches(keyMsg, keys.Confirm):
+		f.cycleFocus(1)
+		return m, nil
 	case f.focus == focusInternal && isToggleKey(k):
 		f.toggleInternal()
 		return m, nil
@@ -243,6 +258,9 @@ func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch f.focus {
 	case focusName:
 		f.name, cmd = f.name.Update(keyMsg)
+		if f.name.Value() != "" {
+			f.nameErr = ""
+		}
 	case focusNote:
 		f.note, cmd = f.note.Update(keyMsg)
 	}
@@ -395,16 +413,24 @@ func (m *Model) editTenantView() string {
 		}
 		return "( ) " + text
 	}
+	width := min(m.modalMaxWidth(), 72)
+	field := max(width-4-2-label.GetWidth(), 1) // border+padding, marker, label
+	f.name.SetWidth(field - len("  required"))
+	f.note.SetWidth(field)
+	name := f.name.View()
+	if f.nameErr != "" {
+		name += "  " + lipgloss.NewStyle().Foreground(p.Danger).Render(f.nameErr)
+	}
 	lines := []string{
-		"Tenancy " + lipgloss.NewStyle().Bold(true).Render(f.tenantID),
+		"  " + label.Render("Tenancy") + lipgloss.NewStyle().Bold(true).Render(f.tenantID),
 		"",
-		marker(focusName) + label.Render("Name") + f.name.View(),
+		marker(focusName) + label.Render("Name") + name,
 		marker(focusInternal) + label.Render("Internal") +
 			radio(f.isInternal, "internal") + "  " + radio(!f.isInternal, "external"),
 		marker(focusNote) + label.Render("Note") + f.note.View(),
 	}
-	hints := "tab move · space toggle · enter save · " + keys.OpenPortal.Help().Key + " portal · esc cancel"
-	return m.modal("Set tenant info", strings.Join(lines, "\n"), hints, p.Focus, min(m.modalMaxWidth(), 72))
+	hints := "tab/enter next · space toggle · ^s save · " + keys.OpenPortal.Help().Key + " portal · esc cancel"
+	return m.modal("Set tenant info", strings.Join(lines, "\n"), hints, p.Focus, width)
 }
 
 // metadataPath returns the configured metadata file path for display,

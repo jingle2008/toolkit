@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -86,14 +87,33 @@ func TestHandleEditTenantKey_Confirm(t *testing.T) {
 	t.Parallel()
 	m := openForm(t)
 
-	// Empty name → a warning command, form stays open.
-	_, cmd := m.handleEditTenantKey(keyPress("enter"))
-	assert.NotNil(t, cmd)
-	assert.NotNil(t, m.editTenant)
+	f := m.editTenant
 
-	// With a name → a save command.
-	m.editTenant.name.SetValue("acme")
+	// enter moves to the next field rather than saving.
+	_, cmd := m.handleEditTenantKey(keyPress("enter"))
+	assert.Nil(t, cmd)
+	assert.Equal(t, focusInternal, f.focus)
+
+	// Saving without a name marks Name, focuses it, and saves nothing.
+	_, cmd = m.handleEditTenantKey(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
+	assert.Nil(t, cmd)
+	assert.Equal(t, "required", f.nameErr)
+	assert.Equal(t, focusName, f.focus)
+	assert.Contains(t, ansi.Strip(m.editTenantView()), "required")
+	assert.Nil(t, m.toasts.active, "inline, not a toast")
+
+	// Typing a name clears the mark; enter through to the last field saves.
+	_, _ = m.handleEditTenantKey(keyPress("a"))
+	assert.Empty(t, f.nameErr)
+	_, _ = m.handleEditTenantKey(keyPress("enter"))
+	_, _ = m.handleEditTenantKey(keyPress("enter"))
+	require.Equal(t, focusNote, f.focus)
 	_, cmd = m.handleEditTenantKey(keyPress("enter"))
+	assert.NotNil(t, cmd, "enter on the last field saves")
+
+	// ctrl+s saves from any field.
+	f.focusOn(focusName)
+	_, cmd = m.handleEditTenantKey(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
 	assert.NotNil(t, cmd)
 }
 

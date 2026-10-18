@@ -19,13 +19,11 @@ import (
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
-// contextString is the breadcrumb path: the category, then what it is
-// narrowed to — the selected row in details view, else the scope.
+// contextString is the breadcrumb path: the category, then the scope it
+// is narrowed to. The details view's row is its panel's title, so the
+// path doesn't repeat it.
 func (m *Model) contextString() string {
 	path := m.category.String()
-	if m.viewMode == common.DetailsView {
-		return path + " › " + itemKeyString(m.selectedKey)
-	}
 	if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {
 		return path + " › " + m.scope.Name
 	}

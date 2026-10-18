@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -61,4 +62,19 @@ func TestErrorToast_WrapsAndSaysHowToDismiss(t *testing.T) {
 	assert.Len(t, lines, maxErrorLines+3, "borders, %d message lines and the hint", maxErrorLines)
 	assert.Contains(t, box, "…", "an over-long error is cut on its last line")
 	assert.Contains(t, box, "esc dismiss · ` log")
+}
+
+// A failed load names r as the next step where the category can refresh.
+func TestLoadError_NamesRetryWhereRefreshable(t *testing.T) {
+	t.Parallel()
+	for cat, want := range map[domain.Category]string{domain.GPUNode: "r retry", domain.Tenant: ""} {
+		m := newGoldenModel(t, 120, 40)
+		showCategory(t, m, cat)
+		m.handleErrMsg(errMsg{err: errors.New("boom")})
+		require.NotNil(t, m.toasts.active, cat)
+		assert.Equal(t, want, m.toasts.active.next, cat)
+		if want != "" {
+			assert.Contains(t, ansi.Strip(m.renderToasts()), "r retry · esc dismiss")
+		}
+	}
 }

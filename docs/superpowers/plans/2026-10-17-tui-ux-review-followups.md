@@ -63,3 +63,16 @@ nothing". It already redraws the hint as "press capital Y to delete"
 
 Dropped from the review: "the help logo costs space on short terminals".
 Help already draws it only when it fits without making help scroll.
+
+## Batch 5 — the rest of the review
+
+- [x] Palette: recent items first, group named once, short aliases, open
+  category marked.
+- [x] Row picker: badges left-aligned; "type to filter" hint. (It already
+  showed `a–b of n` when scrolling.)
+- [x] Edit tenant: placeholders, inline "required", enter moves fields
+  (saves on the last), ctrl+s saves anywhere.
+- [x] Confirm: irreversible hint says lowercase y cancels.
+- [x] Loading: q quit hint. Load errors: r retry where Refresh is bound.
+- [x] Panel title is the row count; details breadcrumb drops the row.
+- [ ] ~~Type the name to confirm deletes in prod~~ — dropped by request.

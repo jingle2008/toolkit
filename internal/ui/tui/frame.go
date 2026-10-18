@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
@@ -39,10 +40,14 @@ func (m *Model) frame(title, main string) string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.envBar(), m.statusView(), panel, m.footer())
 }
 
-// tableTitle names the list panel: the category, its row count, and how
-// many columns are hidden on a terminal too narrow for them.
+// tableTitle names the list panel: its row count, and how many columns
+// are hidden on a terminal too narrow for them. The breadcrumb above
+// already names the category.
 func (m *Model) tableTitle() string {
-	title := fmt.Sprintf("%s (%d)", m.category.String(), len(m.table.Rows()))
+	title := fmt.Sprintf("%d rows", len(m.table.Rows()))
+	if len(m.table.Rows()) == 1 {
+		title = "1 row"
+	}
 	switch m.hiddenColumns {
 	case 0:
 	case 1:
@@ -282,5 +287,6 @@ func lowerFirst(s string) string {
 func (m *Model) loadingView() string {
 	logo := view.RenderLogo(m.theme.LogoTop, m.theme.LogoBottom)
 	line := fmt.Sprintf("%s Loading %s … %s", m.loadingSpinner.View(), m.category.String(), m.loadingTimer.View())
-	return m.centered(lipgloss.JoinVertical(lipgloss.Center, logo, "", line))
+	quit := lipgloss.NewStyle().Foreground(m.theme.Palette.Muted).Render(keys.Quit.Help().Key + " quit")
+	return m.centered(lipgloss.JoinVertical(lipgloss.Center, logo, "", line, "", quit))
 }

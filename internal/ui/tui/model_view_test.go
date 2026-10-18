@@ -87,10 +87,10 @@ func TestContextString(t *testing.T) {
 	m.category = domain.Tenant
 	m.scope = &domain.Scope{Category: domain.Tenant, Name: "foo"}
 	m.selectedKey = "foo"
-	// Should only contain "foo" in DetailsView
+	// In DetailsView the row is the panel's title, not repeated in the path.
 	m.viewMode = common.DetailsView
 	out := m.contextString()
-	assert.Contains(t, out, "foo")
+	assert.Equal(t, "Tenant", out)
 }
 
 func TestTruncateString(t *testing.T) {

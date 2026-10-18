@@ -1,6 +1,6 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  GPUN╭─ Keys · List view ─────────────────────────────────────────────────╮1/2]
-╭─ GP│ Actions                            List view                       │────╮
+╭─ 2 │ Actions                            List view                       │────╮
 │ Nam│   o           Go to related          [           History back      │    │
 │────│   r           Refresh                ]           History forward   │────│
 │ 10.│   C           Toggle cordon          tab         Next category     │    │
