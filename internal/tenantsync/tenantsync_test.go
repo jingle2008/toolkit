@@ -174,6 +174,18 @@ func TestSync(t *testing.T) {
 	assert.ElementsMatch(t, []string{"id-wrong", "id-gone"}, changeIDs(r.Failed))
 }
 
+// An account without a state leaves the recorded status, and the report
+// doesn't count it as a change.
+func TestSync_EmptyStateKeepsStatus(t *testing.T) {
+	t.Parallel()
+	meta := &models.Metadata{Tenants: []models.TenantMetadata{{ID: "id-a", Name: strp("a"), Status: "ACTIVE"}}}
+	f := &fakeFetcher{raw: map[string][]byte{"id-a": details("id-a", "a", "INTERNAL", "")}}
+	next, r, err := Sync(context.Background(), []string{"id-a"}, meta, f, Options{Parallel: 1})
+	require.NoError(t, err)
+	assert.Equal(t, "ACTIVE", next.Tenants[0].Status)
+	assert.Empty(t, r.StatusChanged)
+}
+
 func changeIDs(cs []Change) []string {
 	out := make([]string, len(cs))
 	for i, c := range cs {

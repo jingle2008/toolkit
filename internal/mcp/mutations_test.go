@@ -647,8 +647,9 @@ func TestIntegration_SetTenantTool_ConfirmTrueExecutes(t *testing.T) {
 	if got.ID != "ocid1.tenancy.oc1..aaaa" || got.Name == nil || *got.Name != "Acme" {
 		t.Errorf("unexpected entry: %+v", got)
 	}
-	if got.IsInternal == nil || *got.IsInternal != true {
-		t.Errorf("IsInternal should default true, got %v", got.IsInternal)
+	// Omitted, so the upsert keeps the recorded flag (new tenants read as internal).
+	if got.IsInternal != nil {
+		t.Errorf("IsInternal should be nil when omitted, got %v", *got.IsInternal)
 	}
 	assertMutationOK(t, res, "set", "tenant", "ocid1.tenancy.oc1..aaaa")
 }

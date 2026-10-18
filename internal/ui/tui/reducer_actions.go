@@ -221,8 +221,10 @@ func (m *Model) pickMetricsDAC(im *models.ImportedModel, dacs []string) tea.Cmd 
 		targets[i] = domain.Scope{Category: domain.DedicatedAICluster, Name: ns}
 	}
 	return m.openRowPicker(fmt.Sprintf("Open metrics for %s on", im.Name), "open metrics", targets, func(t domain.Scope) tea.Cmd {
-		one := *im
-		one.Namespace, one.Copies = t.Name, nil
+		one, err := telemetry.OnDAC(*im, t.Name)
+		if err != nil {
+			return m.showToast(err.Error(), toastError)
+		}
 		return m.openMetrics(&one)
 	})
 }

@@ -177,18 +177,21 @@ func apply(next *models.Metadata, id string, acct Account, lookupErr error, repo
 		}
 	}
 
-	if entry.Status != acct.State {
+	// An account without a state leaves the recorded status alone, as
+	// UpsertTenant would anyway, so the report doesn't claim a change.
+	if acct.State != "" && entry.Status != acct.State {
 		report.StatusChanged = append(report.StatusChanged, Change{ID: id, Tenant: nameOf(entry), From: entry.Status, To: acct.State})
 		entry.Status = acct.State
 	}
 	return configloader.UpsertTenant(next, entry)
 }
 
-// nameOwner returns the ID of the tenancy other than id that already has
-// name, or "".
+// nameOwner returns the ID of the tenancy other than id, in id's realm,
+// that already has name, or "".
 func nameOwner(m *models.Metadata, name, id string) string {
+	realm := models.TenancyRealm(id)
 	for _, t := range m.Tenants {
-		if t.ID != id && t.Name != nil && *t.Name == name {
+		if t.ID != id && t.Name != nil && *t.Name == name && models.TenancyRealm(t.ID) == realm {
 			return t.ID
 		}
 	}

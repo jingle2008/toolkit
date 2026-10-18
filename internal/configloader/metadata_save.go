@@ -40,13 +40,16 @@ func SaveMetadata(path string, m *models.Metadata) error {
 
 // UpsertTenant merges entry into m: if a tenant with the same ID
 // already exists it is replaced in place, otherwise entry is appended.
-// It refuses, leaving m unchanged, a name another tenancy already has:
-// names map one to one to IDs. Status is machine-owned (`toolkit tenant sync`
-// writes it), so an entry without one keeps the existing status.
+// It refuses, leaving m unchanged, a name another tenancy in the same realm
+// already has: names map one to one to IDs within a realm. Status is
+// machine-owned (`toolkit tenant sync` writes it), so an entry without one
+// keeps the existing status; likewise an entry without an internal flag
+// keeps the existing one.
 func UpsertTenant(m *models.Metadata, entry models.TenantMetadata) error {
 	if entry.Name != nil && *entry.Name != "" {
+		realm := models.TenancyRealm(entry.ID)
 		for _, t := range m.Tenants {
-			if t.ID != entry.ID && t.Name != nil && *t.Name == *entry.Name {
+			if t.ID != entry.ID && t.Name != nil && *t.Name == *entry.Name && models.TenancyRealm(t.ID) == realm {
 				return fmt.Errorf("tenant name %q is already used by %s", *entry.Name, t.ID)
 			}
 		}
@@ -55,6 +58,9 @@ func UpsertTenant(m *models.Metadata, entry models.TenantMetadata) error {
 		if m.Tenants[i].ID == entry.ID {
 			if entry.Status == "" {
 				entry.Status = m.Tenants[i].Status
+			}
+			if entry.IsInternal == nil {
+				entry.IsInternal = m.Tenants[i].IsInternal
 			}
 			m.Tenants[i] = entry
 			return nil

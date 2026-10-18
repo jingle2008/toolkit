@@ -32,6 +32,20 @@ func TestErrorToast_EscDismissesOnlyErrors(t *testing.T) {
 	assert.Equal(t, domain.GPUNode, m.category, "esc dismissed the error instead of backing out")
 }
 
+// A full stack pushes out an info or warning toast before an error, so a
+// burst of info toasts can't drop an error nobody has seen.
+func TestErrorToast_SurvivesStackOverflow(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 40)
+	m.showToast("export failed", toastError)
+	for _, msg := range []string{"one", "two", "three", "four"} {
+		m.showToast(msg, toastInfo)
+	}
+	assert.True(t, m.hasErrorToast())
+	assert.Len(t, m.toasts.older, maxStackedToasts-1)
+	assert.Equal(t, "four", m.toasts.active.msg)
+}
+
 func TestErrorToast_EscPassesThroughWhileTyping(t *testing.T) {
 	t.Parallel()
 	m := newGoldenModel(t, 120, 40)

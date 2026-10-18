@@ -108,7 +108,7 @@ func TestSetTenant_YesWritesEntry(t *testing.T) {
 	}
 }
 
-func TestSetTenant_DefaultInternalTrue_NoteOmittedWhenEmpty(t *testing.T) {
+func TestSetTenant_InternalAndNoteOmittedWhenUnset(t *testing.T) {
 	stageTenantEnv(t)
 	var got models.TenantMetadata
 	defer swap(&setTenantFn, func(_ context.Context, _ config.Config, e models.TenantMetadata) error {
@@ -119,8 +119,9 @@ func TestSetTenant_DefaultInternalTrue_NoteOmittedWhenEmpty(t *testing.T) {
 	if _, err := runRootCmd(t, []string{"set", "tenant", testTenancyOCID, "--name", "Acme", "--yes"}, ""); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
-	if got.IsInternal == nil || *got.IsInternal != true {
-		t.Errorf("IsInternal should default true, got %v", got.IsInternal)
+	// Unset, so the upsert keeps the recorded flag (new tenants read as internal).
+	if got.IsInternal != nil {
+		t.Errorf("IsInternal should be nil without --internal, got %v", *got.IsInternal)
 	}
 	if got.Note != nil {
 		t.Errorf("Note should be nil when --note empty, got %v", *got.Note)
