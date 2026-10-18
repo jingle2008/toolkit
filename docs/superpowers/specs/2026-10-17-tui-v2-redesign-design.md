@@ -161,7 +161,7 @@ width `min(80, 90% viewWidth)`, max height `90% viewHeight` with scrolling insid
 - Sections flow into columns: `cols = clamp((innerWidth+gap) / (sectionWidth+gap), 1, 3)`;
   sections are packed column-major, balanced by line count.
 - If the packed height still exceeds the modal's max height, content goes in a viewport
-  (`j`/`k`, `pgup`/`pgdn`, `g g`/`G`) with a `↓ more (n%)` indicator.
+  (`j`/`k`, `pgup`/`pgdn`, `g`/`G`) with a `↓ more (n%)` indicator.
 - Logo in the title row when width allows.
 
 **Export, edit tenant:** shared modal chrome; focused field gets a `Primary` left marker
@@ -185,16 +185,15 @@ width `min(80, 90% viewWidth)`, max height `90% viewHeight` with scrolling insid
 
 ### Prefix engine
 
-A small sequence matcher in `keys/` handles multi-key bindings:
+The list view has one prefix key, `s` (sort). A small state machine in the model
+(`prefix.go`) handles it:
 
-- A binding may be a sequence (`g g`, `s n`). On a prefix key the model stores
-  `pending` + a timestamp, shows the prefix in the breadcrumb (`g…`) and, after 400 ms
-  without a follow-up, opens the **which-key** popup listing valid continuations
-  (except `s`, which underlines header letters instead, see Sort keys).
+- On `s` the model records the pending prefix and shows it in the status bar (`s…`).
+  The next key completes the sequence (`s n`).
 - A non-matching continuation cancels the prefix (and is *not* replayed). `esc` cancels.
-- The timeout is driven by a tea tick carrying a generation number (stale ticks ignored),
-  matching the existing `gens` pattern.
 - Text-entry modes (filter, palette, edit tenant, row-picker filter) bypass the engine.
+- *(`gg` and a which-key popup were considered and dropped: `g`/`G` stay single keys
+  for top/bottom.)*
 
 ### Keymap
 
@@ -208,7 +207,7 @@ details) `m` `ctrl+x` `ctrl+o` `ctrl+a` `ctrl+z` `E` `C` `D` `U`.
 |---|---|---|
 | shift+⟨first letter⟩ | `s` ⟨first letter⟩ | Sort by column (all 14 sorts: `N` → `s n`, `T` → `s t`, …) |
 | `G` (Sort GPUs) | `s g` | Sort GPUs |
-| — | `g g` / `G` / `home` / `end` | Top / bottom of table, help, preview |
+| `end` | `G` / `end` (`g` / `home` unchanged) | Bottom (top) of table and help |
 | — | `v` | Toggle preview split |
 
 **Sort keys.** A sort key is the column name's **first letter, unique within a
@@ -231,9 +230,8 @@ first letters never collide within a category, so every key is the first letter:
   gets the next letter of its name that is free there. The key is derived from
   the category's column list, not hand-assigned.
 - **Display:** while `s` is pending, the table header underlines each sortable column's
-  key letter (<u>N</u>ame, <u>T</u>enant, <u>S</u>ize…). The header becomes the menu, so
-  `s` does not open the which-key popup (`g` still does). Outside the prefix the header
-  is plain.
+  key letter (<u>N</u>ame, <u>T</u>enant, <u>S</u>ize…). The header becomes the menu.
+  Outside the prefix the header is plain.
 - **Guard:** a registry test fails if two sortable columns in one category resolve to
   the same key.
 - Re-pressing a sort sequence toggles direction, as today.

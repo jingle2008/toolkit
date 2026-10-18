@@ -75,10 +75,7 @@ var (
 		key.WithKeys("enter"),
 		key.WithHelp("<enter>", "View/Enter"),
 	)
-	SortName = key.NewBinding(
-		key.WithKeys("N"),
-		key.WithHelp("<shift+n>", SortPrefix+common.NameCol),
-	)
+	SortName = sortBy(common.NameCol)
 )
 
 var (
@@ -189,81 +186,38 @@ var (
 		key.WithHelp("<shift+u>", "Scale Up"),
 	)
 	// SortInternal is a key binding for sorting by the "Internal" column.
-	SortInternal = key.NewBinding(
-		key.WithKeys("I"),
-		key.WithHelp("<shift+i>", SortPrefix+common.InternalCol),
-	)
+	SortInternal = sortBy(common.InternalCol)
 	// SortValue is a key binding for sorting by the "Value" column.
-	SortValue = key.NewBinding(
-		key.WithKeys("V"),
-		key.WithHelp("<shift+v>", SortPrefix+common.ValueCol),
-	)
+	SortValue = sortBy(common.ValueCol)
 	// SortRegions is a key binding for sorting by the "Regions" column.
-	SortRegions = key.NewBinding(
-		key.WithKeys("R"),
-		key.WithHelp("<shift+r>", SortPrefix+common.RegionsCol),
-	)
+	SortRegions = sortBy(common.RegionsCol)
 	// SortTenant is a key binding for sorting by the "Tenant" column.
-	SortTenant = key.NewBinding(
-		key.WithKeys("T"),
-		key.WithHelp("<shift+t>", SortPrefix+common.TenantCol),
-	)
+	SortTenant = sortBy(common.TenantCol)
 	// SortContext is a key binding for sorting by the "Context" column.
-	SortContext = key.NewBinding(
-		key.WithKeys("C"),
-		key.WithHelp("<shift+c>", SortPrefix+common.ContextCol),
-	)
+	SortContext = sortBy(common.ContextCol)
 	// SortStatus is a key binding for sorting by the "Status" column.
-	SortStatus = key.NewBinding(
-		key.WithKeys("S"),
-		key.WithHelp("<shift+s>", SortPrefix+common.StatusCol),
-	)
+	SortStatus = sortBy(common.StatusCol)
 	// SortSize is a key binding for sorting by the "Size" column.
-	SortSize = key.NewBinding(
-		key.WithKeys("S"),
-		key.WithHelp("<shift+s>", SortPrefix+common.SizeCol),
-	)
+	SortSize = sortBy(common.SizeCol)
 	// SortFree is a key binding for sorting by the "Free" column.
-	SortFree = key.NewBinding(
-		key.WithKeys("F"),
-		key.WithHelp("<shift+f>", SortPrefix+common.FreeCol),
-	)
+	SortFree = sortBy(common.FreeCol)
 	// SortAge is a key binding for sorting by the "Age" column.
-	SortAge = key.NewBinding(
-		key.WithKeys("A"),
-		key.WithHelp("<shift+a>", SortPrefix+common.AgeCol),
-	)
+	SortAge = sortBy(common.AgeCol)
 	// SortGPUs is a key binding for sorting by the "GPUs" column. Shared
 	// by every category with a GPU-count column: ServingRuntime,
 	// GPUPool and GPUWorkload all title theirs "GPUs".
-	SortGPUs = key.NewBinding(
-		key.WithKeys("G"),
-		key.WithHelp("<shift+g>", SortPrefix+common.GpusCol),
-	)
+	SortGPUs = sortBy(common.GpusCol)
 	// SortUsage is a key binding for sorting by the "Usage" column.
-	SortUsage = key.NewBinding(
-		key.WithKeys("U"),
-		key.WithHelp("<shift+u>", SortPrefix+common.UsageCol),
-	)
+	SortUsage = sortBy(common.UsageCol)
 	// ToggleAlias is a key binding for toggling the alias view.
 	ToggleAlias = key.NewBinding(
 		key.WithKeys("ctrl+a"),
 		key.WithHelp("<ctrl+a>", "Toggle Alias"),
 	)
 	// SortType is a key binding for sorting by the "Type" column.
-	SortType = key.NewBinding(
-		key.WithKeys("T"),
-		key.WithHelp("<shift+t>", SortPrefix+common.TypeCol),
-	)
+	SortType = sortBy(common.TypeCol)
 	// SortVendor is a key binding for sorting by the "Vendor" column.
-	// Shares the V key with SortValue; the two never coexist in a single
-	// category's binding set (SortValue lives on definition/override
-	// categories, SortVendor is currently only on ImportedModel — the
-	// one category still rendering a Vendor column).
-	SortVendor = key.NewBinding(
-		key.WithKeys("V"),
-		key.WithHelp("<shift+v>", SortPrefix+common.VendorCol),
-	)
+	SortVendor = sortBy(common.VendorCol)
 	// ToggleFaulty is a key binding for toggling the faulty state.
 	ToggleFaulty = key.NewBinding(
 		key.WithKeys("ctrl+z"),
@@ -352,5 +306,8 @@ func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
 	if ctxByMode, ok := catContext[cat]; ok {
 		km.Context = ctxByMode[mode]
 	}
+	sortKeys := SortKeys(cat)
+	km.Mode = withSortKeys(km.Mode, sortKeys)
+	km.Context = withSortKeys(km.Context, sortKeys)
 	return km
 }

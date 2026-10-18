@@ -17,6 +17,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -255,6 +256,13 @@ func truncateMiddle(s string, w int) string {
 func (m *Model) updateColumns() {
 	m.headers = headersFor(m.category)
 	sortable := m.keys.SortableColumns()
+	var sortKeys map[string]string // lowercased column -> sort key, while s is pending
+	if m.prefix.key == keys.SortLeader {
+		sortKeys = map[string]string{}
+		for col, k := range keys.SortKeys(m.category) {
+			sortKeys[strings.ToLower(col)] = k
+		}
+	}
 	columns := make([]table.Column, len(m.headers))
 	remaining := m.table.Width()
 	for i, header := range m.headers {
@@ -265,6 +273,9 @@ func (m *Model) updateColumns() {
 		}
 		width -= m.styles.Header.GetHorizontalFrameSize()
 		title := header.text
+		if k, ok := sortKeys[strings.ToLower(header.text)]; ok {
+			title = underlineSortKey(title, k)
+		}
 		switch {
 		case m.sortColumn != "" && strings.EqualFold(header.text, m.sortColumn):
 			if m.sortAsc {
