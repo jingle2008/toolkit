@@ -33,6 +33,7 @@ func TestUpdateExportView_ErrRestoresPreviousViewAndToasts(t *testing.T) {
 	require.Same(t, m, got)
 	assert.Equal(t, common.DetailsView, m.viewMode, "failure should restore the view the popup came from")
 	require.NotNil(t, m.toasts.active, "an error should surface as a toast")
+	assert.Equal(t, "e pick another folder", m.toasts.active.next)
 }
 
 func TestExportTableCSVCmd_ErrorBecomesExportErrMsg(t *testing.T) {

@@ -66,6 +66,30 @@ func TestCtrlX_InInferenceService_RefusalToasts(t *testing.T) {
 	assert.Equal(t, common.ListView, m.viewMode, "a refusal opens no modal")
 	require.NotNil(t, m.toasts.active)
 	assert.Contains(t, m.toasts.active.msg, "delete the DAC instead")
+	assert.Equal(t, toastWarn, m.toasts.active.sev, "a refusal is the check working: it fades")
+}
+
+// A deferred orphan delete is a refusal too; a failed check is an error
+// that names the retry key.
+//
+//nolint:paralleltest // swaps the package-level plan seam
+func TestCtrlX_DeferredWarnsFailureRetries(t *testing.T) {
+	for _, tc := range []struct {
+		err  error
+		sev  toastSeverity
+		next string
+	}{
+		{k8s.ErrDeleteDeferred, toastWarn, ""},
+		{errors.New("check DAC d1 (ome.io): forbidden"), toastError, "^x retry"},
+	} {
+		m := newInferenceServiceModel(t)
+		stubOrphanPlan(t, "", tc.err)
+		cmd := m.handleItemActions(ctrlX())
+		m.handleISVCDeletePlannedMsg(cmd().(isvcDeletePlannedMsg))
+		require.NotNil(t, m.toasts.active)
+		assert.Equal(t, tc.sev, m.toasts.active.sev, tc.err)
+		assert.Equal(t, tc.next, m.toasts.active.next, tc.err)
+	}
 }
 
 // A plan landing after the user left the list doesn't pop a modal.

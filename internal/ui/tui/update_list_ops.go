@@ -9,6 +9,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -143,10 +144,12 @@ func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 	}
 }
 
-func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
+// handleDeleteErrMsg restores the row a failed delete marked and says it
+// failed — it used to only log, so the failure went unseen.
+func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) tea.Cmd {
 	m.logger.Errorw("failed to delete item", "key", msg.key, "error", msg.err)
 	if !m.inCurrentEnv(msg.env) {
-		return
+		return nil
 	}
 	item := findItem(m.dataset, msg.category, msg.key)
 
@@ -160,6 +163,8 @@ func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) {
 	if msg.category == m.category {
 		m.updateRows(false)
 	}
+	return m.showErrorWithNext(fmt.Sprintf("delete %s failed: %v", itemKeyString(msg.key), msg.err),
+		keys.Delete.Help().Key+" retry")
 }
 
 func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
@@ -271,7 +276,8 @@ func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key)
 	if msg.err != nil {
 		m.logger.Errorw("failed to drain node", "key", msg.key, "error", msg.err)
-		return m.showToast(fmt.Sprintf("drain %s failed: %v", target, msg.err), toastError)
+		// The drain is recorded on the node, so a rerun resumes it.
+		return m.showErrorWithNext(fmt.Sprintf("drain %s failed: %v", target, msg.err), keys.DrainNode.Help().Key+" retry (resumes)")
 	}
 	return m.showToast("drained "+target, toastInfo)
 }
@@ -301,7 +307,7 @@ func (m *Model) handleRestartServiceResultMsg(msg restartServiceResultMsg) tea.C
 	target := itemKeyString(msg.key)
 	if msg.err != nil {
 		m.logger.Errorw("failed to restart inference service", "key", msg.key, "error", msg.err)
-		return m.showToast(fmt.Sprintf("restart %s failed: %v", target, msg.err), toastError)
+		return m.showErrorWithNext(fmt.Sprintf("restart %s failed: %v", target, msg.err), keys.Restart.Help().Key+" retry")
 	}
 	return m.showToast("restart requested for "+target, toastInfo)
 }

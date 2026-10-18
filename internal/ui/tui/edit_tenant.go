@@ -209,7 +209,7 @@ func (m *Model) handleTenantSavedMsg(msg tenantSavedMsg) tea.Cmd {
 // handleTenantSaveErrMsg surfaces a failed save. The form (if still
 // open) is left intact so the user's input isn't lost.
 func (m *Model) handleTenantSaveErrMsg(msg tenantSaveErrMsg) tea.Cmd {
-	return m.showToast(fmt.Sprintf("save failed: %v", msg.err), toastError)
+	return m.showErrorWithNext(fmt.Sprintf("save failed: %v", msg.err), "^s retry") // the form keeps the input
 }
 
 // handleEditTenantKey routes a key event while the form is open: tab

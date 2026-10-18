@@ -85,6 +85,11 @@ Help already draws it only when it fits without making help scroll.
   screen, not over view fragments.
 - [x] Confirm Kind row names the category.
 - [x] Edit tenant: `^o` explained on its own line (DevOps portal).
-- [ ] Next-step hints for errors other than loads — needs each failure's
-  cause first.
+- [x] Next-step hints for errors other than loads: retry keys for
+  drain (resumes), restart, delete, tenant save, export, details render;
+  safety-check refusals (not an orphan, deferred orphan delete via
+  `k8s.ErrDeleteDeferred`, no metrics dashboard) are warnings; a failed
+  DAC delete or node termination now toasts at all.
+- [ ] Browser-launch failures (portal, metrics) — a hint needs the URL
+  to be copyable first.
 - [ ] Colors and contrast in a live terminal (light, dark, `NO_COLOR`).

@@ -150,6 +150,7 @@ func TestUpdateContent_Error(t *testing.T) {
 	require.NotNil(t, m.toasts.active)
 	assert.Contains(t, m.toasts.active.msg, "render failed")
 	assert.Equal(t, toastError, m.toasts.active.sev)
+	assert.Equal(t, "tab shows fields", m.toasts.active.next, "the fields layout doesn't use the failed renderer")
 }
 
 type errRenderer struct{}

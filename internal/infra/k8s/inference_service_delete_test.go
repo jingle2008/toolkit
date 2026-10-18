@@ -165,3 +165,12 @@ func TestDeleteOrphanInferenceService_DACLookupFailsClosed(t *testing.T) {
 	assert.Contains(t, err.Error(), "check DAC "+orphanNS)
 	assert.NotErrorIs(t, err, ErrNotOrphan)
 }
+
+// A deferred refusal matches ErrDeleteDeferred and keeps its message.
+func TestDeferred_MatchesSentinelKeepsMessage(t *testing.T) {
+	t.Parallel()
+	err := deferred("InferenceService %s: deletion is pending but no finalizer holds it", "ns/x")
+	require.ErrorIs(t, err, ErrDeleteDeferred)
+	assert.NotErrorIs(t, err, ErrNotOrphan)
+	assert.Equal(t, "InferenceService ns/x: deletion is pending but no finalizer holds it", err.Error())
+}

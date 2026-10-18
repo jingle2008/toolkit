@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -120,4 +121,14 @@ func TestHandleEditTenantKey_Confirm(t *testing.T) {
 func TestModel_MetadataPath(t *testing.T) {
 	t.Parallel()
 	assert.NotEmpty(t, makeTestModel().metadataPath())
+}
+
+// A failed save keeps the form open and names ^s as the retry.
+func TestHandleTenantSaveErrMsg_NamesRetry(t *testing.T) {
+	t.Parallel()
+	m := openForm(t)
+	m.handleTenantSaveErrMsg(tenantSaveErrMsg{err: errors.New("read-only file system")})
+	require.NotNil(t, m.toasts.active)
+	assert.Equal(t, "^s retry", m.toasts.active.next)
+	assert.NotNil(t, m.editTenant, "the form keeps the input")
 }
