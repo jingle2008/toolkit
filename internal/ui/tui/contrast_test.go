@@ -3,6 +3,7 @@ package tui
 import (
 	"image/color"
 	"math"
+	"slices"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -35,43 +36,47 @@ func contrast(a, b color.Color) float64 {
 // minContrast is WCAG AA for normal text.
 const minContrast = 4.5
 
-// Every text role reads at 4.5:1 on common terminal backgrounds, and every
-// fill carries its text at 4.5:1, in both themes.
+// Every text role reads at 4.5:1 on common terminal backgrounds and on
+// the selected row's Selection tint, the tint stands out from the
+// background, and every fill carries its text at 4.5:1, in both themes.
 func TestPalette_Contrast(t *testing.T) {
 	t.Parallel()
 	hex := lipgloss.Color
 	for _, theme := range []struct {
 		name string
 		dark bool
-		bgs  []color.Color // black/#1E1E1E/One Dark; white/#F5F5F5/Solarized light
+		bgs  []color.Color // black/#1E1E1E/One Dark/navy; white/#F5F5F5/Solarized light
 	}{
-		{"dark", true, []color.Color{hex("#000000"), hex("#1E1E1E"), hex("#282C34")}},
+		{"dark", true, []color.Color{hex("#000000"), hex("#1E1E1E"), hex("#282C34"), hex("#011423")}},
 		{"light", false, []color.Color{hex("#FFFFFF"), hex("#F5F5F5"), hex("#FDF6E3")}},
 	} {
 		p := NewPalette(theme.dark)
 		text := map[string]color.Color{
-			"Primary": p.Primary, "Accent": p.Accent, "Secondary": p.Secondary, "Text": p.Text,
-			"Muted": p.Muted, "Focus": p.Focus, "Success": p.Success, "Warn": p.Warn,
-			"Danger": p.Danger, "Info": p.Info,
+			"Primary": p.Primary, "Accent": p.Accent, "Text": p.Text, "Muted": p.Muted,
+			"Success": p.Success, "Warn": p.Warn, "Danger": p.Danger,
 		}
 		for name, c := range text {
-			for _, bg := range theme.bgs {
+			for _, bg := range append(slices.Clone(theme.bgs), p.Selection) {
 				assert.GreaterOrEqual(t, contrast(c, bg), minContrast, "%s %s on %v", theme.name, name, bg)
 			}
 		}
+		for _, bg := range theme.bgs {
+			assert.GreaterOrEqual(t, contrast(p.Selection, bg), minSelectionContrast,
+				"%s selection tint stands out from %v", theme.name, bg)
+		}
 		fills := map[string][2]color.Color{
-			"AccentFill":    {p.OnAccent, p.AccentFill},
-			"SecondaryFill": {p.OnAccent, p.SecondaryFill},
-			"SuccessFill":   {p.OnAccent, p.SuccessFill},
-			"DangerFill":    {p.OnAccent, p.DangerFill},
-			"InfoFill":      {p.OnAccent, p.InfoFill},
-			"Warn":          {p.OnWarn, p.Warn},
+			"DangerFill": {p.OnAccent, p.DangerFill},
+			"Warn":       {p.OnWarn, p.Warn},
 		}
 		for name, pair := range fills {
 			assert.GreaterOrEqual(t, contrast(pair[0], pair[1]), minContrast, "%s text on %s", theme.name, name)
 		}
 	}
 }
+
+// minSelectionContrast is how far the selection tint must stand from the
+// background to read as a band: quiet, but visible.
+const minSelectionContrast = 1.1
 
 // The contrast helper agrees with the WCAG reference values.
 func TestContrast_Reference(t *testing.T) {

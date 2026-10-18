@@ -3,7 +3,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Name ↑             Tenant        Internal     Usage    Type          Model    Shape/Profile     Size   Age   Status  │
 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ dac-alpha          acme          false        75%      Hosting       —        A100_80G          4      12d   Active  │
+│▌dac-alpha          acme          false        75%      Hosting       —        A100_80G          4      12d   Active  │
 │ dac-orphan         orphan        —            0%       Hosting       —        A10               1      41d   Active  │
 │ dac-日本語         acme          false        100%     Fine-tuning   —        H100              2      3d    Failed  │
 │                                                                                                                      │

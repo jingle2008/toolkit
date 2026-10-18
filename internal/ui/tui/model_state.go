@@ -286,6 +286,9 @@ func setStyles(m *Model, s Styles) {
 	if m.loadingSpinner != nil {
 		m.loadingSpinner.Style = s.Spinner
 	}
+	if m.dirPicker != nil {
+		m.dirPicker.Styles = pickerStyles(m.dirPicker.Styles, s.Palette)
+	}
 }
 
 // applyOptions applies all ModelOption functions to the model.

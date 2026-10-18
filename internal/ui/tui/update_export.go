@@ -125,7 +125,7 @@ func (m *Model) exportFilename() string {
 func (m *Model) exportView() string {
 	p := m.theme.Palette
 	label := lipgloss.NewStyle().Foreground(p.Muted).Width(8)
-	strong := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
+	strong := lipgloss.NewStyle().Foreground(p.Text).Bold(true)
 	name := strong.Render(m.exportName.Value())
 	if m.naming {
 		name = m.exportName.View()
@@ -136,7 +136,7 @@ func (m *Model) exportView() string {
 	list := strings.TrimRight(m.dirPicker.View(), "\n")
 	body := label.Render("Folder") + strong.Render(truncateLeft(tildePath(m.dirPicker.CurrentDirectory), field)) + "\n" +
 		label.Render("Name") + name + "\n\n" + list
-	return m.modal("Export CSV", body, exportHints, p.Focus, width)
+	return m.modal("Export CSV", body, exportHints, p.Accent, width)
 }
 
 // truncateLeft keeps s's last limit cells, marking a cut with a leading

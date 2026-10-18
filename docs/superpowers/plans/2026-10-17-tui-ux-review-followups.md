@@ -104,3 +104,20 @@ Help already draws it only when it fits without making help scroll.
   with the total when a filter or faulty-only mode hides rows; the panel
   title stops repeating the count; details and log positions move there
   too. Closes the last of "the same information appears several times".
+
+## Batch 8 — visual review and palette redesign
+
+Rendered every screen (live data and the golden model, dark in the user's
+WezTerm colors, light) on a cell grid and reviewed the images.
+
+- [x] Selected row: quiet Selection tint with no foreground and a `▌`
+  Accent marker in its left padding; statuses keep their colors on it.
+  Fixes light-mode cells turning black after a status, and statuses at
+  1.0–3.2:1 on the pink fill.
+- [x] One meaning per hue: Primary = keys, Accent = focus, status trio,
+  DangerFill = production/irreversible only. Removed Secondary, Focus,
+  Info and the Accent/Secondary/Success/Info fills.
+- [x] Chrome: category, stats, LIVE and log state are text; PROD is the
+  one fill.
+- [x] Export picker themed; JSON view follows light/dark and drops
+  glamour's top margin; help never ends a page on a title.

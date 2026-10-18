@@ -3,7 +3,7 @@
 ╭─ 1 column hidden ────────────────────────────────────────────────────────────╮
 │ Name ↑     Pool    Type           Total  Free  Healt…  Ready  Status         │
 │──────────────────────────────────────────────────────────────────────────────│
-│ 10.0.0.11  pool-a  BM.GPU.H100.8  8      2     true    true   OK             │
+│▌10.0.0.11  pool-a  BM.GPU.H100.8  8      2     true    true   OK             │
 │ 10.0.0.12  pool-a  BM.GPU.H100.8  8      8     false   false  WARN: CORDONED │
 │                                                                              │
 │                                                                              │

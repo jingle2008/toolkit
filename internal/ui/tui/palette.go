@@ -329,7 +329,7 @@ func (m *Model) paletteView() string {
 	end := min(start+n, len(p.matches))
 
 	muted := lipgloss.NewStyle().Foreground(pal.Muted)
-	hit := lipgloss.NewStyle().Foreground(pal.Primary).Bold(true)
+	hit := lipgloss.NewStyle().Foreground(pal.Accent).Bold(true)
 	group := func(i int) string {
 		if i < p.recent {
 			return "recent"
@@ -364,7 +364,7 @@ func (m *Model) paletteView() string {
 		lines = append(lines, muted.Render(fmt.Sprintf("  %d–%d of %d", start+1, end, len(p.matches))))
 	}
 	return m.modal("Command palette", strings.Join(lines, "\n"),
-		"↑/↓ select · enter run · esc close", pal.Focus, width)
+		"↑/↓ select · enter run · esc close", pal.Accent, width)
 }
 
 // highlight renders s with the runes at byte offsets idx in style hit.
