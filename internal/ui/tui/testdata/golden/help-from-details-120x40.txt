@@ -1,30 +1,31 @@
-Realm:   oc1                  <esc> Back/Clear                                                             | | | | |
-Type:    prod                 <o>   Copy Object                                                          .-----------.
-Region:  us-ashburn-1         <?/h> Help                                                                -|   _____   |-
-Context: dp-prod-iad                                                                                    -|  |_   _|  |-
-K8s:     v1.31.4                                                                                        -|    |_|    |-
-Version: v1.2.3                                                                                          '-----------'
- DedicatedAICluster (all)  🐶>                                                    Active: 2 • Failed: 1 • Size: 7 [1/3]
-┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+ oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                                                           v1.2.3
+ DedicatedAICluster                                                               Active: 2 • Failed: 1 • Size: 7 [1/3]
+╭─ acme/dac-alpha ─────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │                                                                                                                      │
 │                                                                                                                      │
 │    {                                                                                                                 │
 │        "name": "dac-alpha",                                                                                          │
 │        "status": "Active",                                                                                           │
 │        "tenantId": "acme",                                                                                           │
-│        "ty╭─ Keys · Details view ────────────────────────────────────────────────────────────────────────╮           │
-│        "un│ Details View Actions            General Actions                 Viewport Actions             │           │
-│        "si│   <o>         Copy Object         <?/h>       Help                ↑/k         up             │           │
-│        "ow│                                   <y>         Toggle Details      ↓/j         down           │           │
-│           │                                   <c>         Copy                u           ½ page up      │           │
+│        "type": "Hosting",                                                                                            │
+│        "unitShape": "A100_80G",                                                                                      │
+│        "si╭─ Keys · Details view ────────────────────────────────────────────────────────────────────────╮           │
+│        "ow│                                          | | | | |                                           │           │
+│           │                                        .-----------.                                         │           │
+│           │                                       -|   _____   |-                                        │           │
+│           │                                       -|  |_   _|  |-                                        │           │
+│           │                                       -|    |_|    |-                                        │           │
+│        }, │                                        '-----------'                                         │           │
+│        "to│ Details View Actions            General Actions                 Viewport Actions             │           │
+│        "id│   <o>         Copy Object         <?/h>       Help                ↑/k         up             │           │
+│        "ag│                                   <y>         Toggle Details      ↓/j         down           │           │
+│    }      │                                   <c>         Copy                u           ½ page up      │           │
 │           │                                   <`>         Toggle Log          d           ½ page down    │           │
 │           │                                   <esc>       Back/Clear          b/pgup      page up        │           │
 │           │                                   <q>         Quit                f/pgdn      page down      │           │
-│        }, │                                                                                              │           │
-│        "to│ esc close                                                                                    │           │
-│        "id╰──────────────────────────────────────────────────────────────────────────────────────────────╯           │
-│        "age": "12d"                                                                                                  │
-│    }                                                                                                                 │
+│           │                                                                                              │           │
+│           │ esc close                                                                                    │           │
+│           ╰──────────────────────────────────────────────────────────────────────────────────────────────╯           │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
@@ -35,6 +36,5 @@ Version: v1.2.3                                                                 
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                                                                                      │
-│                                                                                                                      │
-└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ o copy object  ? more

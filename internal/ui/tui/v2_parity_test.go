@@ -37,9 +37,9 @@ func TestDetailsView_HOpensHelp(t *testing.T) {
 func TestBackgroundColorMsg_Restyles(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	dark := m.theme.StatusBar.GetForeground()
+	dark := m.theme.HelpKey.GetForeground()
 	_, _ = m.Update(tea.BackgroundColorMsg{Color: color.White})
-	assert.NotEqual(t, dark, m.theme.StatusBar.GetForeground(), "light background keeps dark-theme colors")
+	assert.NotEqual(t, dark, m.theme.HelpKey.GetForeground(), "light background keeps dark-theme colors")
 	_, _ = m.Update(tea.BackgroundColorMsg{Color: color.Black})
-	assert.Equal(t, dark, m.theme.StatusBar.GetForeground())
+	assert.Equal(t, dark, m.theme.HelpKey.GetForeground())
 }

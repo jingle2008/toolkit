@@ -14,14 +14,14 @@
 
 
 
+                                                       | | | | |
+                                                     .-----------.
+                                                    -|   _____   |-
+                                                    -|  |_   _|  |-
+                                                    -|    |_|    |-
+                                                     '-----------'
 
-
-
-                                       ∙∙∙ Loading data: DedicatedAICluster … 0s
-
-
-
-
+                                          ∙∙∙ Loading DedicatedAICluster … 0s
 
 
 

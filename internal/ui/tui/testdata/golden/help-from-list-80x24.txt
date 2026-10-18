@@ -1,15 +1,15 @@
-Realm:   oc1                  <ctrl+x>  Delete                     | | | | |
-Type:╭─ Keys · List view ─────────────────────────────────────────────────╮--.
-Regio│ Resource Actions                   List View Actions               │  |-
-Conte│   <o>         Go to related          <[>         History Back      │  |-
-K8s: │   s f         Sort Free              <]>         History Forward   │  |-
-Versi│   s t         Sort Type              <tab>       Next Category     │--'
- GPUN│   s a         Sort Age               <shift+tab> Previous Category │1/2]
-┌────│   <r>         Refresh                <:cmd>      Command mode      │────┐
-│ Nam│   <shift+c>   Toggle Cordon          </term>     Filter mode       │    │
-│────│   <shift+d>   Drain                  <p>         Paste Filter      │────│
-│ 10.│   <ctrl+z>    Toggle Faulty          s n         Sort Name         │    │
-│ 10.│   <shift+r>   Restart                <enter>     View/Enter        │    │
+ oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                   v1.2.3
+ GPUN╭─ Keys · List view ─────────────────────────────────────────────────╮1/2]
+╭─ GP│ Resource Actions                   List View Actions               │────╮
+│ Nam│   <o>         Go to related          <[>         History Back      │    │
+│────│   s f         Sort Free              <]>         History Forward   │────│
+│ 10.│   s t         Sort Type              <tab>       Next Category     │    │
+│ 10.│   s a         Sort Age               <shift+tab> Previous Category │    │
+│    │   <r>         Refresh                <:cmd>      Command mode      │    │
+│    │   <shift+c>   Toggle Cordon          </term>     Filter mode       │    │
+│    │   <shift+d>   Drain                  <p>         Paste Filter      │    │
+│    │   <ctrl+z>    Toggle Faulty          s n         Sort Name         │    │
+│    │   <shift+r>   Restart                <enter>     View/Enter        │    │
 │    │   <ctrl+x>    Delete                 <ctrl+a>    Toggle Alias      │    │
 │    │                                      <e>         Export CSV        │    │
 │    │                                                                    │    │
@@ -20,5 +20,5 @@ Versi│   s t         Sort Type              <tab>       Next Category     │-
 │    │                                                                    │    │
 │    │ j/k pgup/pgdn home/end scroll · esc close                          │    │
 │    ╰────────────────────────────────────────────────────────────────────╯    │
-│                                                                              │
-└──────────────────────────────────────────────────────────────────────────────┘
+╰──────────────────────────────────────────────────────────────────────────────╯
+ o go to related  r refresh  C toggle cordon  D drain  ^z toggle faulty  ? more

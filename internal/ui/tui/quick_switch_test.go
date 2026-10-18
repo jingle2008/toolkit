@@ -233,5 +233,5 @@ func TestFrame_QuickSwitchIsFirstHelpColumn(t *testing.T) {
 	require.NotEmpty(t, full)
 	ks, _ := helpKeysAndDescs(full[0])
 	assert.Equal(t, []string{"<0>", "<1>", "<2>"}, ks)
-	assert.Contains(t, m.frame(""), "dp-prod-iad")
+	assert.Contains(t, m.frame("", ""), "dp-prod-iad")
 }

@@ -1,16 +1,16 @@
-Realm:   oc1                  <t>       Copy Tenant ID             | | | | |
-Type╭─ Export CSV ─────────────────────────────────────────────────────────╮-.
-Regi│ File  us-ashburn-1-DedicatedAICluster.csv                            │ |-
-Cont│                                                                      │ |-
-K8s:│ Pick a directory:                                                    │ |-
-Vers│                                                                      │-'
- Ded│ > drwxr-xr-x  <size> alpha                                            │/3]
-┌───│   drwxr-xr-x  <size> beta                                             │───┐
-│ Na│   drwxr-xr-x  <size> gamma                                            │s  │
-│───│                                                                      │───│
+ oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                   v1.2.3
+ Ded╭─ Export CSV ─────────────────────────────────────────────────────────╮/3]
+╭─ D│ File  us-ashburn-1-DedicatedAICluster.csv                            │───╮
+│ Na│                                                                      │s  │
+│───│ Pick a directory:                                                    │───│
 │ da│                                                                      │e  │
-│ da│                                                                      │e  │
-│ da│                                                                      │d  │
+│ da│ > drwxr-xr-x  <size> alpha                                            │e  │
+│ da│   drwxr-xr-x  <size> beta                                             │d  │
+│   │   drwxr-xr-x  <size> gamma                                            │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
 │   │                                                                      │   │
 │   │                                                                      │   │
 │   │                                                                      │   │
@@ -20,5 +20,5 @@ Vers│                                                                      │
 │   │                                                                      │   │
 │   │                                                                      │   │
 │   │ k up • j down • enter select • l open • h back • esc cancel          │   │
-│   ╰──────────────────────────────────────────────────────────────────────╯   │
-└──────────────────────────────────────────────────────────────────────────────┘
+╰───╰──────────────────────────────────────────────────────────────────────╯───╯
+ o go to related  t copy tenant id  E edit tenant  m open metrics  ? more
