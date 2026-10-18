@@ -11,11 +11,11 @@
 │    │   <ctrl+z>    Toggle Faulty          s n         Sort Name         │    │
 │    │   <shift+r>   Restart                <enter>     View/Enter        │    │
 │    │   <ctrl+x>    Delete                 <ctrl+a>    Toggle Alias      │    │
+│    │                                      <v>         Toggle Preview    │    │
 │    │                                      <e>         Export CSV        │    │
 │    │                                                                    │    │
 │    │                                    General Actions                 │    │
 │    │                                      <?/h>       Help              │    │
-│    │                                      <y>         Toggle Details    │    │
 │    │ ↓ more · 0%                                                        │    │
 │    │                                                                    │    │
 │    │ j/k pgup/pgdn home/end scroll · esc close                          │    │

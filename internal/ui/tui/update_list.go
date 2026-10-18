@@ -148,6 +148,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
 		{keys.SortName, func() []tea.Cmd { return []tea.Cmd{m.sortTableByColumn(common.NameCol)} }},
 		{keys.ToggleAlias, func() []tea.Cmd { return m.toggleAliases() }},
+		{keys.TogglePreview, func() []tea.Cmd { return []tea.Cmd{m.togglePreview()} }},
 		{keys.ExportCSV, func() []tea.Cmd { return m.enterExportView() }},
 	}
 

@@ -121,6 +121,7 @@ type Model struct {
 	confirm       confirmOverlay  // destructive-action confirmation modal state
 	rowPicker     rowPickerState  // modal row picker state (go to, metrics DAC)
 	palette       paletteState    // command palette state
+	preview       bool            // preview pane toggled on (shown when wide enough)
 	selectedKey   models.ItemKey
 	viewport      *viewport.Model
 	renderer      view.Renderer

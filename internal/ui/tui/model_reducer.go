@@ -330,7 +330,11 @@ func (m *Model) updateLayout(w, h int) {
 		m.viewport.SetWidth(inner)
 		m.viewport.SetHeight(body)
 	} else {
-		table.WithWidth(inner)(m.table)
+		tableW := inner
+		if m.previewShown() {
+			tableW = w - m.previewOuterWidth() - 2
+		}
+		table.WithWidth(tableW)(m.table)
 		// updateColumns before WithHeight: WithHeight derives viewport.Height
 		// from lipgloss.Height(headersView()), so columns must be set first
 		// (otherwise an empty header is measured as 1 line and the viewport

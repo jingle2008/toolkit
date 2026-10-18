@@ -212,6 +212,11 @@ var goldenViews = []struct {
 		showCategory(t, m, domain.DedicatedAICluster)
 		m.openRowPicker("Go to", "go", pickerTargets(12), nil)
 	}},
+	{"list-dac-preview", func(t *testing.T, m *Model) {
+		showCategory(t, m, domain.DedicatedAICluster)
+		m.preview = true
+		m.updateLayout(m.viewWidth, m.viewHeight)
+	}},
 	{"palette", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
 		m.openPalette()

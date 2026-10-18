@@ -141,6 +141,7 @@ var listModeKeys = []key.Binding{
 	SortName,
 	Confirm,
 	ToggleAlias,
+	TogglePreview,
 	ExportCSV,
 }
 
@@ -213,6 +214,12 @@ var (
 	ToggleAlias = key.NewBinding(
 		key.WithKeys("ctrl+a"),
 		key.WithHelp("<ctrl+a>", "Toggle Alias"),
+	)
+	// TogglePreview shows or hides the selected row's summary beside the
+	// table, on terminals wide enough for both.
+	TogglePreview = key.NewBinding(
+		key.WithKeys("v"),
+		key.WithHelp("<v>", "Toggle Preview"),
 	)
 	// SortType is a key binding for sorting by the "Type" column.
 	SortType = sortBy(common.TypeCol)
