@@ -92,7 +92,11 @@ Help already draws it only when it fits without making help scroll.
   DAC delete or node termination now toasts at all.
 - [ ] Browser-launch failures (portal, metrics) — a hint needs the URL
   to be copyable first.
-- [ ] Colors and contrast in a live terminal (light, dark, `NO_COLOR`).
+- [x] Colors and contrast: text roles ≥4.5:1 on six common backgrounds
+  and fills ≥4.5:1 under their text (`TestPalette_Contrast`); dark fills
+  split from dark text (`*Fill` roles); `NO_COLOR` draws focus in reverse
+  video (`tea.ColorProfileMsg`). Verified in tmux: 256-color downsampling
+  and NO_COLOR stripping both work; true 16-color untested.
 
 ## Batch 7 — one count
 

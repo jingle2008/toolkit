@@ -10,6 +10,7 @@ import (
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/stopwatch"
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -41,7 +42,12 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.onResize(msg)
 	case tea.BackgroundColorMsg:
+		m.lightBg = !msg.IsDark()
 		setStyles(m, DefaultStyles(msg.IsDark()))
+		return m, nil
+	case tea.ColorProfileMsg:
+		m.colorless = msg.Profile == colorprofile.NoTTY || msg.Profile == colorprofile.ASCII
+		setStyles(m, DefaultStyles(!m.lightBg))
 		return m, nil
 	case errMsg:
 		return m, m.handleErrMsg(msg)

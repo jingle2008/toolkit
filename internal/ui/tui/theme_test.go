@@ -27,7 +27,7 @@ func TestRenderToast_ErrorUsesDanger(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.showToast("boom", toastError)
-	assert.Contains(t, m.renderToast(40), "38;2;215;0;0", "Danger border")
+	assert.Contains(t, m.renderToast(40), "38;2;255;107;107", "Danger border")
 }
 
 // A light-background reply restyles the bubbles, not just the theme.

@@ -165,7 +165,7 @@ func (m *Model) rowPickerView() string {
 	for _, t := range g.targets {
 		catWidth = max(catWidth, lipgloss.Width(t.Category.String())+2)
 	}
-	badge := lipgloss.NewStyle().Foreground(p.OnAccent).Background(p.Secondary).Width(catWidth).Padding(0, 1)
+	badge := lipgloss.NewStyle().Foreground(p.OnAccent).Background(p.SecondaryFill).Width(catWidth).Padding(0, 1)
 	cursorStyle := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
 
 	var lines []string

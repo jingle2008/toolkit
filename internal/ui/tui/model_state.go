@@ -191,6 +191,12 @@ type Model struct {
 	// mutates the table's rows in place, which would otherwise leak
 	// "…" into ScopedItemKey lookups.
 	rawRows []table.Row
+	// colorless is set when the terminal shows no color (NO_COLOR, or a
+	// profile without it); setStyles then draws focus in reverse video.
+	// lightBg records the reported background, so a profile change
+	// rebuilds the right theme (dark until reported).
+	colorless bool
+	lightBg   bool
 	// rowTotal is how many rows the category (in its scope) has before the
 	// filter and faulty-only mode; the panel shows it when they hide some.
 	rowTotal int
@@ -260,10 +266,15 @@ func initStyles(m *Model) {
 	setStyles(m, DefaultStyles(true))
 }
 
-// setStyles makes s the model's theme and pushes its component styles
-// into whichever bubbles exist yet; setDefaults calls it again once they
-// all do, and a tea.BackgroundColorMsg restyles everything through it.
+// setStyles makes s the model's theme (adapted to a colorless terminal)
+// and pushes its component styles into whichever bubbles exist yet;
+// setDefaults calls it again once they all do, and a
+// tea.BackgroundColorMsg or tea.ColorProfileMsg restyles everything
+// through it.
 func setStyles(m *Model, s Styles) {
+	if m.colorless && !s.Monochrome {
+		s = s.monochrome()
+	}
 	m.theme = s
 	if m.table != nil {
 		m.table.SetStyles(s.Table)
