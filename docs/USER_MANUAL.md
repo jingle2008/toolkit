@@ -149,28 +149,25 @@ toolkit --help
 ## Interface Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Tenant  LimitDefinition  PropertyDefinition  GPUPool  GPUNode  ...         │  ← Category tabs
-├─────────────────────────────────────────────────────────────────────────────┤
-│  NAME           │  OCIDS                            │  INTERNAL ↕ │  NOTE   │  ← Column headers (↕ = sortable)
-│  ───────────────┼───────────────────────────────────┼─────────────┼──────── │
-│  acme-corp      │  ocid1.tenancy.oc1..aaa…xyz       │  false      │         │
-│  ▶ beta-tenant  │  ocid1.tenancy.oc1..bbb…uvw,…(+1) │  true       │  pilot  │  ← Selected row
-│  gamma-inc      │  ocid1.tenancy.oc1..ccc…rst       │  false      │         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Filter: _                                                                   │  ← Filter / status bar
-│  [?] Help  [q] Quit  [/] Filter  [tab] Next  [y] Details  [e] Export CSV   │  ← Key hints
-└─────────────────────────────────────────────────────────────────────────────┘
+ oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4   1 dp-prod-ord   ● LIVE  v1.2.3   ← Env bar
+ DedicatedAICluster › acme   ⟨/gpu⟩  ⟨sort: age ▼⟩            Active: 2 • Failed: 1 [1/3]   ← Breadcrumb
+╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────────────╮
+│ Name ↑         Tenant ↕     Internal  Usage  Size  Age ↕  Status                     │   ← Column headers (↕ = sortable)
+│──────────────────────────────────────────────────────────────────────────────────────│
+│ dac-alpha      acme         false     75%    4     12d    Active                     │   ← Selected row
+│ dac-beta       acme         false     100%   2     3d     Failed                     │
+╰──────────────────────────────────────────────────────────────────────────────────────╯
+ o go to related  t copy tenant id  E edit tenant  m open metrics  s sort  ? more        ← Footer
 ```
-
-The interface has four zones:
 
 | Zone | Description |
 |------|-------------|
-| **Category tabs** (top) | Navigate between data categories with `Tab` / `Shift+Tab` |
-| **Table** (center) | Scrollable, sortable, filterable data rows |
-| **Status bar** | Shows current filter text, aggregate statistics, and a `● LIVE` indicator when the current category is updating automatically (see [Live Updates](#live-updates)) |
-| **Key hints** (bottom) | Context-sensitive reminder of available keys |
+| **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: a spinner while loading, `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)), and the toolkit version |
+| **Breadcrumb** | The category, and what it is narrowed to (`› acme` for a scope, the row in details view). While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5⟩` (position in history), `s…` (a pending sort key). On the right: the category's stats and the cursor position |
+| **Panel** (center) | The table, or a row's details, in a frame titled with the category and row count. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
+| **Footer** (bottom) | The most useful keys for this category and view, trimmed to fit, ending in `? more` |
+
+Modals (help, the command palette, confirmations, pickers, export, edit tenant) open over the dimmed view. Notifications appear in the bottom-right corner.
 
 ---
 
@@ -182,7 +179,8 @@ The interface has four zones:
 |-----|--------|
 | `↑` / `↓` | Move selection up / down |
 | `PgUp` / `PgDn` | Jump one page |
-| `Home` / `End` | Jump to first / last row |
+| `g` / `Home` | Jump to the first row |
+| `G` / `End` | Jump to the last row |
 
 ### Switching categories
 
@@ -190,9 +188,9 @@ The interface has four zones:
 |-----|--------|
 | `Tab` | Next category |
 | `Shift+Tab` | Previous category |
-| `:` + alias + `Enter` | Jump directly to a category by alias (Command mode) |
+| `:` | Open the [command palette](#command-palette); `:` + alias + `Enter` jumps to a category |
 
-**Category aliases** — type `:` then one of these shortcuts:
+**Category aliases**: type `:` then one of these shortcuts and press `Enter`:
 
 | Alias | Category |
 |-------|----------|
@@ -267,8 +265,20 @@ node, an InferenceService's DAC), so going up is `o`, `Enter`. A target that
 is known not to exist is left out (e.g. a shared-catalog endpoint's model is
 offered as a BaseModel, not an ImportedModel).
 
-`g` / `Home` moves to the first row and `End` to the last (`G` is Sort GPUs
-on the categories that have it).
+### Command palette
+
+`:` opens the command palette over the table. Type to fuzzy-search:
+
+- **Categories**: every category, matched by name or any alias.
+- **Environments**: recent quick-switch slots first, then every environment. Listed only in environment-scoped categories, the same as the `0`–`5` keys.
+- **Actions**: the selected row's actions (go to related, metrics, edit tenant, delete, …), each sort ("Sort by Tenant"), and Export CSV.
+- **Toggles**: alias view, faulty-only, preview pane.
+
+`↑`/`↓` (or `Ctrl+P`/`Ctrl+N`) move, `Enter` runs, `Esc` closes. An exact alias always wins, so `:dac` + `Enter` opens DedicatedAICluster as it always has. Actions run exactly as their key would, confirmations included.
+
+### Preview pane
+
+On a terminal at least 160 columns wide, `v` splits the panel: the table on the left, and on the right a summary of the selected row's fields (the same names as the detail view; nested objects collapse to `{…}`, lists to `[n]`). It follows the cursor. Press `v` again to close it. It stays on for the session: narrowing the terminal hides it, and widening brings it back. On a narrower terminal, `v` says how many columns it needs.
 
 ---
 
@@ -334,7 +344,7 @@ Toolkit organises data into 22 categories:
 
 ### Enter filter mode
 
-Press `/` to open the filter input at the bottom of the screen. Start typing and the table updates in real time (100 ms debounce).
+Press `/` to open the filter input in the breadcrumb line, under the env bar. Start typing and the table updates in real time (100 ms debounce).
 
 ```
 Filter: phoenix█
@@ -363,63 +373,33 @@ toolkit -c gpunode -f "us-phoenix"
 
 ## Sorting
 
-### Sort by name (always available in list view)
+Press `s`, then the letter of a column, to sort by it. While `s` is pending, each sortable column's letter is underlined in the header and the breadcrumb shows `s…`. A column's letter is its first letter, unique within the category. Pressing the same sort again **reverses** the direction. `Esc`, or any key that isn't a column letter, cancels.
 
-```
-Shift+N    → sort by Name (ascending / descending toggle)
-```
+`s n` sorts by Name in every list view. The other sortable columns are marked `↕` in the header:
 
-### Category-specific sort keys
+| Category | Keys |
+|----------|------|
+| Tenant | `s i` Internal, `s s` Status |
+| ConsolePropertyDefinition | `s v` Value |
+| PropertyDefinition | `s v` Value |
+| LimitTenancyOverride | `s t` Tenant, `s r` Regions |
+| ConsolePropertyTenancyOverride | `s t` Tenant, `s r` Regions, `s v` Value |
+| PropertyTenancyOverride | `s t` Tenant, `s r` Regions, `s v` Value |
+| LimitRegionalOverride | `s r` Regions |
+| ConsolePropertyRegionalOverride | `s r` Regions, `s v` Value |
+| PropertyRegionalOverride | `s r` Regions, `s v` Value |
+| BaseModel | `s s` Size, `s c` Context |
+| ImportedModel | `s t` Tenant, `s s` Size, `s c` Context, `s v` Vendor |
+| Environment | `s t` Type |
+| ServiceTenancy | `s t` Type |
+| GPUPool | `s s` Size, `s g` GPUs |
+| GPUNode | `s f` Free, `s t` Type, `s a` Age |
+| GPUWorkload | `s t` Tenant, `s g` GPUs, `s a` Age |
+| DedicatedAICluster | `s t` Tenant, `s i` Internal, `s u` Usage, `s s` Size, `s a` Age |
+| InferenceService | `s t` Tenant, `s a` Age |
+| ServingRuntime | `s g` GPUs |
 
-Each category exposes additional sort columns. In the TUI, the column
-headers that participate in sorting are marked with a `↕` indicator so
-you can see at a glance which columns the keys below will reach.
-
-| Category | Key | Sorts by |
-|----------|-----|----------|
-| BaseModel | `Shift+S` | Size |
-| BaseModel | `Shift+C` | Context |
-| Tenant | `Shift+I` | Internal |
-| Tenant | `Shift+S` | Status |
-| Environment | `Shift+T` | Type |
-| ServiceTenancy | `Shift+T` | Type |
-| ConsolePropertyDefinition | `Shift+V` | Value |
-| PropertyDefinition | `Shift+V` | Value |
-| GPUPool | `Shift+S` | Size |
-| GPUPool | `Shift+G` | GPUs |
-| GPUNode | `Shift+F` | Free |
-| GPUNode | `Shift+T` | Type |
-| GPUNode | `Shift+A` | Age |
-| GPUWorkload | `Shift+T` | Tenant |
-| GPUWorkload | `Shift+G` | GPUs |
-| GPUWorkload | `Shift+A` | Age |
-| DedicatedAICluster | `Shift+T` | Tenant |
-| DedicatedAICluster | `Shift+I` | Internal |
-| DedicatedAICluster | `Shift+U` | Usage |
-| DedicatedAICluster | `Shift+S` | Size |
-| DedicatedAICluster | `Shift+A` | Age |
-| InferenceService | `Shift+T` | Tenant |
-| InferenceService | `Shift+A` | Age |
-| ImportedModel | `Shift+T` | Tenant |
-| ImportedModel | `Shift+S` | Size |
-| ImportedModel | `Shift+C` | Context |
-| ServingRuntime | `Shift+G` | GPUs |
-| ImportedModel | `Shift+V` | Vendor |
-| LimitTenancyOverride | `Shift+T` | Tenant |
-| LimitTenancyOverride | `Shift+R` | Regions |
-| ConsolePropertyTenancyOverride | `Shift+T` | Tenant |
-| ConsolePropertyTenancyOverride | `Shift+R` | Regions |
-| ConsolePropertyTenancyOverride | `Shift+V` | Value |
-| PropertyTenancyOverride | `Shift+T` | Tenant |
-| PropertyTenancyOverride | `Shift+R` | Regions |
-| PropertyTenancyOverride | `Shift+V` | Value |
-| LimitRegionalOverride | `Shift+R` | Regions |
-| PropertyRegionalOverride | `Shift+R` | Regions |
-| PropertyRegionalOverride | `Shift+V` | Value |
-| ConsolePropertyRegionalOverride | `Shift+R` | Regions |
-| ConsolePropertyRegionalOverride | `Shift+V` | Value |
-
-Pressing the same key again **reverses** the sort direction.
+Sorting used to be on `Shift`+letter. Those keys are now free for row actions, and each one means the same action in every category: `Shift+R` is always Restart, `Shift+C` Cordon, `Shift+D` Drain, `Shift+U` Scale Up, `Shift+E` Edit Tenant.
 
 ### Toggle alias view
 
@@ -570,7 +550,7 @@ The exported CSV reflects the **current filter** and the faulty-toggle state. Tw
 things deliberately differ from what's on screen:
 
 - **The interactive sort is not preserved.** Rows are written in the dataset's
-  natural order, not the order `Shift+N` / `Shift+T` / … put them in.
+  natural order, not the order `s n` / `s t` / … put them in.
 - **OCID columns are expanded.** Where the table shows a shortened OCID suffix
   (the Name and Tenant columns on DedicatedAICluster / ImportedModel, and Tenant
   on GPUWorkload / InferenceService), the CSV carries the fully-qualified OCID so the file is ready
@@ -616,14 +596,16 @@ and CPU/memory remain in the TUI's detail view (`y`).
 | `Tab` | Next category |
 | `Shift+Tab` | Previous category |
 | `/` | Enter filter mode |
-| `:` | Enter command mode (alias jump) |
+| `:` | Open the command palette |
 | `p` | Paste clipboard as filter |
 | `Enter` | View item / scope into context |
 | `[` | History back |
 | `]` | History forward |
 | `e` | Export table as CSV |
 | `Ctrl+A` | Toggle alias view |
-| `Shift+N` | Sort by name |
+| `s` + letter | Sort by a column (`s n` Name; see [Sorting](#sorting)) |
+| `g` / `G` | First / last row |
+| `v` | Toggle the preview pane (≥160 columns) |
 
 ### Detail view
 
@@ -636,7 +618,9 @@ and CPU/memory remain in the TUI's detail view (`y`).
 
 ### In-app help
 
-Press `?` or `h` at any time to display the full keybinding help overlay. The help is **context-sensitive** — it only shows keys relevant to your current category and view mode.
+Press `?` or `h` at any time to display the full keybinding help overlay. The help is **context-sensitive**: it only shows keys relevant to your current category and view mode. Its sections flow into columns on wide terminals. When they still don't fit, it scrolls (`j`/`k`, `PgUp`/`PgDn`, `Home`/`End`) and shows how far down you are.
+
+The first time you run a version whose keys changed, a **Keys changed** note in the bottom-right corner says what moved. Any key dismisses it, and that key still does its usual job. The note won't show again: the version you've seen is saved in `~/.config/toolkit/ui.yaml`.
 
 ---
 

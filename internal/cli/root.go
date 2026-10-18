@@ -22,6 +22,7 @@ import (
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui"
+	"github.com/jingle2008/toolkit/internal/uistate"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -201,6 +202,13 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 	if err != nil {
 		logger.Warnw("failed to load recent contexts", "path", recentPath, "error", err)
 	}
+	// UI preferences (the keymap version behind the keys-changed hint)
+	// live beside it; a broken file just shows the hint once more.
+	uiPath := filepath.Join(home, ".config", "toolkit", "ui.yaml")
+	ui, err := uistate.Load(uiPath)
+	if err != nil {
+		logger.Warnw("failed to load ui state", "path", uiPath, "error", err)
+	}
 
 	model, err := tui.NewModel(
 		tui.WithRepoPath(repoPath),
@@ -214,6 +222,7 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithFilter(cfg.Filter),
 		tui.WithVersion(version),
 		tui.WithRecentEnvs(recent, recentPath),
+		tui.WithUIState(ui, uiPath),
 	)
 	if err != nil {
 		logger.Errorw("failed to create toolkit model", "error", err)
