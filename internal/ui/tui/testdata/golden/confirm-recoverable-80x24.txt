@@ -1,4 +1,4 @@
- oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                   v1.2.3
+ oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  GPUNode                                             Free: 10 • Total: 16 [1/2]
 ╭─ GPUNode (2) ────────────────────────────────────────────────────────────────╮
 │ Name ↑     Pool             Type ↕     T…  F…  H…  R…  A…  Status            │
@@ -8,7 +8,7 @@
 │           ╭─ Drain node ─────────────────────────────────────────╮           │
 │           │ Kind     node                                        │           │
 │           │ Name     10.0.0.11                                   │           │
-│           │ Context  dp-prod-iad                                 │           │
+│           │ Context   PRODUCTION dp-prod-iad                     │           │
 │           │                                                      │           │
 │           │               [ Cancel ]     [ Drain ]               │           │
 │           │                                                      │           │

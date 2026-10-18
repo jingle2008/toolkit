@@ -1,4 +1,4 @@
- oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                   v1.2.3
+ oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  GPUN╭─ Keys · List view ─────────────────────────────────────────────────╮1/2]
 ╭─ GP│ Resource Actions                   List View Actions               │────╮
 │ Nam│   <o>         Go to related          <[>         History Back      │    │

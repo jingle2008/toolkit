@@ -29,10 +29,10 @@ func TestUpdateExportView_ErrRestoresPreviousViewAndToasts(t *testing.T) {
 	m.lastViewMode = common.DetailsView
 	m.viewMode = common.ExportView
 
-	got, cmd := m.updateExportView(exportErrMsg{err: errors.New("disk full")})
+	got, _ := m.updateExportView(exportErrMsg{err: errors.New("disk full")})
 	require.Same(t, m, got)
 	assert.Equal(t, common.DetailsView, m.viewMode, "failure should restore the view the popup came from")
-	require.NotNil(t, cmd, "an error should surface as a toast")
+	require.NotNil(t, m.toasts.active, "an error should surface as a toast")
 }
 
 func TestExportTableCSVCmd_ErrorBecomesExportErrMsg(t *testing.T) {

@@ -36,7 +36,7 @@ func TestFrame_Layout(t *testing.T) {
 	m := newGoldenModel(t, 120, 30)
 	showCategory(t, m, domain.DedicatedAICluster)
 	lines := strings.Split(ansi.Strip(m.render()), "\n")
-	assert.Contains(t, lines[0], "oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4")
+	assert.Contains(t, lines[0], "oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4", "prod is a badge")
 	assert.Contains(t, lines[0], "v1.2.3")
 	assert.True(t, strings.HasPrefix(lines[1], " DedicatedAICluster "), lines[1])
 	assert.True(t, strings.HasPrefix(lines[2], "╭─ DedicatedAICluster (3) ─"), lines[2])
@@ -132,5 +132,17 @@ func TestApplyRows_TonesStatusOnly(t *testing.T) {
 		for _, c := range r {
 			assert.NotContains(t, c, "\x1b[", "raw rows stay plain")
 		}
+	}
+}
+
+func TestEnvBar_ProductionBadgeOnlyForProd(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	showCategory(t, m, domain.DedicatedAICluster)
+	for _, typ := range []string{"dev", "preprod"} {
+		m.environment.Type = typ
+		bar := ansi.Strip(m.envBar())
+		assert.Contains(t, bar, "oc1 › "+typ+" › ", typ)
+		assert.NotContains(t, bar, "PROD", typ)
 	}
 }

@@ -43,7 +43,8 @@ func (m *Model) tableTitle() string {
 }
 
 // envBar is the frame's first line: where the data comes from
-// (realm › type › region · context · k8s) on the left; the other
+// (realm › type › region · context · k8s, with production's type as a
+// red badge so it is never mistaken for dev) on the left; the other
 // quick-switch slots when they fit; and the loading spinner, LIVE and the
 // version on the right.
 func (m *Model) envBar() string {
@@ -56,7 +57,11 @@ func (m *Model) envBar() string {
 		k8s = "…"
 	}
 	env := m.environment
-	left := " " + strong.Render(env.Realm) + muted.Render(" › ") + strong.Render(env.Type) +
+	envType := strong.Render(env.Type)
+	if env.IsProduction() {
+		envType = m.theme.Prod.Render(strings.ToUpper(env.Type))
+	}
+	left := " " + strong.Render(env.Realm) + muted.Render(" › ") + envType +
 		muted.Render(" › ") + strong.Render(env.Region) + muted.Render(" · ") + env.KubeContext() +
 		muted.Render(" · k8s ") + k8s
 

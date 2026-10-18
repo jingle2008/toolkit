@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -120,26 +121,31 @@ func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOu
 }
 
 // confirmCordon builds the recoverable overlay for the cordon key: it
-// cordons a schedulable node and uncordons a cordoned one, and says which.
+// cordons a schedulable node and uncordons a cordoned one, says which,
+// and what that does to scheduling.
 // The run thunk re-resolves the item by key at confirm time so a
 // background reload cannot leave it acting on a stale row; it sets the
 // state named here, so a node changed meanwhile ends up as confirmed.
 func (m *Model) confirmCordon(itemKey models.ItemKey, item any) confirmOverlay {
-	a := mutation.CordonNode
+	a, warning := mutation.CordonNode, "No new pods are scheduled on it; running pods stay."
 	if node, ok := item.(*models.GPUNode); ok && node != nil && node.IsSchedulingDisabled {
-		a = mutation.UncordonNode
+		a, warning = mutation.UncordonNode, "Pods can be scheduled on it again."
 	}
 	return confirmOverlay{
 		act:         a,
+		warning:     warning,
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func() tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey, a) },
 	}
 }
 
+// confirmDrain builds the recoverable overlay for the drain key, spelling
+// out the drain's steps (k8s.DrainNode) and that it takes a while.
 func (m *Model) confirmDrain(itemKey models.ItemKey) confirmOverlay {
 	return confirmOverlay{
 		act:         mutation.DrainNode,
+		warning:     "Cordons it, moves single-replica InferenceServices elsewhere, then evicts every pod. Can take tens of minutes.",
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func() tea.Cmd { return m.drainNode(findItem(m.dataset, m.category, itemKey), itemKey) },
@@ -160,6 +166,7 @@ func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay 
 	switch m.category {
 	case domain.GPUNode:
 		c.act = mutation.RestartNode
+		c.warning = "Soft-resets the instance; pods running on it are interrupted."
 		c.run = func() tea.Cmd { return m.restartNode(findItem(m.dataset, m.category, itemKey), itemKey) }
 	default: // InferenceService
 		c.run = func() tea.Cmd { return m.restartInferenceService(findItem(m.dataset, m.category, itemKey), itemKey) }
@@ -170,13 +177,27 @@ func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay 
 	return c
 }
 
+// confirmScale builds the recoverable overlay for the scale key, saying
+// how far the pool grows: oci.IncreasePoolSize raises the instance pool
+// to the pool's configured size, and does nothing when it is there.
 func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
-	return confirmOverlay{
+	c := confirmOverlay{
 		act:         mutation.ScaleGPUPool,
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func() tea.Cmd { return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey) },
 	}
+	if m.dataset == nil {
+		return c
+	}
+	if pool, ok := findItem(m.dataset, m.category, itemKey).(*models.GPUPool); ok && pool != nil {
+		if pool.ActualSize >= pool.Size {
+			c.warning = fmt.Sprintf("Already at its configured size (%d); nothing to do.", pool.Size)
+		} else {
+			c.warning = fmt.Sprintf("Grows the instance pool from %d to %d instances.", pool.ActualSize, pool.Size)
+		}
+	}
+	return c
 }
 
 // updateConfirmView resolves a keypress while the confirmation modal is
@@ -255,10 +276,14 @@ func (m *Model) confirmView() string {
 	inner := width - 4 // border and padding
 
 	label := lipgloss.NewStyle().Foreground(p.Muted).Width(9)
+	context := m.environment.KubeContext()
+	if m.environment.IsProduction() {
+		context = m.theme.Prod.Render("PRODUCTION") + context // the badge pads itself
+	}
 	rows := []string{
 		label.Render("Kind") + c.noun(),
 		label.Render("Name") + c.target,
-		label.Render("Context") + m.environment.KubeContext(),
+		label.Render("Context") + context,
 	}
 	body := strings.Join(rows, "\n")
 	if c.warning != "" {
