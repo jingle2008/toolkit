@@ -403,7 +403,7 @@ func (m *Model) editTenantView() string {
 			radio(f.isInternal, "internal") + "  " + radio(!f.isInternal, "external"),
 		marker(focusNote) + label.Render("Note") + f.note.View(),
 	}
-	hints := "tab move · space toggle · enter save · ctrl+o portal · esc cancel"
+	hints := "tab move · space toggle · enter save · " + keys.OpenPortal.Help().Key + " portal · esc cancel"
 	return m.modal("Set tenant info", strings.Join(lines, "\n"), hints, p.Focus, min(m.modalMaxWidth(), 72))
 }
 

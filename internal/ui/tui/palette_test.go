@@ -82,7 +82,7 @@ func TestPalette_RunsActions(t *testing.T) {
 	_, _ = m.Update(keyPress("enter"))
 	assert.Equal(t, "Tenant", m.sortColumn)
 
-	typePalette(m, "toggle faulty")
+	typePalette(m, "faulty only")
 	_, _ = m.Update(keyPress("enter"))
 	assert.True(t, m.showFaulty)
 }

@@ -101,21 +101,27 @@ func TestFooterBindings_ActionsThenSortThenCore(t *testing.T) {
 		Mode:    []key.Binding{FilterMode, NextCategory, SortName},
 		Context: []key.Binding{Refresh, SortAge, Delete},
 	}
-	bindings := km.FooterBindings()
-	got := make([]string, 0, len(bindings))
-	for _, b := range bindings {
-		got = append(got, b.Help().Desc)
+	actions, core := km.FooterBindings()
+	descs := func(bs []key.Binding) []string {
+		out := make([]string, 0, len(bs))
+		for _, b := range bs {
+			out = append(out, b.Help().Desc)
+		}
+		return out
 	}
-	want := []string{"Refresh", "Delete", "sort", "Filter mode"}
-	if !slices.Equal(got, want) {
-		t.Errorf("FooterBindings() = %v, want %v", got, want)
+	if got, want := descs(actions), []string{"Refresh", "Delete", "sort"}; !slices.Equal(got, want) {
+		t.Errorf("FooterBindings() actions = %v, want %v", got, want)
+	}
+	if got, want := descs(core), []string{"Filter"}; !slices.Equal(got, want) {
+		t.Errorf("FooterBindings() core = %v, want %v", got, want)
 	}
 }
 
 func TestFooterBindings_NoSortHintWithoutSorts(t *testing.T) {
 	t.Parallel()
 	km := ResolveKeys(domain.Tenant, common.DetailsView)
-	for _, b := range km.FooterBindings() {
+	actions, _ := km.FooterBindings()
+	for _, b := range actions {
 		if b.Help().Desc == "sort" {
 			t.Errorf("details view offers sort: %v", b.Help())
 		}

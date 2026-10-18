@@ -4,12 +4,12 @@ package tui
 
 import (
 	"context"
-	"math"
 	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -128,8 +128,10 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 
 	m.stats = stats
 	m.rawRows = cloneRows(rows)
+	m.updateColumns() // widths follow the values
 	m.applyMiddleTruncation(rows)
 	m.toneStatusCells(rows)
+	m.markEmptyCells(rows)
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
@@ -251,10 +253,13 @@ func truncateMiddle(s string, w int) string {
 	return string(runes[:headEnd]) + ellipsis + string(runes[tailStart:])
 }
 
-// updateColumns updates the table columns based on the current category.
+// updateColumns sets the table's columns for the current category:
+// titles (the sort column's arrow, and each column's sort key underlined
+// while s is pending) and widths fitted to the titles and the rows'
+// values by columnWidths. Columns that don't fit are hidden and counted
+// in m.hiddenColumns.
 func (m *Model) updateColumns() {
 	m.headers = headersFor(m.category)
-	sortable := m.keys.SortableColumns()
 	var sortKeys map[string]string // lowercased column -> sort key, while s is pending
 	if m.prefix == keys.SortLeader {
 		sortKeys = map[string]string{}
@@ -262,32 +267,57 @@ func (m *Model) updateColumns() {
 			sortKeys[strings.ToLower(col)] = k
 		}
 	}
-	columns := make([]table.Column, len(m.headers))
-	remaining := m.table.Width()
+	titles := make([]string, len(m.headers))
+	specs := make([]columnSpec, len(m.headers))
+	content := m.contentWidths()
 	for i, header := range m.headers {
-		width := remaining
-		if i+1 < len(m.headers) {
-			width = int(math.Floor(float64(m.table.Width()) * float64(header.ratio)))
-			remaining -= width
-		}
-		width -= m.styles.Header.GetHorizontalFrameSize()
 		title := header.text
 		if k, ok := sortKeys[strings.ToLower(header.text)]; ok {
 			title = underlineSortKey(title, k)
 		}
-		switch {
-		case m.sortColumn != "" && strings.EqualFold(header.text, m.sortColumn):
+		if m.sortColumn != "" && strings.EqualFold(header.text, m.sortColumn) {
 			if m.sortAsc {
 				title += " ↑"
 			} else {
 				title += " ↓"
 			}
-		case sortable[strings.ToLower(header.text)]:
-			title += " ↕"
 		}
-		columns[i] = table.Column{Title: title, Width: width}
+		titles[i] = title
+		status := strings.EqualFold(header.text, common.StatusCol)
+		specs[i] = columnSpec{
+			title:   lipgloss.Width(title),
+			content: content[i],
+			ratio:   header.ratio,
+			keep:    i == 0 || status,
+			whole:   status,
+		}
+	}
+	widths := columnWidths(specs, m.table.Width(), m.styles.Header.GetHorizontalFrameSize())
+	columns := make([]table.Column, len(m.headers))
+	m.hiddenColumns = 0
+	for i := range m.headers {
+		columns[i] = table.Column{Title: titles[i], Width: widths[i]}
+		if widths[i] == 0 {
+			m.hiddenColumns++
+		}
 	}
 	table.WithColumns(columns)(m.table)
+}
+
+// contentWidths is each column's widest value in m.rawRows, an empty cell
+// counting as its "—". Rows left from another category (their cell count
+// differs) count as none.
+func (m *Model) contentWidths() []int {
+	widths := make([]int, len(m.headers))
+	for _, r := range m.rawRows {
+		if len(r) != len(widths) {
+			continue
+		}
+		for i, cell := range r {
+			widths[i] = max(widths[i], runewidth.StringWidth(cell), 1)
+		}
+	}
+	return widths
 }
 
 // findContextIndex returns the index of the row to move the cursor to, based on environment or context.

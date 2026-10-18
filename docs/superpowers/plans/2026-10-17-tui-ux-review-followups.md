@@ -24,14 +24,20 @@ nothing". It already redraws the hint as "press capital Y to delete"
 
 ## Batch 2 — table columns and key notation
 
-- [ ] Content-aware column widths: a column is at least as wide as its
-  header and its widest short value; low-priority columns drop on narrow
-  terminals instead of every column truncating.
-- [ ] Only the active sort column carries an arrow; the `↕` markers go.
-- [ ] Booleans as `✓` / blank; empty cells as `—`, matching the preview.
-- [ ] One key notation everywhere (the footer's: `C`, `^x`, `/`, `:`):
-  help, modal hints, the export picker.
-- [ ] Footer keeps `/` and `:` visible before category actions.
+- [x] Content-aware column widths (`columnWidths`): a column needs its
+  header or its widest value; spare width goes by ratio. Short of room,
+  long values shrink to 12, Status never shrinks, and columns drop from
+  the right (sparing the first and Status), counted in the panel title.
+- [x] Only the active sort column carries an arrow; the `↕` markers go.
+- [x] Empty cells as a muted `—`, matching the preview.
+- [ ] ~~Booleans as `✓` / blank~~ — dropped: with room, a column is as
+  wide as its header, so `✓` saves no width; short of room, `true`/`false`
+  already keep their width while long columns give way. And blank would
+  hide `Ready false`, the value that matters.
+- [x] One key notation everywhere: the registry's help labels are the
+  footer's (`C`, `^x`, `/`, `:`), so `footerKey` is gone; help gets a Sort
+  section and sentence case; the edit-tenant and export hints match.
+- [x] Footer keeps `/` and `:` visible: category actions drop first.
 
 ## Batch 3 — export and details
 

@@ -1,7 +1,7 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  GPUNode   ⟨/zzz⟩                                                         [0/0]
 ╭─ GPUNode (0) ────────────────────────────────────────────────────────────────╮
-│ Name ↑     Pool             Type ↕     T…  F…  H…  R…  A…  Status            │
+│ Name ↑      Pool       Type      Total  Free  Healthy  Ready  Age  Status    │
 │──────────────────────────────────────────────────────────────────────────────│
 │                                                                              │
 │                                                                              │
@@ -21,4 +21,4 @@
 │                                                                              │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
- o go to related  r refresh  C toggle cordon  D drain  ^z toggle faulty  ? more
+ o go to related  r refresh  / filter  : command palette  ? more

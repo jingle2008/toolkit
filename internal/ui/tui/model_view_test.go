@@ -185,7 +185,7 @@ func TestView_HelpView(t *testing.T) {
 	m := makeTestModel()
 	m.viewMode = common.HelpView
 	out := ansi.Strip(m.render())
-	assert.Contains(t, out, "General Actions")
+	assert.Contains(t, out, "General")
 }
 
 func TestView_ListView(t *testing.T) {

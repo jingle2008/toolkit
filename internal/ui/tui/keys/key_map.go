@@ -81,12 +81,12 @@ var sortHint = key.NewBinding(key.WithKeys(SortLeader), key.WithHelp(SortLeader,
 
 /*
 FooterBindings returns the bindings the footer advertises, most useful
-first: the category's actions in registry order (sort declarations
-collapse into one "s sort"), then the footerCore keys this KeyMap
-carries. The caller appends help and drops from the tail to fit.
+first. actions are the category's actions in registry order (sort
+declarations collapse into one "s sort"); core are the footerCore keys
+this KeyMap carries. The caller appends help and drops actions from the
+tail to fit before it drops any core key.
 */
-func (k KeyMap) FooterBindings() []key.Binding {
-	var out []key.Binding
+func (k KeyMap) FooterBindings() (actions, core []key.Binding) {
 	sortable := false
 	for _, b := range slices.Concat(k.Context, k.Mode) {
 		if strings.HasPrefix(b.Help().Desc, SortPrefix) {
@@ -95,19 +95,19 @@ func (k KeyMap) FooterBindings() []key.Binding {
 	}
 	for _, b := range k.Context {
 		if !strings.HasPrefix(b.Help().Desc, SortPrefix) {
-			out = append(out, b)
+			actions = append(actions, b)
 		}
 	}
 	if sortable {
-		out = append(out, sortHint)
+		actions = append(actions, sortHint)
 	}
 	active := slices.Concat(k.Global, k.Mode)
 	for _, c := range footerCore {
 		if slices.ContainsFunc(active, func(b key.Binding) bool { return b.Help() == c.Help() }) {
-			out = append(out, c)
+			core = append(core, c)
 		}
 	}
-	return out
+	return actions, core
 }
 
 /*

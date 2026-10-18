@@ -1,11 +1,11 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  DedicatedAICluster                       Active: 2 • Failed: 1 • Size: 7 [1/3]
-╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────╮
-│ Name ↑         Tenant ↕     Inte…  Us…  Ty…  Model  Shape/…  S…  A…  Status  │
+╭─ DedicatedAICluster (3) · 1 column hidden ───────────────────────────────────╮
+│ Name ↑      Tenant  Inter…  Usage  Type         Mod…  Shape/P…  Size  Status │
 │──────────────────────────────────────────────────────────────────────────────│
-│ dac-alpha      acme         false  75%  Ho…         A100_8…  4   1…  Active  │
-│ dac-orphan     orphan              0%   Ho…         A10      1   4…  Active  │
-│ dac-日本語     acme         false  10…  Fi…         H100     2   3d  Failed  │
+│ dac-alpha   acme    false   75%    Hosting      —     A100_80G  4     Active │
+│ dac-orphan  orphan  —       0%     Hosting      —     A10       1     Active │
+│ dac-日本語  acme    false   100%   Fine-tuning  —     H100      2     Failed │
 │                                                                              │
 │                                                                              │
 │                                                                              │
@@ -21,4 +21,4 @@
 │                   │ ? lists every key · press any key to dismiss           │ │
 │                   ╰────────────────────────────────────────────────────────╯ │
 ╰──────────────────────────────────────────────────────────────────────────────╯
- o go to related  t copy tenant id  E edit tenant  m open metrics  ? more
+ o go to related  t copy tenant ID  / filter  : command palette  ? more

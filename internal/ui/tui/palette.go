@@ -71,11 +71,11 @@ func (m *Model) paletteItems() []paletteItem {
 	items = append(items, m.paletteActions()...)
 	items = append(items,
 		paletteItem{
-			kind: "toggle", label: "Alias view", hint: footerKey(keys.ToggleAlias.Help()),
+			kind: "toggle", label: "Alias view", hint: keys.ToggleAlias.Help().Key,
 			run: func() tea.Cmd { return tea.Batch(m.toggleAliases()...) },
 		},
 		paletteItem{
-			kind: "toggle", label: "Preview pane", hint: footerKey(keys.TogglePreview.Help()),
+			kind: "toggle", label: "Preview pane", hint: keys.TogglePreview.Help().Key,
 			run: m.togglePreview,
 		})
 	return items
@@ -137,12 +137,12 @@ func (m *Model) paletteActions() []paletteItem {
 		}
 		k := b.Keys()[0]
 		items = append(items, paletteItem{
-			kind: kind, label: h.Desc, hint: footerKey(h),
+			kind: kind, label: h.Desc, hint: h.Key,
 			run: func() tea.Cmd { return tea.Batch(m.handleNormalKeys(pressFor(k))...) },
 		})
 	}
 	items = append(items, paletteItem{
-		kind: "action", label: "Export CSV", hint: footerKey(keys.ExportCSV.Help()),
+		kind: "action", label: "Export CSV", hint: keys.ExportCSV.Help().Key,
 		run: func() tea.Cmd { return tea.Batch(m.enterExportView()...) },
 	})
 	return items

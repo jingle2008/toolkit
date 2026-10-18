@@ -152,20 +152,20 @@ toolkit --help
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4   1 dp-prod-ord   ● LIVE  v1.2.3   ← Env bar
  DedicatedAICluster › acme   ⟨/gpu⟩  ⟨sort: age ▼⟩            Active: 2 • Failed: 1 [1/3]   ← Breadcrumb
 ╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────────────╮
-│ Name ↑         Tenant ↕     Internal  Usage  Size  Age ↕  Status                     │   ← Column headers (↕ = sortable)
+│ Name ↑         Tenant       Internal  Usage  Model  Size  Age  Status                 │   ← Column headers (↑ = sort column)
 │──────────────────────────────────────────────────────────────────────────────────────│
-│ dac-alpha      acme         false     75%    4     12d    Active                     │   ← Selected row
-│ dac-beta       acme         false     100%   2     3d     Failed                     │
+│ dac-alpha      acme         false     75%    —      4     12d  Active                 │   ← Selected row
+│ dac-beta       acme         false     100%   —      2     3d   Failed                 │
 ╰──────────────────────────────────────────────────────────────────────────────────────╯
- o go to related  t copy tenant id  E edit tenant  m open metrics  s sort  ? more        ← Footer
+ o go to related  t copy tenant ID  m open metrics  s sort  / filter  : command palette  ? more   ← Footer
 ```
 
 | Zone | Description |
 |------|-------------|
 | **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. In production the type is a red `PROD` badge, so it can't be mistaken for dev or preprod. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: a spinner while loading, `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)), and the toolkit version |
 | **Breadcrumb** | The category, and what it is narrowed to (`› acme` for a scope, the row in details view). While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5⟩` (position in history), `s…` (a pending sort key). On the right: the category's stats and the cursor position |
-| **Panel** (center) | The table, or a row's details, in a frame titled with the category and row count. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
-| **Footer** (bottom) | The most useful keys for this category and view, trimmed to fit, ending in `? more` |
+| **Panel** (center) | The table, or a row's details, in a frame titled with the category and row count. Columns are as wide as their header or their widest value, and share the rest of the width. On a narrow terminal long values (names, OCIDs) shorten first, short ones keep their width, and Status is never cut; if that still doesn't fit, columns drop from the right (never the first or Status) and the title says how many are hidden. An empty cell shows `—`. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
+| **Footer** (bottom) | The category's most useful actions, then `/ filter`, `: command palette` and `? more`. On a narrow terminal the actions give way first, so filtering and the palette stay in reach |
 
 Modals (help, the command palette, confirmations, pickers, export, edit tenant) open over the dimmed view. Notifications appear in the bottom-right corner. Info and warnings fade after 8 seconds; errors stay until you press `Esc` in the list or details view, and the full message is in the log (`` ` ``).
 
@@ -375,7 +375,7 @@ toolkit -c gpunode -f "us-phoenix"
 
 Press `s`, then the letter of a column, to sort by it. While `s` is pending, each sortable column's letter is underlined in the header and the breadcrumb shows `s…`. A column's letter is its first letter, unique within the category. Pressing the same sort again **reverses** the direction. `Esc`, or any key that isn't a column letter, cancels.
 
-`s n` sorts by Name in every list view. The other sortable columns are marked `↕` in the header:
+`s n` sorts by Name in every list view. The header marks only the column the table is sorted by (`↑`/`↓`); `?` lists every sort under **Sort**, and pressing `s` underlines the letters. The other sortable columns:
 
 | Category | Keys |
 |----------|------|
@@ -457,7 +457,7 @@ Select a node in the `GPUNode` category:
 | `Shift+R` | Restart | Soft-reset (restart) the node's instance |
 | `Ctrl+X` | Delete | Terminate the node instance |
 | `r` | Refresh | Reload GPU node data |
-| `Ctrl+Z` | Toggle Faulty | Show/hide nodes flagged as faulty |
+| `Ctrl+Z` | Faulty only | Show/hide nodes flagged as faulty |
 
 ### GPU Pools (`GPUPool`)
 
@@ -465,7 +465,7 @@ Select a node in the `GPUNode` category:
 |-----|-----------|-------------|
 | `Shift+U` | Scale Up | Request an increase in pool capacity |
 | `r` | Refresh | Reload pool data |
-| `Ctrl+Z` | Toggle Faulty | Show/hide pools with faulty status |
+| `Ctrl+Z` | Faulty only | Show/hide pools with faulty status |
 
 ### Dedicated AI Clusters (`DedicatedAICluster`)
 
@@ -473,7 +473,7 @@ Select a node in the `GPUNode` category:
 |-----|-----------|-------------|
 | `Ctrl+X` | Delete | Delete the selected Dedicated AI Cluster |
 | `r` | Refresh | Reload cluster data |
-| `Ctrl+Z` | Toggle Faulty | Show/hide faulty clusters |
+| `Ctrl+Z` | Faulty only | Show/hide faulty clusters |
 
 ### Inference Services (`InferenceService`)
 
@@ -620,7 +620,7 @@ and CPU/memory remain in the TUI's detail view (`y`).
 
 ### In-app help
 
-Press `?` or `h` at any time to display the full keybinding help overlay. The help is **context-sensitive**: it only shows keys relevant to your current category and view mode. Its sections flow into columns on wide terminals. When they still don't fit, it scrolls (`j`/`k`, `PgUp`/`PgDn`, `Home`/`End`) and shows how far down you are.
+Press `?` or `h` at any time to display the full keybinding help overlay. The help is **context-sensitive**: it only shows keys relevant to your current category and view mode, grouped as Quick switch, Actions, Sort, the view's keys, General and Navigation. Keys are written as the footer writes them: `C` for Shift+C, `^x` for Ctrl+X. Its sections flow into columns on wide terminals. When they still don't fit, it scrolls (`j`/`k`, `PgUp`/`PgDn`, `Home`/`End`) and shows how far down you are.
 
 The first time you run a version whose keys changed, a **Keys changed** note in the bottom-right corner says what moved. Any key dismisses it, and that key still does its usual job. The note won't show again: the version you've seen is saved in `~/.config/toolkit/ui.yaml`.
 

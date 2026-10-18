@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/filepicker"
-	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/stopwatch"
 	"charm.land/bubbles/v2/table"
@@ -132,7 +131,6 @@ type Model struct {
 	loader        loader.Composite
 	scope         *domain.Scope // selected scope (parent context for current category)
 	keys          keys.KeyMap
-	help          *help.Model
 	kubeConfig    string
 	version       string
 	k8sVersion    string // API server version for the current kube context; "" until fetched
@@ -179,6 +177,9 @@ type Model struct {
 	// mutates the table's rows in place, which would otherwise leak
 	// "…" into ScopedItemKey lookups.
 	rawRows []table.Row
+	// hiddenColumns counts the columns updateColumns hid for want of
+	// width; the panel title says so.
+	hiddenColumns int
 
 	// Export CSV popup state
 	dirPicker *filepicker.Model
@@ -247,12 +248,6 @@ func setStyles(m *Model, s Styles) {
 	}
 	if m.viewport != nil {
 		m.viewport.Style = s.Viewport
-	}
-	if m.help != nil {
-		m.help.Styles.FullKey = s.HelpKey
-		m.help.Styles.FullDesc = s.HelpDesc
-		m.help.Styles.ShortKey = s.HelpKey
-		m.help.Styles.ShortDesc = s.HelpDesc
 	}
 	if m.loadingSpinner != nil {
 		m.loadingSpinner.Style = s.Spinner
@@ -326,11 +321,6 @@ func setDefaults(m *Model) {
 	}
 	if m.recentEnvs == nil {
 		m.recentEnvs = &recentenv.List{}
-	}
-	if m.help == nil {
-		hm := help.New()
-		hm.ShowAll = true
-		m.help = &hm
 	}
 	if m.loadingSpinner == nil {
 		loadingSpinner := spinner.New(spinner.WithSpinner(spinner.Points))

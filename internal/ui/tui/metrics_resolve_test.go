@@ -143,7 +143,7 @@ func TestMetricsCatalog_NewCategories(t *testing.T) {
 func TestKeys_OpenMetricsOnNewCategories(t *testing.T) {
 	t.Parallel()
 	for _, cat := range []domain.Category{domain.GPUWorkload, domain.ImportedModel, domain.DedicatedAICluster} {
-		assert.Contains(t, keyHelpDescs(cat), "Open Metrics", "category %v", cat)
+		assert.Contains(t, keyHelpDescs(cat), "Open metrics", "category %v", cat)
 	}
 }
 

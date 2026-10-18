@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
@@ -37,9 +39,18 @@ func (m *Model) frame(title, main string) string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.envBar(), m.statusView(), panel, m.footer())
 }
 
-// tableTitle names the list panel: the category and its row count.
+// tableTitle names the list panel: the category, its row count, and how
+// many columns are hidden on a terminal too narrow for them.
 func (m *Model) tableTitle() string {
-	return fmt.Sprintf("%s (%d)", m.category.String(), len(m.table.Rows()))
+	title := fmt.Sprintf("%s (%d)", m.category.String(), len(m.table.Rows()))
+	switch m.hiddenColumns {
+	case 0:
+	case 1:
+		title += " · 1 column hidden"
+	default:
+		title += fmt.Sprintf(" · %d columns hidden", m.hiddenColumns)
+	}
+	return title
 }
 
 // envBar is the frame's first line: where the data comes from
@@ -203,46 +214,50 @@ func (m *Model) breadcrumbChips() string {
 	return "  " + strings.Join(chips, " ")
 }
 
-// footer is the frame's last line: the most useful keys for the current
-// category and view, trimmed from the right to fit, always ending in
-// "? more".
+// footer is the frame's last line: the category's most useful actions,
+// then the navigation keys (copy, filter, palette) and "? more". Actions
+// drop from the right to fit before any navigation key does.
 func (m *Model) footer() string {
 	p := m.theme.Palette
 	keyStyle := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
 	descStyle := lipgloss.NewStyle().Foreground(p.Muted)
-	item := func(k, d string) string { return keyStyle.Render(k) + " " + descStyle.Render(d) }
-
-	more := item("?", "more")
-	bindings := m.keys.FooterBindings()
-	items := make([]string, 0, len(bindings))
-	for _, b := range bindings {
-		items = append(items, item(footerKey(b.Help()), strings.ToLower(b.Help().Desc)))
+	items := func(bindings []key.Binding) []string {
+		out := make([]string, 0, len(bindings))
+		for _, b := range bindings {
+			out = append(out, keyStyle.Render(b.Help().Key)+" "+descStyle.Render(lowerFirst(b.Help().Desc)))
+		}
+		return out
 	}
-	const gap = "  "
-	for n := len(items); n >= 0; n-- {
-		line := " " + strings.Join(append(items[:n:n], more), gap)
-		if lipgloss.Width(line) <= m.viewWidth {
+
+	actionBindings, coreBindings := m.keys.FooterBindings()
+	actions, core := items(actionBindings), items(coreBindings)
+	more := keyStyle.Render("?") + " " + descStyle.Render("more")
+	fits := func(parts []string) (string, bool) {
+		line := " " + strings.Join(append(parts, more), "  ")
+		return line, lipgloss.Width(line) <= m.viewWidth
+	}
+	for n := len(actions); n >= 0; n-- {
+		if line, ok := fits(append(actions[:n:n], core...)); ok {
+			return line
+		}
+	}
+	for n := len(core) - 1; n >= 0; n-- {
+		if line, ok := fits(core[:n:n]); ok {
 			return line
 		}
 	}
 	return ""
 }
 
-// footerKey is the compact key label the footer shows: "<shift+e>" → "E",
-// "<ctrl+x>" → "^x", "</term>" → "/", "<:cmd>" → ":".
-func footerKey(h key.Help) string {
-	k := strings.Trim(h.Key, "<>")
-	switch {
-	case k == "/term":
-		return "/"
-	case k == ":cmd":
-		return ":"
-	case strings.HasPrefix(k, "shift+"):
-		return strings.ToUpper(strings.TrimPrefix(k, "shift+"))
-	case strings.HasPrefix(k, "ctrl+"):
-		return "^" + strings.TrimPrefix(k, "ctrl+")
+// lowerFirst lowercases s's first letter, so a binding's sentence-case
+// description ("Copy tenant ID") reads as a footer phrase ("copy tenant
+// ID").
+func lowerFirst(s string) string {
+	if s == "" {
+		return s
 	}
-	return k
+	r, n := utf8.DecodeRuneInString(s)
+	return string(unicode.ToLower(r)) + s[n:]
 }
 
 // loadingView is the first-load screen: the logo over the spinner, the

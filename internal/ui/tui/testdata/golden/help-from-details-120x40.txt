@@ -16,13 +16,13 @@
 │           │                                       -|  |_   _|  |-                                        │           │
 │           │                                       -|    |_|    |-                                        │           │
 │        }, │                                        '-----------'                                         │           │
-│        "to│ Details View Actions            General Actions                 Viewport Actions             │           │
-│        "id│   <o>         Copy Object         <?/h>       Help                ↑/k         up             │           │
-│        "ag│                                   <y>         Toggle Details      ↓/j         down           │           │
-│    }      │                                   <c>         Copy                u           ½ page up      │           │
-│           │                                   <`>         Toggle Log          d           ½ page down    │           │
-│           │                                   <esc>       Back/Clear          b/pgup      page up        │           │
-│           │                                   <q>         Quit                f/pgdn      page down      │           │
+│        "to│ Details view                    General                         Navigation                   │           │
+│        "id│   o           Copy object         ?/h         Help                ↑/k         Up             │           │
+│        "ag│                                   y           Toggle details      ↓/j         Down           │           │
+│    }      │                                   c           Copy                u           ½ page up      │           │
+│           │                                   `           Toggle log          d           ½ page down    │           │
+│           │                                   esc         Back/Clear          b/pgup      Page up        │           │
+│           │                                   q           Quit                f/pgdn      Page down      │           │
 │           │                                                                                              │           │
 │           │ esc close                                                                                    │           │
 │           ╰──────────────────────────────────────────────────────────────────────────────────────────────╯           │

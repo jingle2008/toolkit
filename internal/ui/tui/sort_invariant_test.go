@@ -65,12 +65,11 @@ func headerTitles(hs []header) []string {
 	return out
 }
 
-// TestUpdateColumns_SortableIndicator locks in the header glyph
-// rendering. On the DAC category: the active sort column gets ↑ (or
-// ↓ on second press), sortable-but-not-active columns get ↕, and
-// non-sortable columns get nothing. Guards against regressions in
-// the switch in updateColumns and the SortableColumns helper.
-func TestUpdateColumns_SortableIndicator(t *testing.T) {
+// TestUpdateColumns_SortIndicator locks in the header glyph rendering:
+// only the active sort column carries an arrow (↑, or ↓ on second press);
+// every other column, sortable or not, carries none — the sort keys show
+// once s is pressed.
+func TestUpdateColumns_SortIndicator(t *testing.T) {
 	t.Parallel()
 	m, _ := NewModel(
 		WithRepoPath("repo"),
@@ -85,33 +84,18 @@ func TestUpdateColumns_SortableIndicator(t *testing.T) {
 	m.sortAsc = true
 	m.updateColumns()
 
-	// m.table.Columns() returns the column structs whose Title fields
-	// are exactly what updateColumns wrote (no Header style applied
-	// at this layer — that happens later, at render time).
 	titles := map[string]string{}
 	for _, c := range m.table.Columns() {
 		base, _, _ := strings.Cut(c.Title, " ")
 		titles[base] = c.Title
 	}
+	assert.Equal(t, "Name ↑", titles["Name"])
+	assert.Equal(t, "Tenant", titles["Tenant"], "sortable but not active: no glyph")
+	assert.Equal(t, "Status", titles["Status"])
 
-	// Suffix-match the glyphs rather than equality so the assertions
-	// remain valid if future updateColumns logic ever truncates or
-	// otherwise reshapes the leading title text.
-
-	// Name is the active sort (ascending) → " ↑"
-	assert.True(t, strings.HasSuffix(titles["Name"], " ↑"),
-		"active sort column should end with ↑ glyph, got %q", titles["Name"])
-	// Tenant is sortable (SortTenant in DAC catContext) but not active → " ↕"
-	assert.True(t, strings.HasSuffix(titles["Tenant"], " ↕"),
-		"sortable non-active column should end with ↕ glyph, got %q", titles["Tenant"])
-	// Status is NOT sortable in DAC catContext → no glyph suffix
-	assert.False(t, strings.HasSuffix(titles["Status"], " ↕"),
-		"non-sortable Status should not carry ↕, got %q", titles["Status"])
-	assert.False(t, strings.HasSuffix(titles["Status"], " ↑"),
-		"non-sortable Status should not carry ↑, got %q", titles["Status"])
-	// Model is NOT sortable → no glyph suffix
-	assert.False(t, strings.HasSuffix(titles["Model"], " ↕"),
-		"non-sortable Model should not carry ↕, got %q", titles["Model"])
+	m.sortAsc = false
+	m.updateColumns()
+	assert.Equal(t, "Name ↓", m.table.Columns()[0].Title)
 }
 
 func TestTruncateMiddle(t *testing.T) {

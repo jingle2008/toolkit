@@ -1,9 +1,9 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                                                         v1.2.3
  GPUNode                                                                                     Free: 10 • Total: 16 [1/2]
 ╭─ GPUNode (2) ────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Name ↑           Pool                     Type ↕           Total  Free…  Heal…  Ready  Age ↕  Status                 │
+│ Name ↑           Pool           Type                Total    Free    Healthy    Ready    Age    Status               │
 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
-│ 10.0.0.11        pool-a                   BM.GPU.H100.8    8      2      true   true   90d    OK                     │
+│ 10.0.0.11        pool-a         BM.GPU.H100.8       8        2       true       true     90d    OK                   │
 │ 10.0.╭─ Keys · List view ────────────────────────────────────────────────────────────────────────────────────╮       │
 │      │                                               | | | | |                                               │       │
 │      │                                             .-----------.                                             │       │
@@ -11,23 +11,23 @@
 │      │                                            -|  |_   _|  |-                                            │       │
 │      │                                            -|    |_|    |-                                            │       │
 │      │                                             '-----------'                                             │       │
-│      │ Resource Actions                   List View Actions                  General Actions                 │       │
-│      │   <o>         Go to related          <[>         History Back           <?/h>       Help              │       │
-│      │   s f         Sort Free              <]>         History Forward        <y>         Toggle Details    │       │
-│      │   s t         Sort Type              <tab>       Next Category          <c>         Copy              │       │
-│      │   s a         Sort Age               <shift+tab> Previous Category      <`>         Toggle Log        │       │
-│      │   <r>         Refresh                <:cmd>      Command mode           <esc>       Back/Clear        │       │
-│      │   <shift+c>   Toggle Cordon          </term>     Filter mode            <q>         Quit              │       │
-│      │   <shift+d>   Drain                  <p>         Paste Filter                                         │       │
-│      │   <ctrl+z>    Toggle Faulty          s n         Sort Name            Table Actions                   │       │
-│      │   <shift+r>   Restart                <enter>     View/Enter             ↑/k         up                │       │
-│      │   <ctrl+x>    Delete                 <ctrl+a>    Toggle Alias           ↓/j         down              │       │
-│      │                                      <v>         Toggle Preview         u           ½ page up         │       │
-│      │                                      <e>         Export CSV             d           ½ page down       │       │
-│      │                                                                         b/pgup      page up           │       │
-│      │                                                                         f/pgdn      page down         │       │
-│      │                                                                         g/home      go to start       │       │
-│      │                                                                         G/end       go to end         │       │
+│      │ Actions                            List view                          General                         │       │
+│      │   o           Go to related          [           History back           ?/h         Help              │       │
+│      │   r           Refresh                ]           History forward        y           Toggle details    │       │
+│      │   C           Toggle cordon          tab         Next category          c           Copy              │       │
+│      │   D           Drain                  shift+tab   Previous category      `           Toggle log        │       │
+│      │   ^z          Faulty only            :           Command palette        esc         Back/Clear        │       │
+│      │   R           Restart                /           Filter                 q           Quit              │       │
+│      │   ^x          Delete                 p           Paste filter                                         │       │
+│      │                                      enter       Open                 Navigation                      │       │
+│      │ Sort                                 ^a          Toggle aliases         ↑/k         Up                │       │
+│      │   s n         Name                   v           Toggle preview         ↓/j         Down              │       │
+│      │   s f         Free                   e           Export CSV             u           ½ page up         │       │
+│      │   s t         Type                                                      d           ½ page down       │       │
+│      │   s a         Age                                                       b/pgup      Page up           │       │
+│      │                                                                         f/pgdn      Page down         │       │
+│      │                                                                         g/home      Go to start       │       │
+│      │                                                                         G/end       Go to end         │       │
 │      │                                                                                                       │       │
 │      │ esc close                                                                                             │       │
 │      ╰───────────────────────────────────────────────────────────────────────────────────────────────────────╯       │
@@ -37,4 +37,4 @@
 │                                                                                                                      │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
- o go to related  r refresh  C toggle cordon  D drain  ^z toggle faulty  R restart  ^x delete  s sort  ? more
+ o go to related  r refresh  C toggle cordon  D drain  ^z faulty only  R restart  / filter  : command palette  ? more
