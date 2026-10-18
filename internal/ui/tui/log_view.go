@@ -123,26 +123,31 @@ func (m *Model) logView() string {
 	}
 
 	titleStyle := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
-	panel := view.Panel(fmt.Sprintf("Log (%d)", total), m.log.viewport.View(), p.Border, titleStyle, m.viewWidth)
-	return lipgloss.JoinVertical(lipgloss.Left, m.envBar(), m.logCrumb(shown, total), panel, m.logFooter())
+	status := fmt.Sprintf("%d entries", total)
+	if shown < total {
+		status = fmt.Sprintf("%d of %d", shown, total)
+	}
+	panel := view.StatusPanel("", status, m.log.viewport.View(), p.Border, titleStyle,
+		lipgloss.NewStyle().Foreground(p.Muted), m.viewWidth)
+	return lipgloss.JoinVertical(lipgloss.Left, m.envBar(), m.logCrumb(), panel, m.logFooter())
 }
 
 // logCrumb is the log's breadcrumb line: the Log chip, the state (Info
-// while following the tail, Warn when paused), the level and text filter
-// chips or the filter input, and how many entries show.
-func (m *Model) logCrumb(shown, total int) string {
+// while following the tail, Warn when paused), and the level and text
+// filter chips or the filter input. The panel's bottom edge counts the
+// entries.
+func (m *Model) logCrumb() string {
 	w := lipgloss.Width
 	ctx := m.theme.Context.Render("Log")
 	state := m.theme.LogFollowing.Padding(0, 1).Render("following")
 	if !m.log.viewport.AtBottom() {
 		state = m.theme.LogPaused.Padding(0, 1).Render("PAUSED")
 	}
-	stats := m.theme.Stats.Render(fmt.Sprintf("[%d/%d]", shown, total))
 	left := ctx + " " + state
 	var middle string
 	if m.log.typing {
 		ti := m.log.input
-		ti.SetWidth(max(m.viewWidth-w(left)-w(stats)-w(ti.Prompt)-2, 0))
+		ti.SetWidth(max(m.viewWidth-w(left)-w(ti.Prompt)-2, 0))
 		middle = " " + ti.View()
 	} else {
 		chip := lipgloss.NewStyle().Foreground(m.theme.Palette.Secondary)
@@ -153,11 +158,11 @@ func (m *Model) logCrumb(shown, total int) string {
 			middle += " " + chip.Render("⟨/"+m.log.filter+"⟩")
 		}
 	}
-	room := m.viewWidth - w(left) - w(stats)
+	room := m.viewWidth - w(left)
 	if w(middle) > room {
 		middle = truncateString(ansi.Strip(middle), max(room, 1))
 	}
-	return left + middle + strings.Repeat(" ", max(room-w(middle), 0)) + stats
+	return left + middle + strings.Repeat(" ", max(room-w(middle), 0))
 }
 
 // logFooter lists the log's keys, trimmed from the right to fit.

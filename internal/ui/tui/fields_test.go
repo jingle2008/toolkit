@@ -104,14 +104,14 @@ func TestDetails_ToggleJSON(t *testing.T) {
 	showDetails(t, m)
 	assert.False(t, m.detailJSON)
 	assert.Contains(t, ansi.Strip(m.viewport.View()), "Tenant ID")
-	assert.Equal(t, "[fields]", m.detailPosition())
+	assert.Equal(t, "fields", m.detailPosition())
 
 	_, cmd := m.updateDetailView(keyPress("tab"))
 	require.NotNil(t, cmd)
 	m.handleDetailContentRenderedMsg(cmd().(detailContentRenderedMsg))
 	assert.True(t, m.detailJSON)
 	assert.Contains(t, ansi.Strip(m.viewport.View()), `"tenantId": "acme"`)
-	assert.Equal(t, "[JSON]", m.detailPosition())
+	assert.Equal(t, "JSON", m.detailPosition())
 	assert.Equal(t, common.DetailsView, m.viewMode)
 }
 
@@ -122,7 +122,7 @@ func TestDetailPosition_Scrolled(t *testing.T) {
 	showCategory(t, m, domain.DedicatedAICluster)
 	require.NotNil(t, m.enterDetailView())
 	m.viewport.SetContent(strings.Repeat("line\n", 40))
-	assert.Equal(t, "[fields · 0%]", m.detailPosition())
+	assert.Equal(t, "fields · 0%", m.detailPosition())
 	m.viewport.GotoBottom()
-	assert.Equal(t, "[fields · 100%]", m.detailPosition())
+	assert.Equal(t, "fields · 100%", m.detailPosition())
 }

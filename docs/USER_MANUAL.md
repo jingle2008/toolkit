@@ -150,21 +150,21 @@ toolkit --help
 
 ```
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4   1 dp-prod-ord   ● LIVE  v1.2.3   ← Env bar
- DedicatedAICluster › acme   ⟨/gpu⟩  ⟨sort: age ▼⟩            Active: 2 • Failed: 1 [1/3]   ← Breadcrumb
-╭─ 3 rows ──────────────────────────────────────────────────────────────────────────────╮
+ DedicatedAICluster › acme   ⟨/gpu⟩  ⟨sort: age ▼⟩                  Active: 2 • Failed: 1   ← Breadcrumb
+╭──────────────────────────────────────────────────────────────────────────────────────╮
 │ Name ↑         Tenant       Internal  Usage  Model  Size  Age  Status                 │   ← Column headers (↑ = sort column)
 │──────────────────────────────────────────────────────────────────────────────────────│
 │ dac-alpha      acme         false     75%    —      4     12d  Active                 │   ← Selected row
 │ dac-beta       acme         false     100%   —      2     3d   Failed                 │
-╰──────────────────────────────────────────────────────────────────────────────────────╯
+╰──────────────────────────────────────────────────────────────── 1 of 2 (40 total) ─╯   ← Position
  o go to related  t copy tenant ID  m open metrics  s sort  / filter  : command palette  ? more   ← Footer
 ```
 
 | Zone | Description |
 |------|-------------|
 | **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. In production the type is a red `PROD` badge, so it can't be mistaken for dev or preprod. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: a spinner while loading, `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)), and the toolkit version |
-| **Breadcrumb** | The category, and the scope it is narrowed to (`› acme`). The panel below is titled with the row count, or in the detail view with the row. While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5⟩` (position in history), `s…` (a pending sort key). On the right: the category's stats and the cursor position |
-| **Panel** (center) | The table, or a row's details, in a frame titled with the category and row count. Columns are as wide as their header or their widest value, and share the rest of the width. On a narrow terminal long values (names, OCIDs) shorten first, short ones keep their width, and Status is never cut; if that still doesn't fit, columns drop from the right (never the first or Status) and the title says how many are hidden. An empty cell shows `—`. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
+| **Breadcrumb** | The category, and the scope it is narrowed to (`› acme`). While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5⟩` (position in history), `s…` (a pending sort key). On the right: what the rows add up to (`Active: 2 • Failed: 1`), which gives way on a narrow terminal |
+| **Panel** (center) | The table, or a row's details. Its bottom edge says where you are: the cursor among the rows (`1 of 2`), with the total when a filter or faulty-only mode hides some (`(40 total)`), or in the detail view the layout and scroll position. Its title says only what isn't shown elsewhere: the row in the detail view, how many columns are hidden in the list. Columns are as wide as their header or their widest value, and share the rest of the width. On a narrow terminal long values (names, OCIDs) shorten first, short ones keep their width, and Status is never cut; if that still doesn't fit, columns drop from the right (never the first or Status) and the title says how many are hidden. An empty cell shows `—`. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
 | **Footer** (bottom) | The category's most useful actions, then `/ filter`, `: command palette` and `? more`. On a narrow terminal the actions give way first, so filtering and the palette stay in reach |
 
 Modals (help, the command palette, confirmations, pickers, export, edit tenant) open over the dimmed view; one nearly as tall as the terminal opens on a blank screen instead. Notifications appear in the bottom-right corner. Info and warnings fade after 8 seconds; errors stay until you press `Esc` in the list or details view, and the full message is in the log (`` ` ``). An error names the key that retries or works around it when there is one (`D retry (resumes)`, `^x retry`, `e pick another folder`). A refusal by a safety check (not an orphan, nothing to show) is a warning, not an error.
@@ -426,7 +426,7 @@ Press `y` on any selected row to open the **Detail View**. It shows the item's f
  o copy object  tab fields/JSON  ? more
 ```
 
-The breadcrumb's right side shows the layout and, when the content is taller than the panel, how far down you are (`[JSON · 40%]`).
+The panel's bottom edge shows the layout and, when the content is taller than the panel, how far down you are (`JSON · 40%`).
 
 | Key | Action |
 |-----|--------|
@@ -678,7 +678,7 @@ Supported log formats: `console` (human-readable), `json` (structured), `slog` (
 
 ### In-app log
 
-Press `` ` `` in the list or detail view to see the session's recent log entries without leaving the TUI. It sits in the usual frame: the breadcrumb shows `following` while it tails new entries, `PAUSED` once you scroll up, the active filters, and how many entries show (`[11/60]`).
+Press `` ` `` in the list or detail view to see the session's recent log entries without leaving the TUI. It sits in the usual frame: the breadcrumb shows `following` while it tails new entries, `PAUSED` once you scroll up, and the active filters; the panel's bottom edge counts the entries (`60 entries`, or `11 of 60` when filtered).
 
 | Key | Action |
 |-----|--------|

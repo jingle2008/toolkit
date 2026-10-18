@@ -93,3 +93,10 @@ Help already draws it only when it fits without making help scroll.
 - [ ] Browser-launch failures (portal, metrics) — a hint needs the URL
   to be copyable first.
 - [ ] Colors and contrast in a live terminal (light, dark, `NO_COLOR`).
+
+## Batch 7 — one count
+
+- [x] The cursor position moves to the panel's bottom edge (`1 of 3`),
+  with the total when a filter or faulty-only mode hides rows; the panel
+  title stops repeating the count; details and log positions move there
+  too. Closes the last of "the same information appears several times".

@@ -39,7 +39,9 @@ func TestFrame_Layout(t *testing.T) {
 	assert.Contains(t, lines[0], "oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4", "prod is a badge")
 	assert.Contains(t, lines[0], "v1.2.3")
 	assert.True(t, strings.HasPrefix(lines[1], " DedicatedAICluster "), lines[1])
-	assert.True(t, strings.HasPrefix(lines[2], "╭─ 3 rows ─"), "the breadcrumb names the category; the panel counts: %s", lines[2])
+	assert.True(t, strings.HasPrefix(lines[2], "╭────"), "the breadcrumb names the category; the title has nothing to add: %s", lines[2])
+	assert.NotContains(t, lines[1], "[1/3]", "the position moved to the panel")
+	assert.True(t, strings.HasSuffix(lines[len(lines)-2], " 1 of 3 ─╯"), "position on the bottom edge: %s", lines[len(lines)-2])
 	assert.True(t, strings.HasSuffix(strings.TrimRight(lines[len(lines)-1], " "), "? more"), lines[len(lines)-1])
 	assert.NotContains(t, strings.Join(lines, "\n"), "|_   _|", "no logo in the frame")
 }
@@ -145,4 +147,30 @@ func TestEnvBar_ProductionBadgeOnlyForProd(t *testing.T) {
 		assert.Contains(t, bar, "oc1 › "+typ+" › ", typ)
 		assert.NotContains(t, bar, "PROD", typ)
 	}
+}
+
+// With a filter or faulty-only mode hiding rows, the bottom edge gives
+// the total too.
+func TestPosition_ShowsTotalWhenRowsHidden(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	showCategory(t, m, domain.DedicatedAICluster)
+	assert.Equal(t, "1 of 3", m.positionText())
+
+	m.filter = "alpha"
+	m.updateRows(true)
+	assert.Equal(t, "1 of 1 (3 total)", m.positionText())
+
+	m.filter = "zzz"
+	m.updateRows(true)
+	assert.Equal(t, "0 of 3", m.positionText())
+
+	m.filter = ""
+	m.showFaulty = true
+	m.updateRows(true)
+	assert.Equal(t, "1 of 1 (3 total)", m.positionText(), "faulty-only hides the healthy ones")
+
+	_, cmd := m.Update(tableRowsComputedMsg{Rows: m.table.Rows(), Total: 9, Gen: m.gens.rows})
+	assert.Nil(t, cmd)
+	assert.Equal(t, "1 of 1 (9 total)", m.positionText(), "the async path carries its total")
 }

@@ -193,7 +193,7 @@ func TestLogView_FilterThenEsc(t *testing.T) {
 	m.updateLogView(keyPress("enter"))
 	assert.False(t, m.log.typing)
 	assert.Equal(t, "DRAIN", m.log.filter)
-	assert.Contains(t, ansi.Strip(m.logCrumb(1, 4)), "⟨/DRAIN⟩")
+	assert.Contains(t, ansi.Strip(m.logCrumb()), "⟨/DRAIN⟩")
 
 	m.updateLogView(keyPress("esc"))
 	assert.Empty(t, m.log.filter)
@@ -234,7 +234,7 @@ func TestLogView_InFrame(t *testing.T) {
 	lines := strings.Split(out, "\n")
 	assert.Len(t, lines, 20)
 	assert.Contains(t, lines[1], "Log")
-	assert.Contains(t, lines[1], "[4/4]")
-	assert.True(t, strings.HasPrefix(lines[2], "╭─ Log (4) "), lines[2])
+	assert.True(t, strings.HasPrefix(lines[2], "╭───"), "the breadcrumb names the log: %s", lines[2])
+	assert.Contains(t, lines[len(lines)-2], " 4 entries ─╯", "the bottom edge counts the entries")
 	assert.Contains(t, lines[len(lines)-1], "/ filter  l level")
 }

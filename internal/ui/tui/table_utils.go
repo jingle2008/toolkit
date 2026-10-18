@@ -106,6 +106,16 @@ func computeTableRows(dataset *models.Dataset, category domain.Category, scope *
 	return rows, computeStats(category, rows)
 }
 
+// rowTotal is how many rows category has in scope before any filter or
+// faulty-only mode; with neither, it is shown, so the caller passes n.
+func rowTotal(dataset *models.Dataset, category domain.Category, scope *domain.Scope, filter string, faultyOnly bool, n int) int {
+	if filter == "" && !faultyOnly {
+		return n
+	}
+	rows, _ := computeTableRows(dataset, category, scope, "", "", true, false)
+	return len(rows)
+}
+
 // computeStats calculates stats for the given category and rows.
 func computeStats(category domain.Category, rows []table.Row) tableStats {
 	if len(rows) == 0 {

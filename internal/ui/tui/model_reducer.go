@@ -79,7 +79,9 @@ Now also sets m.stats from computeTableRows.
 func (m *Model) updateRows(autoSelect bool) {
 	m.gens.nextRows()
 	rows, stats := computeTableRows(m.dataset, m.category, m.scope, m.filter, m.sortColumn, m.sortAsc, m.showFaulty)
+	total := rowTotal(m.dataset, m.category, m.scope, m.filter, m.showFaulty, len(rows))
 	m.applyRows(rows, stats, autoSelect)
+	m.rowTotal = total
 }
 
 func (m *Model) updateRowsAsync() tea.Cmd {
@@ -96,6 +98,7 @@ func (m *Model) updateRowsAsync() tea.Cmd {
 		return tableRowsComputedMsg{
 			Rows:  rows,
 			Stats: stats,
+			Total: rowTotal(dataset, category, scope, filter, showFaulty, len(rows)),
 			Gen:   gen,
 		}
 	}
@@ -106,6 +109,7 @@ func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
 		return
 	}
 	m.applyRows(msg.Rows, msg.Stats, true)
+	m.rowTotal = msg.Total
 }
 
 func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
@@ -127,6 +131,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	}
 
 	m.stats = stats
+	m.rowTotal = len(rows) // updateRows and the async path set the true total after
 	m.rawRows = cloneRows(rows)
 	m.updateColumns() // widths follow the values
 	m.applyMiddleTruncation(rows)

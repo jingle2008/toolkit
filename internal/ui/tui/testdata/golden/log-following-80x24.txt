@@ -1,6 +1,6 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
- Log   following                                                        [60/60]
-╭─ Log (60) ───────────────────────────────────────────────────────────────────╮
+ Log   following
+╭──────────────────────────────────────────────────────────────────────────────╮
 │ hh:mm:ss INFO  loaded category 41 rows=123                                   │
 │ hh:mm:ss INFO  loaded category 42 rows=126                                   │
 │ hh:mm:ss INFO  loaded category 43 rows=129                                   │
@@ -20,5 +20,5 @@
 │ hh:mm:ss INFO  loaded category 57 rows=171                                   │
 │ hh:mm:ss INFO  loaded category 58 rows=174                                   │
 │ hh:mm:ss INFO  loaded category 59 rows=177                                   │
-╰──────────────────────────────────────────────────────────────────────────────╯
+╰───────────────────────────────────────────────────────────────── 60 entries ─╯
  / filter  l level  end follow  home top  ` close
