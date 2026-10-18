@@ -268,10 +268,10 @@ func (m *Model) confirmView() string {
 	c := m.confirm
 	p := m.theme.Palette
 	irreversible := c.act.Tier == mutation.Irreversible
-	border, onBorder, yes := p.Warn, p.OnWarn, "y"
+	border, fill, onFill, yes := p.Warn, p.Warn, p.OnWarn, "y"
 	title := c.verb() + " " + c.noun()
 	if irreversible {
-		border, onBorder, yes = p.Danger, p.OnAccent, "Y"
+		border, fill, onFill, yes = p.Danger, p.DangerFill, p.OnAccent, "Y"
 		title = "⚠ " + title
 	}
 	width := min(m.modalMaxWidth(), 56)
@@ -294,8 +294,11 @@ func (m *Model) confirmView() string {
 
 	button := func(text string, focused bool) string {
 		s := lipgloss.NewStyle().Padding(0, 1)
-		if focused {
-			s = s.Background(border).Foreground(onBorder).Bold(true)
+		switch {
+		case focused && m.theme.Monochrome:
+			s = s.Reverse(true).Bold(true) // the fill would vanish
+		case focused:
+			s = s.Background(fill).Foreground(onFill).Bold(true)
 		}
 		return s.Render("[ " + text + " ]")
 	}

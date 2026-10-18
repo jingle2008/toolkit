@@ -12,12 +12,18 @@ import (
 // Palette names the TUI's colors by role. Views take colors from roles,
 // never literals, so a light terminal or a retune changes them in one
 // place.
+//
+// A role drawn as text and one drawn as a fill behind OnAccent text need
+// different shades on a dark background — a color bright enough to read
+// as text is too bright to carry white text — so the *Fill roles hold
+// the fills. Every text role reaches 4.5:1 on common terminal
+// backgrounds and every fill 4.5:1 under OnAccent (TestPalette_Contrast).
 type Palette struct {
 	Primary   color.Color // keys, info labels, section headers
-	Accent    color.Color // context chip, selected row, spinner, logo bottom
-	Secondary color.Color // counters, stats chip
+	Accent    color.Color // spinner, logo bottom
+	Secondary color.Color // breadcrumb chips
 	Text      color.Color // body text
-	OnAccent  color.Color // text on Accent/Secondary/Success/Info/Danger fills
+	OnAccent  color.Color // text on the *Fill roles
 	Muted     color.Color // hints, debug lines, dim text
 	Border    color.Color // unfocused borders, separators
 	Focus     color.Color // modal and details borders
@@ -27,7 +33,13 @@ type Palette struct {
 	Warn      color.Color // warnings, paused log
 	OnWarn    color.Color // text on Warn fills
 	Danger    color.Color // errors, irreversible actions, faulty
-	Info      color.Color // info toasts, following log, help keys
+	Info      color.Color // info toasts, help keys
+
+	AccentFill    color.Color // selected row, context chip
+	SecondaryFill color.Color // stats chip, picker badges
+	SuccessFill   color.Color // LIVE
+	DangerFill    color.Color // PROD badge, irreversible confirm button
+	InfoFill      color.Color // following log
 }
 
 // NewPalette returns the role colors for a dark (isDark) or light
@@ -37,21 +49,27 @@ func NewPalette(isDark bool) Palette {
 		return lipgloss.LightDark(isDark)(lipgloss.Color(light), lipgloss.Color(dark))
 	}
 	return Palette{
-		Primary:   c("#D75F00", "#FF8700"),
+		Primary:   c("#B54D00", "#FF8700"),
 		Accent:    c("#D7005F", "#FF5F87"),
-		Secondary: c("#8700AF", "#A550DF"),
+		Secondary: c("#8700AF", "#BC8CFF"),
 		Text:      c("#262626", "#E4E4E4"),
 		OnAccent:  c("#FFFDF5", "#FFFDF5"),
-		Muted:     c("#6C6C6C", "#8A8A8A"),
+		Muted:     c("#6C6C6C", "#9E9E9E"),
 		Border:    c("#BCBCBC", "#585858"),
-		Focus:     c("#5F5FAF", "#5F5FD7"),
+		Focus:     c("#5F5FAF", "#8787FF"),
 		Surface:   c("#D9DCCF", "#353533"),
 		OnSurface: c("#343433", "#C1C6B2"),
-		Success:   c("#1A7F37", "#2EA043"),
-		Warn:      c("#9A6700", "#FFAF00"),
+		Success:   c("#1A7F37", "#3FB950"),
+		Warn:      c("#8A5A00", "#FFAF00"),
 		OnWarn:    c("#FFFDF5", "#000000"),
-		Danger:    c("#CF222E", "#D70000"),
-		Info:      c("#0969DA", "#0087FF"),
+		Danger:    c("#CF222E", "#FF6B6B"),
+		Info:      c("#0969DA", "#58A6FF"),
+
+		AccentFill:    c("#D7005F", "#C2185B"),
+		SecondaryFill: c("#8700AF", "#8250DF"),
+		SuccessFill:   c("#1A7F37", "#238636"),
+		DangerFill:    c("#CF222E", "#D70000"),
+		InfoFill:      c("#0969DA", "#1F6FEB"),
 	}
 }
 
@@ -60,6 +78,9 @@ func NewPalette(isDark bool) Palette {
 // and makes tests simpler.
 type Styles struct {
 	Palette Palette
+	// Monochrome marks a terminal without color (NO_COLOR, or no
+	// support): focus is drawn in reverse video, since its fills vanish.
+	Monochrome bool
 
 	// Frame chips: the breadcrumb's category path and row stats, and the
 	// env bar's LIVE marker and production badge.
@@ -110,7 +131,7 @@ func DefaultStyles(isDark bool) Styles {
 		Bold(true)
 	tbl.Selected = tbl.Selected.
 		Foreground(p.OnAccent).
-		Background(p.Accent).
+		Background(p.AccentFill).
 		Bold(true)
 
 	logBar := lipgloss.NewStyle().Bold(true)
@@ -118,10 +139,10 @@ func DefaultStyles(isDark bool) Styles {
 	return Styles{
 		Palette: p,
 
-		Context:    chip.Background(p.Accent).Bold(true),
-		Stats:      chip.Background(p.Secondary).Align(lipgloss.Right),
-		Live:       chip.Background(p.Success).Bold(true),
-		Prod:       chip.Background(p.Danger).Bold(true),
+		Context:    chip.Background(p.AccentFill).Bold(true),
+		Stats:      chip.Background(p.SecondaryFill).Align(lipgloss.Right),
+		Live:       chip.Background(p.SuccessFill).Bold(true),
+		Prod:       chip.Background(p.DangerFill).Bold(true),
 		LogoTop:    toRGB(p.Primary),
 		LogoBottom: toRGB(p.Accent),
 
@@ -133,13 +154,22 @@ func DefaultStyles(isDark bool) Styles {
 		Viewport: lipgloss.NewStyle(), // the frame's panel draws the border
 		Spinner:  fg(p.Accent),
 
-		LogFollowing: logBar.Inherit(fill(p.Info, p.OnAccent)),
+		LogFollowing: logBar.Inherit(fill(p.InfoFill, p.OnAccent)),
 		LogPaused:    logBar.Inherit(fill(p.Warn, p.OnWarn)),
 		LogHint:      fg(p.Muted),
 		LogWarn:      fg(p.Warn),
 		LogError:     fg(p.Danger),
 		LogDebug:     fg(p.Muted),
 	}
+}
+
+// monochrome adapts s to a terminal without color, where fills and
+// foregrounds are dropped: the selected row is drawn in reverse video so
+// it still stands out.
+func (s Styles) monochrome() Styles {
+	s.Monochrome = true
+	s.Table.Selected = lipgloss.NewStyle().Bold(true).Reverse(true)
+	return s
 }
 
 // toRGB converts c to the logo's 24-bit color.
