@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -79,24 +78,6 @@ func TestEnterExportView_NoPickerPath(t *testing.T) {
 	assert.Equal(t, before, m.lastViewMode)
 	require.Len(t, cmds, 1)
 	assert.NotNil(t, cmds[0], "empty path should initialize the picker")
-}
-
-func TestEnterExportView_WithPickerPath(t *testing.T) {
-	t.Parallel()
-	m := newTestModel(t)
-	m.dirPicker.Path = t.TempDir()
-
-	cmds := m.enterExportView()
-	assert.Equal(t, common.ExportView, m.viewMode)
-	require.Len(t, cmds, 1)
-	require.NotNil(t, cmds[0])
-
-	// With a path already chosen the picker is nudged with a backspace so
-	// it re-renders the current directory rather than resetting.
-	msg := cmds[0]()
-	keyMsg, ok := msg.(tea.KeyMsg)
-	require.True(t, ok, "expected a tea.KeyMsg, got %T", msg)
-	assert.Equal(t, "backspace", keyMsg.String())
 }
 
 //nolint:paralleltest // stubClipboard swaps package-level seams; these must stay serial

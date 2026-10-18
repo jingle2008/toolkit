@@ -124,7 +124,10 @@ type restartServiceResultMsg struct {
 	err error
 }
 
-type exportDoneMsg struct{}
+// exportDoneMsg reports a finished export and where it was written.
+type exportDoneMsg struct {
+	path string
+}
 
 type exportErrMsg struct {
 	err error

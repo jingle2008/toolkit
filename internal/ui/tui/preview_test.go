@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
-	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // Below the width threshold v says why and leaves the layout alone.
@@ -72,32 +71,6 @@ func TestPreview_HidesWhenNarrowed(t *testing.T) {
 	assert.True(t, m.preview, "still on for the session")
 	m.updateLayout(200, 40)
 	assert.True(t, m.previewShown())
-}
-
-func TestSummarize(t *testing.T) {
-	t.Parallel()
-	owner := models.Tenant{Name: "acme"}
-	dac := &models.DedicatedAICluster{Name: "d1", Size: 4, Owner: &owner, Status: "Active"}
-	pairs := summarize(dac)
-	got := map[string]string{}
-	order := make([]string, 0, len(pairs))
-	for _, kv := range pairs {
-		got[kv[0]] = kv[1]
-		order = append(order, kv[0])
-	}
-	assert.Equal(t, "d1", got["name"])
-	assert.Equal(t, "4", got["size"])
-	assert.Equal(t, "{…}", got["owner"], "nested structs collapse")
-	assert.Equal(t, "—", got["unitShape"], "empty strings show a dash")
-	assert.Equal(t, "name", order[0], "declaration order")
-
-	node := models.GPUNode{Name: "n1", Issues: []string{"a", "b"}}
-	for _, kv := range summarize(node) {
-		if kv[0] == "issues" {
-			assert.Equal(t, "[2]", kv[1], "slices show their length")
-		}
-	}
-	assert.Nil(t, summarize((*models.GPUNode)(nil)))
 }
 
 func TestPalette_PreviewToggle(t *testing.T) {

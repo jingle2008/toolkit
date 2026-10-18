@@ -157,8 +157,12 @@ func (m *Model) statusView() string {
 }
 
 // statsText is the breadcrumb's right cell: the category's row stats,
-// then the cursor position.
+// then the cursor position; in details view, the layout shown and how far
+// down it is scrolled.
 func (m *Model) statsText() string {
+	if m.viewMode == common.DetailsView {
+		return m.detailPosition()
+	}
 	var b strings.Builder
 	if len(m.stats) > 0 {
 		names := make([]string, 0, len(m.stats))
@@ -175,6 +179,19 @@ func (m *Model) statsText() string {
 	}
 	b.WriteString(m.cursorText())
 	return b.String()
+}
+
+// detailPosition is the details view's layout and, when it doesn't all
+// fit, how far down it is scrolled: "[fields]", "[JSON · 40%]".
+func (m *Model) detailPosition() string {
+	layout := "fields"
+	if m.detailJSON {
+		layout = "JSON"
+	}
+	if m.viewport.TotalLineCount() <= m.viewport.Height() {
+		return "[" + layout + "]"
+	}
+	return fmt.Sprintf("[%s · %d%%]", layout, int(m.viewport.ScrollPercent()*100))
 }
 
 // cursorText is the cursor position among the rows, e.g. "[12/124]".

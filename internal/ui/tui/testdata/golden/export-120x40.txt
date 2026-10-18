@@ -6,30 +6,30 @@
 │ dac-alpha          acme          false        75%      Hosting       —        A100_80G          4      12d   Active  │
 │ dac-orphan         orphan        —            0%       Hosting       —        A10               1      41d   Active  │
 │ dac-日本語         acme          false        100%     Fine-tuning   —        H100              2      3d    Failed  │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
 │                   ╭─ Export CSV ─────────────────────────────────────────────────────────────────╮                   │
-│                   │ File  us-ashburn-1-DedicatedAICluster.csv                                    │                   │
+│                   │ Folder  <tmp>                                                                │                   │
+│                   │ Name    us-ashburn-1-DedicatedAICluster.csv                                  │                   │
 │                   │                                                                              │                   │
-│                   │ Pick a directory:                                                            │                   │
+│                   │ ▸ alpha                                                                      │                   │
+│                   │   beta                                                                       │                   │
+│                   │   gamma                                                                      │                   │
 │                   │                                                                              │                   │
-│                   │ > drwxr-xr-x  <size> alpha                                                    │                   │
-│                   │   drwxr-xr-x  <size> beta                                                     │                   │
-│                   │   drwxr-xr-x  <size> gamma                                                    │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │                                                                              │                   │
-│                   │ ↑/↓ select · → open · ← parent · enter export here · esc cancel              │                   │
+│                   │ enter export · ↑/↓ select · → open · ← up · tab rename · esc cancel          │                   │
 │                   ╰──────────────────────────────────────────────────────────────────────────────╯                   │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │

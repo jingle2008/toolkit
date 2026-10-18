@@ -1,24 +1,24 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  DedicatedAICluster                       Active: 2 • Failed: 1 • Size: 7 [1/3]
 ╭─ acme/╭─ Keys · Details view ────────────────────────────────────────╮───────╮
-│       │                          | | | | |                           │       │
-│       │                        .-----------.                         │       │
-│    {  │                       -|   _____   |-                        │       │
-│       │                       -|  |_   _|  |-                        │       │
-│       │                       -|    |_|    |-                        │       │
-│       │                        '-----------'                         │       │
-│       │ Details view                    Navigation                   │       │
-│       │   o           Copy object         ↑/k         Up             │       │
-│       │                                   ↓/j         Down           │       │
-│       │ General                           u           ½ page up      │       │
-│       │   ?/h         Help                d           ½ page down    │       │
-│       │   y           Toggle details      b/pgup      Page up        │       │
-│       │   c           Copy                f/pgdn      Page down      │       │
-│       │   `           Toggle log                                     │       │
-│       │   esc         Back/Clear                                     │       │
-│       │   q           Quit                                           │       │
+│ Name  │ Details view                    General                      │       │
+│ Status│   o           Copy object         ?/h         Help           │       │
+│ Tenant│   tab         Fields/JSON         y           Toggle details │       │
+│ Type  │                                   c           Copy           │       │
+│ Unit s│                                   `           Toggle log     │       │
+│ Size  │                                   esc         Back/Clear     │       │
+│ Total │                                   q           Quit           │       │
+│ Idle r│                                                              │       │
+│ Age   │                                 Navigation                   │       │
+│       │                                   ↑/k         Up             │       │
+│ Owner │                                   ↓/j         Down           │       │
+│   Name│                                   u           ½ page up      │       │
+│   ID  │                                   d           ½ page down    │       │
+│   Is i│                                   b/pgup      Page up        │       │
+│   Stat│                                   f/pgdn      Page down      │       │
 │       │                                                              │       │
 │       │ esc close                                                    │       │
-│    }  ╰──────────────────────────────────────────────────────────────╯       │
+│       ╰──────────────────────────────────────────────────────────────╯       │
+│                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
- o copy object  ? more
+ o copy object  tab fields/JSON  ? more

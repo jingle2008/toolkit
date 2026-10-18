@@ -351,7 +351,7 @@ func (m *Model) updateLayout(w, h int) {
 	// The export modal shows four lines above the directory list; give the
 	// list the rest of the modal body, up to its usual 15 rows.
 	if m.dirPicker != nil {
-		m.dirPicker.SetHeight(min(15, max(m.modalMaxBody()-4, 3)))
+		m.dirPicker.SetHeight(min(exportListMax, max(m.modalMaxBody()-exportChrome, 3)))
 	}
 	// The frame draws its panel's border itself: two columns and two rows
 	// around the table or details body, plus frameChrome rows of bars.

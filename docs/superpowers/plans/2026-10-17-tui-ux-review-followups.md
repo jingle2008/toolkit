@@ -39,10 +39,17 @@ nothing". It already redraws the hint as "press capital Y to delete"
   section and sentence case; the edit-tenant and export hints match.
 - [x] Footer keeps `/` and `:` visible: category actions drop first.
 
-## Batch 3 — export and details
+## Batch 3 — export, details, preview, goldens
 
-- [ ] Export shows the current directory and an editable filename; no
-  permission/size columns; hints in the shared style; height fits content.
-- [ ] Details view uses the preview's key/value layout with sections,
-  JSON behind a toggle; scroll position shown.
-- [ ] Preview expands nested objects one level and humanizes labels.
+- [x] Export shows the folder the file goes to and an editable name
+  (`tab`); no permission/size columns; `▸` cursor; height fits content.
+  `enter` exports into the folder shown (the filepicker's Select is off,
+  `l`/`→` open), fixing "can't export into the current or an empty
+  folder"; success toasts the path.
+- [x] Details view: fields layout (`renderFields` over the item's JSON,
+  so it matches `o`), JSON on `tab`; breadcrumb shows layout and scroll
+  position instead of list stats.
+- [x] Preview shares the layout at depth 1 (nested objects open one
+  level) with humanized labels.
+- [x] Goldens trimmed to 80×24 and 120×40; only the preview keeps
+  200×50 (`wideGoldenViews`).

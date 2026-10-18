@@ -10,17 +10,17 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
-func TestUpdateExportView_DoneReturnsToList(t *testing.T) {
+func TestUpdateExportView_DoneRestoresViewAndSaysWhere(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
+	m.lastViewMode = common.DetailsView
 	m.viewMode = common.ExportView
 
-	got, cmd := m.updateExportView(exportDoneMsg{})
+	got, _ := m.updateExportView(exportDoneMsg{path: "/tmp/out.csv"})
 	require.Same(t, m, got)
-	assert.Nil(t, cmd)
-	// A successful export always lands on the list, not lastViewMode —
-	// the popup was opened from the list in the first place.
-	assert.Equal(t, common.ListView, m.viewMode)
+	assert.Equal(t, common.DetailsView, m.viewMode, "success returns to the view the popup came from")
+	require.NotNil(t, m.toasts.active)
+	assert.Equal(t, "exported to /tmp/out.csv", m.toasts.active.msg)
 }
 
 func TestUpdateExportView_ErrRestoresPreviousViewAndToasts(t *testing.T) {
@@ -52,7 +52,9 @@ func TestExportTableCSVCmd_SuccessBecomesExportDoneMsg(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 
-	msg := m.exportTableCSVCmd(t.TempDir() + "/out.csv")()
-	_, ok := msg.(exportDoneMsg)
-	assert.True(t, ok, "expected exportDoneMsg, got %T", msg)
+	path := t.TempDir() + "/out.csv"
+	msg := m.exportTableCSVCmd(path)()
+	done, ok := msg.(exportDoneMsg)
+	require.True(t, ok, "expected exportDoneMsg, got %T", msg)
+	assert.Equal(t, path, done.path)
 }
