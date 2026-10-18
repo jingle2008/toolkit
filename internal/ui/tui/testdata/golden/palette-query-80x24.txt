@@ -1,24 +1,24 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  DedicatedAICluster                             Active: 2 • Failed: 1 • Size: 7
-╭─ 1 column hidden ────────────────────────────────────────────────────────────╮
-│ Name ↑      Tenant  Inter…  Usage  Type         Mod…  Shape/P…  Size  Status │
-│──────────────────────────────────────────────────────────────────────────────│
-│▌dac-alpha   acme    false   75%    Hosting      —     A100_80G  4     Active │
-│ dac-orphan  orphan  —       0%     Hosting      —     A10       1     Active │
-│ da╭─ Command palette ────────────────────────────────────────────────────╮ed │
-│   │ › gpu                                                                │   │
+╭─ 1╭─ Command palette ────────────────────────────────────────────────────╮───╮
+│ Na│ › gpu                                                                │us │
+│───│                                                                      │───│
+│▌da│ ▸ GPUPool                                          gpup gp  category │ve │
+│ da│   GPUNode                                          gpun gn           │ve │
+│ da│   GPUWorkload                                      gpuw gw           │ed │
 │   │                                                                      │   │
-│   │ ▸ GPUPool                                          gpup gp  category │   │
-│   │   GPUNode                                          gpun gn           │   │
-│   │   GPUWorkload                                      gpuw gw           │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
 │   │                                                                      │   │
 │   │ ↑/↓ select · enter run · esc close                                   │   │
 │   ╰──────────────────────────────────────────────────────────────────────╯   │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
 │                                                                              │
 ╰───────────────────────────────────────────────────────────────────── 1 of 3 ─╯
  o go to related  t copy tenant ID  / filter  : command palette  ? more

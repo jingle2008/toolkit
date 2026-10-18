@@ -363,8 +363,14 @@ func (m *Model) paletteView() string {
 	if len(p.matches) > n {
 		lines = append(lines, muted.Render(fmt.Sprintf("  %d–%d of %d", start+1, end, len(p.matches))))
 	}
-	return m.modal("Command palette", strings.Join(lines, "\n"),
-		"↑/↓ select · enter run · esc close", pal.Accent, width)
+	// As tall as the unfiltered list: the query, a blank, the rows, and the
+	// count line when they scroll.
+	bodyH := 2 + min(n, len(p.items))
+	if len(p.items) > n {
+		bodyH++
+	}
+	return m.fixedModal("Command palette", strings.Join(lines, "\n"),
+		"↑/↓ select · enter run · esc close", pal.Accent, width, 0, bodyH)
 }
 
 // highlight renders s with the runes at byte offsets idx in style hit.

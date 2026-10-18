@@ -24,13 +24,16 @@ const (
 // helpSection is one titled group of key bindings, rendered as lines.
 type helpSection []string
 
-// helpSections renders every key group that applies to the view help was
-// opened from, keeping only the bindings the filter matches — all of a
+// helpSections is helpSectionsFor the current filter.
+func (m *Model) helpSections() []helpSection { return m.helpSectionsFor(m.helpFilter) }
+
+// helpSectionsFor renders every key group that applies to the view help
+// was opened from, keeping only the bindings filter matches — all of a
 // group whose title it matches — and leaving out groups with none. The sorts, declared among the category's and the view's
 // keys, are gathered into one Sort section listed by column.
-func (m *Model) helpSections() []helpSection {
+func (m *Model) helpSectionsFor(filter string) []helpSection {
 	var out []helpSection
-	filter := strings.ToLower(m.helpFilter)
+	filter = strings.ToLower(filter)
 	add := func(title string, bind []key.Binding) {
 		sec := helpSection{m.theme.HelpHeader.Render(title)}
 		whole := strings.Contains(strings.ToLower(title), filter) // "/sort" keeps all of Sort
@@ -100,15 +103,22 @@ func sentenceCase(bind []key.Binding) []key.Binding {
 
 // helpLines lays the sections out in as many columns (up to three) as the
 // modal's width allows and returns the resulting body lines.
-func (m *Model) helpLines() []string {
-	columns, secW, _ := m.helpColumns()
+func (m *Model) helpLines() []string { return m.helpLinesFor(m.helpFilter) }
+
+func (m *Model) helpLinesFor(filter string) []string {
+	columns, secW, _ := m.helpColumnsFor(filter)
 	return joinHelpColumns(columns, secW)
 }
 
-// helpColumns packs the sections into columns, returning them with their
-// width and the set of section-title lines.
+// helpColumns is helpColumnsFor the current filter.
 func (m *Model) helpColumns() (columns [][]string, secW int, titles map[string]bool) {
-	secs := m.helpSections()
+	return m.helpColumnsFor(m.helpFilter)
+}
+
+// helpColumnsFor packs filter's sections into columns, returning them with
+// their width and the set of section-title lines.
+func (m *Model) helpColumnsFor(filter string) (columns [][]string, secW int, titles map[string]bool) {
+	secs := m.helpSectionsFor(filter)
 	titles = make(map[string]bool, len(secs))
 	for _, sec := range secs {
 		titles[sec[0]] = true
@@ -125,7 +135,11 @@ func (m *Model) helpColumns() (columns [][]string, secW int, titles map[string]b
 // section title that would be the window's last line — its keys below it,
 // out of view — is left for the next page, so no title shows alone.
 func (m *Model) helpWindowLines(off, rows int) []string {
-	columns, secW, titles := m.helpColumns()
+	return m.helpWindowLinesFor(m.helpFilter, off, rows)
+}
+
+func (m *Model) helpWindowLinesFor(filter string, off, rows int) []string {
+	columns, secW, titles := m.helpColumnsFor(filter)
 	window := make([][]string, len(columns))
 	for i, col := range columns {
 		lo, hi := min(off, len(col)), min(off+rows, len(col))
@@ -182,8 +196,12 @@ func packColumns(secs []helpSection, n int) [][]string {
 // scroll offset; maxScroll is 0 when everything fits. The filter line and
 // the blank under it take two rows while a filter is typed or set.
 func (m *Model) helpWindow(lines int) (rows, maxScroll int) {
+	return m.helpWindowFor(lines, m.helpTyping || m.helpFilter != "")
+}
+
+func (m *Model) helpWindowFor(lines int, filtering bool) (rows, maxScroll int) {
 	body := m.modalMaxBody()
-	if m.helpTyping || m.helpFilter != "" {
+	if filtering {
 		body = max(body-2, 1)
 	}
 	if lines <= body {
@@ -194,23 +212,33 @@ func (m *Model) helpWindow(lines int) (rows, maxScroll int) {
 }
 
 // fullHelpView renders the help modal: key groups in columns, scrolled
-// to m.helpScroll with an indicator when they don't fit.
+// to m.helpScroll with an indicator when they don't fit. Filtered, it
+// keeps the size of unfiltered help (fixedModal).
 func (m *Model) fullHelpView() string {
-	p := m.theme.Palette
-	muted := lipgloss.NewStyle().Foreground(p.Muted)
-	lines := m.helpLines()
-	filtering := m.helpTyping || m.helpFilter != ""
-	if filtering && len(m.helpSections()) == 0 {
+	body, maxScroll := m.helpBody(m.helpFilter, m.helpTyping, m.helpScroll)
+	full, _ := m.helpBody("", false, 0)
+	return m.fixedModal("Keys · "+m.lastViewMode.String()+" view", body, m.helpHints(maxScroll),
+		m.theme.Palette.Accent, 0, lipgloss.Width(full), lipgloss.Height(full))
+}
+
+// helpBody is help's body for filter (typing while its input is open)
+// scrolled to scroll: the head, the window of key groups, and a scroll
+// indicator when they don't fit; maxScroll is 0 when they do.
+func (m *Model) helpBody(filter string, typing bool, scroll int) (body string, maxScroll int) {
+	muted := lipgloss.NewStyle().Foreground(m.theme.Palette.Muted)
+	lines := m.helpLinesFor(filter)
+	filtering := typing || filter != ""
+	matches := len(m.helpSectionsFor(filter)) > 0
+	if filtering && !matches {
 		lines = []string{muted.Render("no keys match · esc clears the filter")}
 	}
-	rows, maxScroll := m.helpWindow(len(lines))
-	off := min(max(m.helpScroll, 0), maxScroll)
+	rows, maxScroll := m.helpWindowFor(len(lines), filtering)
+	off := min(max(scroll, 0), maxScroll)
 	window := lines[off : off+rows]
-	if !filtering || len(m.helpSections()) > 0 {
-		window = m.helpWindowLines(off, rows)
+	if !filtering || matches {
+		window = m.helpWindowLinesFor(filter, off, rows)
 	}
-	body := m.helpHead(strings.Join(window, "\n"), len(lines), maxScroll)
-	hints := m.helpHints(maxScroll)
+	body = m.helpHead(strings.Join(window, "\n"), len(lines), maxScroll, filter, typing)
 	if maxScroll > 0 {
 		var where string
 		switch off {
@@ -223,17 +251,17 @@ func (m *Model) fullHelpView() string {
 		}
 		body += "\n" + muted.Render(fmt.Sprintf("%s · %d%%", where, off*100/maxScroll))
 	}
-	return m.modal("Keys · "+m.lastViewMode.String()+" view", body, hints, p.Accent, 0)
+	return body, maxScroll
 }
 
-// helpHead tops body with the filter input or chip, or, unfiltered, the
-// logo when it fits without making help scroll.
-func (m *Model) helpHead(body string, lines, maxScroll int) string {
+// helpHead tops body with the filter input (typing) or chip, or,
+// unfiltered, the logo when it fits without making help scroll.
+func (m *Model) helpHead(body string, lines, maxScroll int, filter string, typing bool) string {
 	switch {
-	case m.helpTyping:
+	case typing:
 		return m.helpInput.View() + "\n\n" + body
-	case m.helpFilter != "":
-		return lipgloss.NewStyle().Foreground(m.theme.Palette.Accent).Render("⟨/"+m.helpFilter+"⟩") + "\n\n" + body
+	case filter != "":
+		return lipgloss.NewStyle().Foreground(m.theme.Palette.Accent).Render("⟨/"+filter+"⟩") + "\n\n" + body
 	}
 	if logoH := lipgloss.Height(view.Logo) + 1; maxScroll == 0 && lines+logoH <= m.modalMaxBody() {
 		logo := view.RenderLogo(m.theme.LogoTop, m.theme.LogoBottom)
