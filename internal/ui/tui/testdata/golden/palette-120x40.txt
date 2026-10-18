@@ -1,6 +1,6 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                                                         v1.2.3
  DedicatedAICluster                                                               Active: 2 • Failed: 1 • Size: 7 [1/3]
-╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────────────────────────────────────────────╮
+╭─ 3 rows ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Name ↑             Tenant        Internal     Usage    Type          Model    Shape/Profile     Size   Age   Status  │
 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
 │ dac-alpha          acme          false        75%      Hosting       —        A100_80G          4      12d   Active  │
@@ -11,18 +11,18 @@
 │                       ╭─ Command palette ────────────────────────────────────────────────────╮                       │
 │                       │ ›                                                                    │                       │
 │                       │                                                                      │                       │
-│                       │ ▸ Tenant                                          t tenant  category │                       │
-│                       │   LimitDefinition                       ld limitdefinition  category │                       │
-│                       │   ConsolePropertyDefinition          cpd consolepropertyd…  category │                       │
-│                       │   PropertyDefinition                 pd propertydefinition  category │                       │
-│                       │   LimitTenancyOverride               lto limittenancyover…  category │                       │
-│                       │   ConsolePropertyTenancyOverride     cpto consoleproperty…  category │                       │
-│                       │   PropertyTenancyOverride            pto propertytenancyo…  category │                       │
-│                       │   LimitRegionalOverride              lro limitregionalove…  category │                       │
-│                       │   ConsolePropertyRegionalOverride    cpro consoleproperty…  category │                       │
-│                       │   PropertyRegionalOverride           pro propertyregional…  category │                       │
-│                       │   BaseModel                                   bm basemodel  category │                       │
-│                       │   ImportedModel                           im importedmodel  category │                       │
+│                       │ ▸ Tenant                                                 t  category │                       │
+│                       │   LimitDefinition                                       ld           │                       │
+│                       │   ConsolePropertyDefinition                            cpd           │                       │
+│                       │   PropertyDefinition                                    pd           │                       │
+│                       │   LimitTenancyOverride                                 lto           │                       │
+│                       │   ConsolePropertyTenancyOverride                      cpto           │                       │
+│                       │   PropertyTenancyOverride                              pto           │                       │
+│                       │   LimitRegionalOverride                                lro           │                       │
+│                       │   ConsolePropertyRegionalOverride                     cpro           │                       │
+│                       │   PropertyRegionalOverride                             pro           │                       │
+│                       │   BaseModel                                             bm           │                       │
+│                       │   ImportedModel                                         im           │                       │
 │                       │   1–12 of 38                                                         │                       │
 │                       │                                                                      │                       │
 │                       │ ↑/↓ select · enter run · esc close                                   │                       │

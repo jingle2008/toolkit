@@ -1,6 +1,6 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                                                         v1.2.3
  DedicatedAICluster                                                               Active: 2 • Failed: 1 • Size: 7 [1/3]
-╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────────────────────────────────────────────╮
+╭─ 3 rows ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Name ↑             Tenant        Internal     Usage    Type          Model    Shape/Profile     Size   Age   Status  │
 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
 │ dac-alpha          acme          false        75%      Hosting       —        A100_80G          4      12d   Active  │
@@ -16,9 +16,9 @@
 │                       ╭─ Command palette ────────────────────────────────────────────────────╮                       │
 │                       │ › gpu                                                                │                       │
 │                       │                                                                      │                       │
-│                       │ ▸ GPUPool                                  gpup gpupool gp  category │                       │
-│                       │   GPUNode                                  gpun gpunode gn  category │                       │
-│                       │   GPUWorkload                          gpuw gpuworkload gw  category │                       │
+│                       │ ▸ GPUPool                                          gpup gp  category │                       │
+│                       │   GPUNode                                          gpun gn           │                       │
+│                       │   GPUWorkload                                      gpuw gw           │                       │
 │                       │                                                                      │                       │
 │                       │ ↑/↓ select · enter run · esc close                                   │                       │
 │                       ╰──────────────────────────────────────────────────────────────────────╯                       │

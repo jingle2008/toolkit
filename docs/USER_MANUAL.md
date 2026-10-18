@@ -151,7 +151,7 @@ toolkit --help
 ```
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4   1 dp-prod-ord   ● LIVE  v1.2.3   ← Env bar
  DedicatedAICluster › acme   ⟨/gpu⟩  ⟨sort: age ▼⟩            Active: 2 • Failed: 1 [1/3]   ← Breadcrumb
-╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────────────╮
+╭─ 3 rows ──────────────────────────────────────────────────────────────────────────────╮
 │ Name ↑         Tenant       Internal  Usage  Model  Size  Age  Status                 │   ← Column headers (↑ = sort column)
 │──────────────────────────────────────────────────────────────────────────────────────│
 │ dac-alpha      acme         false     75%    —      4     12d  Active                 │   ← Selected row
@@ -163,7 +163,7 @@ toolkit --help
 | Zone | Description |
 |------|-------------|
 | **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. In production the type is a red `PROD` badge, so it can't be mistaken for dev or preprod. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: a spinner while loading, `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)), and the toolkit version |
-| **Breadcrumb** | The category, and what it is narrowed to (`› acme` for a scope, the row in details view). While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5⟩` (position in history), `s…` (a pending sort key). On the right: the category's stats and the cursor position |
+| **Breadcrumb** | The category, and the scope it is narrowed to (`› acme`). The panel below is titled with the row count, or in the detail view with the row. While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5⟩` (position in history), `s…` (a pending sort key). On the right: the category's stats and the cursor position |
 | **Panel** (center) | The table, or a row's details, in a frame titled with the category and row count. Columns are as wide as their header or their widest value, and share the rest of the width. On a narrow terminal long values (names, OCIDs) shorten first, short ones keep their width, and Status is never cut; if that still doesn't fit, columns drop from the right (never the first or Status) and the title says how many are hidden. An empty cell shows `—`. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
 | **Footer** (bottom) | The category's most useful actions, then `/ filter`, `: command palette` and `? more`. On a narrow terminal the actions give way first, so filtering and the palette stay in reach |
 
@@ -273,6 +273,8 @@ offered as a BaseModel, not an ImportedModel).
 - **Environments**: recent quick-switch slots first, then every environment. Listed only in environment-scoped categories, the same as the `0`–`5` keys.
 - **Actions**: the selected row's actions (go to related, metrics, edit tenant, delete, …), each sort ("Sort by Tenant"), and Export CSV.
 - **Toggles**: alias view, faulty-only, preview pane.
+
+With nothing typed, the items you ran this session come first, under **recent**. Each group is named on its first row, a category's hint is its short aliases, and the open category is marked `●`.
 
 `↑`/`↓` (or `Ctrl+P`/`Ctrl+N`) move, `Enter` runs, `Esc` closes. An exact alias always wins, so `:dac` + `Enter` opens DedicatedAICluster as it always has. Actions run exactly as their key would, confirmations included.
 
@@ -442,7 +444,9 @@ Certain categories expose live infrastructure operations. These require Kubernet
 
 > **Warning:** Drain and Restart disrupt running workloads, and Delete is **irreversible**. Toolkit guards against duplicate in-flight requests automatically.
 
-Every operation asks first. The confirmation names the kind, the row and the kube context (with a red `PRODUCTION` badge in production) and says what the operation does: what a cordon or drain does to pods, how far a scale-up grows the pool, or why a delete can't be undone.
+**Edit tenant** (`Shift+E`, on a DedicatedAICluster or ImportedModel row whose tenancy has no name yet) opens a short form: Name (required), Internal/External, Note (optional). `Tab` or `Enter` moves to the next field, `Enter` on the last field or `Ctrl+S` saves, `Ctrl+O` opens the tenancy in the console. Saving without a name marks the Name field instead of saving.
+
+Every operation asks first. The confirmation names the kind, the row and the kube context (with a red `PRODUCTION` badge in production) and says what the operation does. Irreversible operations take a capital `Y`; a lowercase `y` cancels them, so muscle memory never destroys anything: what a cordon or drain does to pods, how far a scale-up grows the pool, or why a delete can't be undone.
 
 ### GPU Nodes (`GPUNode`)
 
@@ -590,6 +594,7 @@ and CPU/memory remain in the TUI's detail view (`y`).
 | `Esc` | Back / Clear filter |
 | `y` | Toggle detail view |
 | `c` | Copy item name / ID |
+| `` ` `` | Open the [in-app log](#in-app-log) |
 
 ### List view
 
@@ -670,6 +675,19 @@ toolkit --log-level warn
 Supported log levels (from most to least verbose): `debug` → `info` → `warn` → `error`.
 
 Supported log formats: `console` (human-readable), `json` (structured), `slog` (Go slog).
+
+### In-app log
+
+Press `` ` `` in the list or detail view to see the session's recent log entries without leaving the TUI. It sits in the usual frame: the breadcrumb shows `following` while it tails new entries, `PAUSED` once you scroll up, the active filters, and how many entries show (`[11/60]`).
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓`, `PgUp` / `PgDn` | Scroll (scrolling up pauses the tail) |
+| `End` / `Home` | Follow the tail / jump to the oldest entry |
+| `/` | Filter entries by text, case-insensitive (`Enter` keeps it, `Esc` clears it) |
+| `l` | Cycle the minimum level: all → info → warn → error |
+| `Esc` | Clear the filters; with none, close the log |
+| `` ` `` | Close the log |
 
 ---
 

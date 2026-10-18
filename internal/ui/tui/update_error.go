@@ -3,16 +3,20 @@ package tui
 import (
 	"context"
 	"errors"
+	"slices"
 
+	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
 /*
 handleErrMsg centralizes error handling for async operations.
 
 It dismisses LoadingView via endTask and surfaces the failure as a
-transient toast over the restored view — so the user can keep
-navigating instead of being trapped.
+toast over the restored view — naming r to retry where the category can
+refresh — so the user can keep navigating instead of being trapped.
 */
 func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	err := msg.err
@@ -49,5 +53,8 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 		m.logger.Errorw("data load failed", "category", m.category, "error", err)
 	}
 	m.endTask(false)
+	if slices.ContainsFunc(m.keys.Context, func(b key.Binding) bool { return b.Help() == keys.Refresh.Help() }) {
+		return m.showErrorWithNext(msg.Error(), keys.Refresh.Help().Key+" retry")
+	}
 	return m.showToast(msg.Error(), toastError)
 }

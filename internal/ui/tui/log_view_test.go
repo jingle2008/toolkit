@@ -5,7 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
@@ -27,13 +29,14 @@ func TestFormatLogEntry(t *testing.T) {
 func TestRenderLogEntries_Empty(t *testing.T) {
 	t.Parallel()
 	m := &Model{log: logOverlay{store: logging.NewRingSink(4)}}
-	assert.Contains(t, m.renderLogEntries(80), "no log entries")
+	body, _, _ := m.renderLogEntries(80)
+	assert.Contains(t, body, "no log entries")
 }
 
 func TestRenderLogEntries_NilStore(t *testing.T) {
 	t.Parallel()
 	m := &Model{}
-	assert.NotPanics(t, func() { _ = m.renderLogEntries(80) })
+	assert.NotPanics(t, func() { _, _, _ = m.renderLogEntries(80) })
 }
 
 func TestRenderLogEntries_OrdersOldestToNewest(t *testing.T) {
@@ -42,7 +45,7 @@ func TestRenderLogEntries_OrdersOldestToNewest(t *testing.T) {
 	ring.Infow("first")
 	ring.Errorw("second")
 	m := &Model{log: logOverlay{store: ring}}
-	out := m.renderLogEntries(120)
+	out, _, _ := m.renderLogEntries(120)
 	assert.Less(t, strings.Index(out, "first"), strings.Index(out, "second"))
 	assert.Contains(t, out, "ERROR")
 }
@@ -56,7 +59,7 @@ func TestRenderLogEntries_WrapsInsteadOfTruncating(t *testing.T) {
 	ring.Infow(long)
 	m := &Model{log: logOverlay{store: ring}}
 
-	out := m.renderLogEntries(40)
+	out, _, _ := m.renderLogEntries(40)
 
 	assert.NotContains(t, out, "…", "entries should wrap, not truncate with an ellipsis")
 	assert.Contains(t, out, "\n", "a 100-char entry must wrap to multiple lines at width 40")
@@ -145,4 +148,93 @@ func TestLogOverlay_NilStoreDoesNotPanic(t *testing.T) {
 		_, _ = m.Update(backtick)
 		_ = m.render()
 	})
+}
+
+// openLog opens the log over the list with one entry per level.
+func openLog(t *testing.T) *Model {
+	t.Helper()
+	ring := logging.NewRingSink(16)
+	ring.Debugw("probe detail")
+	ring.Infow("loaded tenants")
+	ring.Warnw("slow watch")
+	ring.Errorw("drain failed", "node", "n1")
+	m := newLogModel(t, ring)
+	m.viewMode = common.ListView
+	_, _ = m.Update(backtick)
+	return m
+}
+
+// l cycles the minimum level all → info → warn → error → all.
+func TestLogView_LevelCycles(t *testing.T) {
+	t.Parallel()
+	m := openLog(t)
+	for _, want := range []int{4, 3, 2, 1, 4} {
+		_, shown, total := m.renderLogEntries(80)
+		assert.Equal(t, want, shown)
+		assert.Equal(t, 4, total)
+		m.updateLogView(keyPress("l"))
+	}
+}
+
+// / filters as it is typed; enter keeps the filter, then esc clears the
+// filters before a second esc closes the log.
+func TestLogView_FilterThenEsc(t *testing.T) {
+	t.Parallel()
+	m := openLog(t)
+	m.updateLogView(keyPress("/"))
+	require.True(t, m.log.typing)
+	for _, r := range "DRAIN" {
+		m.updateLogView(keyPress(string(r)))
+	}
+	body, shown, _ := m.renderLogEntries(80)
+	assert.Equal(t, 1, shown, "case-insensitive")
+	assert.Contains(t, body, "node=n1")
+
+	m.updateLogView(keyPress("enter"))
+	assert.False(t, m.log.typing)
+	assert.Equal(t, "DRAIN", m.log.filter)
+	assert.Contains(t, ansi.Strip(m.logCrumb(1, 4)), "⟨/DRAIN⟩")
+
+	m.updateLogView(keyPress("esc"))
+	assert.Empty(t, m.log.filter)
+	assert.Equal(t, common.LogView, m.viewMode, "the first esc clears the filter")
+	m.updateLogView(keyPress("esc"))
+	assert.Equal(t, common.ListView, m.viewMode)
+}
+
+// q and ` are text while typing a filter.
+func TestLogView_TypingTakesKeysAsText(t *testing.T) {
+	t.Parallel()
+	m := openLog(t)
+	m.updateLogView(keyPress("/"))
+	m.updateLogView(keyPress("q"))
+	m.updateLogView(keyPress("`"))
+	assert.Equal(t, "q`", m.log.filter)
+	assert.Equal(t, common.LogView, m.viewMode)
+}
+
+// A filter that hides everything says so and how to undo it.
+func TestLogView_NoMatches(t *testing.T) {
+	t.Parallel()
+	m := openLog(t)
+	m.log.filter = "zzz"
+	body, shown, total := m.renderLogEntries(80)
+	assert.Equal(t, 0, shown)
+	assert.Equal(t, 4, total)
+	assert.Contains(t, body, "no entries match · esc clears the filters")
+}
+
+// The log sits in the frame: env bar, breadcrumb, a titled panel and its
+// keys.
+func TestLogView_InFrame(t *testing.T) {
+	t.Parallel()
+	m := openLog(t)
+	m.viewWidth, m.viewHeight = 100, 20
+	out := ansi.Strip(m.logView())
+	lines := strings.Split(out, "\n")
+	assert.Len(t, lines, 20)
+	assert.Contains(t, lines[1], "Log")
+	assert.Contains(t, lines[1], "[4/4]")
+	assert.True(t, strings.HasPrefix(lines[2], "╭─ Log (4) "), lines[2])
+	assert.Contains(t, lines[len(lines)-1], "/ filter  l level")
 }

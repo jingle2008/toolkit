@@ -225,7 +225,7 @@ func TestConfirmView_IrreversibleRender(t *testing.T) {
 	assert.Contains(t, out, "⚠ Terminate node")
 	assert.Contains(t, out, "gpu-1")
 	assert.Contains(t, out, "Boot volume destroyed. Cannot undo.")
-	assert.Contains(t, out, "Y confirm")
+	assert.Contains(t, out, "Y (shift+y) confirm · y/n/esc cancel", "lowercase y cancels, and says so")
 	assert.Contains(t, out, "[ Terminate ]")
 }
 

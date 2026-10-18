@@ -1,20 +1,20 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  DedicatedAICluster                       Active: 2 • Failed: 1 • Size: 7 [1/3]
-╭─ D╭─ Command palette ────────────────────────────────────────────────────╮───╮
+╭─ 3╭─ Command palette ────────────────────────────────────────────────────╮───╮
 │ Na│ ›                                                                    │us │
 │───│                                                                      │───│
-│ da│ ▸ Tenant                                          t tenant  category │ve │
-│ da│   LimitDefinition                       ld limitdefinition  category │ve │
-│ da│   ConsolePropertyDefinition          cpd consolepropertyd…  category │ed │
-│   │   PropertyDefinition                 pd propertydefinition  category │   │
-│   │   LimitTenancyOverride               lto limittenancyover…  category │   │
-│   │   ConsolePropertyTenancyOverride     cpto consoleproperty…  category │   │
-│   │   PropertyTenancyOverride            pto propertytenancyo…  category │   │
-│   │   LimitRegionalOverride              lro limitregionalove…  category │   │
-│   │   ConsolePropertyRegionalOverride    cpro consoleproperty…  category │   │
-│   │   PropertyRegionalOverride           pro propertyregional…  category │   │
-│   │   BaseModel                                   bm basemodel  category │   │
-│   │   ImportedModel                           im importedmodel  category │   │
+│ da│ ▸ Tenant                                                 t  category │ve │
+│ da│   LimitDefinition                                       ld           │ve │
+│ da│   ConsolePropertyDefinition                            cpd           │ed │
+│   │   PropertyDefinition                                    pd           │   │
+│   │   LimitTenancyOverride                                 lto           │   │
+│   │   ConsolePropertyTenancyOverride                      cpto           │   │
+│   │   PropertyTenancyOverride                              pto           │   │
+│   │   LimitRegionalOverride                                lro           │   │
+│   │   ConsolePropertyRegionalOverride                     cpro           │   │
+│   │   PropertyRegionalOverride                             pro           │   │
+│   │   BaseModel                                             bm           │   │
+│   │   ImportedModel                                         im           │   │
 │   │   1–12 of 38                                                         │   │
 │   │                                                                      │   │
 │   │ ↑/↓ select · enter run · esc close                                   │   │

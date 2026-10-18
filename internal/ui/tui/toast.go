@@ -42,9 +42,10 @@ const (
 )
 
 type toastState struct {
-	msg string
-	sev toastSeverity
-	id  int
+	msg  string
+	sev  toastSeverity
+	id   int
+	next string // an error's next step, e.g. "r retry", shown in its hint
 }
 
 type toastExpireMsg struct{ id int }
@@ -65,6 +66,14 @@ func (m *Model) showToast(msg string, sev toastSeverity) tea.Cmd {
 	return tea.Tick(toastTTL, func(time.Time) tea.Msg {
 		return toastExpireMsg{id: id}
 	})
+}
+
+// showErrorWithNext raises an error toast whose hint names next, the
+// key that may fix it ("r retry").
+func (m *Model) showErrorWithNext(msg, next string) tea.Cmd {
+	cmd := m.showToast(msg, toastError)
+	m.toasts.active.next = next
+	return cmd
 }
 
 // handleToastExpireMsg removes the toast msg was scheduled for, if it is
@@ -165,6 +174,9 @@ func (m *Model) toastBox(t toastState, width int) string {
 			lines[maxErrorLines-1] = truncateString(lines[maxErrorLines-1]+" …", inner)
 		}
 		hint := "esc dismiss · " + keys.ToggleLog.Help().Key + " log"
+		if t.next != "" {
+			hint = t.next + " · " + hint
+		}
 		msg = strings.Join(lines, "\n") + "\n" + lipgloss.NewStyle().Foreground(m.theme.Palette.Muted).Render(hint)
 	}
 	fit := min(width, max(lipgloss.Width(msg), lipgloss.Width(title)+2)+4)

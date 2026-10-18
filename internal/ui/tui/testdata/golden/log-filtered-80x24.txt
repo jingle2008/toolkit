@@ -1,0 +1,24 @@
+ oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
+ Log   following  ⟨/category 4⟩                                         [11/60]
+╭─ Log (60) ───────────────────────────────────────────────────────────────────╮
+│ hh:mm:ss INFO  loaded category 4 rows=12                                     │
+│ hh:mm:ss INFO  loaded category 40 rows=120                                   │
+│ hh:mm:ss INFO  loaded category 41 rows=123                                   │
+│ hh:mm:ss INFO  loaded category 42 rows=126                                   │
+│ hh:mm:ss INFO  loaded category 43 rows=129                                   │
+│ hh:mm:ss INFO  loaded category 44 rows=132                                   │
+│ hh:mm:ss INFO  loaded category 45 rows=135                                   │
+│ hh:mm:ss INFO  loaded category 46 rows=138                                   │
+│ hh:mm:ss INFO  loaded category 47 rows=141                                   │
+│ hh:mm:ss INFO  loaded category 48 rows=144                                   │
+│ hh:mm:ss INFO  loaded category 49 rows=147                                   │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ / filter  l level  end follow  home top  ` close

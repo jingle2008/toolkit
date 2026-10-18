@@ -202,6 +202,11 @@ var goldenViews = []struct {
 		_ = m.render() // first render follows the tail
 		m.log.viewport.SetYOffset(0)
 	}},
+	{"log-filtered", func(t *testing.T, m *Model) {
+		showCategory(t, m, domain.DedicatedAICluster)
+		m.viewMode = common.LogView
+		m.log.filter = "category 4"
+	}},
 	{"confirm-recoverable", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.GPUNode)
 		m.requestConfirm(confirmOverlay{act: mutation.DrainNode, target: "10.0.0.11", run: nopRun})

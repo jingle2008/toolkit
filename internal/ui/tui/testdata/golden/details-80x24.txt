@@ -1,5 +1,5 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
- DedicatedAICluster › acme/dac-alpha                                   [fields]
+ DedicatedAICluster                                                    [fields]
 ╭─ acme/dac-alpha ─────────────────────────────────────────────────────────────╮
 │ Name            dac-alpha                                                    │
 │ Status          Active                                                       │

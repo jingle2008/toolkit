@@ -51,6 +51,12 @@ type logOverlay struct {
 	store      *logging.RingSink
 	viewport   *viewport.Model
 	returnView common.ViewMode
+	// minLevel hides entries below it; filter keeps entries containing it
+	// (case-insensitive), typed into input while typing.
+	minLevel logging.Level
+	filter   string
+	input    textinput.Model
+	typing   bool
 }
 
 // toastManager holds the transient banners shown over the active view.
@@ -121,10 +127,13 @@ type Model struct {
 	confirm       confirmOverlay  // destructive-action confirmation modal state
 	rowPicker     rowPickerState  // modal row picker state (go to, metrics DAC)
 	palette       paletteState    // command palette state
-	preview       bool            // preview pane toggled on (shown when wide enough)
-	uiState       uistate.State   // persisted UI preferences
-	uiStatePath   string          // where uiState is saved ("" disables saving and the hint)
-	keysHint      bool            // the keys-changed hint is showing
+	// paletteRecent names the palette items run this session, newest
+	// first (paletteRecentMax at most), by paletteItem.id.
+	paletteRecent []string
+	preview       bool          // preview pane toggled on (shown when wide enough)
+	uiState       uistate.State // persisted UI preferences
+	uiStatePath   string        // where uiState is saved ("" disables saving and the hint)
+	keysHint      bool          // the keys-changed hint is showing
 	selectedKey   models.ItemKey
 	viewport      *viewport.Model
 	renderer      view.Renderer
