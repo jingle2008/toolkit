@@ -2,14 +2,14 @@ Realm:   oc1                  <ctrl+x>  Delete                     | | | | |
 Type:╭─ Keys · List view ─────────────────────────────────────────────────╮--.
 Regio│ Resource Actions                   List View Actions               │  |-
 Conte│   <o>         Go to related          <[>         History Back      │  |-
-K8s: │   <shift+f>   Sort Free              <]>         History Forward   │  |-
-Versi│   <shift+t>   Sort Type              <tab>       Next Category     │--'
- GPUN│   <shift+a>   Sort Age               <shift+tab> Previous Category │1/2]
+K8s: │   s f         Sort Free              <]>         History Forward   │  |-
+Versi│   s t         Sort Type              <tab>       Next Category     │--'
+ GPUN│   s a         Sort Age               <shift+tab> Previous Category │1/2]
 ┌────│   <r>         Refresh                <:cmd>      Command mode      │────┐
 │ Nam│   <shift+c>   Toggle Cordon          </term>     Filter mode       │    │
 │────│   <shift+d>   Drain                  <p>         Paste Filter      │────│
 │ 10.│ ↓ more · 0%                                                        │    │
 │ 10.│                                                                    │    │
-│    │ j/k pgup/pgdn home/end scroll · esc close                          │    │
+│    │ j/k pgup/pgdn gg/G scroll · esc close                              │    │
 │    ╰────────────────────────────────────────────────────────────────────╯    │
 └──────────────────────────────────────────────────────────────────────────────┘

@@ -15,21 +15,21 @@ Version: v1.2.3               <shift+c> Toggle Cordon                           
 │                                              ╭─ Keys · List view ────────────────────────────────────────────────────────────────────────────────────╮                                               │
 │                                              │ Resource Actions                   List View Actions                  General Actions                 │                                               │
 │                                              │   <o>         Go to related          <[>         History Back           <?/h>       Help              │                                               │
-│                                              │   <shift+f>   Sort Free              <]>         History Forward        <y>         Toggle Details    │                                               │
-│                                              │   <shift+t>   Sort Type              <tab>       Next Category          <c>         Copy              │                                               │
-│                                              │   <shift+a>   Sort Age               <shift+tab> Previous Category      <`>         Toggle Log        │                                               │
+│                                              │   s f         Sort Free              <]>         History Forward        <y>         Toggle Details    │                                               │
+│                                              │   s t         Sort Type              <tab>       Next Category          <c>         Copy              │                                               │
+│                                              │   s a         Sort Age               <shift+tab> Previous Category      <`>         Toggle Log        │                                               │
 │                                              │   <r>         Refresh                <:cmd>      Command mode           <esc>       Back/Clear        │                                               │
 │                                              │   <shift+c>   Toggle Cordon          </term>     Filter mode            <q>         Quit              │                                               │
 │                                              │   <shift+d>   Drain                  <p>         Paste Filter                                         │                                               │
-│                                              │   <ctrl+z>    Toggle Faulty          <shift+n>   Sort Name            Table Actions                   │                                               │
+│                                              │   <ctrl+z>    Toggle Faulty          s n         Sort Name            Table Actions                   │                                               │
 │                                              │   <shift+r>   Restart                <enter>     View/Enter             ↑/k         up                │                                               │
 │                                              │   <ctrl+x>    Delete                 <ctrl+a>    Toggle Alias           ↓/j         down              │                                               │
 │                                              │                                      <e>         Export CSV             u           ½ page up         │                                               │
 │                                              │                                                                         d           ½ page down       │                                               │
 │                                              │                                                                         b/pgup      page up           │                                               │
 │                                              │                                                                         f/pgdn      page down         │                                               │
-│                                              │                                                                         g/home      go to start       │                                               │
-│                                              │                                                                         end         go to end         │                                               │
+│                                              │                                                                         gg/home     go to start       │                                               │
+│                                              │                                                                         G/end       go to end         │                                               │
 │                                              │                                                                                                       │                                               │
 │                                              │ esc close                                                                                             │                                               │
 │                                              ╰───────────────────────────────────────────────────────────────────────────────────────────────────────╯                                               │

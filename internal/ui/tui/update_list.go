@@ -15,6 +15,11 @@ import (
 )
 
 func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Keys the prefix machine takes (g, s and whatever follows them) must
+	// not also reach the table, which would act on them on its own.
+	if km, ok := msg.(tea.KeyPressMsg); ok && m.usesListKey(km.String()) {
+		return m, tea.Batch(m.routeListMsg(msg)...)
+	}
 	cmds := m.routeListMsg(msg)
 
 	updatedTable, cmd := m.table.Update(msg)
@@ -74,6 +79,13 @@ func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
+	// Prefix sequences come first, so esc with a prefix pending cancels
+	// only the prefix, not the filter or scope.
+	if m.inputMode == common.NormalInput {
+		if seq, used, cmd := m.feedPrefix(msg.String(), listLeaders...); used {
+			return []tea.Cmd{cmd, m.handleListSequence(seq)}
+		}
+	}
 	// While typing, esc closes the input and clears an applied filter,
 	// but never drops the scope: that takes a second esc.
 	if key.Matches(msg, keys.Back) && (m.inputMode == common.NormalInput || m.filter != "") {

@@ -12,9 +12,9 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// G is Sort GPUs; the table no longer also takes it as go-to-bottom, so
-// sorting leaves the cursor where it was. end still goes to the last row.
-func TestShiftG_SortsWithoutJumpingToBottom(t *testing.T) {
+// Sort GPUs moved to s g, freeing G: it goes to the last row, and gg to
+// the first. A lone g moves nothing (it waits for the second key).
+func TestGoToEnds_AndSortByPrefix(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.dataset.GPUPools = []models.GPUPool{{Name: "a"}, {Name: "b"}, {Name: "c"}, {Name: "d"}}
@@ -25,10 +25,17 @@ func TestShiftG_SortsWithoutJumpingToBottom(t *testing.T) {
 	m.updateRows(true)
 	m.table.SetCursor(1)
 
-	_, _ = m.Update(keyPress("G"))
+	_, _ = m.Update(keyPress("s"))
+	_, _ = m.Update(keyPress("g"))
 	assert.Equal(t, "GPUs", m.sortColumn)
-	assert.Equal(t, 1, m.table.Cursor(), "G must not also jump to the last row")
+	assert.Equal(t, 1, m.table.Cursor(), "sorting must not move the cursor")
 
+	_, _ = m.Update(keyPress("G"))
+	assert.Equal(t, 3, m.table.Cursor())
+	_, _ = m.Update(keyPress("g"))
+	assert.Equal(t, 3, m.table.Cursor(), "a lone g waits")
+	_, _ = m.Update(keyPress("g"))
+	assert.Equal(t, 0, m.table.Cursor())
 	_, _ = m.Update(keyPress("end"))
 	assert.Equal(t, 3, m.table.Cursor())
 }

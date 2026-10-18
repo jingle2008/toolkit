@@ -24,6 +24,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.onResize(msg)
+	case prefixTimeoutMsg:
+		m.handlePrefixTimeout(msg)
+		return m, nil
 	case tea.BackgroundColorMsg:
 		setStyles(m, DefaultStyles(msg.IsDark()))
 		return m, nil

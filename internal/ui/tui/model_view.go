@@ -104,7 +104,8 @@ func (m *Model) statusView() string {
 	// it here rather than in updateLayout. We deliberately operate on
 	// a copy of the textinput so View() stays pure — the original
 	// *m.textInput owned by the reducer is never mutated.
-	inputWidth := max(m.viewWidth-w(contextCell)-w(loadingCell)-w(liveCell)-w(statsCell)-
+	prefixCell := m.prefixCell()
+	inputWidth := max(m.viewWidth-w(contextCell)-w(prefixCell)-w(loadingCell)-w(liveCell)-w(statsCell)-
 		w(m.textInput.Prompt)-1, 0)
 	ti := *m.textInput
 	ti.SetWidth(inputWidth)
@@ -114,6 +115,7 @@ func (m *Model) statusView() string {
 		lipgloss.Top,
 		contextCell,
 		inputCell,
+		prefixCell,
 		loadingCell,
 		liveCell,
 		statsCell,
@@ -167,14 +169,22 @@ func (m *Model) View() tea.View {
 	return v
 }
 
-// render draws the active view as a string, with any toasts composited
-// over its bottom-right corner so they never shift the layout.
+// render draws the active view as a string, with any toasts and the
+// which-key popup composited over its bottom-right corner so they never
+// shift the layout.
 func (m *Model) render() string {
 	body := m.renderMode(m.viewMode)
-	if m.toasts.active == nil {
+	var corner []string
+	if m.toasts.active != nil {
+		corner = append(corner, m.renderToasts())
+	}
+	if m.prefix.whichKey {
+		corner = append(corner, m.whichKeyBox())
+	}
+	if len(corner) == 0 {
 		return body
 	}
-	return view.Corner(body, m.renderToasts(), m.viewWidth, m.viewHeight)
+	return view.Corner(body, lipgloss.JoinVertical(lipgloss.Right, corner...), m.viewWidth, m.viewHeight)
 }
 
 // renderMode draws one view mode. Modal modes draw over the view they

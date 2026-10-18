@@ -185,23 +185,23 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 ### Task 6.1: Sequence matcher
 **Files:** `keys/sequence.go` (new), plus `model_update.go` dispatch.
-- [ ] Add `type Sequence []string` and allow a binding to carry one. Add
+- [x] Add `type Sequence []string` and allow a binding to carry one. Add
   `Matcher.Feed(key) (match *Binding, pending bool)`.
-- [ ] Add model state `pending []string` and `pendingGen`. A
+- [x] Add model state `pending []string` and `pendingGen`. A
   `prefixTimeoutMsg{gen}` arriving after 400 ms opens which-key; stale gens are ignored.
-- [ ] Text-entry modes bypass the matcher. `esc` or a non-matching continuation cancels,
+- [x] Text-entry modes bypass the matcher. `esc` or a non-matching continuation cancels,
   and the key is not replayed.
-- [ ] Tests: match, timeout, stale tick, cancel, bypass.
+- [x] Tests: match, timeout, stale tick, cancel, bypass.
 
 ### Task 6.2: Keymap migration
 **Files:** `keys/registry.go` and `keys/key_map.go`, plus their tests.
-- [ ] Replace the 14 `Sort*` bindings with one derivation: `SortKeys(cat) map[col]rune`.
+- [x] Replace the 14 `Sort*` bindings with one derivation: `SortKeys(cat) map[col]rune`.
   It takes each sortable column's first letter and falls back to the next free letter
   of the column name within that category. The `s ⟨key⟩` sequences are built from it.
   Make `G`/`end` go to the bottom and `g g`/`home` go to the top for the table, help and
   preview. Add `v` for the preview (a no-op until Phase 9).
-- [ ] Update `SortableColumns` and `FullHelp` to read the derived keys.
-- [ ] Tests:
+- [x] Update `SortableColumns` and `FullHelp` to read the derived keys.
+- [x] Tests:
   - Every category's derived keys equal first letters today (table-driven against the
     spec table).
   - The fallback picks the next free letter (synthetic clashing columns).
@@ -209,15 +209,20 @@ atomically, then redesign phase by phase, updating goldens on purpose.
   - Across all of `catContext`, a shift+letter key never appears with two different
     descriptions.
   - No sequence prefix collides with a single-key binding.
-- [ ] Update `registry_conflict_test.go` and `category_drift_test.go`.
+- [x] Update `registry_conflict_test.go` and `category_drift_test.go`.
 
 ### Task 6.3: Pending-prefix display
-- [ ] Show the pending prefix in the breadcrumb area.
-- [ ] `s` pending: the table header underlines each sortable column's key letter (the
+- [x] Show the pending prefix in the breadcrumb area.
+- [x] `s` pending: the table header underlines each sortable column's key letter (the
   derived key's position in the column name). No popup. Test that the underlined index
   matches `SortKeys` in an ANSI-preserving test.
-- [ ] `g` pending: after the timeout, a small `Corner` which-key overlay lists the valid
+- [x] `g` pending: after the timeout, a small `Corner` which-key overlay lists the valid
   continuations.
+
+**Phase 6 notes:**
+- The prefix engine lives in the model (`prefix.go`), not in `keys/sequence.go`. It has only two leaders (`g`, `s`), so a generic `Matcher` wasn't worth it. Sort declarations stay `key.Binding`s, which `ResolveKeys` binds to `s ⟨key⟩` per category. That lets help show the sequence and the existing per-category conflict test check sort-key uniqueness.
+- `gg`/`G` apply to the table and help. Details view is unchanged.
+- A pending prefix takes the next key before any other handler. In help, that means `esc` with `g` pending cancels the prefix instead of closing help.
 
 ## Phase 7: Frame
 
