@@ -75,16 +75,21 @@ func TestEscInFilterInput_ClearsAppliedFilter(t *testing.T) {
 // toggle; in normal input it still opens the log.
 func TestBacktickInInput_IsText(t *testing.T) {
 	t.Parallel()
-	for _, open := range []string{"/", ":"} {
-		m := newGoToModel(t)
-		m.viewMode = common.ListView
-		_, _ = m.Update(keyPress(open))
-		_, _ = m.Update(keyPress("`"))
-		assert.Equalf(t, common.ListView, m.viewMode, "%s input", open)
-		assert.Equalf(t, "`", m.textInput.Value(), "%s input", open)
-	}
-
 	m := newGoToModel(t)
+	m.viewMode = common.ListView
+	_, _ = m.Update(keyPress("/"))
+	_, _ = m.Update(keyPress("`"))
+	assert.Equal(t, common.ListView, m.viewMode, "filter input")
+	assert.Equal(t, "`", m.textInput.Value(), "filter input")
+
+	m = newGoToModel(t)
+	m.viewMode = common.ListView
+	_, _ = m.Update(keyPress(":"))
+	_, _ = m.Update(keyPress("`"))
+	assert.Equal(t, common.PaletteView, m.viewMode, "palette query")
+	assert.Equal(t, "`", m.palette.input.Value(), "palette query")
+
+	m = newGoToModel(t)
 	m.viewMode = common.ListView
 	_, _ = m.Update(keyPress("`"))
 	assert.Equal(t, common.LogView, m.viewMode)

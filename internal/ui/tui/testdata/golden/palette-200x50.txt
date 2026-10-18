@@ -1,0 +1,50 @@
+ oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                                                                                                                                           v1.2.3
+ DedicatedAICluster                                                                                                                                               Active: 2 • Failed: 1 • Size: 7 [1/3]
+╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Name ↑                                 Tenant ↕                         Internal ↕       Usage ↕      Type         Model              Shape/Profile          Size ↕     Age ↕      Status            │
+│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ dac-alpha                              acme                             false            75%          Hosting                         A100_80G               4          12d        Active            │
+│ dac-orphan                             orphan                                            0%           Hosting                         A10                    1          41d        Active            │
+│ dac-日本語                             acme                             false            100%         Fine-tuning                     H100                   2          3d         Failed            │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                               ╭─ Command palette ────────────────────────────────────────────────────╮                                                               │
+│                                                               │ ›                                                                    │                                                               │
+│                                                               │                                                                      │                                                               │
+│                                                               │ ▸ Tenant                                          t tenant  category │                                                               │
+│                                                               │   LimitDefinition                       ld limitdefinition  category │                                                               │
+│                                                               │   ConsolePropertyDefinition          cpd consolepropertyd…  category │                                                               │
+│                                                               │   PropertyDefinition                 pd propertydefinition  category │                                                               │
+│                                                               │   LimitTenancyOverride               lto limittenancyover…  category │                                                               │
+│                                                               │   ConsolePropertyTenancyOverride     cpto consoleproperty…  category │                                                               │
+│                                                               │   PropertyTenancyOverride            pto propertytenancyo…  category │                                                               │
+│                                                               │   LimitRegionalOverride              lro limitregionalove…  category │                                                               │
+│                                                               │   ConsolePropertyRegionalOverride    cpro consoleproperty…  category │                                                               │
+│                                                               │   PropertyRegionalOverride           pro propertyregional…  category │                                                               │
+│                                                               │   BaseModel                                   bm basemodel  category │                                                               │
+│                                                               │   ImportedModel                           im importedmodel  category │                                                               │
+│                                                               │   1–12 of 37                                                         │                                                               │
+│                                                               │                                                                      │                                                               │
+│                                                               │ ↑/↓ select · enter run · esc close                                   │                                                               │
+│                                                               ╰──────────────────────────────────────────────────────────────────────╯                                                               │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+│                                                                                                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ o go to related  t copy tenant id  E edit tenant  m open metrics  r refresh  ^z toggle faulty  ^x delete  s sort  / filter mode  : command mode  ? more

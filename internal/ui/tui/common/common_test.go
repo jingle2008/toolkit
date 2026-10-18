@@ -12,7 +12,6 @@ func TestEditTargetString(t *testing.T) {
 	}{
 		{NoneTarget, "none"},
 		{FilterTarget, "filter"},
-		{AliasTarget, "alias"},
 		{EditTarget(99), "unknown"},
 	}
 	for _, tt := range tests {

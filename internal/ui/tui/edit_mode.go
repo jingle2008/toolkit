@@ -17,17 +17,6 @@ func (m *Model) beginEditInput(target common.EditTarget) {
 	m.textInput.Focus()
 }
 
-// enterAliasMode enters the alias-completion (command) mode: starts
-// from an empty input and offers the category alias list as
-// completions. No tea.Cmd return: alias mode is purely a state flip,
-// no async work is dispatched.
-func (m *Model) enterAliasMode() {
-	m.beginEditInput(common.AliasTarget)
-	m.textInput.Reset()
-	m.textInput.ShowSuggestions = len(domain.Aliases) > 0
-	m.textInput.SetSuggestions(domain.Aliases)
-}
-
 // enterFilterMode enters the filter mode: keeps the current input
 // so re-entering filter mode preserves the partial. When the input
 // is non-empty, also clears any active filter/scope
@@ -58,7 +47,7 @@ func (m *Model) backToLastState() tea.Cmd {
 }
 
 func (m *Model) exitEditMode(resetInput bool) {
-	if m.editTarget == common.AliasTarget || resetInput {
+	if resetInput {
 		m.textInput.SetSuggestions([]string{})
 		m.textInput.ShowSuggestions = false
 	}

@@ -22,6 +22,8 @@ const (
 	ConfirmView
 	// RowPickerView is the modal row picker (go to related, choose a DAC).
 	RowPickerView
+	// PaletteView is the command palette (:).
+	PaletteView
 )
 
 // String returns the string representation of the ViewMode.
@@ -45,6 +47,8 @@ func (v ViewMode) String() string {
 		return "Confirm"
 	case RowPickerView:
 		return "RowPicker"
+	case PaletteView:
+		return "Palette"
 	default:
 		return "Unknown"
 	}

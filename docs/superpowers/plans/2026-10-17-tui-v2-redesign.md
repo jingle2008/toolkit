@@ -245,14 +245,22 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 **Files:** `palette.go` (new), `update_list.go` (CommandMode entry), `go.mod`
 (`github.com/sahilm/fuzzy`).
-- [ ] Palette items come from categories with their aliases, recent environments followed
+- [x] Palette items come from categories with their aliases, recent environments followed
   by everything in `m.dataset.Environments`, the current context actions, and the toggles.
   Each item carries a `run func() tea.Cmd`.
-- [ ] Fuzzy ranking with highlighted matches. An exact alias match always wins on `enter`.
+- [x] Fuzzy ranking with highlighted matches. An exact alias match always wins on `enter`.
   Show at most 12 rows, scrolling.
-- [ ] Tests: an exact alias reaches the same `updateCategory` path as today, ranking is
+- [x] Tests: an exact alias reaches the same `updateCategory` path as today, ranking is
   stable, environment selection calls `switchEnvironment`, and actions dispatch through
   `handleItemActions`.
+
+**Phase 8 notes:**
+- `:` opens the palette in a new modal mode, `PaletteView`. The old alias edit mode is removed (`enterAliasMode`, `common.AliasTarget`, `changeCategory`), and the exact-alias rule replaces it.
+- Ranking: the category an exact alias names comes first, then fuzzy label matches, then items found only by their hint. Labels and hints are matched separately, after a real-TUI check showed `dac` matching an environment as d(p-prod) a(p-…) c(huncheon).
+- Environments are listed only in environment-scoped categories, the same rule as quick switch.
+- Actions run through `handleNormalKeys` with the binding's key, so they behave exactly like pressing it.
+- `enter` with no match leaves the palette open so the query can be edited.
+- The preview toggle joins the palette in Phase 9.
 
 ## Phase 9: Preview split
 

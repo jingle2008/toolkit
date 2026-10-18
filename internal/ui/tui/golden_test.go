@@ -212,6 +212,14 @@ var goldenViews = []struct {
 		showCategory(t, m, domain.DedicatedAICluster)
 		m.openRowPicker("Go to", "go", pickerTargets(12), nil)
 	}},
+	{"palette", func(t *testing.T, m *Model) {
+		showCategory(t, m, domain.DedicatedAICluster)
+		m.openPalette()
+	}},
+	{"palette-query", func(t *testing.T, m *Model) {
+		showCategory(t, m, domain.DedicatedAICluster)
+		typePalette(m, "gpu")
+	}},
 	{"toast-error", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
 		m.showToast("render failed: boom", toastError)

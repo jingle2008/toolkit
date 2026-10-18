@@ -172,6 +172,8 @@ func (m *Model) delegateToActiveView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateConfirmView(msg)
 	case common.RowPickerView:
 		return m.updateRowPickerView(msg)
+	case common.PaletteView:
+		return m.updatePaletteView(msg)
 	}
 	return m, nil
 }

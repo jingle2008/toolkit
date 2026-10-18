@@ -120,6 +120,7 @@ type Model struct {
 	prefix        string          // pending prefix key (keys.SortLeader) or ""
 	confirm       confirmOverlay  // destructive-action confirmation modal state
 	rowPicker     rowPickerState  // modal row picker state (go to, metrics DAC)
+	palette       paletteState    // command palette state
 	selectedKey   models.ItemKey
 	viewport      *viewport.Model
 	renderer      view.Renderer

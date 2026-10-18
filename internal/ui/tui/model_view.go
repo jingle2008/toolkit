@@ -112,6 +112,8 @@ func (m *Model) renderMode(mode common.ViewMode) string {
 		return m.overlayModal(m.confirm.returnView, m.confirmView())
 	case common.RowPickerView:
 		return m.overlayModal(m.rowPicker.returnView, m.rowPickerView())
+	case common.PaletteView:
+		return m.overlayModal(m.palette.returnView, m.paletteView())
 	default:
 		return ""
 	}
