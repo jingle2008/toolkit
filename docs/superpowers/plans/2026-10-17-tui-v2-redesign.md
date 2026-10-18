@@ -265,12 +265,17 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 ## Phase 9: Preview split
 
 **Files:** `preview.go` (new), `model_reducer.go` (`updateLayout`), `model_view.go`.
-- [ ] `v` toggles `m.preview.on`. Below 160 columns it shows a toast instead. Turning it on
+- [x] `v` toggles `m.preview.on`. Below 160 columns it shows a toast instead. Turning it on
   splits the table area 60/40.
-- [ ] A condensed key/value summary of the selected item: top-level scalars, with nested
+- [x] A condensed key/value summary of the selected item: top-level scalars, with nested
   values collapsed. Debounce updates on cursor moves using the existing generation
   pattern.
-- [ ] Tests: the width gate, the layout widths, and stale summary messages being dropped.
+- [x] Tests: the width gate, the layout widths, and stale summary messages being dropped.
+
+**Phase 9 notes:**
+- No debounce: the summary is built during render from the selected item (one `findItem` plus reflection over a single struct), so it is always current, including after a live reload. There is no stale-generation path to guard.
+- The summary uses JSON field names in declaration order, like the details view. Empty strings and nil pointers show as —, nested structs as {…}, slices and maps as [n].
+- The toggle persists for the session. Narrowing below 160 columns hides the pane and widening brings it back. It is also in the palette.
 
 ## Phase 10: Keys-changed hint and docs
 

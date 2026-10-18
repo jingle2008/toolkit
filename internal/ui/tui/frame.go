@@ -26,8 +26,14 @@ func (m *Model) centered(msg string) string {
 // a titled panel, and the footer of key hints.
 func (m *Model) frame(title, main string) string {
 	p := m.theme.Palette
-	panel := view.Panel(title, main, p.Border,
-		lipgloss.NewStyle().Foreground(p.Primary).Bold(true), m.viewWidth)
+	titleStyle := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
+	var panel string
+	if m.previewShown() {
+		left := view.Panel(title, main, p.Border, titleStyle, m.viewWidth-m.previewOuterWidth())
+		panel = lipgloss.JoinHorizontal(lipgloss.Top, left, m.previewPanel(lipgloss.Height(left)-2))
+	} else {
+		panel = view.Panel(title, main, p.Border, titleStyle, m.viewWidth)
+	}
 	return lipgloss.JoinVertical(lipgloss.Left, m.envBar(), m.statusView(), panel, m.footer())
 }
 

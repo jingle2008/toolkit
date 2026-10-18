@@ -22,8 +22,8 @@
 │      │   <ctrl+z>    Toggle Faulty          s n         Sort Name            Table Actions                   │       │
 │      │   <shift+r>   Restart                <enter>     View/Enter             ↑/k         up                │       │
 │      │   <ctrl+x>    Delete                 <ctrl+a>    Toggle Alias           ↓/j         down              │       │
-│      │                                      <e>         Export CSV             u           ½ page up         │       │
-│      │                                                                         d           ½ page down       │       │
+│      │                                      <v>         Toggle Preview         u           ½ page up         │       │
+│      │                                      <e>         Export CSV             d           ½ page down       │       │
 │      │                                                                         b/pgup      page up           │       │
 │      │                                                                         f/pgdn      page down         │       │
 │      │                                                                         g/home      go to start       │       │
