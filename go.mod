@@ -14,7 +14,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/golangci/golangci-lint/v2 v2.14.0
 	github.com/hashicorp/hcl/v2 v2.25.0
-	github.com/mattn/go-runewidth v0.0.30
+	github.com/mattn/go-runewidth v0.0.31
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/oracle/oci-go-sdk/v65 v65.126.2
 	github.com/spf13/cobra v1.10.2
