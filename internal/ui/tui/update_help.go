@@ -7,28 +7,21 @@ import (
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
-// updateHelpView scrolls help (j/k, pgup/pgdn, home/end, gg/G) and closes
-// it on esc or the help key. A pending g takes the next key first, so esc
-// then cancels just the prefix.
+// updateHelpView scrolls help (j/k, pgup/pgdn, g/G, home/end) and closes
+// it on esc or the help key.
 func (m *Model) updateHelpView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	keyMsg, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return m, nil
 	}
-	if key.Matches(keyMsg, keys.Quit) && m.prefix.key == "" {
+	switch {
+	case key.Matches(keyMsg, keys.Back, keys.Help):
+		m.viewMode = m.lastViewMode
+	case key.Matches(keyMsg, keys.Quit):
 		m.cancelInFlight()
 		return m, tea.Quit
+	default:
+		m.scrollHelp(keyMsg.String())
 	}
-	if seq, used, cmd := m.feedPrefix(keyMsg.String(), gotoLeader); used {
-		if seq == gotoLeader+" "+gotoLeader {
-			m.scrollHelp("home")
-		}
-		return m, cmd
-	}
-	if key.Matches(keyMsg, keys.Back, keys.Help) {
-		m.viewMode = m.lastViewMode
-		return m, nil
-	}
-	m.scrollHelp(keyMsg.String())
 	return m, nil
 }

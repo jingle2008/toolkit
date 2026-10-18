@@ -169,22 +169,14 @@ func (m *Model) View() tea.View {
 	return v
 }
 
-// render draws the active view as a string, with any toasts and the
-// which-key popup composited over its bottom-right corner so they never
-// shift the layout.
+// render draws the active view as a string, with any toasts composited
+// over its bottom-right corner so they never shift the layout.
 func (m *Model) render() string {
 	body := m.renderMode(m.viewMode)
-	var corner []string
-	if m.toasts.active != nil {
-		corner = append(corner, m.renderToasts())
-	}
-	if m.prefix.whichKey {
-		corner = append(corner, m.whichKeyBox())
-	}
-	if len(corner) == 0 {
+	if m.toasts.active == nil {
 		return body
 	}
-	return view.Corner(body, lipgloss.JoinVertical(lipgloss.Right, corner...), m.viewWidth, m.viewHeight)
+	return view.Corner(body, m.renderToasts(), m.viewWidth, m.viewHeight)
 }
 
 // renderMode draws one view mode. Modal modes draw over the view they

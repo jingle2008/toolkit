@@ -166,7 +166,7 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 ### Task 5.5: Help redesign
 - [x] Pack sections into balanced columns column by column (1–3 columns from the width).
 - [x] When the packed height exceeds the max, use an inner viewport with a `↓ more`
-  indicator and `j`/`k`/`pgup`/`pgdn`/`home`/`end` keys. `gg`/`G` come in Phase 6.
+  indicator and `j`/`k`/`pgup`/`pgdn`/`home`/`end` keys. `g`/`G` come in Phase 6.
 - [x] The 80×15 help golden now shows a scroll indicator and no truncation. Add a unit
   test that every binding is reachable by scrolling.
 
@@ -183,23 +183,19 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 ## Phase 6: Prefix engine and new keymap
 
-### Task 6.1: Sequence matcher
-**Files:** `keys/sequence.go` (new), plus `model_update.go` dispatch.
-- [x] Add `type Sequence []string` and allow a binding to carry one. Add
-  `Matcher.Feed(key) (match *Binding, pending bool)`.
-- [x] Add model state `pending []string` and `pendingGen`. A
-  `prefixTimeoutMsg{gen}` arriving after 400 ms opens which-key; stale gens are ignored.
-- [x] Text-entry modes bypass the matcher. `esc` or a non-matching continuation cancels,
-  and the key is not replayed.
-- [x] Tests: match, timeout, stale tick, cancel, bypass.
+### Task 6.1: Sort prefix
+**Files:** `prefix.go` (new), plus `update_list.go` dispatch.
+- [x] Model state `prefix` holds the pending prefix (`s`). The next key completes the
+  sequence; `esc` or a non-matching continuation cancels, and the key is not replayed.
+- [x] Text-entry modes bypass the prefix.
+- [x] Tests: sort by key, cancel, esc keeps the filter, bypass, status marker.
 
 ### Task 6.2: Keymap migration
 **Files:** `keys/registry.go` and `keys/key_map.go`, plus their tests.
 - [x] Replace the 14 `Sort*` bindings with one derivation: `SortKeys(cat) map[col]rune`.
   It takes each sortable column's first letter and falls back to the next free letter
   of the column name within that category. The `s ⟨key⟩` sequences are built from it.
-  Make `G`/`end` go to the bottom and `g g`/`home` go to the top for the table, help and
-  preview. Add `v` for the preview (a no-op until Phase 9).
+  Make `G`/`end` go to the bottom and `g`/`home` go to the top for the table and help.
 - [x] Update `SortableColumns` and `FullHelp` to read the derived keys.
 - [x] Tests:
   - Every category's derived keys equal first letters today (table-driven against the
@@ -216,13 +212,11 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 - [x] `s` pending: the table header underlines each sortable column's key letter (the
   derived key's position in the column name). No popup. Test that the underlined index
   matches `SortKeys` in an ANSI-preserving test.
-- [x] `g` pending: after the timeout, a small `Corner` which-key overlay lists the valid
-  continuations.
 
 **Phase 6 notes:**
-- The prefix engine lives in the model (`prefix.go`), not in `keys/sequence.go`. It has only two leaders (`g`, `s`), so a generic `Matcher` wasn't worth it. Sort declarations stay `key.Binding`s, which `ResolveKeys` binds to `s ⟨key⟩` per category. That lets help show the sequence and the existing per-category conflict test check sort-key uniqueness.
-- `gg`/`G` apply to the table and help. Details view is unchanged.
-- A pending prefix takes the next key before any other handler. In help, that means `esc` with `g` pending cancels the prefix instead of closing help.
+- `gg` and the which-key popup were dropped after review. `gg` began as a question, not a requirement, and the popup only ever had one entry. `g`/`G` are single keys for top/bottom of the table and help. The details view is unchanged.
+- The sort prefix lives in the model (`prefix.go`) rather than a generic `keys/sequence.go` matcher, since it is the only prefix. Sort declarations stay `key.Binding`s, which `ResolveKeys` binds to `s ⟨key⟩` per category. That lets help show the sequence and the existing per-category conflict test check sort-key uniqueness.
+- `v` (preview toggle) is added with Phase 9, not here.
 
 ## Phase 7: Frame
 

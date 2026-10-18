@@ -23,7 +23,7 @@ Version: v1.2.3               <shift+c> Toggle Cordon                           
 │      │                                                                         d           ½ page down       │       │
 │      │                                                                         b/pgup      page up           │       │
 │      │                                                                         f/pgdn      page down         │       │
-│      │                                                                         gg/home     go to start       │       │
+│      │                                                                         g/home      go to start       │       │
 │      │                                                                         G/end       go to end         │       │
 │      │                                                                                                       │       │
 │      │ esc close                                                                                             │       │

@@ -12,8 +12,8 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Sort GPUs moved to s g, freeing G: it goes to the last row, and gg to
-// the first. A lone g moves nothing (it waits for the second key).
+// Sort GPUs moved to s g, freeing G: it goes to the last row, and g (the
+// table's own key) to the first.
 func TestGoToEnds_AndSortByPrefix(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
@@ -32,8 +32,6 @@ func TestGoToEnds_AndSortByPrefix(t *testing.T) {
 
 	_, _ = m.Update(keyPress("G"))
 	assert.Equal(t, 3, m.table.Cursor())
-	_, _ = m.Update(keyPress("g"))
-	assert.Equal(t, 3, m.table.Cursor(), "a lone g waits")
 	_, _ = m.Update(keyPress("g"))
 	assert.Equal(t, 0, m.table.Cursor())
 	_, _ = m.Update(keyPress("end"))

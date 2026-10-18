@@ -18,7 +18,7 @@ Versi│   s t         Sort Type              <tab>       Next Category     │-
 │    │                                      <y>         Toggle Details    │    │
 │    │ ↓ more · 0%                                                        │    │
 │    │                                                                    │    │
-│    │ j/k pgup/pgdn gg/G scroll · esc close                              │    │
+│    │ j/k pgup/pgdn g/G scroll · esc close                               │    │
 │    ╰────────────────────────────────────────────────────────────────────╯    │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘

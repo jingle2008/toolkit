@@ -59,8 +59,8 @@ func TestPrefix_EscCancelsOnlyThePrefix(t *testing.T) {
 	t.Parallel()
 	m := newPrefixModel(t)
 	m.filter = "alpha"
-	_, _ = m.Update(keyPress("g"))
-	require.Equal(t, "g", m.prefix.key)
+	_, _ = m.Update(keyPress("s"))
+	require.Equal(t, "s", m.prefix.key)
 	_, _ = m.Update(keyPress("esc"))
 	assert.Empty(t, m.prefix.key)
 	assert.Equal(t, "alpha", m.filter)
@@ -77,33 +77,22 @@ func TestPrefix_FilterInputBypasses(t *testing.T) {
 	assert.Equal(t, "s", m.textInput.Value())
 }
 
-func TestPrefix_WhichKeyAfterTimeout(t *testing.T) {
+func TestPrefix_StatusMarker(t *testing.T) {
 	t.Parallel()
 	m := newPrefixModel(t)
-	_, cmd := m.Update(keyPress("g"))
-	require.NotNil(t, cmd, "a prefix schedules its timeout")
-	assert.Contains(t, ansi.Strip(m.statusView()), "g…")
-
-	_, _ = m.Update(prefixTimeoutMsg{gen: m.prefix.gen - 1})
-	assert.False(t, m.prefix.whichKey, "a stale timeout is ignored")
-	_, _ = m.Update(prefixTimeoutMsg{gen: m.prefix.gen})
-	assert.True(t, m.prefix.whichKey)
-	assert.Contains(t, ansi.Strip(m.render()), "g  top")
-
-	_, _ = m.Update(keyPress("g"))
-	assert.False(t, m.prefix.whichKey)
-	assert.NotContains(t, ansi.Strip(m.render()), "g  top")
+	_, _ = m.Update(keyPress("s"))
+	assert.Contains(t, ansi.Strip(m.statusView()), "s…")
+	_, _ = m.Update(keyPress("n"))
+	assert.NotContains(t, ansi.Strip(m.statusView()), "s…")
 }
 
-// The sort prefix shows its keys in the headers, not a popup: each
-// sortable column's key letter is underlined while s is pending.
+// The sort prefix shows its keys in the headers: each sortable column's
+// key letter is underlined while s is pending.
 func TestPrefix_SortUnderlinesHeaderKeys(t *testing.T) {
 	t.Parallel()
 	m := newPrefixModel(t)
 	assert.NotContains(t, m.table.View(), "\x1b[4mT\x1b[24m")
 	_, _ = m.Update(keyPress("s"))
-	_, _ = m.Update(prefixTimeoutMsg{gen: m.prefix.gen})
-	assert.False(t, m.prefix.whichKey, "no popup for s")
 	header := m.table.View()
 	for _, want := range []string{"\x1b[4mN\x1b[24mame", "\x1b[4mT\x1b[24menant", "\x1b[4mU\x1b[24msage"} {
 		assert.Contains(t, header, want)
@@ -121,14 +110,7 @@ func TestHelp_GotoEnds(t *testing.T) {
 	_, _ = m.updateHelpView(keyPress("G"))
 	assert.Equal(t, maxScroll, m.helpScroll)
 	_, _ = m.updateHelpView(keyPress("g"))
-	_, _ = m.updateHelpView(keyPress("g"))
 	assert.Zero(t, m.helpScroll)
-
-	// esc with g pending cancels the prefix and leaves help open.
-	_, _ = m.updateHelpView(keyPress("g"))
-	_, _ = m.updateHelpView(keyPress("esc"))
-	assert.Equal(t, common.HelpView, m.viewMode)
-	assert.Empty(t, m.prefix.key)
 }
 
 func TestUnderlineSortKey(t *testing.T) {

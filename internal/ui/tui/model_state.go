@@ -300,10 +300,7 @@ func setDefaults(m *Model) {
 	}
 	if m.table == nil {
 		t := table.New(table.WithFocused(true))
-		// g is the goto prefix the model resolves (gg), so the table keeps
-		// only home for the top; G and end go to the bottom.
-		t.KeyMap.GotoTop.SetKeys("home")
-		t.KeyMap.GotoTop.SetHelp("gg/home", "go to start")
+		// G, freed when Sort GPUs moved to s g, goes to the bottom like end.
 		t.KeyMap.GotoBottom.SetKeys("end", "G")
 		t.KeyMap.GotoBottom.SetHelp("G/end", "go to end")
 		m.table = &t
