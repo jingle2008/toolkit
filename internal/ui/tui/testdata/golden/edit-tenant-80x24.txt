@@ -1,24 +1,24 @@
-
-
-
-
-
-
-               ┌────────────────────────────────────────────────┐
-               │                                                │
-               │  Set tenant info for orphan                    │
-               │                                                │
-               │  > Name:                                       │
-               │    Internal: internal  (space/left/right to    │
-               │  toggle)                                       │
-               │    Note:                                       │
-               │                                                │
-               │  <enter> View/Enter …                          │
-               │                                                │
-               └────────────────────────────────────────────────┘
-
-
-
-
-
-
+Realm:   oc1                  <t>       Copy Tenant ID             | | | | |
+Type:    prod                 <ctrl+x>  Delete                   .-----------.
+Region:  us-ashburn-1         <shift+e> Edit Tenant             -|   _____   |-
+Context: dp-prod-iad          <o>       Go to related           -|  |_   _|  |-
+K8s:     v1.31.4              <m>       Open Metrics            -|    |_|    |-
+Version: v1.2.3               <?/h>     Help +5 more             '-----------'
+ DedicatedAICluster (all)  🐶>            Active: 2 • Failed: 1 • Size: 7 [1/3]
+┌───╭─ Set tenant info ────────────────────────────────────────────────────╮───┐
+│ Na│ Tenancy orphan                                                       │s  │
+│───│                                                                      │───│
+│ da│ ▌ Name                                                               │e  │
+│ da│   Internal  (•) internal  ( ) external                               │e  │
+│ da│   Note                                                               │d  │
+│   │                                                                      │   │
+│   │ tab move · space toggle · enter save · ctrl+o portal · esc cancel    │   │
+│   ╰──────────────────────────────────────────────────────────────────────╯   │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘

@@ -1,26 +1,24 @@
-       ┌────────────────────────────────────────────────────────────────┐
-       │                                                                │
-       │  Export file name: us-ashburn-1-DedicatedAICluster.csv         │
-       │                                                                │
-       │  Pick an export path:                                          │
-       │                                                                │
-       │  > drwxr-xr-x  <size> alpha                                     │
-       │    drwxr-xr-x  <size> beta                                      │
-       │    drwxr-xr-x  <size> gamma                                     │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │                                                                │
-       │  k up • j down • g first • G last • pgup page up • pgdown      │
-       │  page down • enter select • l open • h back                    │
-       │                                                                │
-       └────────────────────────────────────────────────────────────────┘
+Realm:   oc1                  <t>       Copy Tenant ID             | | | | |
+Type╭─ Export CSV ─────────────────────────────────────────────────────────╮-.
+Regi│ File  us-ashburn-1-DedicatedAICluster.csv                            │ |-
+Cont│                                                                      │ |-
+K8s:│ Pick a directory:                                                    │ |-
+Vers│                                                                      │-'
+ Ded│ > drwxr-xr-x  <size> alpha                                            │/3]
+┌───│   drwxr-xr-x  <size> beta                                             │───┐
+│ Na│   drwxr-xr-x  <size> gamma                                            │s  │
+│───│                                                                      │───│
+│ da│                                                                      │e  │
+│ da│                                                                      │e  │
+│ da│                                                                      │d  │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │                                                                      │   │
+│   │ k up • j down • enter select • l open • h back • esc cancel          │   │
+│   ╰──────────────────────────────────────────────────────────────────────╯   │
+└──────────────────────────────────────────────────────────────────────────────┘

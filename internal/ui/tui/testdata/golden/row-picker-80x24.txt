@@ -1,24 +1,24 @@
-
-
-
-
-
-
-
-
-                    Go to
-
-                      Tenant          acme
-                    > BaseModel       llama-3.1-70b
-                      ServingRuntime  vllm
-
-                    [↑/↓] select   [enter] go   [esc] cancel
-
-
-
-
-
-
-
-
-
+Realm:   oc1                  <t>       Copy Tenant ID             | | | | |
+Type:    prod                 <ctrl+x>  Delete                   .-----------.
+Region:  us-ashburn-1         <shift+e> Edit Tenant             -|   _____   |-
+Context: dp-prod-iad          <o>       Go to related           -|  |_   _|  |-
+K8s:     v1.31.4              <m>       Open Metrics            -|    |_|    |-
+Version: v1.2.3               <?/h>     Help +5 more             '-----------'
+ DedicatedAICluster (all)  🐶>            Active: 2 • Failed: 1 • Size: 7 [1/3]
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Name ↑         Tena╭─ Go to ────────────────────────────╮/…  S…  A…  Status  │
+│────────────────────│        Tenant       acme           │────────────────────│
+│ dac-alpha      acme│ ▸    BaseModel      llama-3.1-70b  │8…  4   1…  Active  │
+│ dac-orphan     orph│    ServingRuntime   vllm           │    1   4…  Active  │
+│ dac-日本語     acme│                                    │    2   3d  Failed  │
+│                    │ ↑/↓ select · enter go · esc cancel │                    │
+│                    ╰────────────────────────────────────╯                    │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘

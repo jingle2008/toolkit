@@ -1,11 +1,11 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
@@ -29,6 +29,11 @@ type confirmOverlay struct {
 	warning     string
 	returnView  common.ViewMode
 	run         func() tea.Cmd
+	// onAction is the button focus: false (the default) is Cancel.
+	onAction bool
+	// nudge is set when enter lands on an irreversible action's button,
+	// which only a capital Y may confirm; the hint is redrawn as a prompt.
+	nudge bool
 }
 
 // confirmLabels is how the modal names each action it confirms — verb
@@ -177,8 +182,10 @@ func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
 // updateConfirmView resolves a keypress while the confirmation modal is
 // open. Recoverable actions confirm on y/Y; irreversible actions require an
 // explicit capital Y. n/esc cancel; for irreversible, a lowercase y also
-// cancels (so muscle-memory never destroys state). Any other key is
-// swallowed so the modal stays put. ctrl+c always quits.
+// cancels (so muscle-memory never destroys state). ←/→/tab move between
+// the buttons and enter presses the focused one, except that enter never
+// confirms an irreversible action. Any other key is swallowed so the
+// modal stays put. ctrl+c always quits.
 func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	km, ok := msg.(tea.KeyPressMsg)
 	if !ok {
@@ -188,42 +195,90 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cancelInFlight()
 		return m, tea.Quit
 	}
-	confirm, cancel := m.confirm.decide(km.String())
+	k := km.String()
+	switch k {
+	case "left", "right", "tab", "shift+tab":
+		m.confirm.onAction = !m.confirm.onAction
+		return m, nil
+	case "enter":
+		switch {
+		case !m.confirm.onAction:
+			m.refuseConfirm()
+		case m.confirm.act.Tier == mutation.Irreversible:
+			m.confirm.nudge = true
+		default:
+			return m, m.acceptConfirm()
+		}
+		return m, nil
+	}
+	confirm, cancel := m.confirm.decide(k)
 	if confirm {
-		run := m.confirm.run
-		m.dismissConfirm()
-		return m, run()
+		return m, m.acceptConfirm()
 	}
 	if cancel {
-		if c := m.confirm; c.act.Verb != "" {
-			// Declining is audited, as declining the CLI's prompt is.
-			mutation.Audit(m.logger, surfaceTUI, c.act, c.auditTarget, mutation.PhaseRefused, nil)
-		}
-		m.dismissConfirm()
+		m.refuseConfirm()
 	}
 	return m, nil
 }
 
-// confirmView renders the confirmation modal body. The irreversible tier
-// leads with a DESTRUCTIVE banner, shows the warning line, and asks for a
-// capital Y; the recoverable tier is a plain y/N prompt.
+// acceptConfirm closes the modal and returns the confirmed action's command.
+func (m *Model) acceptConfirm() tea.Cmd {
+	run := m.confirm.run
+	m.dismissConfirm()
+	return run()
+}
+
+// refuseConfirm closes the modal without acting. Declining is audited, as
+// declining the CLI's prompt is.
+func (m *Model) refuseConfirm() {
+	if c := m.confirm; c.act.Verb != "" {
+		mutation.Audit(m.logger, surfaceTUI, c.act, c.auditTarget, mutation.PhaseRefused, nil)
+	}
+	m.dismissConfirm()
+}
+
+// confirmView renders the confirmation modal: what is about to happen, to
+// what and where, the warning, and Cancel/action buttons. The irreversible
+// tier is drawn in Danger with a ⚠ title and asks for a capital Y; the
+// recoverable tier is drawn in Warn.
 func (m *Model) confirmView() string {
 	c := m.confirm
-	var b strings.Builder
-	if c.act.Tier == mutation.Irreversible {
-		b.WriteString("⚠ DESTRUCTIVE\n\n")
-		fmt.Fprintf(&b, "%s %s  %s\n", c.verb(), c.noun(), c.target)
-		if c.warning != "" {
-			fmt.Fprintf(&b, "%s\n", c.warning)
-		}
-		b.WriteString("\nPress Y to confirm   n/esc cancel")
-		return b.String()
+	p := m.theme.Palette
+	irreversible := c.act.Tier == mutation.Irreversible
+	border, onBorder, yes := p.Warn, p.OnWarn, "y"
+	title := c.verb() + " " + c.noun()
+	if irreversible {
+		border, onBorder, yes = p.Danger, p.OnAccent, "Y"
+		title = "⚠ " + title
 	}
-	fmt.Fprintf(&b, "Confirm %s\n\n", strings.ToLower(c.verb()))
-	fmt.Fprintf(&b, "%s %s  %s ?\n", c.verb(), c.noun(), c.target)
+	width := min(m.modalMaxWidth(), 56)
+	inner := width - 4 // border and padding
+
+	label := lipgloss.NewStyle().Foreground(p.Muted).Width(9)
+	rows := []string{
+		label.Render("Kind") + c.noun(),
+		label.Render("Name") + c.target,
+		label.Render("Context") + m.environment.KubeContext(),
+	}
+	body := strings.Join(rows, "\n")
 	if c.warning != "" {
-		fmt.Fprintf(&b, "%s\n", c.warning)
+		body += "\n\n" + lipgloss.NewStyle().Foreground(border).Width(inner).Render(c.warning)
 	}
-	b.WriteString("\n[y] confirm   [n/esc] cancel")
-	return b.String()
+
+	button := func(text string, focused bool) string {
+		s := lipgloss.NewStyle().Padding(0, 1)
+		if focused {
+			s = s.Background(border).Foreground(onBorder).Bold(true)
+		}
+		return s.Render("[ " + text + " ]")
+	}
+	buttons := button("Cancel", !c.onAction) + "   " + button(c.verb(), c.onAction)
+	body += "\n\n" + lipgloss.PlaceHorizontal(inner, lipgloss.Center, buttons)
+
+	hints := yes + " confirm · n/esc cancel · ←/→ select"
+	if c.nudge {
+		hints = lipgloss.NewStyle().Foreground(border).Bold(true).
+			Render("press capital Y to " + strings.ToLower(c.verb()) + ", or esc to cancel")
+	}
+	return m.modal(title, body, hints, border, width)
 }

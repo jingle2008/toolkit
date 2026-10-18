@@ -1,24 +1,24 @@
-
-
-
-
-
-
-
-
-
-                                 Confirm drain
-
-                            Drain node  10.0.0.11 ?
-
-                          [y] confirm   [n/esc] cancel
-
-
-
-
-
-
-
-
-
-
+Realm:   oc1                  <ctrl+x>  Delete                     | | | | |
+Type:    prod                 <shift+d> Drain                    .-----------.
+Region:  us-ashburn-1         <o>       Go to related           -|   _____   |-
+Context: dp-prod-iad          <r>       Refresh                 -|  |_   _|  |-
+K8s:     v1.31.4              <shift+r> Restart                 -|    |_|    |-
+Version: v1.2.3               <?/h>     Help +5 more             '-----------'
+ GPUNode (all)  🐶>                                  Free: 10 • Total: 16 [1/2]
+┌───────────╭─ Drain node ─────────────────────────────────────────╮───────────┐
+│ Name ↑    │ Kind     node                                        │           │
+│───────────│ Name     10.0.0.11                                   │───────────│
+│ 10.0.0.11 │ Context  dp-prod-iad                                 │           │
+│ 10.0.0.12 │                                                      │ORDONED    │
+│           │               [ Cancel ]     [ Drain ]               │           │
+│           │                                                      │           │
+│           │ y confirm · n/esc cancel · ←/→ select                │           │
+│           ╰──────────────────────────────────────────────────────╯           │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘

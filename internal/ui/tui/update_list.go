@@ -203,6 +203,7 @@ func (*Model) pasteFilter() tea.Cmd {
 func (m *Model) enterHelpView() {
 	m.lastViewMode = m.viewMode
 	m.viewMode = common.HelpView
+	m.helpScroll = 0
 }
 
 func (m *Model) handleNextCategory() tea.Cmd {

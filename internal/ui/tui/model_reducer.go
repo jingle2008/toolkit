@@ -308,6 +308,11 @@ func (m *Model) findContextIndex(rows []table.Row) int {
 // updateLayout recalculates the layout for the view and table.
 func (m *Model) updateLayout(w, h int) {
 	m.viewWidth, m.viewHeight = w, h
+	// The export modal shows four lines above the directory list; give the
+	// list the rest of the modal body, up to its usual 15 rows.
+	if m.dirPicker != nil {
+		m.dirPicker.SetHeight(min(15, max(m.modalMaxBody()-4, 3)))
+	}
 	// Budget the info column (and the logo, when it fits) out of the help
 	// bubble's width so the header in frame() doesn't exceed the terminal
 	// and soft-wrap. The extra -1 dodges a bubbles/help edge case: when

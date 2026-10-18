@@ -80,7 +80,6 @@ type Styles struct {
 	LogoBottom view.RGB
 
 	// Help view styles
-	HelpBorder lipgloss.Style
 	HelpHeader lipgloss.Style
 	HelpKey    lipgloss.Style
 	HelpDesc   lipgloss.Style
@@ -89,11 +88,6 @@ type Styles struct {
 	Table    table.Styles
 	Viewport lipgloss.Style
 	Spinner  lipgloss.Style
-
-	// Toast banners by severity.
-	ToastInfo  lipgloss.Style
-	ToastWarn  lipgloss.Style
-	ToastError lipgloss.Style
 
 	// Log overlay: title bar by state, hint line, and entry colors.
 	LogFollowing lipgloss.Style
@@ -149,10 +143,6 @@ func DefaultStyles(isDark bool) Styles {
 		LogoTop:      toRGB(p.Primary),
 		LogoBottom:   toRGB(p.Accent),
 
-		HelpBorder: lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(p.Focus).
-			Padding(1, 2),
 		HelpHeader: infoKey.Underline(true),
 		HelpKey:    fg(p.Info),
 		HelpDesc:   lipgloss.NewStyle(),
@@ -162,10 +152,6 @@ func DefaultStyles(isDark bool) Styles {
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(p.Focus),
 		Spinner: fg(p.Accent),
-
-		ToastInfo:  fill(p.Info, p.OnAccent),
-		ToastWarn:  fill(p.Warn, p.OnWarn),
-		ToastError: fill(p.Danger, p.OnAccent).Bold(true),
 
 		LogFollowing: logBar.Inherit(fill(p.Info, p.OnAccent)),
 		LogPaused:    logBar.Inherit(fill(p.Warn, p.OnWarn)),
@@ -180,11 +166,4 @@ func DefaultStyles(isDark bool) Styles {
 func toRGB(c color.Color) view.RGB {
 	r, g, b, _ := c.RGBA()
 	return view.RGB{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8)} //nolint:gosec // RGBA channels are 16-bit, so >>8 fits a byte
-}
-
-// boxWidth sets s's width to w plus its horizontal border. lipgloss v2
-// counts the border inside Width, v1 added it outside; this keeps the
-// boxes' v1 outer width.
-func boxWidth(s lipgloss.Style, w int) lipgloss.Style {
-	return s.Width(w + s.GetHorizontalBorderSize())
 }

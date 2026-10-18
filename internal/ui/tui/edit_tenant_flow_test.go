@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -23,10 +24,11 @@ func openForm(t *testing.T) *Model {
 
 func TestEditTenantView_Renders(t *testing.T) {
 	t.Parallel()
-	out := openForm(t).editTenantView()
+	out := ansi.Strip(openForm(t).editTenantView())
 	require.NotEmpty(t, out)
-	assert.Contains(t, out, "abc")   // tenantID
-	assert.Contains(t, out, "Name:") // field label
+	assert.Contains(t, out, "abc")  // tenantID
+	assert.Contains(t, out, "Name") // field label
+	assert.Contains(t, out, "(•)")
 }
 
 func TestEditTenantView_NilFormIsEmpty(t *testing.T) {

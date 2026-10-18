@@ -1,6 +1,10 @@
 package tui
 
-import tea "charm.land/bubbletea/v2"
+import (
+	"strings"
+
+	tea "charm.land/bubbletea/v2"
+)
 
 // namedKeys maps the key names tests press to their key events; anything
 // else is typed as text.
@@ -35,4 +39,14 @@ func keyPress(s string) tea.KeyMsg {
 		return tea.KeyPressMsg(k)
 	}
 	return tea.KeyPressMsg{Code: []rune(s)[0], Text: s}
+}
+
+// lineWith returns the first line of s containing sub, or "".
+func lineWith(s, sub string) string {
+	for _, l := range strings.Split(s, "\n") {
+		if strings.Contains(l, sub) {
+			return l
+		}
+	}
+	return ""
 }

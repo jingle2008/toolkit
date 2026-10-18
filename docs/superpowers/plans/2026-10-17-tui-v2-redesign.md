@@ -134,45 +134,52 @@ atomically, then redesign phase by phase, updating goldens on purpose.
 
 ### Task 5.1: Overlay infrastructure
 **Files:** `view/overlay.go` (new).
-- [ ] Add `Overlay(base string, modal string, w, h int) string`. It re-renders the base in
+- [x] Add `Overlay(base string, modal string, w, h int) string`. It re-renders the base in
   Muted (dimmed), centers the modal as a `lipgloss.Layer` with Z=1, and composites with
   `lipgloss.NewCompositor(...).Render()`.
-- [ ] Add `Corner(base, box string, w, h int)`, which places the box at the bottom right.
+- [x] Add `Corner(base, box string, w, h int)`, which places the box at the bottom right.
   Toasts use it.
-- [ ] Add `Modal(theme, title, body, hints string, maxW, maxH int)`, the shared chrome:
+- [x] Add `Modal(theme, title, body, hints string, maxW, maxH int)`, the shared chrome:
   rounded border with the title in the top edge.
-- [ ] Test wide runes and ANSI on both sides of the modal edge.
+- [x] Test wide runes and ANSI on both sides of the modal edge.
 
 ### Task 5.2: Route modal views through the overlay
-- [ ] In `renderActiveView`, Confirm, RowPicker, Help, Export and EditTenant render
+- [x] In `renderActiveView`, Confirm, RowPicker, Help, Export and EditTenant render
   `Overlay(m.renderBaseView(), modal)`. `renderBaseView` renders `returnView` (or
   `lastViewMode` for help).
-- [ ] Toasts move from `JoinVertical` to `Corner`, stacking up to 3. Delete the
+- [x] Toasts move from `JoinVertical` to `Corner`, stacking up to 3. Delete the
   clipped-border comment in `model_view.go`.
 
 ### Task 5.3: Confirm redesign
-- [ ] Danger or Warn chrome by tier, the target as key/value rows, buttons with Cancel as
+- [x] Danger or Warn chrome by tier, the target as key/value rows, buttons with Cancel as
   the default, `←`/`→`/`tab` to move between buttons and `enter` to activate one.
   Irreversible actions still need `Y`: `enter` on Delete only pulses the hint.
-- [ ] Existing confirm and audit tests must stay green. Add tests for button focus and for
+- [x] Existing confirm and audit tests must stay green. Add tests for button focus and for
   "enter on Delete does not run when the action is irreversible".
 
 ### Task 5.4: Row picker redesign
-- [ ] Category badges, a scrolling window bounded by the modal's max height, and a
+- [x] Category badges, a scrolling window bounded by the modal's max height, and a
   `a–b/n` indicator.
-- [ ] Above 8 rows, add a type-to-filter textinput. The cursor clamps to the filtered set.
+- [x] Above 8 rows, add a type-to-filter textinput. The cursor clamps to the filtered set.
   Tests cover filtering, the scroll window following the cursor, and an empty result.
 
 ### Task 5.5: Help redesign
-- [ ] Pack sections into balanced columns column by column (1–3 columns from the width).
-- [ ] When the packed height exceeds the max, use an inner viewport with a `↓ more`
+- [x] Pack sections into balanced columns column by column (1–3 columns from the width).
+- [x] When the packed height exceeds the max, use an inner viewport with a `↓ more`
   indicator and `j`/`k`/`pgup`/`pgdn`/`home`/`end` keys. `gg`/`G` come in Phase 6.
-- [ ] The 80×15 help golden now shows a scroll indicator and no truncation. Add a unit
+- [x] The 80×15 help golden now shows a scroll indicator and no truncation. Add a unit
   test that every binding is reachable by scrolling.
 
 ### Task 5.6: Export and edit tenant chrome
-- [ ] Use the shared `Modal`, a Primary focus marker, and `( )`/`(•)` toggles.
-- [ ] Update the goldens deliberately and list the views whose goldens changed in the PR.
+- [x] Use the shared `Modal`, a Primary focus marker, and `( )`/`(•)` toggles.
+- [x] Update the goldens deliberately and list the views whose goldens changed in the PR.
+
+**Phase 5 deviations:**
+- Help may use up to 90% of the terminal width, not the 80-column modal cap, so three columns fit on wide terminals.
+- The logo in help's title is deferred to Phase 7, where the header drops it.
+- Toasts float one row and two columns inside the bottom-right corner, so they don't cover the table frame. `toasts.active` stays the newest toast, and `older` holds up to two more.
+- The export directory list takes its height from the modal body (up to 15 rows), so the export modal fits on 80×24.
+- `view.Box` with width 0 widens to fit its title.
 
 ## Phase 6: Prefix engine and new keymap
 

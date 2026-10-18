@@ -53,11 +53,14 @@ type logOverlay struct {
 	returnView common.ViewMode
 }
 
-// toastManager holds the transient banner shown over the active view.
-// active is nil when no toast is showing; seq is a monotonic id source
-// that persists across toasts so toastExpireMsg can match the latest one.
+// toastManager holds the transient banners shown over the active view.
+// active is the newest, nil when no toast is showing; older holds up to
+// maxStackedToasts-1 earlier ones still alive, oldest first. seq is a
+// monotonic id source that persists across toasts so toastExpireMsg can
+// match the one it was scheduled for.
 type toastManager struct {
 	active *toastState
+	older  []toastState
 	seq    int
 }
 
@@ -113,6 +116,7 @@ type Model struct {
 	initialFilter string
 	viewMode      common.ViewMode
 	lastViewMode  common.ViewMode // for toggling help view
+	helpScroll    int             // first help body line shown when help scrolls
 	confirm       confirmOverlay  // destructive-action confirmation modal state
 	rowPicker     rowPickerState  // modal row picker state (go to, metrics DAC)
 	selectedKey   models.ItemKey
