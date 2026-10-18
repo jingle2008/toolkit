@@ -218,20 +218,6 @@ func (m *Model) exitDetailView() {
 	m.updateLayout(m.viewWidth, m.viewHeight)
 }
 
-// changeCategory parses the text input and updates the category.
-func (m *Model) changeCategory() tea.Cmd {
-	text := m.textInput.Value()
-	category, err := domain.ParseCategory(text)
-	if err != nil {
-		return nil
-	}
-
-	if m.category == category {
-		return nil
-	}
-	return tea.Sequence(m.updateCategory(category)...)
-}
-
 // enterContext moves the model into a new context based on the selected row.
 func (m *Model) enterContext() tea.Cmd {
 	row := m.selectedRawRow()

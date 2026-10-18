@@ -14,8 +14,6 @@ const (
 	NoneTarget EditTarget = iota // No edit target selected (zero value)
 	// FilterTarget is the edit target for filters.
 	FilterTarget // Filter edit target
-	// AliasTarget is the edit target for aliases.
-	AliasTarget // Alias edit target
 )
 
 // String returns the string representation of the EditTarget.
@@ -25,8 +23,6 @@ func (e EditTarget) String() string {
 		return "none"
 	case FilterTarget:
 		return "filter"
-	case AliasTarget:
-		return "alias"
 	default:
 		return "unknown"
 	}

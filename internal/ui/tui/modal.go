@@ -52,7 +52,7 @@ func (m *Model) overlayModal(under common.ViewMode, modal string) string {
 func isModalView(mode common.ViewMode) bool {
 	switch mode { //nolint:exhaustive // the rest are full-screen
 	case common.HelpView, common.ConfirmView, common.RowPickerView,
-		common.ExportView, common.EditTenantView:
+		common.ExportView, common.EditTenantView, common.PaletteView:
 		return true
 	}
 	return false

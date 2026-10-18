@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/table"
-	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
@@ -257,7 +256,7 @@ func TestFilterAndBackToLastState(t *testing.T) {
 func TestEditModeTransitions(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.enterAliasMode()
+	m.enterFilterMode()
 	require.Equal(t, common.EditInput, m.inputMode)
 	m.exitEditMode(true)
 	require.Equal(t, common.NormalInput, m.inputMode)
@@ -391,12 +390,12 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 	filterMsg := keyPress(keyStr)
 	m.updateListView(filterMsg)
 
-	// Simulate JumpTo key
-	if len(keys.CommandMode.Keys()) > 0 {
-		keyStr = keys.CommandMode.Keys()[0]
-	}
-	jumpToMsg := keyPress(keyStr)
-	m.updateListView(jumpToMsg)
+	// The command key opens the palette; esc closes it again.
+	m.exitEditMode(true) // the filter key above left the input open
+	m.updateListView(keyPress(keys.CommandMode.Keys()[0]))
+	require.Equal(t, common.PaletteView, m.viewMode)
+	m.updatePaletteView(keyPress("esc"))
+	require.Equal(t, common.ListView, m.viewMode)
 
 	// Simulate ViewDetails key
 	if len(keys.ViewDetails.Keys()) > 0 {
@@ -414,11 +413,8 @@ func TestModel_UpdateListView_Branches(t *testing.T) {
 
 	// Switch to Edit mode and test "enter" and "esc"
 	m.inputMode = common.EditInput
-	m.editTarget = common.AliasTarget
 	enterMsg := keyPress("enter")
 	escMsg := keyPress("esc")
-	m.updateListView(enterMsg)
-	m.updateListView(escMsg)
 	m.editTarget = common.FilterTarget
 	m.updateListView(enterMsg)
 	m.updateListView(escMsg)
@@ -538,7 +534,7 @@ func TestModel_updateCategory(t *testing.T) {
 	assert.NotNil(t, cmd)
 }
 
-func TestModel_changeCategory(t *testing.T) {
+func TestModel_openCategory(t *testing.T) {
 	t.Parallel()
 	m, _ := NewModel(
 		WithRepoPath("repo"),
@@ -552,11 +548,8 @@ func TestModel_changeCategory(t *testing.T) {
 		GPUNodeMap:            map[string][]models.GPUNode{},
 		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{},
 	}
-	ti := textinput.New()
-	ti.SetValue("BaseModel")
-	m.textInput = &ti
-	cmd := m.changeCategory()
-	assert.NotNil(t, cmd)
+	assert.NotNil(t, m.openCategory(domain.BaseModel))
+	assert.Nil(t, m.openCategory(m.category), "already there")
 }
 
 func TestModel_enterContext(t *testing.T) {

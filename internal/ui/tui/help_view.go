@@ -48,7 +48,7 @@ func (m *Model) helpSections() []helpSection {
 	case common.DetailsView:
 		add("Viewport Actions", m.viewportBinding())
 	case common.LoadingView, common.HelpView, common.ExportView, common.EditTenantView,
-		common.LogView, common.ConfirmView, common.RowPickerView:
+		common.LogView, common.ConfirmView, common.RowPickerView, common.PaletteView:
 		// No additional sections for these view modes
 	}
 	return out

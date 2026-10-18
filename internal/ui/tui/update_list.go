@@ -142,7 +142,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		{keys.GoTo, func() []tea.Cmd { return []tea.Cmd{m.openGoTo()} }},
 		{keys.FilterMode, func() []tea.Cmd { return []tea.Cmd{m.enterFilterMode()} }},
 		{keys.PasteFilter, func() []tea.Cmd { return []tea.Cmd{m.pasteFilter()} }},
-		{keys.CommandMode, func() []tea.Cmd { m.enterAliasMode(); return nil }},
+		{keys.CommandMode, func() []tea.Cmd { m.openPalette(); return nil }},
 		{keys.ViewDetails, func() []tea.Cmd { return []tea.Cmd{m.enterDetailView()} }},
 		{keys.Confirm, func() []tea.Cmd { return []tea.Cmd{m.enterContext()} }},
 		{keys.Help, func() []tea.Cmd { m.enterHelpView(); return nil }},
@@ -255,13 +255,7 @@ func (m *Model) handleEditKeys(msg tea.KeyMsg) []tea.Cmd {
 	case msg.String() == "ctrl+c":
 		cmds = append(cmds, tea.Quit)
 	case key.Matches(msg, keys.Confirm):
-		if m.editTarget == common.AliasTarget {
-			cmd := m.changeCategory()
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
-		}
-		m.exitEditMode(m.editTarget == common.AliasTarget)
+		m.exitEditMode(false)
 	case key.Matches(msg, keys.Back):
 		m.exitEditMode(true)
 	default:
