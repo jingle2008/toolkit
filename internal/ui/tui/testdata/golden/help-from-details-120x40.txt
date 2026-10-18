@@ -24,7 +24,7 @@
 │           │                                   esc         Back/Clear          b/pgup      Page up        │           │
 │           │                                   q           Quit                f/pgdn      Page down      │           │
 │           │                                                                                              │           │
-│           │ esc close                                                                                    │           │
+│           │ / filter · esc close                                                                         │           │
 │           ╰──────────────────────────────────────────────────────────────────────────────────────────────╯           │
 │                                                                                                                      │
 │                                                                                                                      │

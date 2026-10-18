@@ -14,7 +14,7 @@
 │                                                                                                                      │
 │                                                                                                                      │
 │                               ╭─ Drain node ─────────────────────────────────────────╮                               │
-│                               │ Kind     node                                        │                               │
+│                               │ Kind     GPUNode                                     │                               │
 │                               │ Name     10.0.0.11                                   │                               │
 │                               │ Context   PRODUCTION dp-prod-iad                     │                               │
 │                               │                                                      │                               │

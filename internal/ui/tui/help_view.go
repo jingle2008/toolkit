@@ -25,15 +25,21 @@ const (
 type helpSection []string
 
 // helpSections renders every key group that applies to the view help was
-// opened from. The sorts, declared among the category's and the view's
+// opened from, keeping only the bindings the filter matches — all of a
+// group whose title it matches — and leaving out groups with none. The sorts, declared among the category's and the view's
 // keys, are gathered into one Sort section listed by column.
 func (m *Model) helpSections() []helpSection {
 	var out []helpSection
+	filter := strings.ToLower(m.helpFilter)
 	add := func(title string, bind []key.Binding) {
 		sec := helpSection{m.theme.HelpHeader.Render(title)}
+		whole := strings.Contains(strings.ToLower(title), filter) // "/sort" keeps all of Sort
 		for _, b := range bind {
 			h := b.Help()
 			if h.Key == "" && h.Desc == "" {
+				continue
+			}
+			if !whole && !strings.Contains(strings.ToLower(h.Key+" "+h.Desc), filter) {
 				continue
 			}
 			sec = append(sec, "  "+m.theme.HelpKey.Render(fmt.Sprintf("%-*s", helpKeyCol, h.Key))+
@@ -142,9 +148,13 @@ func packColumns(secs []helpSection, n int) [][]string {
 }
 
 // helpWindow is how many body lines help shows at once, and the largest
-// scroll offset; maxScroll is 0 when everything fits.
+// scroll offset; maxScroll is 0 when everything fits. The filter line and
+// the blank under it take two rows while a filter is typed or set.
 func (m *Model) helpWindow(lines int) (rows, maxScroll int) {
 	body := m.modalMaxBody()
+	if m.helpTyping || m.helpFilter != "" {
+		body = max(body-2, 1)
+	}
 	if lines <= body {
 		return lines, 0
 	}
@@ -156,18 +166,17 @@ func (m *Model) helpWindow(lines int) (rows, maxScroll int) {
 // to m.helpScroll with an indicator when they don't fit.
 func (m *Model) fullHelpView() string {
 	p := m.theme.Palette
+	muted := lipgloss.NewStyle().Foreground(p.Muted)
 	lines := m.helpLines()
+	filtering := m.helpTyping || m.helpFilter != ""
+	if filtering && len(m.helpSections()) == 0 {
+		lines = []string{muted.Render("no keys match · esc clears the filter")}
+	}
 	rows, maxScroll := m.helpWindow(len(lines))
 	off := min(max(m.helpScroll, 0), maxScroll)
-	body := strings.Join(lines[off:off+rows], "\n")
-	// The logo heads help when it fits without making help scroll.
-	if logoH := lipgloss.Height(view.Logo) + 1; maxScroll == 0 && len(lines)+logoH <= m.modalMaxBody() {
-		logo := view.RenderLogo(m.theme.LogoTop, m.theme.LogoBottom)
-		body = lipgloss.PlaceHorizontal(lipgloss.Width(body), lipgloss.Center, logo) + "\n" + body
-	}
-	hints := "esc close"
+	body := m.helpHead(strings.Join(lines[off:off+rows], "\n"), len(lines), maxScroll)
+	hints := m.helpHints(maxScroll)
 	if maxScroll > 0 {
-		hints = "j/k pgup/pgdn home/end scroll · esc close"
 		var where string
 		switch off {
 		case 0:
@@ -177,10 +186,41 @@ func (m *Model) fullHelpView() string {
 		default:
 			where = "↑↓ more"
 		}
-		body += "\n" + lipgloss.NewStyle().Foreground(p.Muted).
-			Render(fmt.Sprintf("%s · %d%%", where, off*100/maxScroll))
+		body += "\n" + muted.Render(fmt.Sprintf("%s · %d%%", where, off*100/maxScroll))
 	}
 	return m.modal("Keys · "+m.lastViewMode.String()+" view", body, hints, p.Focus, 0)
+}
+
+// helpHead tops body with the filter input or chip, or, unfiltered, the
+// logo when it fits without making help scroll.
+func (m *Model) helpHead(body string, lines, maxScroll int) string {
+	switch {
+	case m.helpTyping:
+		return m.helpInput.View() + "\n\n" + body
+	case m.helpFilter != "":
+		return lipgloss.NewStyle().Foreground(m.theme.Palette.Secondary).Render("⟨/"+m.helpFilter+"⟩") + "\n\n" + body
+	}
+	if logoH := lipgloss.Height(view.Logo) + 1; maxScroll == 0 && lines+logoH <= m.modalMaxBody() {
+		logo := view.RenderLogo(m.theme.LogoTop, m.theme.LogoBottom)
+		return lipgloss.PlaceHorizontal(lipgloss.Width(body), lipgloss.Center, logo) + "\n" + body
+	}
+	return body
+}
+
+// helpHints is help's key line for its state: typing a filter, filtered,
+// or not, with the scroll keys when it scrolls.
+func (m *Model) helpHints(maxScroll int) string {
+	switch {
+	case m.helpTyping:
+		return "enter keep · esc clear"
+	case maxScroll > 0 && m.helpFilter != "":
+		return "j/k pgup/pgdn home/end scroll · / filter · esc clear"
+	case maxScroll > 0:
+		return "j/k pgup/pgdn home/end scroll · / filter · esc close"
+	case m.helpFilter != "":
+		return "/ filter · esc clear"
+	}
+	return "/ filter · esc close"
 }
 
 // scrollHelp moves the help body by delta lines (or to an end), clamped

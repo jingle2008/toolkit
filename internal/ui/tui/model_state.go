@@ -123,10 +123,15 @@ type Model struct {
 	viewMode      common.ViewMode
 	lastViewMode  common.ViewMode // for toggling help view
 	helpScroll    int             // first help body line shown when help scrolls
-	prefix        string          // pending prefix key (keys.SortLeader) or ""
-	confirm       confirmOverlay  // destructive-action confirmation modal state
-	rowPicker     rowPickerState  // modal row picker state (go to, metrics DAC)
-	palette       paletteState    // command palette state
+	// helpFilter keeps the help bindings whose key or description contains
+	// it (case-insensitive), typed into helpInput while helpTyping.
+	helpFilter string
+	helpInput  textinput.Model
+	helpTyping bool
+	prefix     string         // pending prefix key (keys.SortLeader) or ""
+	confirm    confirmOverlay // destructive-action confirmation modal state
+	rowPicker  rowPickerState // modal row picker state (go to, metrics DAC)
+	palette    paletteState   // command palette state
 	// paletteRecent names the palette items run this session, newest
 	// first (paletteRecentMax at most), by paletteItem.id.
 	paletteRecent []string

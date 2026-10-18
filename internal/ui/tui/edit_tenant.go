@@ -423,13 +423,15 @@ func (m *Model) editTenantView() string {
 	}
 	lines := []string{
 		"  " + label.Render("Tenancy") + lipgloss.NewStyle().Bold(true).Render(f.tenantID),
+		"  " + label.Render("") + lipgloss.NewStyle().Foreground(p.Muted).
+			Render(keys.OpenPortal.Help().Key+" opens its page in the DevOps portal"),
 		"",
 		marker(focusName) + label.Render("Name") + name,
 		marker(focusInternal) + label.Render("Internal") +
 			radio(f.isInternal, "internal") + "  " + radio(!f.isInternal, "external"),
 		marker(focusNote) + label.Render("Note") + f.note.View(),
 	}
-	hints := "tab/enter next · space toggle · ^s save · " + keys.OpenPortal.Help().Key + " portal · esc cancel"
+	hints := "tab/enter next · space toggle · ^s save · esc cancel"
 	return m.modal("Set tenant info", strings.Join(lines, "\n"), hints, p.Focus, width)
 }
 

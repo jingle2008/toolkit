@@ -167,7 +167,7 @@ toolkit --help
 | **Panel** (center) | The table, or a row's details, in a frame titled with the category and row count. Columns are as wide as their header or their widest value, and share the rest of the width. On a narrow terminal long values (names, OCIDs) shorten first, short ones keep their width, and Status is never cut; if that still doesn't fit, columns drop from the right (never the first or Status) and the title says how many are hidden. An empty cell shows `—`. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
 | **Footer** (bottom) | The category's most useful actions, then `/ filter`, `: command palette` and `? more`. On a narrow terminal the actions give way first, so filtering and the palette stay in reach |
 
-Modals (help, the command palette, confirmations, pickers, export, edit tenant) open over the dimmed view. Notifications appear in the bottom-right corner. Info and warnings fade after 8 seconds; errors stay until you press `Esc` in the list or details view, and the full message is in the log (`` ` ``).
+Modals (help, the command palette, confirmations, pickers, export, edit tenant) open over the dimmed view; one nearly as tall as the terminal opens on a blank screen instead. Notifications appear in the bottom-right corner. Info and warnings fade after 8 seconds; errors stay until you press `Esc` in the list or details view, and the full message is in the log (`` ` ``).
 
 ---
 
@@ -444,9 +444,9 @@ Certain categories expose live infrastructure operations. These require Kubernet
 
 > **Warning:** Drain and Restart disrupt running workloads, and Delete is **irreversible**. Toolkit guards against duplicate in-flight requests automatically.
 
-**Edit tenant** (`Shift+E`, on a DedicatedAICluster or ImportedModel row whose tenancy has no name yet) opens a short form: Name (required), Internal/External, Note (optional). `Tab` or `Enter` moves to the next field, `Enter` on the last field or `Ctrl+S` saves, `Ctrl+O` opens the tenancy in the console. Saving without a name marks the Name field instead of saving.
+**Edit tenant** (`Shift+E`, on a DedicatedAICluster or ImportedModel row whose tenancy has no name yet) opens a short form: Name (required), Internal/External, Note (optional). `Tab` or `Enter` moves to the next field, `Enter` on the last field or `Ctrl+S` saves, `Ctrl+O` opens the tenancy's metadata page in the DevOps portal. Saving without a name marks the Name field instead of saving.
 
-Every operation asks first. The confirmation names the kind, the row and the kube context (with a red `PRODUCTION` badge in production) and says what the operation does. Irreversible operations take a capital `Y`; a lowercase `y` cancels them, so muscle memory never destroys anything: what a cordon or drain does to pods, how far a scale-up grows the pool, or why a delete can't be undone.
+Every operation asks first. The confirmation names the category, the row and the kube context (with a red `PRODUCTION` badge in production) and says what the operation does. Irreversible operations take a capital `Y`; a lowercase `y` cancels them, so muscle memory never destroys anything: what a cordon or drain does to pods, how far a scale-up grows the pool, or why a delete can't be undone.
 
 ### GPU Nodes (`GPUNode`)
 
@@ -626,7 +626,7 @@ and CPU/memory remain in the TUI's detail view (`y`).
 
 ### In-app help
 
-Press `?` or `h` at any time to display the full keybinding help overlay. The help is **context-sensitive**: it only shows keys relevant to your current category and view mode, grouped as Quick switch, Actions, Sort, the view's keys, General and Navigation. Keys are written as the footer writes them: `C` for Shift+C, `^x` for Ctrl+X. Its sections flow into columns on wide terminals. When they still don't fit, it scrolls (`j`/`k`, `PgUp`/`PgDn`, `Home`/`End`) and shows how far down you are.
+Press `?` or `h` at any time to display the full keybinding help overlay. The help is **context-sensitive**: it only shows keys relevant to your current category and view mode, grouped as Quick switch, Actions, Sort, the view's keys, General and Navigation. Keys are written as the footer writes them: `C` for Shift+C, `^x` for Ctrl+X. Its sections flow into columns on wide terminals. `/` filters it as you type, by key or description (`/drain`, `/^x`); a section whose title matches stays whole (`/sort`), `Enter` keeps the filter, and `Esc` clears it before closing help. When they still don't fit, it scrolls (`j`/`k`, `PgUp`/`PgDn`, `Home`/`End`) and shows how far down you are.
 
 The first time you run a version whose keys changed, a **Keys changed** note in the bottom-right corner says what moved. Any key dismisses it, and that key still does its usual job. The note won't show again: the version you've seen is saved in `~/.config/toolkit/ui.yaml`.
 

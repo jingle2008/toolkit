@@ -76,3 +76,15 @@ Help already draws it only when it fits without making help scroll.
 - [x] Loading: q quit hint. Load errors: r retry where Refresh is bound.
 - [x] Panel title is the row count; details breadcrumb drops the row.
 - [ ] ~~Type the name to confirm deletes in prod~~ — dropped by request.
+
+## Batch 6 — leftovers
+
+- [x] Help filter on `/` (key or description; a matching section title
+  keeps the section whole).
+- [x] A modal within 4 rows of the screen's height draws on a blank
+  screen, not over view fragments.
+- [x] Confirm Kind row names the category.
+- [x] Edit tenant: `^o` explained on its own line (DevOps portal).
+- [ ] Next-step hints for errors other than loads — needs each failure's
+  cause first.
+- [ ] Colors and contrast in a live terminal (light, dark, `NO_COLOR`).
