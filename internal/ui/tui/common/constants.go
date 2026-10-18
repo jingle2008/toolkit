@@ -29,4 +29,12 @@ const (
 	VendorCol = "Vendor"
 	// GpusCol is the column name for "GPUs".
 	GpusCol = "GPUs"
+	// RestartsCol is the column name for "Restarts".
+	RestartsCol = "Restarts"
+	// ReadyCol is the column name for "Ready".
+	ReadyCol = "Ready"
+	// MinCol is the column name for "Min".
+	MinCol = "Min"
+	// MaxCol is the column name for "Max".
+	MaxCol = "Max"
 )

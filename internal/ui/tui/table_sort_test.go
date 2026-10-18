@@ -6,6 +6,12 @@ import (
 	"testing"
 
 	"charm.land/bubbles/v2/table"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func TestSortByInt(t *testing.T) {
@@ -186,5 +192,49 @@ func TestSortByGPUs_BlankSortsAsZero(t *testing.T) {
 	sortRows(rows, headers, "GPUs", true)
 	if rows[0][0] != "b" {
 		t.Errorf("blank should sort first ascending, got %v", rows)
+	}
+}
+
+// Rows that tie on the sort column are ordered by their cells, ascending
+// in either direction, so the order doesn't depend on the input's.
+func TestSortRows_TiesOrderedByRow(t *testing.T) {
+	t.Parallel()
+	headers := []header{{text: "Name"}, {text: "Tenant"}, {text: "GPUs"}}
+	for _, in := range [][]table.Row{
+		{{"b", "t2", "8"}, {"a", "t1", "8"}, {"c", "t1", "1"}},
+		{{"c", "t1", "1"}, {"a", "t1", "8"}, {"b", "t2", "8"}},
+	} {
+		rows := slices.Clone(in)
+		sortRows(rows, headers, "GPUs", false)
+		assert.Equal(t, []table.Row{{"a", "t1", "8"}, {"b", "t2", "8"}, {"c", "t1", "1"}}, rows)
+		sortRows(rows, headers, "Tenant", true)
+		assert.Equal(t, []table.Row{{"a", "t1", "8"}, {"c", "t1", "1"}, {"b", "t2", "8"}}, rows)
+	}
+}
+
+// Restarts, Min and Max sort as numbers, not as text (2 before 10).
+func TestSortRows_NumericColumns(t *testing.T) {
+	t.Parallel()
+	for _, col := range []string{"Restarts", "Min", "Max"} {
+		rows := []table.Row{{"a", "10"}, {"b", "2"}, {"c", "1000000"}}
+		sortRows(rows, []header{{text: "Name"}, {text: col}}, col, true)
+		assert.Equal(t, []string{"b", "a", "c"}, []string{rows[0][0], rows[1][0], rows[2][0]}, col)
+	}
+}
+
+// Grouped rows come from a map, so before ties were ordered they came out
+// in a different order from one refresh to the next.
+func TestComputeTableRows_TiesStableAcrossRefreshes(t *testing.T) {
+	t.Parallel()
+	ds := &models.Dataset{LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{}}
+	for _, tn := range []string{"t1", "t2", "t3", "t4", "t5", "t6"} {
+		ds.LimitTenancyOverrideMap[tn] = []models.LimitTenancyOverride{
+			{TenantName: tn, LimitRegionalOverride: models.LimitRegionalOverride{Name: "same-limit"}},
+		}
+	}
+	first, _ := computeTableRows(ds, domain.LimitTenancyOverride, nil, "", common.NameCol, true, false)
+	for range 20 {
+		rows, _ := computeTableRows(ds, domain.LimitTenancyOverride, nil, "", common.NameCol, true, false)
+		require.Equal(t, first, rows)
 	}
 }

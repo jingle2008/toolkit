@@ -39,14 +39,35 @@ func SortKeys(cat domain.Category) map[string]string {
 	return deriveSortKeys(sortColumns(cat))
 }
 
-// deriveSortKeys gives each column the first letter of its name, or, when
-// an earlier column already took that letter, the next letter of its name
+// pinnedSortKeys fixes the key of columns whose first letter would
+// otherwise depend on which other columns a category sorts by: s is always
+// Status and z always siZe (DedicatedAICluster sorts by Size, Tenant, Age
+// and Usage, which leave no letter of "status" free), and x is maX (its
+// first free letter would be a, which means Age elsewhere).
+var pinnedSortKeys = map[string]rune{
+	common.StatusCol: 's',
+	common.SizeCol:   'z',
+	common.MaxCol:    'x',
+}
+
+// deriveSortKeys gives a pinned column (pinnedSortKeys) its pinned key, and
+// every other column the first letter of its name or, when an earlier or
+// pinned column already took that letter, the next letter of its name
 // still free. Columns are taken in order, so Name always gets "n". A
 // column with no free letter gets no key.
 func deriveSortKeys(cols []string) map[string]string {
 	used := map[rune]bool{}
 	out := make(map[string]string, len(cols))
 	for _, col := range cols {
+		if r, ok := pinnedSortKeys[col]; ok {
+			used[r] = true
+			out[col] = string(r)
+		}
+	}
+	for _, col := range cols {
+		if _, ok := out[col]; ok {
+			continue
+		}
 		for _, r := range strings.ToLower(col) {
 			if unicode.IsLetter(r) && !used[r] {
 				used[r] = true

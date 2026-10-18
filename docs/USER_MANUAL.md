@@ -377,7 +377,7 @@ toolkit -c gpunode -f "us-phoenix"
 
 ## Sorting
 
-Press `s`, then the letter of a column, to sort by it. While `s` is pending, each sortable column's letter is underlined in the header and the breadcrumb shows `s…`. A column's letter is its first letter, unique within the category. Pressing the same sort again **reverses** the direction. `Esc`, or any key that isn't a column letter, cancels.
+Press `s`, then the letter of a column, to sort by it. While `s` is pending, each sortable column's letter is underlined in the header and the breadcrumb shows `s…`. A column's letter is its first letter, unique within the category, except three that are the same in every category: `s` is always Status, `z` siZe and `x` maX. Rows that tie on the sort column are ordered by the rest of the row, so they stay put across refreshes. Pressing the same sort again **reverses** the direction. `Esc`, or any key that isn't a column letter, cancels.
 
 `s n` sorts by Name in every list view. The header marks only the column the table is sorted by (`↑`/`↓`); `?` lists every sort under **Sort**, and pressing `s` underlines the letters. The other sortable columns:
 
@@ -386,21 +386,22 @@ Press `s`, then the letter of a column, to sort by it. While `s` is pending, eac
 | Tenant | `s i` Internal, `s s` Status |
 | ConsolePropertyDefinition | `s v` Value |
 | PropertyDefinition | `s v` Value |
-| LimitTenancyOverride | `s t` Tenant, `s r` Regions |
+| LimitDefinition | `s m` Min, `s x` Max |
+| LimitTenancyOverride | `s t` Tenant, `s r` Regions, `s m` Min, `s x` Max |
 | ConsolePropertyTenancyOverride | `s t` Tenant, `s r` Regions, `s v` Value |
 | PropertyTenancyOverride | `s t` Tenant, `s r` Regions, `s v` Value |
-| LimitRegionalOverride | `s r` Regions |
+| LimitRegionalOverride | `s r` Regions, `s m` Min, `s x` Max |
 | ConsolePropertyRegionalOverride | `s r` Regions, `s v` Value |
 | PropertyRegionalOverride | `s r` Regions, `s v` Value |
-| BaseModel | `s s` Size, `s c` Context |
-| ImportedModel | `s t` Tenant, `s s` Size, `s c` Context, `s v` Vendor |
+| BaseModel | `s z` Size, `s c` Context |
+| ImportedModel | `s t` Tenant, `s z` Size, `s c` Context, `s v` Vendor |
 | Environment | `s t` Type |
 | ServiceTenancy | `s t` Type |
-| GPUPool | `s s` Size, `s g` GPUs |
+| GPUPool | `s z` Size, `s g` GPUs |
 | GPUNode | `s f` Free, `s t` Type, `s a` Age |
-| GPUWorkload | `s t` Tenant, `s g` GPUs, `s a` Age |
-| DedicatedAICluster | `s t` Tenant, `s i` Internal, `s u` Usage, `s s` Size, `s a` Age |
-| InferenceService | `s t` Tenant, `s a` Age |
+| GPUWorkload | `s t` Tenant, `s g` GPUs, `s r` Restarts, `s a` Age |
+| DedicatedAICluster | `s t` Tenant, `s i` Internal, `s u` Usage, `s z` Size, `s a` Age, `s s` Status |
+| InferenceService | `s t` Tenant, `s r` Ready, `s a` Age |
 | ServingRuntime | `s g` GPUs |
 
 Sorting used to be on `Shift`+letter. Those keys are now free for row actions, and each one means the same action in every category: `Shift+R` is always Restart, `Shift+C` Cordon, `Shift+D` Drain, `Shift+U` Scale Up, `Shift+E` Edit Tenant.

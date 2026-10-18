@@ -217,6 +217,14 @@ var (
 	SortGPUs = sortBy(common.GpusCol)
 	// SortUsage is a key binding for sorting by the "Usage" column.
 	SortUsage = sortBy(common.UsageCol)
+	// SortRestarts is a key binding for sorting by the "Restarts" column.
+	SortRestarts = sortBy(common.RestartsCol)
+	// SortReady is a key binding for sorting by the "Ready" column.
+	SortReady = sortBy(common.ReadyCol)
+	// SortMin is a key binding for sorting by the "Min" column.
+	SortMin = sortBy(common.MinCol)
+	// SortMax is a key binding for sorting by the "Max" column.
+	SortMax = sortBy(common.MaxCol)
 	// ToggleAlias is a key binding for toggling the alias view.
 	ToggleAlias = key.NewBinding(
 		key.WithKeys("ctrl+a"),
@@ -266,22 +274,25 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {GoTo, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, Restart, Delete},
 	},
 	domain.GPUWorkload: {
-		common.ListView: {GoTo, SortTenant, SortGPUs, SortAge, OpenMetrics, ToggleFaulty, Refresh},
+		common.ListView: {GoTo, SortTenant, SortGPUs, SortRestarts, SortAge, OpenMetrics, ToggleFaulty, Refresh},
 	},
 	domain.ServingRuntime: {
 		common.ListView: {SortGPUs, ToggleFaulty, Refresh},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {GoTo, SortTenant, SortInternal, SortUsage, SortSize, SortAge, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
+		common.ListView: {GoTo, SortTenant, SortInternal, SortUsage, SortSize, SortAge, SortStatus, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
 	},
 	domain.InferenceService: {
-		common.ListView: {GoTo, SortTenant, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh, Restart, Delete},
+		common.ListView: {GoTo, SortTenant, SortReady, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh, Restart, Delete},
 	},
 	domain.ImportedModel: {
 		common.ListView: {GoTo, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},
 	},
+	domain.LimitDefinition: {
+		common.ListView: {SortMin, SortMax},
+	},
 	domain.LimitTenancyOverride: {
-		common.ListView: {GoTo, SortTenant, SortRegions, CopyTenant},
+		common.ListView: {GoTo, SortTenant, SortRegions, SortMin, SortMax, CopyTenant},
 	},
 	domain.ConsolePropertyTenancyOverride: {
 		common.ListView: {GoTo, SortTenant, SortRegions, SortValue, CopyTenant},
@@ -290,7 +301,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {GoTo, SortTenant, SortRegions, SortValue, CopyTenant},
 	},
 	domain.LimitRegionalOverride: {
-		common.ListView: {GoTo, SortRegions},
+		common.ListView: {GoTo, SortRegions, SortMin, SortMax},
 	},
 	domain.PropertyRegionalOverride: {
 		common.ListView: {GoTo, SortRegions, SortValue},
