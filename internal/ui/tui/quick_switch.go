@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 	"sync"
@@ -98,7 +97,7 @@ func (m *Model) quickSwitchBindings(mode common.ViewMode) []key.Binding {
 		}
 		out = append(out, key.NewBinding(
 			key.WithKeys(strconv.Itoa(e.Slot)),
-			key.WithHelp(fmt.Sprintf("<%d>", e.Slot), desc),
+			key.WithHelp(strconv.Itoa(e.Slot), desc),
 		))
 	}
 	return out

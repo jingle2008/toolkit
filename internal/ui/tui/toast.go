@@ -164,7 +164,7 @@ func (m *Model) toastBox(t toastState, width int) string {
 			lines = lines[:maxErrorLines]
 			lines[maxErrorLines-1] = truncateString(lines[maxErrorLines-1]+" …", inner)
 		}
-		hint := "esc dismiss · " + footerKey(keys.ToggleLog.Help()) + " log"
+		hint := "esc dismiss · " + keys.ToggleLog.Help().Key + " log"
 		msg = strings.Join(lines, "\n") + "\n" + lipgloss.NewStyle().Foreground(m.theme.Palette.Muted).Render(hint)
 	}
 	fit := min(width, max(lipgloss.Width(msg), lipgloss.Width(title)+2)+4)

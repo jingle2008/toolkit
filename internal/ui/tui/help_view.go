@@ -2,12 +2,16 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
@@ -21,7 +25,8 @@ const (
 type helpSection []string
 
 // helpSections renders every key group that applies to the view help was
-// opened from.
+// opened from. The sorts, declared among the category's and the view's
+// keys, are gathered into one Sort section listed by column.
 func (m *Model) helpSections() []helpSection {
 	var out []helpSection
 	add := func(title string, bind []key.Binding) {
@@ -38,18 +43,51 @@ func (m *Model) helpSections() []helpSection {
 			out = append(out, sec)
 		}
 	}
-	add("Quick Switch", m.quickSwitchBindings(m.lastViewMode))
-	add("Resource Actions", m.keys.Context)
-	add(fmt.Sprintf("%s View Actions", m.lastViewMode), m.keys.Mode)
-	add("General Actions", m.keys.Global)
+	actions, actionSorts := splitSorts(m.keys.Context)
+	mode, modeSorts := splitSorts(m.keys.Mode)
+	add("Quick switch", m.quickSwitchBindings(m.lastViewMode))
+	add("Actions", actions)
+	add("Sort", slices.Concat(modeSorts, actionSorts))
+	add(fmt.Sprintf("%s view", m.lastViewMode), mode)
+	add("General", m.keys.Global)
 	switch m.lastViewMode {
 	case common.ListView:
-		add("Table Actions", m.tableBinding())
+		add("Navigation", sentenceCase(m.tableBinding()))
 	case common.DetailsView:
-		add("Viewport Actions", m.viewportBinding())
+		add("Navigation", sentenceCase(m.viewportBinding()))
 	case common.LoadingView, common.HelpView, common.ExportView, common.EditTenantView,
 		common.LogView, common.ConfirmView, common.RowPickerView, common.PaletteView:
 		// No additional sections for these view modes
+	}
+	return out
+}
+
+// splitSorts separates the sort declarations from bind, relabeling each
+// sort by its column alone ("s n  Name") for the Sort section.
+func splitSorts(bind []key.Binding) (rest, sorts []key.Binding) {
+	for _, b := range bind {
+		h := b.Help()
+		if col, ok := strings.CutPrefix(h.Desc, keys.SortPrefix); ok {
+			sorts = append(sorts, key.NewBinding(key.WithKeys(b.Keys()...), key.WithHelp(h.Key, col)))
+			continue
+		}
+		rest = append(rest, b)
+	}
+	return rest, sorts
+}
+
+// sentenceCase relabels bindings from the bubbles keymaps, whose
+// descriptions are lowercase ("up", "½ page down"), to match the
+// sentence-case rest of help.
+func sentenceCase(bind []key.Binding) []key.Binding {
+	out := make([]key.Binding, 0, len(bind))
+	for _, b := range bind {
+		h := b.Help()
+		desc := h.Desc
+		if r, n := utf8.DecodeRuneInString(desc); n > 0 {
+			desc = string(unicode.ToUpper(r)) + desc[n:]
+		}
+		out = append(out, key.NewBinding(key.WithKeys(b.Keys()...), key.WithHelp(h.Key, desc)))
 	}
 	return out
 }

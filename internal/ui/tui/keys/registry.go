@@ -16,27 +16,27 @@ const SortPrefix = "Sort "
 var (
 	Quit = key.NewBinding(
 		key.WithKeys("q", "ctrl+c"),
-		key.WithHelp("<q>", "Quit"),
+		key.WithHelp("q", "Quit"),
 	)
 	Help = key.NewBinding(
 		key.WithKeys("?", "h"),
-		key.WithHelp("<?/h>", "Help"),
+		key.WithHelp("?/h", "Help"),
 	)
 	Back = key.NewBinding(
 		key.WithKeys("esc"),
-		key.WithHelp("<esc>", "Back/Clear"),
+		key.WithHelp("esc", "Back/Clear"),
 	)
 	ViewDetails = key.NewBinding(
 		key.WithKeys("y"),
-		key.WithHelp("<y>", "Toggle Details"),
+		key.WithHelp("y", "Toggle details"),
 	)
 	CopyName = key.NewBinding(
 		key.WithKeys("c"),
-		key.WithHelp("<c>", "Copy"),
+		key.WithHelp("c", "Copy"),
 	)
 	ToggleLog = key.NewBinding(
 		key.WithKeys("`"),
-		key.WithHelp("<`>", "Toggle Log"),
+		key.WithHelp("`", "Toggle log"),
 	)
 )
 
@@ -53,27 +53,27 @@ var globalKeys = []key.Binding{
 var (
 	NextCategory = key.NewBinding(
 		key.WithKeys("tab"),
-		key.WithHelp("<tab>", "Next Category"),
+		key.WithHelp("tab", "Next category"),
 	)
 	PrevCategory = key.NewBinding(
 		key.WithKeys("shift+tab"),
-		key.WithHelp("<shift+tab>", "Previous Category"),
+		key.WithHelp("shift+tab", "Previous category"),
 	)
 	FilterMode = key.NewBinding(
 		key.WithKeys("/"),
-		key.WithHelp("</term>", "Filter mode"),
+		key.WithHelp("/", "Filter"),
 	)
 	CommandMode = key.NewBinding(
 		key.WithKeys(":"),
-		key.WithHelp("<:cmd>", "Command mode"),
+		key.WithHelp(":", "Command palette"),
 	)
 	PasteFilter = key.NewBinding(
 		key.WithKeys("p"),
-		key.WithHelp("<p>", "Paste Filter"),
+		key.WithHelp("p", "Paste filter"),
 	)
 	Confirm = key.NewBinding(
 		key.WithKeys("enter"),
-		key.WithHelp("<enter>", "View/Enter"),
+		key.WithHelp("enter", "Open"),
 	)
 	SortName = sortBy(common.NameCol)
 )
@@ -87,29 +87,29 @@ var (
 	// BackHist is a key binding for navigating back in history.
 	BackHist = key.NewBinding(
 		key.WithKeys("["),
-		key.WithHelp("<[>", "History Back"),
+		key.WithHelp("[", "History back"),
 	)
 	// FwdHist is a key binding for navigating forward in history.
 	FwdHist = key.NewBinding(
 		key.WithKeys("]"),
-		key.WithHelp("<]>", "History Forward"),
+		key.WithHelp("]", "History forward"),
 	)
 	// ExportCSV is a key binding for exporting table data to CSV.
 	ExportCSV = key.NewBinding(
 		key.WithKeys("e"),
-		key.WithHelp("<e>", "Export CSV"),
+		key.WithHelp("e", "Export CSV"),
 	)
 	// Delete is a key binding for deleting an item.
 	Delete = key.NewBinding(
 		key.WithKeys("ctrl+x"),
-		key.WithHelp("<ctrl+x>", "Delete"),
+		key.WithHelp("^x", "Delete"),
 	)
 	// OpenPortal opens the selected tenant in the OCI console portal.
 	// Bound to a control key so it never collides with typing into the
 	// tenant-metadata form's Name/Note text fields.
 	OpenPortal = key.NewBinding(
 		key.WithKeys("ctrl+o"),
-		key.WithHelp("<ctrl+o>", "Open in portal"),
+		key.WithHelp("^o", "Open in portal"),
 	)
 	// GoTo opens a picker of the rows the selected row relates to (its
 	// DAC, model, runtime, tenant, ...) and jumps to the chosen one. Not
@@ -118,7 +118,7 @@ var (
 	// two never coexist in the same view.
 	GoTo = key.NewBinding(
 		key.WithKeys("o"),
-		key.WithHelp("<o>", "Go to related"),
+		key.WithHelp("o", "Go to related"),
 	)
 	// OpenMetrics opens the selected DAC's OCI Telemetry MQL dashboard
 	// in the browser. Bound to a plain letter (list view only) — no
@@ -126,7 +126,7 @@ var (
 	// with typing.
 	OpenMetrics = key.NewBinding(
 		key.WithKeys("m"),
-		key.WithHelp("<m>", "Open Metrics"),
+		key.WithHelp("m", "Open metrics"),
 	)
 )
 
@@ -153,38 +153,38 @@ var (
 	// CopyObject is a key binding for copying the value of an item in the details view.
 	CopyObject = key.NewBinding(
 		key.WithKeys("o"),
-		key.WithHelp("<o>", "Copy Object"),
+		key.WithHelp("o", "Copy object"),
 	)
 	// CopyTenant is a key binding for copying the tenant ID in the tenant context.
 	CopyTenant = key.NewBinding(
 		key.WithKeys("t"),
-		key.WithHelp("<t>", "Copy Tenant ID"),
+		key.WithHelp("t", "Copy tenant ID"),
 	)
 	// Refresh is a key binding for refreshing the current view or data.
 	Refresh = key.NewBinding(
 		key.WithKeys("r"),
-		key.WithHelp("<r>", "Refresh"),
+		key.WithHelp("r", "Refresh"),
 	)
 	// Restart is a key binding for restarting the selected row: a GPU
 	// node's instance (soft reset) or an InferenceService (rolling restart).
 	Restart = key.NewBinding(
 		key.WithKeys("R"),
-		key.WithHelp("<shift+r>", "Restart"),
+		key.WithHelp("R", "Restart"),
 	)
 	// ToggleCordon is a key binding for cordoning a node in the GPU node list.
 	ToggleCordon = key.NewBinding(
 		key.WithKeys("C"),
-		key.WithHelp("<shift+c>", "Toggle Cordon"),
+		key.WithHelp("C", "Toggle cordon"),
 	)
 	// DrainNode is a key binding for draining a node in the GPU node list.
 	DrainNode = key.NewBinding(
 		key.WithKeys("D"),
-		key.WithHelp("<shift+d>", "Drain"),
+		key.WithHelp("D", "Drain"),
 	)
 	// ScaleUp is a key binding for scaling up a GPU pool.
 	ScaleUp = key.NewBinding(
 		key.WithKeys("U"),
-		key.WithHelp("<shift+u>", "Scale Up"),
+		key.WithHelp("U", "Scale up"),
 	)
 	// SortInternal is a key binding for sorting by the "Internal" column.
 	SortInternal = sortBy(common.InternalCol)
@@ -213,13 +213,13 @@ var (
 	// ToggleAlias is a key binding for toggling the alias view.
 	ToggleAlias = key.NewBinding(
 		key.WithKeys("ctrl+a"),
-		key.WithHelp("<ctrl+a>", "Toggle Alias"),
+		key.WithHelp("^a", "Toggle aliases"),
 	)
 	// TogglePreview shows or hides the selected row's summary beside the
 	// table, on terminals wide enough for both.
 	TogglePreview = key.NewBinding(
 		key.WithKeys("v"),
-		key.WithHelp("<v>", "Toggle Preview"),
+		key.WithHelp("v", "Toggle preview"),
 	)
 	// SortType is a key binding for sorting by the "Type" column.
 	SortType = sortBy(common.TypeCol)
@@ -228,13 +228,13 @@ var (
 	// ToggleFaulty is a key binding for toggling the faulty state.
 	ToggleFaulty = key.NewBinding(
 		key.WithKeys("ctrl+z"),
-		key.WithHelp("<ctrl+z>", "Toggle Faulty"),
+		key.WithHelp("^z", "Faulty only"),
 	)
 	// EditTenant opens the tenant-metadata entry form for an
 	// unresolved DAC/ImportedModel row.
 	EditTenant = key.NewBinding(
 		key.WithKeys("E"),
-		key.WithHelp("<shift+e>", "Edit Tenant"),
+		key.WithHelp("E", "Edit tenant"),
 	)
 )
 

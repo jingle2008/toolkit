@@ -7,16 +7,16 @@
 │       │                       -|  |_   _|  |-                        │       │
 │       │                       -|    |_|    |-                        │       │
 │       │                        '-----------'                         │       │
-│       │ Details View Actions            Viewport Actions             │       │
-│       │   <o>         Copy Object         ↑/k         up             │       │
-│       │                                   ↓/j         down           │       │
-│       │ General Actions                   u           ½ page up      │       │
-│       │   <?/h>       Help                d           ½ page down    │       │
-│       │   <y>         Toggle Details      b/pgup      page up        │       │
-│       │   <c>         Copy                f/pgdn      page down      │       │
-│       │   <`>         Toggle Log                                     │       │
-│       │   <esc>       Back/Clear                                     │       │
-│       │   <q>         Quit                                           │       │
+│       │ Details view                    Navigation                   │       │
+│       │   o           Copy object         ↑/k         Up             │       │
+│       │                                   ↓/j         Down           │       │
+│       │ General                           u           ½ page up      │       │
+│       │   ?/h         Help                d           ½ page down    │       │
+│       │   y           Toggle details      b/pgup      Page up        │       │
+│       │   c           Copy                f/pgdn      Page down      │       │
+│       │   `           Toggle log                                     │       │
+│       │   esc         Back/Clear                                     │       │
+│       │   q           Quit                                           │       │
 │       │                                                              │       │
 │       │ esc close                                                    │       │
 │    }  ╰──────────────────────────────────────────────────────────────╯       │

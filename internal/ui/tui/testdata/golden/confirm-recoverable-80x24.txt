@@ -1,10 +1,10 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  GPUNode                                             Free: 10 • Total: 16 [1/2]
-╭─ GPUNode (2) ────────────────────────────────────────────────────────────────╮
-│ Name ↑     Pool             Type ↕     T…  F…  H…  R…  A…  Status            │
+╭─ GPUNode (2) · 1 column hidden ──────────────────────────────────────────────╮
+│ Name ↑     Pool    Type           Total  Free  Healt…  Ready  Status         │
 │──────────────────────────────────────────────────────────────────────────────│
-│ 10.0.0.11  pool-a           BM.GPU.H…  8   2   t…  t…  9…  OK                │
-│ 10.0.0.12  pool-a           BM.GPU.H…  8   8   f…  f…  9…  WARN: CORDONED    │
+│ 10.0.0.11  pool-a  BM.GPU.H100.8  8      2     true    true   OK             │
+│ 10.0.0.12  pool-a  BM.GPU.H100.8  8      8     false   false  WARN: CORDONED │
 │           ╭─ Drain node ─────────────────────────────────────────╮           │
 │           │ Kind     node                                        │           │
 │           │ Name     10.0.0.11                                   │           │
@@ -21,4 +21,4 @@
 │                                                                              │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
- o go to related  r refresh  C toggle cordon  D drain  ^z toggle faulty  ? more
+ o go to related  r refresh  / filter  : command palette  ? more

@@ -163,6 +163,8 @@ func (m *Model) listBody() string {
 	}
 	lines := strings.Split(body, "\n")
 	const header = 2 // column titles and their rule
+	// A table too short for any row below its header has no room for the
+	// message.
 	if len(lines) <= header {
 		return body
 	}
@@ -183,7 +185,7 @@ func (m *Model) emptyMessage() string {
 	case m.filter != "":
 		return fmt.Sprintf("Nothing matches /%s · esc clears the filter", m.filter)
 	case m.showFaulty:
-		return fmt.Sprintf("No faulty %s · %s shows all", cat, footerKey(keys.ToggleFaulty.Help()))
+		return fmt.Sprintf("No faulty %s · %s shows all", cat, keys.ToggleFaulty.Help().Key)
 	case m.scope != nil && m.scope.Category.IsScopeOf(m.category):
 		return fmt.Sprintf("No %s in %s", cat, m.scope.Name)
 	case m.category.IsEnvironmentScoped():

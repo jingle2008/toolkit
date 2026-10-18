@@ -1,24 +1,24 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  GPUN╭─ Keys · List view ─────────────────────────────────────────────────╮1/2]
-╭─ GP│ Resource Actions                   List View Actions               │────╮
-│ Nam│   <o>         Go to related          <[>         History Back      │    │
-│────│   s f         Sort Free              <]>         History Forward   │────│
-│ 10.│   s t         Sort Type              <tab>       Next Category     │    │
-│ 10.│   s a         Sort Age               <shift+tab> Previous Category │    │
-│    │   <r>         Refresh                <:cmd>      Command mode      │    │
-│    │   <shift+c>   Toggle Cordon          </term>     Filter mode       │    │
-│    │   <shift+d>   Drain                  <p>         Paste Filter      │    │
-│    │   <ctrl+z>    Toggle Faulty          s n         Sort Name         │    │
-│    │   <shift+r>   Restart                <enter>     View/Enter        │    │
-│    │   <ctrl+x>    Delete                 <ctrl+a>    Toggle Alias      │    │
-│    │                                      <v>         Toggle Preview    │    │
-│    │                                      <e>         Export CSV        │    │
-│    │                                                                    │    │
-│    │                                    General Actions                 │    │
-│    │                                      <?/h>       Help              │    │
+╭─ GP│ Actions                            List view                       │────╮
+│ Nam│   o           Go to related          [           History back      │    │
+│────│   r           Refresh                ]           History forward   │────│
+│ 10.│   C           Toggle cordon          tab         Next category     │    │
+│ 10.│   D           Drain                  shift+tab   Previous category │NED │
+│    │   ^z          Faulty only            :           Command palette   │    │
+│    │   R           Restart                /           Filter            │    │
+│    │   ^x          Delete                 p           Paste filter      │    │
+│    │                                      enter       Open              │    │
+│    │ Sort                                 ^a          Toggle aliases    │    │
+│    │   s n         Name                   v           Toggle preview    │    │
+│    │   s f         Free                   e           Export CSV        │    │
+│    │   s t         Type                                                 │    │
+│    │   s a         Age                  General                         │    │
+│    │                                      ?/h         Help              │    │
+│    │                                      y           Toggle details    │    │
 │    │ ↓ more · 0%                                                        │    │
 │    │                                                                    │    │
 │    │ j/k pgup/pgdn home/end scroll · esc close                          │    │
 │    ╰────────────────────────────────────────────────────────────────────╯    │
 ╰──────────────────────────────────────────────────────────────────────────────╯
- o go to related  r refresh  C toggle cordon  D drain  ^z toggle faulty  ? more
+ o go to related  r refresh  / filter  : command palette  ? more

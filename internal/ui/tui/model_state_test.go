@@ -3,7 +3,6 @@ package tui
 import (
 	"testing"
 
-	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/table"
 	"charm.land/bubbles/v2/textinput"
@@ -42,7 +41,6 @@ func TestNewModel_Valid(t *testing.T) {
 	assert.NotNil(t, m.table)
 	assert.NotNil(t, m.textInput)
 	assert.NotNil(t, m.viewport)
-	assert.NotNil(t, m.help)
 	assert.NotNil(t, m.loadingSpinner)
 }
 
@@ -98,7 +96,6 @@ func TestSetDefaults_TableStyles(t *testing.T) {
 	assert.NotNil(t, m.styles)
 	assert.NotNil(t, m.textInput)
 	assert.NotNil(t, m.viewport)
-	assert.NotNil(t, m.help)
 	assert.NotNil(t, m.loadingSpinner)
 }
 
@@ -162,14 +159,12 @@ func TestSetDefaults_ExistingFields(t *testing.T) {
 		table:          &table.Model{},
 		textInput:      &textinput.Model{},
 		viewport:       &viewport.Model{},
-		help:           &help.Model{},
 		loadingSpinner: &spinner.Model{},
 	}
 	setDefaults(m)
 	assert.NotNil(t, m.table)
 	assert.NotNil(t, m.textInput)
 	assert.NotNil(t, m.viewport)
-	assert.NotNil(t, m.help)
 	assert.NotNil(t, m.loadingSpinner)
 }
 

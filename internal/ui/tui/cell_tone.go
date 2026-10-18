@@ -110,6 +110,23 @@ func (m *Model) toneStatusCells(rows []table.Row) {
 	}
 }
 
+// markEmptyCells draws empty cells as a muted "—", so a blank reads as
+// "no value" rather than a rendering gap. Like toneStatusCells it sets
+// and resets only the foreground.
+func (m *Model) markEmptyCells(rows []table.Row) {
+	dash := "—"
+	if c := m.theme.Palette.Muted; c != nil {
+		dash = fgSeq(c) + dash + "\x1b[39m"
+	}
+	for _, r := range rows {
+		for i, cell := range r {
+			if cell == "" {
+				r[i] = dash
+			}
+		}
+	}
+}
+
 // fgSeq is the SGR sequence that sets c as a 24-bit foreground.
 func fgSeq(c color.Color) string {
 	r, g, b, _ := c.RGBA()

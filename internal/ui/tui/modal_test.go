@@ -13,6 +13,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
 func TestConfirmButtons_FocusAndEnter(t *testing.T) {
@@ -128,7 +129,7 @@ func TestHelp_ScrollReachesEveryBinding(t *testing.T) {
 
 	want := map[string]bool{}
 	for _, b := range m.keys.Context {
-		want[b.Help().Desc] = false
+		want[strings.TrimPrefix(b.Help().Desc, keys.SortPrefix)] = false // the Sort section lists columns
 	}
 	for _, b := range m.keys.Global {
 		want[b.Help().Desc] = false

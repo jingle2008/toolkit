@@ -1,11 +1,11 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  Ded╭─ Export CSV ─────────────────────────────────────────────────────────╮/3]
 ╭─ D│ File  us-ashburn-1-DedicatedAICluster.csv                            │───╮
-│ Na│                                                                      │s  │
+│ Na│                                                                      │us │
 │───│ Pick a directory:                                                    │───│
-│ da│                                                                      │e  │
-│ da│ > drwxr-xr-x  <size> alpha                                            │e  │
-│ da│   drwxr-xr-x  <size> beta                                             │d  │
+│ da│                                                                      │ve │
+│ da│ > drwxr-xr-x  <size> alpha                                            │ve │
+│ da│   drwxr-xr-x  <size> beta                                             │ed │
 │   │   drwxr-xr-x  <size> gamma                                            │   │
 │   │                                                                      │   │
 │   │                                                                      │   │
@@ -19,6 +19,6 @@
 │   │                                                                      │   │
 │   │                                                                      │   │
 │   │                                                                      │   │
-│   │ k up • j down • enter select • l open • h back • esc cancel          │   │
+│   │ ↑/↓ select · → open · ← parent · enter export here · esc cancel      │   │
 ╰───╰──────────────────────────────────────────────────────────────────────╯───╯
- o go to related  t copy tenant id  E edit tenant  m open metrics  ? more
+ o go to related  t copy tenant ID  / filter  : command palette  ? more

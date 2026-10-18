@@ -21,13 +21,13 @@
 │        "age": "12d"                               │                                       -|  |_   _|  |-                                        │                                                   │
 │    }                                              │                                       -|    |_|    |-                                        │                                                   │
 │                                                   │                                        '-----------'                                         │                                                   │
-│                                                   │ Details View Actions            General Actions                 Viewport Actions             │                                                   │
-│                                                   │   <o>         Copy Object         <?/h>       Help                ↑/k         up             │                                                   │
-│                                                   │                                   <y>         Toggle Details      ↓/j         down           │                                                   │
-│                                                   │                                   <c>         Copy                u           ½ page up      │                                                   │
-│                                                   │                                   <`>         Toggle Log          d           ½ page down    │                                                   │
-│                                                   │                                   <esc>       Back/Clear          b/pgup      page up        │                                                   │
-│                                                   │                                   <q>         Quit                f/pgdn      page down      │                                                   │
+│                                                   │ Details view                    General                         Navigation                   │                                                   │
+│                                                   │   o           Copy object         ?/h         Help                ↑/k         Up             │                                                   │
+│                                                   │                                   y           Toggle details      ↓/j         Down           │                                                   │
+│                                                   │                                   c           Copy                u           ½ page up      │                                                   │
+│                                                   │                                   `           Toggle log          d           ½ page down    │                                                   │
+│                                                   │                                   esc         Back/Clear          b/pgup      Page up        │                                                   │
+│                                                   │                                   q           Quit                f/pgdn      Page down      │                                                   │
 │                                                   │                                                                                              │                                                   │
 │                                                   │ esc close                                                                                    │                                                   │
 │                                                   ╰──────────────────────────────────────────────────────────────────────────────────────────────╯                                                   │

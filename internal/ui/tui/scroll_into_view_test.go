@@ -30,9 +30,12 @@ func TestApplyRows_AutoSelect_ScrollsTargetFullyIntoView(t *testing.T) {
 
 	// 30 rows: row-00 .. row-29. Zero-padded so no name is a substring of
 	// another (avoids row-2 matching row-20 in the View() contains check).
+	// applyRows fits the category's columns to the rows, so each row has
+	// a cell per Tenant column.
 	rows := make([]table.Row, 30)
 	for i := range rows {
-		rows[i] = table.Row{fmt.Sprintf("row-%02d", i)}
+		rows[i] = make(table.Row, len(headersFor(domain.Tenant)))
+		rows[i][0] = fmt.Sprintf("row-%02d", i)
 	}
 
 	// Simulate returning to the parent category after entering a row's

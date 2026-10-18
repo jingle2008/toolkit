@@ -62,7 +62,7 @@ func TestQuickSwitchBindings_SlotOrderWithCurrentMarker(t *testing.T) {
 	t.Parallel()
 	m := newQuickSwitchModel(t, "")
 	ks, ds := helpKeysAndDescs(m.quickSwitchBindings(common.ListView))
-	assert.Equal(t, []string{"<0>", "<1>", "<2>"}, ks)
+	assert.Equal(t, []string{"0", "1", "2"}, ks)
 	assert.Equal(t, []string{"dp-dev-phx" + currentSlotMarker, "dp-prod-iad", "dp-dev-ord"}, ds)
 }
 
@@ -232,6 +232,26 @@ func TestFrame_QuickSwitchIsFirstHelpColumn(t *testing.T) {
 	full := km.FullHelp()
 	require.NotEmpty(t, full)
 	ks, _ := helpKeysAndDescs(full[0])
-	assert.Equal(t, []string{"<0>", "<1>", "<2>"}, ks)
+	assert.Equal(t, []string{"0", "1", "2"}, ks)
 	assert.Contains(t, m.frame("", ""), "dp-prod-iad")
+}
+
+// Help capitalizes only the bubbles navigation descriptions; quick-switch
+// contexts keep their names.
+func TestHelp_SentenceCaseOnlyForNavigation(t *testing.T) {
+	t.Parallel()
+	m := newQuickSwitchModel(t, "")
+	m.updateLayout(200, 40)
+	m.lastViewMode = common.ListView
+	var lines []string
+	for _, sec := range m.helpSections() {
+		lines = append(lines, sec...)
+	}
+	all := strings.Join(lines, "\n")
+	assert.Contains(t, all, "dp-prod-iad")
+	assert.NotContains(t, all, "Dp-prod-iad")
+	assert.Contains(t, all, "Up")
+
+	b := sentenceCase([]key.Binding{key.NewBinding(key.WithKeys("u"), key.WithHelp("u", "½ page up"))})
+	assert.Equal(t, "½ page up", b[0].Help().Desc, "no letter to capitalize")
 }

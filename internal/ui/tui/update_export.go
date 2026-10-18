@@ -71,13 +71,10 @@ func (m *Model) exportView() string {
 	s.WriteString(lipgloss.NewStyle().Foreground(p.Muted).Render("Pick a directory:"))
 	s.WriteString("\n\n")
 	s.WriteString(m.dirPicker.View())
-	return m.modal("Export CSV", s.String(), m.exportHelpView(), p.Focus, m.modalMaxWidth())
+	return m.modal("Export CSV", s.String(), exportHints, p.Focus, m.modalMaxWidth())
 }
 
-func (m *Model) exportHelpView() string {
-	km := m.dirPicker.KeyMap
-	// An unbounded copy: m.help is sized for the header, not the modal.
-	h := *m.help
-	h.SetWidth(0)
-	return h.ShortHelpView([]key.Binding{km.Up, km.Down, km.Select, km.Open, km.Back}) + " • esc cancel"
-}
+// exportHints is the export modal's key line, in the shared modal style.
+// enter both opens a directory and picks it (the filepicker's Open and
+// Select), so it is named by what the user wants from it here.
+const exportHints = "↑/↓ select · → open · ← parent · enter export here · esc cancel"
