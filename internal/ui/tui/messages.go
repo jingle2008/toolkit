@@ -58,6 +58,7 @@ type filterApplyMsg struct {
 type tableRowsComputedMsg struct {
 	Rows  []table.Row
 	Stats tableStats
+	Total int // rows before the filter and faulty-only mode
 	Gen   int
 }
 

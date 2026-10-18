@@ -53,6 +53,19 @@ func Panel(title, body string, border color.Color, titleStyle lipgloss.Style, wi
 	return frameBox(title, body, border, titleStyle, width, 0)
 }
 
+// StatusPanel is Panel with status, muted, set into the right of its
+// bottom edge: ╰──── 1 of 3 ─╯. An empty status draws a plain edge.
+func StatusPanel(title, status, body string, border color.Color, titleStyle, statusStyle lipgloss.Style, width int) string {
+	boxed := frameBox(title, body, border, titleStyle, width, 0)
+	if status == "" {
+		return boxed
+	}
+	lines := strings.Split(boxed, "\n")
+	lines[len(lines)-1] = bottomEdge(status, lipgloss.Width(lines[len(lines)-1]),
+		lipgloss.NewStyle().Foreground(border), statusStyle)
+	return strings.Join(lines, "\n")
+}
+
 func frameBox(title, body string, border color.Color, titleStyle lipgloss.Style, width, pad int) string {
 	inner := lipgloss.NewStyle().Padding(0, pad)
 	switch {
@@ -69,6 +82,21 @@ func frameBox(title, body string, border color.Color, titleStyle lipgloss.Style,
 		BorderTop(false).
 		Render(inner.Render(body))
 	return topEdge(title, lipgloss.Width(boxed), edge, titleStyle) + "\n" + boxed
+}
+
+// bottomEdge draws a w-wide rounded bottom border with label set before
+// " ─╯". A label too long for the edge is truncated with an ellipsis.
+func bottomEdge(label string, w int, edge, labelStyle lipgloss.Style) string {
+	b := lipgloss.RoundedBorder()
+	room := w - 6 // ╰─ … space label space ─╯
+	if room < 1 {
+		return edge.Render(b.BottomLeft + strings.Repeat(b.Bottom, max(w-2, 0)) + b.BottomRight)
+	}
+	label = ansi.Truncate(label, room, "…")
+	fill := w - 5 - lipgloss.Width(label)
+	return edge.Render(b.BottomLeft+strings.Repeat(b.Bottom, fill)+" ") +
+		labelStyle.Render(label) +
+		edge.Render(" "+b.Bottom+b.BottomRight)
 }
 
 // topEdge draws a w-wide rounded top border with title inset after "╭─ ".

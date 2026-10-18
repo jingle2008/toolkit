@@ -191,6 +191,9 @@ type Model struct {
 	// mutates the table's rows in place, which would otherwise leak
 	// "…" into ScopedItemKey lookups.
 	rawRows []table.Row
+	// rowTotal is how many rows the category (in its scope) has before the
+	// filter and faulty-only mode; the panel shows it when they hide some.
+	rowTotal int
 	// hiddenColumns counts the columns updateColumns hid for want of
 	// width; the panel title says so.
 	hiddenColumns int

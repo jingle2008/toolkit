@@ -1,6 +1,6 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                                                         v1.2.3
- Log   PAUSED                                                                                                   [60/60]
-╭─ Log (60) ───────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ Log   PAUSED
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ hh:mm:ss INFO  loaded category 0 rows=0                                                                              │
 │ hh:mm:ss INFO  loaded category 1 rows=3                                                                              │
 │ hh:mm:ss INFO  loaded category 2 rows=6                                                                              │
@@ -36,5 +36,5 @@
 │ hh:mm:ss INFO  loaded category 32 rows=96                                                                            │
 │ hh:mm:ss INFO  loaded category 33 rows=99                                                                            │
 │ hh:mm:ss INFO  loaded category 34 rows=102                                                                           │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────── 60 entries ─╯
  / filter  l level  end follow  home top  ` close

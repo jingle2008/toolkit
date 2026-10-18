@@ -94,3 +94,22 @@ func TestBox_FitsTitle(t *testing.T) {
 	assert.Equal(t, "╭─ a longer title ─╮", out[0])
 	assert.Equal(t, ansi.StringWidth(out[0]), ansi.StringWidth(out[1]))
 }
+
+// StatusPanel sets its status into the bottom edge, right-aligned, and
+// truncates it to fit; an empty status draws a plain edge.
+func TestStatusPanel_BottomEdge(t *testing.T) {
+	t.Parallel()
+	plain := lipgloss.NewStyle()
+	out := ansi.Strip(StatusPanel("", "1 of 3", "body", lipgloss.Color("1"), plain, plain, 20))
+	lines := strings.Split(out, "\n")
+	assert.Equal(t, "╰───────── 1 of 3 ─╯", lines[len(lines)-1])
+	assert.Equal(t, 20, lipgloss.Width(lines[len(lines)-1]))
+
+	out = ansi.Strip(StatusPanel("", "a very long status line", "body", lipgloss.Color("1"), plain, plain, 16))
+	last := strings.Split(out, "\n")[2]
+	assert.Equal(t, 16, lipgloss.Width(last))
+	assert.Contains(t, last, "…")
+
+	out = ansi.Strip(StatusPanel("", "", "body", lipgloss.Color("1"), plain, plain, 10))
+	assert.Equal(t, "╰────────╯", strings.Split(out, "\n")[2])
+}
