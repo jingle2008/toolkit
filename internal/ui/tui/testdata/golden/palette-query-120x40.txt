@@ -16,9 +16,9 @@
 │                       ╭─ Command palette ────────────────────────────────────────────────────╮                       │
 │                       │ › gpu                                                                │                       │
 │                       │                                                                      │                       │
-│                       │ ▸ GPUPool                                  gpup gpupool gp  category │                       │
-│                       │   GPUNode                                  gpun gpunode gn  category │                       │
-│                       │   GPUWorkload                          gpuw gpuworkload gw  category │                       │
+│                       │ ▸ GPUPool                                          gpup gp  category │                       │
+│                       │   GPUNode                                          gpun gn           │                       │
+│                       │   GPUWorkload                                      gpuw gw           │                       │
 │                       │                                                                      │                       │
 │                       │ ↑/↓ select · enter run · esc close                                   │                       │
 │                       ╰──────────────────────────────────────────────────────────────────────╯                       │

@@ -11,18 +11,18 @@
 │                       ╭─ Command palette ────────────────────────────────────────────────────╮                       │
 │                       │ ›                                                                    │                       │
 │                       │                                                                      │                       │
-│                       │ ▸ Tenant                                          t tenant  category │                       │
-│                       │   LimitDefinition                       ld limitdefinition  category │                       │
-│                       │   ConsolePropertyDefinition          cpd consolepropertyd…  category │                       │
-│                       │   PropertyDefinition                 pd propertydefinition  category │                       │
-│                       │   LimitTenancyOverride               lto limittenancyover…  category │                       │
-│                       │   ConsolePropertyTenancyOverride     cpto consoleproperty…  category │                       │
-│                       │   PropertyTenancyOverride            pto propertytenancyo…  category │                       │
-│                       │   LimitRegionalOverride              lro limitregionalove…  category │                       │
-│                       │   ConsolePropertyRegionalOverride    cpro consoleproperty…  category │                       │
-│                       │   PropertyRegionalOverride           pro propertyregional…  category │                       │
-│                       │   BaseModel                                   bm basemodel  category │                       │
-│                       │   ImportedModel                           im importedmodel  category │                       │
+│                       │ ▸ Tenant                                                 t  category │                       │
+│                       │   LimitDefinition                                       ld           │                       │
+│                       │   ConsolePropertyDefinition                            cpd           │                       │
+│                       │   PropertyDefinition                                    pd           │                       │
+│                       │   LimitTenancyOverride                                 lto           │                       │
+│                       │   ConsolePropertyTenancyOverride                      cpto           │                       │
+│                       │   PropertyTenancyOverride                              pto           │                       │
+│                       │   LimitRegionalOverride                                lro           │                       │
+│                       │   ConsolePropertyRegionalOverride                     cpro           │                       │
+│                       │   PropertyRegionalOverride                             pro           │                       │
+│                       │   BaseModel                                             bm           │                       │
+│                       │   ImportedModel                                         im           │                       │
 │                       │   1–12 of 38                                                         │                       │
 │                       │                                                                      │                       │
 │                       │ ↑/↓ select · enter run · esc close                                   │                       │

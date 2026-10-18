@@ -151,7 +151,7 @@ func scrollWindow(cursor, offset, n int) int {
 }
 
 // rowPickerView renders the picker: an optional filter line, one row per
-// visible target (a category badge, then the name), and a scroll
+// visible target (a left-aligned category badge, then the name), and a scroll
 // indicator when the rows don't all fit.
 func (m *Model) rowPickerView() string {
 	g := m.rowPicker
@@ -165,7 +165,7 @@ func (m *Model) rowPickerView() string {
 	for _, t := range g.targets {
 		catWidth = max(catWidth, lipgloss.Width(t.Category.String())+2)
 	}
-	badge := lipgloss.NewStyle().Foreground(p.OnAccent).Background(p.Secondary).Width(catWidth).Align(lipgloss.Center)
+	badge := lipgloss.NewStyle().Foreground(p.OnAccent).Background(p.Secondary).Width(catWidth).Padding(0, 1)
 	cursorStyle := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
 
 	var lines []string
@@ -188,5 +188,8 @@ func (m *Model) rowPickerView() string {
 			Render(fmt.Sprintf("  %d–%d of %d", start+1, end, len(rows))))
 	}
 	hints := fmt.Sprintf("↑/↓ select · enter %s · esc cancel", g.verb)
+	if g.filterable() {
+		hints = fmt.Sprintf("type to filter · ↑/↓ select · enter %s · esc cancel", g.verb)
+	}
 	return m.modal(g.title, strings.Join(lines, "\n"), hints, p.Focus, 0)
 }

@@ -3,18 +3,18 @@
 ╭─ D╭─ Command palette ────────────────────────────────────────────────────╮───╮
 │ Na│ ›                                                                    │us │
 │───│                                                                      │───│
-│ da│ ▸ Tenant                                          t tenant  category │ve │
-│ da│   LimitDefinition                       ld limitdefinition  category │ve │
-│ da│   ConsolePropertyDefinition          cpd consolepropertyd…  category │ed │
-│   │   PropertyDefinition                 pd propertydefinition  category │   │
-│   │   LimitTenancyOverride               lto limittenancyover…  category │   │
-│   │   ConsolePropertyTenancyOverride     cpto consoleproperty…  category │   │
-│   │   PropertyTenancyOverride            pto propertytenancyo…  category │   │
-│   │   LimitRegionalOverride              lro limitregionalove…  category │   │
-│   │   ConsolePropertyRegionalOverride    cpro consoleproperty…  category │   │
-│   │   PropertyRegionalOverride           pro propertyregional…  category │   │
-│   │   BaseModel                                   bm basemodel  category │   │
-│   │   ImportedModel                           im importedmodel  category │   │
+│ da│ ▸ Tenant                                                 t  category │ve │
+│ da│   LimitDefinition                                       ld           │ve │
+│ da│   ConsolePropertyDefinition                            cpd           │ed │
+│   │   PropertyDefinition                                    pd           │   │
+│   │   LimitTenancyOverride                                 lto           │   │
+│   │   ConsolePropertyTenancyOverride                      cpto           │   │
+│   │   PropertyTenancyOverride                              pto           │   │
+│   │   LimitRegionalOverride                                lro           │   │
+│   │   ConsolePropertyRegionalOverride                     cpro           │   │
+│   │   PropertyRegionalOverride                             pro           │   │
+│   │   BaseModel                                             bm           │   │
+│   │   ImportedModel                                         im           │   │
 │   │   1–12 of 38                                                         │   │
 │   │                                                                      │   │
 │   │ ↑/↓ select · enter run · esc close                                   │   │

@@ -1,24 +1,24 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  DedicatedAICluster                       Active: 2 • Failed: 1 • Size: 7 [1/3]
 ╭─ DedicatedAICluster (3) · 1 column hidden ───────────────────────────────────╮
-│ Name ↑      Tenant ╭─ Go to ────────────────────────────╮pe/P…  Size  Status │
-│────────────────────│ filter: █                          │────────────────────│
-│ dac-alpha   acme   │                                    │0_80G  4     Active │
-│ dac-orphan  orphan │ ▸  Tenant   row-00                 │       1     Active │
-│ dac-日本語  acme   │    Tenant   row-01                 │0      2     Failed │
-│                    │    Tenant   row-02                 │                    │
-│                    │    Tenant   row-03                 │                    │
-│                    │    Tenant   row-04                 │                    │
-│                    │    Tenant   row-05                 │                    │
-│                    │    Tenant   row-06                 │                    │
-│                    │    Tenant   row-07                 │                    │
-│                    │    Tenant   row-08                 │                    │
-│                    │    Tenant   row-09                 │                    │
-│                    │    Tenant   row-10                 │                    │
-│                    │    Tenant   row-11                 │                    │
-│                    │                                    │                    │
-│                    │ ↑/↓ select · enter go · esc cancel │                    │
-│                    ╰────────────────────────────────────╯                    │
+│ Name ↑    ╭─ Go to ─────────────────────────────────────────────╮ize  Status │
+│───────────│ filter: █                                           │────────────│
+│ dac-alpha │                                                     │     Active │
+│ dac-orphan│ ▸  Tenant   row-00                                  │     Active │
+│ dac-日本語│    Tenant   row-01                                  │     Failed │
+│           │    Tenant   row-02                                  │            │
+│           │    Tenant   row-03                                  │            │
+│           │    Tenant   row-04                                  │            │
+│           │    Tenant   row-05                                  │            │
+│           │    Tenant   row-06                                  │            │
+│           │    Tenant   row-07                                  │            │
+│           │    Tenant   row-08                                  │            │
+│           │    Tenant   row-09                                  │            │
+│           │    Tenant   row-10                                  │            │
+│           │    Tenant   row-11                                  │            │
+│           │                                                     │            │
+│           │ type to filter · ↑/↓ select · enter go · esc cancel │            │
+│           ╰─────────────────────────────────────────────────────╯            │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
  o go to related  t copy tenant ID  / filter  : command palette  ? more

@@ -20,6 +20,9 @@ import (
 // paletteMaxRows caps how many items the palette lists before scrolling.
 const paletteMaxRows = 12
 
+// paletteRecentMax is how many recently run items the palette lists first.
+const paletteRecentMax = 5
+
 // paletteItem is one thing the palette can run: a category to open, an
 // environment to switch to, an action on the selected row, or a toggle.
 type paletteItem struct {
@@ -29,12 +32,17 @@ type paletteItem struct {
 	run   func() tea.Cmd
 }
 
+// id names the item across palette openings, for the recent list.
+func (it paletteItem) id() string { return it.kind + "\x00" + it.label }
+
 // paletteState is the open command palette. matches holds the items the
-// query keeps, best first; cursor and offset index it.
+// query keeps, best first; cursor and offset index it. With no query the
+// first recent matches are the recently run items.
 type paletteState struct {
 	input      textinput.Model
 	items      []paletteItem
 	matches    []fuzzy.Match
+	recent     int
 	cursor     int
 	offset     int
 	returnView common.ViewMode
@@ -63,7 +71,7 @@ func (m *Model) paletteItems() []paletteItem {
 			continue
 		}
 		items = append(items, paletteItem{
-			kind: "category", label: e.Name, hint: strings.Join(e.Aliases, " "),
+			kind: "category", label: e.Name, hint: m.categoryHint(cat, e.Aliases),
 			run: func() tea.Cmd { return m.openCategory(cat) },
 		})
 	}
@@ -79,6 +87,22 @@ func (m *Model) paletteItems() []paletteItem {
 			run: m.togglePreview,
 		})
 	return items
+}
+
+// categoryHint is a category's short aliases (the full lowercase name the
+// label already says is left out), marked when it is the one open.
+func (m *Model) categoryHint(cat domain.Category, aliases []string) string {
+	short := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		if a != strings.ToLower(cat.String()) {
+			short = append(short, a)
+		}
+	}
+	hint := strings.Join(short, " ")
+	if cat == m.category {
+		hint += currentSlotMarker
+	}
+	return strings.TrimSpace(hint)
 }
 
 // paletteEnvironments offers the environments the quick-switch keys can
@@ -176,18 +200,25 @@ func (m *Model) refilterPalette() {
 	p.cursor, p.offset = 0, 0
 	q := strings.TrimSpace(p.input.Value())
 	p.matches = make([]fuzzy.Match, 0, len(p.items))
-	if q == "" {
-		for i := range p.items {
-			p.matches = append(p.matches, fuzzy.Match{Index: i})
-		}
-		return
-	}
+	p.recent = 0
 	seen := make(map[int]bool, len(p.items))
 	add := func(mt fuzzy.Match) {
 		if !seen[mt.Index] {
 			seen[mt.Index] = true
 			p.matches = append(p.matches, mt)
 		}
+	}
+	if q == "" {
+		for _, id := range m.paletteRecent {
+			if i := slices.IndexFunc(p.items, func(it paletteItem) bool { return it.id() == id }); i >= 0 {
+				add(fuzzy.Match{Index: i})
+			}
+		}
+		p.recent = len(p.matches)
+		for i := range p.items {
+			add(fuzzy.Match{Index: i})
+		}
+		return
 	}
 	if cat, err := domain.ParseCategory(q); err == nil {
 		for i, it := range p.items {
@@ -252,15 +283,27 @@ func (m *Model) updatePaletteView(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) runPalette() tea.Cmd {
 	p := m.palette
 	if cat, err := domain.ParseCategory(p.input.Value()); err == nil {
+		m.rememberPalette(paletteItem{kind: "category", label: cat.String()})
 		m.closePalette()
 		return m.openCategory(cat)
 	}
 	if len(p.matches) == 0 {
 		return nil
 	}
-	run := p.items[p.matches[p.cursor].Index].run
+	it := p.items[p.matches[p.cursor].Index]
+	m.rememberPalette(it)
 	m.closePalette()
-	return run()
+	return it.run()
+}
+
+// rememberPalette puts it first in the recent list.
+func (m *Model) rememberPalette(it paletteItem) {
+	id := it.id()
+	m.paletteRecent = slices.DeleteFunc(m.paletteRecent, func(r string) bool { return r == id })
+	m.paletteRecent = append([]string{id}, m.paletteRecent...)
+	if len(m.paletteRecent) > paletteRecentMax {
+		m.paletteRecent = m.paletteRecent[:paletteRecentMax]
+	}
 }
 
 func (m *Model) closePalette() {
@@ -274,7 +317,8 @@ func (m *Model) paletteRows() int {
 }
 
 // paletteView renders the palette: the query, then one row per visible
-// match with its matched characters highlighted, its hint and its kind.
+// match with its matched characters highlighted, its hint and its group.
+// A group (recent, or the item's kind) is named on its first row only.
 func (m *Model) paletteView() string {
 	p := m.palette
 	pal := m.theme.Palette
@@ -286,6 +330,16 @@ func (m *Model) paletteView() string {
 
 	muted := lipgloss.NewStyle().Foreground(pal.Muted)
 	hit := lipgloss.NewStyle().Foreground(pal.Primary).Bold(true)
+	group := func(i int) string {
+		if i < p.recent {
+			return "recent"
+		}
+		return p.items[p.matches[i].Index].kind
+	}
+	kindW := 0
+	for i := range p.matches {
+		kindW = max(kindW, len(group(i)))
+	}
 	lines := []string{p.input.View(), ""}
 	for i := start; i < end; i++ {
 		mt := p.matches[i]
@@ -295,7 +349,11 @@ func (m *Model) paletteView() string {
 			marker = hit.Render("▸ ")
 		}
 		label := highlight(it.label, mt.MatchedIndexes, hit)
-		right := muted.Render(truncateString(it.hint, inner/3) + "  " + it.kind)
+		kind := ""
+		if i == start || group(i) != group(i-1) {
+			kind = group(i)
+		}
+		right := muted.Render(truncateString(it.hint, inner/3) + "  " + fmt.Sprintf("%-*s", kindW, kind))
 		gap := max(inner-2-lipgloss.Width(label)-lipgloss.Width(right), 1)
 		lines = append(lines, marker+label+strings.Repeat(" ", gap)+right)
 	}

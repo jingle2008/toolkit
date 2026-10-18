@@ -15,8 +15,8 @@
 │                                                                                                                      │
 │                                                                                                                      │
 │                                        ╭─ Go to ────────────────────────────╮                                        │
-│                                        │        Tenant       acme           │                                        │
-│                                        │ ▸    BaseModel      llama-3.1-70b  │                                        │
+│                                        │    Tenant           acme           │                                        │
+│                                        │ ▸  BaseModel        llama-3.1-70b  │                                        │
 │                                        │    ServingRuntime   vllm           │                                        │
 │                                        │                                    │                                        │
 │                                        │ ↑/↓ select · enter go · esc cancel │                                        │

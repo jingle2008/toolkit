@@ -127,6 +127,9 @@ type Model struct {
 	confirm       confirmOverlay  // destructive-action confirmation modal state
 	rowPicker     rowPickerState  // modal row picker state (go to, metrics DAC)
 	palette       paletteState    // command palette state
+	// paletteRecent names the palette items run this session, newest
+	// first (paletteRecentMax at most), by paletteItem.id.
+	paletteRecent []string
 	preview       bool            // preview pane toggled on (shown when wide enough)
 	uiState       uistate.State   // persisted UI preferences
 	uiStatePath   string          // where uiState is saved ("" disables saving and the hint)

@@ -175,3 +175,14 @@ func TestToasts_StackAndExpire(t *testing.T) {
 	assert.Equal(t, "three", m.toasts.active.msg, "the next older takes its place")
 	assert.Empty(t, m.toasts.older)
 }
+
+// A filterable picker says typing filters.
+func TestRowPicker_HintSaysTypeToFilter(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 40)
+	showCategory(t, m, domain.DedicatedAICluster)
+	m.openRowPicker("Go to", "go", pickerTargets(3), nil)
+	assert.NotContains(t, ansi.Strip(m.rowPickerView()), "type to filter")
+	m.openRowPicker("Go to", "go", pickerTargets(12), nil)
+	assert.Contains(t, ansi.Strip(m.rowPickerView()), "type to filter")
+}

@@ -144,3 +144,50 @@ func TestPalette_NoCrossFieldMatches(t *testing.T) {
 	require.Len(t, m.palette.matches, 1)
 	assert.Equal(t, "DedicatedAICluster", m.palette.items[m.palette.matches[0].Index].label)
 }
+
+// Category hints are the short aliases only, and the open category is
+// marked.
+func TestPalette_CategoryHints(t *testing.T) {
+	t.Parallel()
+	m := newPrefixModel(t) // DedicatedAICluster open
+	assert.Equal(t, "gpup gp", m.categoryHint(domain.GPUPool, domain.GPUPool.Aliases()))
+	assert.True(t, strings.HasSuffix(m.categoryHint(domain.DedicatedAICluster, domain.DedicatedAICluster.Aliases()), currentSlotMarker))
+	assert.NotContains(t, m.categoryHint(domain.GPUPool, domain.GPUPool.Aliases()), "gpupool")
+}
+
+// With no query, the recently run items come first, newest first, under
+// "recent"; each group is named on its first row only.
+func TestPalette_RecentFirst(t *testing.T) {
+	t.Parallel()
+	m := newPrefixModel(t)
+	typePalette(m, "gpunode")
+	_, _ = m.Update(keyPress("enter"))
+	require.Equal(t, domain.GPUNode, m.category)
+	typePalette(m, "tenant")
+	_, _ = m.Update(keyPress("enter"))
+	require.Equal(t, domain.Tenant, m.category)
+
+	_, _ = m.Update(keyPress(":"))
+	p := m.palette
+	require.Equal(t, 2, p.recent)
+	assert.Equal(t, "Tenant", p.items[p.matches[0].Index].label)
+	assert.Equal(t, "GPUNode", p.items[p.matches[1].Index].label)
+
+	lines := strings.Split(ansi.Strip(m.paletteView()), "\n")
+	assert.Equal(t, 1, strings.Count(strings.Join(lines, "\n"), "recent"), "named once")
+	assert.Contains(t, lineWith(strings.Join(lines, "\n"), "Tenant"), "recent")
+	assert.Equal(t, 1, strings.Count(strings.Join(lines, "\n"), " category"), "next group named once")
+}
+
+// The recent list keeps paletteRecentMax items without repeats.
+func TestPalette_RememberCapsAndDedupes(t *testing.T) {
+	t.Parallel()
+	m := newPrefixModel(t)
+	for i := range paletteRecentMax + 2 {
+		m.rememberPalette(paletteItem{kind: "action", label: fmt.Sprint(i)})
+	}
+	m.rememberPalette(paletteItem{kind: "action", label: "3"})
+	assert.Len(t, m.paletteRecent, paletteRecentMax)
+	assert.Equal(t, paletteItem{kind: "action", label: "3"}.id(), m.paletteRecent[0])
+	assert.Equal(t, 1, strings.Count(strings.Join(m.paletteRecent, "|"), "\x003"))
+}

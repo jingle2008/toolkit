@@ -9,24 +9,24 @@
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                        ╭─ Go to ────────────────────────────╮                                        │
-│                                        │ filter: █                          │                                        │
-│                                        │                                    │                                        │
-│                                        │ ▸  Tenant   row-00                 │                                        │
-│                                        │    Tenant   row-01                 │                                        │
-│                                        │    Tenant   row-02                 │                                        │
-│                                        │    Tenant   row-03                 │                                        │
-│                                        │    Tenant   row-04                 │                                        │
-│                                        │    Tenant   row-05                 │                                        │
-│                                        │    Tenant   row-06                 │                                        │
-│                                        │    Tenant   row-07                 │                                        │
-│                                        │    Tenant   row-08                 │                                        │
-│                                        │    Tenant   row-09                 │                                        │
-│                                        │    Tenant   row-10                 │                                        │
-│                                        │    Tenant   row-11                 │                                        │
-│                                        │                                    │                                        │
-│                                        │ ↑/↓ select · enter go · esc cancel │                                        │
-│                                        ╰────────────────────────────────────╯                                        │
+│                               ╭─ Go to ─────────────────────────────────────────────╮                                │
+│                               │ filter: █                                           │                                │
+│                               │                                                     │                                │
+│                               │ ▸  Tenant   row-00                                  │                                │
+│                               │    Tenant   row-01                                  │                                │
+│                               │    Tenant   row-02                                  │                                │
+│                               │    Tenant   row-03                                  │                                │
+│                               │    Tenant   row-04                                  │                                │
+│                               │    Tenant   row-05                                  │                                │
+│                               │    Tenant   row-06                                  │                                │
+│                               │    Tenant   row-07                                  │                                │
+│                               │    Tenant   row-08                                  │                                │
+│                               │    Tenant   row-09                                  │                                │
+│                               │    Tenant   row-10                                  │                                │
+│                               │    Tenant   row-11                                  │                                │
+│                               │                                                     │                                │
+│                               │ type to filter · ↑/↓ select · enter go · esc cancel │                                │
+│                               ╰─────────────────────────────────────────────────────╯                                │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
