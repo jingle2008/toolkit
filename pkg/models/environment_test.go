@@ -93,3 +93,10 @@ func TestEnvironment_Equals_DifferentRealm(t *testing.T) {
 	b := Environment{Type: "dev", Region: "us-phoenix-1", Realm: "oc2"}
 	assert.False(t, a.Equals(b))
 }
+
+func TestEnvironment_IsProduction(t *testing.T) {
+	t.Parallel()
+	for typ, want := range map[string]bool{"prod": true, "preprod": false, "dev": false, "": false} {
+		assert.Equal(t, want, Environment{Type: typ}.IsProduction(), typ)
+	}
+}

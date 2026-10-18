@@ -63,11 +63,8 @@ func TestHandleErrMsg_RealErrorShowsToast(t *testing.T) {
 	m.pendingTasks = 1
 
 	msg := errMsg{err: errors.New("boom"), Gen: 2}
-	cmd := m.handleErrMsg(msg)
+	m.handleErrMsg(msg)
 
-	if cmd == nil {
-		t.Fatal("a real error should return a toast command")
-	}
 	if m.toasts.active == nil || m.toasts.active.sev != toastError {
 		t.Fatalf("a real error should raise an error toast: %+v", m.toasts.active)
 	}
@@ -85,9 +82,9 @@ func TestHandleErrMsg_Gen0SentinelAlwaysShows(t *testing.T) {
 	m.pendingTasks = 1
 
 	msg := errMsg{err: errors.New("init failed")} // Gen 0
-	cmd := m.handleErrMsg(msg)
+	m.handleErrMsg(msg)
 
-	if cmd == nil || m.toasts.active == nil {
+	if m.toasts.active == nil {
 		t.Fatalf("gen-0 error must surface a toast even at gen %d", m.gens.msg)
 	}
 }

@@ -62,10 +62,11 @@ type Styles struct {
 	Palette Palette
 
 	// Frame chips: the breadcrumb's category path and row stats, and the
-	// env bar's LIVE marker.
+	// env bar's LIVE marker and production badge.
 	Context lipgloss.Style
 	Stats   lipgloss.Style
 	Live    lipgloss.Style
+	Prod    lipgloss.Style
 
 	// Logo gradient endpoints: Primary fading to Accent.
 	LogoTop    view.RGB
@@ -120,6 +121,7 @@ func DefaultStyles(isDark bool) Styles {
 		Context:    chip.Background(p.Accent).Bold(true),
 		Stats:      chip.Background(p.Secondary).Align(lipgloss.Right),
 		Live:       chip.Background(p.Success).Bold(true),
+		Prod:       chip.Background(p.Danger).Bold(true),
 		LogoTop:    toRGB(p.Primary),
 		LogoBottom: toRGB(p.Accent),
 

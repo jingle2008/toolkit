@@ -53,6 +53,13 @@ func (e Environment) Equals(o Environment) bool {
 	return e.Realm == o.Realm && e.GetName() == o.GetName()
 }
 
+// IsProduction reports whether e is a production environment. Types are
+// whatever shep_targets declares (dev, preprod and prod today); only
+// "prod", as ResolveEnvType canonicalizes it, is production.
+func (e Environment) IsProduction() bool {
+	return e.Type == "prod"
+}
+
 // KubeContext returns the Kubernetes context string for the environment.
 func (e Environment) KubeContext() string {
 	envType := e.Type

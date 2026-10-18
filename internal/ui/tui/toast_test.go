@@ -18,8 +18,11 @@ func TestShowToast_SetsStateAndReturnsCmd(t *testing.T) {
 	if m.toasts.active.id == 0 {
 		t.Error("expected non-zero toast id")
 	}
-	if cmd == nil {
-		t.Error("expected non-nil tea.Cmd for auto-dismiss tick")
+	if cmd != nil {
+		t.Error("an error toast stays until dismissed: expected no auto-dismiss tick")
+	}
+	if cmd := m.showToast("fyi", toastInfo); cmd == nil {
+		t.Error("expected non-nil tea.Cmd for an info toast's auto-dismiss tick")
 	}
 }
 

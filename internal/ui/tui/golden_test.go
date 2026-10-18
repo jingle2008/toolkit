@@ -230,6 +230,11 @@ var goldenViews = []struct {
 		showCategory(t, m, domain.DedicatedAICluster)
 		WithUIState(uistate.State{}, filepath.Join(t.TempDir(), "ui.yaml"))(m)
 	}},
+	{"list-empty-filter", func(t *testing.T, m *Model) {
+		showCategory(t, m, domain.GPUNode)
+		m.filter = "zzz"
+		m.updateRows(true)
+	}},
 	{"toast-error", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
 		m.showToast("render failed: boom", toastError)

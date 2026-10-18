@@ -195,7 +195,9 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 			assert.Equal(t, mutation.Recoverable, tc.got.act.Tier)
 			assert.Equal(t, tc.action, tc.got.verb())
 			assert.Equal(t, tc.kind, tc.got.noun())
-			assert.Empty(t, tc.got.warning, "recoverable actions carry no warning line")
+			if tc.name != "scale" { // no pool to describe; see TestConfirmScale_Warning
+				assert.NotEmpty(t, tc.got.warning, "recoverable actions say what they do")
+			}
 			assert.NotNil(t, tc.got.run)
 		})
 	}
@@ -242,4 +244,36 @@ func TestConfirmLabels_CoverModalActions(t *testing.T) {
 		}
 	}
 	assert.NotContains(t, confirmLabels, mutation.SetTenant)
+}
+
+func TestConfirmScale_Warning(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name         string
+		actual, size int
+		want         string
+	}{
+		{"grows", 2, 4, "Grows the instance pool from 2 to 4 instances."},
+		{"at size", 4, 4, "Already at its configured size (4); nothing to do."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			m := newConfirmTestModel(t)
+			m.category = domain.GPUPool
+			m.dataset = &models.Dataset{GPUPools: []models.GPUPool{{Name: "pool-a", ActualSize: tc.actual, Size: tc.size}}}
+			key := itemKeyFrom(domain.GPUPool, []string{"pool-a"})
+			assert.Equal(t, tc.want, m.confirmScale(key).warning)
+		})
+	}
+}
+
+func TestConfirmView_ProductionContext(t *testing.T) {
+	t.Parallel()
+	m := newConfirmTestModel(t)
+	m.updateLayout(120, 40)
+	m.requestConfirm(confirmOverlay{act: mutation.DrainNode, target: "n1", run: func() tea.Cmd { return nil }})
+	assert.NotContains(t, ansi.Strip(m.confirmView()), "PRODUCTION")
+
+	m.environment.Type = "prod"
+	assert.Contains(t, ansi.Strip(m.confirmView()), "PRODUCTION dp-prod-phx")
 }

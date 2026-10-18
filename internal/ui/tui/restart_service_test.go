@@ -99,7 +99,7 @@ func TestHandleRestartServiceResultMsg_Toasts(t *testing.T) {
 	assert.Equal(t, "restart requested for ns1/svc1", m.toasts.active.msg)
 	assert.Equal(t, toastInfo, m.toasts.active.sev)
 
-	require.NotNil(t, m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key, err: errors.New("forbidden")}))
+	m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key, err: errors.New("forbidden")})
 	assert.Equal(t, "restart ns1/svc1 failed: forbidden", m.toasts.active.msg)
 	assert.Equal(t, toastError, m.toasts.active.sev)
 }
@@ -137,7 +137,7 @@ func TestHandleDrainNodeResultMsg_Toasts(t *testing.T) {
 	assert.Equal(t, "drained pool1/node1", m.toasts.active.msg)
 	assert.Equal(t, toastInfo, m.toasts.active.sev)
 
-	require.NotNil(t, m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, err: errors.New("pdb violation (node uncordoned)")}))
+	m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, err: errors.New("pdb violation (node uncordoned)")})
 	assert.Equal(t, "drain pool1/node1 failed: pdb violation (node uncordoned)", m.toasts.active.msg)
 	assert.Equal(t, toastError, m.toasts.active.sev)
 }

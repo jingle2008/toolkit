@@ -149,7 +149,7 @@ toolkit --help
 ## Interface Overview
 
 ```
- oc1 › prod › us-ashburn-1 · dp-prod-iad · k8s v1.31.4   1 dp-prod-ord   ● LIVE  v1.2.3   ← Env bar
+ oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4   1 dp-prod-ord   ● LIVE  v1.2.3   ← Env bar
  DedicatedAICluster › acme   ⟨/gpu⟩  ⟨sort: age ▼⟩            Active: 2 • Failed: 1 [1/3]   ← Breadcrumb
 ╭─ DedicatedAICluster (3) ─────────────────────────────────────────────────────────────╮
 │ Name ↑         Tenant ↕     Internal  Usage  Size  Age ↕  Status                     │   ← Column headers (↕ = sortable)
@@ -162,12 +162,12 @@ toolkit --help
 
 | Zone | Description |
 |------|-------------|
-| **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: a spinner while loading, `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)), and the toolkit version |
+| **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. In production the type is a red `PROD` badge, so it can't be mistaken for dev or preprod. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: a spinner while loading, `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)), and the toolkit version |
 | **Breadcrumb** | The category, and what it is narrowed to (`› acme` for a scope, the row in details view). While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5⟩` (position in history), `s…` (a pending sort key). On the right: the category's stats and the cursor position |
-| **Panel** (center) | The table, or a row's details, in a frame titled with the category and row count. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
+| **Panel** (center) | The table, or a row's details, in a frame titled with the category and row count. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
 | **Footer** (bottom) | The most useful keys for this category and view, trimmed to fit, ending in `? more` |
 
-Modals (help, the command palette, confirmations, pickers, export, edit tenant) open over the dimmed view. Notifications appear in the bottom-right corner.
+Modals (help, the command palette, confirmations, pickers, export, edit tenant) open over the dimmed view. Notifications appear in the bottom-right corner. Info and warnings fade after 8 seconds; errors stay until you press `Esc` in the list or details view, and the full message is in the log (`` ` ``).
 
 ---
 
@@ -443,6 +443,8 @@ Press `y` on any selected row to open the **Detail View**, which shows the full 
 Certain categories expose live infrastructure operations. These require Kubernetes or OCI credentials to be configured.
 
 > **Warning:** Drain and Restart disrupt running workloads, and Delete is **irreversible**. Toolkit guards against duplicate in-flight requests automatically.
+
+Every operation asks first. The confirmation names the kind, the row and the kube context (with a red `PRODUCTION` badge in production) and says what the operation does: what a cordon or drain does to pods, how far a scale-up grows the pool, or why a delete can't be undone.
 
 ### GPU Nodes (`GPUNode`)
 

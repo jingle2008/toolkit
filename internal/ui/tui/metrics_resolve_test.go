@@ -191,8 +191,7 @@ func TestFinishMetrics_UnresolvableShowsToast(t *testing.T) {
 	t.Parallel()
 	m := newResolveModel(t)
 	// GPUWorkload with empty Model → resolveMetricsPlan returns ok=false, reason="workload has no model"
-	cmd := m.finishMetrics(&models.GPUWorkload{Name: "p", Namespace: "amaaaaaadac1"})
-	assert.NotNil(t, cmd, "a toast cmd must be dispatched for unresolvable items with a reason")
+	m.finishMetrics(&models.GPUWorkload{Name: "p", Namespace: "amaaaaaadac1"})
 	require.NotNil(t, m.toasts.active, "toast must be set after finishMetrics on unresolvable item")
 	assert.Equal(t, "workload has no model", m.toasts.active.msg)
 }

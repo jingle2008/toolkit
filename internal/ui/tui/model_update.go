@@ -18,9 +18,13 @@ import (
 /*
 Update implements the tea.Model interface and updates the Model state in
 response to a message. While the keys-changed hint is up, the first key
-press dismisses it and is then handled as usual.
+press dismisses it and is then handled as usual. While an error toast is
+up, esc in the list or details view dismisses it instead of backing out.
 */
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.interceptToastDismiss(msg) {
+		return m, nil
+	}
 	if _, ok := msg.(tea.KeyPressMsg); ok && m.keysHint {
 		hint := m.dismissKeysHint()
 		model, cmd := m.route(msg)

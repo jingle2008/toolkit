@@ -5,6 +5,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
@@ -108,7 +110,7 @@ func (m *Model) renderMode(mode common.ViewMode) string {
 	case common.HelpView:
 		return m.overlayModal(m.lastViewMode, m.fullHelpView())
 	case common.ListView:
-		return m.frame(m.tableTitle(), m.table.View())
+		return m.frame(m.tableTitle(), m.listBody())
 	case common.DetailsView:
 		return m.frame(itemKeyString(m.selectedKey), m.viewport.View())
 	case common.ExportView:
@@ -149,5 +151,44 @@ func (m *Model) viewportBinding() []key.Binding {
 		m.viewport.KeyMap.HalfPageDown,
 		m.viewport.KeyMap.PageUp,
 		m.viewport.KeyMap.PageDown,
+	}
+}
+
+// listBody is the table, or, when it has no rows, its header over a
+// message saying why it is empty and what to do about it.
+func (m *Model) listBody() string {
+	body := m.table.View()
+	if len(m.table.Rows()) > 0 {
+		return body
+	}
+	lines := strings.Split(body, "\n")
+	const header = 2 // column titles and their rule
+	if len(lines) <= header {
+		return body
+	}
+	width := m.table.Width()
+	msg := lipgloss.NewStyle().Foreground(m.theme.Palette.Muted).
+		Render(truncateString(m.emptyMessage(), max(width, 1)))
+	lines[header+(len(lines)-header)/3] = lipgloss.PlaceHorizontal(width, lipgloss.Center, msg)
+	return strings.Join(lines, "\n")
+}
+
+// emptyMessage says why the list has no rows: still loading, the filter
+// or faulty-only mode hides them all, or there are none here.
+func (m *Model) emptyMessage() string {
+	cat := m.category.String()
+	switch {
+	case m.pendingTasks > 0:
+		return "Loading " + cat + "…"
+	case m.filter != "":
+		return fmt.Sprintf("Nothing matches /%s · esc clears the filter", m.filter)
+	case m.showFaulty:
+		return fmt.Sprintf("No faulty %s · %s shows all", cat, footerKey(keys.ToggleFaulty.Help()))
+	case m.scope != nil && m.scope.Category.IsScopeOf(m.category):
+		return fmt.Sprintf("No %s in %s", cat, m.scope.Name)
+	case m.category.IsEnvironmentScoped():
+		return fmt.Sprintf("No %s in %s", cat, m.environment.KubeContext())
+	default:
+		return "No " + cat
 	}
 }
