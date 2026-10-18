@@ -257,7 +257,7 @@ func (m *Model) updateColumns() {
 	m.headers = headersFor(m.category)
 	sortable := m.keys.SortableColumns()
 	var sortKeys map[string]string // lowercased column -> sort key, while s is pending
-	if m.prefix.key == keys.SortLeader {
+	if m.prefix == keys.SortLeader {
 		sortKeys = map[string]string{}
 		for col, k := range keys.SortKeys(m.category) {
 			sortKeys[strings.ToLower(col)] = k

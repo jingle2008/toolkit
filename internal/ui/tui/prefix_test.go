@@ -47,7 +47,7 @@ func TestPrefix_UnknownContinuationCancels(t *testing.T) {
 	m := newPrefixModel(t)
 	_, _ = m.Update(keyPress("s"))
 	_, cmd := m.Update(keyPress("q"))
-	assert.Empty(t, m.prefix.key)
+	assert.Empty(t, m.prefix)
 	if cmd != nil {
 		_, quit := cmd().(tea.QuitMsg)
 		assert.False(t, quit, "s q must not quit")
@@ -60,9 +60,9 @@ func TestPrefix_EscCancelsOnlyThePrefix(t *testing.T) {
 	m := newPrefixModel(t)
 	m.filter = "alpha"
 	_, _ = m.Update(keyPress("s"))
-	require.Equal(t, "s", m.prefix.key)
+	require.Equal(t, "s", m.prefix)
 	_, _ = m.Update(keyPress("esc"))
-	assert.Empty(t, m.prefix.key)
+	assert.Empty(t, m.prefix)
 	assert.Equal(t, "alpha", m.filter)
 }
 
@@ -73,7 +73,7 @@ func TestPrefix_FilterInputBypasses(t *testing.T) {
 	_, _ = m.Update(keyPress("/"))
 	require.Equal(t, common.EditInput, m.inputMode)
 	_, _ = m.Update(keyPress("s"))
-	assert.Empty(t, m.prefix.key)
+	assert.Empty(t, m.prefix)
 	assert.Equal(t, "s", m.textInput.Value())
 }
 
@@ -99,18 +99,6 @@ func TestPrefix_SortUnderlinesHeaderKeys(t *testing.T) {
 	}
 	_, _ = m.Update(keyPress("esc"))
 	assert.NotContains(t, m.table.View(), "\x1b[4m", "underlines go with the prefix")
-}
-
-func TestHelp_GotoEnds(t *testing.T) {
-	t.Parallel()
-	m := newGoldenModel(t, 80, 15)
-	showCategory(t, m, domain.GPUNode)
-	m.enterHelpView()
-	_, maxScroll := m.helpWindow(len(m.helpLines()))
-	_, _ = m.updateHelpView(keyPress("G"))
-	assert.Equal(t, maxScroll, m.helpScroll)
-	_, _ = m.updateHelpView(keyPress("g"))
-	assert.Zero(t, m.helpScroll)
 }
 
 func TestUnderlineSortKey(t *testing.T) {

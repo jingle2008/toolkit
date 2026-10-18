@@ -123,7 +123,7 @@ func (m *Model) fullHelpView() string {
 	body := strings.Join(lines[off:off+rows], "\n")
 	hints := "esc close"
 	if maxScroll > 0 {
-		hints = "j/k pgup/pgdn g/G scroll · esc close"
+		hints = "j/k pgup/pgdn home/end scroll · esc close"
 		var where string
 		switch off {
 		case 0:
@@ -152,9 +152,9 @@ func (m *Model) scrollHelp(k string) {
 		m.helpScroll += rows
 	case "pgup", "b":
 		m.helpScroll -= rows
-	case "home", "g":
+	case "home":
 		m.helpScroll = 0
-	case "end", "G":
+	case "end":
 		m.helpScroll = maxScroll
 	}
 	m.helpScroll = min(max(m.helpScroll, 0), maxScroll)

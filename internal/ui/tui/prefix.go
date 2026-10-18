@@ -10,19 +10,15 @@ import (
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
-// prefixState is the pending prefix key ("" when none). The only prefix
-// is keys.SortLeader: s then a column's sort key sorts by that column.
-type prefixState struct {
-	key string
-}
-
-// feedPrefix runs the prefix state machine for k in the list view. It
+// feedPrefix runs the prefix state machine for k in the list view. The
+// only prefix is keys.SortLeader: s then a column's sort key sorts by
+// that column; m.prefix holds it while pending ("" when none). It
 // returns the completed sequence ("s n") once a second key arrives, and
 // whether k was used by the machine (and so must not reach the list's
 // other handlers). A second key that matches nothing just cancels: the
 // caller ignores unknown sequences, and the key is not replayed.
 func (m *Model) feedPrefix(k string) (seq string, used bool) {
-	if p := m.prefix.key; p != "" {
+	if p := m.prefix; p != "" {
 		m.setPrefix("")
 		if k == "esc" {
 			return "", true
@@ -40,8 +36,8 @@ func (m *Model) feedPrefix(k string) (seq string, used bool) {
 // column headers, which underline each column's sort key while the sort
 // prefix is pending.
 func (m *Model) setPrefix(k string) {
-	changed := m.prefix.key != k
-	m.prefix = prefixState{key: k}
+	changed := m.prefix != k
+	m.prefix = k
 	if changed && m.table != nil {
 		m.updateColumns()
 	}
@@ -59,13 +55,16 @@ func (m *Model) handleListSequence(seq string) tea.Cmd {
 	return nil
 }
 
-// usesListKey reports whether the prefix machine will consume k in the
-// list view, so the table must not also see it.
+// usesListKey reports whether feedPrefix will consume k, so
+// updateListView can keep the key from the table. The list view hands
+// every key to the table after its own handlers; without this, the s
+// that starts a sort, or the letter after it (k, j, G, ...), would also
+// move the table's cursor.
 func (m *Model) usesListKey(k string) bool {
 	if m.inputMode != common.NormalInput {
 		return false
 	}
-	return m.prefix.key != "" || k == keys.SortLeader
+	return m.prefix != "" || k == keys.SortLeader
 }
 
 // underlineSortKey underlines the first occurrence of key (any case) in
@@ -81,9 +80,9 @@ func underlineSortKey(title, key string) string {
 
 // prefixCell is the status-bar marker for a pending prefix, e.g. "s…".
 func (m *Model) prefixCell() string {
-	if m.prefix.key == "" {
+	if m.prefix == "" {
 		return ""
 	}
 	return lipgloss.NewStyle().Foreground(m.theme.Palette.Primary).Bold(true).
-		Render(" " + m.prefix.key + "… ")
+		Render(" " + m.prefix + "… ")
 }

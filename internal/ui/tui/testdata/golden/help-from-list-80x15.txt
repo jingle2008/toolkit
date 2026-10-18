@@ -10,6 +10,6 @@ Versi│   s t         Sort Type              <tab>       Next Category     │-
 │────│   <shift+d>   Drain                  <p>         Paste Filter      │────│
 │ 10.│ ↓ more · 0%                                                        │    │
 │ 10.│                                                                    │    │
-│    │ j/k pgup/pgdn g/G scroll · esc close                               │    │
+│    │ j/k pgup/pgdn home/end scroll · esc close                          │    │
 │    ╰────────────────────────────────────────────────────────────────────╯    │
 └──────────────────────────────────────────────────────────────────────────────┘
