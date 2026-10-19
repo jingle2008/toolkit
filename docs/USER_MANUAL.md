@@ -447,7 +447,7 @@ Certain categories expose live infrastructure operations. These require Kubernet
 
 > **Warning:** Drain and Restart disrupt running workloads, and Delete is **irreversible**. Toolkit guards against duplicate in-flight requests automatically.
 
-**Edit tenant** (`Shift+E`, on a DedicatedAICluster or ImportedModel row whose tenancy has no name yet) opens a short form: Name (required), Internal/External, Note (optional). `Tab` or `Enter` moves to the next field, `Enter` on the last field or `Ctrl+S` saves, `Ctrl+O` opens the tenancy's metadata page in the DevOps portal. Saving without a name marks the Name field instead of saving.
+**Edit tenant** (`Shift+E`, in any category with a Tenant column — DedicatedAICluster, ImportedModel, GPUWorkload, InferenceService and the three tenancy-override categories — on a row whose tenant has no metadata name yet, so it shows as an OCID or tenancy id) opens a short form: Name (required), Internal/External, Note (optional). `Tab` or `Enter` moves to the next field, `Enter` on the last field or `Ctrl+S` saves, `Ctrl+O` opens the tenancy's metadata page in the DevOps portal. Saving without a name marks the Name field instead of saving.
 
 Every operation asks first. The confirmation names the category, the row and the kube context (with a red `PRODUCTION` badge in production) and says what the operation does. Irreversible operations take a capital `Y`; a lowercase `y` cancels them, so muscle memory never destroys anything: what a cordon or drain does to pods, how far a scale-up grows the pool, or why a delete can't be undone.
 

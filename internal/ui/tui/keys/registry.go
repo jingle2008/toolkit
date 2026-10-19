@@ -245,8 +245,9 @@ var (
 		key.WithKeys("ctrl+z"),
 		key.WithHelp("^z", "Faulty only"),
 	)
-	// EditTenant opens the tenant-metadata entry form for an
-	// unresolved DAC/ImportedModel row.
+	// EditTenant opens the tenant-metadata entry form for a row whose
+	// tenant has no metadata name yet, in every category with a Tenant
+	// column.
 	EditTenant = key.NewBinding(
 		key.WithKeys("E"),
 		key.WithHelp("E", "Edit tenant"),
@@ -274,7 +275,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {GoTo, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, Restart, Delete},
 	},
 	domain.GPUWorkload: {
-		common.ListView: {GoTo, SortTenant, SortGPUs, SortRestarts, SortAge, OpenMetrics, ToggleFaulty, Refresh},
+		common.ListView: {GoTo, SortTenant, SortGPUs, SortRestarts, SortAge, EditTenant, OpenMetrics, ToggleFaulty, Refresh},
 	},
 	domain.ServingRuntime: {
 		common.ListView: {SortGPUs, ToggleFaulty, Refresh},
@@ -283,7 +284,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {GoTo, SortTenant, SortInternal, SortUsage, SortSize, SortAge, SortStatus, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
 	},
 	domain.InferenceService: {
-		common.ListView: {GoTo, SortTenant, SortReady, SortAge, CopyTenant, OpenMetrics, ToggleFaulty, Refresh, Restart, Delete},
+		common.ListView: {GoTo, SortTenant, SortReady, SortAge, CopyTenant, EditTenant, OpenMetrics, ToggleFaulty, Refresh, Restart, Delete},
 	},
 	domain.ImportedModel: {
 		common.ListView: {GoTo, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},
@@ -292,13 +293,13 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortMin, SortMax},
 	},
 	domain.LimitTenancyOverride: {
-		common.ListView: {GoTo, SortTenant, SortRegions, SortMin, SortMax, CopyTenant},
+		common.ListView: {GoTo, SortTenant, SortRegions, SortMin, SortMax, CopyTenant, EditTenant},
 	},
 	domain.ConsolePropertyTenancyOverride: {
-		common.ListView: {GoTo, SortTenant, SortRegions, SortValue, CopyTenant},
+		common.ListView: {GoTo, SortTenant, SortRegions, SortValue, CopyTenant, EditTenant},
 	},
 	domain.PropertyTenancyOverride: {
-		common.ListView: {GoTo, SortTenant, SortRegions, SortValue, CopyTenant},
+		common.ListView: {GoTo, SortTenant, SortRegions, SortValue, CopyTenant, EditTenant},
 	},
 	domain.LimitRegionalOverride: {
 		common.ListView: {GoTo, SortRegions, SortMin, SortMax},
