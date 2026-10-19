@@ -141,3 +141,38 @@ func TestFaultyPools_EnrichmentFailureFlagsNone(t *testing.T) {
 	rows, _ := computeTableRows(m.dataset, domain.GPUPool, nil, "", "", true, true)
 	assert.Empty(t, rows)
 }
+
+// Tenants and the three tenancy-override maps load as one group. A switch
+// in place on an override category clears its rows, so the group's
+// arrival must redraw that category, not just Tenant.
+func TestSwitchEnvironment_TenancyOverridesRedraw(t *testing.T) {
+	t.Parallel()
+	for _, cat := range []domain.Category{
+		domain.Tenant, domain.LimitTenancyOverride,
+		domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride,
+	} {
+		t.Run(cat.String(), func(t *testing.T) {
+			t.Parallel()
+			m := newTestModel(t)
+			m.dataset = &models.Dataset{}
+			m.updateCategory(cat)
+			m.switchEnvironment(otherEnv, cat)
+			require.Empty(t, m.table.Rows())
+
+			const tenant = "acme"
+			m.handleTenancyOverridesLoaded(models.TenancyOverrideGroup{
+				Tenants: []models.Tenant{{ID: "ocid1.tenancy.oc1..acme", Name: tenant}},
+				LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
+					tenant: {{TenantName: tenant, LimitRegionalOverride: models.LimitRegionalOverride{Name: "l1"}}},
+				},
+				ConsolePropertyTenancyOverrideMap: map[string][]models.ConsolePropertyTenancyOverride{
+					tenant: {{TenantName: tenant}},
+				},
+				PropertyTenancyOverrideMap: map[string][]models.PropertyTenancyOverride{
+					tenant: {{TenantName: tenant}},
+				},
+			}, m.gens.msg)
+			assert.NotEmpty(t, m.table.Rows())
+		})
+	}
+}

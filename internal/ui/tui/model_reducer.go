@@ -539,6 +539,13 @@ func (m *Model) handleInferenceServicesLoaded(items map[string][]models.Inferenc
 }
 
 func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) {
+	// The group fills four categories; name the one on screen, if any, so
+	// applyDataset redraws it (an environment switch in place on
+	// LimitTenancyOverride clears its rows and relies on this load).
+	cat := domain.Tenant
+	if _, ok := tenancyOverrideCategories[m.category]; ok {
+		cat = m.category
+	}
 	m.applyLoaded(gen, func(ds *models.Dataset) {
 		ds.Tenants = group.Tenants
 		ds.LimitTenancyOverrideMap = group.LimitTenancyOverrideMap
@@ -548,7 +555,7 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 		// switch while viewing DACs): resolve their owners against the
 		// new tenants, or drilling in from a tenant would miss them.
 		resolveTenantOwners(ds)
-	}, domain.Tenant, len(group.Tenants))
+	}, cat, len(group.Tenants))
 }
 
 func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) {
