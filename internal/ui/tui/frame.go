@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -43,18 +44,24 @@ func (m *Model) frame(title, main string) string {
 	return lipgloss.JoinVertical(lipgloss.Left, m.envBar(), m.statusView(), panel, m.footer())
 }
 
-// tableTitle names what the list panel shows that nothing else does: how
-// many columns are hidden on a terminal too narrow for them. The
+// tableTitle names what the list panel shows that nothing else does: the
+// columns hidden on a terminal too narrow for them, and where to see
+// them (details show every field). The names give way to
+// a count when they'd take more than half the panel's edge. The
 // breadcrumb names the category and the bottom edge counts the rows.
 func (m *Model) tableTitle() string {
-	switch m.hiddenColumns {
-	case 0:
+	n := len(m.hiddenColumns)
+	if n == 0 {
 		return ""
-	case 1:
-		return "1 column hidden"
-	default:
-		return fmt.Sprintf("%d columns hidden", m.hiddenColumns)
 	}
+	where := " · " + keys.ViewDetails.Help().Key + " shows all"
+	if title := strings.Join(m.hiddenColumns, ", ") + " hidden" + where; lipgloss.Width(title) <= m.viewWidth/2 {
+		return title
+	}
+	if n == 1 {
+		return "1 column hidden" + where
+	}
+	return fmt.Sprintf("%d columns hidden", n) + where
 }
 
 // positionText is the panel's bottom-edge status: in the list, the
@@ -252,7 +259,8 @@ func (m *Model) breadcrumbChips() string {
 
 // footer is the frame's last line: the category's most useful actions,
 // then the navigation keys (copy, filter, palette) and "? more". Actions
-// drop from the right to fit before any navigation key does.
+// drop from the right to fit before any navigation key does. An empty
+// list shows only its list-level actions (faulty only, refresh).
 func (m *Model) footer() string {
 	p := m.theme.Palette
 	keyStyle := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
@@ -266,6 +274,10 @@ func (m *Model) footer() string {
 	}
 
 	actionBindings, coreBindings := m.keys.FooterBindings()
+	if m.viewMode == common.ListView && len(m.table.Rows()) == 0 {
+		// No row to act on or sort: keep only the list's own toggles.
+		actionBindings = slices.DeleteFunc(actionBindings, func(b key.Binding) bool { return !keys.ListLevel(b) })
+	}
 	actions, core := items(actionBindings), items(coreBindings)
 	more := keyStyle.Render("?") + " " + descStyle.Render("more")
 	fits := func(parts []string) (string, bool) {

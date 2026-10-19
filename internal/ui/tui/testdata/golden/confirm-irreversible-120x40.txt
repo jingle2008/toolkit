@@ -22,7 +22,7 @@
 │                               │                                                      │                               │
 │                               │              [ Cancel ]     [ Delete ]               │                               │
 │                               │                                                      │                               │
-│                               │ Y (shift+y) confirm · y/n/esc cancel · ←/→ select    │                               │
+│                               │ Y (shift+y) confirm · n/esc cancel · ←/→ select      │                               │
 │                               ╰──────────────────────────────────────────────────────╯                               │
 │                                                                                                                      │
 │                                                                                                                      │
@@ -37,4 +37,4 @@
 │                                                                                                                      │
 │                                                                                                                      │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────── 1 of 3 ─╯
- o go to related  t copy tenant ID  E edit tenant  m open metrics  ^x delete  / filter  : command palette  ? more
+

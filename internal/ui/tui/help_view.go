@@ -9,6 +9,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
@@ -259,8 +260,23 @@ func (m *Model) helpWindowFor(lines int, filtering bool) (rows, maxScroll int) {
 func (m *Model) fullHelpView() string {
 	body, maxScroll := m.helpBody(m.helpFilter, m.helpTyping, m.helpScroll)
 	full, _ := m.helpBody("", false, 0)
-	return m.fixedModal("Keys · "+m.lastViewMode.String()+" view", body, m.helpHints(maxScroll),
-		m.theme.Palette.Accent, 0, lipgloss.Width(full), lipgloss.Height(full))
+	inner := max(m.viewWidth*9/10-4, 1) // modal border and padding
+	hints := m.helpHints(maxScroll)
+	if lipgloss.Width(hints) > inner {
+		hints = strings.Replace(hints, "j/k pgup/pgdn home/end scroll", "j/k scroll", 1)
+	}
+	return m.fixedModal("Keys · "+m.lastViewMode.String()+" view", clipLines(body, inner), clipLines(hints, inner),
+		m.theme.Palette.Accent, 0, min(lipgloss.Width(full), inner), lipgloss.Height(full))
+}
+
+// clipLines cuts each line of s to w cells, so a modal on a terminal
+// narrower than its content stays inside the screen.
+func clipLines(s string, w int) string {
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = ansi.Truncate(l, w, "…")
+	}
+	return strings.Join(lines, "\n")
 }
 
 // helpBody is help's body for filter (typing while its input is open)

@@ -34,8 +34,9 @@ type confirmOverlay struct {
 	run         func() tea.Cmd
 	// onAction is the button focus: false (the default) is Cancel.
 	onAction bool
-	// nudge is set when enter lands on an irreversible action's button,
-	// which only a capital Y may confirm; the hint is redrawn as a prompt.
+	// nudge is set when enter on its button or a lowercase y tries an
+	// irreversible action, which only a capital Y may confirm; the hint
+	// is redrawn as a prompt.
 	nudge bool
 	// quit marks the quit confirmation, shown when quitting would cancel
 	// running actions; it has no mutation.
@@ -91,13 +92,16 @@ func (m *Model) dismissConfirm() {
 }
 
 // decide maps a pressed key string to confirm/cancel intent for this
-// overlay's tier. Recoverable: y/Y confirm; n/N/esc cancel. Irreversible:
-// only Y confirms; y/n/N/esc cancel (lowercase y never destroys state).
-func (c confirmOverlay) decide(s string) (confirm, cancel bool) {
+// overlay's tier. Recoverable: y/Y confirm. Irreversible: only Y
+// confirms, and a lowercase y asks for it (nudge) rather than meaning
+// either, so muscle memory neither destroys state nor throws away the
+// confirmation. n/N/esc cancel.
+func (c confirmOverlay) decide(s string) (confirm, cancel, nudge bool) {
+	cancel = s == "n" || s == "N" || s == "esc"
 	if c.act.Tier == mutation.Irreversible {
-		return s == "Y", s == "y" || s == "n" || s == "N" || s == "esc"
+		return s == "Y", cancel, s == "y"
 	}
-	return s == "y" || s == "Y", s == "n" || s == "N" || s == "esc"
+	return s == "y" || s == "Y", cancel, false
 }
 
 // confirmDelete builds the irreversible overlay for the Delete key. The
@@ -213,10 +217,10 @@ func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
 
 // updateConfirmView resolves a keypress while the confirmation modal is
 // open. Recoverable actions confirm on y/Y; irreversible actions require an
-// explicit capital Y. n/esc cancel; for irreversible, a lowercase y also
-// cancels (so muscle-memory never destroys state). ←/→/tab move between
-// the buttons and enter presses the focused one, except that enter never
-// confirms an irreversible action. Any other key is swallowed so the
+// explicit capital Y, and a lowercase y only redraws the hint as a prompt
+// for it. n/esc cancel. ←/→/tab move between the buttons and enter
+// presses the focused one, except that enter never confirms an
+// irreversible action. Any other key is swallowed so the
 // modal stays put. ctrl+c always quits.
 func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	km, ok := msg.(tea.KeyPressMsg)
@@ -243,12 +247,14 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
-	confirm, cancel := m.confirm.decide(k)
-	if confirm {
+	confirm, cancel, nudge := m.confirm.decide(k)
+	switch {
+	case confirm:
 		return m, m.acceptConfirm()
-	}
-	if cancel {
+	case cancel:
 		m.refuseConfirm()
+	case nudge:
+		m.confirm.nudge = true
 	}
 	return m, nil
 }
@@ -309,7 +315,7 @@ func (m *Model) confirmView() string {
 
 	hints := yes + " confirm · n/esc cancel · ←/→ select"
 	if irreversible {
-		hints = "Y (shift+y) confirm · y/n/esc cancel · ←/→ select"
+		hints = "Y (shift+y) confirm · n/esc cancel · ←/→ select"
 	}
 	if c.nudge {
 		hints = lipgloss.NewStyle().Foreground(border).Bold(true).

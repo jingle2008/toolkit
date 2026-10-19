@@ -205,9 +205,9 @@ type Model struct {
 	// rowTotal is how many rows the category (in its scope) has before the
 	// filter and faulty-only mode; the panel shows it when they hide some.
 	rowTotal int
-	// hiddenColumns counts the columns updateColumns hid for want of
+	// hiddenColumns names the columns updateColumns hid for want of
 	// width; the panel title says so.
-	hiddenColumns int
+	hiddenColumns []string
 
 	// detailJSON shows the details view as raw JSON instead of fields.
 	detailJSON bool

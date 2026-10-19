@@ -1,6 +1,6 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  DedicatedAICluster                             Active: 2 • Failed: 1 • Size: 7
-╭─ 1 column hidden ────────────────────────────────────────────────────────────╮
+╭─ Age hidden · y shows all ───────────────────────────────────────────────────╮
 │ Name ↑      Tenant  Inter…  Usage  Type         Mod…  Shape/P…  Size  Status │
 │──────────────────────────────────────────────────────────────────────────────│
 │▌dac-alpha   acme    false   75%    Hosting      —     A100_80G  4     Active │
@@ -14,11 +14,11 @@
 │           │                                                      │           │
 │           │              [ Cancel ]     [ Delete ]               │           │
 │           │                                                      │           │
-│           │ Y (shift+y) confirm · y/n/esc cancel · ←/→ select    │           │
+│           │ Y (shift+y) confirm · n/esc cancel · ←/→ select      │           │
 │           ╰──────────────────────────────────────────────────────╯           │
 │                                                                              │
 │                                                                              │
 │                                                                              │
 │                                                                              │
 ╰───────────────────────────────────────────────────────────────────── 1 of 3 ─╯
- o go to related  t copy tenant ID  / filter  : command palette  ? more
+

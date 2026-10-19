@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -173,4 +174,65 @@ func TestPosition_ShowsTotalWhenRowsHidden(t *testing.T) {
 	_, cmd := m.Update(tableRowsComputedMsg{Rows: m.table.Rows(), Total: 9, Gen: m.gens.rows})
 	assert.Nil(t, cmd)
 	assert.Equal(t, "1 of 1 (9 total)", m.positionText(), "the async path carries its total")
+}
+
+// An empty list offers no row actions or sort, only its list-level
+// toggles and the core keys.
+func TestFooter_EmptyListDropsRowActions(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 200, 30)
+	showCategory(t, m, domain.GPUNode)
+	m.applyRows(nil, nil, false)
+	footer := ansi.Strip(m.footer())
+	for _, gone := range []string{"go to related", "drain", "s sort"} {
+		assert.NotContains(t, footer, gone)
+	}
+	for _, kept := range []string{"^z faulty only", "r refresh", "/ filter", "? more"} {
+		assert.Contains(t, footer, kept)
+	}
+}
+
+// Under a modal, the view's footer is blanked: its keys don't work there.
+func TestOverlayModal_BlanksFooter(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 40)
+	showCategory(t, m, domain.GPUNode)
+	assert.Contains(t, ansi.Strip(m.render()), "go to related")
+	m.openPalette()
+	out := ansi.Strip(m.render())
+	lines := strings.Split(out, "\n")
+	assert.Len(t, lines, 40)
+	assert.Empty(t, strings.TrimSpace(lines[len(lines)-1]), "footer blanked under the modal")
+	assert.NotContains(t, out, "go to related")
+}
+
+// The panel title names the hidden columns and how to see them, and falls
+// back to a count when the names don't fit.
+func TestTableTitle_NamesHiddenColumns(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	assert.Empty(t, m.tableTitle())
+	m.hiddenColumns = []string{"Internal", "Note"}
+	assert.Equal(t, "Internal, Note hidden · y shows all", m.tableTitle())
+	m.viewWidth = 40
+	assert.Equal(t, "2 columns hidden · y shows all", m.tableTitle())
+}
+
+// A resize cuts middle-truncated cells (OCIDs) to the new widths, keeping
+// their distinguishing tail, rather than leaving the table to cut their
+// end.
+func TestUpdateLayout_RetruncatesInTheMiddle(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	showCategory(t, m, domain.Tenant)
+	col := slices.IndexFunc(m.headers, func(h header) bool { return h.text == "OCID" })
+	require.GreaterOrEqual(t, col, 0)
+	require.True(t, m.headers[col].truncateMiddle)
+	m.updateLayout(50, 30)
+	w := m.table.Columns()[col].Width
+	require.Positive(t, w)
+	cell := m.table.Rows()[0][col]
+	assert.Contains(t, cell, "…")
+	assert.True(t, strings.HasSuffix(cell, "acme"), "the tail survives: %q", cell)
+	assert.LessOrEqual(t, ansi.StringWidth(cell), w)
 }

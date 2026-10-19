@@ -126,13 +126,16 @@ func TestUpdateConfirmView_Irreversible(t *testing.T) {
 		assert.True(t, *ran)
 		assert.Equal(t, common.ListView, m.viewMode)
 	})
-	t.Run("lowercase y cancels (does not run)", func(t *testing.T) {
+	t.Run("lowercase y asks for capital Y (neither runs nor cancels)", func(t *testing.T) {
 		t.Parallel()
 		m := newConfirmTestModel(t)
 		ran := armConfirm(m, mutation.Irreversible)
 		_, _ = m.updateConfirmView(keyPress("y"))
 		assert.False(t, *ran, "lowercase y must not run an irreversible action")
-		assert.Equal(t, common.ListView, m.viewMode, "lowercase y cancels the modal")
+		assert.Equal(t, common.ConfirmView, m.viewMode, "lowercase y keeps the modal open")
+		assert.True(t, m.confirm.nudge, "lowercase y prompts for capital Y")
+		_, _ = m.updateConfirmView(keyPress("Y"))
+		assert.True(t, *ran, "capital Y still confirms after the nudge")
 	})
 }
 
@@ -225,7 +228,7 @@ func TestConfirmView_IrreversibleRender(t *testing.T) {
 	assert.Contains(t, out, "⚠ Terminate node")
 	assert.Contains(t, out, "gpu-1")
 	assert.Contains(t, out, "Boot volume destroyed. Cannot undo.")
-	assert.Contains(t, out, "Y (shift+y) confirm · y/n/esc cancel", "lowercase y cancels, and says so")
+	assert.Contains(t, out, "Y (shift+y) confirm · n/esc cancel")
 	assert.Contains(t, out, "[ Terminate ]")
 }
 

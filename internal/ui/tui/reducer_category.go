@@ -230,7 +230,7 @@ func (m *Model) enterContext() tea.Cmd {
 	switch {
 	case m.category.IsScope():
 		m.scope = &domain.Scope{Category: m.category, Name: target}
-		return tea.Sequence(m.updateCategory(m.category.ScopedCategories()[0])...)
+		return tea.Sequence(m.updateCategory(m.drillTarget())...)
 	case m.category == domain.Environment:
 		envPtr := collections.FindByName(m.dataset.Environments, target)
 		if envPtr == nil {
@@ -249,4 +249,19 @@ func (m *Model) enterContext() tea.Cmd {
 		return m.enterDetailView()
 	}
 	return nil
+}
+
+// drillTarget is the child category Enter drills into under m.scope: the
+// first, in registry order, with rows for the scope in what's loaded, so
+// Enter on a tenant without limit overrides lands on its console
+// properties rather than an empty list. With none, the first child: an
+// unloaded category may still have rows, and loading it finds out.
+func (m *Model) drillTarget() domain.Category {
+	children := m.category.ScopedCategories()
+	for _, c := range children {
+		if rows, _ := computeTableRows(m.dataset, c, m.scope, "", "", true, false); len(rows) > 0 {
+			return c
+		}
+	}
+	return children[0]
 }

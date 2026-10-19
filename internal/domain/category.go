@@ -101,8 +101,8 @@ func (e Category) IsScope() bool {
 
 // ScopedCategories returns the categories that are scoped by the receiver
 // — its children in the relation registry (Contains and References), in
-// declaration order (the first is where Enter drills in). Returns nil for
-// a category that scopes nothing.
+// declaration order (Enter drills into the first with rows for the
+// scope). Returns nil for a category that scopes nothing.
 func (e Category) ScopedCategories() []Category {
 	return slices.Clone(scopedChildren[e])
 }
