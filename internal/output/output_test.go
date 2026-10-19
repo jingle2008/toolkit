@@ -193,6 +193,25 @@ func TestWriteDelimited_TSVUsesTabSeparator(t *testing.T) {
 	assert.Equal(t, "alice\thello, world", lines[1])
 }
 
+// TSV is never quoted: a JSON value keeps single quotes, and a tab or
+// newline inside a cell can't split the row (`cut -f` reads it as is).
+func TestWriteDelimited_TSVNeverQuotes(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	rows := [][]string{{"p", `{"a":"b"}`, " lead", "x\ty\nz"}}
+	require.NoError(t, WriteDelimited(&buf, nil, rows, Options{}, '\t'))
+	assert.Equal(t, "p\t{\"a\":\"b\"}\t lead\tx y z\n", buf.String())
+}
+
+func TestWriteTable_CellBreaksStayInRow(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	require.NoError(t, WriteTable(&buf, []string{"NAME", "NOTE"}, [][]string{{"a", "line1\nline2"}, {"b", "x"}}, Options{}))
+	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
+	require.Len(t, lines, 3)
+	assert.Contains(t, lines[1], "line1 line2")
+}
+
 func TestWriteDelimited_NoHeaders(t *testing.T) {
 	t.Parallel()
 	var buf bytes.Buffer
