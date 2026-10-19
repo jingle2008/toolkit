@@ -13,7 +13,10 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-var otherEnv = models.Environment{Type: "preprod", Region: "us-ashburn-1", Realm: "oc1"}
+var (
+	otherEnv      = models.Environment{Type: "preprod", Region: "us-ashburn-1", Realm: "oc1"}
+	otherRealmEnv = models.Environment{Type: "prod", Region: "me-abudhabi-2", Realm: "oc29"}
+)
 
 // A scope names a row of the old environment, so it doesn't survive a
 // switch — including one from the Environment list, which lands on Tenant
@@ -156,7 +159,7 @@ func TestSwitchEnvironment_TenancyOverridesRedraw(t *testing.T) {
 			m := newTestModel(t)
 			m.dataset = &models.Dataset{}
 			m.updateCategory(cat)
-			m.switchEnvironment(otherEnv, cat)
+			m.switchEnvironment(otherRealmEnv, cat)
 			require.Empty(t, m.table.Rows())
 
 			const tenant = "acme"
@@ -175,4 +178,75 @@ func TestSwitchEnvironment_TenancyOverridesRedraw(t *testing.T) {
 			assert.NotEmpty(t, m.table.Rows())
 		})
 	}
+}
+
+const acmeOCID = "ocid1.tenancy.oc1..aaaaacme"
+
+// newSwitchDACModel is a model in an oc1 environment on DACs, whose dataset
+// has tenant acme.
+func newSwitchDACModel(t *testing.T) *Model {
+	t.Helper()
+	m := newTestModel(t)
+	m.environment = models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "oc1"}
+	m.dataset = &models.Dataset{
+		Tenants:                 []models.Tenant{{ID: acmeOCID, Name: "acme"}},
+		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{},
+	}
+	m.updateCategory(domain.DedicatedAICluster)
+	return m
+}
+
+func loadAcmeDAC(m *Model) {
+	m.handleDedicatedAIClustersLoaded(map[string][]models.DedicatedAICluster{
+		"aaaaacme": {{Name: "dac1", TenantID: "aaaaacme"}}, // the label: the OCID's suffix
+	}, m.gens.msg)
+}
+
+// Tenants and overrides are loaded per realm, so a switch within the realm
+// keeps them: a DAC loaded after it resolves its owner straight away.
+func TestSwitchEnvironment_SameRealmKeepsTenants(t *testing.T) {
+	t.Parallel()
+	m := newSwitchDACModel(t)
+	m.switchEnvironment(otherEnv, domain.DedicatedAICluster)
+	assert.NotNil(t, m.dataset.Tenants)
+	assert.NotNil(t, m.dataset.LimitTenancyOverrideMap)
+	assert.Nil(t, m.tenantsForOwnersCmd(), "no tenancy reload")
+	loadAcmeDAC(m)
+	require.Len(t, m.table.Rows(), 1)
+	assert.Equal(t, "acme", m.table.Rows()[0][1])
+}
+
+// A switch to another realm drops its tenants; a tenant-owned category
+// reloads them alongside its own rows, and their arrival names the owners.
+func TestSwitchEnvironment_OtherRealmReloadsTenantsForOwners(t *testing.T) {
+	t.Parallel()
+	m := newSwitchDACModel(t)
+	m.switchEnvironment(otherRealmEnv, domain.DedicatedAICluster)
+	assert.Nil(t, m.dataset.Tenants)
+	assert.Nil(t, m.dataset.LimitTenancyOverrideMap)
+	require.NotNil(t, m.tenantsForOwnersCmd())
+
+	loadAcmeDAC(m)
+	require.Len(t, m.table.Rows(), 1)
+	assert.Equal(t, "aaaaacme", m.table.Rows()[0][1], "no tenants yet: the raw ID")
+
+	m.handleTenancyOverridesLoaded(models.TenancyOverrideGroup{
+		Tenants: []models.Tenant{{ID: acmeOCID, Name: "acme"}},
+	}, m.gens.msg)
+	require.Len(t, m.table.Rows(), 1)
+	assert.Equal(t, "acme", m.table.Rows()[0][1])
+	assert.Nil(t, m.tenantsForOwnersCmd(), "loaded once")
+}
+
+// Only tenant-owned categories pull the tenancy group in.
+func TestTenantsForOwnersCmd_OnlyTenantOwned(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset = &models.Dataset{}
+	for cat := range tenantOwnedCategories {
+		m.category = cat
+		assert.NotNil(t, m.tenantsForOwnersCmd(), cat.String())
+	}
+	m.category = domain.GPUNode
+	assert.Nil(t, m.tenantsForOwnersCmd())
 }

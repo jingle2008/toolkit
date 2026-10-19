@@ -155,7 +155,9 @@ func resolveOwnersInPlace[T any](d *Dataset, m map[string][]T, tenantID func(*T)
 	return out
 }
 
-// ResetRealmScopedFields resets all realm-scoped fields to nil.
+// ResetRealmScopedFields nils what a switch to another realm invalidates:
+// the realm's tenants and overrides, and everything
+// ResetEnvironmentScopedFields nils.
 func (d *Dataset) ResetRealmScopedFields() {
 	d.LimitTenancyOverrideMap = nil
 	d.ConsolePropertyTenancyOverrideMap = nil
@@ -164,6 +166,14 @@ func (d *Dataset) ResetRealmScopedFields() {
 	d.LimitRegionalOverrides = nil
 	d.ConsolePropertyRegionalOverrides = nil
 	d.PropertyRegionalOverrides = nil
+	d.ResetEnvironmentScopedFields()
+}
+
+// ResetEnvironmentScopedFields nils what a switch to another environment
+// in the same realm invalidates: the region's GPU pools and the cluster's
+// k8s-backed categories. Tenants and overrides are loaded per realm, so
+// they stay.
+func (d *Dataset) ResetEnvironmentScopedFields() {
 	d.BaseModels = nil
 	d.ServingRuntimes = nil
 	d.ImportedModelMap = nil

@@ -35,9 +35,9 @@ func (m *Model) quickSwitch(msg tea.KeyMsg) tea.Cmd {
 }
 
 /*
-switchEnvironment makes env current, drops the realm-scoped data loaded for
-the previous one, records env as most recently used, and loads target in the
-new context.
+switchEnvironment makes env current, drops the data loaded for the previous
+one that doesn't carry over (tenants and overrides do, within a realm),
+records env as most recently used, and loads target in the new context.
 
 The scope always names a row of the old environment, so it's cleared
 whatever the target: navigation keeps a scope across the categories it
@@ -50,8 +50,13 @@ Results still in flight for the old environment are dropped on arrival
 (inCurrentEnv).
 */
 func (m *Model) switchEnvironment(env models.Environment, target domain.Category) tea.Cmd {
+	sameRealm := env.Realm == m.environment.Realm
 	m.environment = env
-	if m.dataset != nil {
+	switch {
+	case m.dataset == nil:
+	case sameRealm:
+		m.dataset.ResetEnvironmentScopedFields()
+	default:
 		m.dataset.ResetRealmScopedFields()
 	}
 	m.k8sVersion = ""
