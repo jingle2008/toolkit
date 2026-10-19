@@ -34,8 +34,7 @@ func (m *Model) updateHelpView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case key.Matches(keyMsg, keys.Back, keys.Help):
 		m.viewMode = m.lastViewMode
 	case key.Matches(keyMsg, keys.Quit):
-		m.cancelInFlight()
-		return m, tea.Quit
+		return m, m.quit()
 	default:
 		m.scrollHelp(keyMsg.String())
 	}
@@ -47,8 +46,7 @@ func (m *Model) updateHelpView(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) updateHelpInput(km tea.KeyPressMsg) tea.Cmd {
 	switch km.String() {
 	case "ctrl+c":
-		m.cancelInFlight()
-		return tea.Quit
+		return m.quit()
 	case "enter":
 		m.helpTyping = false
 		return nil

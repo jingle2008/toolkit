@@ -108,19 +108,15 @@ func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("no GPU pool selected for scale up")
 		return nil
 	}
-
 	env := m.environment
-	return tea.Batch(
-		func() tea.Msg { return gpuPoolScaleStartedMsg{key: itemKey, env: env} },
-		func() tea.Msg {
-			ctx, cancel := m.opCtx()
-			defer cancel()
-			err := audited(m.logger, mutation.ScaleGPUPool, pool.Name, func() error {
-				return oci.IncreasePoolSize(ctx, pool, env, m.logger)
-			})
-			return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env}
-		},
-	)
+	return m.trackAction("scale up "+pool.Name, "Scaling", itemKey, func(func(string)) tea.Msg {
+		ctx, cancel := m.opCtx()
+		defer cancel()
+		err := audited(m.logger, mutation.ScaleGPUPool, pool.Name, func() error {
+			return oci.IncreasePoolSize(ctx, pool, env, m.logger)
+		})
+		return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env}
+	})
 }
 
 func (m *Model) toggleFaultyList() tea.Cmd {
@@ -142,7 +138,7 @@ func (m *Model) cordonNode(item any, itemKey models.ItemKey, a mutation.Action) 
 	}
 	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
 	unschedulable := a == mutation.CordonNode
-	return func() tea.Msg {
+	return m.trackAction(strings.ToLower(confirmLabels[a].verb)+" "+name, "", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := audited(m.logger, a, name, func() error {
@@ -150,7 +146,7 @@ func (m *Model) cordonNode(item any, itemKey models.ItemKey, a mutation.Action) 
 			return err
 		})
 		return cordonNodeResultMsg{key: itemKey, state: unschedulable, err: err, env: env}
-	}
+	})
 }
 
 func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
@@ -163,17 +159,19 @@ func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("unsupported item type for draining", "item", item)
 		return nil
 	}
-	kubeConfig, kubeContext, name := m.kubeConfig, m.environment.KubeContext(), node.Name
-	drain := func() tea.Msg {
+	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
+	return m.trackAction("drain "+name, "Draining", itemKey, func(progress func(string)) tea.Msg {
 		// Draining restarts single-replica services and waits for them to
 		// reschedule, which can take tens of minutes under its own internal
 		// timeouts; the 30s one-shot cap would abort it midway.
-		err := audited(m.logger, mutation.DrainNode, name, func() error {
-			return k8s.DrainNode(m.longOpCtx(), kubeConfig, kubeContext, name)
+		ctx := k8s.WithDrainProgress(m.longOpCtx(), func(line string) {
+			progress(strings.TrimPrefix(line, "drain: "))
 		})
-		return drainNodeResultMsg{key: itemKey, err: err}
-	}
-	return tea.Batch(m.showToast("draining "+itemKeyString(itemKey)+"…", toastInfo), drain)
+		err := audited(m.logger, mutation.DrainNode, name, func() error {
+			return k8s.DrainNode(ctx, kubeConfig, env.KubeContext(), name)
+		})
+		return drainNodeResultMsg{key: itemKey, err: err, env: env}
+	})
 }
 
 // selectedItem returns the currently selected item in the table.

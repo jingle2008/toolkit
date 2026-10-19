@@ -57,31 +57,22 @@ func TestHandleFilterApplyMsg(t *testing.T) {
 	}
 }
 
-func TestHandleDeleteErrMsg_GPUNodeRestoresStatus(t *testing.T) {
+func TestHandleDeleteErrMsg_GPUNodeToasts(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.category = domain.GPUNode
-	node := models.GPUNode{Name: "node1", NodePool: "pool1"}
-	node.SetStatus("Deleting")
 	m.dataset.GPUNodeMap = map[string][]models.GPUNode{
-		"pool1": {node},
+		"pool1": {{Name: "node1", NodePool: "pool1"}},
 	}
 	m.updateColumns()
 	m.updateRows(false)
 
-	msg := deleteErrMsg{
+	m.handleDeleteErrMsg(deleteErrMsg{
 		err:      errors.New("boom"),
 		category: domain.GPUNode,
 		key:      models.ScopedItemKey{Scope: "pool1", Name: "node1"},
 		env:      m.environment,
-	}
-	msg.prevState = "OK"
-	m.handleDeleteErrMsg(msg)
-
-	got := m.dataset.GPUNodeMap["pool1"][0].GetStatus()
-	if got != "OK" {
-		t.Fatalf("expected status OK, got %q", got)
-	}
+	})
 	// The failure is shown, not only logged.
 	if m.toasts.active == nil || m.toasts.active.sev != toastError || m.toasts.active.next != "^x retry" {
 		t.Fatalf("expected an error toast naming ^x retry, got %+v", m.toasts.active)

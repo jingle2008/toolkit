@@ -132,6 +132,11 @@ type Model struct {
 	confirm    confirmOverlay // destructive-action confirmation modal state
 	rowPicker  rowPickerState // modal row picker state (go to, metrics DAC)
 	palette    paletteState   // command palette state
+
+	// actions are the mutations in flight, oldest first (action_tracker.go);
+	// actionSeq numbers them.
+	actions   []runningAction
+	actionSeq int
 	// paletteRecent names the palette items run this session, newest
 	// first (paletteRecentMax at most), by paletteItem.id.
 	paletteRecent []string

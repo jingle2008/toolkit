@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/charmbracelet/x/ansi"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -76,6 +78,8 @@ func TestCordonAndDrainNode_InvalidItem(t *testing.T) {
 	}
 }
 
+// A running delete shows in the row's Status cell; the item itself is
+// left alone, so a reload can't erase the status.
 func TestDeleteItemActions(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
@@ -87,14 +91,11 @@ func TestDeleteItemActions(t *testing.T) {
 	m.updateColumns()
 	m.updateRows(true)
 	key := models.ScopedItemKey{Name: "dac1", Scope: "tenant1"}
-	cmd := m.deleteItem(key)
-	if cmd == nil {
+	if cmd := m.deleteItem(key); cmd == nil {
 		t.Fatal("expected deleteItem to return cmd for dedicated AI cluster")
 	}
-	dac := findItem(m.dataset, m.category, key).(*models.DedicatedAICluster)
-	if dac.Status != "Deleting" {
-		t.Fatalf("expected dedicated AI cluster status Deleting, got %q", dac.Status)
-	}
+	assert.Equal(t, "Deleting", statusCell(t, m))
+	assert.Equal(t, "RUNNING", findItem(m.dataset, m.category, key).(*models.DedicatedAICluster).Status)
 
 	m.category = domain.GPUNode
 	m.dataset.GPUNodeMap = map[string][]models.GPUNode{
@@ -103,14 +104,22 @@ func TestDeleteItemActions(t *testing.T) {
 	m.updateColumns()
 	m.updateRows(true)
 	key = models.ScopedItemKey{Name: "node1", Scope: "pool"}
-	cmd = m.deleteItem(key)
-	if cmd == nil {
+	if cmd := m.deleteItem(key); cmd == nil {
 		t.Fatal("expected deleteItem to return cmd for gpu node")
 	}
-	node := findItem(m.dataset, m.category, key).(*models.GPUNode)
-	if node.GetStatus() != "Deleting" {
-		t.Fatalf("expected gpu node status Deleting, got %q", node.GetStatus())
+	assert.Equal(t, "Terminating", statusCell(t, m))
+}
+
+// statusCell is the first row's Status cell as the table shows it.
+func statusCell(t *testing.T, m *Model) string {
+	t.Helper()
+	for c, h := range m.headers {
+		if h.text == common.StatusCol {
+			return ansi.Strip(m.table.Rows()[0][c])
+		}
 	}
+	t.Fatal("no Status column")
+	return ""
 }
 
 func TestRestartNode_InvalidItem(t *testing.T) {

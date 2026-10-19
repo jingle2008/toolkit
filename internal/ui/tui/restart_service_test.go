@@ -75,7 +75,7 @@ func TestRestartInferenceService_ConfirmPatchesRow(t *testing.T) {
 	m.handleItemActions(shiftR())
 	_, cmd := m.updateConfirmView(keyPress("y"))
 	require.NotNil(t, cmd, "confirming must dispatch the restart")
-	msg, ok := cmd().(restartServiceResultMsg)
+	msg, ok := actionResult(t, cmd).(restartServiceResultMsg)
 	require.True(t, ok)
 	require.NoError(t, msg.err)
 	assert.Equal(t, "ns1", gotNS)
@@ -95,11 +95,11 @@ func TestHandleRestartServiceResultMsg_Toasts(t *testing.T) {
 	m := newTestModel(t)
 	key := models.ScopedItemKey{Scope: "ns1", Name: "svc1"}
 
-	require.NotNil(t, m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key}))
+	require.NotNil(t, m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key, env: m.environment}))
 	assert.Equal(t, "restart requested for ns1/svc1", m.toasts.active.msg)
 	assert.Equal(t, toastInfo, m.toasts.active.sev)
 
-	m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key, err: errors.New("forbidden")})
+	m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key, err: errors.New("forbidden"), env: m.environment})
 	assert.Equal(t, "restart ns1/svc1 failed: forbidden", m.toasts.active.msg)
 	assert.Equal(t, toastError, m.toasts.active.sev)
 	assert.Equal(t, "R retry", m.toasts.active.next)
@@ -123,7 +123,7 @@ func TestRestartInferenceService_LegacyDispatches(t *testing.T) {
 	key := models.ScopedItemKey{Scope: "ns1", Name: "svc1"}
 	cmd := m.restartInferenceService(&models.InferenceService{Name: "svc1", Namespace: "ns1", Legacy: true}, key)
 	require.NotNil(t, cmd)
-	msg, ok := cmd().(restartServiceResultMsg)
+	msg, ok := actionResult(t, cmd).(restartServiceResultMsg)
 	require.True(t, ok)
 	require.NoError(t, msg.err)
 	assert.True(t, called)
@@ -134,11 +134,11 @@ func TestHandleDrainNodeResultMsg_Toasts(t *testing.T) {
 	m := newTestModel(t)
 	key := models.ScopedItemKey{Scope: "pool1", Name: "node1"}
 
-	require.NotNil(t, m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key}))
+	require.NotNil(t, m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, env: m.environment}))
 	assert.Equal(t, "drained pool1/node1", m.toasts.active.msg)
 	assert.Equal(t, toastInfo, m.toasts.active.sev)
 
-	m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, err: errors.New("pdb violation (node uncordoned)")})
+	m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, err: errors.New("pdb violation (node uncordoned)"), env: m.environment})
 	assert.Equal(t, "drain pool1/node1 failed: pdb violation (node uncordoned)", m.toasts.active.msg)
 	assert.Equal(t, toastError, m.toasts.active.sev)
 	assert.Equal(t, "D retry (resumes)", m.toasts.active.next, "the drain is recorded on the node")

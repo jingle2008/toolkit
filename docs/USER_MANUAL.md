@@ -162,7 +162,7 @@ toolkit --help
 
 | Zone | Description |
 |------|-------------|
-| **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. In production the type is a red `PROD` badge, so it can't be mistaken for dev or preprod. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: a spinner while loading, `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)), and the toolkit version |
+| **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. In production the type is a red `PROD` badge, so it can't be mistaken for dev or preprod. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: the action running, if any — the newest one's latest step, how many run, and its environment when you've switched away (`⣾ 2 running · drain 10.0.0.11 (dp-prod-ord): evicted pod=ns/p1`); a spinner while loading; `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)); and the toolkit version. While an action runs, its row's Status says so (`Draining`, `Deleting`, `Terminating`, `Restarting`, `Scaling`), and every action ends with a notification: one that fades on success, one that waits for `Esc` on failure |
 | **Breadcrumb** | The category, and the scope it is narrowed to (`› acme`). While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5⟩` (position in history), `s…` (a pending sort key). On the right: what the rows add up to (`Active: 2 • Failed: 1`), which gives way on a narrow terminal |
 | **Panel** (center) | The table, or a row's details. Its bottom edge says where you are: the cursor among the rows (`1 of 2`), with the total when a filter or faulty-only mode hides some (`(40 total)`), or in the detail view the layout and scroll position. Its title says only what isn't shown elsewhere: the row in the detail view, how many columns are hidden in the list. Columns are as wide as their header or their widest value, and share the rest of the width. On a narrow terminal long values (names, OCIDs) shorten first, short ones keep their width, and Status is never cut; if that still doesn't fit, columns drop from the right (never the first or Status) and the title says how many are hidden. An empty cell shows `—`. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
 | **Footer** (bottom) | The category's most useful actions, then `/ filter`, `: command palette` and `? more`. On a narrow terminal the actions give way first, so filtering and the palette stay in reach |
@@ -592,7 +592,7 @@ and CPU/memory remain in the TUI's detail view (`y`).
 
 | Key | Action |
 |-----|--------|
-| `q` / `Ctrl+C` | Quit |
+| `q` / `Ctrl+C` | Quit. With actions running it asks first and lists them, since quitting stops them (a drain resumes when run again); `q` again quits anyway |
 | `?` / `h` | Toggle help overlay |
 | `Esc` | Back / Clear filter |
 | `y` | Toggle detail view |

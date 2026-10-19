@@ -15,20 +15,19 @@ import (
 // Update; the only thing left to do here is honor Quit.
 func (m *Model) updateLoadingView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok && key.Matches(keyMsg, keys.Quit) {
-		m.cancelInFlight()
-		return m, tea.Quit
+		return m, m.quit()
 	}
 	return m, nil
 }
 
 // handleSpinnerTickMsg advances the spinner one frame and lets the
-// tick chain die when no load is in flight, so we don't burn empty
-// event-loop wakeups idle. beginTask kicks off a fresh chain via
-// tea.Sequence the next time pendingTasks goes 0 → 1.
+// tick chain die when no load or action is in flight, so we don't burn
+// empty event-loop wakeups idle. beginTask (or trackAction) kicks off a
+// fresh chain the next time one starts.
 func (m *Model) handleSpinnerTickMsg(msg spinner.TickMsg) tea.Cmd {
 	loadingSpinner, cmd := m.loadingSpinner.Update(msg)
 	m.loadingSpinner = &loadingSpinner
-	if m.pendingTasks == 0 {
+	if m.pendingTasks == 0 && len(m.actions) == 0 {
 		return nil
 	}
 	return cmd

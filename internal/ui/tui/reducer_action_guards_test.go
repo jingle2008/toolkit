@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -48,11 +49,14 @@ func TestRestartNode_AlreadyRestartingIsNoOp(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	node := &models.GPUNode{Name: "node-a"}
-	node.SetStatus("Restarting")
 
 	// Re-pressing the key while a restart is in flight must not queue a
 	// second SoftResetInstance for the same node.
-	assert.Nil(t, m.restartNode(node, models.ItemKey("node-a")))
+	require.NotNil(t, m.restartNode(node, models.ItemKey("node-a")))
+	m.restartNode(node, models.ItemKey("node-a"))
+	assert.Len(t, m.actions, 1)
+	require.NotNil(t, m.toasts.active)
+	assert.Equal(t, "restart node-a is already running", m.toasts.active.msg)
 }
 
 func TestDeleteGPUNode_ItemNotFound(t *testing.T) {

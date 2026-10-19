@@ -3,6 +3,7 @@ package tui
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -33,6 +34,7 @@ type isvcDeleteResultMsg struct {
 	key     models.ItemKey
 	outcome k8s.OrphanDeleteOutcome
 	err     error
+	env     models.Environment
 }
 
 // planDeleteInferenceService starts ctrl+x on an InferenceService. Only an
@@ -86,22 +88,22 @@ func (m *Model) deleteOrphanInferenceService(itemKey models.ItemKey, a mutation.
 		return m.showToast(itemKeyString(itemKey)+" is gone", toastInfo)
 	}
 	namespace, name := svc.Namespace, svc.Name
-	kubeConfig, kubeContext := m.kubeConfig, m.environment.KubeContext()
-	return func() tea.Msg {
+	env, kubeConfig := m.environment, m.kubeConfig
+	return m.trackAction(strings.ToLower(confirmLabels[a].verb)+" "+namespace+"/"+name, "", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		var outcome k8s.OrphanDeleteOutcome
 		err := audited(m.logger, a, namespace+"/"+name, func() error {
 			var err error
-			outcome, err = deleteOrphanISVCFn(ctx, kubeConfig, kubeContext, namespace, name)
+			outcome, err = deleteOrphanISVCFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
 			return err
 		})
-		return isvcDeleteResultMsg{key: itemKey, outcome: outcome, err: err}
-	}
+		return isvcDeleteResultMsg{key: itemKey, outcome: outcome, err: err, env: env}
+	})
 }
 
 func (m *Model) handleISVCDeleteResultMsg(msg isvcDeleteResultMsg) tea.Cmd {
-	target := itemKeyString(msg.key)
+	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
 		m.logger.Errorw("failed to delete inference service", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("delete %s failed: %v", target, msg.err), keys.Delete.Help().Key+" retry")

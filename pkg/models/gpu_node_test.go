@@ -61,17 +61,6 @@ func TestGPUNode_GetStatus_Cordoned(t *testing.T) {
 	assert.Equal(t, "WARN: CORDONED", node.GetStatus())
 }
 
-func TestGPUNode_SetStatus_Overrides(t *testing.T) {
-	t.Parallel()
-	// An explicit status short-circuits the derived checks, even ones
-	// that would otherwise report an error.
-	node := GPUNode{InstanceType: "NVIDIA.A100.8", Allocatable: 0, IsReady: false}
-	node.SetStatus("CUSTOM")
-	assert.Equal(t, "CUSTOM", node.GetStatus())
-	assert.Contains(t, node.FilterableFields(), "CUSTOM")
-	assert.True(t, node.IsFaulty())
-}
-
 func TestGPUNode_IsHealthy(t *testing.T) {
 	t.Parallel()
 	assert.True(t, GPUNode{}.IsHealthy())

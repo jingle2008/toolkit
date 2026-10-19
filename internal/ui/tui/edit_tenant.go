@@ -224,7 +224,7 @@ func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	k := keyMsg.String()
 	switch {
 	case k == "ctrl+c":
-		return m, tea.Quit
+		return m, m.quit()
 	case key.Matches(keyMsg, keys.Back):
 		m.editTenant = nil
 		m.viewMode = common.ListView
@@ -288,7 +288,7 @@ func (m *Model) openPortalCmd() tea.Cmd {
 func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 	writer, ok := m.loader.(loader.TenantMetadataWriter)
 	path := m.metadataPath()
-	return func() tea.Msg {
+	return m.trackAction("save tenant "+entry.ID, "", nil, func(func(string)) tea.Msg {
 		if !ok {
 			return tenantSaveErrMsg{err: errors.New("loader does not support writing metadata")}
 		}
@@ -298,7 +298,7 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 			return tenantSaveErrMsg{err: err}
 		}
 		return tenantSavedMsg{path: path, entry: entry}
-	}
+	})
 }
 
 // applyTenantSave reflects a just-saved tenant entry in the dataset

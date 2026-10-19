@@ -133,6 +133,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	m.stats = stats
 	m.rowTotal = len(rows) // updateRows and the async path set the true total after
 	m.rawRows = cloneRows(rows)
+	m.overlayActionStatus(rows)
 	m.updateColumns() // widths follow the values
 	m.applyMiddleTruncation(rows)
 	m.toneStatusCells(rows)

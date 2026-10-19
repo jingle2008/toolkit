@@ -74,8 +74,7 @@ func (m *Model) updateRowPickerView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	k := km.String()
 	switch {
 	case key.Matches(km, keys.Quit):
-		m.cancelInFlight()
-		return m, tea.Quit
+		return m, m.quit()
 	case g.moveCursor(k):
 	case k == "enter":
 		rows := g.visible()

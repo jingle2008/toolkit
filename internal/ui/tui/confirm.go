@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"image/color"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -36,6 +37,9 @@ type confirmOverlay struct {
 	// nudge is set when enter lands on an irreversible action's button,
 	// which only a capital Y may confirm; the hint is redrawn as a prompt.
 	nudge bool
+	// quit marks the quit confirmation, shown when quitting would cancel
+	// running actions; it has no mutation.
+	quit bool
 }
 
 // confirmLabels is how the modal names each action it confirms — verb
@@ -56,7 +60,12 @@ var confirmLabels = map[mutation.Action]struct{ verb, noun string }{
 }
 
 // verb is the modal's name for the action, e.g. "Scale up".
-func (c confirmOverlay) verb() string { return confirmLabels[c.act].verb }
+func (c confirmOverlay) verb() string {
+	if c.quit {
+		return "Quit"
+	}
+	return confirmLabels[c.act].verb
+}
 
 // noun is the modal's name for what it acts on, e.g. "GPU pool".
 func (c confirmOverlay) noun() string { return confirmLabels[c.act].noun }
@@ -216,7 +225,7 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	if key.Matches(km, keys.Quit) {
 		m.cancelInFlight()
-		return m, tea.Quit
+		return m, tea.Quit // a second q quits, even past the quit confirmation
 	}
 	k := km.String()
 	switch k {
@@ -269,6 +278,9 @@ func (m *Model) confirmView() string {
 	p := m.theme.Palette
 	irreversible := c.act.Tier == mutation.Irreversible
 	border, fill, onFill, yes := p.Warn, p.Warn, p.OnWarn, "y"
+	if c.quit {
+		return m.quitConfirmView()
+	}
 	title := c.verb() + " " + c.noun()
 	if irreversible {
 		border, fill, onFill, yes = p.Danger, p.DangerFill, p.OnAccent, "Y"
@@ -292,17 +304,7 @@ func (m *Model) confirmView() string {
 		body += "\n\n" + lipgloss.NewStyle().Foreground(border).Width(inner).Render(c.warning)
 	}
 
-	button := func(text string, focused bool) string {
-		s := lipgloss.NewStyle().Padding(0, 1)
-		switch {
-		case focused && m.theme.Monochrome:
-			s = s.Reverse(true).Bold(true) // the fill would vanish
-		case focused:
-			s = s.Background(fill).Foreground(onFill).Bold(true)
-		}
-		return s.Render("[ " + text + " ]")
-	}
-	buttons := button("Cancel", !c.onAction) + "   " + button(c.verb(), c.onAction)
+	buttons := m.confirmButtons(c, fill, onFill)
 	body += "\n\n" + lipgloss.PlaceHorizontal(inner, lipgloss.Center, buttons)
 
 	hints := yes + " confirm · n/esc cancel · ←/→ select"
@@ -314,4 +316,62 @@ func (m *Model) confirmView() string {
 			Render("press capital Y to " + strings.ToLower(c.verb()) + ", or esc to cancel")
 	}
 	return m.modal(title, body, hints, border, width)
+}
+
+// quit ends the program. With actions running it asks first, since
+// quitting cancels them; the confirmation lists them.
+func (m *Model) quit() tea.Cmd {
+	if len(m.actions) == 0 {
+		m.cancelInFlight()
+		return tea.Quit
+	}
+	return m.requestConfirm(confirmOverlay{quit: true, run: func() tea.Cmd {
+		m.cancelInFlight()
+		return tea.Quit
+	}})
+}
+
+// quitConfirmViewMaxRows caps how many running actions the quit
+// confirmation lists.
+const quitConfirmViewMaxRows = 5
+
+// quitConfirmView renders the quit confirmation: the running actions,
+// what quitting does to them, and Cancel/Quit buttons.
+func (m *Model) quitConfirmView() string {
+	c := m.confirm
+	p := m.theme.Palette
+	width := min(m.modalMaxWidth(), 56)
+	inner := width - 4
+	running := m.runningSummary()
+	if len(running) > quitConfirmViewMaxRows {
+		running = append(running[:quitConfirmViewMaxRows-1], fmt.Sprintf("… and %d more", len(running)-quitConfirmViewMaxRows+1))
+	}
+	for i, r := range running {
+		running[i] = "  " + truncateString(r, inner-2)
+	}
+	body := strings.Join(running, "\n") + "\n\n" + lipgloss.NewStyle().Foreground(p.Warn).Width(inner).
+		Render("Quitting stops them. A drain resumes when you run it again.")
+	body += "\n\n" + lipgloss.PlaceHorizontal(inner, lipgloss.Center, m.confirmButtons(c, p.Warn, p.OnWarn))
+	title := fmt.Sprintf("Quit with %d action", len(m.actions))
+	if len(m.actions) > 1 {
+		title += "s"
+	}
+	return m.modal(title+" running", body, "y/q quit · n/esc cancel · ←/→ select", p.Warn, width)
+}
+
+// confirmButtons draws c's Cancel and action buttons, the focused one
+// filled with fill (reverse video without color, where the fill would
+// vanish).
+func (m *Model) confirmButtons(c confirmOverlay, fill, onFill color.Color) string {
+	button := func(text string, focused bool) string {
+		s := lipgloss.NewStyle().Padding(0, 1)
+		switch {
+		case focused && m.theme.Monochrome:
+			s = s.Reverse(true).Bold(true)
+		case focused:
+			s = s.Background(fill).Foreground(onFill).Bold(true)
+		}
+		return s.Render("[ " + text + " ]")
+	}
+	return button("Cancel", !c.onAction) + "   " + button(c.verb(), c.onAction)
 }

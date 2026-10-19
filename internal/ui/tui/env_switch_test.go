@@ -57,7 +57,6 @@ func TestActionResults_FromPreviousEnvLeaveRowsAlone(t *testing.T) {
 	m.dataset.GPUPools = []models.GPUPool{{Name: poolKey, Status: "RUNNING"}}
 	m.dataset.GPUNodeMap = map[string][]models.GPUNode{"pool1": {{Name: "10.0.0.1", NodePool: "pool1"}}}
 
-	m.handleGPUPoolScaleStartedMsg(gpuPoolScaleStartedMsg{key: poolKey, env: otherEnv})
 	m.handleGPUPoolScaleResultMsg(gpuPoolScaleResultMsg{key: poolKey, err: errors.New("boom"), env: otherEnv})
 	assert.Equal(t, "RUNNING", m.dataset.GPUPools[0].Status)
 
@@ -65,12 +64,21 @@ func TestActionResults_FromPreviousEnvLeaveRowsAlone(t *testing.T) {
 	m.handleRestartNodeResultMsg(restartNodeResultMsg{key: nodeKey, err: errors.New("boom"), env: otherEnv})
 	m.handleDeleteDoneMsg(deleteDoneMsg{category: domain.GPUNode, key: nodeKey, env: otherEnv})
 	require.Len(t, m.dataset.GPUNodeMap["pool1"], 1, "not removed")
-	node := m.dataset.GPUNodeMap["pool1"][0]
-	assert.False(t, node.IsSchedulingDisabled)
-	assert.NotEqual(t, "FAILED", node.GetStatus())
+	assert.False(t, m.dataset.GPUNodeMap["pool1"][0].IsSchedulingDisabled)
 
-	m.handleGPUPoolScaleResultMsg(gpuPoolScaleResultMsg{key: poolKey, err: errors.New("boom"), env: m.environment})
-	assert.Equal(t, "FAILED", m.dataset.GPUPools[0].Status, "a result for the current environment still applies")
+	m.handleCordonNodeResultMsg(cordonNodeResultMsg{key: nodeKey, state: true, env: m.environment})
+	assert.True(t, m.dataset.GPUNodeMap["pool1"][0].IsSchedulingDisabled, "a result for the current environment still applies")
+}
+
+// A result that lands after an environment switch is still shown, naming
+// the environment it ran in.
+func TestActionResults_FromPreviousEnvNameIt(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.handleRestartNodeResultMsg(restartNodeResultMsg{key: "10.0.0.1", err: errors.New("boom"), env: otherEnv})
+	require.NotNil(t, m.toasts.active)
+	assert.Equal(t, toastError, m.toasts.active.sev)
+	assert.Contains(t, m.toasts.active.msg, "("+otherEnv.KubeContext()+")")
 }
 
 // A delete plan from the old environment would open a modal over the new

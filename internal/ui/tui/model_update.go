@@ -103,6 +103,30 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.showToast(fmt.Sprintf("failed to open metrics: %v", msg.err), toastError)
 	case openMetricsTriggerMsg:
 		return m, m.handleOpenMetricsTrigger(msg)
+	// Actions' results are handled from any view: the user may be in
+	// details, help or the log when one finishes.
+	case actionDoneMsg:
+		return m.route(m.handleActionDone(msg))
+	case actionProgressMsg:
+		return m, m.handleActionProgress(msg)
+	case deleteErrMsg:
+		return m, m.handleDeleteErrMsg(msg)
+	case deleteDoneMsg:
+		return m, m.handleDeleteDoneMsg(msg)
+	case gpuPoolScaleResultMsg:
+		return m, m.handleGPUPoolScaleResultMsg(msg)
+	case cordonNodeResultMsg:
+		return m, m.handleCordonNodeResultMsg(msg)
+	case drainNodeResultMsg:
+		return m, m.handleDrainNodeResultMsg(msg)
+	case restartNodeResultMsg:
+		return m, m.handleRestartNodeResultMsg(msg)
+	case restartServiceResultMsg:
+		return m, m.handleRestartServiceResultMsg(msg)
+	case isvcDeletePlannedMsg:
+		return m, m.handleISVCDeletePlannedMsg(msg)
+	case isvcDeleteResultMsg:
+		return m, m.handleISVCDeleteResultMsg(msg)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil

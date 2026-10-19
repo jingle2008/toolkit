@@ -69,7 +69,7 @@ func TestCordon_ConfirmedIsAudited(t *testing.T) {
 		m.requestConfirm(m.confirmCordon(key, &node))
 		_, cmd := m.updateConfirmView(keyPress("y"))
 		require.NotNil(t, cmd)
-		msg, ok := cmd().(cordonNodeResultMsg)
+		msg, ok := actionResult(t, cmd).(cordonNodeResultMsg)
 		require.True(t, ok)
 		assert.Equal(t, !tc.cordoned, msg.state, "the state set is the one confirmed")
 		assert.Equal(t, []auditRecord{
@@ -117,7 +117,7 @@ func TestISVCDelete_ConfirmedIsAuditedAsPlanned(t *testing.T) {
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
 	_, cmd := m.updateConfirmView(keyPress("Y"))
 	require.NotNil(t, cmd)
-	msg, ok := cmd().(isvcDeleteResultMsg)
+	msg, ok := actionResult(t, cmd).(isvcDeleteResultMsg)
 	require.True(t, ok)
 	require.ErrorIs(t, msg.err, assert.AnError)
 	assert.Equal(t, []auditRecord{

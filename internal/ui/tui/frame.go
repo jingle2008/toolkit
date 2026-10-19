@@ -101,6 +101,9 @@ func (m *Model) envBar() string {
 		muted.Render(" · k8s ") + k8s
 
 	var right []string
+	if running := m.actionsIndicator(m.viewWidth / 3); running != "" {
+		right = append(right, running)
+	}
 	if m.pendingTasks > 0 {
 		right = append(right, m.loadingSpinner.View()+" "+m.loadingTimer.View())
 	}
