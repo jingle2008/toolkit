@@ -643,6 +643,22 @@ func TestDrain_ReRunInheritsCordonOfAFailedDrain(t *testing.T) { //nolint:parall
 	}
 }
 
+// A rolled-back drain no longer owns a cordon. If an operator cordons the
+// node afterwards, a re-run that fails must leave that cordon in place.
+func TestDrain_ReRunKeepsOperatorCordonAfterRollback(t *testing.T) { //nolint:paralleltest // shared drain seams
+	f := newDrainFixture(t, false, []*corev1.Pod{drainPod("ft-0", "ft", map[string]string{fineTuneLabel: "m"}, corev1.PodRunning)})
+
+	_, err := f.d.start(context.Background())
+	require.ErrorContains(t, err, "(node uncordoned)")
+	assert.False(t, f.node().Spec.Unschedulable)
+	assert.False(t, f.state().CordonedByDrain, "a rollback lifts the drain's cordon claim with the cordon")
+
+	f.setNode(f.state(), true) // kubectl cordon
+	_, err = f.d.start(context.Background())
+	require.ErrorContains(t, err, "(node left cordoned)")
+	assert.True(t, f.node().Spec.Unschedulable, "the operator's cordon stays")
+}
+
 func TestDrain_EvictionSupportCheckedOncePerRound(t *testing.T) { //nolint:paralleltest // shared drain seams
 	f := newDrainFixture(t, true, []*corev1.Pod{
 		drainPod("a", "default", nil, corev1.PodRunning),
