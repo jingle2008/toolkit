@@ -8,6 +8,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -246,4 +247,76 @@ func TestIsToggleKey(t *testing.T) {
 	for _, k := range []string{"tab", "x", "enter"} {
 		assert.False(t, isToggleKey(k), k)
 	}
+}
+
+// Every category with a Tenant column binds E (edit tenant).
+func TestEditTenant_BoundWhereverTenantColumn(t *testing.T) {
+	t.Parallel()
+	for _, cat := range domain.Categories {
+		hasTenant := false
+		for _, h := range headersFor(cat) {
+			hasTenant = hasTenant || h.text == common.TenantCol
+		}
+		bound := false
+		for _, b := range keys.ResolveKeys(cat, common.ListView).Context {
+			bound = bound || b.Help() == keys.EditTenant.Help()
+		}
+		assert.Equalf(t, hasTenant, bound, "%s: Tenant column %v, E bound %v", cat, hasTenant, bound)
+	}
+}
+
+// The newly covered rows qualify while their tenant has no metadata name:
+// tenant-owned rows whose tenancy resolves to no tenant, and tenancy
+// overrides whose tenant is still named by its OCID.
+func TestTenantEditTarget_EveryTenantColumn(t *testing.T) {
+	t.Parallel()
+	const ocid = "ocid1.tenancy.oc1..xyz"
+	acme := &models.Tenant{Name: "acme", ID: ocid}
+	for name, tc := range map[string]struct {
+		item any
+		ok   bool
+	}{
+		"workload unresolved":       {&models.GPUWorkload{TenantID: "xyz"}, true},
+		"workload resolved":         {&models.GPUWorkload{TenantID: "xyz", Owner: acme}, false},
+		"endpoint unresolved":       {&models.InferenceService{TenantID: "xyz"}, true},
+		"endpoint no tenancy":       {&models.InferenceService{}, false},
+		"limit override unnamed":    {&models.LimitTenancyOverride{TenantID: ocid, TenantName: ocid}, true},
+		"limit override named":      {&models.LimitTenancyOverride{TenantID: ocid, TenantName: "acme"}, false},
+		"console override unnamed":  {&models.ConsolePropertyTenancyOverride{TenantID: ocid, TenantName: ocid}, true},
+		"property override unnamed": {&models.PropertyTenancyOverride{TenantID: ocid, TenantName: ocid}, true},
+		"property override no id":   {&models.PropertyTenancyOverride{}, false},
+	} {
+		tgt, ok := tenantEditTarget(tc.item, "oc1")
+		assert.Equal(t, tc.ok, ok, name)
+		if tc.ok {
+			assert.Equal(t, ocid, tgt.ocid, name)
+		}
+	}
+}
+
+// Naming a tenant an override's OCID made renames it: its overrides move
+// from under the OCID to the name, and carry it.
+func TestApplyTenantSave_RenamesOverrideTenant(t *testing.T) {
+	t.Parallel()
+	const ocid = "ocid1.tenancy.oc1..xyz"
+	m := newTestModel(t)
+	m.dataset = &models.Dataset{
+		Tenants: []models.Tenant{{ID: ocid, Name: ocid, IsInternal: true}},
+		LimitTenancyOverrideMap: map[string][]models.LimitTenancyOverride{
+			ocid: {{TenantID: ocid, TenantName: ocid, LimitRegionalOverride: models.LimitRegionalOverride{Name: "l1"}}},
+		},
+		PropertyTenancyOverrideMap: map[string][]models.PropertyTenancyOverride{
+			ocid: {{TenantID: ocid, TenantName: ocid}},
+		},
+	}
+	name := "Acme"
+	m.applyTenantSave(models.TenantMetadata{ID: ocid, Name: &name})
+
+	require.Len(t, m.dataset.Tenants, 1)
+	assert.Equal(t, "Acme", m.dataset.Tenants[0].Name)
+	assert.NotContains(t, m.dataset.LimitTenancyOverrideMap, ocid)
+	require.Len(t, m.dataset.LimitTenancyOverrideMap["Acme"], 1)
+	assert.Equal(t, "Acme", m.dataset.LimitTenancyOverrideMap["Acme"][0].TenantName)
+	assert.Equal(t, "Acme", m.dataset.PropertyTenancyOverrideMap["Acme"][0].TenantName)
+	assert.Nil(t, m.dataset.ConsolePropertyTenancyOverrideMap, "an unloaded map stays unloaded")
 }

@@ -46,31 +46,72 @@ type editTarget struct {
 }
 
 // tenantEditTarget inspects a selected item and returns an editTarget
-// when it is an unresolved tenant-owned row (DAC or ImportedModel with
-// Owner == nil and a real, non-orphan TenantID). ok is false otherwise.
+// when its tenant has no metadata name yet, in any category with a Tenant
+// column. A tenant-owned row (DAC, ImportedModel, GPUWorkload,
+// InferenceService) qualifies when its tenancy resolves to no tenant
+// (Owner == nil) and is real, not an orphan's. A tenancy override always
+// has a tenant (one per override OCID); it qualifies while that tenant is
+// named by its OCID. ok is false otherwise.
 func tenantEditTarget(item any, realm string) (editTarget, bool) {
-	var (
-		ocid, tenantID string
-		resolved       bool
-	)
-	switch v := item.(type) {
-	case *models.DedicatedAICluster:
-		if v == nil {
-			return editTarget{}, false
-		}
-		ocid, tenantID, resolved = v.TenancyOCID(realm), v.TenantID, v.Owner != nil
-	case *models.ImportedModel:
-		if v == nil {
-			return editTarget{}, false
-		}
-		ocid, tenantID, resolved = v.TenancyOCID(realm), v.TenantID, v.Owner != nil
-	default:
-		return editTarget{}, false
+	ocid, tenantID, resolved, ok := ownedTenant(item, realm)
+	if !ok {
+		ocid, tenantID, resolved, ok = overrideTenant(item)
 	}
-	if resolved || tenantID == "" || tenantID == "UNKNOWN_TENANCY" {
+	if !ok || resolved || tenantID == "" || tenantID == "UNKNOWN_TENANCY" {
 		return editTarget{}, false
 	}
 	return editTarget{ocid: ocid, tenantID: tenantID}, true
+}
+
+// ownedTenant is a tenant-owned row's tenancy: its OCID, its raw tenancy
+// id, and whether it resolves to a tenant. ok is false for other rows.
+func ownedTenant(item any, realm string) (ocid, tenantID string, resolved, ok bool) {
+	switch v := item.(type) {
+	case *models.DedicatedAICluster:
+		if v != nil {
+			return v.TenancyOCID(realm), v.TenantID, v.Owner != nil, true
+		}
+	case *models.ImportedModel:
+		if v != nil {
+			return v.TenancyOCID(realm), v.TenantID, v.Owner != nil, true
+		}
+	case *models.GPUWorkload:
+		if v != nil {
+			return v.TenancyOCID(realm), v.TenantID, v.Owner != nil, true
+		}
+	case *models.InferenceService:
+		if v != nil {
+			return v.TenancyOCID(realm), v.TenantID, v.Owner != nil, true
+		}
+	}
+	return "", "", false, false
+}
+
+// overrideTenant is a tenancy override's tenancy: its OCID (twice: it is
+// also the id), and whether its tenant has a metadata name, i.e. isn't
+// named by the OCID. ok is false for other rows.
+func overrideTenant(item any) (ocid, tenantID string, named, ok bool) {
+	var id, name string
+	switch v := item.(type) {
+	case *models.LimitTenancyOverride:
+		if v == nil {
+			return "", "", false, false
+		}
+		id, name = v.TenantID, v.TenantName
+	case *models.ConsolePropertyTenancyOverride:
+		if v == nil {
+			return "", "", false, false
+		}
+		id, name = v.TenantID, v.TenantName
+	case *models.PropertyTenancyOverride:
+		if v == nil {
+			return "", "", false, false
+		}
+		id, name = v.TenantID, v.TenantName
+	default:
+		return "", "", false, false
+	}
+	return id, id, name != id, true
 }
 
 // Focus indices for the form fields.
@@ -302,20 +343,16 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 }
 
 // applyTenantSave reflects a just-saved tenant entry in the dataset
-// entirely in memory — no reload. Because the form only edits UNRESOLVED
-// rows, the entry is always a new tenant: its tenancy suffix matched no
-// existing Tenant, which also means it has no tenancy-override entries
-// (every override record's OCID is a tenant). So we add the one Tenant directly
-// and re-resolve the tenant-owned maps against it; the override maps are
-// provably unaffected and left alone.
+// entirely in memory — no reload. The form only edits a tenant without a
+// metadata name, so the entry either adds a tenant (a tenant-owned row's
+// tenancy matched none) or names one a tenancy override's OCID made, which
+// renames it from its OCID. upsertTenantByID covers both; the tenant-owned
+// maps are re-resolved against the result, and the override maps, keyed
+// and stamped by tenant name, are regrouped under the new name.
 //
 // Every tenant-owned map is re-resolved (see resolveTenantOwners), even
 // when its owners don't change: upsertTenantByID may reallocate
 // ds.Tenants, which would leave Owner pointers into the old array.
-//
-// If the form is ever extended to edit RESOLVED tenants, this assumption
-// breaks (a rename could affect override-map display) and a fuller
-// rebuild would be needed.
 func (m *Model) applyTenantSave(entry models.TenantMetadata) {
 	ds := m.dataset
 	if ds == nil {
@@ -323,7 +360,42 @@ func (m *Model) applyTenantSave(entry models.TenantMetadata) {
 	}
 	ds.Tenants = upsertTenantByID(ds.Tenants, tenantFromEntry(entry))
 	resolveTenantOwners(ds)
+	renameOverrideTenants(ds)
 	m.refreshDisplay()
+}
+
+// renameOverrideTenants regroups the tenancy-override maps by their
+// records' current tenant names, as the loader groups them, so a tenant
+// just named moves its overrides from under its OCID.
+func renameOverrideTenants(ds *models.Dataset) {
+	nameOf := make(map[string]string, len(ds.Tenants))
+	for _, t := range ds.Tenants {
+		nameOf[t.ID] = t.Name
+	}
+	ds.LimitTenancyOverrideMap = regroupByTenant(ds.LimitTenancyOverrideMap, nameOf, (*models.LimitTenancyOverride).SetTenantName)
+	ds.ConsolePropertyTenancyOverrideMap = regroupByTenant(ds.ConsolePropertyTenancyOverrideMap, nameOf, (*models.ConsolePropertyTenancyOverride).SetTenantName)
+	ds.PropertyTenancyOverrideMap = regroupByTenant(ds.PropertyTenancyOverrideMap, nameOf, (*models.PropertyTenancyOverride).SetTenantName)
+}
+
+// regroupByTenant re-keys mm by each record's tenant name in nameOf,
+// stamping it on the record; a record whose tenant isn't there keeps its
+// group. nil stays nil (not loaded).
+func regroupByTenant[T models.TenancyOverride](mm map[string][]T, nameOf map[string]string, setName func(*T, string)) map[string][]T {
+	if mm == nil {
+		return nil
+	}
+	out := make(map[string][]T, len(mm))
+	for group, items := range mm {
+		for _, it := range items {
+			name, ok := nameOf[it.GetTenantID()]
+			if !ok {
+				name = group
+			}
+			setName(&it, name)
+			out[name] = append(out[name], it)
+		}
+	}
+	return out
 }
 
 // resolveTenantOwners re-resolves every loaded tenant-owned map against
@@ -366,9 +438,9 @@ func tenantFromEntry(e models.TenantMetadata) models.Tenant {
 	return t
 }
 
-// upsertTenantByID replaces the tenant with t's ID, else appends t.
-// (Replacement only matters defensively; the unresolved-only gate means
-// the form never re-edits an already-present tenant.)
+// upsertTenantByID replaces the tenant with t's ID, else appends t. A
+// tenancy override's tenant is already present, named by its OCID, and is
+// replaced by its newly named self.
 func upsertTenantByID(tenants []models.Tenant, t models.Tenant) []models.Tenant {
 	for i := range tenants {
 		if tenants[i].ID == t.ID {
