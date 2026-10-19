@@ -3,9 +3,9 @@
 ╭─ Age hidden ─────────────────────────────────────────────────────────────────╮
 │ Name ↑    ╭─ Go to ─────────────────────────────────────────────╮ize  Status │
 │───────────│ filter: █                                           │────────────│
-│▌dac-alpha │                                                     │     Active │
-│ dac-orphan│ ▸  Tenant   row-00                                  │     Active │
-│ dac-日本語│    Tenant   row-01                                  │     Failed │
+│▌dac-alpha │                                                     │  4  Active │
+│ dac-orphan│ ▸  Tenant   row-00                                  │  1  Active │
+│ dac-日本語│    Tenant   row-01                                  │  2  Failed │
 │           │    Tenant   row-02                                  │            │
 │           │    Tenant   row-03                                  │            │
 │           │    Tenant   row-04                                  │            │

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"image/color"
+	"math"
 
 	"charm.land/bubbles/v2/filepicker"
 	"charm.land/bubbles/v2/table"
@@ -19,8 +20,13 @@ import (
 //     matched text, the spinner.
 //   - Success, Warn and Danger are status; Danger's fill (DangerFill) is
 //     reserved for production and irreversible actions.
-//   - Selection is the selected row's background: a quiet tint, so the
-//     status colors stay readable on it.
+//   - Selection is the selected row's background: a tint of Accent, so
+//     the status colors stay readable on it.
+//
+// Text, Muted, Border and Selection follow the terminal's own
+// colors when it reports them (DerivePalette): the hues are fixed, the
+// neutrals take the terminal's tint, so they don't read as grey mud on a
+// colored background.
 //
 // Every text role reaches 4.5:1 on common terminal backgrounds and on
 // Selection, and every fill 4.5:1 under its text (TestPalette_Contrast).
@@ -59,6 +65,77 @@ func NewPalette(isDark bool) Palette {
 		DangerFill: c("#CF222E", "#D70000"),
 		OnAccent:   c("#FFFDF5", "#FFFDF5"),
 	}
+}
+
+// DerivePalette is NewPalette with the neutrals taken from the terminal's
+// foreground fg and background bg. Text is fg; Border sits between them.
+// Selection is bg tinted toward
+// Accent, as strongly as the text roles allow (minContrast on it), and
+// Muted is fg faded toward bg as far as minContrast on bg and Selection
+// allows — so a low-contrast theme gets a quieter tint and a brighter
+// Muted rather than unreadable text.
+func DerivePalette(isDark bool, fg, bg color.Color) Palette {
+	p := NewPalette(isDark)
+	p.Text = fg
+	p.Border = mix(bg, fg, 0.30)
+	hues := []color.Color{p.Primary, p.Accent, p.Text, p.Success, p.Warn, p.Danger}
+	p.Selection = bg
+	for t := 0.32; t > 0; t -= 0.02 {
+		if sel := mix(bg, p.Accent, t); readableOn(sel, hues) {
+			p.Selection = sel
+			break
+		}
+	}
+	p.Muted = fg
+	for t := 0.30; t > 0; t -= 0.02 {
+		if m := mix(fg, bg, t); contrast(m, bg) >= minContrast && contrast(m, p.Selection) >= minContrast {
+			p.Muted = m
+			break
+		}
+	}
+	return p
+}
+
+// luminance is c's WCAG 2 relative luminance.
+func luminance(c color.Color) float64 {
+	r, g, b, _ := c.RGBA()
+	lin := func(v uint32) float64 {
+		s := float64(v>>8) / 255
+		if s <= 0.03928 {
+			return s / 12.92
+		}
+		return math.Pow((s+0.055)/1.055, 2.4)
+	}
+	return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b)
+}
+
+// contrast is the WCAG 2 contrast ratio of a and b.
+func contrast(a, b color.Color) float64 {
+	la, lb := luminance(a), luminance(b)
+	return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+}
+
+// minContrast is WCAG AA for normal text, the least any text role gets.
+const minContrast = 4.5
+
+// readableOn reports whether every color in text reaches minContrast on bg.
+func readableOn(bg color.Color, text []color.Color) bool {
+	for _, c := range text {
+		if contrast(c, bg) < minContrast {
+			return false
+		}
+	}
+	return true
+}
+
+// mix is the color t of the way from a to b, blended in sRGB.
+func mix(a, b color.Color, t float64) color.Color {
+	ar, ag, ab, _ := a.RGBA()
+	br, bg, bb, _ := b.RGBA()
+	ch := func(x, y uint32) uint8 {
+		return uint8(float64(x>>8)*(1-t) + float64(y>>8)*t + 0.5) //nolint:gosec // a blend of two bytes is a byte
+	}
+	return color.RGBA{R: ch(ar, br), G: ch(ag, bg), B: ch(ab, bb), A: 0xff}
 }
 
 // Styles groups immutable lipgloss styles used by the TUI, all built from
@@ -103,7 +180,11 @@ type Styles struct {
 // DefaultStyles returns the shared immutable style set for the TUI on a
 // dark (isDark) or light terminal background.
 func DefaultStyles(isDark bool) Styles {
-	p := NewPalette(isDark)
+	return stylesFor(NewPalette(isDark))
+}
+
+// stylesFor builds the style set from palette p.
+func stylesFor(p Palette) Styles {
 	fg := func(c color.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c) }
 	pad := lipgloss.NewStyle().Padding(0, 1)
 

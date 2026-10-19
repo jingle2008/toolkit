@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"charm.land/bubbles/v2/table"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
@@ -134,4 +135,64 @@ func (m *Model) markEmptyCells(rows []table.Row) {
 func fgSeq(c color.Color) string {
 	r, g, b, _ := c.RGBA()
 	return fmt.Sprintf("\x1b[38;2;%d;%d;%dm", r>>8, g>>8, b>>8)
+}
+
+// numericCols are the columns whose values are counts, sizes, ages or
+// percentages: they are right-aligned, header included, so digits line
+// up. Matched case-insensitively against the header text.
+var numericCols = map[string]bool{
+	"total": true, "free": true, "size": true, "actual size": true, "gpus": true,
+	"age": true, "usage": true, "min": true, "max": true, "context": true,
+	"restarts": true, "replicas": true,
+}
+
+// idCols are the columns that only identify a row (OCIDs): drawn Muted,
+// so the data around them leads.
+var idCols = map[string]bool{"ocid": true}
+
+// isNumericCol reports whether the column titled h is right-aligned.
+func isNumericCol(h string) bool { return numericCols[strings.ToLower(h)] }
+
+// muteIDCells draws idCols cells in Muted, setting and resetting only the
+// foreground like toneStatusCells.
+func (m *Model) muteIDCells(rows []table.Row) {
+	c := m.theme.Palette.Muted
+	if c == nil {
+		return
+	}
+	for i, h := range m.headers {
+		if !idCols[strings.ToLower(h.text)] {
+			continue
+		}
+		for _, r := range rows {
+			if i < len(r) && r[i] != "" {
+				r[i] = fgSeq(c) + r[i] + "\x1b[39m"
+			}
+		}
+	}
+}
+
+// alignNumericCells right-aligns numericCols cells within their column
+// width. It runs last, on cells already cut and colored.
+func (m *Model) alignNumericCells(rows []table.Row) {
+	cols := m.table.Columns()
+	for i, h := range m.headers {
+		if !isNumericCol(h.text) || i >= len(cols) {
+			continue
+		}
+		w := cols[i].Width
+		for _, r := range rows {
+			if i < len(r) {
+				r[i] = padLeft(r[i], w)
+			}
+		}
+	}
+}
+
+// padLeft right-aligns s, which may carry ANSI styling, in w cells.
+func padLeft(s string, w int) string {
+	if n := ansi.StringWidth(s); n < w {
+		return strings.Repeat(" ", w-n) + s
+	}
+	return s
 }

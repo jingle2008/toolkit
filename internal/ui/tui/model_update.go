@@ -45,7 +45,8 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.onResize(msg)
 	case tea.BackgroundColorMsg:
 		m.lightBg = !msg.IsDark()
-		setStyles(m, DefaultStyles(msg.IsDark()))
+		m.termBg = msg.Color
+		m.restyle()
 		if r, ok := m.renderer.(view.ProductionRenderer); ok {
 			r.Light = m.lightBg // the JSON view follows the background
 			m.renderer = r
@@ -53,7 +54,11 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.updateContentAsync()
 	case tea.ColorProfileMsg:
 		m.colorless = msg.Profile == colorprofile.NoTTY || msg.Profile == colorprofile.ASCII
-		setStyles(m, DefaultStyles(!m.lightBg))
+		m.restyle()
+		return m, nil
+	case tea.ForegroundColorMsg:
+		m.termFg = msg.Color
+		m.restyle()
 		return m, nil
 	case errMsg:
 		return m, m.handleErrMsg(msg)

@@ -231,7 +231,7 @@ func TestUpdateLayout_RetruncatesInTheMiddle(t *testing.T) {
 	m.updateLayout(50, 30)
 	w := m.table.Columns()[col].Width
 	require.Positive(t, w)
-	cell := m.table.Rows()[0][col]
+	cell := ansi.Strip(m.table.Rows()[0][col]) // OCIDs are drawn Muted
 	assert.Contains(t, cell, "…")
 	assert.True(t, strings.HasSuffix(cell, "acme"), "the tail survives: %q", cell)
 	assert.LessOrEqual(t, ansi.StringWidth(cell), w)
@@ -257,4 +257,40 @@ func TestStatusView_FilterPromptIsSlash(t *testing.T) {
 	m.enterFilterMode()
 	m.textInput.SetValue("acme")
 	assert.Contains(t, ansi.Strip(m.statusView()), "Tenant   /acme", "aligned with the applied chip: Tenant   ⟨/acme⟩")
+}
+
+// The focused panel's border is Accent in every full-screen view: the
+// list, details and the log.
+func TestFrame_FocusedPanelBorderIsAccent(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	accent := strings.TrimSuffix(strings.TrimPrefix(fgSeq(m.theme.Palette.Accent), "\x1b["), "m") // 38;2;r;g;b
+	topEdge := func() string { return strings.Split(m.render(), "\n")[2] }
+
+	showCategory(t, m, domain.GPUNode)
+	assert.Contains(t, topEdge(), accent, "list")
+	showDetails(t, m)
+	assert.Contains(t, topEdge(), accent, "details")
+	m.viewMode = common.LogView
+	assert.Contains(t, topEdge(), accent, "log")
+}
+
+// Number columns are right-aligned, header included; OCIDs are Muted.
+func TestDecorateRows_AlignsNumbersAndMutesIDs(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	showCategory(t, m, domain.GPUNode)
+	free := slices.IndexFunc(m.headers, func(h header) bool { return h.text == "Free" })
+	require.GreaterOrEqual(t, free, 0)
+	w := m.table.Columns()[free].Width
+	cell := ansi.Strip(m.table.Rows()[0][free])
+	assert.Len(t, cell, w)
+	assert.True(t, strings.HasSuffix(cell, "2") && strings.HasPrefix(cell, " "), "right-aligned: %q", cell)
+	title := ansi.Strip(m.table.Columns()[free].Title)
+	assert.True(t, strings.HasSuffix(title, "Free") && strings.HasPrefix(title, " "), "header right-aligned: %q", title)
+
+	showCategory(t, m, domain.Tenant)
+	ocid := slices.IndexFunc(m.headers, func(h header) bool { return h.text == "OCID" })
+	require.GreaterOrEqual(t, ocid, 0)
+	assert.True(t, strings.HasPrefix(m.table.Rows()[0][ocid], fgSeq(m.theme.Palette.Muted)), "OCID in Muted")
 }

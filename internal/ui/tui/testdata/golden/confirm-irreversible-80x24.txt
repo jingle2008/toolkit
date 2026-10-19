@@ -3,9 +3,9 @@
 ╭─ Age hidden ─────────────────────────────────────────────────────────────────╮
 │ Name ↑      Tenant  Inter…  Usage  Type         Mod…  Shape/P…  Size  Status │
 │──────────────────────────────────────────────────────────────────────────────│
-│▌dac-alpha   acme    false   75%    Hosting      —     A100_80G  4     Active │
-│ dac-orphan╭─ ⚠ Delete DAC ───────────────────────────────────────╮    Active │
-│ dac-日本語│ Kind     DedicatedAICluster                          │    Failed │
+│▌dac-alpha   acme    false     75%  Hosting      —     A100_80G     4  Active │
+│ dac-orphan╭─ ⚠ Delete DAC ───────────────────────────────────────╮ 1  Active │
+│ dac-日本語│ Kind     DedicatedAICluster                          │ 2  Failed │
 │           │ Name     dac-alpha                                   │           │
 │           │ Context   PRODUCTION dp-prod-iad                     │           │
 │           │                                                      │           │

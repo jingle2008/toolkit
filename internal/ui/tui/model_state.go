@@ -7,6 +7,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"image/color"
 	"os"
 	"time"
 
@@ -202,6 +203,10 @@ type Model struct {
 	// rebuilds the right theme (dark until reported).
 	colorless bool
 	lightBg   bool
+	// termFg and termBg are the terminal's reported text and background
+	// colors, nil until it answers; with both, the palette's neutrals are
+	// derived from them (DerivePalette).
+	termFg, termBg color.Color
 	// rowTotal is how many rows the category (in its scope) has before the
 	// filter and faulty-only mode; the panel shows it when they hide some.
 	rowTotal int
@@ -276,6 +281,17 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 // color (tea.BackgroundColorMsg, requested in Init).
 func initStyles(m *Model) {
 	setStyles(m, DefaultStyles(true))
+}
+
+// restyle rebuilds the theme from what the terminal has reported: the
+// palette derived from its colors once it has given both, else the fixed
+// one for its background (dark until it says).
+func (m *Model) restyle() {
+	if m.termFg != nil && m.termBg != nil {
+		setStyles(m, stylesFor(DerivePalette(!m.lightBg, m.termFg, m.termBg)))
+		return
+	}
+	setStyles(m, DefaultStyles(!m.lightBg))
 }
 
 // setStyles makes s the model's theme (adapted to a colorless terminal)

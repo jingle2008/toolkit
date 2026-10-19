@@ -2,7 +2,6 @@ package tui
 
 import (
 	"image/color"
-	"math"
 	"slices"
 	"testing"
 
@@ -13,28 +12,6 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/mutation"
 )
-
-// luminance is c's WCAG 2 relative luminance.
-func luminance(c color.Color) float64 {
-	r, g, b, _ := c.RGBA()
-	lin := func(v uint32) float64 {
-		s := float64(v>>8) / 255
-		if s <= 0.03928 {
-			return s / 12.92
-		}
-		return math.Pow((s+0.055)/1.055, 2.4)
-	}
-	return 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b)
-}
-
-// contrast is the WCAG 2 contrast ratio of a and b.
-func contrast(a, b color.Color) float64 {
-	la, lb := luminance(a), luminance(b)
-	return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
-}
-
-// minContrast is WCAG AA for normal text.
-const minContrast = 4.5
 
 // Every text role reads at 4.5:1 on common terminal backgrounds and on
 // the selected row's Selection tint, the tint stands out from the
@@ -106,4 +83,45 @@ func TestColorless_FocusInReverse(t *testing.T) {
 
 	_, _ = m.Update(tea.ColorProfileMsg{Profile: colorprofile.TrueColor})
 	assert.False(t, m.styles.Selected.GetReverse(), "color comes back")
+}
+
+// themes are common terminal color schemes, as foreground and background.
+var themes = []struct {
+	name   string
+	dark   bool
+	fg, bg string
+}{
+	{"black", true, "#E4E4E4", "#000000"},
+	{"VS Code dark", true, "#D4D4D4", "#1E1E1E"},
+	{"One Dark", true, "#ABB2BF", "#282C34"},
+	{"neon navy", true, "#CBE0F0", "#011423"},
+	{"white", false, "#262626", "#FFFFFF"},
+	{"GitHub light", false, "#24292F", "#F5F5F5"},
+	{"Solarized light", false, "#657B83", "#FDF6E3"},
+}
+
+// A palette derived from a theme keeps every text role readable: the
+// hues and Muted on the background and the selection, Text on the
+// selection whenever the theme's own text is readable on its background.
+// The selection still stands out where any tint is readable.
+func TestDerivePalette_Contrast(t *testing.T) {
+	t.Parallel()
+	for _, th := range themes {
+		fg, bg := lipgloss.Color(th.fg), lipgloss.Color(th.bg)
+		p := DerivePalette(th.dark, fg, bg)
+		text := map[string]color.Color{
+			"Primary": p.Primary, "Accent": p.Accent, "Success": p.Success, "Warn": p.Warn, "Danger": p.Danger,
+		}
+		if contrast(fg, bg) >= minContrast {
+			text["Text"] = p.Text
+			text["Muted"] = p.Muted
+		}
+		for name, c := range text {
+			assert.GreaterOrEqual(t, contrast(c, bg), minContrast, "%s: %s on background", th.name, name)
+			assert.GreaterOrEqual(t, contrast(c, p.Selection), minContrast, "%s: %s on selection", th.name, name)
+		}
+		if p.Selection != bg {
+			assert.GreaterOrEqual(t, contrast(p.Selection, bg), minSelectionContrast, "%s: selection stands out", th.name)
+		}
+	}
 }
