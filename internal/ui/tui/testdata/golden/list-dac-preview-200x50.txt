@@ -47,4 +47,4 @@
 │                                                                                                                      ││                                                                              │
 │                                                                                                                      ││                                                                              │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────── 1 of 3 ─╯╰──────────────────────────────────────────────────────────────────────────────╯
- o go to related  t copy tenant ID  E edit tenant  m open metrics  r refresh  ^z faulty only  ^x delete  s sort  / filter  : command palette  ? more
+ o go to related  t copy tenant ID  E edit tenant  m open metrics  ^x delete  ^z faulty only  r refresh  s sort  / filter  : command palette  ? more

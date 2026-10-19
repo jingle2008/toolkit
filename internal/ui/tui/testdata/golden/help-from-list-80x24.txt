@@ -1,21 +1,21 @@
 
      ╭─ Keys · List view ─────────────────────────────────────────────────╮
-     │ Actions                            List view                       │
-     │   o           Go to related          [           History back      │
-     │   r           Refresh                ]           History forward   │
-     │   C           Toggle cordon          tab         Next category     │
-     │   D           Drain                  shift+tab   Previous category │
-     │   ^z          Faulty only            :           Command palette   │
-     │   R           Restart                /           Filter            │
-     │   ^x          Delete                 p           Paste filter      │
-     │                                      enter       Open              │
-     │ Sort                                 ^a          Toggle aliases    │
-     │   s n         Name                   v           Toggle preview    │
-     │   s f         Free                   e           Export CSV        │
-     │   s t         Type                                                 │
-     │   s a         Age                  General                         │
-     │                                      ?/h         Help              │
-     │                                      y           Toggle details    │
+     │ Actions                            General                         │
+     │   o           Go to related          ?/h         Help              │
+     │   C           Toggle cordon          y           Toggle details    │
+     │   D           Drain                  c           Copy              │
+     │   R           Restart                `           Toggle log        │
+     │   ^x          Terminate              esc         Back/Clear        │
+     │                                      q           Quit              │
+     │ Sort                                                               │
+     │   s n         Name                 Navigation                      │
+     │   s f         Free                   ↑/k         Up                │
+     │   s t         Type                   ↓/j         Down              │
+     │   s a         Age                    u           ½ page up         │
+     │                                      d           ½ page down       │
+     │ List view                            b/pgup      Page up           │
+     │   [           History back           f/pgdn      Page down         │
+     │   ]           History forward        g/home      Go to start       │
      │ ↓ more · 0%                                                        │
      │                                                                    │
      │ j/k pgup/pgdn home/end scroll · / filter · esc close               │

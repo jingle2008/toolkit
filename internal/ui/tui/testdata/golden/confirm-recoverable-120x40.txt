@@ -37,4 +37,4 @@
 │                                                                                                                      │
 │                                                                                                                      │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────── 1 of 2 ─╯
- o go to related  r refresh  C toggle cordon  D drain  ^z faulty only  R restart  / filter  : command palette  ? more
+ o go to related  C toggle cordon  D drain  R restart  ^x terminate  ^z faulty only  / filter  : command palette  ? more

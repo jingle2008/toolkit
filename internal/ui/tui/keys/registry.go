@@ -104,6 +104,12 @@ var (
 		key.WithKeys("ctrl+x"),
 		key.WithHelp("^x", "Delete"),
 	)
+	// Terminate is Delete as GPUNode names it: deleting a node terminates
+	// its instance, as its confirmation says. Same key, same action.
+	Terminate = key.NewBinding(
+		key.WithKeys("ctrl+x"),
+		key.WithHelp("^x", "Terminate"),
+	)
 	// OpenPortal opens the selected tenant in the OCI console portal.
 	// Bound to a control key so it never collides with typing into the
 	// tenant-metadata form's Name/Note text fields.
@@ -254,7 +260,10 @@ var (
 	)
 )
 
-// Category+mode-specific key bindings
+// Category+mode-specific key bindings. Each category lists its row actions
+// in actionOrder (go to, tenant, metrics, then what changes the row) and
+// the list-level toggles last, so the footer, which drops from the right,
+// reads the same everywhere and keeps the row actions longest.
 var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 	domain.BaseModel: {
 		common.ListView: {SortSize, SortContext, ToggleFaulty, Refresh},
@@ -269,10 +278,10 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortValue},
 	},
 	domain.GPUPool: {
-		common.ListView: {SortSize, SortGPUs, ToggleFaulty, ScaleUp, Refresh},
+		common.ListView: {SortSize, SortGPUs, ScaleUp, ToggleFaulty, Refresh},
 	},
 	domain.GPUNode: {
-		common.ListView: {GoTo, SortFree, SortType, SortAge, Refresh, ToggleCordon, DrainNode, ToggleFaulty, Restart, Delete},
+		common.ListView: {GoTo, SortFree, SortType, SortAge, ToggleCordon, DrainNode, Restart, Terminate, ToggleFaulty, Refresh},
 	},
 	domain.GPUWorkload: {
 		common.ListView: {GoTo, SortTenant, SortGPUs, SortRestarts, SortAge, EditTenant, OpenMetrics, ToggleFaulty, Refresh},
@@ -281,10 +290,10 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {SortGPUs, ToggleFaulty, Refresh},
 	},
 	domain.DedicatedAICluster: {
-		common.ListView: {GoTo, SortTenant, SortInternal, SortUsage, SortSize, SortAge, SortStatus, CopyTenant, EditTenant, OpenMetrics, Refresh, ToggleFaulty, Delete},
+		common.ListView: {GoTo, SortTenant, SortInternal, SortUsage, SortSize, SortAge, SortStatus, CopyTenant, EditTenant, OpenMetrics, Delete, ToggleFaulty, Refresh},
 	},
 	domain.InferenceService: {
-		common.ListView: {GoTo, SortTenant, SortReady, SortAge, CopyTenant, EditTenant, OpenMetrics, ToggleFaulty, Refresh, Restart, Delete},
+		common.ListView: {GoTo, SortTenant, SortReady, SortAge, CopyTenant, EditTenant, OpenMetrics, Restart, Delete, ToggleFaulty, Refresh},
 	},
 	domain.ImportedModel: {
 		common.ListView: {GoTo, SortTenant, SortSize, SortContext, SortVendor, CopyTenant, EditTenant, OpenMetrics, Refresh},
@@ -336,4 +345,19 @@ func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
 	km.Mode = withSortKeys(km.Mode, sortKeys)
 	km.Context = withSortKeys(km.Context, sortKeys)
 	return km
+}
+
+// actionOrder is the order every category lists its actions in: the row's
+// own actions first, the list-level toggles (faulty only, refresh) last.
+// Delete and Terminate are one action under two names.
+var actionOrder = []key.Binding{
+	GoTo, CopyTenant, EditTenant, OpenMetrics,
+	ToggleCordon, DrainNode, ScaleUp, Restart, Delete,
+	ToggleFaulty, Refresh,
+}
+
+// ListLevel reports whether b acts on the list rather than the row: help
+// lists those with the view's keys, not under Actions.
+func ListLevel(b key.Binding) bool {
+	return b.Help() == ToggleFaulty.Help() || b.Help() == Refresh.Help()
 }

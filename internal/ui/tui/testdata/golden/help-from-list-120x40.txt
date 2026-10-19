@@ -13,18 +13,18 @@
 │      │                                             '-----------'                                             │       │
 │      │ Actions                            List view                          General                         │       │
 │      │   o           Go to related          [           History back           ?/h         Help              │       │
-│      │   r           Refresh                ]           History forward        y           Toggle details    │       │
-│      │   C           Toggle cordon          tab         Next category          c           Copy              │       │
-│      │   D           Drain                  shift+tab   Previous category      `           Toggle log        │       │
-│      │   ^z          Faulty only            :           Command palette        esc         Back/Clear        │       │
-│      │   R           Restart                /           Filter                 q           Quit              │       │
-│      │   ^x          Delete                 p           Paste filter                                         │       │
-│      │                                      enter       Open                 Navigation                      │       │
-│      │ Sort                                 ^a          Toggle aliases         ↑/k         Up                │       │
-│      │   s n         Name                   v           Toggle preview         ↓/j         Down              │       │
-│      │   s f         Free                   e           Export CSV             u           ½ page up         │       │
-│      │   s t         Type                                                      d           ½ page down       │       │
-│      │   s a         Age                                                       b/pgup      Page up           │       │
+│      │   C           Toggle cordon          ]           History forward        y           Toggle details    │       │
+│      │   D           Drain                  tab         Next category          c           Copy              │       │
+│      │   R           Restart                shift+tab   Previous category      `           Toggle log        │       │
+│      │   ^x          Terminate              :           Command palette        esc         Back/Clear        │       │
+│      │                                      /           Filter                 q           Quit              │       │
+│      │ Sort                                 p           Paste filter                                         │       │
+│      │   s n         Name                   enter       Open                 Navigation                      │       │
+│      │   s f         Free                   ^a          Toggle aliases         ↑/k         Up                │       │
+│      │   s t         Type                   v           Toggle preview         ↓/j         Down              │       │
+│      │   s a         Age                    e           Export CSV             u           ½ page up         │       │
+│      │                                      ^z          Faulty only            d           ½ page down       │       │
+│      │                                      r           Refresh                b/pgup      Page up           │       │
 │      │                                                                         f/pgdn      Page down         │       │
 │      │                                                                         g/home      Go to start       │       │
 │      │                                                                         G/end       Go to end         │       │
@@ -37,4 +37,4 @@
 │                                                                                                                      │
 │                                                                                                                      │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────── 1 of 2 ─╯
- o go to related  r refresh  C toggle cordon  D drain  ^z faulty only  R restart  / filter  : command palette  ? more
+ o go to related  C toggle cordon  D drain  R restart  ^x terminate  ^z faulty only  / filter  : command palette  ? more
