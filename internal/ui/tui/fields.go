@@ -91,15 +91,25 @@ func decodeContainer(dec *json.Decoder, open json.Delim) (node, error) {
 	return n, err
 }
 
-// scalarList is an array of scalars joined as one value ("a, b, c"), or
-// false when any element is an object or array.
-func (n node) scalarList() (string, bool) {
+// scalarItems is an array's elements' text, or false when any element is
+// an object or array.
+func (n node) scalarItems() ([]string, bool) {
 	parts := make([]string, 0, len(n.items))
 	for _, it := range n.items {
 		if it.kind != scalarNode {
-			return "", false
+			return nil, false
 		}
 		parts = append(parts, it.text)
+	}
+	return parts, true
+}
+
+// scalarList is an array of scalars joined as one value ("a, b, c"), or
+// false when any element is an object or array.
+func (n node) scalarList() (string, bool) {
+	parts, ok := n.scalarItems()
+	if !ok {
+		return "", false
 	}
 	if len(parts) == 0 {
 		return "—", true
@@ -117,8 +127,10 @@ type fieldStyles struct {
 renderFields lays out an object as label/value rows, width columns wide:
 its plain values first, then its nested objects and arrays of objects as
 titled, indented sections, to depth levels (0 is unlimited); deeper ones
-collapse to {…} and [n]. Arrays of scalars join into one value. Long
-values are cut at width, or wrapped when wrap is set. sep puts a blank
+collapse to {…} and [n]. Arrays of scalars join into one value, or list
+one bulleted item per row when joined they would be ambiguous (an item
+holds ", ") or overflow the value column. Long values are cut at width,
+or wrapped when wrap is set. sep puts a blank
 line before each top-level section.
 */
 func renderFields(n node, width, depth int, wrap, sep bool, st fieldStyles) string {
@@ -153,9 +165,14 @@ func (r *fieldRenderer) object(n node, indent, level int) {
 	keyW = min(keyW, max((r.width-indent)/2, 1))
 	pad := strings.Repeat(" ", indent)
 	for _, f := range n.fields {
-		if !r.opens(f.val, level) {
-			r.out = append(r.out, fieldRows(pad, humanize(f.key), collapsed(f.val), keyW, r.width-indent, r.wrap, r.st)...)
+		if r.opens(f.val, level) {
+			continue
 		}
+		if items, ok := stacked(f.val, max(r.width-indent-keyW-2, 1)); ok {
+			r.out = append(r.out, fieldListRows(pad, humanize(f.key), items, keyW, r.width-indent, r.wrap, r.st)...)
+			continue
+		}
+		r.out = append(r.out, fieldRows(pad, humanize(f.key), collapsed(f.val), keyW, r.width-indent, r.wrap, r.st)...)
 	}
 	for _, f := range n.fields {
 		if r.opens(f.val, level) {
@@ -203,21 +220,73 @@ func collapsed(v node) string {
 	return v.text
 }
 
+// stacked is v's items when v is an array of two or more scalars that
+// reads badly joined into one value: an item holds ", " (so the join
+// can't be split back apart), or the join is wider than valW and would
+// wrap.
+func stacked(v node, valW int) ([]string, bool) {
+	if v.kind != arrayNode {
+		return nil, false
+	}
+	items, ok := v.scalarItems()
+	if !ok || len(items) < 2 {
+		return nil, false
+	}
+	for _, it := range items {
+		if strings.Contains(it, ", ") {
+			return items, true
+		}
+	}
+	return items, runewidth.StringWidth(strings.Join(items, ", ")) > valW
+}
+
 // fieldRows renders one label/value row: the value cut to fit, or
 // wrapped under itself when wrap is set.
 func fieldRows(pad, label, value string, keyW, width int, wrap bool, st fieldStyles) []string {
 	labelCell := st.label.Width(keyW + 2).Render(truncateString(label, keyW))
-	valW := max(width-keyW-2, 1)
-	if !wrap {
-		return []string{pad + labelCell + truncateString(value, valW)}
-	}
-	lines := strings.Split(lipgloss.NewStyle().Width(valW).Render(value), "\n")
-	rows := []string{pad + labelCell + strings.TrimRight(lines[0], " ")}
+	lines := valueLines(value, max(width-keyW-2, 1), wrap)
 	cont := pad + strings.Repeat(" ", keyW+2)
-	for _, l := range lines[1:] {
-		rows = append(rows, cont+strings.TrimRight(l, " "))
+	rows := make([]string, len(lines))
+	for i, l := range lines {
+		rows[i] = cont + l
+	}
+	rows[0] = pad + labelCell + lines[0]
+	return rows
+}
+
+// fieldListRows renders a label with items under it, one per row, each
+// bulleted and, when wrap is set, wrapped under its own text.
+func fieldListRows(pad, label string, items []string, keyW, width int, wrap bool, st fieldStyles) []string {
+	labelCell := st.label.Width(keyW + 2).Render(truncateString(label, keyW))
+	cont := pad + strings.Repeat(" ", keyW+2)
+	itemW := max(width-keyW-4, 1)
+	var rows []string
+	for _, it := range items {
+		for j, l := range valueLines(it, itemW, wrap) {
+			lead := cont
+			if len(rows) == 0 {
+				lead = pad + labelCell
+			}
+			mark := "  "
+			if j == 0 {
+				mark = "• "
+			}
+			rows = append(rows, lead+mark+l)
+		}
 	}
 	return rows
+}
+
+// valueLines is value cut to valW, or wrapped to it when wrap is set.
+func valueLines(value string, valW int, wrap bool) []string {
+	if !wrap {
+		return []string{truncateString(value, valW)}
+	}
+	lines := strings.Split(lipgloss.NewStyle().Width(valW).Render(value), "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimRight(l, " ")
+	}
+	return lines
 }
 
 // labelAcronyms are the words humanize writes in capitals.

@@ -20,33 +20,22 @@ import (
 // key is not replayed; handleListSequence says which keys would have.
 func (m *Model) feedPrefix(k string) (seq string, used bool) {
 	if p := m.prefix; p != "" {
-		m.setPrefix("")
+		m.prefix = ""
 		if k == "esc" {
 			return "", true
 		}
 		return p + " " + k, true
 	}
 	if k == keys.SortLeader {
-		m.setPrefix(k)
+		m.prefix = k
 		return "", true
 	}
 	return "", false
 }
 
-// setPrefix makes k the pending prefix (or clears it) and redraws the
-// column headers, which underline each column's sort key while the sort
-// prefix is pending.
-func (m *Model) setPrefix(k string) {
-	changed := m.prefix != k
-	m.prefix = k
-	if changed && m.table != nil {
-		m.updateColumns()
-	}
-}
-
 // handleListSequence runs a completed list-view sequence. A sort key no
-// column has gets a toast naming the ones it could be, since the header
-// stops underlining them once the prefix is cancelled.
+// column has gets a toast naming the ones it could be (the headers
+// underline them too, but a column hidden for width shows no header).
 func (m *Model) handleListSequence(seq string) tea.Cmd {
 	leader, k, _ := strings.Cut(seq, " ")
 	if leader != keys.SortLeader {

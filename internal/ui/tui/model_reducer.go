@@ -283,18 +283,15 @@ func truncateMiddle(s string, w int) string {
 }
 
 // updateColumns sets the table's columns for the current category:
-// titles (the sort column's arrow, and each column's sort key underlined
-// while s is pending) and widths fitted to the titles and the rows'
+// titles (the sort column's arrow, and each sortable column's sort key
+// underlined, so the key is there to read before s is pressed) and widths fitted to the titles and the rows'
 // values by columnWidths. Columns that don't fit are hidden and named
 // in m.hiddenColumns.
 func (m *Model) updateColumns() {
 	m.headers = headersFor(m.category)
-	var sortKeys map[string]string // lowercased column -> sort key, while s is pending
-	if m.prefix == keys.SortLeader {
-		sortKeys = map[string]string{}
-		for col, k := range keys.SortKeys(m.category) {
-			sortKeys[strings.ToLower(col)] = k
-		}
+	sortKeys := map[string]string{} // lowercased column -> sort key
+	for col, k := range keys.SortKeys(m.category) {
+		sortKeys[strings.ToLower(col)] = k
 	}
 	titles := make([]string, len(m.headers))
 	specs := make([]columnSpec, len(m.headers))

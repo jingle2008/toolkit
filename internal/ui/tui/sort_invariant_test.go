@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"charm.land/bubbles/v2/table"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -67,8 +68,9 @@ func headerTitles(hs []header) []string {
 
 // TestUpdateColumns_SortIndicator locks in the header glyph rendering:
 // only the active sort column carries an arrow (↑, or ↓ on second press);
-// every other column, sortable or not, carries none — the sort keys show
-// once s is pressed.
+// every other column, sortable or not, carries none. (The sort keys'
+// underlines are stripped here; TestPrefix_SortUnderlinesHeaderKeys
+// covers them.)
 func TestUpdateColumns_SortIndicator(t *testing.T) {
 	t.Parallel()
 	m, _ := NewModel(
@@ -86,8 +88,9 @@ func TestUpdateColumns_SortIndicator(t *testing.T) {
 
 	titles := map[string]string{}
 	for _, c := range m.table.Columns() {
-		base, _, _ := strings.Cut(c.Title, " ")
-		titles[base] = c.Title
+		title := ansi.Strip(c.Title)
+		base, _, _ := strings.Cut(title, " ")
+		titles[base] = title
 	}
 	assert.Equal(t, "Name ↑", titles["Name"])
 	assert.Equal(t, "Tenant", titles["Tenant"], "sortable but not active: no glyph")
@@ -95,7 +98,7 @@ func TestUpdateColumns_SortIndicator(t *testing.T) {
 
 	m.sortAsc = false
 	m.updateColumns()
-	assert.Equal(t, "Name ↓", m.table.Columns()[0].Title)
+	assert.Equal(t, "Name ↓", ansi.Strip(m.table.Columns()[0].Title))
 }
 
 func TestTruncateMiddle(t *testing.T) {

@@ -28,6 +28,9 @@ func (m *Model) modalMaxBody() int {
 
 // modal frames body in the shared modal chrome: a rounded border of color
 // border with title in its top edge and hints, muted, on the last line.
+// The hints stay muted throughout, keys included, unlike the footer's
+// Primary keys: the footer is the screen's key guide, while a modal's
+// hints sit under its body and should recede behind it.
 // width is the outer width; 0 fits the content.
 func (m *Model) modal(title, body, hints string, border color.Color, width int) string {
 	if hints != "" {

@@ -86,19 +86,21 @@ func TestPrefix_StatusMarker(t *testing.T) {
 	assert.NotContains(t, ansi.Strip(m.statusView()), "s…")
 }
 
-// The sort prefix shows its keys in the headers: each sortable column's
-// key letter is underlined while s is pending.
+// The headers show the sort keys before s is pressed: each sortable
+// column's key letter is underlined, pending prefix or not.
 func TestPrefix_SortUnderlinesHeaderKeys(t *testing.T) {
 	t.Parallel()
 	m := newPrefixModel(t)
-	assert.NotContains(t, m.table.View(), "\x1b[4mT\x1b[24m")
-	_, _ = m.Update(keyPress("s"))
-	header := m.table.View()
-	for _, want := range []string{"\x1b[4mN\x1b[24mame", "\x1b[4mT\x1b[24menant", "\x1b[4mU\x1b[24msage"} {
-		assert.Contains(t, header, want)
+	want := []string{"\x1b[4mN\x1b[24mame", "\x1b[4mT\x1b[24menant", "\x1b[4mU\x1b[24msage"}
+	for _, step := range []string{"", "s", "esc"} {
+		if step != "" {
+			_, _ = m.Update(keyPress(step))
+		}
+		header := m.table.View()
+		for _, w := range want {
+			assert.Contains(t, header, w, "after %q", step)
+		}
 	}
-	_, _ = m.Update(keyPress("esc"))
-	assert.NotContains(t, m.table.View(), "\x1b[4m", "underlines go with the prefix")
 }
 
 func TestUnderlineSortKey(t *testing.T) {
