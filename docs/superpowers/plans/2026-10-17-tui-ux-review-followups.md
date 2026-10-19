@@ -121,3 +121,27 @@ WezTerm colors, light) on a cell grid and reviewed the images.
   one fill.
 - [x] Export picker themed; JSON view follows light/dark and drops
   glamour's top margin; help never ends a page on a title.
+
+## Batch 9 — 2026-10-18 review (navigation, safety, narrow terminals)
+
+A heuristic review (Nielsen; k9s/lazygit conventions) over the goldens and
+a live tmux session on preprod.
+
+- [x] `esc` in a drilled-in list returns to the parent with the cursor on
+  the row drilled in from (as the manual already said), stepping back in
+  history so `]` re-enters the child. It used to drop the scope and stay
+  in the child, listing every row.
+- [x] `Enter` on a scope drills into the first child with rows in what's
+  loaded (a tenant without limit overrides no longer opens an empty list).
+- [x] Irreversible confirm: lowercase `y` nudges ("press capital Y…")
+  instead of cancelling — a "yes" key no longer means no. Reverses
+  Batch 5's hint.
+- [x] Footer: blanked under modals (the modal has its own hint line);
+  an empty list shows only list-level actions.
+- [x] Narrow terminals: help clips to the screen (it overflowed at 50
+  columns); a resize re-truncates OCIDs in the middle (they were
+  end-cut to identical `ocid1.tenanc…`); the panel title names hidden
+  columns (no "y shows all": details shows one row's fields, not the
+  hidden columns).
+- [ ] ~~Status column shrinks on narrow terminals~~ — kept: Batch 2 chose
+  never to cut Status (`WARN: CORDONED` → `WARN: C…` loses the meaning).

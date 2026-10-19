@@ -136,7 +136,7 @@ func TestISVCDelete_CancelledIsAuditedRefused(t *testing.T) {
 	sink := logging.NewRingSink(16)
 	m.logger = sink
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
-	_, cmd := m.updateConfirmView(keyPress("y")) // lowercase y cancels an irreversible action
+	_, cmd := m.updateConfirmView(keyPress("n"))
 	assert.Nil(t, cmd)
 	assert.Equal(t, []auditRecord{{"delete", "inference_service", "ns1/svc1", "refused"}}, auditRecords(sink))
 }

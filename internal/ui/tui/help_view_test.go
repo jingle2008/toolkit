@@ -57,3 +57,16 @@ func TestHelpSections_ListLevelKeysWithView(t *testing.T) {
 	assert.Contains(t, sections["List view"], "Faulty only")
 	assert.Contains(t, sections["List view"], "Refresh")
 }
+
+// Help stays inside a terminal narrower than its widest line.
+func TestHelp_FitsNarrowTerminal(t *testing.T) {
+	t.Parallel()
+	for _, w := range []int{40, 50, 60} {
+		m := newGoldenModel(t, w, 24)
+		showCategory(t, m, domain.GPUNode)
+		m.enterHelpView()
+		for i, l := range strings.Split(ansi.Strip(m.render()), "\n") {
+			assert.LessOrEqual(t, ansi.StringWidth(l), w, "width %d line %d: %q", w, i, l)
+		}
+	}
+}

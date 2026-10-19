@@ -134,11 +134,8 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	m.stats = stats
 	m.rowTotal = len(rows) // updateRows and the async path set the true total after
 	m.rawRows = cloneRows(rows)
-	m.overlayActionStatus(rows)
 	m.updateColumns() // widths follow the values
-	m.applyMiddleTruncation(rows)
-	m.toneStatusCells(rows)
-	m.markEmptyCells(rows)
+	m.decorateRows(rows)
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
@@ -186,6 +183,28 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 // and ImportedModel Name; the Tenant key on those plus tenancy-
 // override grouped sets); the head identifies the OCID shape while
 // the tail is the distinguishing portion — both worth keeping.
+// decorateRows turns rows, plain cells as in m.rawRows, into display
+// rows for the current columns: running actions' statuses, cells cut to
+// their width in the middle, status colors and empty-cell dashes.
+func (m *Model) decorateRows(rows []table.Row) {
+	m.overlayActionStatus(rows)
+	m.applyMiddleTruncation(rows)
+	m.toneStatusCells(rows)
+	m.markEmptyCells(rows)
+}
+
+// redecorateRows redraws the table's rows from m.rawRows after the column
+// widths change without new rows (a resize), so middle-truncated cells
+// are cut to the new widths rather than end-truncated by the table.
+func (m *Model) redecorateRows() {
+	if len(m.rawRows) == 0 || len(m.rawRows[0]) != len(m.headers) {
+		return // nothing shown, or rows left from another category
+	}
+	rows := cloneRows(m.rawRows)
+	m.decorateRows(rows)
+	table.WithRows(rows)(m.table)
+}
+
 func (m *Model) applyMiddleTruncation(rows []table.Row) {
 	if len(rows) == 0 || len(m.headers) == 0 {
 		return
@@ -263,7 +282,7 @@ func truncateMiddle(s string, w int) string {
 // updateColumns sets the table's columns for the current category:
 // titles (the sort column's arrow, and each column's sort key underlined
 // while s is pending) and widths fitted to the titles and the rows'
-// values by columnWidths. Columns that don't fit are hidden and counted
+// values by columnWidths. Columns that don't fit are hidden and named
 // in m.hiddenColumns.
 func (m *Model) updateColumns() {
 	m.headers = headersFor(m.category)
@@ -301,11 +320,11 @@ func (m *Model) updateColumns() {
 	}
 	widths := columnWidths(specs, m.table.Width(), m.styles.Header.GetHorizontalFrameSize())
 	columns := make([]table.Column, len(m.headers))
-	m.hiddenColumns = 0
-	for i := range m.headers {
+	m.hiddenColumns = nil
+	for i, header := range m.headers {
 		columns[i] = table.Column{Title: titles[i], Width: widths[i]}
 		if widths[i] == 0 {
-			m.hiddenColumns++
+			m.hiddenColumns = append(m.hiddenColumns, header.text)
 		}
 	}
 	table.WithColumns(columns)(m.table)
@@ -378,6 +397,7 @@ func (m *Model) updateLayout(w, h int) {
 		// ends up 1 line too tall once columns are populated — the top header
 		// row gets clipped by bubbletea's renderer until a manual resize).
 		m.updateColumns()
+		m.redecorateRows()
 		table.WithHeight(body)(m.table)
 		m.table.UpdateViewport()
 	}

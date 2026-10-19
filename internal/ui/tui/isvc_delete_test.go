@@ -118,9 +118,8 @@ func TestDeleteOrphanInferenceService_ConfirmDeletesAndToasts(t *testing.T) {
 
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
 	_, cmd := m.updateConfirmView(keyPress("y"))
-	assert.Nil(t, cmd, "irreversible: lowercase y cancels")
+	assert.Nil(t, cmd, "irreversible: lowercase y doesn't confirm")
 
-	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
 	_, cmd = m.updateConfirmView(keyPress("Y"))
 	require.NotNil(t, cmd, "confirming must dispatch the delete")
 	msg, ok := actionResult(t, cmd).(isvcDeleteResultMsg)

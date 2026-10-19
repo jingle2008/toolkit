@@ -64,9 +64,25 @@ func (m *Model) overlayModal(under common.ViewMode, modal string) string {
 	// spans it.
 	base := strings.TrimSuffix(strings.Repeat(strings.Repeat(" ", m.viewWidth)+"\n", m.viewHeight), "\n")
 	if lipgloss.Height(modal) < m.viewHeight-modalFullMargin {
-		base = view.Dim(m.renderMode(under), m.theme.Palette.Muted)
+		base = view.Dim(withoutFooter(under, m.renderMode(under)), m.theme.Palette.Muted)
 	}
 	return view.Overlay(base, modal, m.viewWidth, m.viewHeight)
+}
+
+// withoutFooter blanks the key footer, the last line, of a framed view
+// (list, details, log) drawn under a modal: its keys don't work while the
+// modal is open, and the modal carries its own hint line.
+func withoutFooter(mode common.ViewMode, s string) string {
+	switch mode { //nolint:exhaustive // only these are framed
+	case common.ListView, common.DetailsView, common.LogView:
+	default:
+		return s
+	}
+	i := strings.LastIndexByte(s, '\n')
+	if i < 0 {
+		return s
+	}
+	return s[:i+1]
 }
 
 // modalFullMargin is how many rows a modal must leave free for the view

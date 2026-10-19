@@ -58,9 +58,9 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) []tea.Cmd {
 		}
 	}
 	// While typing, esc closes the input and clears an applied filter,
-	// but never drops the scope: that takes a second esc.
+	// but never leaves the scoped list: that takes a second esc.
 	if key.Matches(msg, keys.Back) && (m.inputMode == common.NormalInput || m.filter != "") {
-		cmd := m.backToLastState()
+		cmd := m.goBack()
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}

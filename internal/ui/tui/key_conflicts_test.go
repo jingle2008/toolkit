@@ -53,7 +53,8 @@ func TestEscInFilterInput_KeepsScope(t *testing.T) {
 	assert.Equal(t, scope, m.scope)
 
 	_, _ = m.Update(keyPress("esc"))
-	assert.Nil(t, m.scope, "a second esc leaves the scope")
+	assert.Equal(t, domain.DedicatedAICluster, m.category, "a second esc returns to the parent list")
+	assert.Equal(t, scope, m.scope, "the scope stays, so the cursor lands on the row drilled in from")
 }
 
 // esc in the filter input still clears an applied filter.

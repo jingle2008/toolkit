@@ -1,6 +1,6 @@
  oc1 ›  PROD  › us-ashburn-1 · dp-prod-iad · k8s v1.31.4                 v1.2.3
  DedicatedAICluster                             Active: 2 • Failed: 1 • Size: 7
-╭─ 1╭─ Command palette ────────────────────────────────────────────────────╮───╮
+╭─ A╭─ Command palette ────────────────────────────────────────────────────╮───╮
 │ Na│ › gpu                                                                │us │
 │───│                                                                      │───│
 │▌da│ ▸ GPUPool                                          gpup gp  category │ve │
@@ -21,4 +21,4 @@
 │   ╰──────────────────────────────────────────────────────────────────────╯   │
 │                                                                              │
 ╰───────────────────────────────────────────────────────────────────── 1 of 3 ─╯
- o go to related  t copy tenant ID  / filter  : command palette  ? more
+

@@ -46,6 +46,24 @@ func (m *Model) backToLastState() tea.Cmd {
 	return nil
 }
 
+// goBack is esc in the list: it clears the filter, or, in a scoped list,
+// returns to the parent list with the cursor on the row drilled in from
+// (the scope stays, as on [). Back in history when the parent is there,
+// so ] still leads into the child; otherwise the parent is pushed.
+func (m *Model) goBack() tea.Cmd {
+	if m.filter != "" || m.scope == nil || !m.scope.Category.IsScopeOf(m.category) {
+		return m.backToLastState()
+	}
+	parent := m.scope.Category
+	for i := m.historyIdx - 1; i >= 0; i-- {
+		if m.history[i] == parent {
+			m.historyIdx = i
+			return tea.Sequence(m.updateCategoryNoHist(parent)...)
+		}
+	}
+	return tea.Sequence(m.updateCategory(parent)...)
+}
+
 func (m *Model) exitEditMode(resetInput bool) {
 	if resetInput {
 		m.textInput.SetSuggestions([]string{})

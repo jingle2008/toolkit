@@ -193,3 +193,54 @@ func TestRowPickerView_LinesEqualWidth(t *testing.T) {
 		assert.Equal(t, lipgloss.Width(lines[0]), lipgloss.Width(l), "%q", l)
 	}
 }
+
+// Enter on a tenant drills into its first child category with rows:
+// Acme has no overrides, so DedicatedAICluster, not LimitTenancyOverride.
+func TestDrillTarget_SkipsEmptyChildren(t *testing.T) {
+	t.Parallel()
+	m := newGoToModel(t)
+	m.category = domain.Tenant
+	m.scope = &domain.Scope{Category: domain.Tenant, Name: "Acme"}
+	assert.Equal(t, domain.DedicatedAICluster, m.drillTarget())
+
+	m.scope = &domain.Scope{Category: domain.Tenant, Name: "nobody"}
+	assert.Equal(t, domain.LimitTenancyOverride, m.drillTarget(), "with no rows anywhere, the first child")
+}
+
+// esc in a drilled-in list returns to the parent, on the row drilled in
+// from, by stepping back in history, so ] leads into the child again.
+func TestEsc_ScopedListReturnsToParent(t *testing.T) {
+	t.Parallel()
+	m := newGoToModel(t)
+	m.viewMode = common.ListView
+	m.updateCategory(domain.Tenant)
+	m.updateRows(true)
+	m.history, m.historyIdx = []domain.Category{domain.Tenant}, 0
+
+	_, _ = m.Update(keyPress("enter"))
+	require.Equal(t, domain.DedicatedAICluster, m.category)
+	require.Equal(t, []domain.Category{domain.Tenant, domain.DedicatedAICluster}, m.history)
+
+	_, _ = m.Update(keyPress("esc"))
+	assert.Equal(t, domain.Tenant, m.category)
+	assert.Equal(t, 0, m.historyIdx, "back in history, not pushed")
+	m.updateRows(true)
+	assert.Equal(t, "Acme", m.selectedRawRow()[0], "the cursor lands on the row drilled in from")
+
+	_, _ = m.Update(keyPress("]"))
+	assert.Equal(t, domain.DedicatedAICluster, m.category)
+	assert.Contains(t, m.contextString(), "Acme", "forward returns to the scoped child")
+}
+
+// With the parent not in history (reached by tab, say), esc pushes it.
+func TestEsc_ScopedListPushesParent(t *testing.T) {
+	t.Parallel()
+	m := newGoToModel(t)
+	m.viewMode = common.ListView
+	m.scope = &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}
+	m.history, m.historyIdx = []domain.Category{domain.InferenceService}, 0
+
+	_, _ = m.Update(keyPress("esc"))
+	assert.Equal(t, domain.DedicatedAICluster, m.category)
+	assert.Equal(t, []domain.Category{domain.InferenceService, domain.DedicatedAICluster}, m.history)
+}

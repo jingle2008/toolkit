@@ -93,7 +93,7 @@ func TestCategory_ScopedCategories(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.scope.String(), func(t *testing.T) {
 			t.Parallel()
-			// Exact order: Enter drills into ScopedCategories()[0].
+			// Exact order: Enter drills into the first with rows.
 			assert.Equal(t, tc.want, tc.scope.ScopedCategories())
 		})
 	}
