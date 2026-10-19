@@ -78,6 +78,18 @@ func TestFilterMap_Basic(t *testing.T) {
 	assert.Len(t, out, 2)
 }
 
+// The group key matches case-insensitively, as item fields do, whatever
+// the filter's case.
+func TestFilterMap_KeyIgnoresFilterCase(t *testing.T) {
+	t.Parallel()
+	m := map[string][]testStruct{
+		"Acme":  {{"foo", "bar"}},
+		"Other": {{"baz", "qux"}},
+	}
+	out := FilterMap(m, nil, nil, "ACME", nil)
+	assert.Equal(t, map[string][]testStruct{"Acme": {{"foo", "bar"}}}, out)
+}
+
 func TestFilterMap_Empty(t *testing.T) {
 	t.Parallel()
 	m := map[string][]testStruct{}
