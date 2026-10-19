@@ -171,26 +171,17 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	}
 }
 
-// applyMiddleTruncation shortens cells in columns marked
-// TruncateMiddle so values wider than their column's display width
-// are elided in the MIDDLE (head + "…" + tail) instead of having
-// their tail chopped by bubbles' default right-truncation. After
-// this pass the cell's measured width is ≤ the column width, so
-// runewidth.Truncate inside bubbles becomes a no-op for these
-// cells. Rows are mutated in place.
-//
-// Columns marked TruncateMiddle today hold OCID-suffix values (DAC
-// and ImportedModel Name; the Tenant key on those plus tenancy-
-// override grouped sets); the head identifies the OCID shape while
-// the tail is the distinguishing portion — both worth keeping.
 // decorateRows turns rows, plain cells as in m.rawRows, into display
 // rows for the current columns: running actions' statuses, cells cut to
-// their width in the middle, status colors and empty-cell dashes.
+// their width in the middle, status colors, muted IDs, empty-cell dashes
+// and right-aligned numbers.
 func (m *Model) decorateRows(rows []table.Row) {
 	m.overlayActionStatus(rows)
 	m.applyMiddleTruncation(rows)
 	m.toneStatusCells(rows)
+	m.muteIDCells(rows)
 	m.markEmptyCells(rows)
+	m.alignNumericCells(rows)
 }
 
 // redecorateRows redraws the table's rows from m.rawRows after the column
@@ -205,6 +196,18 @@ func (m *Model) redecorateRows() {
 	table.WithRows(rows)(m.table)
 }
 
+// applyMiddleTruncation shortens cells in columns marked
+// TruncateMiddle so values wider than their column's display width
+// are elided in the MIDDLE (head + "…" + tail) instead of having
+// their tail chopped by bubbles' default right-truncation. After
+// this pass the cell's measured width is ≤ the column width, so
+// runewidth.Truncate inside bubbles becomes a no-op for these
+// cells. Rows are mutated in place.
+//
+// Columns marked TruncateMiddle today hold OCID-suffix values (DAC
+// and ImportedModel Name; the Tenant key on those plus tenancy-
+// override grouped sets); the head identifies the OCID shape while
+// the tail is the distinguishing portion — both worth keeping.
 func (m *Model) applyMiddleTruncation(rows []table.Row) {
 	if len(rows) == 0 || len(m.headers) == 0 {
 		return
@@ -319,6 +322,11 @@ func (m *Model) updateColumns() {
 		}
 	}
 	widths := columnWidths(specs, m.table.Width(), m.styles.Header.GetHorizontalFrameSize())
+	for i, header := range m.headers {
+		if isNumericCol(header.text) {
+			titles[i] = padLeft(titles[i], widths[i])
+		}
+	}
 	columns := make([]table.Column, len(m.headers))
 	m.hiddenColumns = nil
 	for i, header := range m.headers {

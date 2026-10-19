@@ -34,12 +34,14 @@ func (m *Model) frame(title, main string) string {
 	titleStyle := lipgloss.NewStyle().Foreground(p.Text).Bold(true)
 	statusStyle := lipgloss.NewStyle().Foreground(p.Muted)
 	status := m.positionText()
+	// The panel has focus, so its border is Accent; a modal over it dims
+	// the whole view, border included. The preview beside it stays plain.
 	var panel string
 	if m.previewShown() {
-		left := view.StatusPanel(title, status, main, p.Border, titleStyle, statusStyle, m.viewWidth-m.previewOuterWidth())
+		left := view.StatusPanel(title, status, main, p.Accent, titleStyle, statusStyle, m.viewWidth-m.previewOuterWidth())
 		panel = lipgloss.JoinHorizontal(lipgloss.Top, left, m.previewPanel(lipgloss.Height(left)-2))
 	} else {
-		panel = view.StatusPanel(title, status, main, p.Border, titleStyle, statusStyle, m.viewWidth)
+		panel = view.StatusPanel(title, status, main, p.Accent, titleStyle, statusStyle, m.viewWidth)
 	}
 	return lipgloss.JoinVertical(lipgloss.Left, m.envBar(), m.statusView(), panel, m.footer())
 }

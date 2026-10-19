@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -44,4 +45,18 @@ func TestBackgroundColorMsg_RestylesComponents(t *testing.T) {
 	r, ok := m.renderer.(view.ProductionRenderer)
 	require.True(t, ok)
 	assert.True(t, r.Light, "the JSON view follows the background")
+}
+
+// With both of the terminal's colors reported, the neutrals come from
+// them; with only the background, the fixed palette for it.
+func TestRestyle_DerivesFromTerminalColors(t *testing.T) {
+	t.Parallel()
+	fg, bg := lipgloss.Color("#CBE0F0"), lipgloss.Color("#011423")
+	m := newGoldenModel(t, 120, 30)
+	_, _ = m.Update(tea.BackgroundColorMsg{Color: bg})
+	assert.Equal(t, NewPalette(true), m.theme.Palette, "background alone: the fixed dark palette")
+	_, _ = m.Update(tea.ForegroundColorMsg{Color: fg})
+	assert.Equal(t, DerivePalette(true, fg, bg), m.theme.Palette)
+	assert.Equal(t, fg, m.theme.Palette.Text)
+	assert.Equal(t, NewPalette(true).Accent, m.theme.Palette.Accent, "hues stay fixed")
 }

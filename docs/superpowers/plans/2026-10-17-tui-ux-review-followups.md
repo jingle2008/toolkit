@@ -145,3 +145,26 @@ a live tmux session on preprod.
   hidden columns).
 - [ ] ~~Status column shrinks on narrow terminals~~ — kept: Batch 2 chose
   never to cut Status (`WARN: CORDONED` → `WARN: C…` loses the meaning).
+
+## Batch 10 — visual polish (2026-10-19)
+
+The UI read as dull: on a colored theme (neon on navy) the fixed grey
+neutrals looked muddy, and nothing but Status and the footer keys
+carried color. Decided in a grilling session; previews rendered with
+`freeze` in the user's WezTerm colors.
+
+- [x] Neutrals (Text, Muted, Border, Selection) derive from the
+  terminal's reported foreground and background (`DerivePalette`,
+  `tea.RequestForegroundColor`); hues stay fixed. Contrast-aware:
+  Selection is the strongest Accent tint (≤32%) every text role reads on,
+  Muted the dimmest blend that reads on background and selection.
+  Covered on seven themes (`TestDerivePalette_Contrast`).
+- [x] The focused panel's border is Accent (focus) in every full-screen
+  view — list, details, log; a modal dims it. The preview pane, which
+  never has focus, stays Border; confirms and toasts keep their status
+  colors.
+- [x] Number columns right-aligned, header included; OCIDs Muted.
+- [ ] ~~Surface header band and breadcrumb pills~~ — previewed and
+  dropped by request.
+- Fallback Selection stays `#203A5C`: a stronger fixed tint fails 4.5:1
+  for Danger/Primary/Accent.

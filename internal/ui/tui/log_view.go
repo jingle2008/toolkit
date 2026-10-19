@@ -127,7 +127,8 @@ func (m *Model) logView() string {
 	if shown < total {
 		status = fmt.Sprintf("%d of %d", shown, total)
 	}
-	panel := view.StatusPanel("", status, m.log.viewport.View(), p.Border, titleStyle,
+	// The log has focus, so its border is Accent, as the list's is.
+	panel := view.StatusPanel("", status, m.log.viewport.View(), p.Accent, titleStyle,
 		lipgloss.NewStyle().Foreground(p.Muted), m.viewWidth)
 	return lipgloss.JoinVertical(lipgloss.Left, m.envBar(), m.logCrumb(), panel, m.logFooter())
 }

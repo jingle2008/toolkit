@@ -87,5 +87,6 @@ func (m *Model) Init() tea.Cmd {
 		fetchKubeVersionCmd(m.kubeConfig, m.environment.KubeContext()),
 		saveRecent,
 		tea.RequestBackgroundColor,
+		tea.RequestForegroundColor,
 	)
 }
