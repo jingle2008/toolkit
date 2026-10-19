@@ -97,6 +97,26 @@ func TestRenderFields_CutOrWrap(t *testing.T) {
 	assert.Equal(t, "ID  aaaa bbbb\n    cccc dddd", renderFields(n, 14, 0, true, false, plainFields))
 }
 
+// A scalar array whose join would be ambiguous (an item holds ", ") or
+// overflow the value column lists one bulleted item per row, each wrapped
+// under its own text; short lists, and single items, stay one value.
+func TestRenderFields_StackedLists(t *testing.T) {
+	t.Parallel()
+	render := func(doc string, width int, wrap bool) string {
+		n, err := parseFields([]byte(doc))
+		require.NoError(t, err)
+		return renderFields(n, width, 0, wrap, false, plainFields)
+	}
+	assert.Equal(t, "Issues  • GPU bus error, on 3\n        • Disk full",
+		render(`{"issues":["GPU bus error, on 3","Disk full"]}`, 40, true), "an item holds a comma")
+	assert.Equal(t, "Issues  • aaaa bbbb\n          cccc\n        • dddd",
+		render(`{"issues":["aaaa bbbb cccc","dddd"]}`, 20, true), "join overflows; items wrap under their text")
+	assert.Equal(t, "Issues  • aaaa bbb…\n        • dddd",
+		render(`{"issues":["aaaa bbbb cccc","dddd"]}`, 20, false), "cut, not wrapped")
+	assert.Equal(t, "Tags  a, b", render(`{"tags":["a","b"]}`, 40, true))
+	assert.Equal(t, "Issues  one, two", render(`{"issues":["one, two"]}`, 40, true), "a single item can't be ambiguous")
+}
+
 // tab switches details between fields and JSON; the breadcrumb says which.
 func TestDetails_ToggleJSON(t *testing.T) {
 	t.Parallel()
