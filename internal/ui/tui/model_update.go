@@ -22,17 +22,18 @@ Update implements the tea.Model interface and updates the Model state in
 response to a message. While the keys-changed hint is up, the first key
 press dismisses it and is then handled as usual. While an error toast is
 up, esc in the list or details view dismisses it instead of backing out.
+An open details view re-renders after any message that rebuilt the rows.
 */
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.interceptToastDismiss(msg) {
 		return m, nil
 	}
+	var hint tea.Cmd
 	if _, ok := msg.(tea.KeyPressMsg); ok && m.keysHint {
-		hint := m.dismissKeysHint()
-		model, cmd := m.route(msg)
-		return model, tea.Batch(hint, cmd)
+		hint = m.dismissKeysHint()
 	}
-	return m.route(msg)
+	model, cmd := m.route(msg)
+	return model, tea.Batch(hint, cmd, m.refreshStaleDetail())
 }
 
 // route dispatches msg to its handler.

@@ -5,6 +5,7 @@ package tui
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -50,6 +51,12 @@ func (m *Model) updateContentAsync() tea.Cmd {
 
 	gen := m.gens.nextDetail()
 	item := findItem(m.dataset, m.category, m.selectedKey)
+	// An item deleted while details is open stays on screen, marked gone,
+	// rendered from what details last showed.
+	if m.detailGone = isNilItem(item) && m.detailItem != nil; m.detailGone {
+		item = m.detailItem
+	}
+	m.detailItem = item
 	width := m.detailRenderWidth()
 	renderer := m.renderer
 	asJSON := m.detailJSON
@@ -72,6 +79,36 @@ func (m *Model) updateContentAsync() tea.Cmd {
 		str, err := renderer.RenderJSON(content, max(width-2, 1))
 		return detailContentRenderedMsg{Content: indentLines(str, " "), Err: err, Gen: gen} // the fields layout's margin
 	}
+}
+
+// refreshStaleDetail re-renders an open details view after its rows were
+// rebuilt, so it shows the item as the latest reload has it. The viewport
+// keeps its scroll position.
+func (m *Model) refreshStaleDetail() tea.Cmd {
+	if !m.detailStale || m.viewMode != common.DetailsView {
+		return nil
+	}
+	m.detailStale = false
+	return m.updateContentAsync()
+}
+
+// detailTitle is the details panel's title: the item's key, marked gone
+// once it has left the dataset.
+func (m *Model) detailTitle() string {
+	if m.detailGone {
+		return itemKeyString(m.selectedKey) + " · gone"
+	}
+	return itemKeyString(m.selectedKey)
+}
+
+// isNilItem reports whether a looked-up item is missing: nil, or a nil
+// pointer in an interface (what a typed lookup returns for no match).
+func isNilItem(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	return rv.Kind() == reflect.Pointer && rv.IsNil()
 }
 
 func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea.Cmd {
@@ -132,7 +169,7 @@ func (m *Model) renderMode(mode common.ViewMode) string {
 	case common.ListView:
 		return m.frame(m.tableTitle(), m.listBody())
 	case common.DetailsView:
-		return m.frame(itemKeyString(m.selectedKey), m.viewport.View())
+		return m.frame(m.detailTitle(), m.viewport.View())
 	case common.ExportView:
 		return m.overlayModal(m.lastViewMode, m.exportView())
 	case common.EditTenantView:

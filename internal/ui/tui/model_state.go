@@ -211,6 +211,13 @@ type Model struct {
 
 	// detailJSON shows the details view as raw JSON instead of fields.
 	detailJSON bool
+	// detailStale is set when the rows are rebuilt (a reload, or an action
+	// changing a row), so Update re-renders an open details view.
+	detailStale bool
+	// detailItem is the item details last rendered; detailGone is set when
+	// it has since left the dataset, and details keeps showing it.
+	detailItem any
+	detailGone bool
 
 	// Export CSV popup state: the folder list, and the file name with
 	// whether it has focus.
