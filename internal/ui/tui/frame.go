@@ -244,7 +244,7 @@ func (m *Model) breadcrumbChips() string {
 		chips = append(chips, lipgloss.NewStyle().Foreground(p.Danger).Render("⟨faulty⟩"))
 	}
 	if len(m.history) > 1 {
-		chips = append(chips, chip.Render(fmt.Sprintf("⟨◀ %d/%d⟩", m.historyIdx+1, len(m.history))))
+		chips = append(chips, chip.Render(m.historyChip()))
 	}
 	if cell := m.prefixCell(); cell != "" {
 		chips = append(chips, cell)
@@ -253,6 +253,19 @@ func (m *Model) breadcrumbChips() string {
 		return ""
 	}
 	return "  " + strings.Join(chips, " ")
+}
+
+// historyChip is the position in navigation history, with an arrow for
+// each way [ and ] can still go: "⟨◀ 3/3⟩", "⟨1/3 ▶⟩", "⟨◀ 2/3 ▶⟩".
+func (m *Model) historyChip() string {
+	back, fwd := "", ""
+	if m.historyIdx > 0 {
+		back = "◀ "
+	}
+	if m.historyIdx < len(m.history)-1 {
+		fwd = " ▶"
+	}
+	return fmt.Sprintf("⟨%s%d/%d%s⟩", back, m.historyIdx+1, len(m.history), fwd)
 }
 
 // footer is the frame's last line: the category's most useful actions,

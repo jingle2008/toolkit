@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -15,8 +16,8 @@ import (
 // that column; m.prefix holds it while pending ("" when none). It
 // returns the completed sequence ("s n") once a second key arrives, and
 // whether k was used by the machine (and so must not reach the list's
-// other handlers). A second key that matches nothing just cancels: the
-// caller ignores unknown sequences, and the key is not replayed.
+// other handlers). A second key that matches nothing cancels, and the
+// key is not replayed; handleListSequence says which keys would have.
 func (m *Model) feedPrefix(k string) (seq string, used bool) {
 	if p := m.prefix; p != "" {
 		m.setPrefix("")
@@ -43,7 +44,9 @@ func (m *Model) setPrefix(k string) {
 	}
 }
 
-// handleListSequence runs a completed list-view sequence.
+// handleListSequence runs a completed list-view sequence. A sort key no
+// column has gets a toast naming the ones it could be, since the header
+// stops underlining them once the prefix is cancelled.
 func (m *Model) handleListSequence(seq string) tea.Cmd {
 	leader, k, _ := strings.Cut(seq, " ")
 	if leader != keys.SortLeader {
@@ -52,7 +55,22 @@ func (m *Model) handleListSequence(seq string) tea.Cmd {
 	if col, ok := keys.SortColumn(m.category, k); ok {
 		return m.sortTableByColumn(col)
 	}
-	return nil
+	return m.showToast(fmt.Sprintf("no sort on %s · try %s %s", k, keys.SortLeader, strings.Join(m.sortKeyList(), "/")), toastInfo)
+}
+
+// sortKeyList is the category's sort keys in column order.
+func (m *Model) sortKeyList() []string {
+	byCol := map[string]string{}
+	for col, k := range keys.SortKeys(m.category) {
+		byCol[strings.ToLower(col)] = k
+	}
+	var out []string
+	for _, h := range m.headers {
+		if k, ok := byCol[strings.ToLower(h.text)]; ok {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 // usesListKey reports whether feedPrefix will consume k, so

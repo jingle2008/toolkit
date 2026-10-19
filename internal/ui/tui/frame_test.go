@@ -236,3 +236,25 @@ func TestUpdateLayout_RetruncatesInTheMiddle(t *testing.T) {
 	assert.True(t, strings.HasSuffix(cell, "acme"), "the tail survives: %q", cell)
 	assert.LessOrEqual(t, ansi.StringWidth(cell), w)
 }
+
+// The history chip has an arrow for each way [ and ] can still go.
+func TestHistoryChip_ArrowsFollowDirections(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	m.history = []domain.Category{domain.Tenant, domain.GPUNode, domain.GPUPool}
+	for idx, want := range []string{"⟨1/3 ▶⟩", "⟨◀ 2/3 ▶⟩", "⟨◀ 3/3⟩"} {
+		m.historyIdx = idx
+		assert.Equal(t, want, m.historyChip())
+	}
+}
+
+// While typing a filter the breadcrumb reads "/text", like the ⟨/text⟩
+// chip the filter becomes once applied.
+func TestStatusView_FilterPromptIsSlash(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	showCategory(t, m, domain.Tenant)
+	m.enterFilterMode()
+	m.textInput.SetValue("acme")
+	assert.Contains(t, ansi.Strip(m.statusView()), "Tenant   /acme", "aligned with the applied chip: Tenant   ⟨/acme⟩")
+}
