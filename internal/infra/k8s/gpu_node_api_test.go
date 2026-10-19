@@ -81,6 +81,38 @@ func TestListGPUNodes_HappyPath(t *testing.T) {
 	assert.False(t, nodes[0].IsSchedulingDisabled)
 }
 
+// A pod bound to a node but still Pending (pulling its image) already
+// holds its GPUs, so the allocation query must not be limited to Running
+// pods, and a pod not yet scheduled must not be charged to any node.
+func TestListGPUNodes_CountsScheduledPendingPods(t *testing.T) {
+	t.Parallel()
+	node := makeNode("n1", map[string]string{"nvidia.com/gpu.present": "true"}, 8, false,
+		[]corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}})
+	running := makePod("running", "n1", 4, servingLabelV2)
+	pending := makePod("pending", "n1", 4, servingLabelV2)
+	pending.Status.Phase = corev1.PodPending
+	unscheduled := makePod("unscheduled", "", 2, servingLabelV2)
+	unscheduled.Status.Phase = corev1.PodPending
+	client := fake.NewSimpleClientset(node, running, pending, unscheduled)
+
+	var allocSelectors []string
+	client.PrependReactor("list", "pods", func(a cgotesting.Action) (bool, runtime.Object, error) {
+		if r := a.(cgotesting.ListAction).GetListRestrictions(); !r.Labels.Empty() {
+			allocSelectors = append(allocSelectors, r.Fields.String())
+		}
+		return false, nil, nil
+	})
+
+	nodes, err := ListGPUNodes(context.Background(), client, -1)
+	require.NoError(t, err)
+	require.Len(t, nodes, 1)
+	assert.Equal(t, 8, nodes[0].Allocated, "the Pending pod's GPUs count; the unscheduled one's don't")
+	require.NotEmpty(t, allocSelectors)
+	for _, sel := range allocSelectors {
+		assert.Equal(t, allocatedPodSelector, sel)
+	}
+}
+
 func TestListGPUNodes_NoGPUNodes(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

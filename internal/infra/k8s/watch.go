@@ -235,11 +235,12 @@ func crWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) fu
 }
 
 // gpuPodWatchOpeners returns one pod-watch opener per GPU pod label
-// selector, scoped to Running pods. This mirrors the bounded selectors
-// the allocation path lists with (gpuPodSelectors + runningPodSelector),
-// so the trigger reacts to the GPU pods that drive node allocation,
-// node issues, and DAC replica stats — without a cluster-wide pod
-// firehose. A GPU-consuming pod outside these selectors will not trigger
+// selector, scoped to pods that hold node resources. This mirrors the
+// bounded selectors the allocation path lists with (gpuPodSelectors +
+// allocatedPodSelector), so a pod bound to a node but still Pending
+// refreshes the node's free GPUs. The set includes the Running pods
+// behind node issues and DAC replica stats, so one watch per selector
+// serves them all — without a cluster-wide pod firehose. A GPU-consuming pod outside these selectors will not trigger
 // a reload until a watched resource also changes (acceptable for the
 // eventual-freshness target).
 func gpuPodWatchOpeners(clientset kubernetes.Interface) []func(context.Context) (watch.Interface, error) {
@@ -249,7 +250,7 @@ func gpuPodWatchOpeners(clientset kubernetes.Interface) []func(context.Context) 
 			func(ctx context.Context) (string, error) {
 				l, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 					LabelSelector: sel,
-					FieldSelector: runningPodSelector,
+					FieldSelector: allocatedPodSelector,
 					Limit:         1,
 				})
 				if err != nil {
@@ -259,7 +260,7 @@ func gpuPodWatchOpeners(clientset kubernetes.Interface) []func(context.Context) 
 			},
 			func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 				opts.LabelSelector = sel
-				opts.FieldSelector = runningPodSelector
+				opts.FieldSelector = allocatedPodSelector
 				return clientset.CoreV1().Pods("").Watch(ctx, opts)
 			},
 		))
