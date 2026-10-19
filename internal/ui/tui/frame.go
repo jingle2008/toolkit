@@ -45,8 +45,7 @@ func (m *Model) frame(title, main string) string {
 }
 
 // tableTitle names what the list panel shows that nothing else does: the
-// columns hidden on a terminal too narrow for them, and where to see
-// them (details show every field). The names give way to
+// columns hidden on a terminal too narrow for them. The names give way to
 // a count when they'd take more than half the panel's edge. The
 // breadcrumb names the category and the bottom edge counts the rows.
 func (m *Model) tableTitle() string {
@@ -54,14 +53,13 @@ func (m *Model) tableTitle() string {
 	if n == 0 {
 		return ""
 	}
-	where := " · " + keys.ViewDetails.Help().Key + " shows all"
-	if title := strings.Join(m.hiddenColumns, ", ") + " hidden" + where; lipgloss.Width(title) <= m.viewWidth/2 {
+	if title := strings.Join(m.hiddenColumns, ", ") + " hidden"; lipgloss.Width(title) <= m.viewWidth/2 {
 		return title
 	}
 	if n == 1 {
-		return "1 column hidden" + where
+		return "1 column hidden"
 	}
-	return fmt.Sprintf("%d columns hidden", n) + where
+	return fmt.Sprintf("%d columns hidden", n)
 }
 
 // positionText is the panel's bottom-edge status: in the list, the

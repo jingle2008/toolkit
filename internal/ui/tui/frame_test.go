@@ -206,16 +206,16 @@ func TestOverlayModal_BlanksFooter(t *testing.T) {
 	assert.NotContains(t, out, "go to related")
 }
 
-// The panel title names the hidden columns and how to see them, and falls
-// back to a count when the names don't fit.
+// The panel title names the hidden columns, and falls back to a count
+// when the names don't fit.
 func TestTableTitle_NamesHiddenColumns(t *testing.T) {
 	t.Parallel()
 	m := newGoldenModel(t, 120, 30)
 	assert.Empty(t, m.tableTitle())
 	m.hiddenColumns = []string{"Internal", "Note"}
-	assert.Equal(t, "Internal, Note hidden · y shows all", m.tableTitle())
+	assert.Equal(t, "Internal, Note hidden", m.tableTitle())
 	m.viewWidth = 40
-	assert.Equal(t, "2 columns hidden · y shows all", m.tableTitle())
+	assert.Equal(t, "2 columns hidden", m.tableTitle())
 }
 
 // A resize cuts middle-truncated cells (OCIDs) to the new widths, keeping

@@ -141,6 +141,7 @@ a live tmux session on preprod.
 - [x] Narrow terminals: help clips to the screen (it overflowed at 50
   columns); a resize re-truncates OCIDs in the middle (they were
   end-cut to identical `ocid1.tenanc…`); the panel title names hidden
-  columns and points at `y`.
+  columns (no "y shows all": details shows one row's fields, not the
+  hidden columns).
 - [ ] ~~Status column shrinks on narrow terminals~~ — kept: Batch 2 chose
   never to cut Status (`WARN: CORDONED` → `WARN: C…` loses the meaning).
