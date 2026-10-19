@@ -29,9 +29,31 @@ func (c Check) Hint() string {
 		return ""
 	}
 	if c.Parent == domain.Tenant {
-		return "add the tenancies to the metadata file (TUI: edit tenant on an unresolved DAC/ImportedModel)"
+		return tenancyHint(c.Dangling)
 	}
 	return fmt.Sprintf("these %s rows name a %s that doesn't exist: clean them up or restore the %s", c.Child, c.Parent, c.Parent)
+}
+
+// tenancyHint is the tenancy check's remedy: tenancies missing from the
+// metadata are added there, while an orphan has no tenancy to add (the
+// TUI won't edit its tenant) and needs its CR labelled.
+func tenancyHint(dangling []Dangling) string {
+	var unknown, orphans bool
+	for _, d := range dangling {
+		if d.Missing == MissingTenancyLabel {
+			orphans = true
+		} else {
+			unknown = true
+		}
+	}
+	var hints []string
+	if unknown {
+		hints = append(hints, "add the tenancies to the metadata file (TUI: edit tenant on an unresolved DAC/ImportedModel)")
+	}
+	if orphans {
+		hints = append(hints, "set the tenancy-id label on the CRs missing it")
+	}
+	return strings.Join(hints, "; ")
 }
 
 // NotePartialPools adds poolNote — which GPU pool sources failed to load

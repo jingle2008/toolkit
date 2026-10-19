@@ -77,6 +77,13 @@ func TestCheckHint(t *testing.T) {
 	assert.Contains(t, Check{Child: domain.InferenceService, Parent: domain.DedicatedAICluster, Dangling: dangling}.Hint(),
 		"these InferenceService rows name a DedicatedAICluster that doesn't exist")
 	assert.Contains(t, Check{Parent: domain.Tenant, Dangling: dangling}.Hint(), "metadata file")
+
+	// An orphan has no tenancy to add to the metadata: label its CR.
+	orphan := []Dangling{{Row: "ImportedModel default/x", Missing: MissingTenancyLabel}}
+	assert.Equal(t, "set the tenancy-id label on the CRs missing it", Check{Parent: domain.Tenant, Dangling: orphan}.Hint())
+	both := Check{Parent: domain.Tenant, Dangling: append(orphan, dangling...)}.Hint()
+	assert.Contains(t, both, "metadata file")
+	assert.Contains(t, both, "tenancy-id label")
 }
 
 // A missing pool may just be one that failed to load: the GPUNode →
