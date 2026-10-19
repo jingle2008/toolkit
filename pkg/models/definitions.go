@@ -10,6 +10,14 @@ type NamedItem interface {
 	GetName() string
 }
 
+// QualifiedItem is a row of a flat category whose name alone can repeat
+// (service tenancies share names across realms). QualifiedName is
+// <qualifier>/<name>, which names one row where the name doesn't.
+type QualifiedItem interface {
+	NamedItem
+	QualifiedName() string
+}
+
 // NamedFilterable represents an item that is both named and filterable.
 type NamedFilterable interface {
 	NamedItem

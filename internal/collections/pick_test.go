@@ -26,6 +26,27 @@ func TestPickByName(t *testing.T) {
 	assert.EqualError(t, err, `2 GPUPool rows are named "a"`)
 }
 
+// Service tenancies share names across realms; <realm>/<name> picks one.
+func TestPickByName_Qualified(t *testing.T) {
+	t.Parallel()
+	items := []models.ServiceTenancy{
+		{Name: "prod", Realm: "oc4"}, {Name: "prod", Realm: "oc1"}, {Name: "dev", Realm: "oc1"},
+	}
+	_, err := PickByName(items, "prod", "ServiceTenancy")
+	require.EqualError(t, err, `2 ServiceTenancy rows are named "prod": oc1/prod, oc4/prod; name one as listed`)
+
+	got, err := PickByName(items, "oc4/prod", "ServiceTenancy")
+	require.NoError(t, err)
+	assert.Equal(t, "oc4", got.Realm)
+
+	got, err = PickByName(items, "dev", "ServiceTenancy")
+	require.NoError(t, err)
+	assert.Equal(t, "oc1", got.Realm)
+
+	_, err = PickByName(items, "oc2/prod", "ServiceTenancy")
+	require.ErrorAs(t, err, new(*NoSuchNameError))
+}
+
 // A name shared across groups is ambiguous; <group>/<name> picks one.
 func TestPickByNameGrouped(t *testing.T) {
 	t.Parallel()
