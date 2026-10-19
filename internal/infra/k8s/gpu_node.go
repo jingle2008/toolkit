@@ -13,8 +13,24 @@ import (
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
-// gpuProperty is the Kubernetes resource name for GPU.
+// gpuProperty is the Kubernetes resource name for an NVIDIA GPU.
 const gpuProperty corev1.ResourceName = "nvidia.com/gpu"
+
+// gpuResources are the extended resources a GPU is advertised and
+// requested as: NVIDIA's, and AMD's on the MI300X shapes. A node or pod
+// uses one vendor's, so summing them gives its GPU count.
+var gpuResources = []corev1.ResourceName{gpuProperty, "amd.com/gpu"}
+
+// gpuCount sums the GPU resources in list.
+func gpuCount(list corev1.ResourceList) int64 {
+	var total int64
+	for _, name := range gpuResources {
+		if q, ok := list[name]; ok {
+			total += q.Value()
+		}
+	}
+	return total
+}
 
 // ListGPUNodes lists a list of gpu nodes up to the limit.
 func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int) ([]models.GPUNode, error) {
@@ -68,8 +84,7 @@ func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 
 	gpuNodes := make([]models.GPUNode, 0, len(nodes.Items))
 	for _, node := range nodes.Items {
-		allocQty := node.Status.Allocatable[gpuProperty]
-		allocatable, _ := allocQty.AsInt64()
+		allocatable := gpuCount(node.Status.Allocatable)
 		age := FormatAge(time.Since(node.CreationTimestamp.Time))
 		issues := getNodeIssues(node.Status.Conditions)
 		// Add pod issues for this node

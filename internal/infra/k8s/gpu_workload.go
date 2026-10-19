@@ -19,7 +19,7 @@ const gpuWorkloadPageSize = 500
 
 // LoadGPUWorkloadsByNode lists running pods that consume GPU and groups
 // them by spec.nodeName (== GPUNode.Name). A pod qualifies when it limits
-// nvidia.com/gpu > 0 and is scheduled to a node.
+// a GPU (nvidia.com/gpu or amd.com/gpu) and is scheduled to a node.
 //
 // Detection is intentionally broad (any GPU-consuming pod, not just
 // serving workloads), so it cannot pre-narrow with a label selector the
@@ -42,7 +42,7 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 		for i := range page.Items {
 			pod := &page.Items[i]
 			// calculatePodGPUs (requests) is the same accounting the
-			// GPUNode "Allocated" sum uses. For nvidia.com/gpu requests
+			// GPUNode "Allocated" sum uses. For GPU resources requests
 			// equal limits (Kubernetes forbids overcommitting extended
 			// resources), so this matches the spec's "limits" intent while
 			// keeping a single source of truth. Only Spec.Containers count

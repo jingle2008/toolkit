@@ -315,6 +315,47 @@ spec:
 	assert.Equal(t, "2", got.GPURequest)
 }
 
+// The MI300X runtimes ask for amd.com/gpu, not nvidia.com/gpu; their
+// GPU count must not come out blank. Multi-node sums count it too.
+func TestParseServingRuntime_AMDGPUs(t *testing.T) {
+	t.Parallel()
+	src := `
+metadata:
+  name: vllm-amd
+spec:
+  engineConfig:
+    runner:
+      resources:
+        limits:
+          amd.com/gpu: 8
+        requests:
+          amd.com/gpu: 8
+`
+	got := parseServingRuntime(context.Background(), parseYAML(t, src))
+	assert.Equal(t, "8", got.GPULimit)
+	assert.Equal(t, "8", got.GPURequest)
+
+	multi := `
+metadata:
+  name: vllm-amd-multi
+spec:
+  engineConfig:
+    leader:
+      runner:
+        resources:
+          limits:
+            amd.com/gpu: 8
+    worker:
+      size: 1
+      runner:
+        resources:
+          limits:
+            amd.com/gpu: 8
+`
+	got = parseServingRuntime(context.Background(), parseYAML(t, multi))
+	assert.Equal(t, "16", got.GPULimit)
+}
+
 func TestParseServingRuntime_FractionalCPU(t *testing.T) {
 	t.Parallel()
 	src := `

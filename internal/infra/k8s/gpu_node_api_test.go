@@ -113,6 +113,28 @@ func TestListGPUNodes_CountsScheduledPendingPods(t *testing.T) {
 	}
 }
 
+// An MI300X node advertises amd.com/gpu and its pods request it: both
+// count, or the node reads "Missing GPUs" with every GPU free.
+func TestListGPUNodes_AMDGPUs(t *testing.T) {
+	t.Parallel()
+	const amd corev1.ResourceName = "amd.com/gpu"
+	node := makeNode("mi300", map[string]string{
+		"nvidia.com/gpu.present":           "true",
+		"beta.kubernetes.io/instance-type": "BM.GPU.MI300X.8",
+	}, 0, false, []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}})
+	node.Status.Allocatable = corev1.ResourceList{amd: *resource.NewQuantity(8, resource.DecimalSI)}
+	pod := makePod("p", "mi300", 0, servingLabelV2)
+	pod.Spec.Containers[0].Resources.Requests = corev1.ResourceList{amd: *resource.NewQuantity(2, resource.DecimalSI)}
+	client := fake.NewSimpleClientset(node, pod)
+
+	nodes, err := ListGPUNodes(context.Background(), client, -1)
+	require.NoError(t, err)
+	require.Len(t, nodes, 1)
+	assert.Equal(t, 8, nodes[0].Allocatable)
+	assert.Equal(t, 2, nodes[0].Allocated)
+	assert.Equal(t, "OK", nodes[0].GetStatus())
+}
+
 func TestListGPUNodes_NoGPUNodes(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

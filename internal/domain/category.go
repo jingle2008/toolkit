@@ -57,7 +57,7 @@ const (
 	// GPUNode is a category for GPU nodes.
 	GPUNode
 	// GPUWorkload is a category for GPU-consuming pods (any pod that
-	// requests nvidia.com/gpu). Scoped by GPUNode: GPUPool → GPUNode →
+	// requests nvidia.com/gpu or amd.com/gpu). Scoped by GPUNode: GPUPool → GPUNode →
 	// GPUWorkload.
 	GPUWorkload
 	// DedicatedAICluster is a category for dedicated AI clusters.

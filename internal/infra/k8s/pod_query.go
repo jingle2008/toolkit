@@ -67,9 +67,7 @@ func getGPUAllocations(
 func calculatePodGPUs(pod *corev1.Pod) int64 {
 	var total int64
 	for _, container := range pod.Spec.Containers {
-		if val, ok := container.Resources.Requests[gpuProperty]; ok {
-			total += val.Value()
-		}
+		total += gpuCount(container.Resources.Requests)
 	}
 	return total
 }
