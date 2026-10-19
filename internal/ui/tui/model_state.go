@@ -355,7 +355,7 @@ func setDefaults(m *Model) {
 	if m.textInput == nil {
 		ti := textinput.New()
 		ti.CharLimit = 256
-		ti.Prompt = " 🐶> "
+		ti.Prompt = "  /" // the applied filter's chip reads ⟨/text⟩
 		m.textInput = &ti
 	}
 	if m.viewport == nil {

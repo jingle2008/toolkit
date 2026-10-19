@@ -107,3 +107,16 @@ func TestUnderlineSortKey(t *testing.T) {
 	assert.Equal(t, "S\x1b[4mi\x1b[24mze", underlineSortKey("Size", "i"))
 	assert.Equal(t, "Age", underlineSortKey("Age", "z"))
 }
+
+// A sort key no column has cancels the prefix and says which keys would
+// have worked, in column order.
+func TestSortPrefix_UnknownKeyToastsTheKeys(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 30)
+	showCategory(t, m, domain.Tenant)
+	_, _ = m.Update(keyPress("s"))
+	_, _ = m.Update(keyPress("x"))
+	assert.Empty(t, m.prefix)
+	require.NotNil(t, m.toasts.active)
+	assert.Equal(t, "no sort on x · try s n/i/s", m.toasts.active.msg)
+}
