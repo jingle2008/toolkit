@@ -94,5 +94,5 @@ func (n DedicatedAICluster) OCID(realm, region string) string {
 // TenancyOCID returns the full tenancy OCID for the
 // DedicatedAICluster, built from realm + the stored TenantID suffix.
 func (n DedicatedAICluster) TenancyOCID(realm string) string {
-	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, n.TenantID)
+	return tenancyOCID(realm, n.TenantID)
 }

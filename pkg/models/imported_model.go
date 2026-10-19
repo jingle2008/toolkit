@@ -106,7 +106,7 @@ func IsImportedModelName(name string) bool {
 // combining the realm with the `tenancy-id` label suffix stored in
 // TenantID. Mirrors DedicatedAICluster.TenancyOCID.
 func (m ImportedModel) TenancyOCID(realm string) string {
-	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, m.TenantID)
+	return tenancyOCID(realm, m.TenantID)
 }
 
 // OwnerState returns the owner's internal/external state ("true" /

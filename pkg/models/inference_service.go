@@ -59,10 +59,7 @@ func (s InferenceService) IsDedicated() bool { return s.Type == InferenceService
 // TenancyOCID returns the full tenancy OCID from realm + tenancy-id
 // suffix, or "" for an endpoint without a tenant.
 func (s InferenceService) TenancyOCID(realm string) string {
-	if s.TenantID == "" {
-		return ""
-	}
-	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, s.TenantID)
+	return tenancyOCID(realm, s.TenantID)
 }
 
 // TenantName returns the resolved owning-tenant name, or the raw

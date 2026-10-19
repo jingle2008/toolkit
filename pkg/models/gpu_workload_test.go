@@ -24,6 +24,11 @@ func TestGPUWorkload(t *testing.T) {
 	if got := w.TenancyOCID("oc1"); got != "ocid1.tenancy.oc1..suffix1" {
 		t.Errorf("TenancyOCID = %q", got)
 	}
+	// A pod with no tenancy-id label (on-demand serving) has no OCID,
+	// not a bare "ocid1.tenancy.oc1.." prefix.
+	if got := (GPUWorkload{}).TenancyOCID("oc1"); got != "" {
+		t.Errorf("TenancyOCID (no label) = %q", got)
+	}
 	// Unresolved owner → raw suffix.
 	if got := w.TenantName(); got != "suffix1" {
 		t.Errorf("TenantName (unresolved) = %q", got)

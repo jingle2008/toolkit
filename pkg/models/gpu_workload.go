@@ -1,10 +1,8 @@
 package models
 
-import "fmt"
-
 // GPUWorkload is a GPU-consuming Kubernetes pod (any pod that requests
-// nvidia.com/gpu or amd.com/gpu). Grouped by Node (spec.nodeName, which equals
-// GPUNode.Name); its parent category is GPUNode. model/runtime/mode are
+// nvidia.com/gpu or amd.com/gpu). Grouped by Node (spec.nodeName, which
+// equals GPUNode.Name); its parent category is GPUNode. model/runtime/mode are
 // best-effort: blank for non-serving GPU pods.
 type GPUWorkload struct {
 	Name      string `json:"name"`
@@ -44,7 +42,7 @@ func (w GPUWorkload) FilterableFields() []string {
 
 // TenancyOCID returns the full tenancy OCID from realm + tenancy-id suffix.
 func (w GPUWorkload) TenancyOCID(realm string) string {
-	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, w.TenantID)
+	return tenancyOCID(realm, w.TenantID)
 }
 
 // TenantName returns the resolved owning-tenant name, or the raw

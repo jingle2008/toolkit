@@ -194,5 +194,5 @@ func tenantIDFromLabels(labels map[string]any) string {
 			return str
 		}
 	}
-	return "UNKNOWN_TENANCY"
+	return models.UnknownTenancy
 }

@@ -57,7 +57,7 @@ func tenantEditTarget(item any, realm string) (editTarget, bool) {
 	if !ok {
 		ocid, tenantID, resolved, ok = overrideTenant(item)
 	}
-	if !ok || resolved || tenantID == "" || tenantID == "UNKNOWN_TENANCY" {
+	if !ok || resolved || tenantID == "" || tenantID == models.UnknownTenancy {
 		return editTarget{}, false
 	}
 	return editTarget{ocid: ocid, tenantID: tenantID}, true

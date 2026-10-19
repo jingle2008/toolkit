@@ -1,6 +1,7 @@
 package columns
 
 import (
+	"cmp"
 	"strconv"
 
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -39,8 +40,9 @@ var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 	{
 		Title: "Tenant", Key: "tenant", Ratio: 0.17, TruncateMiddle: true,
 		Render: func(k string, _ models.DedicatedAICluster) string { return k },
-		RenderForExport: func(realm, _ string, _ string, d models.DedicatedAICluster) string {
-			return d.TenancyOCID(realm)
+		// An orphan has no tenancy OCID; its key, UNKNOWN_TENANCY, stays.
+		RenderForExport: func(realm, _ string, k string, d models.DedicatedAICluster) string {
+			return cmp.Or(d.TenancyOCID(realm), k)
 		},
 	},
 	{
