@@ -16,11 +16,6 @@ import (
 // gpuProperty is the Kubernetes resource name for GPU.
 const gpuProperty corev1.ResourceName = "nvidia.com/gpu"
 
-const (
-	nodeCondGPUBus   corev1.NodeConditionType = "GPUBus"
-	nodeCondGPUCount corev1.NodeConditionType = "GPUCount"
-)
-
 // ListGPUNodes lists a list of gpu nodes up to the limit.
 func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int) ([]models.GPUNode, error) {
 	nodes, err := clientset.CoreV1().Nodes().List(ctx, v1.ListOptions{
@@ -31,12 +26,15 @@ func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 		return nil, err
 	}
 
-	// 1. GPU allocation: as before, using processPodQueries (4 label selectors)
+	// 1. GPU allocation, using processPodQueries (4 label selectors). It
+	// counts scheduled Pending pods too, as the scheduler does: counting
+	// only Running ones showed a node free while a pod starting on it
+	// already held its GPUs.
 	gpuAllocationMap := make(map[string]int64)
 	for _, node := range nodes.Items {
 		gpuAllocationMap[node.Name] = 0
 	}
-	err = processPodQueries(ctx, clientset, gpuPodSelectors, runningPodSelector,
+	err = processPodQueries(ctx, clientset, gpuPodSelectors, allocatedPodSelector,
 		getGPUAllocations,
 		func(node string, usage int64) {
 			gpuAllocationMap[node] += usage
@@ -93,23 +91,29 @@ func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 	return gpuNodes, nil
 }
 
-// getNodeIssues returns a list of messages for alarming node conditions.
+/*
+getNodeIssues returns a message for each alarming node condition.
+
+Every condition but Ready follows the node-problem-detector convention —
+True means the problem is present — and that holds for the kubelet's own
+pressure conditions as well as the OCI health checks (GpuBus, GpuCount,
+GpuEcc, GpuRowRemap, RdmaLink, KernelDeadlock, ReadonlyFilesystem, ...).
+So any True condition other than Ready is an issue, rather than a fixed
+list of types: a list misses checks added later, and once matched on
+"GPUBus" while nodes report "GpuBus", so GPU faults never showed.
+Unknown (e.g. a check that doesn't run on this shape) is not an issue.
+*/
 func getNodeIssues(conditions []corev1.NodeCondition) []string {
 	issues := make([]string, 0)
 	for _, c := range conditions {
-		switch c.Type {
-		case corev1.NodeMemoryPressure,
-			corev1.NodeDiskPressure,
-			corev1.NodePIDPressure,
-			corev1.NodeNetworkUnavailable,
-			nodeCondGPUBus,
-			nodeCondGPUCount:
-			if c.Status == corev1.ConditionTrue {
-				issues = append(issues, c.Message)
-			}
-		case corev1.NodeReady:
-			// exhaustive check
+		if c.Type == corev1.NodeReady || c.Status != corev1.ConditionTrue {
+			continue
 		}
+		msg := c.Message
+		if msg == "" {
+			msg = string(c.Type)
+		}
+		issues = append(issues, msg)
 	}
 	return issues
 }
