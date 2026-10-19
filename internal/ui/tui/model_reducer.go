@@ -539,11 +539,14 @@ func (m *Model) handleInferenceServicesLoaded(items map[string][]models.Inferenc
 }
 
 func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) {
-	// The group fills four categories; name the one on screen, if any, so
-	// applyDataset redraws it (an environment switch in place on
-	// LimitTenancyOverride clears its rows and relies on this load).
+	// The group fills four categories and names the owners of four more;
+	// name the one on screen, if any, so applyDataset redraws it (an
+	// environment switch in place on LimitTenancyOverride clears its rows
+	// and relies on this load; one on DACs shows raw tenancy IDs until it).
 	cat := domain.Tenant
-	if _, ok := tenancyOverrideCategories[m.category]; ok {
+	_, override := tenancyOverrideCategories[m.category]
+	_, owned := tenantOwnedCategories[m.category]
+	if override || owned {
 		cat = m.category
 	}
 	m.applyLoaded(gen, func(ds *models.Dataset) {

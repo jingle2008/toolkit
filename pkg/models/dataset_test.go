@@ -193,6 +193,25 @@ func TestResetRealmScopedFields(t *testing.T) {
 	}
 }
 
+// A switch within the realm keeps its tenants and overrides and drops the
+// rest.
+func TestResetEnvironmentScopedFields(t *testing.T) {
+	t.Parallel()
+	d := &Dataset{
+		Tenants:                 []Tenant{{Name: "t"}},
+		LimitTenancyOverrideMap: map[string][]LimitTenancyOverride{"x": nil},
+		LimitRegionalOverrides:  []LimitRegionalOverride{{}},
+		GPUPools:                []GPUPool{{}},
+		DedicatedAIClusterMap:   map[string][]DedicatedAICluster{"x": nil},
+	}
+	d.ResetEnvironmentScopedFields()
+	assert.NotNil(t, d.Tenants)
+	assert.NotNil(t, d.LimitTenancyOverrideMap)
+	assert.NotNil(t, d.LimitRegionalOverrides)
+	assert.Nil(t, d.GPUPools)
+	assert.Nil(t, d.DedicatedAIClusterMap)
+}
+
 func TestFindBaseModelByName(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{

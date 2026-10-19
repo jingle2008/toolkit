@@ -52,6 +52,16 @@ var tenancyOverrideCategories = map[domain.Category]struct{}{
 	domain.PropertyTenancyOverride:        {},
 }
 
+// tenantOwnedCategories are the cluster categories whose rows name their
+// owning tenant, resolved from Dataset.Tenants: without the tenants they
+// show raw tenancy IDs.
+var tenantOwnedCategories = map[domain.Category]struct{}{
+	domain.DedicatedAICluster: {},
+	domain.ImportedModel:      {},
+	domain.GPUWorkload:        {},
+	domain.InferenceService:   {},
+}
+
 /*
 updateCategoryCore contains the shared logic for changing category.
 */
@@ -102,10 +112,24 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	} else {
 		cmds = append(cmds, refreshDataCmd())
 	}
+	if tenants := m.tenantsForOwnersCmd(); tenants != nil {
+		cmds = append(cmds, m.beginTask(), tenants)
+	}
 	if watchCmd != nil {
 		cmds = append(cmds, watchCmd)
 	}
 	return cmds
+}
+
+// tenantsForOwnersCmd loads the tenancy group when a tenant-owned category
+// is showing without tenants, as after a switch to another realm, which
+// drops them; handleTenancyOverridesLoaded resolves the owners and redraws.
+// It shares the gen of the category's own load.
+func (m *Model) tenantsForOwnersCmd() tea.Cmd {
+	if _, ok := tenantOwnedCategories[m.category]; !ok || m.dataset == nil || m.dataset.Tenants != nil {
+		return nil
+	}
+	return loadTenancyOverrideGroupCmd(m.loadCtx, m.loader, m.repoPath, m.environment, m.gens.msg)
 }
 
 // Lazy loaders for realm-specific categories
