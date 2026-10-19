@@ -355,6 +355,15 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 		sort.Strings(tenancy.Regions)
 		tenancies = append(tenancies, *tenancy)
 	}
+	// Map order would shuffle the rows (and the environments derived from
+	// them) on every load, so `get --limit` picked different rows each run.
+	sort.Slice(tenancies, func(i, j int) bool {
+		a, b := tenancies[i], tenancies[j]
+		if a.Name != b.Name {
+			return a.Name < b.Name
+		}
+		return a.Realm < b.Realm
+	})
 
 	return tenancies, nil
 }

@@ -487,6 +487,29 @@ locals {
 	assert.Equal(t, []string{"us-ashburn-1", "us-phoenix-1"}, tenancies[0].Regions)
 }
 
+func TestLoadServiceTenancies_SortedByNameThenRealm(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	subdir := shepTargetsDir(t, dir)
+	tf := `
+locals {
+  oc4_prod  = { tenancy_name = "prod", home_region = "uk-gov-london-1", regions = ["uk-gov-london-1"], environment = "prod" }
+  oc1_prod  = { tenancy_name = "prod", home_region = "us-ashburn-1", regions = ["us-ashburn-1"], environment = "prod" }
+  oc1_dev   = { tenancy_name = "dev", home_region = "us-ashburn-1", regions = ["us-ashburn-1"], environment = "dev" }
+  oc2_alpha = { tenancy_name = "alpha", home_region = "us-langley-1", regions = ["us-langley-1"], environment = "prod" }
+}
+`
+	writeTfFile(t, subdir, "locals.tf", tf)
+
+	tenancies, err := LoadServiceTenancies(context.Background(), dir)
+	require.NoError(t, err)
+	got := make([]string, len(tenancies))
+	for i, ten := range tenancies {
+		got[i] = ten.Realm + "/" + ten.Name
+	}
+	assert.Equal(t, []string{"oc2/alpha", "oc1/dev", "oc1/prod", "oc4/prod"}, got)
+}
+
 func TestLoadServiceTenancies_InvalidHCL(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
