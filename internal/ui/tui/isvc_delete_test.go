@@ -123,7 +123,7 @@ func TestDeleteOrphanInferenceService_ConfirmDeletesAndToasts(t *testing.T) {
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
 	_, cmd = m.updateConfirmView(keyPress("Y"))
 	require.NotNil(t, cmd, "confirming must dispatch the delete")
-	msg, ok := cmd().(isvcDeleteResultMsg)
+	msg, ok := actionResult(t, cmd).(isvcDeleteResultMsg)
 	require.True(t, ok)
 	assert.Equal(t, "ns1", gotNS)
 	assert.Equal(t, "svc1", gotName)
@@ -132,6 +132,6 @@ func TestDeleteOrphanInferenceService_ConfirmDeletesAndToasts(t *testing.T) {
 	require.NotNil(t, m.toasts.active)
 	assert.Equal(t, "force-deleted ns1/svc1: finalizer removed", m.toasts.active.msg)
 
-	m.handleISVCDeleteResultMsg(isvcDeleteResultMsg{key: msg.key, err: errors.New("boom")})
+	m.handleISVCDeleteResultMsg(isvcDeleteResultMsg{key: msg.key, err: errors.New("boom"), env: m.environment})
 	assert.Contains(t, m.toasts.active.msg, "delete ns1/svc1 failed: boom")
 }

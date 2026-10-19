@@ -253,8 +253,7 @@ func (m *Model) updatePaletteView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	p := &m.palette
 	switch km.String() {
 	case "ctrl+c":
-		m.cancelInFlight()
-		return m, tea.Quit
+		return m, m.quit()
 	case "esc":
 		m.closePalette()
 		return m, nil

@@ -76,8 +76,7 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) exportKey(km tea.KeyPressMsg) (tea.Cmd, bool) {
 	switch k := km.String(); {
 	case k == "ctrl+c" || (!m.naming && key.Matches(km, keys.Quit)):
-		m.cancelInFlight()
-		return tea.Quit, true
+		return m.quit(), true
 	case k == "esc" || (!m.naming && key.Matches(km, keys.ExportCSV)):
 		m.viewMode = m.lastViewMode
 		return nil, true

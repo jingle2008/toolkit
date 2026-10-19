@@ -221,8 +221,7 @@ func (m *Model) updateLogView(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) logKey(km tea.KeyPressMsg) (tea.Cmd, bool) {
 	switch {
 	case key.Matches(km, keys.Quit):
-		m.cancelInFlight()
-		return tea.Quit, true
+		return m.quit(), true
 	case key.Matches(km, keys.Back) && (m.log.filter != "" || m.log.minLevel > logging.LevelDebug):
 		m.log.filter, m.log.minLevel = "", logging.LevelDebug
 		return nil, true
@@ -254,8 +253,7 @@ func (m *Model) logKey(km tea.KeyPressMsg) (tea.Cmd, bool) {
 func (m *Model) updateLogInput(km tea.KeyPressMsg) tea.Cmd {
 	switch km.String() {
 	case "ctrl+c":
-		m.cancelInFlight()
-		return tea.Quit
+		return m.quit()
 	case "enter":
 		m.log.typing = false
 		return nil

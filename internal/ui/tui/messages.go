@@ -75,11 +75,10 @@ type deleteDoneMsg struct {
 }
 
 type deleteErrMsg struct {
-	err       error
-	category  domain.Category
-	key       models.ItemKey
-	prevState string
-	env       models.Environment
+	err      error
+	category domain.Category
+	key      models.ItemKey
+	env      models.Environment
 }
 
 type updateDoneMsg struct {
@@ -89,11 +88,6 @@ type updateDoneMsg struct {
 	// pools is the enriched snapshot of the GPU pools (category
 	// GPUPool); the handler merges it into the current pool list.
 	pools []models.GPUPool
-}
-
-type gpuPoolScaleStartedMsg struct {
-	key models.ItemKey
-	env models.Environment
 }
 
 type gpuPoolScaleResultMsg struct {
@@ -112,6 +106,7 @@ type cordonNodeResultMsg struct {
 type drainNodeResultMsg struct {
 	key models.ItemKey
 	err error
+	env models.Environment
 }
 
 type restartNodeResultMsg struct {
@@ -123,6 +118,7 @@ type restartNodeResultMsg struct {
 type restartServiceResultMsg struct {
 	key models.ItemKey
 	err error
+	env models.Environment
 }
 
 // exportDoneMsg reports a finished export and where it was written.

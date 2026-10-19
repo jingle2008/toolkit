@@ -41,37 +41,9 @@ func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
 		return []tea.Cmd{m.handleSetFilterMsg(msg)}
 	case filterApplyMsg:
 		return []tea.Cmd{m.handleFilterApplyMsg(msg)}
-	case deleteErrMsg:
-		return []tea.Cmd{m.handleDeleteErrMsg(msg)}
-	case deleteDoneMsg:
-		m.handleDeleteDoneMsg(msg)
-		return nil
 	case updateDoneMsg:
 		m.handleUpdateDoneMsg(msg)
 		return nil
-	default:
-		return m.routeListAsyncMsg(msg)
-	}
-}
-
-func (m *Model) routeListAsyncMsg(msg tea.Msg) []tea.Cmd {
-	switch msg := msg.(type) {
-	case gpuPoolScaleStartedMsg:
-		m.handleGPUPoolScaleStartedMsg(msg)
-	case gpuPoolScaleResultMsg:
-		m.handleGPUPoolScaleResultMsg(msg)
-	case cordonNodeResultMsg:
-		m.handleCordonNodeResultMsg(msg)
-	case drainNodeResultMsg:
-		return []tea.Cmd{m.handleDrainNodeResultMsg(msg)}
-	case restartNodeResultMsg:
-		m.handleRestartNodeResultMsg(msg)
-	case restartServiceResultMsg:
-		return []tea.Cmd{m.handleRestartServiceResultMsg(msg)}
-	case isvcDeletePlannedMsg:
-		return []tea.Cmd{m.handleISVCDeletePlannedMsg(msg)}
-	case isvcDeleteResultMsg:
-		return []tea.Cmd{m.handleISVCDeleteResultMsg(msg)}
 	}
 	return nil
 }
@@ -133,7 +105,7 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 		match  key.Binding
 		action func() []tea.Cmd
 	}{
-		{keys.Quit, func() []tea.Cmd { return []tea.Cmd{func() tea.Msg { m.cancelInFlight(); return tea.QuitMsg{} }} }},
+		{keys.Quit, func() []tea.Cmd { return []tea.Cmd{m.quit()} }},
 		{keys.BackHist, func() []tea.Cmd { return []tea.Cmd{m.moveHistory(-1)} }},
 		{keys.FwdHist, func() []tea.Cmd { return []tea.Cmd{m.moveHistory(1)} }},
 		{keys.NextCategory, func() []tea.Cmd { return []tea.Cmd{m.handleNextCategory()} }},
@@ -235,7 +207,7 @@ func (m *Model) handleEditKeys(msg tea.KeyMsg) []tea.Cmd {
 
 	switch {
 	case msg.String() == "ctrl+c":
-		cmds = append(cmds, tea.Quit)
+		cmds = append(cmds, m.quit())
 	case key.Matches(msg, keys.Confirm):
 		m.exitEditMode(false)
 	case key.Matches(msg, keys.Back):

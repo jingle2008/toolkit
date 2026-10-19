@@ -24,8 +24,9 @@ const (
 // its tone. A value not listed stays plain, so a new state is never
 // colored by accident. Sources:
 //   - Tenant: account state (ACTIVE, DELETING, TERMINATED, ALWAYS_FREE_ONLY)
-//   - DAC: the CR's status (Active, Failed), Deleting while the TUI deletes
-//     one, pending when unset
+//   - DAC: the CR's status (Active, Failed), pending when unset
+//   - an action running on a row (action tracker): Deleting, Terminating,
+//     Restarting, Draining, Scaling
 //   - BaseModel, ImportedModel: CR state (Ready, Creating, Unknown)
 //   - GPU pool: the OCI instance-pool lifecycle state, plus UNKNOWN,
 //     NONEXIST and "..." (not yet enriched)
@@ -45,6 +46,8 @@ var statusTones = map[string]statusTone{
 	"starting":         toneWarn,
 	"stopping":         toneWarn,
 	"terminating":      toneWarn,
+	"restarting":       toneWarn,
+	"draining":         toneWarn,
 	"unknown":          toneWarn,
 	"...":              toneWarn,
 	"active":           toneSuccess,

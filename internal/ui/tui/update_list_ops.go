@@ -38,7 +38,8 @@ func (m *Model) deleteItem(itemKey models.ItemKey) tea.Cmd {
 }
 
 /*
-deleteDedicatedAICluster deletes a DedicatedAICluster item and updates the UI accordingly.
+deleteDedicatedAICluster deletes a DedicatedAICluster: its endpoints, then
+the cluster, a multi-minute OCI workflow whose steps show as progress.
 */
 func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
@@ -47,36 +48,21 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
 	}
-	if dac.Status == "Deleting" {
-		return nil
-	}
-	prevState := dac.Status
-	dac.Status = "Deleting"
-	m.updateRows(false)
 	env := m.environment
-	return func() tea.Msg {
+	return m.trackAction("delete "+dac.Name, "Deleting", itemKey, func(progress func(string)) tea.Msg {
 		// DAC deletion is a multi-minute workflow with its own internal
 		// timeout; use longOpCtx so the 30s one-shot cap doesn't cancel it
 		// after endpoint deletion but before the cluster delete completes.
 		ctx := m.longOpCtx()
+		logger := progressLogger{Logger: m.logger, report: progress}
 		err := audited(m.logger, mutation.DeleteDAC, dac.Name, func() error {
-			return oci.DeleteDedicatedAICluster(ctx, dac, env, m.logger)
+			return oci.DeleteDedicatedAICluster(ctx, dac, env, logger)
 		})
 		if err != nil {
-			return deleteErrMsg{
-				err:       err,
-				category:  domain.DedicatedAICluster,
-				key:       itemKey,
-				prevState: prevState,
-				env:       env,
-			}
+			return deleteErrMsg{err: err, category: domain.DedicatedAICluster, key: itemKey, env: env}
 		}
-		return deleteDoneMsg{
-			category: domain.DedicatedAICluster,
-			key:      itemKey,
-			env:      env,
-		}
-	}
+		return deleteDoneMsg{category: domain.DedicatedAICluster, key: itemKey, env: env}
+	})
 }
 
 func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
@@ -86,32 +72,18 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
 	}
-	if node.GetStatus() == "Deleting" {
-		return nil
-	}
-	node.SetStatus("Deleting")
-	m.updateRows(false)
 	env := m.environment
-	return func() tea.Msg {
+	return m.trackAction("terminate "+node.Name, "Terminating", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := audited(m.logger, mutation.TerminateNode, node.Name, func() error {
 			return oci.TerminateInstance(ctx, node, env, m.logger)
 		})
 		if err != nil {
-			return deleteErrMsg{
-				err:      err,
-				category: domain.GPUNode,
-				key:      itemKey,
-				env:      env,
-			}
+			return deleteErrMsg{err: err, category: domain.GPUNode, key: itemKey, env: env}
 		}
-		return deleteDoneMsg{
-			category: domain.GPUNode,
-			key:      itemKey,
-			env:      env,
-		}
-	}
+		return deleteDoneMsg{category: domain.GPUNode, key: itemKey, env: env}
+	})
 }
 
 func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
@@ -119,61 +91,41 @@ func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("no item selected for restart operation", "category", m.category)
 		return nil
 	}
-
 	node, ok := item.(*models.GPUNode)
 	if !ok {
 		m.logger.Errorw("unsupported item type for restart operation", "item", item)
 		return nil
 	}
-
-	if node.GetStatus() == "Restarting" {
-		return nil
-	}
-	// optimistic UI
-	node.SetStatus("Restarting")
-	m.updateRows(false)
-
 	env := m.environment
-	return func() tea.Msg {
+	return m.trackAction("restart "+node.Name, "Restarting", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := audited(m.logger, mutation.RestartNode, node.Name, func() error {
 			return oci.SoftResetInstance(ctx, node, env, m.logger)
 		})
 		return restartNodeResultMsg{key: itemKey, err: err, env: env}
-	}
+	})
 }
 
-// handleDeleteErrMsg restores the row a failed delete marked and says it
-// failed — it used to only log, so the failure went unseen.
+// handleDeleteErrMsg says a delete failed, wherever it ran.
 func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) tea.Cmd {
 	m.logger.Errorw("failed to delete item", "key", msg.key, "error", msg.err)
-	if !m.inCurrentEnv(msg.env) {
-		return nil
-	}
-	item := findItem(m.dataset, msg.category, msg.key)
-
-	if dac, ok := item.(*models.DedicatedAICluster); ok {
-		dac.Status = msg.prevState
-	} else if node, ok := item.(*models.GPUNode); ok {
-		node.SetStatus(msg.prevState)
-	}
-
-	// update view if current
-	if msg.category == m.category {
-		m.updateRows(false)
-	}
-	return m.showErrorWithNext(fmt.Sprintf("delete %s failed: %v", itemKeyString(msg.key), msg.err),
+	return m.showErrorWithNext(fmt.Sprintf("%s %s failed%s: %v", deleteVerb(msg.category), itemKeyString(msg.key), m.envNote(msg.env), msg.err),
 		keys.Delete.Help().Key+" retry")
 }
 
-func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
+// handleDeleteDoneMsg removes the deleted row, when it is in the current
+// environment, and says the delete went through.
+func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) tea.Cmd {
+	done := deleteVerb(msg.category) + " requested for " + itemKeyString(msg.key) + m.envNote(msg.env)
+	if msg.category == domain.DedicatedAICluster {
+		done = "deleted " + itemKeyString(msg.key) + m.envNote(msg.env)
+	}
+	toast := m.showToast(done, toastInfo)
 	if !m.inCurrentEnv(msg.env) {
-		return
+		return toast
 	}
 	removeItemFromDataset(m.dataset, msg.category, msg.key)
-
-	// update view if current
 	if msg.category == m.category {
 		idx := m.table.Cursor()
 		if idx+1 >= len(m.table.Rows()) {
@@ -181,6 +133,16 @@ func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) {
 		}
 		m.updateRows(false)
 	}
+	return toast
+}
+
+// deleteVerb is how a toast names deleting a row of cat: a GPU node's
+// instance is terminated.
+func deleteVerb(cat domain.Category) string {
+	if cat == domain.GPUNode {
+		return "terminate"
+	}
+	return "delete"
 }
 
 // handleUpdateDoneMsg applies a GPU pool enrichment (updateGPUPoolState):
@@ -215,65 +177,40 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
 	}
 }
 
-func (m *Model) handleGPUPoolScaleStartedMsg(msg gpuPoolScaleStartedMsg) {
-	if !m.inCurrentEnv(msg.env) {
-		return
-	}
-	item := findItem(m.dataset, domain.GPUPool, msg.key)
-	if pool, ok := item.(*models.GPUPool); ok && pool != nil {
-		pool.Status = "SCALING"
-		if m.category == domain.GPUPool {
-			m.updateRows(false)
-		}
-	}
-}
-
-func (m *Model) handleGPUPoolScaleResultMsg(msg gpuPoolScaleResultMsg) {
+// handleGPUPoolScaleResultMsg says whether the scale-up was requested;
+// the pool's size and state follow from the next enrichment.
+func (m *Model) handleGPUPoolScaleResultMsg(msg gpuPoolScaleResultMsg) tea.Cmd {
+	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
 		m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
+		return m.showErrorWithNext(fmt.Sprintf("scale up %s failed: %v", target, msg.err), keys.ScaleUp.Help().Key+" retry")
 	}
-	if !m.inCurrentEnv(msg.env) {
-		return
-	}
-	item := findItem(m.dataset, domain.GPUPool, msg.key)
-	if pool, ok := item.(*models.GPUPool); ok && pool != nil {
-		if msg.err != nil {
-			pool.Status = "FAILED"
-		} else {
-			// Optimistic success state until enrichment updates the pool
-			pool.Status = "RUNNING"
-		}
-		if m.category == domain.GPUPool {
-			m.updateRows(false)
-		}
-	}
+	return m.showToast("scale-up requested for "+target, toastInfo)
 }
 
-func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) {
+func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) tea.Cmd {
+	verb := "cordon"
+	if !msg.state {
+		verb = "uncordon"
+	}
+	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
 		m.logger.Errorw("failed to toggle cordon state", "key", msg.key, "error", msg.err)
+		return m.showErrorWithNext(fmt.Sprintf("%s %s failed: %v", verb, target, msg.err), keys.ToggleCordon.Help().Key+" retry")
 	}
-	if !m.inCurrentEnv(msg.env) {
-		return
-	}
-	item := findItem(m.dataset, domain.GPUNode, msg.key)
-	if node, ok := item.(*models.GPUNode); ok && node != nil {
-		if msg.err == nil {
+	if m.inCurrentEnv(msg.env) {
+		if node, ok := findItem(m.dataset, domain.GPUNode, msg.key).(*models.GPUNode); ok && node != nil {
 			node.IsSchedulingDisabled = msg.state
-			// Clear transient status so GetStatus reflects current state
-			node.SetStatus("")
-		}
-		if m.category == domain.GPUNode {
-			m.updateRows(false)
+			if m.category == domain.GPUNode {
+				m.updateRows(false)
+			}
 		}
 	}
+	return m.showToast(verb+"ed "+target, toastInfo)
 }
 
 func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) tea.Cmd {
-	if m.category == domain.GPUNode {
-		m.updateRows(false)
-	}
-	target := itemKeyString(msg.key)
+	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
 		m.logger.Errorw("failed to drain node", "key", msg.key, "error", msg.err)
 		// The drain is recorded on the node, so a rerun resumes it.
@@ -292,19 +229,19 @@ func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cm
 		return nil
 	}
 	namespace, name := svc.Namespace, svc.Name
-	kubeConfig, kubeContext := m.kubeConfig, m.environment.KubeContext()
-	return func() tea.Msg {
+	env, kubeConfig := m.environment, m.kubeConfig
+	return m.trackAction("restart "+namespace+"/"+name, "", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := audited(m.logger, mutation.RestartInferenceService, namespace+"/"+name, func() error {
-			return restartInferenceServiceFn(ctx, kubeConfig, kubeContext, namespace, name)
+			return restartInferenceServiceFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
 		})
-		return restartServiceResultMsg{key: itemKey, err: err}
-	}
+		return restartServiceResultMsg{key: itemKey, err: err, env: env}
+	})
 }
 
 func (m *Model) handleRestartServiceResultMsg(msg restartServiceResultMsg) tea.Cmd {
-	target := itemKeyString(msg.key)
+	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
 		m.logger.Errorw("failed to restart inference service", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("restart %s failed: %v", target, msg.err), keys.Restart.Help().Key+" retry")
@@ -312,23 +249,11 @@ func (m *Model) handleRestartServiceResultMsg(msg restartServiceResultMsg) tea.C
 	return m.showToast("restart requested for "+target, toastInfo)
 }
 
-func (m *Model) handleRestartNodeResultMsg(msg restartNodeResultMsg) {
+func (m *Model) handleRestartNodeResultMsg(msg restartNodeResultMsg) tea.Cmd {
+	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
 		m.logger.Errorw("failed to restart node", "key", msg.key, "error", msg.err)
+		return m.showErrorWithNext(fmt.Sprintf("restart %s failed: %v", target, msg.err), keys.Restart.Help().Key+" retry")
 	}
-	if !m.inCurrentEnv(msg.env) {
-		return
-	}
-	item := findItem(m.dataset, domain.GPUNode, msg.key)
-	if node, ok := item.(*models.GPUNode); ok && node != nil {
-		if msg.err != nil {
-			node.SetStatus("FAILED")
-		} else {
-			// Clear transient "Restarting" status to recompute via GetStatus()
-			node.SetStatus("")
-		}
-	}
-	if m.category == domain.GPUNode {
-		m.updateRows(false)
-	}
+	return m.showToast("restart requested for "+target, toastInfo)
 }

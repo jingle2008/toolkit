@@ -26,8 +26,7 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
 		case key.Matches(keyMsg, keys.Quit):
-			m.cancelInFlight()
-			return m, tea.Quit
+			return m, m.quit()
 		case key.Matches(keyMsg, keys.Back, keys.ViewDetails):
 			m.exitDetailView()
 		case key.Matches(keyMsg, keys.CopyName):
