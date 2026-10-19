@@ -1,13 +1,13 @@
 
      ╭─ Keys · List view ─────────────────────────────────────────────────╮
-     │ Actions                            List view                       │
-     │   o           Go to related          [           History back      │
-     │   r           Refresh                ]           History forward   │
-     │   C           Toggle cordon          tab         Next category     │
-     │   D           Drain                  shift+tab   Previous category │
-     │   ^z          Faulty only            :           Command palette   │
-     │   R           Restart                /           Filter            │
-     │   ^x          Delete                 p           Paste filter      │
+     │ Actions                            General                         │
+     │   o           Go to related          ?/h         Help              │
+     │   C           Toggle cordon          y           Toggle details    │
+     │   D           Drain                  c           Copy              │
+     │   R           Restart                `           Toggle log        │
+     │   ^x          Terminate              esc         Back/Clear        │
+     │                                      q           Quit              │
+     │                                                                    │
      │ ↓ more · 0%                                                        │
      │                                                                    │
      │ j/k pgup/pgdn home/end scroll · / filter · esc close               │

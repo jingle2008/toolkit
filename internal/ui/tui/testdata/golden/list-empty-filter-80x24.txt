@@ -21,4 +21,4 @@
 │                                                                              │
 │                                                                              │
 ╰───────────────────────────────────────────────────────────────────── 0 of 2 ─╯
- o go to related  r refresh  / filter  : command palette  ? more
+ o go to related  C toggle cordon  D drain  / filter  : command palette  ? more

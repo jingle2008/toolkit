@@ -1,8 +1,11 @@
 package keys
 
 import (
+	"slices"
 	"strings"
 	"testing"
+
+	"charm.land/bubbles/v2/key"
 
 	"github.com/stretchr/testify/assert"
 
@@ -80,4 +83,39 @@ func TestToggleFaulty_BoundOnFaultyCategories(t *testing.T) {
 		}
 	}
 	assert.ElementsMatch(t, relations.FaultyCategories(), bound)
+}
+
+// Every category lists its actions in actionOrder — the row's own first,
+// faulty-only and refresh last — so the footer reads the same everywhere
+// and drops the list toggles before any row action.
+func TestCatContext_ActionOrder(t *testing.T) {
+	t.Parallel()
+	rank := func(b key.Binding) int {
+		for i, o := range actionOrder {
+			if slices.Equal(b.Keys(), o.Keys()) {
+				return i
+			}
+		}
+		return -1
+	}
+	for cat, byMode := range catContext {
+		last := -1
+		for _, b := range byMode[common.ListView] {
+			if strings.HasPrefix(b.Help().Desc, SortPrefix) {
+				continue
+			}
+			r := rank(b)
+			assert.GreaterOrEqualf(t, r, 0, "%s: %q is missing from actionOrder", cat, b.Help().Desc)
+			assert.Greaterf(t, r, last, "%s: %q is out of order", cat, b.Help().Desc)
+			last = r
+		}
+	}
+}
+
+// GPUNode names ^x Terminate: deleting a node terminates its instance.
+func TestGPUNode_DeleteIsTerminate(t *testing.T) {
+	t.Parallel()
+	km := ResolveKeys(domain.GPUNode, common.ListView)
+	assert.True(t, slices.ContainsFunc(km.Context, func(b key.Binding) bool { return b.Help().Desc == "Terminate" }))
+	assert.False(t, slices.ContainsFunc(km.Context, func(b key.Binding) bool { return b.Help().Desc == "Delete" }))
 }

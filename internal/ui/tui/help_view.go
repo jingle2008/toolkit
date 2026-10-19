@@ -54,10 +54,14 @@ func (m *Model) helpSectionsFor(filter string) []helpSection {
 	}
 	actions, actionSorts := splitSorts(m.keys.Context)
 	mode, modeSorts := splitSorts(m.keys.Mode)
+	// Faulty-only and refresh act on the list, not the row: they go with
+	// the view's keys.
+	listLevel := slices.DeleteFunc(slices.Clone(actions), func(b key.Binding) bool { return !keys.ListLevel(b) })
+	actions = slices.DeleteFunc(actions, keys.ListLevel)
 	add("Quick switch", m.quickSwitchBindings(m.lastViewMode))
 	add("Actions", actions)
 	add("Sort", slices.Concat(modeSorts, actionSorts))
-	add(fmt.Sprintf("%s view", m.lastViewMode), mode)
+	add(fmt.Sprintf("%s view", m.lastViewMode), slices.Concat(mode, listLevel))
 	add("General", m.keys.Global)
 	switch m.lastViewMode {
 	case common.ListView:
@@ -168,28 +172,66 @@ func joinHelpColumns(columns [][]string, secW int) []string {
 	return strings.Split(lipgloss.JoinHorizontal(lipgloss.Top, parts...), "\n")
 }
 
-// packColumns fills up to n columns top to bottom, in order, starting a
-// new column once the current one would pass an even share of the lines.
-// Sections in one column are separated by a blank line.
+// packColumns lays secs out in up to n columns, in order, top to bottom,
+// choosing the split whose tallest column is shortest (ties: fewer
+// columns). Sections in one column are separated by a blank line. Filling
+// each column to an even share instead piled whatever was left into the
+// last one: GPUNode's help ran 30 lines in its third column and 5 in its
+// second.
 func packColumns(secs []helpSection, n int) [][]string {
-	total := 0
-	for _, sec := range secs {
-		total += len(sec) + 1
+	var bestCuts []int
+	best := -1
+	var search func(start int, cuts []int)
+	search = func(start int, cuts []int) {
+		if start == len(secs) {
+			if h := tallestColumn(secs, cuts); best < 0 || h < best || (h == best && len(cuts) < len(bestCuts)) {
+				best, bestCuts = h, slices.Clone(cuts)
+			}
+			return
+		}
+		if len(cuts) == n {
+			return
+		}
+		for end := start + 1; end <= len(secs); end++ {
+			search(end, append(cuts, end))
+		}
 	}
-	target := (total + n - 1) / n
-	columns := [][]string{nil}
-	for _, sec := range secs {
-		cur := &columns[len(columns)-1]
-		if len(*cur) > 0 && len(*cur)+1+len(sec) > target && len(columns) < n {
-			columns = append(columns, nil)
-			cur = &columns[len(columns)-1]
+	search(0, nil)
+	columns := make([][]string, 0, len(bestCuts))
+	start := 0
+	for _, end := range bestCuts {
+		var col []string
+		for i, sec := range secs[start:end] {
+			if i > 0 {
+				col = append(col, "")
+			}
+			col = append(col, sec...)
 		}
-		if len(*cur) > 0 {
-			*cur = append(*cur, "")
-		}
-		*cur = append(*cur, sec...)
+		columns = append(columns, col)
+		start = end
+	}
+	if len(columns) == 0 {
+		columns = [][]string{nil}
 	}
 	return columns
+}
+
+// tallestColumn is the height of the tallest column when secs are cut
+// into columns ending at cuts.
+func tallestColumn(secs []helpSection, cuts []int) int {
+	tallest, start := 0, 0
+	for _, end := range cuts {
+		h := 0
+		for i, sec := range secs[start:end] {
+			if i > 0 {
+				h++
+			}
+			h += len(sec)
+		}
+		tallest = max(tallest, h)
+		start = end
+	}
+	return tallest
 }
 
 // helpWindow is how many body lines help shows at once, and the largest
