@@ -113,6 +113,7 @@ func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
 }
 
 func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
+	m.detailStale = true
 	// Capture the prior selection before m.rawRows is replaced below, so an
 	// in-place reload can re-home the cursor onto the same item by identity.
 	// Identity is the per-category item key (itemKeyFrom), not the bare Name

@@ -416,7 +416,7 @@ Ctrl+A    → toggle between full category names and short aliases in the UI
 
 ## Detail View
 
-Press `y` on any selected row to open the **Detail View**. It shows the item's fields with readable labels: plain values first, then each nested object as a titled, indented section, and each list of objects as numbered entries. Lists of plain values are joined on one line, and long values wrap. `Tab` switches to the raw JSON (the same JSON `o` copies) and back.
+Press `y` on any selected row to open the **Detail View**. It shows the item's fields with readable labels: plain values first, then each nested object as a titled, indented section, and each list of objects as numbered entries. Lists of plain values are joined on one line, and long values wrap. `Tab` switches to the raw JSON (the same JSON `o` copies) and back. It follows the data: when the category reloads (the live watch, a repo change, an action finishing), the view shows the item as reloaded and keeps its scroll position. If the item is deleted meanwhile, the view keeps showing it, titled `· gone`, until you leave.
 
 ```
  Tenant › acme-corp                                                       [fields]
