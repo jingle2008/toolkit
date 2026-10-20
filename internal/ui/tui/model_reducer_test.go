@@ -297,6 +297,23 @@ func TestUpdateGPUPoolState_NoCompartmentIsAnError(t *testing.T) {
 	}
 }
 
+// A GPU pool enrichment that lands while help (or any non-list view) is
+// open is applied, not dropped: otherwise every pool stays at status
+// "..." and actual size 0 until a manual refresh.
+func TestUpdateDoneMsg_AppliedFromAnyView(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset.GPUPools = []models.GPUPool{{Name: "a", Size: 2}}
+	m.viewMode = common.HelpView
+
+	m.Update(updateDoneMsg{
+		category: domain.GPUPool, env: m.environment,
+		pools: []models.GPUPool{{Name: "a", ActualSize: 2, Status: "RUNNING"}},
+	})
+	assert.Equal(t, 2, m.dataset.GPUPools[0].ActualSize)
+	assert.Equal(t, "RUNNING", m.dataset.GPUPools[0].Status)
+}
+
 func TestSortTableByColumn_Toggles(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)

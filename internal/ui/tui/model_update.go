@@ -133,6 +133,19 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleISVCDeletePlannedMsg(msg)
 	case isvcDeleteResultMsg:
 		return m, m.handleISVCDeleteResultMsg(msg)
+	// The list's own async results are handled from any view too: one
+	// that lands while help, the palette, details or the log is open
+	// would otherwise be dropped — a GPU pool enrichment for good,
+	// leaving every pool at status "..." and actual size 0.
+	case updateDoneMsg:
+		m.handleUpdateDoneMsg(msg)
+		return m, nil
+	case filterMsg:
+		return m, m.handleFilterMsg(msg)
+	case setFilterMsg:
+		return m, m.handleSetFilterMsg(msg)
+	case filterApplyMsg:
+		return m, m.handleFilterApplyMsg(msg)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil

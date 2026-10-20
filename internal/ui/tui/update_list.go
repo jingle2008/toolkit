@@ -29,21 +29,10 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
-	// dataMsg, datasetLoadedMsg, and the typed *LoadedMsg family are
-	// intercepted at the top of Update so they fire from any view —
-	// they don't reach this router.
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
+	// Data, filter and enrichment messages are intercepted at the top of
+	// Update so they fire from any view — they don't reach this router.
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		return m.handleKeyMsg(msg)
-	case filterMsg:
-		return []tea.Cmd{m.handleFilterMsg(msg)}
-	case setFilterMsg:
-		return []tea.Cmd{m.handleSetFilterMsg(msg)}
-	case filterApplyMsg:
-		return []tea.Cmd{m.handleFilterApplyMsg(msg)}
-	case updateDoneMsg:
-		m.handleUpdateDoneMsg(msg)
-		return nil
 	}
 	return nil
 }
