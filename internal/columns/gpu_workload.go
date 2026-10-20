@@ -7,13 +7,13 @@ import (
 )
 
 // GPUWorkloadColumns is the canonical column set for domain.GPUWorkload.
-// 9 columns, ratios sum to 1.00. Node is the group key and MUST stay at
+// 10 columns, ratios sum to 1.00. Node is the group key and MUST stay at
 // index 1: itemKeyFrom derives the scoped key (under GPUNode) from row[1]
 // for grouped categories. Mode (deploymentMode) is
 // dropped from the table as low-signal; it stays reachable via `-o json`.
 var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn[models.GPUWorkload]{
 	{
-		Title: "Name", Key: "name", Ratio: 0.17, TruncateMiddle: true,
+		Title: "Name", Key: "name", Ratio: 0.14, TruncateMiddle: true,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Name },
 	},
 	{
@@ -36,7 +36,7 @@ var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn
 		Render: func(_ string, w models.GPUWorkload) string { return w.Model },
 	},
 	{
-		Title: "Runtime", Key: "runtime", Ratio: 0.17, TruncateMiddle: true,
+		Title: "Runtime", Key: "runtime", Ratio: 0.13, TruncateMiddle: true,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Runtime },
 	},
 	{
@@ -50,5 +50,9 @@ var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn
 	{
 		Title: "Age", Key: "age", Ratio: 0.05,
 		Render: func(_ string, w models.GPUWorkload) string { return w.Age },
+	},
+	{
+		Title: "Status", Key: "status", Ratio: 0.07,
+		Render: func(_ string, w models.GPUWorkload) string { return w.Status },
 	},
 }}

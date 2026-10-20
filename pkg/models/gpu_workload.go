@@ -14,7 +14,10 @@ type GPUWorkload struct {
 	GPUs      int    `json:"gpus"`
 	Restarts  int    `json:"restarts"`
 	Age       string `json:"age"`
-	Mode      string `json:"mode,omitempty"`
+	// Status is the pod phase: Running, or Pending for a pod scheduled to
+	// its node (holding its GPUs) that hasn't started yet.
+	Status string `json:"status"`
+	Mode   string `json:"mode,omitempty"`
 	// Legacy is true for a pod serving a legacy ome.oracle.com/v1alpha1
 	// InferenceService; its Runtime then names a legacy runtime, not an
 	// ome.io ClusterServingRuntime.

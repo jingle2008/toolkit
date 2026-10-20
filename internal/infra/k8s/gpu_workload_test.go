@@ -119,3 +119,38 @@ func TestLoadGPUWorkloadsByNode_Paginates(t *testing.T) {
 		t.Fatalf("expected one workload on each of node-a and node-b, got %v", got)
 	}
 }
+
+// A pod scheduled to its node but still Pending (pulling its image) holds
+// its GPUs, as the node's Allocated counts it: it's listed, with Status
+// Pending, and the list asks for every pod holding node resources.
+func TestLoadGPUWorkloadsByNode_ListsScheduledPending(t *testing.T) {
+	t.Parallel()
+	pending := gpuPod("starting", "node-a", 4, nil, nil)
+	pending.Status.Phase = corev1.PodPending
+	running := gpuPod("serving", "node-a", 2, nil, nil)
+	cs := fake.NewSimpleClientset(pending, running)
+	var selectors []string
+	cs.PrependReactor("list", "pods", func(a k8stesting.Action) (bool, runtime.Object, error) {
+		selectors = append(selectors, a.(k8stesting.ListAction).GetListRestrictions().Fields.String())
+		return false, nil, nil
+	})
+
+	got, err := LoadGPUWorkloadsByNode(context.Background(), cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	status := map[string]string{}
+	gpus := 0
+	for _, w := range got["node-a"] {
+		status[w.Name] = w.Status
+		gpus += w.GPUs
+	}
+	if status["starting"] != "Pending" || status["serving"] != "Running" || gpus != 6 {
+		t.Fatalf("got statuses %v, %d GPUs; want the Pending pod listed and all 6 GPUs", status, gpus)
+	}
+	for _, s := range selectors {
+		if s != allocatedPodSelector {
+			t.Fatalf("listed with field selector %q, want %q", s, allocatedPodSelector)
+		}
+	}
+}

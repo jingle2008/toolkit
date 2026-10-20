@@ -284,7 +284,7 @@ var catContext = map[domain.Category]map[common.ViewMode][]key.Binding{
 		common.ListView: {GoTo, SortFree, SortType, SortAge, ToggleCordon, DrainNode, Restart, Terminate, ToggleFaulty, Refresh},
 	},
 	domain.GPUWorkload: {
-		common.ListView: {GoTo, SortTenant, SortGPUs, SortRestarts, SortAge, EditTenant, OpenMetrics, ToggleFaulty, Refresh},
+		common.ListView: {GoTo, SortTenant, SortGPUs, SortRestarts, SortAge, SortStatus, EditTenant, OpenMetrics, ToggleFaulty, Refresh},
 	},
 	domain.ServingRuntime: {
 		common.ListView: {SortGPUs, ToggleFaulty, Refresh},

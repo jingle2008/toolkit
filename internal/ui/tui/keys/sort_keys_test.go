@@ -20,7 +20,7 @@ func TestSortKeys_FirstLetters(t *testing.T) {
 		domain.ImportedModel:         {"Name": "n", "Tenant": "t", "Size": "z", "Context": "c", "Vendor": "v"},
 		domain.GPUNode:               {"Name": "n", "Free": "f", "Type": "t", "Age": "a"},
 		domain.GPUPool:               {"Name": "n", "Size": "z", "GPUs": "g"},
-		domain.GPUWorkload:           {"Name": "n", "Tenant": "t", "GPUs": "g", "Restarts": "r", "Age": "a"},
+		domain.GPUWorkload:           {"Name": "n", "Tenant": "t", "GPUs": "g", "Restarts": "r", "Age": "a", "Status": "s"},
 		domain.InferenceService:      {"Name": "n", "Tenant": "t", "Ready": "r", "Age": "a"},
 		domain.LimitDefinition:       {"Name": "n", "Min": "m", "Max": "x"},
 		domain.LimitTenancyOverride:  {"Name": "n", "Tenant": "t", "Regions": "r", "Min": "m", "Max": "x"},
