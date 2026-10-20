@@ -139,6 +139,7 @@ type (
 	tenantSavedMsg struct {
 		path  string
 		entry models.TenantMetadata
+		realm string // the realm the tenant was saved in
 	}
 	tenantSaveErrMsg struct{ err error }
 )
@@ -243,7 +244,12 @@ func (m *Model) handleTenantSavedMsg(msg tenantSavedMsg) tea.Cmd {
 	if m.viewMode == common.EditTenantView {
 		m.viewMode = common.ListView
 	}
-	m.applyTenantSave(msg.entry)
+	// The save is a tracked action and outlives an environment switch;
+	// tenants are per realm, so one saved in another realm is left to
+	// load from the file when that realm is shown again.
+	if msg.realm == m.environment.Realm {
+		m.applyTenantSave(msg.entry)
+	}
 	return m.showToast(fmt.Sprintf("saved tenant metadata to %s", msg.path), toastInfo)
 }
 
@@ -328,7 +334,7 @@ func (m *Model) openPortalCmd() tea.Cmd {
 // writer interface, off the UI goroutine.
 func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 	writer, ok := m.loader.(loader.TenantMetadataWriter)
-	path := m.metadataPath()
+	path, realm := m.metadataPath(), m.environment.Realm
 	return m.trackAction("save tenant "+entry.ID, "", nil, func(func(string)) tea.Msg {
 		if !ok {
 			return tenantSaveErrMsg{err: errors.New("loader does not support writing metadata")}
@@ -338,7 +344,7 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 		}); err != nil {
 			return tenantSaveErrMsg{err: err}
 		}
-		return tenantSavedMsg{path: path, entry: entry}
+		return tenantSavedMsg{path: path, entry: entry, realm: realm}
 	})
 }
 

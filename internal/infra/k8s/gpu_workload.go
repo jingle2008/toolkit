@@ -17,9 +17,12 @@ import (
 // Continue token in LoadGPUWorkloadsByNode.
 const gpuWorkloadPageSize = 500
 
-// LoadGPUWorkloadsByNode lists running pods that consume GPU and groups
-// them by spec.nodeName (== GPUNode.Name). A pod qualifies when it limits
-// a GPU (nvidia.com/gpu or amd.com/gpu) and is scheduled to a node.
+// LoadGPUWorkloadsByNode lists the pods that hold GPUs and groups them by
+// spec.nodeName (== GPUNode.Name). A pod qualifies when it requests a GPU
+// (nvidia.com/gpu or amd.com/gpu) and is scheduled to a node. Like the
+// GPUNode allocation, that includes a scheduled Pending pod (pulling its
+// image): it already holds its GPUs, so a node's pods add up to its
+// Allocated; its Status says it isn't running yet.
 //
 // Detection is intentionally broad (any GPU-consuming pod, not just
 // serving workloads), so it cannot pre-narrow with a label selector the
@@ -32,7 +35,7 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 	cont := ""
 	for {
 		page, err := clientset.CoreV1().Pods("").List(ctx, v1.ListOptions{
-			FieldSelector: runningPodSelector,
+			FieldSelector: allocatedPodSelector,
 			Limit:         gpuWorkloadPageSize,
 			Continue:      cont,
 		})
@@ -56,8 +59,6 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 			annos := pod.Annotations
 			// Only ContainerStatuses: init containers run once at startup,
 			// so their restarts don't signal an ongoing serving failure.
-			// Restart/faulty visibility is bounded by the status.phase=Running
-			// selector above — a fully-down crash-looper won't appear here.
 			var restarts int
 			for _, cs := range pod.Status.ContainerStatuses {
 				restarts += int(cs.RestartCount)
@@ -76,6 +77,7 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 				GPUs:      gpus,
 				Restarts:  restarts,
 				Age:       age,
+				Status:    string(pod.Status.Phase),
 				Mode:      annos["ome.io/deploymentMode"],
 				Legacy:    isLegacyServingPod(labels),
 			}

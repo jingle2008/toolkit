@@ -82,6 +82,12 @@ func (m *Model) handleActionDone(msg actionDoneMsg) tea.Msg {
 		m.actions = slices.Delete(m.actions, i, i+1)
 		m.refreshActionRows(a)
 	}
+	// The quit confirmation exists only because actions were running;
+	// with the last one done it would ask about none, so close it (q
+	// then quits at once).
+	if len(m.actions) == 0 && m.viewMode == common.ConfirmView && m.confirm.quit {
+		m.dismissConfirm()
+	}
 	return msg.msg
 }
 

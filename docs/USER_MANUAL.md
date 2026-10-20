@@ -333,7 +333,7 @@ Toolkit organises data into 22 categories:
 | **ModelArtifact** | Model artifact versions |
 | **GPUPool** | OCI GPU instance pools; supports scaling |
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
-| **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu`), scoped by GPUNode, or by DedicatedAICluster (the pods in its namespace). Pods serving a legacy `ome.oracle.com/v1alpha1` endpoint match `/legacy`; their runtime is a legacy one, so they aren't related to a ServingRuntime |
+| **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu` or `amd.com/gpu` and scheduled to a node, including one still starting: its **Status** is `Pending`, and its GPUs count toward the node's allocation), scoped by GPUNode, or by DedicatedAICluster (the pods in its namespace). Pods serving a legacy `ome.oracle.com/v1alpha1` endpoint match `/legacy`; their runtime is a legacy one, so they aren't related to a ServingRuntime |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters; press `Enter` to see the inference services running on one |
 | **InferenceService** | OME `InferenceService` CRs — serving endpoints, scoped by DedicatedAICluster (grouped by namespace). **Type** is `dedicated` (namespace is the DAC ID) or `on-demand` (shared endpoint; namespace is the model name, no tenant). **Replicas** is the engine's `min/max`. A row whose `Ready` condition isn't `True` is reported as faulty. Legacy `ome.oracle.com/v1alpha1` endpoints (on legacy DACs) are listed too and match `/legacy` |
 | **ServingRuntime** | OME `ClusterServingRuntime` CRs — the cluster-scoped templates defining how a class of models is served (hardware constraints, container image, resource caps); a `disabled` runtime is reported as faulty. The TUI's columns are a slimmer set than `toolkit get servingruntime`'s (see [Exporting Data](#exporting-data)). `Enter` lists the inference services naming the runtime; with that scope active, `:gw` lists the pods running it, including endpoints whose runtime OME selected at deploy time (`y` opens details) |
@@ -401,7 +401,7 @@ Press `s`, then the letter of a column, to sort by it. While `s` is pending, eac
 | ServiceTenancy | `s t` Type |
 | GPUPool | `s z` Size, `s g` GPUs |
 | GPUNode | `s f` Free, `s t` Type, `s a` Age |
-| GPUWorkload | `s t` Tenant, `s g` GPUs, `s r` Restarts, `s a` Age |
+| GPUWorkload | `s t` Tenant, `s g` GPUs, `s r` Restarts, `s a` Age, `s s` Status |
 | DedicatedAICluster | `s t` Tenant, `s i` Internal, `s u` Usage, `s z` Size, `s a` Age, `s s` Status |
 | InferenceService | `s t` Tenant, `s r` Ready, `s a` Age |
 | ServingRuntime | `s g` GPUs |

@@ -97,6 +97,22 @@ func TestQuit_AsksWhileActionsRun(t *testing.T) {
 	assert.IsType(t, tea.QuitMsg{}, cmd())
 }
 
+// The quit confirmation closes when the last running action ends: it
+// would otherwise read "Quit with 0 action running". q then quits at once.
+func TestQuitConfirm_ClosesWhenActionsEnd(t *testing.T) {
+	t.Parallel()
+	m, key, id := newTrackedDrain(t)
+	m.viewMode = common.ListView
+	m.quit()
+	require.Equal(t, common.ConfirmView, m.viewMode)
+
+	m.Update(actionDoneMsg{id: id, msg: drainNodeResultMsg{key: key, env: m.environment}})
+	assert.Equal(t, common.ListView, m.viewMode, "nothing left to ask about")
+	cmd := m.quit()
+	require.NotNil(t, cmd)
+	assert.IsType(t, tea.QuitMsg{}, cmd())
+}
+
 // A progress report replaces a line not yet read, and reports after the
 // action ends are dropped.
 func TestProgressBox(t *testing.T) {

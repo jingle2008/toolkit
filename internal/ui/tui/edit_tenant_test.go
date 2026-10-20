@@ -227,6 +227,7 @@ func TestHandleTenantSavedMsg_AfterFormDismissed(t *testing.T) {
 	cmd := m.handleTenantSavedMsg(tenantSavedMsg{
 		path:  "/tmp/metadata.yaml",
 		entry: models.TenantMetadata{ID: "ocid1.tenancy.oc1..abc", Name: strp("acme"), IsInternal: boolp(true)},
+		realm: m.environment.Realm,
 	})
 	if cmd == nil {
 		t.Fatal("expected a toast cmd even when the form was already dismissed")
@@ -236,6 +237,27 @@ func TestHandleTenantSavedMsg_AfterFormDismissed(t *testing.T) {
 	}
 	if len(m.dataset.Tenants) != 1 {
 		t.Fatalf("save should have applied in memory; Tenants=%+v", m.dataset.Tenants)
+	}
+}
+
+// A save that lands after a switch to another realm is not applied to that
+// realm's tenants: tenants are per realm, and the saved one belongs to the
+// realm it was saved in (it loads from the file when that realm is shown).
+func TestHandleTenantSavedMsg_OtherRealmNotApplied(t *testing.T) {
+	t.Parallel()
+	m := makeTestModel()
+	m.environment.Realm = "oc2"
+	m.dataset = &models.Dataset{}
+	cmd := m.handleTenantSavedMsg(tenantSavedMsg{
+		path:  "/tmp/metadata.yaml",
+		entry: models.TenantMetadata{ID: "ocid1.tenancy.oc1..abc", Name: strp("acme"), IsInternal: boolp(true)},
+		realm: "oc1",
+	})
+	if cmd == nil {
+		t.Fatal("expected the saved toast")
+	}
+	if len(m.dataset.Tenants) != 0 {
+		t.Fatalf("an oc1 tenant must not join oc2's tenants: %+v", m.dataset.Tenants)
 	}
 }
 
