@@ -175,6 +175,28 @@ func TestHistory_EscRestoresParentScopeAndCursor(t *testing.T) {
 	assert.Equal(t, &domain.Scope{Category: domain.GPUNode, Name: "n3"}, m.scope)
 }
 
+// landOn places the cursor once: after esc lands on the drilled-from node,
+// a later reload that removes the selected row keeps the cursor at that
+// offset, as any reload does, instead of jumping back to the node.
+func TestHistory_LandOnUsedOnce(t *testing.T) {
+	t.Parallel()
+	m := newHistoryModel(t)
+	m.dataset.GPUNodeMap["p2"] = append(m.dataset.GPUNodeMap["p2"], models.GPUNode{Name: "n4", NodePool: "p2"})
+	m.updateCategory(domain.GPUPool)
+	drill(m, domain.GPUNode, "p2")
+	drill(m, domain.GPUWorkload, "n2")
+
+	_, _ = m.Update(keyPress("esc"))
+	require.Equal(t, []string{"n2", "n3", "n4"}, shownNames(m))
+	require.Equal(t, "n2", m.selectedRawRow()[0])
+	assert.Nil(t, m.landOn, "cleared once the cursor is placed")
+
+	m.table.SetCursor(2) // n4
+	m.dataset.GPUNodeMap["p2"] = m.dataset.GPUNodeMap["p2"][:2]
+	m.updateRows(true)
+	assert.Equal(t, "n3", m.selectedRawRow()[0], "the row that took n4's offset, not n2")
+}
+
 // esc clearing a scope in place is recorded, so [ ] don't bring it back.
 func TestHistory_EscClearingScopeIsRecorded(t *testing.T) {
 	t.Parallel()

@@ -150,6 +150,11 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 		} else {
 			m.table.GotoTop()
 		}
+		// landOn places the cursor once, when the rows it was set for
+		// first land; later reloads keep the selection as usual.
+		if len(m.rawRows) > 0 {
+			m.landOn = nil
+		}
 	} else {
 		m.table.UpdateViewport()
 	}
