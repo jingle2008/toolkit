@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"golang.org/x/sync/errgroup"
@@ -136,7 +137,12 @@ func processPodQueries[C any, V any](
 	}
 
 	if err := eg.Wait(); err != nil {
-		logger.Errorw("failed to load pods", "error", err)
+		// Navigating away cancels a load: expected, not a failure.
+		if errors.Is(err, context.Canceled) {
+			logger.Debugw("pod load canceled", "error", err)
+		} else {
+			logger.Errorw("failed to load pods", "error", err)
+		}
 		return err
 	}
 	return nil

@@ -369,6 +369,17 @@ func TestApplyRows_ClampsWhenSelectedRowDisappears(t *testing.T) {
 	if c < 0 || c >= len(m.table.Rows()) {
 		t.Fatalf("cursor out of range after reload: %d (rows=%d)", c, len(m.table.Rows()))
 	}
+	// It stays at the gone row's offset, on the row that took its place.
+	if got := m.selectedRawRow(); len(got) == 0 || got[0] != "bm3" {
+		t.Fatalf("cursor on %v, want the next row bm3", got)
+	}
+
+	m.table.SetCursor(1) // bm3, the last row
+	m.dataset.BaseModels = []models.BaseModel{{Name: "bm1"}}
+	m.refreshDisplay()
+	if got := m.selectedRawRow(); len(got) == 0 || got[0] != "bm1" {
+		t.Fatalf("cursor on %v, want the new last row bm1", got)
+	}
 }
 
 // For scoped categories (e.g. ImportedModel), the Name cell alone is not a

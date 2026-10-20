@@ -54,10 +54,16 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	}
 	m.loadFailed = true
 	m.endTask(false)
-	if m.canRefresh() {
-		return m.showErrorWithNext(msg.Error(), keys.Refresh.Help().Key+" retry")
+	// An error toast outlives an environment switch, so one from an
+	// environment-scoped load names where it failed.
+	text := msg.Error()
+	if m.category.IsEnvironmentScoped() {
+		text = m.environment.KubeContext() + ": " + text
 	}
-	return m.showToast(msg.Error(), toastError)
+	if m.canRefresh() {
+		return m.showErrorWithNext(text, keys.Refresh.Help().Key+" retry")
+	}
+	return m.showToast(text, toastError)
 }
 
 // canRefresh reports whether r (refresh) is bound in the current category.

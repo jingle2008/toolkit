@@ -155,6 +155,12 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 		if idx < 0 {
 			idx = m.findContextIndex(rows)
 		}
+		// The selected row is gone (deleted, or filtered out by the
+		// reload): stay at its offset, on the row that took its place,
+		// rather than jumping to the top.
+		if idx < 0 && prevKey != nil && prevIdx >= 0 && len(m.rawRows) > 0 {
+			idx = min(prevIdx, len(m.rawRows)-1)
+		}
 		if idx >= 0 {
 			// SetCursor moves the cursor and render window but leaves the
 			// viewport's scroll offset untouched, so a target beyond the
