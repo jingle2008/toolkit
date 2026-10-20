@@ -43,11 +43,29 @@ func TestEmptyMessage_LoadFailedUntilNextLoad(t *testing.T) {
 	t.Parallel()
 	m := newGoldenModel(t, 120, 40)
 	showCategory(t, m, domain.GPUNode)
-	m.handleErrMsg(errMsg{err: assert.AnError})
+	m.handleErrMsg(errMsg{err: assert.AnError, Cat: domain.GPUNode})
 	assert.Contains(t, m.emptyMessage(), "Couldn't load GPUNode")
 
 	m.updateCategoryCore(domain.GPUNode) // r
 	assert.False(t, m.loadFailed)
+}
+
+// Only a failure of the list's own load marks it failed: the tenants load
+// only resolves a tenant-owned list's owners, and its rows did load. For
+// an override list the tenants load is its own data.
+func TestHandleErrMsg_OnlyOwnLoadMarksFailed(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 40)
+	m.category = domain.ImportedModel
+	m.handleErrMsg(errMsg{err: assert.AnError, Cat: domain.Tenant})
+	assert.False(t, m.loadFailed, "the models loaded; only their owners didn't")
+	m.handleErrMsg(errMsg{err: assert.AnError, Cat: domain.ImportedModel})
+	assert.True(t, m.loadFailed)
+
+	m.loadFailed = false
+	m.category = domain.LimitTenancyOverride
+	m.handleErrMsg(errMsg{err: assert.AnError, Cat: domain.Tenant})
+	assert.True(t, m.loadFailed, "the tenants load is the overrides' own")
 }
 
 func TestEmptyMessage_RealmWideCategoryNamesNoContext(t *testing.T) {

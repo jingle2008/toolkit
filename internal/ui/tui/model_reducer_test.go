@@ -533,6 +533,25 @@ func TestHandleDataMsg_KeepsEarlierClusterData(t *testing.T) {
 // TestHandleTenancyOverridesLoaded_ResolvesEarlierClusterRows covers
 // cluster rows that loaded before the tenants (e.g. after an environment
 // switch while viewing DACs): when the tenants arrive, those rows must
+
+// On a tenant-owned category the tenants load only resolves owners: when
+// it lands after the category's own load failed, the list still says the
+// load failed rather than that there are no rows. On an override category
+// the group is the category's data, so it clears the failure.
+func TestHandleTenancyOverridesLoaded_KeepsOwnedLoadFailure(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gens.msg = 1
+	m.category = domain.DedicatedAICluster
+	m.loadFailed = true
+	m.handleTenancyOverridesLoaded(models.TenancyOverrideGroup{Tenants: []models.Tenant{{Name: "acme"}}}, 1)
+	assert.True(t, m.loadFailed, "the DACs still failed to load")
+
+	m.category = domain.LimitTenancyOverride
+	m.handleTenancyOverridesLoaded(models.TenancyOverrideGroup{Tenants: []models.Tenant{{Name: "acme"}}}, 1)
+	assert.False(t, m.loadFailed, "the overrides did load")
+}
+
 // resolve, or drilling in from the tenant would miss them.
 func TestHandleTenancyOverridesLoaded_ResolvesEarlierClusterRows(t *testing.T) {
 	t.Parallel()

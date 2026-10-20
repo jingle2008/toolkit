@@ -8,6 +8,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/jingle2008/toolkit/internal/domain"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
@@ -52,7 +53,9 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	if m.logger != nil {
 		m.logger.Errorw("data load failed", "category", m.category, "error", err)
 	}
-	m.loadFailed = true
+	if m.ownLoadFailed(msg.Cat) {
+		m.loadFailed = true
+	}
 	m.endTask(false)
 	// An error toast outlives an environment switch, so one from an
 	// environment-scoped load names where it failed.
@@ -64,6 +67,24 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 		return m.showErrorWithNext(text, keys.Refresh.Help().Key+" retry")
 	}
 	return m.showToast(text, toastError)
+}
+
+// ownLoadFailed reports whether a failed load of cat is the on-screen
+// category's own (its rows), so the empty list should say the load failed.
+// The tenants load (Tenant) is an override category's own data, but for a
+// tenant-owned category it only resolves owners: its rows did load. The
+// foundational dataset load (CategoryUnknown) holds the repo categories.
+func (m *Model) ownLoadFailed(cat domain.Category) bool {
+	switch cat {
+	case m.category:
+		return true
+	case domain.CategoryUnknown:
+		return !m.category.NeedsKubeConfig()
+	case domain.Tenant:
+		_, override := tenancyOverrideCategories[m.category]
+		return override
+	}
+	return false
 }
 
 // canRefresh reports whether r (refresh) is bound in the current category.

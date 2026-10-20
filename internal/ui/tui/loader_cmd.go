@@ -22,7 +22,7 @@ func loadBaseModelsCmd(ctx context.Context, ld loader.Composite, kubeCfg string,
 	return func() tea.Msg {
 		items, err := ld.LoadBaseModels(ctx, kubeCfg, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.BaseModel, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.BaseModel, err), Gen: gen, Cat: domain.BaseModel}
 		}
 		return baseModelsLoadedMsg{Items: items, Gen: gen}
 	}
@@ -32,7 +32,7 @@ func loadServingRuntimesCmd(ctx context.Context, ld loader.Composite, kubeCfg st
 	return func() tea.Msg {
 		items, err := ld.LoadServingRuntimes(ctx, kubeCfg, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ServingRuntime, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ServingRuntime, err), Gen: gen, Cat: domain.ServingRuntime}
 		}
 		return servingRuntimesLoadedMsg{Items: items, Gen: gen}
 	}
@@ -42,7 +42,7 @@ func loadImportedModelsCmd(ctx context.Context, ld loader.Composite, kubeCfg str
 	return func() tea.Msg {
 		grouped, err := ld.LoadImportedModels(ctx, kubeCfg, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ImportedModel, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ImportedModel, err), Gen: gen, Cat: domain.ImportedModel}
 		}
 		return importedModelsLoadedMsg{Items: grouped, Gen: gen}
 	}
@@ -60,7 +60,7 @@ func loadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, 
 					"category", domain.GPUPool, "error", partial)
 				return gpuPoolsLoadedMsg{Items: items, Gen: gen}
 			}
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUPool, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUPool, err), Gen: gen, Cat: domain.GPUPool}
 		}
 		return gpuPoolsLoadedMsg{Items: items, Gen: gen}
 	}
@@ -70,7 +70,7 @@ func loadGPUNodesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, e
 	return func() tea.Msg {
 		items, err := ld.LoadGPUNodesByPool(ctx, kubeCfg, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUNode, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUNode, err), Gen: gen, Cat: domain.GPUNode}
 		}
 		return gpuNodesLoadedMsg{Items: items, Gen: gen}
 	}
@@ -80,7 +80,7 @@ func loadGPUWorkloadsCmd(ctx context.Context, ld loader.Composite, kubeCfg strin
 	return func() tea.Msg {
 		items, err := ld.LoadGPUWorkloadsByNode(ctx, kubeCfg, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUWorkload, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUWorkload, err), Gen: gen, Cat: domain.GPUWorkload}
 		}
 		return gpuWorkloadsLoadedMsg{Items: items, Gen: gen}
 	}
@@ -90,7 +90,7 @@ func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Composite, kubeCf
 	return func() tea.Msg {
 		items, err := ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.DedicatedAICluster, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.DedicatedAICluster, err), Gen: gen, Cat: domain.DedicatedAICluster}
 		}
 		return dedicatedAIClustersLoadedMsg{Items: items, Gen: gen}
 	}
@@ -100,7 +100,7 @@ func loadInferenceServicesCmd(ctx context.Context, ld loader.Composite, kubeCfg 
 	return func() tea.Msg {
 		items, err := ld.LoadInferenceServices(ctx, kubeCfg, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.InferenceService, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.InferenceService, err), Gen: gen, Cat: domain.InferenceService}
 		}
 		return inferenceServicesLoadedMsg{Items: items, Gen: gen}
 	}
@@ -110,7 +110,7 @@ func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Composite, repoP
 	return func() tea.Msg {
 		group, err := ld.LoadTenancyOverrideGroup(ctx, repoPath, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.Tenant, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.Tenant, err), Gen: gen, Cat: domain.Tenant}
 		}
 		return tenancyOverridesLoadedMsg{Group: group, Gen: gen}
 	}
@@ -120,7 +120,7 @@ func loadLimitRegionalOverridesCmd(ctx context.Context, ld loader.Composite, rep
 	return func() tea.Msg {
 		items, err := ld.LoadLimitRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.LimitRegionalOverride, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.LimitRegionalOverride, err), Gen: gen, Cat: domain.LimitRegionalOverride}
 		}
 		return limitRegionalOverridesLoadedMsg{Items: items, Gen: gen}
 	}
@@ -130,7 +130,7 @@ func loadConsolePropertyRegionalOverridesCmd(ctx context.Context, ld loader.Comp
 	return func() tea.Msg {
 		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ConsolePropertyRegionalOverride, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ConsolePropertyRegionalOverride, err), Gen: gen, Cat: domain.ConsolePropertyRegionalOverride}
 		}
 		return consolePropertyRegionalOverridesLoadedMsg{Items: items, Gen: gen}
 	}
@@ -140,7 +140,7 @@ func loadPropertyRegionalOverridesCmd(ctx context.Context, ld loader.Composite, 
 	return func() tea.Msg {
 		items, err := ld.LoadPropertyRegionalOverrides(ctx, repoPath, env)
 		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.PropertyRegionalOverride, err), Gen: gen}
+			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.PropertyRegionalOverride, err), Gen: gen, Cat: domain.PropertyRegionalOverride}
 		}
 		return propertyRegionalOverridesLoadedMsg{Items: items, Gen: gen}
 	}
