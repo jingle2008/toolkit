@@ -17,6 +17,9 @@ import (
 type errMsg struct {
 	err error
 	Gen int
+	// Cat is the category whose load failed; CategoryUnknown for the
+	// foundational dataset load.
+	Cat domain.Category
 }
 
 // Error implements error so errMsg can carry the failure to the toast and so
