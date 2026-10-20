@@ -271,7 +271,7 @@ func TestWatchGPUNodes_AppliesSelectors(t *testing.T) {
 		wantLabels[s] = true
 	}
 	for _, r := range podRs {
-		assert.Equal(t, runningPodSelector, r.fields, "pod watch must be scoped to Running pods")
+		assert.Equal(t, allocatedPodSelector, r.fields, "pod watch must be scoped to pods holding node resources")
 		assert.Truef(t, wantLabels[r.labels], "pod watch label selector %q is not one of the bounded gpuPodSelectors", r.labels)
 	}
 }

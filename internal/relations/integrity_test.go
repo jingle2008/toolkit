@@ -125,6 +125,19 @@ func TestCheckIntegrity_DedicatedOutsideDACNamespace(t *testing.T) {
 	assert.NotContains(t, isvcDAC.Dangling, Dangling{Row: "tenant-ns/isvc-5", Missing: "tenant-ns"})
 }
 
+// An orphan (no tenancy-id label) is reported as missing its label, not
+// as a tenancy named UNKNOWN_TENANCY to add to the metadata.
+func TestCheckIntegrity_TenancyOrphan(t *testing.T) {
+	t.Parallel()
+	ds := integrityDataset()
+	ds.ImportedModelMap[models.UnknownTenancy] = []models.ImportedModel{
+		{BaseModel: models.BaseModel{Name: "orphan"}, Namespace: "default", TenantID: models.UnknownTenancy},
+	}
+	checks := CheckIntegrity(ds)
+	tc := checks[len(checks)-1]
+	assert.Contains(t, tc.Dangling, Dangling{Row: "ImportedModel default/orphan", Missing: MissingTenancyLabel})
+}
+
 func TestCheckIntegrity_Tenancy(t *testing.T) {
 	t.Parallel()
 	checks := CheckIntegrity(integrityDataset())

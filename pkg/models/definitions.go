@@ -1,5 +1,7 @@
 package models
 
+import "fmt"
+
 // Filterable represents an item that can be filtered by fields.
 type Filterable interface {
 	FilterableFields() []string
@@ -8,6 +10,14 @@ type Filterable interface {
 // NamedItem represents an item with a name.
 type NamedItem interface {
 	GetName() string
+}
+
+// QualifiedItem is a row of a flat category whose name alone can repeat
+// (service tenancies share names across realms). QualifiedName is
+// <qualifier>/<name>, which names one row where the name doesn't.
+type QualifiedItem interface {
+	NamedItem
+	QualifiedName() string
 }
 
 // NamedFilterable represents an item that is both named and filterable.
@@ -46,6 +56,20 @@ type RealmedID interface {
 // is already the full identifier).
 type RealmedTenancyID interface {
 	TenancyOCID(realm string) string
+}
+
+// UnknownTenancy is the tenancy-id of a DAC or imported model whose CR
+// has no tenancy-id label: an orphan, not a tenancy.
+const UnknownTenancy = "UNKNOWN_TENANCY"
+
+// tenancyOCID is the tenancy OCID for a stored tenancy-id suffix, or ""
+// when there is none: no label (an on-demand or non-serving pod), or the
+// orphan placeholder, which no real OCID ends in.
+func tenancyOCID(realm, tenantID string) string {
+	if tenantID == "" || tenantID == UnknownTenancy {
+		return ""
+	}
+	return fmt.Sprintf("ocid1.tenancy.%s..%s", realm, tenantID)
 }
 
 // DefinitionOverride represents a definition override with regions and value.

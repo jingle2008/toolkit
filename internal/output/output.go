@@ -184,11 +184,16 @@ func Flatten[T any](grouped map[string][]T) []T {
 	return out
 }
 
-// WriteDelimited emits headers + rows as delimiter-separated values
-// using encoding/csv, which handles quoting for fields containing the
-// separator, double quotes, or newlines. Pass ',' for CSV or '\t' for
-// TSV. opts.NoHeaders suppresses the header row.
+// WriteDelimited emits headers + rows as delimiter-separated values.
+// Pass ',' for CSV or '\t' for TSV. CSV goes through encoding/csv, which
+// quotes fields containing the separator, double quotes, or newlines.
+// TSV is never quoted, so `cut -f` and friends read it as is: a JSON
+// value's quotes stay single, and a tab or line break inside a cell
+// becomes a space. opts.NoHeaders suppresses the header row.
 func WriteDelimited(w io.Writer, headers []string, rows [][]string, opts Options, sep rune) error {
+	if sep == '\t' {
+		return writeLines(w, headers, rows, opts)
+	}
 	cw := csv.NewWriter(w)
 	cw.Comma = sep
 	if !opts.NoHeaders && len(headers) > 0 {
@@ -204,18 +209,40 @@ func WriteDelimited(w io.Writer, headers []string, rows [][]string, opts Options
 }
 
 // WriteTable emits a tab-aligned table. opts.NoHeaders suppresses the
-// header row even when headers is non-empty.
+// header row even when headers is non-empty. A tab or line break inside
+// a cell becomes a space, so it can't break the row or its alignment.
 func WriteTable(w io.Writer, headers []string, rows [][]string, opts Options) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	if err := writeLines(tw, headers, rows, opts); err != nil {
+		return err
+	}
+	return tw.Flush()
+}
+
+// cellBreaks turns the characters that would end a TSV field or line
+// into spaces.
+var cellBreaks = strings.NewReplacer("\r\n", " ", "\t", " ", "\n", " ", "\r", " ")
+
+// writeLines writes headers (unless opts.NoHeaders) and rows as
+// tab-separated lines, flattening each cell with cellBreaks.
+func writeLines(w io.Writer, headers []string, rows [][]string, opts Options) error {
+	line := func(cells []string) error {
+		flat := make([]string, len(cells))
+		for i, c := range cells {
+			flat[i] = cellBreaks.Replace(c)
+		}
+		_, err := fmt.Fprintln(w, strings.Join(flat, "\t"))
+		return err
+	}
 	if !opts.NoHeaders && len(headers) > 0 {
-		if _, err := fmt.Fprintln(tw, strings.Join(headers, "\t")); err != nil {
+		if err := line(headers); err != nil {
 			return err
 		}
 	}
 	for _, row := range rows {
-		if _, err := fmt.Fprintln(tw, strings.Join(row, "\t")); err != nil {
+		if err := line(row); err != nil {
 			return err
 		}
 	}
-	return tw.Flush()
+	return nil
 }

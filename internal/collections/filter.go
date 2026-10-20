@@ -97,13 +97,15 @@ func FilterMap[T models.NamedFilterable](
 // FilterMapFunc filters every group of g: an item is kept when keep
 // (if non-nil) accepts its (group key, item) pair, the filter matches
 // either the group key or the item's filterable fields, and pred (if
-// non-nil) accepts it. Groups left empty are dropped.
+// non-nil) accepts it. Groups left empty are dropped. Both matches
+// ignore case.
 func FilterMapFunc[T models.NamedFilterable](
 	g map[string][]T,
 	keep func(key string, item T) bool,
 	filter string,
 	pred func(T) bool,
 ) map[string][]T {
+	filter = strings.ToLower(filter)
 	results := make(map[string][]T)
 	for key, value := range g {
 		matchKey := strings.Contains(strings.ToLower(key), filter)

@@ -106,8 +106,8 @@ func getUniqeKey(logger logging.Logger, m map[string]struct{}, namespace string)
 	return keys[0]
 }
 
-// runsOnGPU reports whether any of the pod's containers requests an
-// nvidia.com/gpu resource, reusing the same accounting as
+// runsOnGPU reports whether any of the pod's containers requests a GPU
+// (nvidia.com/gpu or amd.com/gpu), reusing the same accounting as
 // getGPUAllocations (calculatePodGPUs). Pods that request no GPU are
 // excluded from replica stats so TotalReplicas reflects only
 // GPU-consuming pods.

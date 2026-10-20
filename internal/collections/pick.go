@@ -29,11 +29,13 @@ func itemName(it any) (string, bool) {
 
 // PickByName returns the one item of a flat category named name, exactly
 // (case-sensitive). what names the rows in errors. It is how `toolkit get
-// <category> <name>` and MCP's get_item find a row, so both agree.
+// <category> <name>` and MCP's get_item find a row, so both agree. Rows
+// that can share a name (models.QualifiedItem) also answer to their
+// qualified name, and an ambiguous name lists each of those.
 func PickByName[T any](items []T, name, what string) (T, error) {
 	var found []T
 	for _, it := range items {
-		if n, ok := itemName(it); ok && n == name {
+		if n, ok := itemName(it); ok && (n == name || qualifiedName(it) == name) {
 			found = append(found, it)
 		}
 	}
@@ -43,9 +45,27 @@ func PickByName[T any](items []T, name, what string) (T, error) {
 		return zero, &NoSuchNameError{What: what, Name: name}
 	case 1:
 		return found[0], nil
-	default:
+	}
+	ids := make([]string, 0, len(found))
+	for _, it := range found {
+		if q := qualifiedName(it); q != "" {
+			ids = append(ids, q)
+		}
+	}
+	if len(ids) < len(found) {
 		return zero, fmt.Errorf("%d %s rows are named %q", len(found), what, name)
 	}
+	slices.Sort(ids)
+	return zero, fmt.Errorf("%d %s rows are named %q: %s; name one as listed",
+		len(found), what, name, strings.Join(ids, ", "))
+}
+
+// qualifiedName is a models.QualifiedItem's qualified name, or "".
+func qualifiedName(it any) string {
+	if q, ok := it.(models.QualifiedItem); ok {
+		return q.QualifiedName()
+	}
+	return ""
 }
 
 // PickByNameGrouped is PickByName for a grouped category, returning the

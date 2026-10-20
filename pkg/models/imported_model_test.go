@@ -38,9 +38,10 @@ func TestImportedModel_TenancyOCID(t *testing.T) {
 	m := ImportedModel{TenantID: "t123"}
 	assert.Equal(t, "ocid1.tenancy.oc1..t123", m.TenancyOCID("oc1"))
 
-	// Orphans keep the placeholder suffix rather than producing an empty tail.
-	orphan := ImportedModel{TenantID: "UNKNOWN_TENANCY"}
-	assert.Equal(t, "ocid1.tenancy.oc1..UNKNOWN_TENANCY", orphan.TenancyOCID("oc1"))
+	// An orphan has no tenancy: no OCID ends in the placeholder, and
+	// copying or exporting one would hand out an OCID that isn't real.
+	orphan := ImportedModel{TenantID: UnknownTenancy}
+	assert.Empty(t, orphan.TenancyOCID("oc1"))
 }
 
 func TestImportedModel_OCID(t *testing.T) {

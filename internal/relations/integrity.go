@@ -344,9 +344,15 @@ func unnamedRuntimeNote(ds *models.Dataset) string {
 	return fmt.Sprintf("%d endpoint(s) name no runtime; OME selects one at deploy time", n)
 }
 
+// MissingTenancyLabel is the Missing of a tenancy-resolution finding for
+// an orphan: a DAC or imported model whose CR has no tenancy-id label,
+// so there is no tenancy to add to the metadata, only a label to set.
+const MissingTenancyLabel = "its tenancy-id label"
+
 // checkTenancy reports tenant-owned rows whose tenancy-id resolved to no
 // tenant: a gap in the tenant list (tenancy overrides plus metadata),
-// so WARN. Missing is the tenancy-id to add.
+// so WARN. Missing is the tenancy-id to add, or MissingTenancyLabel for
+// an orphan.
 func checkTenancy(ds *models.Dataset) Check {
 	c := Check{Child: domain.CategoryUnknown, Parent: domain.Tenant, Name: "tenancy resolution", Severity: SeverityWarn}
 	visit := func(row, tenancyID string, owner *models.Tenant) {
@@ -354,7 +360,11 @@ func checkTenancy(ds *models.Dataset) Check {
 			return
 		}
 		c.Checked++
-		if owner == nil {
+		switch {
+		case owner != nil:
+		case tenancyID == models.UnknownTenancy:
+			c.Dangling = append(c.Dangling, Dangling{Row: row, Missing: MissingTenancyLabel})
+		default:
 			c.Dangling = append(c.Dangling, Dangling{Row: row, Missing: tenancyID})
 		}
 	}

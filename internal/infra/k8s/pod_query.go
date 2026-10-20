@@ -17,14 +17,19 @@ import (
 
 const (
 	runningPodSelector = "status.phase=Running"
-	gpuNodeSelector    = "nvidia.com/gpu.present=true"
-	reservationLabel   = "reservation"
-	servingLabelV1     = "ome.oracle.com/inferenceservice"
-	servingLabelV2     = "ome.io/inferenceservice"
-	trainingLabelV2    = "ome.io/trainingjob"
-	appLabel           = "app"
-	baseModelLabelV1   = "base-model-name"
-	baseModelLabelV2   = "ome.io/base-model-name"
+	// allocatedPodSelector is every pod that holds its node's resources:
+	// the scheduler charges a pod to a node from binding until it
+	// terminates, so a scheduled Pending pod (pulling its image, waiting
+	// on volumes) already takes its GPUs.
+	allocatedPodSelector = "status.phase!=Failed,status.phase!=Succeeded"
+	gpuNodeSelector      = "nvidia.com/gpu.present=true"
+	reservationLabel     = "reservation"
+	servingLabelV1       = "ome.oracle.com/inferenceservice"
+	servingLabelV2       = "ome.io/inferenceservice"
+	trainingLabelV2      = "ome.io/trainingjob"
+	appLabel             = "app"
+	baseModelLabelV1     = "base-model-name"
+	baseModelLabelV2     = "ome.io/base-model-name"
 )
 
 var gpuPodSelectors = []string{
@@ -50,6 +55,9 @@ func getGPUAllocations(
 
 	usageMap := make(map[string]int64)
 	for _, pod := range pods.Items {
+		if pod.Spec.NodeName == "" {
+			continue // not scheduled yet: holds no node's GPUs
+		}
 		usageMap[pod.Spec.NodeName] += calculatePodGPUs(&pod)
 	}
 
@@ -59,9 +67,7 @@ func getGPUAllocations(
 func calculatePodGPUs(pod *corev1.Pod) int64 {
 	var total int64
 	for _, container := range pod.Spec.Containers {
-		if val, ok := container.Resources.Requests[gpuProperty]; ok {
-			total += val.Value()
-		}
+		total += gpuCount(container.Resources.Requests)
 	}
 	return total
 }

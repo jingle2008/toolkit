@@ -92,8 +92,11 @@ func TestGetNodeIssues(t *testing.T) {
 		{Type: corev1.NodeDiskPressure, Status: corev1.ConditionFalse, Message: "disk ok"},
 		{Type: corev1.NodePIDPressure, Status: corev1.ConditionTrue, Message: "pid pressure!"},
 		{Type: corev1.NodeNetworkUnavailable, Status: corev1.ConditionTrue, Message: "network unavailable!"},
-		{Type: nodeCondGPUBus, Status: corev1.ConditionTrue, Message: "gpu bus error!"},
-		{Type: nodeCondGPUCount, Status: corev1.ConditionTrue, Message: "gpu count mismatch!"},
+		{Type: "GpuBus", Status: corev1.ConditionTrue, Message: "gpu bus error!"},
+		{Type: "GpuCount", Status: corev1.ConditionTrue, Message: "gpu count mismatch!"},
+		{Type: "GpuEcc", Status: corev1.ConditionUnknown, Message: "not available on this shape"},
+		{Type: "RdmaLink", Status: corev1.ConditionTrue, Message: "RDMA Link check failed"},
+		{Type: "KernelDeadlock", Status: corev1.ConditionTrue},
 		{Type: corev1.NodeReady, Status: corev1.ConditionTrue, Message: "node is ready"},
 	}
 	want := []string{
@@ -102,6 +105,8 @@ func TestGetNodeIssues(t *testing.T) {
 		"network unavailable!",
 		"gpu bus error!",
 		"gpu count mismatch!",
+		"RDMA Link check failed",
+		"KernelDeadlock",
 	}
 	got := getNodeIssues(conds)
 	assert.ElementsMatch(t, want, got)

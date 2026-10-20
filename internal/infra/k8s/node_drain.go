@@ -588,13 +588,16 @@ func (d *drainer) noteEvictionWarnings(ctx context.Context, warnings string, pod
 }
 
 // fail records the drain as failed. With rollback set, a node the drain
-// cordoned is uncordoned in the same patch.
+// cordoned is uncordoned in the same patch, and the record stops claiming
+// a cordon: one found later is an operator's, which the next drain's
+// rollback must keep.
 func (d *drainer) fail(ctx context.Context, st DrainState, msg string, rollback bool) (DrainState, error) {
 	next := st
 	next.Phase, next.PhaseStartedAt = DrainFailed, d.now()
 	var cordon *bool
 	if rollback && st.CordonedByDrain {
 		cordon = new(false)
+		next.CordonedByDrain = false
 		next.Message = msg + " (node uncordoned)"
 	} else {
 		next.Message = msg + " (node left cordoned)"

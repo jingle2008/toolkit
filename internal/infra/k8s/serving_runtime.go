@@ -110,10 +110,10 @@ func runtimeResources(spec, engine map[string]any) resourceSet {
 		image:      image,
 		cpuLimit:   nestedQuantity(runner, "resources", "limits", "cpu"),
 		memLimit:   nestedQuantity(runner, "resources", "limits", "memory"),
-		gpuLimit:   nestedQuantity(runner, "resources", "limits", "nvidia.com/gpu"),
+		gpuLimit:   nestedGPU(runner, "limits"),
 		cpuRequest: nestedQuantity(runner, "resources", "requests", "cpu"),
 		memRequest: nestedQuantity(runner, "resources", "requests", "memory"),
-		gpuRequest: nestedQuantity(runner, "resources", "requests", "nvidia.com/gpu"),
+		gpuRequest: nestedGPU(runner, "requests"),
 		nodes:      1,
 	}
 }
@@ -166,21 +166,26 @@ func sumLeaderWorker(leader, worker map[string]any) resourceSet {
 		out.image, _, _ = unstructured.NestedString(workerRunner, "image")
 	}
 
+	resource := func(key string) func(map[string]any, string) string {
+		return func(runner map[string]any, kind string) string {
+			return nestedQuantity(runner, "resources", kind, key)
+		}
+	}
 	for _, field := range []struct {
 		kind string
-		key  string
+		get  func(runner map[string]any, kind string) string
 		dst  *string
 	}{
-		{"limits", "cpu", &out.cpuLimit},
-		{"limits", "memory", &out.memLimit},
-		{"limits", "nvidia.com/gpu", &out.gpuLimit},
-		{"requests", "cpu", &out.cpuRequest},
-		{"requests", "memory", &out.memRequest},
-		{"requests", "nvidia.com/gpu", &out.gpuRequest},
+		{"limits", resource("cpu"), &out.cpuLimit},
+		{"limits", resource("memory"), &out.memLimit},
+		{"limits", nestedGPU, &out.gpuLimit},
+		{"requests", resource("cpu"), &out.cpuRequest},
+		{"requests", resource("memory"), &out.memRequest},
+		{"requests", nestedGPU, &out.gpuRequest},
 	} {
 		*field.dst = sumQuantities(
-			nestedQuantity(leaderRunner, "resources", field.kind, field.key), leaders,
-			nestedQuantity(workerRunner, "resources", field.kind, field.key), workers,
+			field.get(leaderRunner, field.kind), leaders,
+			field.get(workerRunner, field.kind), workers,
 		)
 	}
 	return out
@@ -366,6 +371,18 @@ func nestedQuantity(root map[string]any, fields ...string) string {
 	default:
 		return ""
 	}
+}
+
+// nestedGPU is a container's GPU quantity under resources.<kind>
+// (limits or requests): its nvidia.com/gpu, or else its amd.com/gpu, as
+// the MI300X runtimes declare. "" when it declares neither.
+func nestedGPU(runner map[string]any, kind string) string {
+	for _, name := range gpuResources {
+		if q := nestedQuantity(runner, "resources", kind, string(name)); q != "" {
+			return q
+		}
+	}
+	return ""
 }
 
 // nestedCount reads an integer field that may have decoded as either

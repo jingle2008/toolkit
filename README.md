@@ -175,7 +175,7 @@ toolkit get dac <dac-name>
 toolkit get inferenceservice <namespace>/<name> -o json
 ```
 
-With a name, `get` prints just that row: the name must match the row's first column exactly, or be `<group>/<name>` when rows in different groups share it (an override's name across tenants, an endpoint's across namespaces). No match, or several, exits non-zero and says which; `--filter` is the loose match.
+With a name, `get` prints just that row: the name must match the row's first column exactly, or be `<group>/<name>` when rows in different groups share it (an override's name across tenants, an endpoint's across namespaces); a service tenancy's name repeats across realms, so it takes `<realm>/<name>`. No match, or several, exits non-zero and says which; `--filter` is the loose match.
 
 `--related-to <category>/<name>` keeps the rows related to that parent row, using the relations the TUI drills through: a DAC's pods, a model's or runtime's endpoints, a tenant's DACs, pods and endpoints, a definition's overrides, and so on. The name must match the parent row's first column exactly (case-sensitive). The flag combines with `--filter`, and an unrelated category is rejected with the valid parents listed. Shell completion offers the valid `<category>/` prefixes.
 

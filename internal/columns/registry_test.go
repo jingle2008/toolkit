@@ -184,6 +184,32 @@ func TestRenderTableForExport_Grouped(t *testing.T) {
 	}
 }
 
+// An orphan DAC (no tenancy-id label) exports its UNKNOWN_TENANCY key as
+// is, and an unlabelled GPU pod an empty tenant, rather than either as a
+// tenancy OCID that doesn't exist.
+func TestRenderTableForExport_NoTenancy(t *testing.T) {
+	t.Parallel()
+	dacs := map[string][]models.DedicatedAICluster{
+		models.UnknownTenancy: {{Name: "amaaaaaadac", TenantID: models.UnknownTenancy}},
+	}
+	_, rows, err := RenderTableForExport(domain.DedicatedAICluster, dacs, "oc1", "us-chicago-1", []string{"tenant"})
+	if err != nil {
+		t.Fatalf("RenderTableForExport: %v", err)
+	}
+	if got := rows[0][0]; got != models.UnknownTenancy {
+		t.Errorf("orphan DAC tenant = %q, want %q", got, models.UnknownTenancy)
+	}
+
+	pods := map[string][]models.GPUWorkload{"10.0.0.1": {{Name: "p"}}}
+	_, rows, err = RenderTableForExport(domain.GPUWorkload, pods, "oc1", "us-chicago-1", []string{"tenant"})
+	if err != nil {
+		t.Fatalf("RenderTableForExport: %v", err)
+	}
+	if got := rows[0][0]; got != "" {
+		t.Errorf("unlabelled pod tenant = %q, want empty", got)
+	}
+}
+
 // TestRenderTableForExport_Unregistered covers the registry-miss
 // error path on the export branch (separate code from RenderTable's
 // equivalent, hence its own assertion).

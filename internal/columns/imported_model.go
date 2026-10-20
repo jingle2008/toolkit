@@ -1,6 +1,7 @@
 package columns
 
 import (
+	"cmp"
 	"strconv"
 	"strings"
 
@@ -28,8 +29,9 @@ var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedCo
 	{
 		Title: "Tenant", Key: "tenant", Ratio: 0.17, TruncateMiddle: true,
 		Render: func(k string, _ models.ImportedModel) string { return k },
-		RenderForExport: func(realm, _ string, _ string, m models.ImportedModel) string {
-			return m.TenancyOCID(realm)
+		// An orphan has no tenancy OCID; its key, UNKNOWN_TENANCY, stays.
+		RenderForExport: func(realm, _ string, k string, m models.ImportedModel) string {
+			return cmp.Or(m.TenancyOCID(realm), k)
 		},
 	},
 	{
