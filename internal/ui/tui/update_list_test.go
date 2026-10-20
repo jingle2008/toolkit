@@ -124,7 +124,7 @@ func TestHandleNextCategory(t *testing.T) {
 		textInput:      &ti,
 	}
 	// Seed initial history as in NewModel
-	m.history = []domain.Category{m.category}
+	m.history = histOf(m.category)
 	m.historyIdx = 0
 	cmd := m.handleNextCategory()
 	assert.NotNil(t, cmd)
@@ -144,7 +144,7 @@ func TestHandlePrevCategory(t *testing.T) {
 		textInput:      &ti,
 	}
 	// Seed initial history as in NewModel
-	m.history = []domain.Category{m.category}
+	m.history = histOf(m.category)
 	m.historyIdx = 0
 	cmd := m.handlePrevCategory()
 	assert.NotNil(t, cmd)
@@ -155,24 +155,24 @@ func TestHandlePrevCategory(t *testing.T) {
 func TestSeedHistory(t *testing.T) {
 	t.Parallel()
 	m := &Model{
-		history:    []domain.Category{},
+		history:    []historyEntry{},
 		historyIdx: -1,
 		category:   domain.Tenant,
 	}
 	// Simulate initial seeding as in NewModel
 	if len(m.history) == 0 {
-		m.history = []domain.Category{m.category}
+		m.history = histOf(m.category)
 		m.historyIdx = 0
 	}
 	assert.Len(t, m.history, 1)
 	assert.Equal(t, 0, m.historyIdx)
-	assert.Equal(t, domain.Tenant, m.history[0])
+	assert.Equal(t, domain.Tenant, m.history[0].category)
 }
 
 func TestHistoryCap20(t *testing.T) {
 	t.Parallel()
 	m := &Model{
-		history:    []domain.Category{},
+		history:    []historyEntry{},
 		historyIdx: -1,
 	}
 	// Add 25 categories, should cap at 20
@@ -181,15 +181,15 @@ func TestHistoryCap20(t *testing.T) {
 	}
 	assert.Len(t, m.history, 20)
 	assert.Equal(t, 19, m.historyIdx)
-	assert.Equal(t, domain.Category(5), m.history[0])
-	assert.Equal(t, domain.Category(24), m.history[19])
+	assert.Equal(t, domain.Category(5), m.history[0].category)
+	assert.Equal(t, domain.Category(24), m.history[19].category)
 }
 
 func makeModelWithHistory(hist []domain.Category, idx int) *Model {
 	tbl := table.New()
 	ti := textinput.New()
 	return &Model{
-		history:        append([]domain.Category{}, hist...),
+		history:        histOf(hist...),
 		historyIdx:     idx,
 		loadingSpinner: &spinner.Model{},
 		loadingTimer:   &stopwatch.Model{},
@@ -206,12 +206,12 @@ func TestMoveHistoryBackForward(t *testing.T) {
 	cmd := m.moveHistory(-1)
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 1, m.historyIdx)
-	assert.Equal(t, domain.GPUPool, m.history[m.historyIdx])
+	assert.Equal(t, domain.GPUPool, m.history[m.historyIdx].category)
 	// Move forward
 	cmd = m.moveHistory(1)
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 2, m.historyIdx)
-	assert.Equal(t, domain.GPUNode, m.history[m.historyIdx])
+	assert.Equal(t, domain.GPUNode, m.history[m.historyIdx].category)
 	// Out of bounds (forward)
 	cmd = m.moveHistory(1)
 	assert.Nil(t, cmd)

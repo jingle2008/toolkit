@@ -62,6 +62,8 @@ func (m *Model) switchEnvironment(env models.Environment, target domain.Category
 	m.k8sVersion = ""
 	m.recentEnvs.Touch(env)
 	m.scope = nil
+	m.landOn = nil
+	m.clearHistoryScopes()
 	if target == m.category {
 		m.watch.k8sActive = false
 		m.watch.k8sTrigger = nil

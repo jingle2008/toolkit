@@ -41,24 +41,31 @@ func (m *Model) backToLastState() tea.Cmd {
 		return filterTableAsync(m, "")
 	} else if m.scope != nil && m.scope.Category.IsScopeOf(m.category) {
 		m.scope = nil
+		m.syncHistoryScope()
 		return m.updateRowsAsync()
 	}
 	return nil
 }
 
 // goBack is esc in the list: it clears the filter, or, in a scoped list,
-// returns to the parent list with the cursor on the row drilled in from
-// (the scope stays, as on [). Back in history when the parent is there,
-// so ] still leads into the child; otherwise the parent is pushed.
+// returns to the parent list with the cursor on the row drilled in from.
+// Back in history when the parent is there, so ] still leads into the
+// child: the parent shows under the scope it was visited with, and
+// landOn puts the cursor on the drilled-from row. Otherwise the parent is
+// pushed, keeping the drill scope, which lands the cursor there itself.
 func (m *Model) goBack() tea.Cmd {
 	if m.filter != "" || m.scope == nil || !m.scope.Category.IsScopeOf(m.category) {
 		return m.backToLastState()
 	}
-	parent := m.scope.Category
+	from := copyScope(m.scope)
+	parent := from.Category
 	for i := m.historyIdx - 1; i >= 0; i-- {
-		if m.history[i] == parent {
+		if m.history[i].category == parent {
 			m.historyIdx = i
-			return tea.Sequence(m.updateCategoryNoHist(parent)...)
+			m.scope = copyScope(m.history[i].scope)
+			cmds := m.updateCategoryNoHist(parent)
+			m.landOn = from
+			return tea.Sequence(cmds...)
 		}
 	}
 	return tea.Sequence(m.updateCategory(parent)...)

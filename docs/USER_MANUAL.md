@@ -225,12 +225,14 @@ Every category additionally accepts its **full name, lowercased** — `tenant`,
 
 ### History navigation
 
-Navigate back and forward through the categories you've visited:
+Navigate back and forward through the lists you've visited:
 
 | Key | Action |
 |-----|--------|
 | `[` | History back |
 | `]` | History forward |
+
+Each step returns to a list as you saw it, scope included: after drilling into a node's pods and going (`o`) to their DAC, `[` returns to that node's pods. Switching environments keeps the history's categories but drops their scopes, since those name rows of the old environment.
 
 ### Scoping into a context
 
