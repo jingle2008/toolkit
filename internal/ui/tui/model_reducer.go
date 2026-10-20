@@ -473,6 +473,9 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 		m.dataset = &models.Dataset{}
 	}
 	mut(m.dataset)
+	if category == m.category {
+		m.loadFailed = false
+	}
 	m.endTask(true)
 	m.logger.Infow("data loaded", "category", category, "count", count, "pendingTasks", m.pendingTasks)
 	// Only rebuild the visible table when the load is for the category

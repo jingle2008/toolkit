@@ -98,6 +98,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	)
 
 	m.newLoadContext()
+	m.loadFailed = false
 	// A cluster category's cache went stale when its watch stopped, as it
 	// does on leaving the category, and the new watch only reports changes
 	// from now on. So returning to one reloads it, showing the cached rows

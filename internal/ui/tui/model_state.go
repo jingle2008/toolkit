@@ -158,6 +158,10 @@ type Model struct {
 	kubeConfig string
 	version    string
 	k8sVersion string // API server version for the current kube context; "" until fetched
+	// loadFailed is set when the current category's load failed, so an
+	// empty list says so instead of claiming there are no rows. Cleared
+	// when a load starts or lands.
+	loadFailed bool
 	// theme holds the app-level lipgloss styles (status bar, info pane,
 	// help view). Set once via setStyles; see the Styles struct in styles.go.
 	theme Styles

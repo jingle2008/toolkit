@@ -52,9 +52,15 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	if m.logger != nil {
 		m.logger.Errorw("data load failed", "category", m.category, "error", err)
 	}
+	m.loadFailed = true
 	m.endTask(false)
-	if slices.ContainsFunc(m.keys.Context, func(b key.Binding) bool { return b.Help() == keys.Refresh.Help() }) {
+	if m.canRefresh() {
 		return m.showErrorWithNext(msg.Error(), keys.Refresh.Help().Key+" retry")
 	}
 	return m.showToast(msg.Error(), toastError)
+}
+
+// canRefresh reports whether r (refresh) is bound in the current category.
+func (m *Model) canRefresh() bool {
+	return slices.ContainsFunc(m.keys.Context, func(b key.Binding) bool { return b.Help() == keys.Refresh.Help() })
 }
