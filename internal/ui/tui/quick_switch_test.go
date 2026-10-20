@@ -150,9 +150,41 @@ func TestEnterContext_RecordsRecentEnv(t *testing.T) {
 
 	require.NotNil(t, m.enterContext())
 	assert.Equal(t, domain.Tenant, m.category)
+	_, ok := m.recentEnvs.Get(3)
+	require.False(t, ok, "remembered once its kube context is known to exist")
+
+	m.handleKubeVersionMsg(kubeVersionMsg{Context: envSEA.KubeContext(), Version: "v1.32.10"})
 	got, ok := m.recentEnvs.Get(3)
 	require.True(t, ok)
 	assert.True(t, got.Equals(envSEA))
+}
+
+// Switching to an environment the kubeconfig has no context for (the
+// palette lists every repo environment) must not take a quick-switch slot
+// from a reachable one.
+func TestSwitchEnvironment_NoContextNotRemembered(t *testing.T) {
+	t.Parallel()
+	m := newQuickSwitchModel(t, "")
+	before := m.recentEnvs.BySlot()
+	envSEA := models.Environment{Type: "dev", Region: "uk-london-1", Realm: "oc1"}
+
+	m.switchEnvironment(envSEA, m.category)
+	m.handleKubeVersionMsg(kubeVersionMsg{Context: envSEA.KubeContext(), Version: "n/a", NoContext: true})
+	assert.Equal(t, before, m.recentEnvs.BySlot())
+}
+
+// A scope still naming a row after the switch is kept: a definition's in
+// any environment, a tenant's within the realm. A cluster row's is not.
+func TestScopeSurvives(t *testing.T) {
+	t.Parallel()
+	def := &domain.Scope{Category: domain.LimitDefinition, Name: "l"}
+	tenant := &domain.Scope{Category: domain.Tenant, Name: "acme"}
+	dac := &domain.Scope{Category: domain.DedicatedAICluster, Name: "d"}
+	assert.True(t, scopeSurvives(def, false))
+	assert.True(t, scopeSurvives(tenant, true))
+	assert.False(t, scopeSurvives(tenant, false))
+	assert.False(t, scopeSurvives(dac, true))
+	assert.False(t, scopeSurvives(nil, true))
 }
 
 func TestPruneRecentEnvs(t *testing.T) {

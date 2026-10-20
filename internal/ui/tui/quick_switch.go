@@ -39,10 +39,12 @@ switchEnvironment makes env current, drops the data loaded for the previous
 one that doesn't carry over (tenants and overrides do, within a realm),
 records env as most recently used, and loads target in the new context.
 
-The scope always names a row of the old environment, so it's cleared
-whatever the target: navigation keeps a scope across the categories it
-scopes, so a DAC picked before the switch would otherwise still filter
-:gw and :is after it. When target is the current category the switch
+A scope naming a row of the old environment is cleared whatever the
+target: navigation keeps a scope across the categories it scopes, so a DAC
+picked before the switch would otherwise still filter :gw and :is after
+it. A definition's scope, and a tenant's within the realm, still name a
+row and are kept (scopeSurvives). env is remembered in a quick-switch slot
+once its kube context is known to exist (handleKubeVersionMsg). When target is the current category the switch
 happens in place: the visible rows belong to the old context, and the old
 k8s watch dies with the load context updateCategoryCore cancels, so both
 are cleared here too (a category change clears them on its own).
@@ -60,10 +62,12 @@ func (m *Model) switchEnvironment(env models.Environment, target domain.Category
 		m.dataset.ResetRealmScopedFields()
 	}
 	m.k8sVersion = ""
-	m.recentEnvs.Touch(env)
-	m.scope = nil
+	m.pendingRecent = &env // remembered once its context is known to exist
+	if !scopeSurvives(m.scope, sameRealm) {
+		m.scope = nil
+	}
 	m.landOn = nil
-	m.clearHistoryScopes()
+	m.dropStaleHistoryScopes(sameRealm)
 	if target == m.category {
 		m.watch.k8sActive = false
 		m.watch.k8sTrigger = nil
@@ -72,8 +76,22 @@ func (m *Model) switchEnvironment(env models.Environment, target domain.Category
 	return tea.Batch(
 		tea.Sequence(m.updateCategory(target)...),
 		fetchKubeVersionCmd(m.kubeConfig, m.environment.KubeContext()),
-		m.saveRecentEnvsCmd(),
 	)
+}
+
+// scopeSurvives reports whether scope still names a row after an
+// environment switch: a definition's rows come from the repo and hold in
+// every environment, and a tenant's within its realm, whose tenants stay
+// loaded. Any other scope (a DAC, a pool, a node) is a row of the old
+// environment.
+func scopeSurvives(scope *domain.Scope, sameRealm bool) bool {
+	if scope == nil {
+		return false
+	}
+	if !scope.Category.IsEnvironmentScoped() {
+		return true
+	}
+	return sameRealm && scope.Category == domain.Tenant
 }
 
 // inCurrentEnv reports whether a result produced for env still applies.

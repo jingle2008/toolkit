@@ -162,6 +162,9 @@ type Model struct {
 	// empty list says so instead of claiming there are no rows. Cleared
 	// when a load starts or lands.
 	loadFailed bool
+	// pendingRecent is the environment just switched to, remembered in a
+	// quick-switch slot once its kube context is known to exist.
+	pendingRecent *models.Environment
 	// theme holds the app-level lipgloss styles (status bar, info pane,
 	// help view). Set once via setStyles; see the Styles struct in styles.go.
 	theme Styles

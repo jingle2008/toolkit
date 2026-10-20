@@ -630,7 +630,14 @@ func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
 	m.watch.k8sActive = true
 	m.watch.k8sTrigger = msg.Trigger
 	m.logger.Infow("watch started", "category", msg.Cat, "gen", msg.Gen)
-	return waitForK8sTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
+	wait := waitForK8sTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
+	// The version is fetched once per environment; if that failed (an
+	// expired session since renewed), a watch starting shows the cluster
+	// is reachable now, so fetch it again rather than show n/a for good.
+	if m.k8sVersion == kubeVersionUnknown {
+		return tea.Batch(wait, fetchKubeVersionCmd(m.kubeConfig, m.environment.KubeContext()))
+	}
+	return wait
 }
 
 // handleK8sWatchTriggered re-runs the category loader and re-arms the

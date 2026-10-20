@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -100,6 +101,26 @@ func TestHandleWatchClosed_OtherCategoryIgnored(t *testing.T) {
 
 	assert.Nil(t, m.handleK8sWatchClosed(k8sWatchClosedMsg{Cat: domain.GPUWorkload, Gen: 4}))
 	assert.Nil(t, m.handleK8sWatchTriggered(k8sWatchTriggeredMsg{Cat: domain.GPUWorkload, Gen: 4}))
+}
+
+// A version fetch that failed (n/a) is retried once a watch starts, as the
+// cluster is reachable again; a known version is not refetched.
+func TestHandleWatchStarted_RefetchesUnknownVersion(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gens.msg = 3
+	trigger := make(chan struct{})
+	close(trigger) // so the trigger wait returns instead of blocking
+
+	m.k8sVersion = "v1.32.10"
+	cmd := m.handleK8sWatchStarted(k8sWatchStartedMsg{Cat: domain.GPUNode, Gen: 3, Trigger: trigger})
+	_, batched := cmd().(tea.BatchMsg)
+	assert.False(t, batched, "known version: only the trigger wait")
+
+	m.k8sVersion = kubeVersionUnknown
+	cmd = m.handleK8sWatchStarted(k8sWatchStartedMsg{Cat: domain.GPUNode, Gen: 3, Trigger: trigger})
+	_, batched = cmd().(tea.BatchMsg)
+	assert.True(t, batched, "unknown version: the wait plus a version fetch")
 }
 
 func TestHandleWatchUnavailable_StaleIgnored(t *testing.T) {

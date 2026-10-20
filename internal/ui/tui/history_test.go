@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -193,16 +194,20 @@ func TestHistory_EntryDoesNotAliasScope(t *testing.T) {
 	assert.Equal(t, "Acme", m.history[m.historyIdx].scope.Name)
 }
 
-// An environment switch drops every entry's scope: they name rows of the
-// old environment.
+// An environment switch drops the entries' scopes naming rows of the old
+// environment, and keeps a tenant's within the realm.
 func TestHistory_EnvSwitchClearsScopes(t *testing.T) {
 	t.Parallel()
 	m := newHistoryModel(t)
+	drill(m, domain.LimitTenancyOverride, "Acme")
 	m.goTo(domain.Scope{Category: domain.DedicatedAICluster, Name: histDAC})
 	drill(m, domain.GPUWorkload, histDAC)
 	m.switchEnvironment(models.Environment{Type: "preprod", Region: "us-ashburn-1", Realm: "realm"}, domain.GPUWorkload)
 	for i, e := range m.history {
-		assert.Nilf(t, e.scope, "entry %d", i)
+		if e.scope != nil {
+			assert.Equalf(t, domain.Tenant, e.scope.Category, "entry %d keeps only the tenant's scope", i)
+		}
 	}
+	assert.True(t, slices.ContainsFunc(m.history, func(e historyEntry) bool { return e.scope != nil }), "the tenant's scope survives a same-realm switch")
 	assert.Nil(t, m.landOn)
 }

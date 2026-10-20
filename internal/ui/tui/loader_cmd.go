@@ -256,13 +256,20 @@ func reloadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string
 	}
 }
 
+// kubeVersionUnknown is the version shown when the fetch failed.
+const kubeVersionUnknown = "n/a"
+
 // fetchKubeVersionCmd queries the API server version for kubeCtx. Failures
 // render as "n/a" rather than a toast — the header is informational only.
+// A context the kubeconfig lacks is reported as NoContext.
 func fetchKubeVersionCmd(kubeConfig, kubeCtx string) tea.Cmd {
 	return func() tea.Msg {
+		if ok, err := k8s.HasContext(kubeConfig, kubeCtx); err == nil && !ok {
+			return kubeVersionMsg{Context: kubeCtx, Version: kubeVersionUnknown, NoContext: true}
+		}
 		v, err := k8s.ServerVersion(kubeConfig, kubeCtx)
 		if err != nil || v == "" {
-			v = "n/a"
+			v = kubeVersionUnknown
 		}
 		return kubeVersionMsg{Context: kubeCtx, Version: v}
 	}

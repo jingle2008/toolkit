@@ -252,4 +252,7 @@ type gpuPoolsReloadedMsg struct {
 type kubeVersionMsg struct {
 	Context string
 	Version string
+	// NoContext: the kubeconfig has no such context, so the environment
+	// can't be reached at all.
+	NoContext bool
 }

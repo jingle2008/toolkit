@@ -172,8 +172,7 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case gpuPoolsReloadedMsg:
 		return m, m.handleGPUPoolsReloaded(msg)
 	case kubeVersionMsg:
-		m.handleKubeVersionMsg(msg)
-		return m, nil
+		return m, m.handleKubeVersionMsg(msg)
 	default:
 		return m.delegateToActiveView(msg)
 	}
@@ -181,12 +180,26 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleKubeVersionMsg records the server version and re-runs layout, since
 // the info column's width (and thus the help bubble's budget) may change.
-func (m *Model) handleKubeVersionMsg(msg kubeVersionMsg) {
+// It also settles a switch's pending quick-switch entry: an environment
+// whose context the kubeconfig lacks isn't remembered, as it would push a
+// reachable one out of its slot.
+func (m *Model) handleKubeVersionMsg(msg kubeVersionMsg) tea.Cmd {
 	if msg.Context != m.environment.KubeContext() {
-		return
+		return nil
 	}
 	m.k8sVersion = msg.Version
 	m.updateLayout(m.viewWidth, m.viewHeight)
+	if m.pendingRecent == nil || m.pendingRecent.KubeContext() != msg.Context {
+		return nil
+	}
+	env := *m.pendingRecent
+	m.pendingRecent = nil
+	if msg.NoContext {
+		m.logger.Infow("not remembering an environment without a kube context", "context", msg.Context)
+		return nil
+	}
+	m.recentEnvs.Touch(env)
+	return m.saveRecentEnvsCmd()
 }
 
 func (m *Model) onResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {

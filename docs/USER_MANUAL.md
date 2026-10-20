@@ -232,7 +232,7 @@ Navigate back and forward through the lists you've visited:
 | `[` | History back |
 | `]` | History forward |
 
-Each step returns to a list as you saw it, scope included: after drilling into a node's pods and going (`o`) to their DAC, `[` returns to that node's pods. Switching environments keeps the history's categories but drops their scopes, since those name rows of the old environment.
+Each step returns to a list as you saw it, scope included: after drilling into a node's pods and going (`o`) to their DAC, `[` returns to that node's pods. Switching environments keeps the history's categories but drops the scopes that name rows of the old environment (a DAC, a node); a definition's scope, and a tenant's within the same realm, still hold and are kept, as the current scope is.
 
 ### Scoping into a context
 
