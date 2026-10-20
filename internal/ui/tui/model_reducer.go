@@ -139,29 +139,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
-		// Match identity against m.rawRows, not the just-truncated `rows`:
-		// applyMiddleTruncation may have shortened the key cells (Name/Tenant
-		// for scoped categories), which would defeat the key comparison.
-		idx := -1
-		// Fast path: if the selected item still sits at its previous offset,
-		// skip the scan. Reloads usually preserve order, so this hits often.
-		if prevKey != nil && prevIdx >= 0 && prevIdx < len(m.rawRows) &&
-			itemKeyFrom(m.category, m.rawRows[prevIdx]) == prevKey {
-			idx = prevIdx
-		}
-		if idx < 0 {
-			idx = indexOfItemKey(m.rawRows, m.category, prevKey)
-		}
-		if idx < 0 {
-			idx = m.findContextIndex(rows)
-		}
-		// The selected row is gone (deleted, or filtered out by the
-		// reload): stay at its offset, on the row that took its place,
-		// rather than jumping to the top.
-		if idx < 0 && prevKey != nil && prevIdx >= 0 && len(m.rawRows) > 0 {
-			idx = min(prevIdx, len(m.rawRows)-1)
-		}
-		if idx >= 0 {
+		if idx := m.reselectIndex(rows, prevKey, prevIdx); idx >= 0 {
 			// SetCursor moves the cursor and render window but leaves the
 			// viewport's scroll offset untouched, so a target beyond the
 			// first page lands one row below the visible window (off by
@@ -175,6 +153,35 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	} else {
 		m.table.UpdateViewport()
 	}
+}
+
+// reselectIndex is the row the cursor goes to after applyRows replaced the
+// rows: the previously selected item (prevKey, at offset prevIdx), else the
+// scope or environment row, else, when the selected item is gone, the row
+// that took its offset. -1 for the top.
+func (m *Model) reselectIndex(rows []table.Row, prevKey models.ItemKey, prevIdx int) int {
+	// Match identity against m.rawRows, not the just-truncated `rows`:
+	// applyMiddleTruncation may have shortened the key cells (Name/Tenant
+	// for scoped categories), which would defeat the key comparison.
+	// Fast path: if the selected item still sits at its previous offset,
+	// skip the scan. Reloads usually preserve order, so this hits often.
+	if prevKey != nil && prevIdx >= 0 && prevIdx < len(m.rawRows) &&
+		itemKeyFrom(m.category, m.rawRows[prevIdx]) == prevKey {
+		return prevIdx
+	}
+	if idx := indexOfItemKey(m.rawRows, m.category, prevKey); idx >= 0 {
+		return idx
+	}
+	if idx := m.findContextIndex(rows); idx >= 0 {
+		return idx
+	}
+	// The selected row is gone (deleted, or filtered out by the reload):
+	// stay at its offset, on the row that took its place, rather than
+	// jumping to the top.
+	if prevKey != nil && prevIdx >= 0 && len(m.rawRows) > 0 {
+		return min(prevIdx, len(m.rawRows)-1)
+	}
+	return -1
 }
 
 // decorateRows turns rows, plain cells as in m.rawRows, into display
