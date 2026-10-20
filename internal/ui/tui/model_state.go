@@ -150,10 +150,14 @@ type Model struct {
 	renderer      view.Renderer
 	loader        loader.Composite
 	scope         *domain.Scope // selected scope (parent context for current category)
-	keys          keys.KeyMap
-	kubeConfig    string
-	version       string
-	k8sVersion    string // API server version for the current kube context; "" until fetched
+	// landOn is the row the cursor lands on after the next navigation,
+	// when it isn't m.scope's: esc back to a parent shows the parent under
+	// its own history scope but puts the cursor on the row drilled in from.
+	landOn     *domain.Scope
+	keys       keys.KeyMap
+	kubeConfig string
+	version    string
+	k8sVersion string // API server version for the current kube context; "" until fetched
 	// theme holds the app-level lipgloss styles (status bar, info pane,
 	// help view). Set once via setStyles; see the Styles struct in styles.go.
 	theme Styles
@@ -184,8 +188,8 @@ type Model struct {
 	recentSaver    recentSaver
 
 	// Category navigation history
-	history    []domain.Category // chronological list of visited categories
-	historyIdx int               // index of the current position in history
+	history    []historyEntry // chronological list of visited lists
+	historyIdx int            // index of the current position in history
 
 	// Show only faulty items in list view: rows whose model reports
 	// IsFaulty, or that name a parent row that doesn't exist (see
@@ -253,7 +257,7 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		lastViewMode: common.ListView,
 		sortColumn:   common.NameCol,
 		sortAsc:      true,
-		history:      []domain.Category{},
+		history:      []historyEntry{},
 		historyIdx:   -1,
 	}
 
@@ -266,7 +270,7 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 
 	// Seed initial category in history if not already present
 	if len(m.history) == 0 {
-		m.history = []domain.Category{m.category}
+		m.history = []historyEntry{{category: m.category, scope: copyScope(m.scope)}}
 		m.historyIdx = 0
 	}
 

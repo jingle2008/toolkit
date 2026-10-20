@@ -71,6 +71,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		refresh = true
 	} else {
 		m.category = category
+		m.landOn = nil // a cursor target for an earlier navigation
 		m.keys = keys.ResolveKeys(m.category, m.viewMode)
 		m.sortColumn = common.NameCol
 		m.sortAsc = true

@@ -215,11 +215,11 @@ func TestEsc_ScopedListReturnsToParent(t *testing.T) {
 	m.viewMode = common.ListView
 	m.updateCategory(domain.Tenant)
 	m.updateRows(true)
-	m.history, m.historyIdx = []domain.Category{domain.Tenant}, 0
+	m.history, m.historyIdx = histOf(domain.Tenant), 0
 
 	_, _ = m.Update(keyPress("enter"))
 	require.Equal(t, domain.DedicatedAICluster, m.category)
-	require.Equal(t, []domain.Category{domain.Tenant, domain.DedicatedAICluster}, m.history)
+	require.Equal(t, []domain.Category{domain.Tenant, domain.DedicatedAICluster}, histCategories(m))
 
 	_, _ = m.Update(keyPress("esc"))
 	assert.Equal(t, domain.Tenant, m.category)
@@ -238,9 +238,9 @@ func TestEsc_ScopedListPushesParent(t *testing.T) {
 	m := newGoToModel(t)
 	m.viewMode = common.ListView
 	m.scope = &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}
-	m.history, m.historyIdx = []domain.Category{domain.InferenceService}, 0
+	m.history, m.historyIdx = histOf(domain.InferenceService), 0
 
 	_, _ = m.Update(keyPress("esc"))
 	assert.Equal(t, domain.DedicatedAICluster, m.category)
-	assert.Equal(t, []domain.Category{domain.InferenceService, domain.DedicatedAICluster}, m.history)
+	assert.Equal(t, []domain.Category{domain.InferenceService, domain.DedicatedAICluster}, histCategories(m))
 }

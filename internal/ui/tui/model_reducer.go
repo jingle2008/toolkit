@@ -361,6 +361,8 @@ func (m *Model) findContextIndex(rows []table.Row) int {
 	switch {
 	case m.category == domain.Environment:
 		name = m.environment.GetName()
+	case m.landOn != nil && m.category == m.landOn.Category:
+		name = m.landOn.Name
 	case m.scope != nil && m.category == m.scope.Category:
 		name = m.scope.Name
 	default:
