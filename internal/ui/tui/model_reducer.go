@@ -589,6 +589,10 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 	if override || owned {
 		cat = m.category
 	}
+	// For a tenant-owned category the group only resolves owners: naming
+	// it must not clear a failure of its own load (loadFailed), or the
+	// empty list would claim there are no rows after all.
+	failed := m.loadFailed
 	m.applyLoaded(gen, func(ds *models.Dataset) {
 		ds.Tenants = group.Tenants
 		ds.LimitTenancyOverrideMap = group.LimitTenancyOverrideMap
@@ -599,6 +603,9 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 		// new tenants, or drilling in from a tenant would miss them.
 		resolveTenantOwners(ds)
 	}, cat, len(group.Tenants))
+	if owned {
+		m.loadFailed = failed
+	}
 }
 
 func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) {
