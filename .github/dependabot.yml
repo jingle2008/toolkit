@@ -18,10 +18,9 @@ updates:
   # deprecation warning in a run log — which is how codeql-action sat on
   # v3 from October 2025 until it started warning about Node 20.
   #
-  # prefix "ci" (not "deps") is deliberate: release-drafter categorizes by
-  # label, and its autolabeler derives labels from the PR title's
-  # conventional-commit prefix, so "ci: bump ..." lands these under
-  # "🏗 Build & CI" and resolves to a patch bump.
+  # prefix "ci" (not "deps") is deliberate: GoReleaser's changelog
+  # filters drop ci: commits, so action bumps stay out of the release
+  # notes, while gomod's deps: bumps are listed under Dependencies.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

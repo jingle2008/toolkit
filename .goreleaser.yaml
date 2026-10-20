@@ -44,17 +44,30 @@ release:
     name: toolkit
 
 changelog:
+  # GoReleaser owns the release notes (Release Drafter was removed: it
+  # drafted a second, same-named release on every tag). `github` lists the
+  # commits since the previous tag through the GitHub API, with each
+  # commit's link and author's handle; GITHUB_TOKEN is set in release.yml.
+  use: github
   sort: asc
+  # Sections by conventional-commit prefix, scope optional: feat(tui): …
+  groups:
+    - title: "🚀 Added"
+      regexp: '^.*?feat(\(.+\))?!?:.+$'
+      order: 0
+    - title: "🐛 Fixed"
+      regexp: '^.*?fix(\(.+\))?!?:.+$'
+      order: 1
+    - title: "📦 Dependencies"
+      regexp: '^.*?deps(\(.+\))?!?:.+$'
+      order: 2
+    - title: "Other"
+      order: 999
   filters:
+    # Housekeeping commits stay out of the notes, scoped or not:
+    # `ci(release): …` matched none of the old `^ci:`-style patterns.
     exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
-      - '^refactor:'
-      - '^ci:'
-      - '^build:'
-      - '^style:'
-      - '^wip:'
+      - '^(docs|test|chore|refactor|ci|build|style|wip)(\(.+\))?!?:'
       - '^Merge pull request'
       - '^Merge branch'
 
