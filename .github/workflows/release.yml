@@ -11,6 +11,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # GoReleaser builds the changelog from the commits since the
+          # previous tag; a shallow clone has neither, so the release
+          # notes came out empty (v0.12.0, v0.13.0).
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v7
