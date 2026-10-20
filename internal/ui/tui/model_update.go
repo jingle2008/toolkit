@@ -133,6 +133,19 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleISVCDeletePlannedMsg(msg)
 	case isvcDeleteResultMsg:
 		return m, m.handleISVCDeleteResultMsg(msg)
+	// The list's own async results are handled from any view too: one
+	// that lands while help, the palette, details or the log is open
+	// would otherwise be dropped — a GPU pool enrichment for good,
+	// leaving every pool at status "..." and actual size 0.
+	case updateDoneMsg:
+		m.handleUpdateDoneMsg(msg)
+		return m, nil
+	case filterMsg:
+		return m, m.handleFilterMsg(msg)
+	case setFilterMsg:
+		return m, m.handleSetFilterMsg(msg)
+	case filterApplyMsg:
+		return m, m.handleFilterApplyMsg(msg)
 	case tableRowsComputedMsg:
 		m.handleTableRowsComputedMsg(msg)
 		return m, nil
@@ -155,13 +168,11 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleRepoWatchClosed()
 		return m, nil
 	case datasetReloadedMsg:
-		m.handleDatasetReloaded(msg)
-		return m, nil
+		return m, m.handleDatasetReloaded(msg)
 	case gpuPoolsReloadedMsg:
 		return m, m.handleGPUPoolsReloaded(msg)
 	case kubeVersionMsg:
-		m.handleKubeVersionMsg(msg)
-		return m, nil
+		return m, m.handleKubeVersionMsg(msg)
 	default:
 		return m.delegateToActiveView(msg)
 	}
@@ -169,12 +180,26 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleKubeVersionMsg records the server version and re-runs layout, since
 // the info column's width (and thus the help bubble's budget) may change.
-func (m *Model) handleKubeVersionMsg(msg kubeVersionMsg) {
+// It also settles a switch's pending quick-switch entry: an environment
+// whose context the kubeconfig lacks isn't remembered, as it would push a
+// reachable one out of its slot.
+func (m *Model) handleKubeVersionMsg(msg kubeVersionMsg) tea.Cmd {
 	if msg.Context != m.environment.KubeContext() {
-		return
+		return nil
 	}
 	m.k8sVersion = msg.Version
 	m.updateLayout(m.viewWidth, m.viewHeight)
+	if m.pendingRecent == nil || m.pendingRecent.KubeContext() != msg.Context {
+		return nil
+	}
+	env := *m.pendingRecent
+	m.pendingRecent = nil
+	if msg.NoContext {
+		m.logger.Infow("not remembering an environment without a kube context", "context", msg.Context)
+		return nil
+	}
+	m.recentEnvs.Touch(env)
+	return m.saveRecentEnvsCmd()
 }
 
 func (m *Model) onResize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {

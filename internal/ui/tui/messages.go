@@ -237,6 +237,7 @@ type repoWatchClosedMsg struct{}
 type datasetReloadedMsg struct {
 	Dataset *models.Dataset
 	env     models.Environment
+	err     error // the reload failed; the current data stays
 }
 
 // gpuPoolsReloadedMsg carries freshly loaded GPU pools (repo-sourced via their
@@ -251,4 +252,7 @@ type gpuPoolsReloadedMsg struct {
 type kubeVersionMsg struct {
 	Context string
 	Version string
+	// NoContext: the kubeconfig has no such context, so the environment
+	// can't be reached at all.
+	NoContext bool
 }

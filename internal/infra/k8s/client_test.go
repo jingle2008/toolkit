@@ -55,6 +55,26 @@ func TestNewConfig(t *testing.T) { //nolint:paralleltest // paralleltest is not 
 	}
 }
 
+func TestHasContext(t *testing.T) {
+	t.Parallel()
+	cfg := api.NewConfig()
+	cfg.Clusters["c"] = &api.Cluster{Server: "https://127.0.0.1"}
+	cfg.Contexts["dp-ppe-ord"] = &api.Context{Cluster: "c"}
+	path := writeTempKubeconfig(t, cfg)
+
+	ok, err := HasContext(path, "dp-ppe-ord")
+	if err != nil || !ok {
+		t.Fatalf("HasContext(dp-ppe-ord) = %v, %v; want true", ok, err)
+	}
+	ok, err = HasContext(path, "dp-dev-phx")
+	if err != nil || ok {
+		t.Fatalf("HasContext(dp-dev-phx) = %v, %v; want false", ok, err)
+	}
+	if _, err := HasContext("/nonexistent/kubeconfig", "x"); err == nil {
+		t.Fatal("HasContext on a missing kubeconfig: want an error")
+	}
+}
+
 func TestNewConfig_AppliesRequestTimeout(t *testing.T) { //nolint:paralleltest // mutates package-level RequestTimeout
 	validConfig := api.NewConfig()
 	validConfig.Clusters["test"] = &api.Cluster{Server: "https://127.0.0.1"}

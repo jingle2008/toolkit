@@ -265,13 +265,20 @@ func (m *Model) markedTableView() string {
 	return taggedPad.ReplaceAllString(view, marker+"$1")
 }
 
-// emptyMessage says why the list has no rows: still loading, the filter
-// or faulty-only mode hides them all, or there are none here.
+// emptyMessage says why the list has no rows: still loading, the load
+// failed, the filter or faulty-only mode hides them all, or there are
+// none here.
 func (m *Model) emptyMessage() string {
 	cat := m.category.String()
 	switch {
 	case m.pendingTasks > 0:
 		return "Loading " + cat + "…"
+	case m.loadFailed:
+		msg := "Couldn't load " + cat
+		if m.canRefresh() {
+			msg += " · " + keys.Refresh.Help().Key + " retry"
+		}
+		return msg + " · ` shows the error"
 	case m.filter != "":
 		return fmt.Sprintf("Nothing matches /%s · esc clears the filter", m.filter)
 	case m.showFaulty:

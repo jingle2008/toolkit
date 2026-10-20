@@ -164,7 +164,7 @@ toolkit --help
 |------|-------------|
 | **Env bar** (top) | Where the data comes from: realm › type › region · kube context · k8s version. In production the type is a red `PROD` badge, so it can't be mistaken for dev or preprod. Other quick-switch slots (`1 dp-prod-ord`) appear when they fit. On the right: the action running, if any — the newest one's latest step, how many run, and its environment when you've switched away (`⣾ 2 running · drain 10.0.0.11 (dp-prod-ord): evicted pod=ns/p1`); a spinner while loading; `● LIVE` while the category updates automatically (see [Live Updates](#live-updates)); and the toolkit version. While an action runs, its row's Status says so (`Draining`, `Deleting`, `Terminating`, `Restarting`, `Scaling`), and every action ends with a notification: one that fades on success, one that waits for `Esc` on failure |
 | **Breadcrumb** | The category, and the scope it is narrowed to (`› acme`). While you type, it holds the filter input. Otherwise it shows chips only when they're active: `⟨/filter⟩`, `⟨sort: …⟩`, `⟨faulty⟩`, `⟨◀ 2/5 ▶⟩` (position in history, with an arrow for each way `[` and `]` can go), `s…` (a pending sort key). On the right: what the rows add up to (`Active: 2 • Failed: 1`), which gives way on a narrow terminal |
-| **Panel** (center) | The table, or a row's details. Its bottom edge says where you are: the cursor among the rows (`1 of 2`), with the total when a filter or faulty-only mode hides some (`(40 total)`), or in the detail view the layout and scroll position. Its title says only what isn't shown elsewhere: the row in the detail view, which columns are hidden in the list. Columns are as wide as their header or their widest value, and share the rest of the width. On a narrow terminal long values (names, OCIDs) shorten first, short ones keep their width, and Status is never cut; if that still doesn't fit, columns drop from the right (never the first or Status) and the title names them (`Age hidden`), or counts them when the names don't fit. Long values are shortened in the middle (`ocid1.tenancy.oc1…eectrta`), so the distinguishing end stays visible, and resizing re-shortens them to the new width. An empty cell shows `—`. An empty table says why: still loading, the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
+| **Panel** (center) | The table, or a row's details. Its bottom edge says where you are: the cursor among the rows (`1 of 2`), with the total when a filter or faulty-only mode hides some (`(40 total)`), or in the detail view the layout and scroll position. Its title says only what isn't shown elsewhere: the row in the detail view, which columns are hidden in the list. Columns are as wide as their header or their widest value, and share the rest of the width. On a narrow terminal long values (names, OCIDs) shorten first, short ones keep their width, and Status is never cut; if that still doesn't fit, columns drop from the right (never the first or Status) and the title names them (`Age hidden`), or counts them when the names don't fit. Long values are shortened in the middle (`ocid1.tenancy.oc1…eectrta`), so the distinguishing end stays visible, and resizing re-shortens them to the new width. An empty cell shows `—`. An empty table says why: still loading, the load failed (and `r` to retry, where the category has it), the filter or faulty-only mode hides every row (and how to undo it), or there are none in this context. Status cells are colored by meaning: red for failed or deleting, amber for pending or transitional, green for healthy. On terminals at least 160 columns wide, `v` adds a [preview pane](#preview-pane) |
 | **Footer** (bottom) | The category's most useful actions, then `/ filter`, `: command palette` and `? more`. On a narrow terminal the actions give way first, so filtering and the palette stay in reach. An empty list shows only the actions that don't need a row (`^z faulty only`, `r refresh`) |
 
 Colors follow the terminal. The neutrals — body text, dim text, borders and the selected row's tint — are blended from the terminal's own text and background colors when it reports them (most do; until it answers, or if it doesn't, a fixed dark or light palette is used), so they match your theme instead of sitting on it as grey. Every text color keeps at least 4.5:1 contrast against the background and against the selected row; on a low-contrast theme the selection tint gets quieter rather than the text unreadable. Each color has one meaning: orange is a key you can press, the periwinkle accent is focus (the border of the panel you're in, modal borders, cursors, the `▌` beside the selected row), green, amber and red are status, and the only filled badge is the red `PROD`. The selected row is tinted toward the accent, as strongly as keeps its status readable. Numbers (counts, sizes, ages, percentages) are right-aligned so their digits line up, and OCIDs are dimmed so the data around them leads. With `NO_COLOR` set (or a terminal without color), the selected row and the focused button are drawn in reverse video.
@@ -232,7 +232,7 @@ Navigate back and forward through the lists you've visited:
 | `[` | History back |
 | `]` | History forward |
 
-Each step returns to a list as you saw it, scope included: after drilling into a node's pods and going (`o`) to their DAC, `[` returns to that node's pods. Switching environments keeps the history's categories but drops their scopes, since those name rows of the old environment.
+Each step returns to a list as you saw it, scope included: after drilling into a node's pods and going (`o`) to their DAC, `[` returns to that node's pods. Switching environments keeps the history's categories but drops the scopes that name rows of the old environment (a DAC, a node); a definition's scope, and a tenant's within the same realm, still hold and are kept, as the current scope is.
 
 ### Scoping into a context
 
@@ -274,7 +274,7 @@ offered as a BaseModel, not an ImportedModel).
 `:` opens the command palette over the table. Type to fuzzy-search:
 
 - **Categories**: every category, matched by name or any alias.
-- **Environments**: recent quick-switch slots first, then every environment. Listed only in environment-scoped categories, the same as the `0`–`5` keys.
+- **Environments**: recent quick-switch slots first, then every environment. Listed only in environment-scoped categories, the same as the `0`–`5` keys. An environment you switch to takes a quick-switch slot only if your kubeconfig has its context.
 - **Actions**: the selected row's actions (go to related, metrics, edit tenant, delete, …), each sort ("Sort by Tenant"), and Export CSV.
 - **Toggles**: alias view, faulty-only, preview pane.
 
@@ -537,6 +537,11 @@ shows up on screen within a few seconds without pressing a key.
 - **Switching environments** keeps live updates working: the working-tree
   watch continues and the cluster watch re-establishes for the new
   environment as you navigate.
+- **Returning to a cluster category** shows its rows from before at once
+  and reloads them, since its watch stopped while you were away.
+- **A repo edit that breaks loading** (a malformed file) keeps the data
+  from before on screen and raises a warning naming the file; fixing the
+  file reloads as usual.
 - **Recovering a dropped watch:** the working-tree watch has no
   auto-reconnect. If it drops (rare — e.g. a filesystem error), press `r` to
   re-establish it.

@@ -33,6 +33,17 @@ var DefaultRequestTimeout = 30 * time.Second
 // disables the timeout (matches client-go's default of "no timeout").
 var RequestTimeout = DefaultRequestTimeout
 
+// HasContext reports whether kubeconfig defines the context name. An
+// error means the kubeconfig itself couldn't be read.
+func HasContext(kubeconfig, name string) (bool, error) {
+	raw, err := (&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig}).Load()
+	if err != nil {
+		return false, fmt.Errorf("failed to load kubeconfig: %w", err)
+	}
+	_, ok := raw.Contexts[name]
+	return ok, nil
+}
+
 // NewConfig loads a rest.Config from kubeconfig/context.
 func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	loadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig}

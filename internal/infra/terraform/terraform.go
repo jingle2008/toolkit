@@ -568,6 +568,9 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 			}
 		}
 
+		// cty map iteration order varies by run, so `get ma --limit`
+		// would pick different rows each time.
+		sort.Slice(modelArtifacts, func(i, j int) bool { return modelArtifacts[i].Name < modelArtifacts[j].Name })
 		modelArtifactMap[modelName] = modelArtifacts
 	}
 

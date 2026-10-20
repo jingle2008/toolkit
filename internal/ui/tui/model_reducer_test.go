@@ -297,6 +297,23 @@ func TestUpdateGPUPoolState_NoCompartmentIsAnError(t *testing.T) {
 	}
 }
 
+// A GPU pool enrichment that lands while help (or any non-list view) is
+// open is applied, not dropped: otherwise every pool stays at status
+// "..." and actual size 0 until a manual refresh.
+func TestUpdateDoneMsg_AppliedFromAnyView(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset.GPUPools = []models.GPUPool{{Name: "a", Size: 2}}
+	m.viewMode = common.HelpView
+
+	m.Update(updateDoneMsg{
+		category: domain.GPUPool, env: m.environment,
+		pools: []models.GPUPool{{Name: "a", ActualSize: 2, Status: "RUNNING"}},
+	})
+	assert.Equal(t, 2, m.dataset.GPUPools[0].ActualSize)
+	assert.Equal(t, "RUNNING", m.dataset.GPUPools[0].Status)
+}
+
 func TestSortTableByColumn_Toggles(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
@@ -351,6 +368,17 @@ func TestApplyRows_ClampsWhenSelectedRowDisappears(t *testing.T) {
 	c := m.table.Cursor()
 	if c < 0 || c >= len(m.table.Rows()) {
 		t.Fatalf("cursor out of range after reload: %d (rows=%d)", c, len(m.table.Rows()))
+	}
+	// It stays at the gone row's offset, on the row that took its place.
+	if got := m.selectedRawRow(); len(got) == 0 || got[0] != "bm3" {
+		t.Fatalf("cursor on %v, want the next row bm3", got)
+	}
+
+	m.table.SetCursor(1) // bm3, the last row
+	m.dataset.BaseModels = []models.BaseModel{{Name: "bm1"}}
+	m.refreshDisplay()
+	if got := m.selectedRawRow(); len(got) == 0 || got[0] != "bm1" {
+		t.Fatalf("cursor on %v, want the new last row bm1", got)
 	}
 }
 
@@ -485,9 +513,21 @@ func TestHandleDataMsg_IgnoresPerCategoryPayload(t *testing.T) {
 	m.handleDataMsg(dataMsg{Data: []models.GPUPool{{Name: "p1"}}})
 	require.Empty(t, m.dataset.GPUPools, "per-category payload must not be applied by handleDataMsg")
 
-	ds := &models.Dataset{}
+	ds := &models.Dataset{Environments: []models.Environment{{Realm: "oc9"}}}
 	m.handleDataMsg(dataMsg{Data: ds})
-	require.Same(t, ds, m.dataset, "foundational *models.Dataset payload must still be applied")
+	require.Equal(t, ds.Environments, m.dataset.Environments, "foundational *models.Dataset payload must still be applied")
+}
+
+// The startup dataset load can land after a lazily loaded category (with
+// `-c gpup`, the pools may win): it must keep them, not wipe them.
+func TestHandleDataMsg_KeepsEarlierClusterData(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset = &models.Dataset{GPUPools: []models.GPUPool{{Name: "pool-a"}}}
+
+	m.handleDataMsg(dataMsg{Data: &models.Dataset{Tenants: []models.Tenant{{Name: "acme"}}}})
+	assert.Equal(t, []models.GPUPool{{Name: "pool-a"}}, m.dataset.GPUPools)
+	assert.Equal(t, "acme", m.dataset.Tenants[0].Name)
 }
 
 // TestHandleTenancyOverridesLoaded_ResolvesEarlierClusterRows covers

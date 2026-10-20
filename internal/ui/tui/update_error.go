@@ -52,9 +52,21 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	if m.logger != nil {
 		m.logger.Errorw("data load failed", "category", m.category, "error", err)
 	}
+	m.loadFailed = true
 	m.endTask(false)
-	if slices.ContainsFunc(m.keys.Context, func(b key.Binding) bool { return b.Help() == keys.Refresh.Help() }) {
-		return m.showErrorWithNext(msg.Error(), keys.Refresh.Help().Key+" retry")
+	// An error toast outlives an environment switch, so one from an
+	// environment-scoped load names where it failed.
+	text := msg.Error()
+	if m.category.IsEnvironmentScoped() {
+		text = m.environment.KubeContext() + ": " + text
 	}
-	return m.showToast(msg.Error(), toastError)
+	if m.canRefresh() {
+		return m.showErrorWithNext(text, keys.Refresh.Help().Key+" retry")
+	}
+	return m.showToast(text, toastError)
+}
+
+// canRefresh reports whether r (refresh) is bound in the current category.
+func (m *Model) canRefresh() bool {
+	return slices.ContainsFunc(m.keys.Context, func(b key.Binding) bool { return b.Help() == keys.Refresh.Help() })
 }

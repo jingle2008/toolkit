@@ -139,23 +139,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
-		// Match identity against m.rawRows, not the just-truncated `rows`:
-		// applyMiddleTruncation may have shortened the key cells (Name/Tenant
-		// for scoped categories), which would defeat the key comparison.
-		idx := -1
-		// Fast path: if the selected item still sits at its previous offset,
-		// skip the scan. Reloads usually preserve order, so this hits often.
-		if prevKey != nil && prevIdx >= 0 && prevIdx < len(m.rawRows) &&
-			itemKeyFrom(m.category, m.rawRows[prevIdx]) == prevKey {
-			idx = prevIdx
-		}
-		if idx < 0 {
-			idx = indexOfItemKey(m.rawRows, m.category, prevKey)
-		}
-		if idx < 0 {
-			idx = m.findContextIndex(rows)
-		}
-		if idx >= 0 {
+		if idx := m.reselectIndex(rows, prevKey, prevIdx); idx >= 0 {
 			// SetCursor moves the cursor and render window but leaves the
 			// viewport's scroll offset untouched, so a target beyond the
 			// first page lands one row below the visible window (off by
@@ -166,9 +150,43 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 		} else {
 			m.table.GotoTop()
 		}
+		// landOn places the cursor once, when the rows it was set for
+		// first land; later reloads keep the selection as usual.
+		if len(m.rawRows) > 0 {
+			m.landOn = nil
+		}
 	} else {
 		m.table.UpdateViewport()
 	}
+}
+
+// reselectIndex is the row the cursor goes to after applyRows replaced the
+// rows: the previously selected item (prevKey, at offset prevIdx), else the
+// scope or environment row, else, when the selected item is gone, the row
+// that took its offset. -1 for the top.
+func (m *Model) reselectIndex(rows []table.Row, prevKey models.ItemKey, prevIdx int) int {
+	// Match identity against m.rawRows, not the just-truncated `rows`:
+	// applyMiddleTruncation may have shortened the key cells (Name/Tenant
+	// for scoped categories), which would defeat the key comparison.
+	// Fast path: if the selected item still sits at its previous offset,
+	// skip the scan. Reloads usually preserve order, so this hits often.
+	if prevKey != nil && prevIdx >= 0 && prevIdx < len(m.rawRows) &&
+		itemKeyFrom(m.category, m.rawRows[prevIdx]) == prevKey {
+		return prevIdx
+	}
+	if idx := indexOfItemKey(m.rawRows, m.category, prevKey); idx >= 0 {
+		return idx
+	}
+	if idx := m.findContextIndex(rows); idx >= 0 {
+		return idx
+	}
+	// The selected row is gone (deleted, or filtered out by the reload):
+	// stay at its offset, on the row that took its place, rather than
+	// jumping to the top.
+	if prevKey != nil && prevIdx >= 0 && len(m.rawRows) > 0 {
+		return min(prevIdx, len(m.rawRows)-1)
+	}
+	return -1
 }
 
 // decorateRows turns rows, plain cells as in m.rawRows, into display
@@ -433,13 +451,30 @@ func (m *Model) handleDataMsg(msg dataMsg) {
 	// (*models.Dataset) and a nil-payload refresh signal (refreshDataCmd).
 	// Per-category data is owned solely by the typed *LoadedMsg handlers.
 	if ds, ok := msg.Data.(*models.Dataset); ok {
-		m.dataset = ds
+		m.mergeRepoDataset(ds)
 	}
 	if msg.Data != nil {
 		m.endTask(true)
 		m.logger.Infow("data loaded", "category", m.category, "pendingTasks", m.pendingTasks)
 	}
 	m.refreshDisplay()
+}
+
+/*
+mergeRepoDataset takes in a freshly loaded repo dataset (LoadDataset: the
+repo-owned fields). A lazily loaded category can land first — `-c gpup`
+whose pools beat the startup load, or a repo reload with cluster
+categories cached — so the cluster fields already held are kept rather
+than wiped, and their owners re-resolved against the fresh tenants (a
+tenant renamed in the metadata, or tenants now known).
+*/
+func (m *Model) mergeRepoDataset(fresh *models.Dataset) {
+	if m.dataset == nil {
+		m.dataset = fresh
+		return
+	}
+	m.dataset.MergeReloadedRepoData(fresh)
+	resolveTenantOwners(m.dataset)
 }
 
 /*
@@ -456,6 +491,9 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 		m.dataset = &models.Dataset{}
 	}
 	mut(m.dataset)
+	if category == m.category {
+		m.loadFailed = false
+	}
 	m.endTask(true)
 	m.logger.Infow("data loaded", "category", category, "count", count, "pendingTasks", m.pendingTasks)
 	// Only rebuild the visible table when the load is for the category
@@ -610,14 +648,21 @@ func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
 	m.watch.k8sActive = true
 	m.watch.k8sTrigger = msg.Trigger
 	m.logger.Infow("watch started", "category", msg.Cat, "gen", msg.Gen)
-	return waitForK8sTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
+	wait := waitForK8sTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
+	// The version is fetched once per environment; if that failed (an
+	// expired session since renewed), a watch starting shows the cluster
+	// is reachable now, so fetch it again rather than show n/a for good.
+	if m.k8sVersion == kubeVersionUnknown {
+		return tea.Batch(wait, fetchKubeVersionCmd(m.kubeConfig, m.environment.KubeContext()))
+	}
+	return wait
 }
 
 // handleK8sWatchTriggered re-runs the category loader and re-arms the
 // listener so subsequent changes keep flowing. Stale-generation
 // messages (msg.Gen != m.gens.msg) are ignored without side effects.
 func (m *Model) handleK8sWatchTriggered(msg k8sWatchTriggeredMsg) tea.Cmd {
-	if msg.Gen != m.gens.msg {
+	if msg.Gen != m.gens.msg || msg.Cat != m.category {
 		m.logger.Debugw("watch triggered ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
@@ -632,7 +677,11 @@ func (m *Model) handleK8sWatchTriggered(msg k8sWatchTriggeredMsg) tea.Cmd {
 // handleK8sWatchClosed falls back to a final one-shot load and clears the
 // live indicator (no auto-reconnect).
 func (m *Model) handleK8sWatchClosed(msg k8sWatchClosedMsg) tea.Cmd {
-	if msg.Gen != m.gens.msg {
+	// Leaving a cluster category for one without a loader (a definition,
+	// the alias list) cancels its watch without bumping the gen: its
+	// close is then still current, but for a category no longer shown,
+	// and must not reload it in the background.
+	if msg.Gen != m.gens.msg || msg.Cat != m.category {
 		m.logger.Debugw("watch closed ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}

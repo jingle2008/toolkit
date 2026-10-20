@@ -153,11 +153,19 @@ type Model struct {
 	// landOn is the row the cursor lands on after the next navigation,
 	// when it isn't m.scope's: esc back to a parent shows the parent under
 	// its own history scope but puts the cursor on the row drilled in from.
+	// Used once: cleared when that navigation's rows first land.
 	landOn     *domain.Scope
 	keys       keys.KeyMap
 	kubeConfig string
 	version    string
 	k8sVersion string // API server version for the current kube context; "" until fetched
+	// loadFailed is set when the current category's load failed, so an
+	// empty list says so instead of claiming there are no rows. Cleared
+	// when a load starts or lands.
+	loadFailed bool
+	// pendingRecent is the environment just switched to, remembered in a
+	// quick-switch slot once its kube context is known to exist.
+	pendingRecent *models.Environment
 	// theme holds the app-level lipgloss styles (status bar, info pane,
 	// help view). Set once via setStyles; see the Styles struct in styles.go.
 	theme Styles

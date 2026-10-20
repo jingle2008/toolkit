@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -174,6 +175,28 @@ func TestHistory_EscRestoresParentScopeAndCursor(t *testing.T) {
 	assert.Equal(t, &domain.Scope{Category: domain.GPUNode, Name: "n3"}, m.scope)
 }
 
+// landOn places the cursor once: after esc lands on the drilled-from node,
+// a later reload that removes the selected row keeps the cursor at that
+// offset, as any reload does, instead of jumping back to the node.
+func TestHistory_LandOnUsedOnce(t *testing.T) {
+	t.Parallel()
+	m := newHistoryModel(t)
+	m.dataset.GPUNodeMap["p2"] = append(m.dataset.GPUNodeMap["p2"], models.GPUNode{Name: "n4", NodePool: "p2"})
+	m.updateCategory(domain.GPUPool)
+	drill(m, domain.GPUNode, "p2")
+	drill(m, domain.GPUWorkload, "n2")
+
+	_, _ = m.Update(keyPress("esc"))
+	require.Equal(t, []string{"n2", "n3", "n4"}, shownNames(m))
+	require.Equal(t, "n2", m.selectedRawRow()[0])
+	assert.Nil(t, m.landOn, "cleared once the cursor is placed")
+
+	m.table.SetCursor(2) // n4
+	m.dataset.GPUNodeMap["p2"] = m.dataset.GPUNodeMap["p2"][:2]
+	m.updateRows(true)
+	assert.Equal(t, "n3", m.selectedRawRow()[0], "the row that took n4's offset, not n2")
+}
+
 // esc clearing a scope in place is recorded, so [ ] don't bring it back.
 func TestHistory_EscClearingScopeIsRecorded(t *testing.T) {
 	t.Parallel()
@@ -193,16 +216,20 @@ func TestHistory_EntryDoesNotAliasScope(t *testing.T) {
 	assert.Equal(t, "Acme", m.history[m.historyIdx].scope.Name)
 }
 
-// An environment switch drops every entry's scope: they name rows of the
-// old environment.
+// An environment switch drops the entries' scopes naming rows of the old
+// environment, and keeps a tenant's within the realm.
 func TestHistory_EnvSwitchClearsScopes(t *testing.T) {
 	t.Parallel()
 	m := newHistoryModel(t)
+	drill(m, domain.LimitTenancyOverride, "Acme")
 	m.goTo(domain.Scope{Category: domain.DedicatedAICluster, Name: histDAC})
 	drill(m, domain.GPUWorkload, histDAC)
 	m.switchEnvironment(models.Environment{Type: "preprod", Region: "us-ashburn-1", Realm: "realm"}, domain.GPUWorkload)
 	for i, e := range m.history {
-		assert.Nilf(t, e.scope, "entry %d", i)
+		if e.scope != nil {
+			assert.Equalf(t, domain.Tenant, e.scope.Category, "entry %d keeps only the tenant's scope", i)
+		}
 	}
+	assert.True(t, slices.ContainsFunc(m.history, func(e historyEntry) bool { return e.scope != nil }), "the tenant's scope survives a same-realm switch")
 	assert.Nil(t, m.landOn)
 }

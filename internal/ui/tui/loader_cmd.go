@@ -228,14 +228,16 @@ func waitForRepoTriggerCmd(trigger <-chan struct{}) tea.Cmd {
 }
 
 // reloadDatasetCmd re-runs LoadDataset on the session context and returns
-// datasetReloadedMsg. On error it logs at warn and returns nil — a background
-// refresh must not raise a toast or disturb the loading state.
+// datasetReloadedMsg. On error it logs at warn and reports the error in the
+// message, keeping the current data: a background refresh must not disturb
+// the loading state, but a repo edit that broke the load (a malformed
+// file) must not go unnoticed under LIVE either.
 func reloadDatasetCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, logger logging.Logger) tea.Cmd {
 	return func() tea.Msg {
 		ds, err := ld.LoadDataset(ctx, repoPath, env)
 		if err != nil {
 			logger.Warnw("background dataset reload failed; keeping current data", "error", err)
-			return nil
+			return datasetReloadedMsg{env: env, err: err}
 		}
 		return datasetReloadedMsg{Dataset: ds, env: env}
 	}
@@ -254,13 +256,20 @@ func reloadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string
 	}
 }
 
+// kubeVersionUnknown is the version shown when the fetch failed.
+const kubeVersionUnknown = "n/a"
+
 // fetchKubeVersionCmd queries the API server version for kubeCtx. Failures
 // render as "n/a" rather than a toast — the header is informational only.
+// A context the kubeconfig lacks is reported as NoContext.
 func fetchKubeVersionCmd(kubeConfig, kubeCtx string) tea.Cmd {
 	return func() tea.Msg {
+		if ok, err := k8s.HasContext(kubeConfig, kubeCtx); err == nil && !ok {
+			return kubeVersionMsg{Context: kubeCtx, Version: kubeVersionUnknown, NoContext: true}
+		}
 		v, err := k8s.ServerVersion(kubeConfig, kubeCtx)
 		if err != nil || v == "" {
-			v = "n/a"
+			v = kubeVersionUnknown
 		}
 		return kubeVersionMsg{Context: kubeCtx, Version: v}
 	}

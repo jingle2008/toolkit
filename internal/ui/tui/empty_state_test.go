@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 )
 
 func TestEmptyMessage(t *testing.T) {
@@ -21,6 +22,10 @@ func TestEmptyMessage(t *testing.T) {
 		{"faulty", func(m *Model) { m.showFaulty = true }, "No faulty GPUNode · ^z shows all"},
 		{"scope", func(m *Model) { m.scope = &domain.Scope{Category: domain.GPUPool, Name: "pool-a"} }, "No GPUNode in pool-a"},
 		{"environment", func(*Model) {}, "No GPUNode in dp-prod-iad"},
+		{"load failed", func(m *Model) {
+			m.keys = keys.ResolveKeys(domain.GPUNode, m.viewMode)
+			m.loadFailed = true
+		}, "Couldn't load GPUNode · r retry · ` shows the error"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -30,6 +35,19 @@ func TestEmptyMessage(t *testing.T) {
 			assert.Equal(t, tc.want, m.emptyMessage())
 		})
 	}
+}
+
+// A failed load marks the list as failed until a load starts again, so
+// the empty list doesn't claim there is nothing in the environment.
+func TestEmptyMessage_LoadFailedUntilNextLoad(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 120, 40)
+	showCategory(t, m, domain.GPUNode)
+	m.handleErrMsg(errMsg{err: assert.AnError})
+	assert.Contains(t, m.emptyMessage(), "Couldn't load GPUNode")
+
+	m.updateCategoryCore(domain.GPUNode) // r
+	assert.False(t, m.loadFailed)
 }
 
 func TestEmptyMessage_RealmWideCategoryNamesNoContext(t *testing.T) {

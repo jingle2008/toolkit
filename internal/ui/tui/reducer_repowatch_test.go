@@ -1,9 +1,11 @@
 package tui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -86,6 +88,41 @@ func TestHandleDatasetReloaded_CachesMergeOnK8sCategory(t *testing.T) {
 	}, env: m.environment})
 	require.Equal(t, "new", m.dataset.Tenants[0].Name, "merge still applied while on a k8s category")
 	require.Len(t, m.dataset.BaseModels, 1, "k8s field preserved")
+}
+
+// A tenant renamed in the metadata renames it on cached cluster rows too:
+// their owners are re-resolved against the reloaded tenants.
+func TestHandleDatasetReloaded_ReResolvesOwners(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.DedicatedAICluster
+	old := &models.Tenant{Name: "old", ID: "ocid1.tenancy.oc1..acme"}
+	m.dataset = &models.Dataset{
+		Tenants: []models.Tenant{*old},
+		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
+			"old": {{Name: "dac1", TenantID: "acme", Owner: old}},
+		},
+	}
+	m.handleDatasetReloaded(datasetReloadedMsg{Dataset: &models.Dataset{
+		Tenants: []models.Tenant{{Name: "renamed", ID: "ocid1.tenancy.oc1..acme"}},
+	}, env: m.environment})
+	dacs := m.dataset.DedicatedAIClusterMap["renamed"]
+	require.Len(t, dacs, 1, "re-keyed by the new name")
+	require.NotNil(t, dacs[0].Owner)
+	assert.Equal(t, "renamed", dacs[0].Owner.Name)
+}
+
+// A repo edit that breaks the load (a malformed file) keeps the data on
+// screen but says so, rather than leaving it stale under LIVE.
+func TestHandleDatasetReloaded_FailureWarns(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	before := m.dataset
+	cmd := m.handleDatasetReloaded(datasetReloadedMsg{err: errors.New("x.json: failed to decode JSON"), env: m.environment})
+	require.NotNil(t, cmd, "a warning toast")
+	assert.Same(t, before, m.dataset, "the current data stays")
+	require.NotNil(t, m.toasts.active)
+	assert.Contains(t, m.toasts.active.msg, "x.json")
 }
 
 func TestHandleDatasetReloaded_NilDatasetIgnored(t *testing.T) {

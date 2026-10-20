@@ -96,13 +96,16 @@ func (m *Model) syncHistoryScope() {
 	}
 }
 
-// clearHistoryScopes drops every entry's scope. An environment switch
-// clears the current scope because it names a row of the old
-// environment; the entries' scopes do too, and [ must not bring one back
-// (a DAC or node that doesn't exist here would list nothing). The
-// categories stay, so [ still retraces where you were, unscoped.
-func (m *Model) clearHistoryScopes() {
+// dropStaleHistoryScopes drops the entries' scopes that an environment
+// switch leaves naming a row of the old environment (scopeSurvives, the
+// rule for the current scope): [ must not bring one back (a DAC or node
+// that doesn't exist here would list nothing). A definition's scope, and
+// a tenant's within the realm, still hold and are kept. The categories
+// stay, so [ still retraces where you were.
+func (m *Model) dropStaleHistoryScopes(sameRealm bool) {
 	for i := range m.history {
-		m.history[i].scope = nil
+		if !scopeSurvives(m.history[i].scope, sameRealm) {
+			m.history[i].scope = nil
+		}
 	}
 }

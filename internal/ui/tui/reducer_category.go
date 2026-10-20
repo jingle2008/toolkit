@@ -98,19 +98,28 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	)
 
 	m.newLoadContext()
+	m.loadFailed = false
+	// A cluster category's cache went stale when its watch stopped, as it
+	// does on leaving the category, and the new watch only reports changes
+	// from now on. So returning to one reloads it, showing the cached rows
+	// (cached) until the fresh ones land.
+	var cached bool
 	if fn, ok := categoryHandlers[m.category]; ok {
 		gen := m.bumpGen()
-		cmd = fn(m, refresh, gen)
 		if m.category.NeedsKubeConfig() {
+			cached = !refresh
+			refresh = true
 			watchCmd = startK8sWatchCmd(m.loadCtx, m.loader, m.category, m.kubeConfig, m.environment, gen)
 		}
+		cmd = fn(m, refresh, gen)
 	} else if _, ok := tenancyOverrideCategories[m.category]; ok {
 		gen := m.bumpGen()
 		cmd = m.handleTenancyOverridesGroup(gen)
 	}
 	if cmd != nil {
 		cmds = append(cmds, m.beginTask(), cmd)
-	} else {
+	}
+	if cmd == nil || cached {
 		cmds = append(cmds, refreshDataCmd())
 	}
 	if tenants := m.tenantsForOwnersCmd(); tenants != nil {
