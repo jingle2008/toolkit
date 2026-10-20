@@ -502,9 +502,21 @@ func TestHandleDataMsg_IgnoresPerCategoryPayload(t *testing.T) {
 	m.handleDataMsg(dataMsg{Data: []models.GPUPool{{Name: "p1"}}})
 	require.Empty(t, m.dataset.GPUPools, "per-category payload must not be applied by handleDataMsg")
 
-	ds := &models.Dataset{}
+	ds := &models.Dataset{Environments: []models.Environment{{Realm: "oc9"}}}
 	m.handleDataMsg(dataMsg{Data: ds})
-	require.Same(t, ds, m.dataset, "foundational *models.Dataset payload must still be applied")
+	require.Equal(t, ds.Environments, m.dataset.Environments, "foundational *models.Dataset payload must still be applied")
+}
+
+// The startup dataset load can land after a lazily loaded category (with
+// `-c gpup`, the pools may win): it must keep them, not wipe them.
+func TestHandleDataMsg_KeepsEarlierClusterData(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset = &models.Dataset{GPUPools: []models.GPUPool{{Name: "pool-a"}}}
+
+	m.handleDataMsg(dataMsg{Data: &models.Dataset{Tenants: []models.Tenant{{Name: "acme"}}}})
+	assert.Equal(t, []models.GPUPool{{Name: "pool-a"}}, m.dataset.GPUPools)
+	assert.Equal(t, "acme", m.dataset.Tenants[0].Name)
 }
 
 // TestHandleTenancyOverridesLoaded_ResolvesEarlierClusterRows covers

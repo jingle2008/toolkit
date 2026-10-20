@@ -433,13 +433,30 @@ func (m *Model) handleDataMsg(msg dataMsg) {
 	// (*models.Dataset) and a nil-payload refresh signal (refreshDataCmd).
 	// Per-category data is owned solely by the typed *LoadedMsg handlers.
 	if ds, ok := msg.Data.(*models.Dataset); ok {
-		m.dataset = ds
+		m.mergeRepoDataset(ds)
 	}
 	if msg.Data != nil {
 		m.endTask(true)
 		m.logger.Infow("data loaded", "category", m.category, "pendingTasks", m.pendingTasks)
 	}
 	m.refreshDisplay()
+}
+
+/*
+mergeRepoDataset takes in a freshly loaded repo dataset (LoadDataset: the
+repo-owned fields). A lazily loaded category can land first — `-c gpup`
+whose pools beat the startup load, or a repo reload with cluster
+categories cached — so the cluster fields already held are kept rather
+than wiped, and their owners re-resolved against the fresh tenants (a
+tenant renamed in the metadata, or tenants now known).
+*/
+func (m *Model) mergeRepoDataset(fresh *models.Dataset) {
+	if m.dataset == nil {
+		m.dataset = fresh
+		return
+	}
+	m.dataset.MergeReloadedRepoData(fresh)
+	resolveTenantOwners(m.dataset)
 }
 
 /*

@@ -64,12 +64,9 @@ func (m *Model) handleDatasetReloaded(msg datasetReloadedMsg) {
 	if msg.Dataset == nil || !m.inCurrentEnv(msg.env) {
 		return
 	}
-	if m.dataset == nil {
-		m.dataset = msg.Dataset
-	} else {
-		m.dataset.MergeReloadedRepoData(msg.Dataset)
-	}
-	if !m.category.NeedsKubeConfig() {
+	m.mergeRepoDataset(msg.Dataset)
+	// A tenant-owned cluster category shows owners from the repo's tenants.
+	if _, owned := tenantOwnedCategories[m.category]; owned || !m.category.NeedsKubeConfig() {
 		m.refreshDisplay()
 	}
 }
