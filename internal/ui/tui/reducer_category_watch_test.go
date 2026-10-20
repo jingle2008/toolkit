@@ -96,14 +96,14 @@ func TestUpdateCategoryCore_GPUNode_CacheMiss(t *testing.T) {
 }
 
 // TestUpdateCategoryCore_GPUNode_Cached asserts that re-entering GPUNode
-// when data is already loaded does NOT increment pendingTasks (no task leak),
-// but still starts a watch.
+// with data already loaded shows the cached rows at once but also reloads:
+// the cache went stale when the category's watch stopped, and the new
+// watch only reports changes from now on.
 func TestUpdateCategoryCore_GPUNode_Cached(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	// Start from a different category.
 	m.category = domain.Environment
-	// Pre-populate the cache so the handler returns nil (no load needed).
 	m.dataset = &models.Dataset{
 		GPUNodeMap: map[string][]models.GPUNode{
 			"pool1": {},
@@ -113,17 +113,11 @@ func TestUpdateCategoryCore_GPUNode_Cached(t *testing.T) {
 	cmds := m.updateCategoryCore(domain.GPUNode)
 	require.NotEmpty(t, cmds)
 
-	// Run all cmds to produce messages. beginTask is only called during cmd
-	// execution for new load tasks; on the cached path it was never called,
-	// so pendingTasks stays 0.
 	types := collectCmdsMsgTypes(t, cmds)
-
-	// The handler returned nil → beginTask must NOT have been called.
-	assert.Equal(t, 0, m.pendingTasks,
-		"cached re-entry must not leak a pending task")
-
-	// Watch should still be started even when the load was skipped.
+	assert.True(t, contains(types, "tui.dataMsg"), "cached rows are shown at once, got %v", types)
+	assert.True(t, contains(types, "tui.gpuNodesLoadedMsg"), "the stale cache is reloaded, got %v", types)
+	assert.Equal(t, 1, m.pendingTasks, "one task for the reload, ended by its result")
 	assert.True(t,
 		hasWatchLifecycle(types),
-		"expected a watch lifecycle message even on cached path, got %v", types)
+		"expected a watch lifecycle message, got %v", types)
 }

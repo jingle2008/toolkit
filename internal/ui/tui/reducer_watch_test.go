@@ -88,6 +88,20 @@ func TestHandleWatchClosed_StaleIgnored(t *testing.T) {
 	assert.True(t, m.watch.k8sActive, "stale k8sWatchClosedMsg must not clear the live indicator")
 }
 
+// Leaving GPUWorkload for PropertyDefinition (no loader, so no gen bump)
+// closes its watch with a still-current gen: that close must not reload
+// GPUWorkloads in the background.
+func TestHandleWatchClosed_OtherCategoryIgnored(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.gens.msg = 4
+	m.category = domain.PropertyDefinition
+	m.newLoadContext()
+
+	assert.Nil(t, m.handleK8sWatchClosed(k8sWatchClosedMsg{Cat: domain.GPUWorkload, Gen: 4}))
+	assert.Nil(t, m.handleK8sWatchTriggered(k8sWatchTriggeredMsg{Cat: domain.GPUWorkload, Gen: 4}))
+}
+
 func TestHandleWatchUnavailable_StaleIgnored(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)

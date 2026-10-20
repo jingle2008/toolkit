@@ -617,7 +617,7 @@ func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
 // listener so subsequent changes keep flowing. Stale-generation
 // messages (msg.Gen != m.gens.msg) are ignored without side effects.
 func (m *Model) handleK8sWatchTriggered(msg k8sWatchTriggeredMsg) tea.Cmd {
-	if msg.Gen != m.gens.msg {
+	if msg.Gen != m.gens.msg || msg.Cat != m.category {
 		m.logger.Debugw("watch triggered ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
@@ -632,7 +632,11 @@ func (m *Model) handleK8sWatchTriggered(msg k8sWatchTriggeredMsg) tea.Cmd {
 // handleK8sWatchClosed falls back to a final one-shot load and clears the
 // live indicator (no auto-reconnect).
 func (m *Model) handleK8sWatchClosed(msg k8sWatchClosedMsg) tea.Cmd {
-	if msg.Gen != m.gens.msg {
+	// Leaving a cluster category for one without a loader (a definition,
+	// the alias list) cancels its watch without bumping the gen: its
+	// close is then still current, but for a category no longer shown,
+	// and must not reload it in the background.
+	if msg.Gen != m.gens.msg || msg.Cat != m.category {
 		m.logger.Debugw("watch closed ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
