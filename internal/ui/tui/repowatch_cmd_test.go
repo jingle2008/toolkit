@@ -72,6 +72,9 @@ func TestReloadDatasetCmd_SuccessAndError(t *testing.T) {
 	require.Same(t, ds, reloaded.Dataset)
 
 	errLoader := fakeLoader{err: errors.New("boom")}
-	require.Nil(t, reloadDatasetCmd(context.Background(), errLoader, "/repo", models.Environment{}, logging.NewNoOpLogger())(),
-		"a reload error must produce a nil (no-op) message, not a toast")
+	msg = reloadDatasetCmd(context.Background(), errLoader, "/repo", models.Environment{}, logging.NewNoOpLogger())()
+	failed, ok := msg.(datasetReloadedMsg)
+	require.True(t, ok, "expected datasetReloadedMsg, got %T", msg)
+	require.EqualError(t, failed.err, "boom")
+	require.Nil(t, failed.Dataset, "a failed reload carries no data to merge")
 }

@@ -168,8 +168,7 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.handleRepoWatchClosed()
 		return m, nil
 	case datasetReloadedMsg:
-		m.handleDatasetReloaded(msg)
-		return m, nil
+		return m, m.handleDatasetReloaded(msg)
 	case gpuPoolsReloadedMsg:
 		return m, m.handleGPUPoolsReloaded(msg)
 	case kubeVersionMsg:

@@ -58,17 +58,25 @@ func (m *Model) maybeStartRepoWatchCmd() tea.Cmd {
 // in-memory dataset (preserving live k8s fields). When the on-screen category
 // is repo-backed it refreshes the view, preserving the active filter and
 // selected-row cursor; when a k8s-backed category is showing, the merge cannot
-// have changed its visible rows, so the recompute is skipped (the merged data
-// is still cached for when the user navigates to a repo category).
-func (m *Model) handleDatasetReloaded(msg datasetReloadedMsg) {
-	if msg.Dataset == nil || !m.inCurrentEnv(msg.env) {
-		return
+// have changed its visible rows (bar a tenant-owned one's owners), so the
+// recompute is skipped (the merged data is still cached for when the user
+// navigates to a repo category). A failed reload keeps the data and warns.
+func (m *Model) handleDatasetReloaded(msg datasetReloadedMsg) tea.Cmd {
+	if !m.inCurrentEnv(msg.env) {
+		return nil
+	}
+	if msg.err != nil {
+		return m.showToast("repo reload failed, showing the data from before: "+msg.err.Error(), toastWarn)
+	}
+	if msg.Dataset == nil {
+		return nil
 	}
 	m.mergeRepoDataset(msg.Dataset)
 	// A tenant-owned cluster category shows owners from the repo's tenants.
 	if _, owned := tenantOwnedCategories[m.category]; owned || !m.category.NeedsKubeConfig() {
 		m.refreshDisplay()
 	}
+	return nil
 }
 
 // handleGPUPoolsReloaded refreshes the cached GPU pool list and re-runs the

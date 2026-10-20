@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -109,6 +110,19 @@ func TestHandleDatasetReloaded_ReResolvesOwners(t *testing.T) {
 	require.Len(t, dacs, 1, "re-keyed by the new name")
 	require.NotNil(t, dacs[0].Owner)
 	assert.Equal(t, "renamed", dacs[0].Owner.Name)
+}
+
+// A repo edit that breaks the load (a malformed file) keeps the data on
+// screen but says so, rather than leaving it stale under LIVE.
+func TestHandleDatasetReloaded_FailureWarns(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	before := m.dataset
+	cmd := m.handleDatasetReloaded(datasetReloadedMsg{err: errors.New("x.json: failed to decode JSON"), env: m.environment})
+	require.NotNil(t, cmd, "a warning toast")
+	assert.Same(t, before, m.dataset, "the current data stays")
+	require.NotNil(t, m.toasts.active)
+	assert.Contains(t, m.toasts.active.msg, "x.json")
 }
 
 func TestHandleDatasetReloaded_NilDatasetIgnored(t *testing.T) {

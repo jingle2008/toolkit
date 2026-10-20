@@ -30,10 +30,12 @@ func LoadFile[T any](path string) (*T, error) {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 
+	// The path is in the error: an override load reads hundreds of files,
+	// and one malformed file fails it.
 	var data T
 	err = json.Unmarshal(jsonData, &data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode JSON: %w", err)
+		return nil, fmt.Errorf("failed to decode JSON in %s: %w", path, err)
 	}
 
 	return &data, nil
