@@ -97,6 +97,9 @@ type gpuPoolScaleResultMsg struct {
 	key models.ItemKey
 	err error
 	env models.Environment
+	// noop is set when the pool was already at its configured size, so
+	// no request went to OCI.
+	noop bool
 }
 
 type cordonNodeResultMsg struct {

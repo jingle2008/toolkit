@@ -148,13 +148,14 @@ func deleteVerb(cat domain.Category) string {
 // handleUpdateDoneMsg applies a GPU pool enrichment (updateGPUPoolState):
 // each current pool takes the enriched ID, actual size and status of the
 // snapshot pool of its name. A pool added since the snapshot keeps its
-// state until the next enrichment.
-func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
+// state until the next enrichment. While a pool is mid-transition (e.g.
+// SCALING) it schedules the next enrichment.
+func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) tea.Cmd {
 	if msg.err != nil {
 		m.logger.Errorw("failed to update data", "category", msg.category, "error", msg.err)
 	}
 	if m.dataset == nil || !m.inCurrentEnv(msg.env) {
-		return
+		return nil
 	}
 	enriched := make(map[string]models.GPUPool, len(msg.pools))
 	for _, p := range msg.pools {
@@ -175,17 +176,29 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) {
 	if msg.category == m.category {
 		m.updateRows(false)
 	}
+	if msg.err != nil {
+		return nil
+	}
+	return m.scheduleGPUPoolPoll()
 }
 
-// handleGPUPoolScaleResultMsg says whether the scale-up was requested;
-// the pool's size and state follow from the next enrichment.
+// handleGPUPoolScaleResultMsg says whether the scale-up was requested,
+// and after a request re-fetches the pools' OCI state so the new size and
+// state show without a manual refresh.
 func (m *Model) handleGPUPoolScaleResultMsg(msg gpuPoolScaleResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
 		m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("scale up %s failed: %v", target, msg.err), keys.ScaleUp.Help().Key+" retry")
 	}
-	return m.showToast("scale-up requested for "+target, toastInfo)
+	if msg.noop {
+		return m.showToast(target+" is already at its configured size; nothing to scale", toastInfo)
+	}
+	toast := m.showToast("scale-up requested for "+target, toastInfo)
+	if !m.inCurrentEnv(msg.env) {
+		return toast
+	}
+	return tea.Batch(toast, m.updateGPUPoolState())
 }
 
 func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) tea.Cmd {

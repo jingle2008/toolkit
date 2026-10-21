@@ -185,6 +185,10 @@ type Model struct {
 	// repo working-tree watch. See the watchState type.
 	watch watchState
 
+	// gpuPoolPollPending is true while a gpuPoolPollMsg tick is
+	// scheduled, so enrichments never stack a second poll chain.
+	gpuPoolPollPending bool
+
 	// Table sorting state
 	sortColumn string
 	sortAsc    bool
