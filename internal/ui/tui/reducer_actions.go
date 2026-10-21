@@ -109,13 +109,16 @@ func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey) tea.Cmd {
 		return nil
 	}
 	env := m.environment
+	// Mirrors oci.IncreasePoolSize, which returns without calling OCI
+	// when the pool is already at its configured size.
+	noop := pool.ActualSize >= pool.Size
 	return m.trackAction("scale up "+pool.Name, "Scaling", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
 		err := audited(m.logger, mutation.ScaleGPUPool, pool.Name, func() error {
 			return oci.IncreasePoolSize(ctx, pool, env, m.logger)
 		})
-		return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env}
+		return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env, noop: noop}
 	})
 }
 

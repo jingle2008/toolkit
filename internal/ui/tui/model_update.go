@@ -138,8 +138,9 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// would otherwise be dropped — a GPU pool enrichment for good,
 	// leaving every pool at status "..." and actual size 0.
 	case updateDoneMsg:
-		m.handleUpdateDoneMsg(msg)
-		return m, nil
+		return m, m.handleUpdateDoneMsg(msg)
+	case gpuPoolPollMsg:
+		return m, m.handleGPUPoolPoll(msg)
 	case filterMsg:
 		return m, m.handleFilterMsg(msg)
 	case setFilterMsg:
