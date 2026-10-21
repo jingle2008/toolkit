@@ -92,16 +92,18 @@ const (
 
 // Audit writes the "mutation" record for action on target at phase,
 // from surface ("tui", "cli" or "mcp"). err is recorded on PhaseFailed,
-// which logs at error level; every other phase logs at info.
-func Audit(logger logging.Logger, surface string, a Action, target string, phase Phase, err error) {
-	kv := []any{
+// which logs at error level; every other phase logs at info. fields are
+// the action's own key-value pairs (a scale's sizes), appended after the
+// standard ones so a search on target still matches.
+func Audit(logger logging.Logger, surface string, a Action, target string, phase Phase, err error, fields ...any) {
+	kv := append([]any{
 		"action", a.Verb,
 		"kind", a.Kind,
 		"target", target,
 		"surface", surface,
 		"phase", string(phase),
 		"dry_run", phase == PhaseDryRun,
-	}
+	}, fields...)
 	if phase == PhaseFailed {
 		logger.Errorw("mutation", append(kv, "error", err)...)
 		return

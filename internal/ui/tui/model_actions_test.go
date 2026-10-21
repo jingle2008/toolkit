@@ -53,10 +53,10 @@ func TestHandleItemActions_Refresh(t *testing.T) {
 func TestScaleUpGPUPool_InvalidItem(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	if cmd := m.scaleUpGPUPool(nil, nil); cmd != nil {
+	if cmd := m.scaleUpGPUPool(nil, nil, 1); cmd != nil {
 		t.Fatal("expected nil cmd for nil pool")
 	}
-	if cmd := m.scaleUpGPUPool("not-a-pool", nil); cmd != nil {
+	if cmd := m.scaleUpGPUPool("not-a-pool", nil, 1); cmd != nil {
 		t.Fatal("expected nil cmd for invalid pool type")
 	}
 }

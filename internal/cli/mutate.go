@@ -235,6 +235,21 @@ type mutationPlan struct {
 	Resolve func(ctx context.Context, p *mutationPlan) error
 	// Resolved is what Resolve found (mutation.ResolvedNode, ...).
 	Resolved mutation.Resolved
+	// Skip, when Resolve sets it, ends the call with this line: there is
+	// nothing to do, so nothing is prompted, performed or audited.
+	Skip string
+	// Notice, when Resolve sets it, is printed before the prompt (with
+	// --yes too) and after the dry-run line: what the action will do (a
+	// scale's sizes) and any warning.
+	Notice string
+	// AuditFields, when set, adds the action's own fields to every audit
+	// record from Resolve on. It is called per record, so fields the
+	// perform closure fills in (a scale's actual sizes) reach the done
+	// record.
+	AuditFields func() []any
+	// Outcome, when set, is appended to the success line after perform:
+	// "<action> <kind>/<target>: OK (<outcome>)".
+	Outcome func() string
 }
 
 // runMutation orchestrates the standard refuse / resolve / dry-run /
@@ -244,15 +259,16 @@ type mutationPlan struct {
 //  1. An Irreversible action without --yes (and not a dry run): refused,
 //     before touching anything.
 //  2. Resolve looks the target up; a failure ends the call, audited as
-//     failed unless a dry run.
+//     failed unless a dry run. A Skip it sets ends the call too.
 //  3. --dry-run: report what would run and what was resolved.
 //  4. Without --yes, the prompt; declining is audited as refused.
 //  5. perform, audited begin, then done or failed.
 //
 // Output contract (writes to out):
-//   - dry-run: "DRY-RUN: would <action> <kind>/<target>[ (<resolved>)]\n"
+//   - skip: "<skip>\n"
+//   - dry-run: "DRY-RUN: would <action> <kind>/<target>[ (<resolved>)]\n[<notice>\n]"
 //   - interactive abort: "aborted\n"
-//   - success: "<action> <kind>/<target>: OK\n"
+//   - success: "<action> <kind>/<target>: OK[ (<outcome>)]\n"
 //
 // Errors from Resolve and perform are returned verbatim; callers should
 // let Cobra surface them.
@@ -265,7 +281,7 @@ func runMutation(
 ) error {
 	logger := logging.FromContext(ctx)
 	audit := func(phase mutation.Phase, err error) {
-		mutation.Audit(logger, surfaceCLI, plan.Action, plan.Target, phase, err)
+		mutation.Audit(logger, surfaceCLI, plan.Action, plan.Target, phase, err, plan.auditFields()...)
 	}
 
 	if plan.Action.Tier == mutation.Irreversible && !plan.Yes && !plan.DryRun {
@@ -280,18 +296,20 @@ func runMutation(
 			return err
 		}
 	}
+	if plan.Skip != "" {
+		_, _ = fmt.Fprintln(out, plan.Skip)
+		return nil
+	}
 	desc := fmt.Sprintf("%s %s/%s", plan.Action.Verb, plan.Action.Kind, plan.Target)
 
 	if plan.DryRun {
-		line := "DRY-RUN: would " + desc
-		if r := plan.Resolved.String(); r != "" {
-			line += " (" + r + ")"
-		}
-		_, _ = fmt.Fprintln(out, line)
+		_, _ = fmt.Fprintln(out, "DRY-RUN: would "+desc+parenthesized(plan.Resolved.String()))
+		plan.printNotice(out)
 		audit(mutation.PhaseDryRun, nil)
 		return nil
 	}
 
+	plan.printNotice(out)
 	if !plan.Yes {
 		ok, err := confirmAction(in, out, fmt.Sprintf("Confirm %s? [y/N]: ", desc))
 		if err != nil {
@@ -310,8 +328,39 @@ func runMutation(
 		return err
 	}
 	audit(mutation.PhaseDone, nil)
-	_, _ = fmt.Fprintf(out, "%s: OK\n", desc)
+	_, _ = fmt.Fprintln(out, desc+": OK"+parenthesized(plan.outcome()))
 	return nil
+}
+
+// outcome is the plan's Outcome, "" when unset.
+func (p *mutationPlan) outcome() string {
+	if p.Outcome == nil {
+		return ""
+	}
+	return p.Outcome()
+}
+
+// auditFields is the plan's own audit fields, none when unset.
+func (p *mutationPlan) auditFields() []any {
+	if p.AuditFields == nil {
+		return nil
+	}
+	return p.AuditFields()
+}
+
+// printNotice prints the plan's Notice, when it has one.
+func (p *mutationPlan) printNotice(out io.Writer) {
+	if p.Notice != "" {
+		_, _ = fmt.Fprintln(out, p.Notice)
+	}
+}
+
+// parenthesized is " (s)", or "" for an empty s.
+func parenthesized(s string) string {
+	if s == "" {
+		return ""
+	}
+	return " (" + s + ")"
 }
 
 // surfaceCLI is the audit record's surface for every CLI mutation.

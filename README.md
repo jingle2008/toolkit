@@ -221,7 +221,7 @@ Maintenance operations the TUI exposes via keyboard shortcuts are also available
 | `toolkit drain <node>` | Safely drain a node: cordon, refuse nodes running fine-tuning / training / replicationJob pods, rolling-restart single-replica InferenceServices so they move off first, then evict the rest. Blocks until done; the drain is recorded on the Node (`toolkit/drain` annotation), so re-running resumes an interrupted drain. `--status` prints the recorded drain instead (phase, deadline, what it still waits on; `-o yaml\|json`), as MCP's `get_drain_status`. |
 | `toolkit restart node <node>` | Soft-reset (restart) the node's underlying OCI instance |
 | `toolkit restart inference-service <name> [--namespace <ns>]` | Rolling-restart an OME InferenceService by bumping its `restartedAt` annotation. Without `--namespace`, the name must be unique across namespaces. Alias `isvc`. |
-| `toolkit scale gpu-pool <name>` | Sync OCI instance-pool size to the Terraform-declared `pool.Size` (no `--size` flag — Terraform is the source of truth). The `gpupool` alias is accepted for back-compat. |
+| `toolkit scale gpu-pool <name> [--add N]` | Without `--add`, fill the OCI instance pool to the Terraform-declared size (nothing to do when it's there). `--add N` adds N instances to OCI's current size, past the Terraform size if need be; the next `terraform apply` shrinks it back, which the prompt and `--dry-run` warn about. The `gpupool` alias is accepted for back-compat. |
 | `toolkit delete dac <name>` | Delete a dedicated AI cluster (destructive — requires `--yes`) |
 | `toolkit delete inference-service <name> [--namespace <ns>]` | Delete an orphaned InferenceService — a dedicated endpoint whose DAC no longer exists. Refused for shared endpoints and for endpoints whose DAC exists. One stuck deleting for over 10 minutes is force-deleted by removing its finalizer. Destructive — requires `--yes`. Alias `isvc`. |
 | `toolkit terminate <node>` | Terminate the underlying OCI instance (destructive — requires `--yes`) |
@@ -299,7 +299,7 @@ Every read tool takes an optional `filter` (fuzzy substring) and optional `env_t
 | `get_drain_status` | Read-only, no `confirm` needed: a node's drain phase, deadline, what it still waits on, and any failure message |
 | `restart_node` | Soft-reset (restart) the node's underlying OCI instance |
 | `restart_inference_service` | Rolling-restart an OME InferenceService (`namespace` optional) |
-| `scale_gpu_pool` | Resize an OCI GPU instance pool |
+| `scale_gpu_pool` | Grow an OCI GPU instance pool: to its Terraform size, or by `add` instances past it (status `NOOP` when there's nothing to do) |
 | `delete_dac` | Delete a dedicated AI cluster (irreversible: needs `confirm_target`) |
 | `delete_inference_service` | Delete an orphaned InferenceService (its DAC is gone); force-deletes one stuck deleting (`namespace` optional; irreversible: needs `confirm_target`) |
 | `terminate_node` | Terminate the underlying OCI instance (irreversible: needs `confirm_target`) |

@@ -191,14 +191,14 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 		{"uncordon", m.confirmCordon(key, &models.GPUNode{Name: "gpu-1", IsSchedulingDisabled: true}), "Uncordon", "node"},
 		{"drain", m.confirmDrain(key), "Drain", "node"},
 		{"restart", m.confirmRestart(key, nil), "Restart", "node"},
-		{"scale", m.confirmScale(key), "Scale up", "GPU pool"},
+		{"scale", m.confirmScale(key, models.GPUPool{Name: "gpu-1", ID: "p", Size: 4, ActualSize: 2}), "Scale up", "GPU pool"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, mutation.Recoverable, tc.got.act.Tier)
 			assert.Equal(t, tc.action, tc.got.verb())
 			assert.Equal(t, tc.kind, tc.got.noun())
-			if tc.name != "scale" { // no pool to describe; see TestConfirmScale_Warning
+			if tc.name != "scale" { // its notice follows the count; see scale_confirm_test.go
 				assert.NotEmpty(t, tc.got.warning, "recoverable actions say what they do")
 			}
 			assert.NotNil(t, tc.got.run)
@@ -247,27 +247,6 @@ func TestConfirmLabels_CoverModalActions(t *testing.T) {
 		}
 	}
 	assert.NotContains(t, confirmLabels, mutation.SetTenant)
-}
-
-func TestConfirmScale_Warning(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct {
-		name         string
-		actual, size int
-		want         string
-	}{
-		{"grows", 2, 4, "Grows the instance pool from 2 to 4 instances."},
-		{"at size", 4, 4, "Already at its configured size (4); nothing to do."},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			m := newConfirmTestModel(t)
-			m.category = domain.GPUPool
-			m.dataset = &models.Dataset{GPUPools: []models.GPUPool{{Name: "pool-a", ActualSize: tc.actual, Size: tc.size}}}
-			key := itemKeyFrom(domain.GPUPool, []string{"pool-a"})
-			assert.Equal(t, tc.want, m.confirmScale(key).warning)
-		})
-	}
 }
 
 func TestConfirmView_ProductionContext(t *testing.T) {

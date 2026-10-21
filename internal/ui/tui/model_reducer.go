@@ -197,6 +197,7 @@ func (m *Model) decorateRows(rows []table.Row) {
 	m.overlayActionStatus(rows)
 	m.applyMiddleTruncation(rows)
 	m.toneStatusCells(rows)
+	m.toneOverSizePools(rows)
 	m.muteIDCells(rows)
 	m.markEmptyCells(rows)
 	m.alignNumericCells(rows)

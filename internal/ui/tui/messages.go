@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/table"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -97,9 +98,10 @@ type gpuPoolScaleResultMsg struct {
 	key models.ItemKey
 	err error
 	env models.Environment
-	// noop is set when the pool was already at its configured size, so
-	// no request went to OCI.
-	noop bool
+	// scale is the sizes the scale-up went from and to; declared is the
+	// pool's Terraform size, for the over-size note.
+	scale    oci.PoolScale
+	declared int
 }
 
 type cordonNodeResultMsg struct {

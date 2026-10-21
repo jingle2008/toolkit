@@ -3,11 +3,13 @@ package tui
 import (
 	"fmt"
 	"image/color"
+	"strconv"
 	"strings"
 
 	"charm.land/bubbles/v2/table"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
@@ -110,6 +112,38 @@ func (m *Model) toneStatusCells(rows []table.Row) {
 		}
 		if c := toneOf(r[col]).color(m.theme.Palette); c != nil {
 			r[col] = fgSeq(c) + r[col] + "\x1b[39m"
+		}
+	}
+}
+
+// toneOverSizePools draws a GPU pool's Actual Size in Warn when it is
+// past the Terraform Size: a deliberate over-scale, which isn't faulty
+// but is drift the next terraform apply undoes (models.GPUPool.IsOverSize).
+// Like toneStatusCells it sets and resets only the foreground.
+func (m *Model) toneOverSizePools(rows []table.Row) {
+	if m.category != domain.GPUPool {
+		return
+	}
+	size, actual := -1, -1
+	for i, h := range m.headers {
+		switch h.text {
+		case common.SizeCol:
+			size = i
+		case common.ActualSizeCol:
+			actual = i
+		}
+	}
+	if size < 0 || actual < 0 {
+		return
+	}
+	for _, r := range rows {
+		if size >= len(r) || actual >= len(r) {
+			continue
+		}
+		declared, err1 := strconv.Atoi(strings.TrimSpace(r[size]))
+		live, err2 := strconv.Atoi(strings.TrimSpace(r[actual]))
+		if err1 == nil && err2 == nil && live > declared {
+			r[actual] = fgSeq(m.theme.Palette.Warn) + r[actual] + "\x1b[39m"
 		}
 	}
 }

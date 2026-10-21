@@ -13,6 +13,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -99,9 +100,9 @@ func stubPerformSeams(t *testing.T) *[]string {
 	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GPUPool, error) {
 		return &models.GPUPool{Name: name, ID: "ocid1.pool", Size: 4, ActualSize: 2}, nil
 	}
-	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, models.Environment, logging.Logger) error {
+	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, logging.Logger) (oci.PoolScale, error) {
 		did("scale")
-		return nil
+		return oci.PoolScale{}, nil
 	}
 	mcpDeleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
 		did("delete-dac")
@@ -184,7 +185,10 @@ func TestMutationTools_DryRunReportsResolved(t *testing.T) {
 	assert.Equal(t, map[string]any{"namespace": "ns-a"}, sc["resolved"])
 
 	sc = structured(t, callTool(t, "scale_gpu_pool", with(mutationArgs["scale_gpu_pool"], "dry_run", true)))
-	assert.Equal(t, map[string]any{"pool_id": "ocid1.pool", "size": float64(4), "actual_size": float64(2)}, sc["resolved"])
+	assert.Equal(t, map[string]any{
+		"pool_id": "ocid1.pool", "size": float64(4), "actual_size": float64(2), "add": float64(2), "target_size": float64(4),
+	}, sc["resolved"])
+	assert.Equal(t, "Grows the instance pool from 2 to 4 instances.", sc["note"])
 }
 
 // confirm=true doesn't run an irreversible tool: confirm_target must name

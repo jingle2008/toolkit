@@ -331,7 +331,7 @@ Toolkit organises data into 22 categories:
 | **BaseModel** | AI model definitions; supports faulty tracking. `Enter` lists the inference services serving the model (`y` opens details) |
 | **ImportedModel** | Tenant-imported models (namespaced BaseModel CRs + ClusterBaseModel CRs with a `tenancy-id` label). A model copied into several namespaces — its `default` library copy plus copies in DAC namespaces — is one row, with every copy listed under **Namespace**. `m` opens the metrics of the DAC serving the model; when several do, it asks which. `Enter` lists the inference services serving the model (`y` opens details) |
 | **ModelArtifact** | Model artifact versions |
-| **GPUPool** | OCI GPU instance pools; supports scaling |
+| **GPUPool** | OCI GPU instance pools; supports scaling. **Size** is the Terraform-declared instance count, **Actual Size** OCI's. A pool short of its Size is reported as faulty; one scaled past it is drawn with Actual Size in amber instead: it isn't broken, but the next `terraform apply` shrinks it back |
 | **GPUNode** | Individual Kubernetes GPU compute nodes |
 | **GPUWorkload** | GPU-consuming Kubernetes pods (anything requesting `nvidia.com/gpu` or `amd.com/gpu` and scheduled to a node, including one still starting: its **Status** is `Pending`, and its GPUs count toward the node's allocation), scoped by GPUNode, or by DedicatedAICluster (the pods in its namespace). Pods serving a legacy `ome.oracle.com/v1alpha1` endpoint match `/legacy`; their runtime is a legacy one, so they aren't related to a ServingRuntime |
 | **DedicatedAICluster** | OCI Dedicated AI Clusters; press `Enter` to see the inference services running on one |
@@ -470,9 +470,9 @@ Select a node in the `GPUNode` category:
 
 | Key | Operation | Description |
 |-----|-----------|-------------|
-| `Shift+U` | Scale Up | Request an increase in pool capacity |
+| `Shift+U` | Scale Up | Add instances to the pool. The confirmation asks how many, starting at what the pool is short of its Size, or 1 for a full pool; type digits to change it. It shows the size it grows to, and warns when that passes the Terraform size, which the next `terraform apply` undoes by terminating the extra instances. The count is added to OCI's size at the time, and the toast says if that had moved. A pool OCI has no instance pool for can't be scaled |
 | `r` | Refresh | Reload pool data |
-| `Ctrl+Z` | Faulty only | Show/hide pools with faulty status |
+| `Ctrl+Z` | Faulty only | Show/hide pools short of their Terraform size |
 
 ### Dedicated AI Clusters (`DedicatedAICluster`)
 

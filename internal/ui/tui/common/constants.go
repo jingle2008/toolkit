@@ -17,6 +17,8 @@ const (
 	ContextCol = "Context"
 	// SizeCol is the column name for "Size".
 	SizeCol = "Size"
+	// ActualSizeCol is the column name for a GPU pool's "Actual Size".
+	ActualSizeCol = "Actual Size"
 	// FreeCol is the column name for "Free".
 	FreeCol = "Free"
 	// AgeCol is the column name for "Age".

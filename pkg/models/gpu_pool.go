@@ -42,15 +42,39 @@ func (p GPUPool) FilterableFields() []string {
 	return []string{p.Name, p.Shape, p.CapacityType}
 }
 
-// IsFaulty reports whether the pool's actual size differs from its desired
-// size. A pool whose live state is pending or unknown isn't faulty: its
+// IsFaulty reports whether the pool is short of its desired size. A pool
+// scaled past it isn't: that is a deliberate over-scale (IsOverSize). A
+// pool whose live state is pending or unknown isn't faulty either: its
 // actual size is unknown, not zero. One OCI doesn't have is (its actual
 // size is zero).
 func (p GPUPool) IsFaulty() bool {
-	if p.Status == GPUPoolStatusPending || p.Status == GPUPoolStatusUnknown {
-		return false
+	return p.hasLiveSize() && p.ActualSize < p.Size
+}
+
+// IsOverSize reports whether the pool was scaled past its desired size,
+// drift the next terraform apply undoes.
+func (p GPUPool) IsOverSize() bool {
+	return p.hasLiveSize() && p.ActualSize > p.Size
+}
+
+// hasLiveSize reports whether ActualSize was looked up.
+func (p GPUPool) hasLiveSize() bool {
+	return p.Status != GPUPoolStatusPending && p.Status != GPUPoolStatusUnknown
+}
+
+// Shortfall is how many instances the pool is short of its desired size,
+// 0 when it is at or past it.
+func (p GPUPool) Shortfall() int {
+	return max(p.Size-p.ActualSize, 0)
+}
+
+// DefaultScaleAdd is how many instances a scale-up adds unless told
+// otherwise: the shortfall, or one past the desired size.
+func (p GPUPool) DefaultScaleAdd() int {
+	if n := p.Shortfall(); n > 0 {
+		return n
 	}
-	return p.ActualSize != p.Size
+	return 1
 }
 
 // GPUs returns the total number of GPUs in the pool.
