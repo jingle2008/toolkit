@@ -242,10 +242,13 @@ func (m *Model) refilterPalette() {
 }
 
 // updatePaletteView moves through the matches (↑/↓, ctrl+p/ctrl+n), runs
-// one on enter, closes on esc, and feeds everything else to the query.
-// An exact category alias wins on enter whatever the ranking, so :dac⏎
-// still opens DedicatedAICluster.
+// one on enter, closes on esc, and feeds everything else, pastes
+// included, to the query. An exact category alias wins on enter whatever
+// the ranking, so :dac⏎ still opens DedicatedAICluster.
 func (m *Model) updatePaletteView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if paste, ok := msg.(tea.PasteMsg); ok {
+		return m, m.updatePaletteQuery(paste)
+	}
 	km, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return m, nil
@@ -264,16 +267,23 @@ func (m *Model) updatePaletteView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "enter":
 		return m, m.runPalette()
 	default:
-		before := p.input.Value()
-		var cmd tea.Cmd
-		p.input, cmd = p.input.Update(msg)
-		if p.input.Value() != before {
-			m.refilterPalette()
-		}
-		return m, cmd
+		return m, m.updatePaletteQuery(msg)
 	}
 	p.offset = scrollWindow(p.cursor, p.offset, m.paletteRows())
 	return m, nil
+}
+
+// updatePaletteQuery feeds msg (a key or a paste) to the query and
+// re-ranks the matches when it changed.
+func (m *Model) updatePaletteQuery(msg tea.Msg) tea.Cmd {
+	p := &m.palette
+	before := p.input.Value()
+	var cmd tea.Cmd
+	p.input, cmd = p.input.Update(msg)
+	if p.input.Value() != before {
+		m.refilterPalette()
+	}
+	return cmd
 }
 
 // runPalette closes the palette and runs the exact alias, else the

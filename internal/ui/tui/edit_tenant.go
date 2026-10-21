@@ -221,16 +221,21 @@ func (m *Model) enterEditTenantView() tea.Cmd {
 	return m.openTenantForm(m.selectedItem())
 }
 
-// updateEditTenantView handles key events while the form is open. The
-// async save-result messages (tenantSavedMsg / tenantSaveErrMsg) are
-// intercepted at the top of Update so they fire regardless of the
-// active view, and therefore never reach here.
+// updateEditTenantView handles key events and pastes while the form is
+// open. The async save-result messages (tenantSavedMsg /
+// tenantSaveErrMsg) are intercepted at the top of Update so they fire
+// regardless of the active view, and therefore never reach here.
 func (m *Model) updateEditTenantView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	keyMsg, ok := msg.(tea.KeyPressMsg)
-	if !ok || m.editTenant == nil {
+	if m.editTenant == nil {
 		return m, nil
 	}
-	return m.handleEditTenantKey(keyMsg)
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		return m.handleEditTenantKey(msg)
+	case tea.PasteMsg:
+		return m, m.editTenant.updateFocusedField(msg)
+	}
+	return m, nil
 }
 
 // handleTenantSavedMsg finalizes a successful tenant-metadata save. It
@@ -300,18 +305,23 @@ func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Route remaining keys to the focused text field.
+	return m, f.updateFocusedField(keyMsg)
+}
+
+// updateFocusedField feeds msg (a key or a paste) to the focused text
+// field; the Internal toggle takes no text.
+func (f *editTenantForm) updateFocusedField(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch f.focus {
 	case focusName:
-		f.name, cmd = f.name.Update(keyMsg)
+		f.name, cmd = f.name.Update(msg)
 		if f.name.Value() != "" {
 			f.nameErr = ""
 		}
 	case focusNote:
-		f.note, cmd = f.note.Update(keyMsg)
+		f.note, cmd = f.note.Update(msg)
 	}
-	return m, cmd
+	return cmd
 }
 
 // openPortalCmd launches the OCI console portal for the form's tenancy
