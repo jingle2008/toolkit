@@ -31,8 +31,13 @@ func (m *Model) updateListView(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) routeListMsg(msg tea.Msg) []tea.Cmd {
 	// Data, filter and enrichment messages are intercepted at the top of
 	// Update so they fire from any view — they don't reach this router.
-	if msg, ok := msg.(tea.KeyPressMsg); ok {
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
 		return m.handleKeyMsg(msg)
+	case tea.PasteMsg:
+		if m.inputMode != common.NormalInput {
+			return m.updateEditInput(msg)
+		}
 	}
 	return nil
 }
@@ -188,6 +193,18 @@ func prevCategory(c domain.Category) domain.Category {
 }
 
 // handleEditKeys processes key events in Edit mode.
+// updateEditInput feeds a paste to the open filter or alias input,
+// debouncing the filter as typing does.
+func (m *Model) updateEditInput(msg tea.PasteMsg) []tea.Cmd {
+	updatedTextInput, cmd := m.textInput.Update(msg)
+	m.textInput = &updatedTextInput
+	cmds := []tea.Cmd{cmd}
+	if m.editTarget == common.FilterTarget {
+		cmds = append(cmds, DebounceFilter(m))
+	}
+	return cmds
+}
+
 func (m *Model) handleEditKeys(msg tea.KeyMsg) []tea.Cmd {
 	var cmds []tea.Cmd
 	updatedTextInput, cmd := m.textInput.Update(msg)

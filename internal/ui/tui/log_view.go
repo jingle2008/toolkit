@@ -204,6 +204,9 @@ func logTickCmd() tea.Cmd {
 // (the viewport keymap lacks them), esc clears the filters and then
 // closes, ` closes, and the rest scrolls.
 func (m *Model) updateLogView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if paste, ok := msg.(tea.PasteMsg); ok && m.log.typing {
+		return m, m.updateLogFilter(paste)
+	}
 	km, ok := msg.(tea.KeyPressMsg)
 	if ok && m.log.typing {
 		return m, m.updateLogInput(km)
@@ -262,8 +265,13 @@ func (m *Model) updateLogInput(km tea.KeyPressMsg) tea.Cmd {
 		m.log.typing, m.log.filter = false, ""
 		return nil
 	}
+	return m.updateLogFilter(km)
+}
+
+// updateLogFilter feeds msg (a key or a paste) to the filter input.
+func (m *Model) updateLogFilter(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
-	m.log.input, cmd = m.log.input.Update(km)
+	m.log.input, cmd = m.log.input.Update(msg)
 	m.log.filter = strings.TrimSpace(m.log.input.Value())
 	return cmd
 }
