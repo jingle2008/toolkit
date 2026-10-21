@@ -160,6 +160,9 @@ type mutationResult struct {
 	// Resolved is what a dry run looked up about the target (e.g. the
 	// node's instance, the InferenceService's namespace); dry runs only.
 	Resolved mutation.Resolved `json:"resolved,omitempty"`
+	// Note is what the call wants the agent to know: why a NOOP did
+	// nothing, or a dry run's warning.
+	Note string `json:"note,omitempty"`
 }
 
 // jsonResult wraps items in the standard listResult envelope. Callers

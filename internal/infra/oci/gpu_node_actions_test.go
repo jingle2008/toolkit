@@ -6,7 +6,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -42,8 +44,13 @@ func (f *fakeComputeClient) TerminateInstance(ctx context.Context, req core.Term
 
 type fakeMgmtClient struct {
 	core.ComputeManagementClient
+	GetInstancePoolFunc    func(ctx context.Context, req core.GetInstancePoolRequest) (core.GetInstancePoolResponse, error)
 	UpdateInstancePoolFunc func(ctx context.Context, req core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error)
 	ListInstancePoolsFunc  func(ctx context.Context, req core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error)
+}
+
+func (f *fakeMgmtClient) GetInstancePool(ctx context.Context, req core.GetInstancePoolRequest) (core.GetInstancePoolResponse, error) {
+	return f.GetInstancePoolFunc(ctx, req)
 }
 
 func (f *fakeMgmtClient) UpdateInstancePool(ctx context.Context, req core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
@@ -90,58 +97,71 @@ func TestSoftResetInstance_Error(t *testing.T) {
 	require.Contains(t, err.Error(), "reqid")
 }
 
-func TestIncreasePoolSize_Success(t *testing.T) {
+// fakePoolMgmt fakes an instance pool OCI reports at size, recording the
+// size an update requests.
+func fakePoolMgmt(t *testing.T, size int, updateErr error) *int {
+	t.Helper()
 	orig := newComputeMgmtClient
-	defer func() { newComputeMgmtClient = orig }()
-	var gotSize *int
+	t.Cleanup(func() { newComputeMgmtClient = orig })
+	gotSize := new(int)
 	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
 		return &fakeMgmtClient{
+			GetInstancePoolFunc: func(_ context.Context, req core.GetInstancePoolRequest) (core.GetInstancePoolResponse, error) {
+				assert.Equal(t, "pid", *req.InstancePoolId)
+				return core.GetInstancePoolResponse{InstancePool: core.InstancePool{Size: common.Int(size)}}, nil
+			},
 			UpdateInstancePoolFunc: func(_ context.Context, req core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
-				gotSize = req.Size
-				return core.UpdateInstancePoolResponse{OpcRequestId: strPtr("reqid")}, nil
+				*gotSize = *req.Size
+				return core.UpdateInstancePoolResponse{OpcRequestId: strPtr("reqid")}, updateErr
 			},
 		}, nil
 	}
-	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 5}
+	return gotSize
+}
+
+// add counts from the size OCI reports, past the declared size if need be.
+func TestIncreasePoolSize_AddsToOCISize(t *testing.T) {
+	gotSize := fakePoolMgmt(t, 3, nil)
+	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 3, Size: 3}
 	logger := &testLogger{}
-	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
+	scale, err := IncreasePoolSize(context.Background(), pool, 2, makeEnv(), logger)
 	require.NoError(t, err)
-	require.NotNil(t, gotSize)
-	require.Equal(t, 5, *gotSize)
+	assert.Equal(t, 5, *gotSize, "two past the declared size")
+	assert.Equal(t, PoolScale{Shown: 3, Before: 3, After: 5}, scale)
+	assert.Equal(t, "3 → 5 instances", scale.String())
 	require.Contains(t, logger.Infos[0], "scaling up instance pool")
 	require.Contains(t, logger.Infos[1], "scaling request is submitted successfully")
 }
 
-func TestIncreasePoolSize_ActualSizeAtOrAboveDesired_NoOp(t *testing.T) {
+// A size that moved since the caller looked is the one added to, and
+// the result says so.
+func TestIncreasePoolSize_StaleActualSize(t *testing.T) {
+	gotSize := fakePoolMgmt(t, 5, nil)
+	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 4, Size: 4}
+	scale, err := IncreasePoolSize(context.Background(), pool, 2, makeEnv(), &testLogger{})
+	require.NoError(t, err)
+	assert.Equal(t, 7, *gotSize)
+	assert.Equal(t, "5 → 7 instances (was 5, not 4)", scale.String())
+}
+
+// Nothing reaches OCI for a pool it doesn't have or a count below 1.
+func TestIncreasePoolSize_Refusals(t *testing.T) {
 	orig := newComputeMgmtClient
 	defer func() { newComputeMgmtClient = orig }()
-	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
-		return &fakeMgmtClient{
-			UpdateInstancePoolFunc: func(_ context.Context, _ core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
-				return core.UpdateInstancePoolResponse{OpcRequestId: strPtr("reqid")}, nil
-			},
-		}, nil
+	newComputeMgmtClient = func(models.Environment) (computeMgmtClient, error) {
+		t.Fatal("must not reach OCI")
+		return nil, errors.New("unreachable")
 	}
-	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 3, Size: 3}
-	logger := &testLogger{}
-	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
-	require.NoError(t, err)
-	require.Empty(t, logger.Infos)
+	_, err := IncreasePoolSize(context.Background(), &models.GPUPool{Name: "gone", Status: models.GPUPoolStatusNonexistent}, 1, makeEnv(), &testLogger{})
+	require.ErrorIs(t, err, ErrNoInstancePool)
+	_, err = IncreasePoolSize(context.Background(), &models.GPUPool{ID: "pid", Name: "p"}, 0, makeEnv(), &testLogger{})
+	require.ErrorContains(t, err, "at least 1")
 }
 
 func TestIncreasePoolSize_Error(t *testing.T) {
-	orig := newComputeMgmtClient
-	defer func() { newComputeMgmtClient = orig }()
-	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
-		return &fakeMgmtClient{
-			UpdateInstancePoolFunc: func(_ context.Context, _ core.UpdateInstancePoolRequest) (core.UpdateInstancePoolResponse, error) {
-				return core.UpdateInstancePoolResponse{OpcRequestId: strPtr("reqid")}, errors.New("fail")
-			},
-		}, nil
-	}
+	fakePoolMgmt(t, 2, errors.New("fail"))
 	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 3}
-	logger := &testLogger{}
-	err := IncreasePoolSize(context.Background(), pool, makeEnv(), logger)
+	_, err := IncreasePoolSize(context.Background(), pool, 1, makeEnv(), &testLogger{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "fail")
 	require.Contains(t, err.Error(), "reqid")

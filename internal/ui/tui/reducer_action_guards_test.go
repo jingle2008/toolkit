@@ -27,7 +27,7 @@ func TestActionGuards_NilItem(t *testing.T) {
 	assert.Nil(t, m.cordonNode(nil, key, mutation.CordonNode), "cordon must not dispatch without an item")
 	assert.Nil(t, m.drainNode(nil, key), "drain must not dispatch without an item")
 	assert.Nil(t, m.restartNode(nil, key), "restart must not dispatch without an item")
-	assert.Nil(t, m.scaleUpGPUPool(nil, key), "scale must not dispatch without an item")
+	assert.Nil(t, m.scaleUpGPUPool(nil, key, 1), "scale must not dispatch without an item")
 }
 
 func TestActionGuards_WrongItemType(t *testing.T) {
@@ -42,7 +42,7 @@ func TestActionGuards_WrongItemType(t *testing.T) {
 	assert.Nil(t, m.cordonNode(wrong, key, mutation.CordonNode))
 	assert.Nil(t, m.drainNode(wrong, key))
 	assert.Nil(t, m.restartNode(wrong, key))
-	assert.Nil(t, m.scaleUpGPUPool(wrong, key))
+	assert.Nil(t, m.scaleUpGPUPool(wrong, key, 1))
 }
 
 func TestRestartNode_AlreadyRestartingIsNoOp(t *testing.T) {

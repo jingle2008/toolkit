@@ -16,6 +16,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -98,7 +99,10 @@ func stubAllMutationSeams() (*bool, func()) {
 		mark()
 		return &models.GPUPool{Name: name, ID: "ocid1.pool", Size: 1}, nil
 	}
-	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, models.Environment, logging.Logger) error { mark(); return nil }
+	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, logging.Logger) (oci.PoolScale, error) {
+		mark()
+		return oci.PoolScale{}, nil
+	}
 	mcpDeleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
 		mark()
 		return nil
@@ -335,9 +339,9 @@ func TestIntegration_ScaleGPUPoolTool_ConfirmTrueExecutes(t *testing.T) {
 	var gotPool *models.GPUPool
 	origInc := mcpIncreasePoolSizeFn
 	defer func() { mcpIncreasePoolSizeFn = origInc }()
-	mcpIncreasePoolSizeFn = func(_ context.Context, p *models.GPUPool, _ models.Environment, _ logging.Logger) error {
+	mcpIncreasePoolSizeFn = func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ logging.Logger) (oci.PoolScale, error) {
 		gotPool = p
-		return nil
+		return oci.PoolScale{Shown: 4, Before: 4, After: 4 + add}, nil
 	}
 
 	clientSess := newTestPair(ctx, t, stubLoader{})
@@ -522,9 +526,9 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	}
 	origInc := mcpIncreasePoolSizeFn
 	defer func() { mcpIncreasePoolSizeFn = origInc }()
-	mcpIncreasePoolSizeFn = func(_ context.Context, _ *models.GPUPool, env models.Environment, _ logging.Logger) error {
+	mcpIncreasePoolSizeFn = func(_ context.Context, _ *models.GPUPool, _ int, env models.Environment, _ logging.Logger) (oci.PoolScale, error) {
 		gotActionEnv = env
-		return nil
+		return oci.PoolScale{}, nil
 	}
 	_, err = clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "scale_gpu_pool",

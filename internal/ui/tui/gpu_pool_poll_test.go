@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -56,19 +57,19 @@ func TestIsTransitionalPoolState(t *testing.T) {
 	}
 }
 
-// A scale-up that sent nothing to OCI says so rather than "requested".
-func TestHandleGPUPoolScaleResultMsg_NoopSaysSo(t *testing.T) {
+// A requested scale-up reports its sizes, and that one past the
+// Terraform size lasts until the next terraform apply.
+func TestHandleGPUPoolScaleResultMsg_ReportsSizes(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.handleGPUPoolScaleResultMsg(gpuPoolScaleResultMsg{key: "pool-a", env: m.environment, noop: true})
-	require.NotNil(t, m.toasts.active)
-	assert.Contains(t, m.toasts.active.msg, "already at its configured size")
-}
+	require.NotNil(t, m.handleGPUPoolScaleResultMsg(gpuPoolScaleResultMsg{
+		key: "pool-a", env: m.environment, declared: 4, scale: oci.PoolScale{Shown: 2, Before: 2, After: 4},
+	}))
+	assert.Equal(t, "scale-up requested for pool-a: 2 → 4 instances", m.toasts.active.msg)
 
-// A requested scale-up still reports the request.
-func TestHandleGPUPoolScaleResultMsg_RequestedSaysSo(t *testing.T) {
-	t.Parallel()
-	m := newTestModel(t)
-	require.NotNil(t, m.handleGPUPoolScaleResultMsg(gpuPoolScaleResultMsg{key: "pool-a", env: m.environment}))
-	assert.Contains(t, m.toasts.active.msg, "scale-up requested")
+	m.handleGPUPoolScaleResultMsg(gpuPoolScaleResultMsg{
+		key: "pool-a", env: m.environment, declared: 4, scale: oci.PoolScale{Shown: 4, Before: 5, After: 6},
+	})
+	assert.Contains(t, m.toasts.active.msg, "5 → 6 instances (was 5, not 4)")
+	assert.Contains(t, m.toasts.active.msg, "past its Terraform size (4) until the next terraform apply")
 }

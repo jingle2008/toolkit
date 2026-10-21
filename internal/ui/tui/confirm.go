@@ -3,9 +3,11 @@ package tui
 import (
 	"fmt"
 	"image/color"
+	"strconv"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -41,6 +43,60 @@ type confirmOverlay struct {
 	// quit marks the quit confirmation, shown when quitting would cancel
 	// running actions; it has no mutation.
 	quit bool
+	// amount is the scale confirmation's instance count; nil for every
+	// other action.
+	amount *scaleAmount
+}
+
+// scaleAmount is the scale confirmation's input: how many instances to
+// add to pool, the snapshot the modal opened on.
+type scaleAmount struct {
+	input textinput.Model
+	pool  models.GPUPool
+}
+
+// newScaleAmount starts the input at pool's default count.
+func newScaleAmount(pool models.GPUPool) *scaleAmount {
+	in := textinput.New()
+	in.CharLimit = 4
+	in.Prompt = ""
+	in.SetWidth(5)
+	in.SetValue(strconv.Itoa(pool.DefaultScaleAdd()))
+	in.Focus()
+	return &scaleAmount{input: in, pool: pool}
+}
+
+// value is the entered count, and whether it is a whole number ≥ 1.
+func (a *scaleAmount) value() (int, bool) {
+	n, err := strconv.Atoi(strings.TrimSpace(a.input.Value()))
+	return n, err == nil && n >= 1
+}
+
+// update feeds msg to the input when it edits a count — a digit, a
+// deletion or a paste — and reports whether it did.
+func (a *scaleAmount) update(msg tea.Msg) bool {
+	switch msg := msg.(type) {
+	case tea.PasteMsg:
+	case tea.KeyPressMsg:
+		k := msg.String()
+		if k != "backspace" && k != "delete" && (len(k) != 1 || k[0] < '0' || k[0] > '9') {
+			return false
+		}
+	default:
+		return false
+	}
+	a.input, _ = a.input.Update(msg)
+	return true
+}
+
+// ready reports whether c can be confirmed: always, unless its count is
+// invalid.
+func (c confirmOverlay) ready() bool {
+	if c.amount == nil {
+		return true
+	}
+	_, ok := c.amount.value()
+	return ok
 }
 
 // confirmLabels is how the modal names each action it confirms — verb
@@ -192,27 +248,41 @@ func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmOverlay 
 	return c
 }
 
-// confirmScale builds the recoverable overlay for the scale key, saying
-// how far the pool grows: oci.IncreasePoolSize raises the instance pool
-// to the pool's configured size, and does nothing when it is there.
-func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
-	c := confirmOverlay{
+// requestScale opens the scale confirmation for the pool at itemKey, or
+// says why it can't scale: a pool with no OCI instance pool, or one
+// whose OCI state isn't loaded, has no instance pool ID to update.
+func (m *Model) requestScale(itemKey models.ItemKey, item any) tea.Cmd {
+	pool, ok := item.(*models.GPUPool)
+	if !ok || pool == nil {
+		return nil
+	}
+	if pool.ID == "" {
+		if pool.Status == models.GPUPoolStatusNonexistent {
+			return m.showToast(pool.Name+" has no OCI instance pool; nothing to scale", toastWarn)
+		}
+		return m.showToast(pool.Name+"'s OCI state isn't loaded; refresh and retry", toastWarn)
+	}
+	return m.requestConfirm(m.confirmScale(itemKey, *pool))
+}
+
+// confirmScale builds the recoverable overlay for the scale key: how many
+// instances to add, starting at pool's default, with what that does
+// redrawn as it is edited (scaleAmount). The action button starts
+// focused, so a count typed and entered scales. run reads the count at
+// confirm time.
+func (m *Model) confirmScale(itemKey models.ItemKey, pool models.GPUPool) confirmOverlay {
+	amount := newScaleAmount(pool)
+	return confirmOverlay{
 		act:         mutation.ScaleGPUPool,
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
-		run:         func() tea.Cmd { return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey) },
+		amount:      amount,
+		onAction:    true,
+		run: func() tea.Cmd {
+			n, _ := amount.value()
+			return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey, n)
+		},
 	}
-	if m.dataset == nil {
-		return c
-	}
-	if pool, ok := findItem(m.dataset, m.category, itemKey).(*models.GPUPool); ok && pool != nil {
-		if pool.ActualSize >= pool.Size {
-			c.warning = fmt.Sprintf("Already at its configured size (%d); nothing to do.", pool.Size)
-		} else {
-			c.warning = fmt.Sprintf("Grows the instance pool from %d to %d instances.", pool.ActualSize, pool.Size)
-		}
-	}
-	return c
 }
 
 // updateConfirmView resolves a keypress while the confirmation modal is
@@ -223,6 +293,9 @@ func (m *Model) confirmScale(itemKey models.ItemKey) confirmOverlay {
 // irreversible action. Any other key is swallowed so the
 // modal stays put. ctrl+c always quits.
 func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.confirm.amount != nil && m.confirm.amount.update(msg) {
+		return m, nil
+	}
 	km, ok := msg.(tea.KeyPressMsg)
 	if !ok {
 		return m, nil
@@ -237,19 +310,11 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.confirm.onAction = !m.confirm.onAction
 		return m, nil
 	case "enter":
-		switch {
-		case !m.confirm.onAction:
-			m.refuseConfirm()
-		case m.confirm.act.Tier == mutation.Irreversible:
-			m.confirm.nudge = true
-		default:
-			return m, m.acceptConfirm()
-		}
-		return m, nil
+		return m, m.pressConfirmButton()
 	}
 	confirm, cancel, nudge := m.confirm.decide(k)
 	switch {
-	case confirm:
+	case confirm && m.confirm.ready():
 		return m, m.acceptConfirm()
 	case cancel:
 		m.refuseConfirm()
@@ -257,6 +322,21 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.confirm.nudge = true
 	}
 	return m, nil
+}
+
+// pressConfirmButton is enter on the focused button: Cancel refuses, the
+// action button confirms — except an irreversible action, which only a
+// capital Y confirms, and a count that isn't valid.
+func (m *Model) pressConfirmButton() tea.Cmd {
+	switch {
+	case !m.confirm.onAction:
+		m.refuseConfirm()
+	case m.confirm.act.Tier == mutation.Irreversible:
+		m.confirm.nudge = true
+	case m.confirm.ready():
+		return m.acceptConfirm()
+	}
+	return nil
 }
 
 // acceptConfirm closes the modal and returns the confirmed action's command.
@@ -305,15 +385,27 @@ func (m *Model) confirmView() string {
 		label.Render("Name") + c.target,
 		label.Render("Context") + context,
 	}
+	warning, warnColor := c.warning, border
+	if a := c.amount; a != nil {
+		rows = append(rows, label.Render("Add")+a.input.View()+" instances")
+		if n, ok := a.value(); ok {
+			warning = mutation.PoolScaleNotice(a.pool, n)
+		} else {
+			warning, warnColor = "Enter a whole number of instances, at least 1.", p.Danger
+		}
+	}
 	body := strings.Join(rows, "\n")
-	if c.warning != "" {
-		body += "\n\n" + lipgloss.NewStyle().Foreground(border).Width(inner).Render(c.warning)
+	if warning != "" {
+		body += "\n\n" + lipgloss.NewStyle().Foreground(warnColor).Width(inner).Render(warning)
 	}
 
 	buttons := m.confirmButtons(c, fill, onFill)
 	body += "\n\n" + lipgloss.PlaceHorizontal(inner, lipgloss.Center, buttons)
 
 	hints := yes + " confirm · n/esc cancel · ←/→ select"
+	if c.amount != nil {
+		hints = "0-9 count · " + yes + "/enter confirm · n/esc cancel"
+	}
 	if irreversible {
 		hints = "Y (shift+y) confirm · n/esc cancel · ←/→ select"
 	}

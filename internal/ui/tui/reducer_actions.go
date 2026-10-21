@@ -67,7 +67,7 @@ func (m *Model) handleItemActions(msg tea.KeyMsg) tea.Cmd {
 	case key.Matches(msg, keys.Restart):
 		return m.requestConfirm(m.confirmRestart(itemKey, item))
 	case key.Matches(msg, keys.ScaleUp):
-		return m.requestConfirm(m.confirmScale(itemKey))
+		return m.requestScale(itemKey, item)
 	}
 	return nil
 }
@@ -102,23 +102,31 @@ func (m *Model) copyTenantID(item any) tea.Cmd {
 	}
 }
 
-func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey) tea.Cmd {
+// scaleUpGPUPool grows pool by add instances, counted from OCI's size at
+// the time (oci.IncreasePoolSize).
+func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey, add int) tea.Cmd {
 	pool, ok := item.(*models.GPUPool)
 	if !ok || pool == nil {
 		m.logger.Errorw("no GPU pool selected for scale up")
 		return nil
 	}
-	env := m.environment
-	// Mirrors oci.IncreasePoolSize, which returns without calling OCI
-	// when the pool is already at its configured size.
-	noop := pool.ActualSize >= pool.Size
+	env, snapshot := m.environment, *pool
 	return m.trackAction("scale up "+pool.Name, "Scaling", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := m.opCtx()
 		defer cancel()
-		err := audited(m.logger, mutation.ScaleGPUPool, pool.Name, func() error {
-			return oci.IncreasePoolSize(ctx, pool, env, m.logger)
+		var scale oci.PoolScale
+		fields := func() []any {
+			if scale.After == 0 {
+				return []any{"add", add}
+			}
+			return []any{"add", add, "from", scale.Before, "to", scale.After}
+		}
+		err := auditedWith(m.logger, mutation.ScaleGPUPool, snapshot.Name, fields, func() error {
+			var err error
+			scale, err = increasePoolSizeFn(ctx, &snapshot, add, env, m.logger)
+			return err
 		})
-		return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env, noop: noop}
+		return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env, scale: scale, declared: snapshot.Size}
 	})
 }
 

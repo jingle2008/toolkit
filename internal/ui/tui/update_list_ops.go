@@ -13,10 +13,11 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Seams tests use to fake the restart patch and the cordon.
+// Seams tests use to fake the restart patch, the cordon and the scale-up.
 var (
 	restartInferenceServiceFn = k8s.RestartInferenceService
 	setCordonFn               = k8s.SetCordon
+	increasePoolSizeFn        = oci.IncreasePoolSize
 )
 
 /*
@@ -182,19 +183,21 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) tea.Cmd {
 	return m.scheduleGPUPoolPoll()
 }
 
-// handleGPUPoolScaleResultMsg says whether the scale-up was requested,
-// and after a request re-fetches the pools' OCI state so the new size and
-// state show without a manual refresh.
+// handleGPUPoolScaleResultMsg says what the scale-up requested — the
+// sizes, and that terraform apply reverts one past the declared size —
+// and then re-fetches the pools' OCI state so the new size and state show
+// without a manual refresh.
 func (m *Model) handleGPUPoolScaleResultMsg(msg gpuPoolScaleResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
 		m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("scale up %s failed: %v", target, msg.err), keys.ScaleUp.Help().Key+" retry")
 	}
-	if msg.noop {
-		return m.showToast(target+" is already at its configured size; nothing to scale", toastInfo)
+	text := fmt.Sprintf("scale-up requested for %s: %s", target, msg.scale)
+	if msg.scale.After > msg.declared {
+		text += fmt.Sprintf("; past its Terraform size (%d) until the next terraform apply", msg.declared)
 	}
-	toast := m.showToast("scale-up requested for "+target, toastInfo)
+	toast := m.showToast(text, toastInfo)
 	if !m.inCurrentEnv(msg.env) {
 		return toast
 	}

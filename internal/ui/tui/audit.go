@@ -16,12 +16,26 @@ const surfaceTUI = "tui"
 // target is the resource's own name (a node, pool or DAC name, or
 // <namespace>/<name>), as the other surfaces audit it.
 func audited(logger logging.Logger, a mutation.Action, target string, perform func() error) error {
-	mutation.Audit(logger, surfaceTUI, a, target, mutation.PhaseBegin, nil)
+	return auditedWith(logger, a, target, nil, perform)
+}
+
+// auditedWith is audited with the action's own fields on every record.
+// fields is called per record, so ones perform fills in (a scale's
+// actual sizes) reach the done record; nil adds none.
+func auditedWith(logger logging.Logger, a mutation.Action, target string, fields func() []any, perform func() error) error {
+	audit := func(phase mutation.Phase, err error) {
+		var kv []any
+		if fields != nil {
+			kv = fields()
+		}
+		mutation.Audit(logger, surfaceTUI, a, target, phase, err, kv...)
+	}
+	audit(mutation.PhaseBegin, nil)
 	if err := perform(); err != nil {
-		mutation.Audit(logger, surfaceTUI, a, target, mutation.PhaseFailed, err)
+		audit(mutation.PhaseFailed, err)
 		return err
 	}
-	mutation.Audit(logger, surfaceTUI, a, target, mutation.PhaseDone, nil)
+	audit(mutation.PhaseDone, nil)
 	return nil
 }
 

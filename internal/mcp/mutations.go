@@ -112,6 +112,12 @@ type planned struct {
 	target string
 	// resolved is what the lookup found, reported by a dry run.
 	resolved mutation.Resolved
+	// noop, when the lookup sets it, ends the call as status NOOP with
+	// this note: there is nothing to do, so nothing is performed or
+	// audited.
+	noop string
+	// note is a dry run's note: what the action will do, any warning.
+	note string
 }
 
 func (p planned) String() string { return p.action.Verb + " " + p.action.Kind + "/" + p.target }
@@ -134,8 +140,20 @@ type mutationCall[Out any] struct {
 	// perform acts on what plan found.
 	perform func(p planned) (Out, error)
 	// envelope builds the tool's result from a bare envelope, for the
-	// dry-run response.
+	// dry-run and NOOP responses.
 	envelope func(mutationResult) Out
+	// auditFields, when set, adds the action's own fields to every audit
+	// record. It is called per record, so fields perform fills in (a
+	// scale's actual sizes) reach the done record.
+	auditFields func() []any
+}
+
+// fields is the call's own audit fields, none when unset.
+func (c mutationCall[Out]) fields() []any {
+	if c.auditFields == nil {
+		return nil
+	}
+	return c.auditFields()
 }
 
 // asResult is the envelope for tools whose result is the bare envelope.
@@ -146,7 +164,7 @@ func asResult(r mutationResult) mutationResult { return r }
 //
 //  1. Neither confirm nor dry_run: refused, before touching anything.
 //  2. plan looks the target up; a failure ends the call (audited as
-//     failed unless a dry run).
+//     failed unless a dry run). A noop it sets ends the call as NOOP.
 //  3. dry_run: report the plan as status DRY_RUN.
 //  4. An Irreversible action whose confirm_target names neither the
 //     requested nor the resolved target: refused.
@@ -158,7 +176,7 @@ func asResult(r mutationResult) mutationResult { return r }
 func runMutationCall[Out any](s *Server, c mutationCall[Out]) (*sdk.CallToolResult, Out, error) {
 	p := planned{action: c.action, target: c.target}
 	audit := func(phase mutation.Phase, err error) {
-		mutation.Audit(s.logger, surfaceMCP, p.action, p.target, phase, err)
+		mutation.Audit(s.logger, surfaceMCP, p.action, p.target, phase, err, c.fields()...)
 	}
 	if !c.gate.Confirm && !c.gate.DryRun {
 		audit(mutation.PhaseRefused, nil)
@@ -173,10 +191,15 @@ func runMutationCall[Out any](s *Server, c mutationCall[Out]) (*sdk.CallToolResu
 			return failTool[Out](p.String(), err)
 		}
 	}
+	if p.noop != "" {
+		r := p.ok()
+		r.Status, r.Note = "NOOP", p.noop
+		return &sdk.CallToolResult{}, c.envelope(r), nil
+	}
 	if c.gate.DryRun {
 		audit(mutation.PhaseDryRun, nil)
 		r := p.ok()
-		r.Status, r.Resolved = "DRY_RUN", p.resolved
+		r.Status, r.Resolved, r.Note = "DRY_RUN", p.resolved, p.note
 		return &sdk.CallToolResult{}, c.envelope(r), nil
 	}
 	if p.action.Tier == mutation.Irreversible &&
@@ -240,8 +263,16 @@ type terminateNodeInput struct {
 
 type scaleGPUPoolInput struct {
 	Name string `json:"name" jsonschema:"the pool name from the Terraform repo (same as toolkit get gpupool)"`
+	Add  *int   `json:"add,omitempty" jsonschema:"instances to add (at least 1), counted from OCI's current size; may take the pool past its Terraform size, which the next terraform apply reverts. Omit to fill the pool to its Terraform size (status NOOP when it is already there)"`
 	confirmGate
 	envOverride
+}
+
+// scaleGPUPoolResult is the standard envelope plus, on success, the
+// sizes the scale-up went from and to.
+type scaleGPUPoolResult struct {
+	mutationResult
+	Scale *oci.PoolScale `json:"scale,omitempty"`
 }
 
 type deleteDACInput struct {
@@ -406,23 +437,59 @@ func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolReque
 	})
 }
 
-func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGPUPoolInput) (*sdk.CallToolResult, mutationResult, error) {
+func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolRequest, in scaleGPUPoolInput) (*sdk.CallToolResult, scaleGPUPoolResult, error) {
 	a := mutation.ScaleGPUPool
 	env := s.effectiveMutationEnv(a, in.Name, in.envOverride)
-	var pool *models.GPUPool
-	return runMutationCall(s, mutationCall[mutationResult]{
-		action: a, target: in.Name, gate: in.confirmGate, envelope: asResult,
+	var (
+		pool   *models.GPUPool
+		n      int
+		result *oci.PoolScale
+	)
+	return runMutationCall(s, mutationCall[scaleGPUPoolResult]{
+		action: a, target: in.Name, gate: in.confirmGate,
+		envelope: func(r mutationResult) scaleGPUPoolResult { return scaleGPUPoolResult{mutationResult: r} },
 		plan: func(p *planned) error {
 			found, err := mcpResolveGPUPoolFn(ctx, s, env, in.Name)
 			if err != nil {
 				return err
 			}
+			if found.ID == "" {
+				return fmt.Errorf("pool %s: %w", found.Name, oci.ErrNoInstancePool)
+			}
+			requested := 0
+			if in.Add != nil {
+				requested = *in.Add
+			}
+			if n, err = mutation.PoolScaleAdd(*found, requested, in.Add != nil); err != nil {
+				return err
+			}
+			if n == 0 {
+				p.noop = mutation.PoolAtSizeNote(*found, "add")
+				return nil
+			}
 			pool = found
-			p.resolved = mutation.ResolvedPool(found.ID, found.Size, found.ActualSize)
+			p.resolved = mutation.ResolvedPool(found.ID, found.Size, found.ActualSize, n)
+			p.note = mutation.PoolScaleNotice(*found, n)
 			return nil
 		},
-		perform: func(p planned) (mutationResult, error) {
-			return p.ok(), mcpIncreasePoolSizeFn(ctx, pool, env, logging.FromContext(ctx))
+		auditFields: func() []any {
+			if result == nil {
+				return []any{"add", n}
+			}
+			return []any{"add", n, "from", result.Before, "to", result.After}
+		},
+		perform: func(p planned) (scaleGPUPoolResult, error) {
+			scale, err := mcpIncreasePoolSizeFn(ctx, pool, n, env, logging.FromContext(ctx))
+			if err != nil {
+				return scaleGPUPoolResult{}, err
+			}
+			result = &scale
+			r := scaleGPUPoolResult{mutationResult: p.ok(), Scale: result}
+			r.Note = scale.String()
+			if w := mutation.PoolOverSizeWarning(pool.Size, scale.After); w != "" {
+				r.Note += ". " + w
+			}
+			return r, nil
 		},
 	})
 }
@@ -604,8 +671,10 @@ func registerMutationTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "scale_gpu_pool",
-		Annotations: idempotent(),
-		Description: "Push the Terraform-declared pool.Size to OCI for the named GPU pool. No size override: Terraform is the source of truth." + mutationToolFooter,
+		Annotations: recoverable(),
+		Description: "Grow the named GPU pool's OCI instance pool. Without add, fills it to its Terraform-declared size (status NOOP when already there)." +
+			" With add=N, adds N instances to OCI's current size, possibly past the Terraform size: the next terraform apply shrinks it back and terminates the extra instances." +
+			" Each call with add grows the pool again. The result's scale reports the sizes it went from and to." + mutationToolFooter,
 	}, s.handleScaleGPUPool)
 
 	sdk.AddTool(s.server, &sdk.Tool{

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // The tier table every surface gates on: irreversible actions need the
@@ -90,8 +91,58 @@ func TestAudit_Record(t *testing.T) {
 
 func TestResolved(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, "actual_size=1, pool_id=p, size=2", ResolvedPool("p", 2, 1).String())
+	assert.Equal(t, "actual_size=1, add=3, pool_id=p, size=2, target_size=4", ResolvedPool("p", 2, 1, 3).String())
 	assert.Equal(t, "instance_id=i", ResolvedNode("i").String())
 	assert.Equal(t, "namespace=ns", ResolvedNamespace("ns").String())
 	assert.Empty(t, Resolved(nil).String())
+}
+
+// Without a count only the shortfall is added, so a full pool needs an
+// explicit one to go past its declared size.
+func TestPoolScaleAdd(t *testing.T) {
+	t.Parallel()
+	short, full := models.GPUPool{Size: 4, ActualSize: 1}, models.GPUPool{Size: 4, ActualSize: 4}
+	for _, tc := range []struct {
+		name      string
+		pool      models.GPUPool
+		requested int
+		given     bool
+		want      int
+	}{
+		{"short, no count fills", short, 0, false, 3},
+		{"full, no count does nothing", full, 0, false, 0},
+		{"full, count goes past", full, 2, true, 2},
+		{"short, count overrides the fill", short, 5, true, 5},
+	} {
+		got, err := PoolScaleAdd(tc.pool, tc.requested, tc.given)
+		require.NoError(t, err, tc.name)
+		assert.Equal(t, tc.want, got, tc.name)
+	}
+	_, err := PoolScaleAdd(full, 0, true)
+	require.Error(t, err, "an explicit 0 isn't a scale-up")
+	_, err = PoolScaleAdd(full, -1, true)
+	require.Error(t, err)
+}
+
+func TestPoolScaleNotice(t *testing.T) {
+	t.Parallel()
+	pool := models.GPUPool{Name: "p", Size: 4, ActualSize: 2}
+	assert.Equal(t, "Grows the instance pool from 2 to 4 instances.", PoolScaleNotice(pool, 2))
+	notice := PoolScaleNotice(pool, 3)
+	assert.Contains(t, notice, "from 2 to 5 instances")
+	assert.Contains(t, notice, "Terraform declares 4; the next terraform apply shrinks it back")
+	assert.Empty(t, PoolOverSizeWarning(4, 4))
+}
+
+// A mutation's own fields follow the standard ones in its record.
+func TestAudit_Fields(t *testing.T) {
+	t.Parallel()
+	sink := logging.NewRingSink(2)
+	Audit(sink, "cli", ScaleGPUPool, "p", PhaseDone, nil, "add", 2, "to", 6)
+	got := sink.Snapshot()
+	require.Len(t, got, 1)
+	f := fields(got[0])
+	assert.Equal(t, "p", f["target"])
+	assert.Equal(t, 2, f["add"])
+	assert.Equal(t, 6, f["to"])
 }
