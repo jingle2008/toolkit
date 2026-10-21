@@ -35,8 +35,10 @@ func (w GPUWorkload) IsFaulty() bool { return w.Restarts > 0 }
 // FilterableFields returns the fields matched by `--filter`. Age is
 // excluded (matching GPUNode): a formatted duration like "3d" is noise
 // for text filtering.
+// TenantName is matched alongside TenantID so the Tenant column filters
+// by what it shows.
 func (w GPUWorkload) FilterableFields() []string {
-	fields := []string{w.Name, w.Node, w.TenantID, w.Namespace, w.Model, w.Runtime, w.Mode}
+	fields := []string{w.Name, w.Node, w.TenantID, w.TenantName(), w.Namespace, w.Model, w.Runtime, w.Mode}
 	if w.Legacy {
 		fields = append(fields, "legacy")
 	}
