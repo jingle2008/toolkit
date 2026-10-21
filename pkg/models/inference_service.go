@@ -45,8 +45,10 @@ func (s InferenceService) IsFaulty() bool { return s.Ready != "True" }
 // FilterableFields returns the fields matched by `--filter`. Age is
 // excluded (matching GPUWorkload): a formatted duration is noise for
 // text filtering.
+// TenantName is matched alongside TenantID so the Tenant column filters
+// by what it shows.
 func (s InferenceService) FilterableFields() []string {
-	fields := []string{s.Name, s.Namespace, s.Type, s.TenantID, s.Model, s.Runtime, s.Ready}
+	fields := []string{s.Name, s.Namespace, s.Type, s.TenantID, s.TenantName(), s.Model, s.Runtime, s.Ready}
 	if s.Legacy {
 		fields = append(fields, "legacy")
 	}
