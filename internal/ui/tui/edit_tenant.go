@@ -166,9 +166,10 @@ func newEditTenantForm(t editTarget) *editTenantForm {
 
 func (f *editTenantForm) toggleInternal() { f.isInternal = !f.isInternal }
 
-// toEntry builds the TenantMetadata; ok is false when Name is empty.
+// toEntry builds the TenantMetadata; ok is false when Name is empty or
+// only whitespace. The name is trimmed.
 func (f *editTenantForm) toEntry() (models.TenantMetadata, bool) {
-	name := f.name.Value()
+	name := strings.TrimSpace(f.name.Value())
 	if name == "" {
 		return models.TenantMetadata{}, false
 	}

@@ -2,6 +2,7 @@ package configloader
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -45,14 +46,13 @@ func SaveMetadata(path string, m *models.Metadata) error {
 // machine-owned (`toolkit tenant sync` writes it), so an entry without one
 // keeps the existing status; likewise an entry without an internal flag
 // keeps the existing one.
+//
+// The name is stored trimmed, and the check compares trimmed names: one
+// with a stray space ("acme ") would otherwise get past it and list as a
+// second "acme". A name that is only whitespace is refused.
 func UpsertTenant(m *models.Metadata, entry models.TenantMetadata) error {
-	if entry.Name != nil && *entry.Name != "" {
-		realm := models.TenancyRealm(entry.ID)
-		for _, t := range m.Tenants {
-			if t.ID != entry.ID && t.Name != nil && *t.Name == *entry.Name && models.TenancyRealm(t.ID) == realm {
-				return fmt.Errorf("tenant name %q is already used by %s", *entry.Name, t.ID)
-			}
-		}
+	if err := trimTenantName(m, &entry); err != nil {
+		return err
 	}
 	for i := range m.Tenants {
 		if m.Tenants[i].ID == entry.ID {
@@ -67,5 +67,26 @@ func UpsertTenant(m *models.Metadata, entry models.TenantMetadata) error {
 		}
 	}
 	m.Tenants = append(m.Tenants, entry)
+	return nil
+}
+
+// trimTenantName trims entry's name (if it has one) as UpsertTenant
+// stores it, or says why it can't be stored: it is blank, or another
+// tenancy in the realm has it.
+func trimTenantName(m *models.Metadata, entry *models.TenantMetadata) error {
+	if entry.Name == nil {
+		return nil
+	}
+	name := strings.TrimSpace(*entry.Name)
+	if name == "" && *entry.Name != "" {
+		return errors.New("tenant name is blank")
+	}
+	realm := models.TenancyRealm(entry.ID)
+	for _, t := range m.Tenants {
+		if name != "" && t.ID != entry.ID && t.Name != nil && strings.TrimSpace(*t.Name) == name && models.TenancyRealm(t.ID) == realm {
+			return fmt.Errorf("tenant name %q is already used by %s", name, t.ID)
+		}
+	}
+	entry.Name = &name
 	return nil
 }
