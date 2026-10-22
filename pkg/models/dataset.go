@@ -107,6 +107,10 @@ func resolveTenantOwnedMap[T any](d *Dataset, raw map[string][]T, setOwner func(
 func (d *Dataset) SetDedicatedAIClusterMap(m map[string][]DedicatedAICluster) {
 	d.DedicatedAIClusterMap = resolveTenantOwnedMap(d, m,
 		func(v *DedicatedAICluster, t *Tenant) { v.Owner = t })
+	if d.GPUWorkloadMap != nil {
+		// Workloads loaded first may take their tenant from a DAC.
+		d.SetGPUWorkloadMap(d.GPUWorkloadMap)
+	}
 }
 
 // SetImportedModelMap sets the imported model map using tenant suffixes.
@@ -119,7 +123,21 @@ func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
 // each item's owning Tenant from its tenancy-id suffix. The node key is
 // preserved (workloads are grouped by node, not tenant). Allocates a fresh
 // map and does not reuse the caller's input.
+//
+// A pod without a tenancy-id label in a DAC's namespace (a kueue
+// reservation pod, say) takes the DAC's tenancy, when the DACs are
+// loaded: it runs on the tenant's cluster, and without one it would show
+// no tenant and be missing from the tenant's workloads.
 func (d *Dataset) SetGPUWorkloadMap(m map[string][]GPUWorkload) {
+	if dacTenants := d.dacTenantsByName(); len(dacTenants) > 0 {
+		for _, items := range m {
+			for i := range items {
+				if items[i].TenantID == "" {
+					items[i].TenantID = dacTenants[items[i].Namespace]
+				}
+			}
+		}
+	}
 	d.GPUWorkloadMap = resolveOwnersInPlace(d, m,
 		func(v *GPUWorkload) string { return v.TenantID },
 		func(v *GPUWorkload, t *Tenant) { v.Owner = t })
@@ -133,6 +151,20 @@ func (d *Dataset) SetInferenceServiceMap(m map[string][]InferenceService) {
 	d.InferenceServiceMap = resolveOwnersInPlace(d, m,
 		func(v *InferenceService) string { return v.TenantID },
 		func(v *InferenceService, t *Tenant) { v.Owner = t })
+}
+
+// dacTenantsByName maps each loaded DAC's name (its namespace's name) to
+// its raw tenancy id.
+func (d *Dataset) dacTenantsByName() map[string]string {
+	out := make(map[string]string)
+	for _, dacs := range d.DedicatedAIClusterMap {
+		for _, dac := range dacs {
+			if dac.TenantID != "" {
+				out[dac.Name] = dac.TenantID
+			}
+		}
+	}
+	return out
 }
 
 // resolveOwnersInPlace is the non-re-keying counterpart of

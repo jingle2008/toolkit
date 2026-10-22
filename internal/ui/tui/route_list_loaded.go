@@ -22,7 +22,7 @@ func (m *Model) routeListLoadedMsg(msg tea.Msg) []tea.Cmd {
 	case gpuNodesLoadedMsg:
 		m.handleGPUNodesLoaded(msg.Items, msg.Gen)
 	case gpuWorkloadsLoadedMsg:
-		m.handleGPUWorkloadsLoaded(msg.Items, msg.Gen)
+		m.handleGPUWorkloadsLoaded(msg.Items, msg.DACs, msg.Gen)
 	case dedicatedAIClustersLoadedMsg:
 		m.handleDedicatedAIClustersLoaded(msg.Items, msg.Gen)
 	case inferenceServicesLoadedMsg:

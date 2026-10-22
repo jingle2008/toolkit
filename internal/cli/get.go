@@ -409,6 +409,19 @@ func tenantDataset(ctx context.Context, ld loader.Composite, cfg config.Config, 
 	return ds
 }
 
+// workloadOwnersDataset is tenantDataset with the DACs too: they give a
+// GPU pod without a tenancy-id label its tenant. A failed DAC load only
+// leaves those pods unowned.
+func workloadOwnersDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) *models.Dataset {
+	ds := tenantDataset(ctx, ld, cfg, env)
+	if dacs, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env); err == nil {
+		ds.SetDedicatedAIClusterMap(dacs)
+	} else {
+		logging.FromContext(ctx).Warnw("dacs for workload tenants unavailable", "error", err)
+	}
+	return ds
+}
+
 //nolint:cyclop // a simple per-category switch is clearer than a registry here
 func emitCategory(
 	ctx context.Context,
@@ -481,7 +494,7 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load gpu workloads: %w", err)
 		}
-		ds := tenantDataset(ctx, ld, cfg, env)
+		ds := workloadOwnersDataset(ctx, ld, cfg, env)
 		ds.SetGPUWorkloadMap(grouped)
 		return writeMap(w, relatedOrFiltered(relations.GPUWorkload, ds.GPUWorkloadMap, domain.GPUWorkload, related, filter),
 			limit, opts, domain.GPUWorkload, env, selected)

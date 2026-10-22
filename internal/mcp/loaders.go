@@ -38,6 +38,13 @@ func (s *Server) gpuWorkloads(ctx context.Context, env models.Environment) (map[
 		return nil, nil, fmt.Errorf("load gpu workloads: %w", err)
 	}
 	ds, warnings := s.tenantDataset(ctx, env)
+	// The DACs give a pod without a tenancy-id label its tenant; a failed
+	// load only leaves those pods unowned.
+	if dacs, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, env); err == nil {
+		ds.SetDedicatedAIClusterMap(dacs)
+	} else {
+		s.logger.Warnw("dacs for workload tenants unavailable", "error", err)
+	}
 	ds.SetGPUWorkloadMap(grouped)
 	return ds.GPUWorkloadMap, warnings, nil
 }
