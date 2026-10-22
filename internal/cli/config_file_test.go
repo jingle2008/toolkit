@@ -65,6 +65,28 @@ func TestDoctor_UnknownConfigKeyWarns(t *testing.T) {
 	assert.Equal(t, "unknown key(s): env_type", rows["config_keys"].Detail, "log-format is a setting")
 }
 
+// --mcp-read-only shows as a plain flag in the help: pflag reads
+// backquoted usage text as the flag's value name.
+func TestHelp_MCPReadOnlyHasNoValueName(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	viper.Reset()
+	t.Cleanup(viper.Reset)
+	cmd := NewRootCmd("vtest")
+	cmd.SetArgs([]string{"--help"})
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	require.NoError(t, cmd.Execute())
+	assert.Contains(t, out.String(), "      --mcp-read-only   ")
+	assert.NotContains(t, out.String(), "--mcp-read-only toolkit")
+}
+
+// A negative --limit is refused rather than read as unlimited.
+func TestGet_NegativeLimitRefused(t *testing.T) {
+	stageMutationEnv(t)
+	_, err := runRootCmd(t, []string{"get", "alias", "--limit", "-1"}, "")
+	require.ErrorContains(t, err, "--limit must be 0 (unlimited) or more, got -1")
+}
+
 // A config file named with --config must exist; the default one may be
 // absent.
 func TestReadConfigFile_ExplicitMustExist(t *testing.T) {

@@ -172,7 +172,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		if err := cfg.Normalize(); err != nil {
 			return err
 		}
-		if err := validateGetRequest(cfg, cat, *faulty); err != nil {
+		if err := validateGetRequest(cfg, cat, *faulty, *limit); err != nil {
 			return err
 		}
 
@@ -262,8 +262,13 @@ func validateLoaderConfig(cfg config.Config) []string {
 // requested category. Unlike config.Validate (used by the TUI), it
 // does not require Category — the positional arg supplies it — and
 // only requires KubeConfig for cluster-derived categories.
-// validateGetRequest is validateGetConfig, then validateFaulty.
-func validateGetRequest(cfg config.Config, cat domain.Category, faulty bool) error {
+// validateGetRequest checks --limit (0 is unlimited; a negative one was
+// read as unlimited too, though the help didn't say so), then
+// validateGetConfig and validateFaulty.
+func validateGetRequest(cfg config.Config, cat domain.Category, faulty bool, limit int) error {
+	if limit < 0 {
+		return fmt.Errorf("--limit must be 0 (unlimited) or more, got %d", limit)
+	}
 	if err := validateGetConfig(cfg, cat); err != nil {
 		return err
 	}
