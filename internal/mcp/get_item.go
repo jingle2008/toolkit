@@ -21,7 +21,7 @@ type getItemInput struct {
 const getItemDescription = "Get the one row of a category named exactly `name` — the full object the matching list_* tool returns," +
 	" without filtering a whole list; the same lookup as `toolkit get <category> <name>`. When rows in different groups share" +
 	" the name (an override's across tenants, an endpoint's across namespaces) the call is refused with each candidate as" +
-	" <group>/<name> (a service tenancy's across realms, as <realm>/<name>); pass one of those as `name`. No row of that name is an error. Accepts env_type/env_region/env_realm overrides."
+	" <group>/<name> (a service tenancy's across realms, as <realm>/<name>; model artifacts that share their model too, one per GPU config, as <model>/<name>@<config> like @2xH100); pass one of those as `name`. No row of that name is an error. Accepts env_type/env_region/env_realm overrides."
 
 // itemResult is get_item's result: the one row, and the load's warnings.
 type itemResult struct {
