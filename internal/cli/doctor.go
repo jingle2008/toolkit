@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/jingle2008/toolkit/internal/config"
@@ -63,13 +66,14 @@ Examples:
   toolkit doctor --relations -o json | jq '.[] | select(.status != "PASS")'`,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			if err := readConfigFile(cfgFile); err != nil {
-				return err
-			}
+			// A config file that doesn't read is a finding, not a reason to
+			// stop: doctor reports it with the other checks.
+			readErr := readConfigFile(cfgFile)
 			// Ctrl+C cancels the cluster loads of --relations.
 			ctx, stop := signal.NotifyContext(c.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			return runDoctor(ctx, c.OutOrStdout(), *cfgFile, format, relations)
+			return runDoctor(ctx, c.OutOrStdout(), *cfgFile, format, relations,
+				configFileRead{err: readErr, knownKeys: settingKeys(c.Root())})
 		},
 	}
 	cmd.Flags().StringVarP(&format, "output", "o", "table", "table|json|yaml")
@@ -106,7 +110,26 @@ type checkResult struct {
 	Items []string `json:"items,omitempty"`
 }
 
-func runDoctor(ctx context.Context, w io.Writer, cfgFile, format string, relations bool) error {
+// configFileRead is what doctor knows about reading the config file:
+// the error reading it, if any, and the keys a config file may set.
+type configFileRead struct {
+	err       error
+	knownKeys map[string]bool
+}
+
+// settingKeys is every key a config file may set: the root command's
+// persistent flags, which viper binds by name (bar --config itself).
+func settingKeys(root *cobra.Command) map[string]bool {
+	keys := map[string]bool{}
+	root.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Name != "config" {
+			keys[f.Name] = true
+		}
+	})
+	return keys
+}
+
+func runDoctor(ctx context.Context, w io.Writer, cfgFile, format string, relations bool, read configFileRead) error {
 	// Validate format before doing any work — a typo'd -o shouldn't
 	// stat the filesystem (and stays consistent with `config`).
 	normalized := strings.ToLower(format)
@@ -126,7 +149,7 @@ func runDoctor(ctx context.Context, w io.Writer, cfgFile, format string, relatio
 	if unmarshalErr == nil {
 		unmarshalErr = cfg.Normalize()
 	}
-	results := collectChecks(cfgFile, cfg, unmarshalErr)
+	results := collectChecks(cfgFile, cfg, unmarshalErr, read)
 	if relations {
 		if countFails(results) > 0 {
 			results = append(results, checkResult{
@@ -162,10 +185,18 @@ func runDoctor(ctx context.Context, w io.Writer, cfgFile, format string, relatio
 
 // collectChecks runs each individual probe and returns the rows. The
 // list order is stable so output diff-tests cleanly across runs.
-func collectChecks(cfgFile string, cfg config.Config, unmarshalErr error) []checkResult {
+func collectChecks(cfgFile string, cfg config.Config, unmarshalErr error, read configFileRead) []checkResult {
+	file := checkConfigFile(cfgFile)
+	if file.Status == statusPass && read.err != nil {
+		file = checkResult{
+			Name: "config_file", Status: statusFail, Detail: read.err.Error(),
+			Hint: "fix the file's YAML/JSON syntax",
+		}
+	}
 	return []checkResult{
 		checkConfigSchema(cfg, unmarshalErr),
-		checkConfigFile(cfgFile),
+		file,
+		checkConfigKeys(cfgFile, file.Status == statusPass, read.knownKeys),
 		checkPath("repo-path", cfg.RepoPath, true, "set --repo-path or `repo-path:` in config.yaml"),
 		// kubeconfig is `required=true` to match config.Validate(): the
 		// TUI insists on it and the cluster-derived categories (BaseModel,
@@ -217,6 +248,38 @@ func checkConfigFile(cfgFile string) checkResult {
 		r.Status = statusFail
 		r.Detail = err.Error()
 	}
+	return r
+}
+
+// checkConfigKeys warns about keys in the config file that set nothing:
+// a misspelled one (env-typo, env_type) is otherwise silently ignored, and
+// the setting it meant stays at its default. It is skipped when the file
+// didn't read (readOK false) or known is empty.
+func checkConfigKeys(cfgFile string, readOK bool, known map[string]bool) checkResult {
+	r := checkResult{Name: "config_keys"}
+	if !readOK || len(known) == 0 {
+		r.Status, r.Detail = statusSkip, "no config file read"
+		return r
+	}
+	v := viper.New()
+	v.SetConfigFile(cfgFile)
+	if err := v.ReadInConfig(); err != nil {
+		r.Status, r.Detail = statusSkip, err.Error()
+		return r
+	}
+	unknown := map[string]bool{}
+	for _, k := range v.AllKeys() {
+		if top, _, _ := strings.Cut(k, "."); !known[top] {
+			unknown[top] = true
+		}
+	}
+	if len(unknown) == 0 {
+		r.Status = statusPass
+		return r
+	}
+	r.Status = statusWarn
+	r.Detail = "unknown key(s): " + strings.Join(slices.Sorted(maps.Keys(unknown)), ", ")
+	r.Hint = "check the spelling against `toolkit --help` (the flag names); unknown keys are ignored"
 	return r
 }
 
