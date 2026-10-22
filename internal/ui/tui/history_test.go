@@ -233,3 +233,29 @@ func TestHistory_EnvSwitchClearsScopes(t *testing.T) {
 	assert.True(t, slices.ContainsFunc(m.history, func(e historyEntry) bool { return e.scope != nil }), "the tenant's scope survives a same-realm switch")
 	assert.Nil(t, m.landOn)
 }
+
+// A scope carries over to its parent's other children, but not past a
+// category it doesn't apply to: there it would be hidden and esc
+// couldn't clear it, so the next child came back scoped with no way to
+// unscope it. History still holds the scoped visit.
+func TestScope_DroppedOnUnrelatedCategory(t *testing.T) {
+	t.Parallel()
+	m := newHistoryModel(t)
+	drill(m, domain.LimitTenancyOverride, "Acme")
+	m.updateCategory(domain.DedicatedAICluster)
+	require.Equal(t, &domain.Scope{Category: domain.Tenant, Name: "Acme"}, m.scope, "another child of Tenant keeps the scope")
+
+	m.updateCategory(domain.GPUNode)
+	assert.Nil(t, m.scope, "GPUNode isn't scoped by Tenant")
+
+	m.updateCategory(domain.LimitTenancyOverride)
+	assert.Nil(t, m.scope)
+	assert.ElementsMatch(t, []string{"l1", "l2", "l1"}, shownNames(m), "every tenant's overrides")
+
+	back(t, m)
+	require.Equal(t, domain.GPUNode, m.category)
+	assert.Nil(t, m.scope)
+	back(t, m)
+	assert.Equal(t, domain.DedicatedAICluster, m.category)
+	assert.Equal(t, &domain.Scope{Category: domain.Tenant, Name: "Acme"}, m.scope, "[ returns to the list as it was visited")
+}

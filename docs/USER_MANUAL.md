@@ -252,8 +252,10 @@ Some categories are **parent scopes** — pressing `Enter` on a row zooms in to 
 | ServingRuntime | InferenceService (endpoints naming the runtime), GPUWorkload (pods running it) |
 
 `Enter` opens the first child category that has rows for the selected parent (a tenant with no limit overrides opens its console property overrides, or its DACs); when none of the loaded ones do, the first child. The scope stays active when you
-switch categories, so switching to another child (e.g. `:gw` after drilling
-into a DAC) lists that child filtered to the same parent.
+switch to another child (e.g. `:gw` after drilling into a DAC), which lists
+that child filtered to the same parent. Switching to a category the scope
+doesn't apply to (`:gp` from a DAC's endpoints) drops it, so the next child
+you open is unfiltered; `[` still returns to the scoped list.
 
 Press `Esc` to exit the scoped context and return to the parent, with the cursor on the row you drilled in from. It steps back in history when the parent is there, so `]` goes back into the child. (With a filter applied, the first `Esc` clears the filter.) On a parent
 scope, `Enter` drills in rather than opening details; use `y` to view a row's

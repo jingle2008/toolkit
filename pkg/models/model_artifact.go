@@ -21,6 +21,13 @@ func (m ModelArtifact) GPUConfig() string {
 	return fmt.Sprintf("%dx %s", m.GPUCount, m.GPUShape)
 }
 
+// Variant is the GPU config without its space ("2xH100"): an artifact
+// built for several GPU configs is one row per config, all with the
+// same name.
+func (m ModelArtifact) Variant() string {
+	return fmt.Sprintf("%dx%s", m.GPUCount, m.GPUShape)
+}
+
 // FilterableFields returns filterable fields for the model artifact.
 func (m ModelArtifact) FilterableFields() []string {
 	return []string{m.Name, m.GPUConfig(), m.ModelName}

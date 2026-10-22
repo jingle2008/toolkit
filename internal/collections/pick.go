@@ -71,7 +71,9 @@ func qualifiedName(it any) string {
 // PickByNameGrouped is PickByName for a grouped category, returning the
 // item's group too. A name rows in different groups share (an override's
 // across tenants, an endpoint's across namespaces) is ambiguous: the
-// error lists each as <group>/<name>, which picks one.
+// error lists each as <group>/<name>, which picks one. Rows that share
+// their group too (models.VariantItem) are listed, and picked, as
+// <group>/<name>@<variant>.
 func PickByNameGrouped[T any](grouped map[string][]T, name, what string) (string, T, error) {
 	type hit struct {
 		group string
@@ -80,7 +82,12 @@ func PickByNameGrouped[T any](grouped map[string][]T, name, what string) (string
 	var found []hit
 	for group, items := range grouped {
 		for _, it := range items {
-			if n, ok := itemName(it); ok && (n == name || group+"/"+n == name) {
+			n, ok := itemName(it)
+			if !ok {
+				continue
+			}
+			id := group + "/" + n
+			if v := variant(it); n == name || id == name || (v != "" && id+"@"+v == name) {
 				found = append(found, hit{group, it})
 			}
 		}
@@ -91,14 +98,43 @@ func PickByNameGrouped[T any](grouped map[string][]T, name, what string) (string
 		return "", zero, &NoSuchNameError{What: what, Name: name}
 	case 1:
 		return found[0].group, found[0].item, nil
-	default:
-		ids := make([]string, len(found))
-		for i, h := range found {
-			n, _ := itemName(h.item)
-			ids[i] = h.group + "/" + n
-		}
-		slices.Sort(ids)
-		return "", zero, fmt.Errorf("%d %s rows are named %q: %s; name one as <group>/<name>",
-			len(found), what, name, strings.Join(ids, ", "))
 	}
+	ids := make([]string, len(found))
+	for i, h := range found {
+		n, _ := itemName(h.item)
+		ids[i] = h.group + "/" + n
+	}
+	items := make([]any, len(found))
+	for i, h := range found {
+		items[i] = h.item
+	}
+	return "", zero, ambiguousGrouped(ids, items, name, what)
+}
+
+// ambiguousGrouped is PickByNameGrouped's error for several rows named
+// name: each as <group>/<name>, or <group>/<name>@<variant> where rows
+// share the group too, so every form it lists picks one row.
+func ambiguousGrouped(ids []string, items []any, name, what string) error {
+	seen := make(map[string]int, len(ids))
+	for _, id := range ids {
+		seen[id]++
+	}
+	form := "<group>/<name>"
+	for i, it := range items {
+		if v := variant(it); seen[ids[i]] > 1 && v != "" {
+			ids[i] += "@" + v
+			form = "listed"
+		}
+	}
+	slices.Sort(ids)
+	return fmt.Errorf("%d %s rows are named %q: %s; name one as %s",
+		len(ids), what, name, strings.Join(ids, ", "), form)
+}
+
+// variant is a models.VariantItem's variant, or "".
+func variant(it any) string {
+	if v, ok := it.(models.VariantItem); ok {
+		return v.Variant()
+	}
+	return ""
 }

@@ -15,6 +15,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"sync"
 
@@ -71,12 +73,20 @@ func NewServer(cfg config.Config, ld loader.Composite, logger logging.Logger, ve
 // output (the toolkit logger writes to a file by default — see
 // internal/cli/mcp.go).
 //
+// A line that isn't a JSON-RPC message is answered with a JSON-RPC error
+// and the session goes on (see newGuardedTransport).
+//
 // Single-shot: a second Run on the same *Server reuses the SDK's
 // session list rather than reinitializing cleanly. Construct a fresh
 // Server (via NewServer) if you need to restart.
 func (s *Server) Run(ctx context.Context) error {
+	return s.runIO(ctx, os.Stdin, os.Stdout)
+}
+
+// runIO is Run over in and out instead of stdin and stdout.
+func (s *Server) runIO(ctx context.Context, in io.Reader, out io.Writer) error {
 	s.bgCtx = ctx
-	return s.server.Run(ctx, &sdk.StdioTransport{})
+	return s.server.Run(ctx, newGuardedTransport(in, out))
 }
 
 // envOverride is the shared input shape for tools that touch realm /

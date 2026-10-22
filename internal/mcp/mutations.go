@@ -9,6 +9,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
@@ -25,6 +26,7 @@ import (
 // tests don't have to stub a fake k8s+OCI pipeline.
 var (
 	mcpSetCordonFn        = k8s.SetCordon
+	mcpNodeCordonedFn     = k8s.NodeCordoned
 	mcpStartDrainFn       = k8s.StartDrain
 	mcpAwaitDrainFn       = k8s.AwaitDrain
 	mcpDrainStatusFn      = k8s.GetDrainStatus
@@ -32,6 +34,7 @@ var (
 	mcpTerminateFn        = oci.TerminateInstance
 	mcpIncreasePoolSizeFn = oci.IncreasePoolSize
 	mcpDeleteDACFn        = oci.DeleteDedicatedAICluster
+	mcpGetDACFn           = oci.GetDedicatedAICluster
 	mcpResolveISVCFn      = k8s.ResolveInferenceService
 	mcpRestartISVCFn      = k8s.RestartInferenceService
 	mcpPlanOrphanISVCFn   = k8s.PlanOrphanInferenceServiceDelete
@@ -41,6 +44,12 @@ var (
 	}
 	mcpResolveGPUPoolFn = func(ctx context.Context, s *Server, env models.Environment, name string) (*models.GPUPool, error) {
 		return resolve.GPUPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
+	}
+	mcpCheckTenantFn = func(s *Server, entry models.TenantMetadata) (bool, error) {
+		if s.cfg.MetadataFile == "" {
+			return false, errors.New("no metadata file configured")
+		}
+		return configloader.CheckTenantUpsert(s.cfg.MetadataFile, entry)
 	}
 	mcpUpsertTenantFn = func(s *Server, entry models.TenantMetadata) error {
 		writer, ok := s.loader.(loader.TenantMetadataWriter)
@@ -326,6 +335,11 @@ func (s *Server) setCordon(ctx context.Context, a mutation.Action, in cordonNode
 	env := s.effectiveMutationEnv(a, in.Node, in.envOverride)
 	return runMutationCall(s, mutationCall[mutationResult]{
 		action: a, target: in.Node, gate: in.confirmGate, envelope: asResult,
+		plan: func(p *planned) error {
+			cordoned, err := mcpNodeCordonedFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
+			p.resolved = mutation.ResolvedCordon(cordoned)
+			return err
+		},
 		perform: func(p planned) (mutationResult, error) {
 			_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node, unschedulable)
 			return p.ok(), err
@@ -344,6 +358,11 @@ func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, 
 	res, out, err := runMutationCall(s, mutationCall[drainNodeResult]{
 		action: a, target: in.Node, gate: in.confirmGate,
 		envelope: func(r mutationResult) drainNodeResult { return drainNodeResult{mutationResult: r} },
+		plan: func(p *planned) error {
+			status, err := mcpDrainStatusFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
+			p.resolved = mutation.ResolvedDrain(string(status.Phase))
+			return err
+		},
 		perform: func(p planned) (drainNodeResult, error) {
 			status, err := mcpStartDrainFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
 			if err != nil {
@@ -497,10 +516,15 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, in deleteDACInput) (*sdk.CallToolResult, mutationResult, error) {
 	a := mutation.DeleteDAC
 	env := s.effectiveMutationEnv(a, in.Name, in.envOverride)
+	dac := &models.DedicatedAICluster{Name: in.Name}
 	return runMutationCall(s, mutationCall[mutationResult]{
 		action: a, target: in.Name, gate: in.confirmGate, confirmTarget: in.ConfirmTarget, envelope: asResult,
+		plan: func(p *planned) error {
+			found, err := mcpGetDACFn(ctx, dac, env)
+			p.resolved = mutation.ResolvedDAC(found.ID, found.State)
+			return err
+		},
 		perform: func(p planned) (mutationResult, error) {
-			dac := &models.DedicatedAICluster{Name: in.Name}
 			return p.ok(), mcpDeleteDACFn(ctx, dac, env, logging.FromContext(ctx))
 		},
 	})
@@ -598,6 +622,13 @@ func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, 
 	}
 	return runMutationCall(s, mutationCall[mutationResult]{
 		action: mutation.SetTenant, target: in.OCID, gate: in.confirmGate, envelope: asResult,
+		// The write's own checks (a name another tenancy has, a file that
+		// doesn't load), so a dry run catches them too.
+		plan: func(p *planned) error {
+			exists, err := mcpCheckTenantFn(s, entry)
+			p.resolved = mutation.ResolvedTenant(exists)
+			return err
+		},
 		perform: func(p planned) (mutationResult, error) {
 			return p.ok(), mcpUpsertTenantFn(s, entry)
 		},
@@ -704,7 +735,7 @@ func registerMutationTools(s *Server) {
 		Name:        "set_tenant",
 		Annotations: idempotent(),
 		Description: "Create or update a tenancy's metadata (name / internal flag / note), keyed by full tenancy OCID in the global metadata file." +
-			" Mutating: requires confirm=true to execute, otherwise refuses without acting; dry_run=true reports what it would do instead." +
+			" Mutating: requires confirm=true to execute, otherwise refuses without acting; dry_run=true instead makes the write's checks and reports what it would do (status DRY_RUN, resolved.exists says whether the entry is replaced)." +
 			" Not env-scoped: env_type/env_region/env_realm do not apply.",
 	}, s.handleSetTenant)
 }

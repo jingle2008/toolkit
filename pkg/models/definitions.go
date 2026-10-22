@@ -20,6 +20,14 @@ type QualifiedItem interface {
 	QualifiedName() string
 }
 
+// VariantItem is a row of a grouped category that can share both its
+// group and its name with another row (one model artifact built for
+// several GPU configs). Variant tells those rows apart:
+// <group>/<name>@<variant> names one.
+type VariantItem interface {
+	Variant() string
+}
+
 // NamedFilterable represents an item that is both named and filterable.
 type NamedFilterable interface {
 	NamedItem

@@ -14,7 +14,10 @@ import (
 
 // setCordonFn is the seam tests use to fake the k8s call. Production
 // callers go through k8s.SetCordon, which reaches a live cluster.
-var setCordonFn = k8s.SetCordon
+var (
+	setCordonFn    = k8s.SetCordon
+	nodeCordonedFn = k8s.NodeCordoned
+)
 
 func addCordonCommand(rootCmd *cobra.Command, cfgFile *string) {
 	addCordonOrUncordon(rootCmd, cfgFile, "cordon", true,
@@ -75,6 +78,11 @@ Examples:
 					Target: nodeName,
 					DryRun: dryRun,
 					Yes:    yes,
+					Resolve: func(ctx context.Context, p *mutationPlan) error {
+						cordoned, err := nodeCordonedFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
+						p.Resolved = mutation.ResolvedCordon(cordoned)
+						return err
+					},
 				}, func(ctx context.Context) error {
 					changed, err := setCordonFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName, unschedulable)
 					if err != nil {

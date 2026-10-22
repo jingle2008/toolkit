@@ -4,12 +4,14 @@ Package terraform provides functions for loading and managing infrastructure dat
 package terraform
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -518,6 +520,9 @@ func loadGPUPools(ctx context.Context, dirPath, poolConfigName string, isOkeMana
 		}
 	}
 
+	// cty map iteration order varies by run; without a sort the rows,
+	// `get gpupool --limit` and a CSV export would change on every load.
+	sort.Slice(gpuPools, func(i, j int) bool { return gpuPools[i].Name < gpuPools[j].Name })
 	return gpuPools, nil
 }
 
@@ -569,8 +574,16 @@ func LoadModelArtifacts(ctx context.Context, repoPath string, env models.Environ
 		}
 
 		// cty map iteration order varies by run, so `get ma --limit`
-		// would pick different rows each time.
-		sort.Slice(modelArtifacts, func(i, j int) bool { return modelArtifacts[i].Name < modelArtifacts[j].Name })
+		// would pick different rows each time. One artifact can serve
+		// several GPU configs, so the name alone doesn't order them.
+		slices.SortFunc(modelArtifacts, func(a, b models.ModelArtifact) int {
+			return cmp.Or(
+				strings.Compare(a.Name, b.Name),
+				strings.Compare(a.GPUShape, b.GPUShape),
+				cmp.Compare(a.GPUCount, b.GPUCount),
+				strings.Compare(a.TensorRTVersion, b.TensorRTVersion),
+			)
+		})
 		modelArtifactMap[modelName] = modelArtifacts
 	}
 

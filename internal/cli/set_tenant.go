@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/mutation"
@@ -29,6 +30,15 @@ var setTenantFn = func(ctx context.Context, cfg config.Config, entry models.Tena
 		return errors.New("loader does not support writing metadata")
 	}
 	return writer.UpsertTenantMetadata(entry)
+}
+
+// checkTenantFn is the seam tests use to fake set tenant's lookup: what
+// the write would find, without writing.
+var checkTenantFn = func(cfg config.Config, entry models.TenantMetadata) (bool, error) {
+	if cfg.MetadataFile == "" {
+		return false, errors.New("no metadata file configured")
+	}
+	return configloader.CheckTenantUpsert(cfg.MetadataFile, entry)
 }
 
 func addSetCommand(rootCmd *cobra.Command, cfgFile *string) {
@@ -66,25 +76,32 @@ Examples:
 			if !strings.HasPrefix(ocid, tenancyOCIDPrefix) {
 				return fmt.Errorf("invalid tenancy OCID %q: must start with %q", ocid, tenancyOCIDPrefix)
 			}
+			nameVal := name
+			entry := models.TenantMetadata{ID: ocid, Name: &nameVal}
+			// Without --internal, keep the recorded flag (e.g. one
+			// `tenant sync` set); a new tenant then defaults to internal.
+			if cmd.Flags().Changed("internal") {
+				internalVal := internal
+				entry.IsInternal = &internalVal
+			}
+			if note != "" {
+				noteVal := note
+				entry.Note = &noteVal
+			}
 			return withMutationSetup(cfgFile, false, false, false, func(ctx context.Context, cfg config.Config, _ models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action: mutation.SetTenant,
 					Target: ocid,
 					DryRun: dryRun,
 					Yes:    yes,
+					// The write's own checks (a name another tenancy has, a
+					// file that doesn't load), so a dry run catches them too.
+					Resolve: func(_ context.Context, p *mutationPlan) error {
+						exists, err := checkTenantFn(cfg, entry)
+						p.Resolved = mutation.ResolvedTenant(exists)
+						return err
+					},
 				}, func(ctx context.Context) error {
-					nameVal := name
-					entry := models.TenantMetadata{ID: ocid, Name: &nameVal}
-					// Without --internal, keep the recorded flag (e.g. one
-					// `tenant sync` set); a new tenant then defaults to internal.
-					if cmd.Flags().Changed("internal") {
-						internalVal := internal
-						entry.IsInternal = &internalVal
-					}
-					if note != "" {
-						noteVal := note
-						entry.Note = &noteVal
-					}
 					return setTenantFn(ctx, cfg, entry)
 				})
 			})

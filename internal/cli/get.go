@@ -61,8 +61,10 @@ Examples:
 
 With a name, get prints that one row (default -o yaml): the name must
 match the row's first column exactly, or be <group>/<name> when rows in
-different groups share it (<realm>/<name> for a service tenancy). No
-match, or several, is an error.
+different groups share it (<realm>/<name> for a service tenancy). A
+model artifact built for several GPU configs is one row per config, all
+with the same name: name one as <model>/<name>@<config> (e.g. @2xH100).
+No match, or several, is an error that lists what to pass instead.
 
 Category aliases match the TUI (e.g. "tenant"/"t", "gpunode"/"gn",
 "dac", "basemodel"/"bm"). Run with shell completion enabled to

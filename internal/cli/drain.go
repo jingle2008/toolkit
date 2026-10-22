@@ -72,6 +72,11 @@ no process is driving it: run the drain again to resume.`,
 					Target: nodeName,
 					DryRun: dryRun,
 					Yes:    yes,
+					Resolve: func(ctx context.Context, p *mutationPlan) error {
+						status, err := drainStatusFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
+						p.Resolved = mutation.ResolvedDrain(string(status.Phase))
+						return err
+					},
 				}, func(ctx context.Context) error {
 					// The drain can run for tens of minutes and the log goes to a
 					// file, so echo its milestones on stderr; stdout keeps only

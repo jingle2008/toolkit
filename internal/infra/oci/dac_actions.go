@@ -38,6 +38,28 @@ func derefOr[T any](p *T, fallback T) T {
 	return *p
 }
 
+// DACState is what GetDedicatedAICluster found: the DAC's OCID and its
+// lifecycle state.
+type DACState struct {
+	ID    string
+	State string
+}
+
+// GetDedicatedAICluster looks the DAC up in OCI, changing nothing: the
+// lookup that lets a delete dry run prove the DAC exists.
+func GetDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluster, env models.Environment) (DACState, error) {
+	client, err := newGenAIClient(env)
+	if err != nil {
+		return DACState{}, fmt.Errorf("failed to create GenerativeAI client: %w", err)
+	}
+	dacID := dac.OCID(env.Realm, env.Region)
+	resp, err := client.GetDedicatedAiCluster(ctx, generativeai.GetDedicatedAiClusterRequest{DedicatedAiClusterId: &dacID})
+	if err != nil {
+		return DACState{}, fmt.Errorf("failed to get DedicatedAiCluster: %w", err)
+	}
+	return DACState{ID: derefOr(resp.Id, dacID), State: string(resp.LifecycleState)}, nil
+}
+
 /*
 DeleteDedicatedAICluster deletes a DedicatedAICluster using the OCI Generative AI SDK.
 */

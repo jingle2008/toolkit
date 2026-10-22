@@ -18,6 +18,22 @@ type Resolved map[string]any
 // ResolvedNode is a GPU node's lookup: the instance the action targets.
 func ResolvedNode(instanceID string) Resolved { return Resolved{"instance_id": instanceID} }
 
+// ResolvedCordon is a cordon or uncordon's lookup: whether the node is
+// cordoned now (the action changes nothing when it already has the state
+// it asks for).
+func ResolvedCordon(cordoned bool) Resolved { return Resolved{"cordoned": cordoned} }
+
+// ResolvedDrain is a drain's lookup: the phase of the drain the node
+// records ("none" when it has none; an unfinished one is resumed).
+func ResolvedDrain(phase string) Resolved { return Resolved{"drain_phase": phase} }
+
+// ResolvedDAC is a DAC delete's lookup: its OCID and lifecycle state.
+func ResolvedDAC(id, state string) Resolved { return Resolved{"dac_id": id, "state": state} }
+
+// ResolvedTenant is a set-tenant's lookup: whether the metadata file
+// already has the tenancy (the entry is replaced) or not (added).
+func ResolvedTenant(exists bool) Resolved { return Resolved{"exists": exists} }
+
 // ResolvedPool is a GPU pool scale-up's lookup: its OCI instance pool,
 // the size Terraform declares, the size it has, and the instances to add
 // with the size that makes.

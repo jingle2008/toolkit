@@ -175,7 +175,7 @@ toolkit get dac <dac-name>
 toolkit get inferenceservice <namespace>/<name> -o json
 ```
 
-With a name, `get` prints just that row: the name must match the row's first column exactly, or be `<group>/<name>` when rows in different groups share it (an override's name across tenants, an endpoint's across namespaces); a service tenancy's name repeats across realms, so it takes `<realm>/<name>`. No match, or several, exits non-zero and says which; `--filter` is the loose match.
+With a name, `get` prints just that row: the name must match the row's first column exactly, or be `<group>/<name>` when rows in different groups share it (an override's name across tenants, an endpoint's across namespaces); a service tenancy's name repeats across realms, so it takes `<realm>/<name>`; a model artifact built for several GPU configs is one row per config, so it takes `<model>/<name>@<config>` (e.g. `@2xH100`). No match, or several, exits non-zero and says which; `--filter` is the loose match.
 
 `--related-to <category>/<name>` keeps the rows related to that parent row, using the relations the TUI drills through: a DAC's pods, a model's or runtime's endpoints, a tenant's DACs, pods and endpoints, a definition's overrides, and so on. The name must match the parent row's first column exactly (case-sensitive). The flag combines with `--filter`, and an unrelated category is rejected with the valid parents listed. Shell completion offers the valid `<category>/` prefixes.
 
@@ -213,7 +213,7 @@ A row with no dashboard — no model, or a capability with no metrics — fails 
 
 ### Cluster mutations
 
-Maintenance operations the TUI exposes via keyboard shortcuts are also available as scriptable subcommands. All mutations support `--dry-run` / `-n` (preview the action) and `--yes` / `-y` (skip the interactive prompt). Each call writes a JSON line to the audit log.
+Maintenance operations the TUI exposes via keyboard shortcuts are also available as scriptable subcommands. All mutations support `--dry-run` / `-n` (look the target up as a real call would, and preview the action: a node, DAC or pool that doesn't exist fails the dry run) and `--yes` / `-y` (skip the interactive prompt). Each call writes a JSON line to the audit log.
 
 | Command | Effect |
 | ------- | ------ |
@@ -290,7 +290,7 @@ The tools for the categories whose rows can be faulty (`list_base_models`, `list
 
 Every read tool takes an optional `filter` (fuzzy substring) and optional `env_type` / `env_region` / `env_realm` to override the startup env per-call, so a single running server can answer questions across multiple environments.
 
-**Mutation tools** — gated on `confirm: true`. The same safety model as the CLI: failures surface as a tool error (`isError` plus the underlying cause), every call writes to the audit log. `dry_run: true` (no `confirm` needed) looks the target up as a real call would and returns `status: "DRY_RUN"` with what it found under `resolved` (the node's instance, the pool's sizes, the InferenceService's namespace and planned delete vs force-delete) without acting. The irreversible tools — `terminate_node`, `delete_dac`, `delete_inference_service` — also need `confirm_target` set to the target, as named or as the dry run reports it: `confirm: true` alone is refused, as the CLI requires `--yes` and the TUI a capital `Y` for them.
+**Mutation tools** — gated on `confirm: true`. The same safety model as the CLI: failures surface as a tool error (`isError` plus the underlying cause), every call writes to the audit log. `dry_run: true` (no `confirm` needed) looks the target up as a real call would and returns `status: "DRY_RUN"` with what it found under `resolved` (the node's instance or cordon state, its drain phase, the pool's sizes, the DAC's OCID and state, the InferenceService's namespace and planned delete vs force-delete, whether a tenant entry exists) without acting; a target that doesn't exist fails the dry run. A line on stdin that isn't a JSON-RPC message gets a JSON-RPC error (`-32700` / `-32600`) and the session goes on; batches aren't supported. The irreversible tools — `terminate_node`, `delete_dac`, `delete_inference_service` — also need `confirm_target` set to the target, as named or as the dry run reports it: `confirm: true` alone is refused, as the CLI requires `--yes` and the TUI a capital `Y` for them.
 
 | Tool | Effect |
 | ---- | ------ |

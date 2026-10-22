@@ -23,6 +23,7 @@ func stageDACEnv(t *testing.T) {
 	t.Setenv("TOOLKIT_ENV_REALM", "oc1")
 	viper.Reset()
 	t.Cleanup(viper.Reset)
+	stubTargetLookups(t)
 }
 
 func TestDeleteDAC_DryRun_DoesNotCallOCI(t *testing.T) {
