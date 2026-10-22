@@ -15,7 +15,7 @@ var LimitTenancyOverrideColumns = GroupedSet[models.LimitTenancyOverride]{Column
 		Render: func(_ string, v models.LimitTenancyOverride) string { return v.Name },
 	},
 	{
-		Title: "Tenant", Key: "tenant", Ratio: 0.24, TruncateMiddle: true,
+		Title: "Tenant", Key: "tenant", Ratio: 0.24,
 		Render: func(k string, _ models.LimitTenancyOverride) string { return k },
 	},
 	{

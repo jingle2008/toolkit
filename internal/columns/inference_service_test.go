@@ -67,14 +67,3 @@ func TestInferenceServiceColumns_OnDemandTenantBlank(t *testing.T) {
 		}
 	}
 }
-
-// Model (imported models' OCIDs) and Runtime values share long prefixes,
-// so they truncate in the middle to keep the distinct tail visible.
-func TestInferenceServiceColumns_TruncateMiddle(t *testing.T) {
-	t.Parallel()
-	for _, c := range InferenceServiceColumns.Columns {
-		if (c.Key == "model" || c.Key == "runtime") && !c.TruncateMiddle {
-			t.Errorf("%s should truncate in the middle", c.Key)
-		}
-	}
-}

@@ -17,6 +17,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -218,25 +219,20 @@ func (m *Model) redecorateRows() {
 	table.WithRows(rows)(m.table)
 }
 
-// applyMiddleTruncation shortens cells in columns marked
-// TruncateMiddle so values wider than their column's display width
-// are elided in the MIDDLE (head + "…" + tail) instead of having
-// their tail chopped by bubbles' default right-truncation. After
-// this pass the cell's measured width is ≤ the column width, so
-// runewidth.Truncate inside bubbles becomes a no-op for these
-// cells. Rows are mutated in place.
-//
-// Columns marked TruncateMiddle today hold OCID-suffix values (DAC
-// and ImportedModel Name; the Tenant key on those plus tenancy-
-// override grouped sets); the head identifies the OCID shape while
-// the tail is the distinguishing portion — both worth keeping.
+// applyMiddleTruncation shortens cells wider than their column in the
+// middle (head + "…" + tail) instead of letting bubbles chop the tail,
+// so the end that tells values apart stays visible: an OCID's suffix, a
+// pool's _cn_01 / _cn_02, an image's tag. After this pass every cell
+// fits its column, so bubbles' own right-truncation is a no-op. Status
+// is never shortened (columnWidths keeps it whole). Rows are mutated in
+// place.
 func (m *Model) applyMiddleTruncation(rows []table.Row) {
 	if len(rows) == 0 || len(m.headers) == 0 {
 		return
 	}
 	cols := m.table.Columns()
 	for c, h := range m.headers {
-		if !h.truncateMiddle || c >= len(cols) {
+		if h.text == "Status" || c >= len(cols) {
 			continue
 		}
 		w := cols[c].Width
@@ -252,57 +248,8 @@ func (m *Model) applyMiddleTruncation(rows []table.Row) {
 	}
 }
 
-// truncateMiddle returns s shortened to fit width w by eliding the
-// middle: head + "…" + tail, where head and tail are sized to use
-// the available width minus the ellipsis. The split favors the tail
-// by one cell when w-1 is odd, since the tail is typically the
-// distinguishing portion for OCID-shaped values. If s already fits,
-// it is returned unchanged.
-func truncateMiddle(s string, w int) string {
-	if runewidth.StringWidth(s) <= w {
-		return s
-	}
-	const ellipsis = "…"
-	ew := runewidth.StringWidth(ellipsis)
-	if w <= 0 {
-		return ""
-	}
-	if w < ew {
-		return ""
-	}
-	if w == ew {
-		return ellipsis
-	}
-	keep := w - ew
-	headW := keep / 2
-	tailW := keep - headW
-
-	runes := []rune(s)
-	headEnd := 0
-	var acc int
-	for i := 0; i < len(runes); i++ {
-		rw := runewidth.RuneWidth(runes[i])
-		if acc+rw > headW {
-			break
-		}
-		acc += rw
-		headEnd = i + 1
-	}
-	tailStart := len(runes)
-	acc = 0
-	for i := len(runes) - 1; i >= 0; i-- {
-		rw := runewidth.RuneWidth(runes[i])
-		if acc+rw > tailW {
-			break
-		}
-		acc += rw
-		tailStart = i
-	}
-	if tailStart < headEnd {
-		tailStart = headEnd
-	}
-	return string(runes[:headEnd]) + ellipsis + string(runes[tailStart:])
-}
+// truncateMiddle is view.TruncateMiddle.
+func truncateMiddle(s string, w int) string { return view.TruncateMiddle(s, w) }
 
 // updateColumns sets the table's columns for the current category:
 // titles (the sort column's arrow, and each sortable column's sort key

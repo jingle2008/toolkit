@@ -13,15 +13,15 @@ import (
 // and in filtering.
 var InferenceServiceColumns = GroupedSet[models.InferenceService]{Columns: []GroupedColumn[models.InferenceService]{
 	{
-		Title: "Name", Key: "name", Ratio: 0.18, TruncateMiddle: true,
+		Title: "Name", Key: "name", Ratio: 0.18,
 		Render: func(_ string, s models.InferenceService) string { return s.Name },
 	},
 	{
-		Title: "Namespace", Key: "namespace", Ratio: 0.18, TruncateMiddle: true,
+		Title: "Namespace", Key: "namespace", Ratio: 0.18,
 		Render: func(k string, _ models.InferenceService) string { return k },
 	},
 	{
-		Title: "Tenant", Key: "tenant", Ratio: 0.13, TruncateMiddle: true,
+		Title: "Tenant", Key: "tenant", Ratio: 0.13,
 		Render: func(_ string, s models.InferenceService) string { return s.TenantName() },
 		RenderForExport: func(realm, _ string, _ string, s models.InferenceService) string {
 			return s.TenancyOCID(realm)
@@ -30,11 +30,11 @@ var InferenceServiceColumns = GroupedSet[models.InferenceService]{Columns: []Gro
 	{
 		// Imported model names are OCID resource ids sharing a long
 		// prefix, so truncate in the middle to keep the distinct tail.
-		Title: "Model", Key: "model", Ratio: 0.17, TruncateMiddle: true,
+		Title: "Model", Key: "model", Ratio: 0.17,
 		Render: func(_ string, s models.InferenceService) string { return s.Model },
 	},
 	{
-		Title: "Runtime", Key: "runtime", Ratio: 0.17, TruncateMiddle: true,
+		Title: "Runtime", Key: "runtime", Ratio: 0.17,
 		Render: func(_ string, s models.InferenceService) string { return s.Runtime },
 	},
 	{

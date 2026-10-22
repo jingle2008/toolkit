@@ -100,7 +100,8 @@ func bottomEdge(label string, w int, edge, labelStyle lipgloss.Style) string {
 }
 
 // topEdge draws a w-wide rounded top border with title inset after "╭─ ".
-// A title too long for the edge is truncated with an ellipsis.
+// A title too long for the edge is shortened in the middle, so its end
+// (an OCID's suffix, the name after a namespace) stays visible.
 func topEdge(title string, w int, edge, titleStyle lipgloss.Style) string {
 	b := lipgloss.RoundedBorder()
 	if title == "" {
@@ -111,7 +112,7 @@ func topEdge(title string, w int, edge, titleStyle lipgloss.Style) string {
 	if room < 1 {
 		return edge.Render(b.TopLeft + strings.Repeat(b.Top, max(w-2, 0)) + b.TopRight)
 	}
-	title = ansi.Truncate(title, room, "…")
+	title = TruncateMiddle(ansi.Strip(title), room)
 	fill := w - 5 - lipgloss.Width(title)
 	return edge.Render(b.TopLeft+b.Top+" ") +
 		titleStyle.Render(title) +

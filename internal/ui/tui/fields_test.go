@@ -88,12 +88,13 @@ func TestRenderFields_DepthOneCollapsesDeeper(t *testing.T) {
 	assert.NotContains(t, got, "Deep")
 }
 
-// Long values are cut to the width, or wrapped under themselves.
+// Long values are cut to the width in the middle, keeping their end, or
+// wrapped under themselves.
 func TestRenderFields_CutOrWrap(t *testing.T) {
 	t.Parallel()
 	n, err := parseFields([]byte(`{"id":"aaaa bbbb cccc dddd"}`))
 	require.NoError(t, err)
-	assert.Equal(t, "ID  aaaa bbb…", renderFields(n, 14, 0, false, false, plainFields))
+	assert.Equal(t, "ID  aaaa… dddd", renderFields(n, 14, 0, false, false, plainFields))
 	assert.Equal(t, "ID  aaaa bbbb\n    cccc dddd", renderFields(n, 14, 0, true, false, plainFields))
 }
 
@@ -111,7 +112,7 @@ func TestRenderFields_StackedLists(t *testing.T) {
 		render(`{"issues":["GPU bus error, on 3","Disk full"]}`, 40, true), "an item holds a comma")
 	assert.Equal(t, "Issues  • aaaa bbbb\n          cccc\n        • dddd",
 		render(`{"issues":["aaaa bbbb cccc","dddd"]}`, 20, true), "join overflows; items wrap under their text")
-	assert.Equal(t, "Issues  • aaaa bbb…\n        • dddd",
+	assert.Equal(t, "Issues  • aaaa… cccc\n        • dddd",
 		render(`{"issues":["aaaa bbbb cccc","dddd"]}`, 20, false), "cut, not wrapped")
 	assert.Equal(t, "Tags  a, b", render(`{"tags":["a","b"]}`, 40, true))
 	assert.Equal(t, "Issues  one, two", render(`{"issues":["one, two"]}`, 40, true), "a single item can't be ambiguous")

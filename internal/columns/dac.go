@@ -31,14 +31,14 @@ func dacShapeOrProfile(d models.DedicatedAICluster) string {
 // title and ACTIVE/FAILED/READY values would truncate at ratio 0.04.
 var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[models.DedicatedAICluster]{
 	{
-		Title: "Name", Key: "name", Ratio: 0.20, TruncateMiddle: true,
+		Title: "Name", Key: "name", Ratio: 0.20,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Name },
 		RenderForExport: func(realm, region string, _ string, d models.DedicatedAICluster) string {
 			return d.OCID(realm, region)
 		},
 	},
 	{
-		Title: "Tenant", Key: "tenant", Ratio: 0.17, TruncateMiddle: true,
+		Title: "Tenant", Key: "tenant", Ratio: 0.17,
 		Render: func(k string, _ models.DedicatedAICluster) string { return k },
 		// An orphan has no tenancy OCID; its key, UNKNOWN_TENANCY, stays.
 		RenderForExport: func(realm, _ string, k string, d models.DedicatedAICluster) string {
@@ -58,7 +58,7 @@ var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.Type },
 	},
 	{
-		Title: "Model", Key: "model", Ratio: 0.10, TruncateMiddle: true,
+		Title: "Model", Key: "model", Ratio: 0.10,
 		Render: func(_ string, d models.DedicatedAICluster) string { return d.ModelName },
 	},
 	{

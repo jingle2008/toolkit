@@ -115,11 +115,11 @@ var ServingRuntimeColumns = Set[models.ServingRuntime]{Columns: []Column[models.
 		Render: func(r models.ServingRuntime) string { return r.Name },
 	},
 	{
-		Title: "Hardware", Key: "hardware", Ratio: 0.26, TruncateMiddle: true,
+		Title: "Hardware", Key: "hardware", Ratio: 0.26,
 		Render: servingRuntimeHardware,
 	},
 	{
-		Title: "Image", Key: "image", Ratio: 0.20, TruncateMiddle: true,
+		Title: "Image", Key: "image", Ratio: 0.20,
 		Render: servingRuntimeImage,
 	},
 	{
@@ -184,11 +184,11 @@ typical rows untruncated.
 */
 var ServingRuntimeTUIColumns = Set[models.ServingRuntime]{Columns: []Column[models.ServingRuntime]{
 	{
-		Title: "Name", Key: "name", Ratio: 0.26, TruncateMiddle: true,
+		Title: "Name", Key: "name", Ratio: 0.26,
 		Render: func(r models.ServingRuntime) string { return r.Name },
 	},
 	{
-		Title: "Hardware", Key: "hardware", Ratio: 0.3, TruncateMiddle: true,
+		Title: "Hardware", Key: "hardware", Ratio: 0.3,
 		// GPU families only, normalized across both constraint kinds; the
 		// raw lists stay in the detail view.
 		Render: func(r models.ServingRuntime) string { return strings.Join(r.GPUFamilies(), ", ") },
@@ -200,7 +200,7 @@ var ServingRuntimeTUIColumns = Set[models.ServingRuntime]{Columns: []Column[mode
 		Render: servingRuntimeGPUPerNode,
 	},
 	{
-		Title: "Image", Key: "image", Ratio: 0.3, TruncateMiddle: true,
+		Title: "Image", Key: "image", Ratio: 0.3,
 		Render: servingRuntimeImage,
 	},
 	{

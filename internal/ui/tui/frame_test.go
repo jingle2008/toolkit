@@ -227,7 +227,6 @@ func TestUpdateLayout_RetruncatesInTheMiddle(t *testing.T) {
 	showCategory(t, m, domain.Tenant)
 	col := slices.IndexFunc(m.headers, func(h header) bool { return h.text == "OCID" })
 	require.GreaterOrEqual(t, col, 0)
-	require.True(t, m.headers[col].truncateMiddle)
 	m.updateLayout(50, 30)
 	w := m.table.Columns()[col].Width
 	require.Positive(t, w)
