@@ -96,3 +96,36 @@ func TestUpdateMetadata_ConcurrentUpdatesAllLand(t *testing.T) {
 	wg.Wait()
 	assert.Len(t, tenantIDs(t, path), n)
 }
+
+// CheckTenantUpsert makes UpsertTenant's checks against the file as it
+// is, and writes nothing.
+func TestCheckTenantUpsert(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "metadata.yaml")
+
+	exists, err := CheckTenantUpsert(path, models.TenantMetadata{ID: "ocid1.tenancy.oc1..a", Name: strptr("acme")})
+	require.NoError(t, err, "a missing file is empty")
+	assert.False(t, exists)
+	_, statErr := os.Stat(path)
+	require.ErrorIs(t, statErr, os.ErrNotExist, "nothing is written")
+
+	_, err = UpdateMetadata(path, addTenant("ocid1.tenancy.oc1..a"))
+	require.NoError(t, err)
+	before, err := os.ReadFile(path) // #nosec G304 -- the test's temp dir
+	require.NoError(t, err)
+
+	exists, err = CheckTenantUpsert(path, models.TenantMetadata{ID: "ocid1.tenancy.oc1..a", Name: strptr("renamed")})
+	require.NoError(t, err)
+	assert.True(t, exists)
+
+	_, err = CheckTenantUpsert(path, models.TenantMetadata{ID: "ocid1.tenancy.oc1..b", Name: strptr("ocid1.tenancy.oc1..a")})
+	require.ErrorContains(t, err, "is already used by ocid1.tenancy.oc1..a")
+
+	after, err := os.ReadFile(path) // #nosec G304 -- the test's temp dir
+	require.NoError(t, err)
+	assert.Equal(t, before, after, "nothing is written")
+
+	require.NoError(t, os.WriteFile(path, []byte("tenants: [unclosed\n"), 0o600))
+	_, err = CheckTenantUpsert(path, models.TenantMetadata{ID: "ocid1.tenancy.oc1..c", Name: strptr("c")})
+	require.Error(t, err, "a file that doesn't load is refused, as the write refuses it")
+}

@@ -3,12 +3,18 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
+
+	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/infra/oci"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // stageMutationEnv writes a fake kubeconfig to a tempdir, sets HOME to
@@ -28,6 +34,23 @@ func stageMutationEnv(t *testing.T) {
 	t.Setenv("TOOLKIT_ENV_REALM", "oc1")
 	viper.Reset()
 	t.Cleanup(viper.Reset)
+	stubTargetLookups(t)
+}
+
+// stubTargetLookups makes the read-only target lookups that cordon,
+// drain, delete dac and set tenant run before a dry run or prompt find
+// their target, so no test reaches a cluster, OCI or the metadata file.
+// A test that wants a lookup to fail swaps the seam again.
+func stubTargetLookups(t *testing.T) {
+	t.Helper()
+	t.Cleanup(swap(&nodeCordonedFn, func(context.Context, string, string, string) (bool, error) { return false, nil }))
+	t.Cleanup(swap(&drainStatusFn, func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+		return k8s.DrainStatus{Node: node, DrainState: k8s.DrainState{Phase: k8s.DrainNone}}, nil
+	}))
+	t.Cleanup(swap(&getDACFn, func(_ context.Context, d *models.DedicatedAICluster, env models.Environment) (oci.DACState, error) {
+		return oci.DACState{ID: d.OCID(env.Realm, env.Region), State: "ACTIVE"}, nil
+	}))
+	t.Cleanup(swap(&checkTenantFn, func(config.Config, models.TenantMetadata) (bool, error) { return false, nil }))
 }
 
 // runRootCmd builds a fresh root command, wires stdin/stdout/stderr to

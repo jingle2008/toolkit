@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -263,4 +264,42 @@ func TestReadOnlyServer_RejectsMutationCalls(t *testing.T) {
 		Arguments: map[string]any{"node": "node-a", "confirm": true, "confirm_target": "node-a"},
 	})
 	require.ErrorContains(t, err, `unknown tool "terminate_node"`)
+}
+
+// Every tool's dry run looks its target up as a real call would, so a
+// target that doesn't exist fails the dry run instead of reporting
+// DRY_RUN — an agent can't dry-run a typo and then confirm it.
+//
+//nolint:paralleltest // replaces package-level seams
+func TestMutationTools_DryRunFailsOnMissingTarget(t *testing.T) {
+	performed := stubPerformSeams(t)
+	missing := errors.New("ghost not found")
+	oCordoned, oDrain, oDAC, oTenant := mcpNodeCordonedFn, mcpDrainStatusFn, mcpGetDACFn, mcpCheckTenantFn
+	oNode, oPool, oISVC := mcpResolveGPUNodeFn, mcpResolveGPUPoolFn, mcpResolveISVCFn
+	t.Cleanup(func() {
+		mcpNodeCordonedFn, mcpDrainStatusFn, mcpGetDACFn, mcpCheckTenantFn = oCordoned, oDrain, oDAC, oTenant
+		mcpResolveGPUNodeFn, mcpResolveGPUPoolFn, mcpResolveISVCFn = oNode, oPool, oISVC
+	})
+	mcpNodeCordonedFn = func(context.Context, string, string, string) (bool, error) { return false, missing }
+	mcpDrainStatusFn = func(context.Context, string, string, string) (k8s.DrainStatus, error) {
+		return k8s.DrainStatus{}, missing
+	}
+	mcpGetDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment) (oci.DACState, error) {
+		return oci.DACState{}, missing
+	}
+	mcpCheckTenantFn = func(*Server, models.TenantMetadata) (bool, error) { return false, missing }
+	mcpResolveGPUNodeFn = func(context.Context, *Server, models.Environment, string, string) (*models.GPUNode, error) {
+		return nil, missing
+	}
+	mcpResolveGPUPoolFn = func(context.Context, *Server, models.Environment, string) (*models.GPUPool, error) {
+		return nil, missing
+	}
+	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) { return "", missing }
+
+	for name, args := range mutationArgs {
+		res := callTool(t, name, with(args, "dry_run", true))
+		require.True(t, res.IsError, name)
+		assert.Contains(t, resultText(t, res), "ghost not found", name)
+	}
+	assert.Empty(t, *performed)
 }

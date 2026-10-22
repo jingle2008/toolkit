@@ -26,6 +26,21 @@ func SetCordon(ctx context.Context, kubeconfig, contextName, nodeName string, wa
 	return setCordon(ctx, clientset, nodeName, want)
 }
 
+// NodeCordoned reports whether the node is cordoned, changing nothing:
+// the lookup that lets a cordon or uncordon dry run prove the node
+// exists and say what it would find.
+func NodeCordoned(ctx context.Context, kubeconfig, contextName, nodeName string) (bool, error) {
+	clientset, err := NewClientsetFromKubeConfig(kubeconfig, contextName)
+	if err != nil {
+		return false, err
+	}
+	node, err := clientset.CoreV1().Nodes().Get(ctx, nodeName, v1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	return node.Spec.Unschedulable, nil
+}
+
 type logWriter struct{ logger logging.Logger }
 
 func (w logWriter) Write(p []byte) (int, error) {

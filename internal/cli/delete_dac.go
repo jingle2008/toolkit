@@ -17,6 +17,7 @@ import (
 // Seams tests use to fake the OCI call and the cluster calls.
 var (
 	deleteDACFn            = oci.DeleteDedicatedAICluster
+	getDACFn               = oci.GetDedicatedAICluster
 	planOrphanISVCDeleteFn = k8s.PlanOrphanInferenceServiceDelete
 	deleteOrphanISVCFn     = k8s.DeleteOrphanInferenceService
 )
@@ -34,7 +35,8 @@ func addDeleteCommand(rootCmd *cobra.Command, cfgFile *string) {
 	dacCmd := &cobra.Command{
 		Use:   "dac <name>",
 		Short: "Delete a dedicated AI cluster (synchronous; polls the work request)",
-		Long: `Deletes the DAC and its endpoints. Synchronous: the call
+		Long: `Deletes the DAC and its endpoints. It is looked up in OCI first,
+so --dry-run proves it exists and reports its state. Synchronous: the call
 blocks until the work request reports SUCCEEDED or FAILED (10-min
 timeout). <name> is the DAC's identifier — the same string the table
 in toolkit get dac shows. Uniqueness comes from realm+region+name in
@@ -46,13 +48,18 @@ deliberately disabled to prevent reflex "y" answers.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			return withMutationSetup(cfgFile, false, false, true, func(ctx context.Context, _ config.Config, env models.Environment) error {
+				dac := &models.DedicatedAICluster{Name: name}
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action: mutation.DeleteDAC,
 					Target: name,
 					DryRun: dryRun,
 					Yes:    yes,
+					Resolve: func(ctx context.Context, p *mutationPlan) error {
+						found, err := getDACFn(ctx, dac, env)
+						p.Resolved = mutation.ResolvedDAC(found.ID, found.State)
+						return err
+					},
 				}, func(ctx context.Context) error {
-					dac := &models.DedicatedAICluster{Name: name}
 					return deleteDACFn(ctx, dac, env, logging.FromContext(ctx))
 				})
 			})
