@@ -188,6 +188,33 @@ func getEnvironments(tenancies []models.ServiceTenancy) []models.Environment {
 	return environments
 }
 
+// ErrUnknownEnvironment is CheckEnvironment's error: the env triple
+// isn't one the repo declares.
+var ErrUnknownEnvironment = errors.New("environment is not valid or in the list")
+
+// LoadEnvironments is every environment the repo declares (the
+// Environment category's rows), from its service tenancies.
+func LoadEnvironments(ctx context.Context, repoPath string) ([]models.Environment, error) {
+	tenancies, err := terraform.LoadServiceTenancies(ctx, repoPath)
+	if err != nil {
+		return nil, err
+	}
+	return getEnvironments(tenancies), nil
+}
+
+// CheckEnvironment reports whether env is one of all. One the repo
+// doesn't declare (a mistyped realm or type, a region of another realm)
+// is ErrUnknownEnvironment, naming it: the cluster loaders key on region
+// and type only, so without this check they load another environment's
+// data under the wrong realm, and OCIDs built from it name nothing.
+func CheckEnvironment(env models.Environment, all []models.Environment) error {
+	if isValidEnvironment(env, all) {
+		return nil
+	}
+	return fmt.Errorf("%w: realm %q, type %q, region %q is not an environment the repo declares (`toolkit get environment` lists them)",
+		ErrUnknownEnvironment, env.Realm, env.Type, env.Region)
+}
+
 func isValidEnvironment(env models.Environment, allEnvs []models.Environment) bool {
 	for _, e := range allEnvs {
 		if e.Equals(env) {
@@ -263,10 +290,7 @@ func getLimitsRoot(repoPath string) string {
 
 // validateEnvironment checks if the provided environment is valid.
 func validateEnvironment(env models.Environment, allEnvs []models.Environment) error {
-	if !isValidEnvironment(env, allEnvs) {
-		return errors.New("environment is not valid or in the list")
-	}
-	return nil
+	return CheckEnvironment(env, allEnvs)
 }
 
 // splatLimitDefinitionsFile holds the splat throttle limit definitions,

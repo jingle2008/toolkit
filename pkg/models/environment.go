@@ -26,6 +26,14 @@ func ResolveEnvType(v string) string {
 	return v
 }
 
+// ResolveRealm canonicalizes a user-supplied realm: lowercased and
+// trimmed, as the repo spells realms ("OC1" is oc1). Realms are matched
+// exactly against the repo's environments, metadata entries and OCIDs,
+// so a case slip would otherwise load nothing, or the wrong rows.
+func ResolveRealm(v string) string {
+	return strings.ToLower(strings.TrimSpace(v))
+}
+
 // Environment represents a deployment environment.
 type Environment struct {
 	Type   string

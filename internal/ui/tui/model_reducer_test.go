@@ -422,8 +422,8 @@ func scopedTruncatedModel(t *testing.T) *Model {
 	m := newTestModel(t)
 	m.category = domain.ImportedModel
 	m.headers = []header{
-		{text: "Name", truncateMiddle: true},
-		{text: "Tenant", truncateMiddle: true},
+		{text: "Name"},
+		{text: "Tenant"},
 	}
 	table.WithColumns([]table.Column{
 		{Title: "Name", Width: 7},

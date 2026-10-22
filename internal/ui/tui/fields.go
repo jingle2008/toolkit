@@ -277,10 +277,11 @@ func fieldListRows(pad, label string, items []string, keyW, width int, wrap bool
 	return rows
 }
 
-// valueLines is value cut to valW, or wrapped to it when wrap is set.
+// valueLines is value cut to valW in the middle (so its end, often what
+// tells values apart, stays), or wrapped to it when wrap is set.
 func valueLines(value string, valW int, wrap bool) []string {
 	if !wrap {
-		return []string{truncateString(value, valW)}
+		return []string{truncateMiddle(value, valW)}
 	}
 	lines := strings.Split(lipgloss.NewStyle().Width(valW).Render(value), "\n")
 	for i, l := range lines {

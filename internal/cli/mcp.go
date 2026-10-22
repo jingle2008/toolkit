@@ -78,6 +78,9 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		ctx = logging.WithContext(ctx, logger)
+		if err := checkEnvironment(ctx, cfg); err != nil {
+			return err
+		}
 
 		ld := production.New(ctx, cfg.MetadataFile)
 		srv := mcp.NewServer(cfg, ld, logger, version)

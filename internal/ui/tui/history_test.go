@@ -259,3 +259,51 @@ func TestScope_DroppedOnUnrelatedCategory(t *testing.T) {
 	assert.Equal(t, domain.DedicatedAICluster, m.category)
 	assert.Equal(t, &domain.Scope{Category: domain.Tenant, Name: "Acme"}, m.scope, "[ returns to the list as it was visited")
 }
+
+// [ returns to a list as it was left: the cursor on the same row, and
+// the filter, sort and faulty-only mode it had.
+func TestHistory_BackRestoresView(t *testing.T) {
+	t.Parallel()
+	m := newHistoryModel(t)
+	m.updateCategory(domain.Tenant)
+	require.Equal(t, []string{"Acme", "Other"}, shownNames(m))
+	m.table.MoveDown(1) // on Other
+	m.sortAsc, m.showFaulty = false, true
+	m.updateCategory(domain.LimitDefinition)
+	require.True(t, m.sortAsc, "a navigation resets the view")
+	require.False(t, m.showFaulty)
+
+	back(t, m)
+	require.Equal(t, domain.Tenant, m.category)
+	assert.False(t, m.sortAsc, "the sort comes back")
+	assert.True(t, m.showFaulty, "faulty-only comes back")
+	m.showFaulty = false // the fixture's tenants aren't faulty
+	assert.Equal(t, []string{"Other", "Acme"}, shownNames(m))
+	assert.Equal(t, "Other", m.selectedRawRow()[0], "the cursor is on the row it was left on")
+
+	m.filter = "oth"
+	m.textInput.SetValue("Oth")
+	_, _ = m.Update(keyPress("]"))
+	require.Equal(t, domain.LimitDefinition, m.category)
+	assert.Empty(t, m.filter)
+	back(t, m)
+	assert.Equal(t, "oth", m.filter, "the filter comes back")
+	assert.Equal(t, "Oth", m.textInput.Value())
+	assert.Equal(t, []string{"Other"}, shownNames(m))
+}
+
+// esc from a child back to its parent, then ], returns to the child that
+// was left, not to the first child visited.
+func TestHistory_EscThenForwardReturnsToChildLeft(t *testing.T) {
+	t.Parallel()
+	m := newHistoryModel(t)
+	m.updateCategory(domain.Tenant)
+	drill(m, domain.LimitTenancyOverride, "Acme")
+	m.updateCategory(domain.DedicatedAICluster)
+
+	_, _ = m.Update(keyPress("esc"))
+	require.Equal(t, domain.Tenant, m.category)
+	_, _ = m.Update(keyPress("]"))
+	assert.Equal(t, domain.DedicatedAICluster, m.category)
+	assert.Equal(t, &domain.Scope{Category: domain.Tenant, Name: "Acme"}, m.scope)
+}

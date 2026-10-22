@@ -111,7 +111,11 @@ func TestEditTenantForm_EntryRequiresName(t *testing.T) {
 	if _, ok := f.toEntry(); ok {
 		t.Fatal("empty name must be rejected")
 	}
-	f.name.SetValue("acme")
+	f.name.SetValue("   ")
+	if _, ok := f.toEntry(); ok {
+		t.Fatal("a name of spaces must be rejected")
+	}
+	f.name.SetValue(" acme ")
 	f.note.SetValue("hi")
 	f.isInternal = true
 	entry, ok := f.toEntry()

@@ -19,7 +19,7 @@ func TenancyOverrideColumns[T models.DefinitionOverride]() GroupedSet[T] {
 			Render: func(_ string, v T) string { return v.GetName() },
 		},
 		{
-			Title: "Tenant", Key: "tenant", Ratio: 0.25, TruncateMiddle: true,
+			Title: "Tenant", Key: "tenant", Ratio: 0.25,
 			Render: func(k string, _ T) string { return k },
 		},
 		{
@@ -27,7 +27,7 @@ func TenancyOverrideColumns[T models.DefinitionOverride]() GroupedSet[T] {
 			Render: func(_ string, v T) string { return strings.Join(v.GetRegions(), ", ") },
 		},
 		{
-			Title: "Value", Key: "value", Ratio: 0.10, TruncateMiddle: true,
+			Title: "Value", Key: "value", Ratio: 0.10,
 			Render: func(_ string, v T) string { return v.GetValue() },
 		},
 	}}

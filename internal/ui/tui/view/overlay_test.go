@@ -84,7 +84,7 @@ func TestBox_FixedWidthAndLongTitle(t *testing.T) {
 	for i, row := range out {
 		assert.Equal(t, 14, ansi.StringWidth(row), "row %d: %q", i, row)
 	}
-	assert.True(t, strings.HasPrefix(out[0], "╭─ a very … ─╮"), out[0])
+	assert.True(t, strings.HasPrefix(out[0], "╭─ a v…deed ─╮"), "cut in the middle, keeping the end: %s", out[0])
 }
 
 // A fitted box widens for a title longer than its body.

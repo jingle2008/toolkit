@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"slices"
+
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
@@ -50,9 +52,11 @@ func (m *Model) backToLastState() tea.Cmd {
 // goBack is esc in the list: it clears the filter, or, in a scoped list,
 // returns to the parent list with the cursor on the row drilled in from.
 // Back in history when the parent is there, so ] still leads into the
-// child: the parent shows under the scope it was visited with, and
-// landOn puts the cursor on the drilled-from row. Otherwise the parent is
-// pushed, keeping the drill scope, which lands the cursor there itself.
+// child: the parent shows under the scope it was visited with and the
+// view it was left with, and landOn puts the cursor on the drilled-from
+// row. The child left moves to just after the parent, so ] returns to it
+// even when other children were visited in between. Otherwise the parent
+// is pushed, keeping the drill scope, which lands the cursor there itself.
 func (m *Model) goBack() tea.Cmd {
 	if m.filter != "" || m.scope == nil || !m.scope.Category.IsScopeOf(m.category) {
 		return m.backToLastState()
@@ -61,10 +65,14 @@ func (m *Model) goBack() tea.Cmd {
 	parent := from.Category
 	for i := m.historyIdx - 1; i >= 0; i-- {
 		if m.history[i].category == parent {
+			m.saveView()
+			child := m.history[m.historyIdx]
+			m.history = slices.Concat(m.history[:i+1], []historyEntry{child}, m.history[m.historyIdx+1:])
 			m.historyIdx = i
 			m.scope = copyScope(m.history[i].scope)
 			cmds := m.updateCategoryNoHist(parent)
-			m.landOn = from
+			m.restoreView(m.history[i].view)
+			m.landOn, m.landOnKey = from, nil // the drilled-from row, not the saved cursor
 			return tea.Sequence(cmds...)
 		}
 	}

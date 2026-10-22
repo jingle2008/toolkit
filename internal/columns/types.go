@@ -6,14 +6,9 @@ package columns
 
 import "strings"
 
-// Column is a column for a flat (non-grouped) category.
-//
-// TruncateMiddle is an optional rendering hint: when the cell value is
-// wider than the column at display time, the TUI elides the MIDDLE
-// (head + "…" + tail) rather than chopping the tail. Useful for
-// OCID-suffix-shaped values where the head identifies the resource
-// shape and the tail is the distinguishing portion. CLI surfaces
-// ignore this hint — they emit the full value.
+// Column is a column for a flat (non-grouped) category. (The TUI
+// shortens any value wider than its column in the middle, so no column
+// needs to ask for it; the CLI emits full values.)
 //
 // RenderForExport is an optional alternate renderer used by file/CSV
 // export paths (TUI <e> and CLI `-o csv`/`-o tsv` when env is set).
@@ -33,7 +28,6 @@ type Column[T any] struct {
 	Ratio           float64
 	Render          func(T) string
 	RenderForExport func(realm, region string, item T) string
-	TruncateMiddle  bool
 }
 
 // GroupedColumn is a column for a grouped category (loader returns
@@ -41,8 +35,7 @@ type Column[T any] struct {
 // any column can use either. A "group key column" is just a
 // GroupedColumn whose Render ignores `item` and returns `key`.
 //
-// TruncateMiddle and RenderForExport have the same semantics as
-// Column.TruncateMiddle / Column.RenderForExport; RenderForExport's
+// RenderForExport has the same semantics as Column.RenderForExport; its
 // signature carries the group key alongside realm/region so a
 // column can substitute its display value with an export-mode
 // representation that depends on either.
@@ -52,7 +45,6 @@ type GroupedColumn[T any] struct {
 	Ratio           float64
 	Render          func(key string, item T) string
 	RenderForExport func(realm, region, key string, item T) string
-	TruncateMiddle  bool
 }
 
 // Set is the canonical column list for a flat category.

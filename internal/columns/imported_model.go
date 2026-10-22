@@ -20,14 +20,14 @@ import (
 // grouped categories ("view details" and "go to related").
 var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedColumn[models.ImportedModel]{
 	{
-		Title: "Name", Key: "name", Ratio: 0.18, TruncateMiddle: true,
+		Title: "Name", Key: "name", Ratio: 0.18,
 		Render: func(_ string, m models.ImportedModel) string { return m.Name },
 		RenderForExport: func(realm, region string, _ string, m models.ImportedModel) string {
 			return m.OCID(realm, region)
 		},
 	},
 	{
-		Title: "Tenant", Key: "tenant", Ratio: 0.17, TruncateMiddle: true,
+		Title: "Tenant", Key: "tenant", Ratio: 0.17,
 		Render: func(k string, _ models.ImportedModel) string { return k },
 		// An orphan has no tenancy OCID; its key, UNKNOWN_TENANCY, stays.
 		RenderForExport: func(realm, _ string, k string, m models.ImportedModel) string {
@@ -40,7 +40,7 @@ var ImportedModelColumns = GroupedSet[models.ImportedModel]{Columns: []GroupedCo
 	},
 	{
 		// Every copy's namespace, primary (usually `default`) first.
-		Title: "Namespace", Key: "namespace", Ratio: 0.15, TruncateMiddle: true,
+		Title: "Namespace", Key: "namespace", Ratio: 0.15,
 		Render: func(_ string, m models.ImportedModel) string { return strings.Join(m.Namespaces(), ", ") },
 	},
 	{

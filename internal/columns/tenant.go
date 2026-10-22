@@ -14,7 +14,7 @@ var TenantColumns = Set[models.Tenant]{Columns: []Column[models.Tenant]{
 		Render: func(t models.Tenant) string { return t.Name },
 	},
 	{
-		Title: "OCID", Key: "ocid", Ratio: 0.50, TruncateMiddle: true,
+		Title: "OCID", Key: "ocid", Ratio: 0.50,
 		Render: func(t models.Tenant) string { return t.ID },
 	},
 	{

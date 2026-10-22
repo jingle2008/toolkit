@@ -198,6 +198,11 @@ func withCommandSetup(
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	ctx = logging.WithContext(ctx, logger)
+	if needsEnv {
+		if err := checkEnvironment(ctx, cfg); err != nil {
+			return err
+		}
+	}
 
 	env := models.Environment{
 		Type:   cfg.EnvType,

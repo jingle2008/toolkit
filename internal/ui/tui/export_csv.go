@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"charm.land/bubbles/v2/table"
 
@@ -41,11 +42,12 @@ func (m *Model) exportTableCSV(outPath string) (err error) {
 // applyMiddleTruncation neighbor for the corresponding display-mode
 // behaviour. Sort order is the dataset's natural order (the live
 // table's interactive sort is not preserved on export — the filter
-// and the faulty-toggle are).
+// and the faulty-toggle are). Headers are upper-cased as the CLI's are
+// (columns.RenderTable), so the bytes match.
 func (m *Model) writeCSV(w io.Writer) error {
 	headers := make([]string, len(m.headers))
 	for i, h := range m.headers {
-		headers[i] = h.text
+		headers[i] = strings.ToUpper(h.text)
 	}
 	rows := m.exportRows()
 	strRows := make([][]string, len(rows))

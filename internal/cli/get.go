@@ -172,10 +172,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		if err := cfg.Normalize(); err != nil {
 			return err
 		}
-		if err := validateGetConfig(cfg, cat); err != nil {
-			return err
-		}
-		if err := validateFaulty(cfg, cat, *faulty); err != nil {
+		if err := validateGetRequest(cfg, cat, *faulty); err != nil {
 			return err
 		}
 
@@ -194,6 +191,9 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		ctx = logging.WithContext(ctx, logger)
+		if err := checkGetEnvironment(ctx, cfg, cat); err != nil {
+			return err
+		}
 
 		env := models.Environment{Type: cfg.EnvType, Region: cfg.EnvRegion, Realm: cfg.EnvRealm}
 		ld := production.New(ctx, cfg.MetadataFile)
@@ -262,6 +262,14 @@ func validateLoaderConfig(cfg config.Config) []string {
 // requested category. Unlike config.Validate (used by the TUI), it
 // does not require Category — the positional arg supplies it — and
 // only requires KubeConfig for cluster-derived categories.
+// validateGetRequest is validateGetConfig, then validateFaulty.
+func validateGetRequest(cfg config.Config, cat domain.Category, faulty bool) error {
+	if err := validateGetConfig(cfg, cat); err != nil {
+		return err
+	}
+	return validateFaulty(cfg, cat, faulty)
+}
+
 func validateGetConfig(cfg config.Config, cat domain.Category) error {
 	// Alias is a static dump of domain.Aliases — it never reaches the
 	// loader, so don't gate it on repo_path / env_*.

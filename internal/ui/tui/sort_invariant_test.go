@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -169,7 +170,33 @@ func TestApplyMiddleTruncation_DACNameAndTenant(t *testing.T) {
 	assert.Contains(t, rows[0][1], "…", "Tenant should be middle-truncated, got %q", rows[0][1])
 	assert.NotEqual(t, "…", rows[0][0][0:len("…")], "Name should NOT start with ellipsis (middle-truncate keeps head)")
 	assert.Equal(t, "true", rows[0][2], "Internal must not be touched")
-	assert.Equal(t, "ACTIVE", rows[0][9], "Status must not be touched (not TruncateMiddle)")
+	assert.Equal(t, "BM.…00.8", rows[0][6], "every long value is cut in the middle, keeping its tail")
+	assert.Equal(t, "ACTIVE", rows[0][9], "Status must not be touched")
+}
+
+// A narrow GPUNode table keeps pools that differ only at the end apart:
+// cut at the end, both read "gais_inference_h…".
+func TestApplyMiddleTruncation_KeepsDistinguishingTail(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.GPUNode
+	m.headers = headersFor(m.category)
+	pool := slices.IndexFunc(m.headers, func(h header) bool { return h.text == "Pool" })
+	require.GreaterOrEqual(t, pool, 0)
+	cols := make([]table.Column, len(m.headers))
+	for i, h := range m.headers {
+		cols[i] = table.Column{Title: h.text, Width: 18}
+	}
+	m.table.SetColumns(cols)
+	row := func(p string) table.Row {
+		r := make(table.Row, len(m.headers))
+		r[pool] = p
+		return r
+	}
+	rows := []table.Row{row("gais_inference_h100_cn_01"), row("gais_inference_h100_cn_02")}
+	m.applyMiddleTruncation(rows)
+	assert.True(t, strings.HasSuffix(rows[0][pool], "cn_01"), rows[0][pool])
+	assert.True(t, strings.HasSuffix(rows[1][pool], "cn_02"), rows[1][pool])
 }
 
 // TestApplyRows_PreservesRawRowForKeyLookup is a regression guard for

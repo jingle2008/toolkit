@@ -154,7 +154,10 @@ type Model struct {
 	// when it isn't m.scope's: esc back to a parent shows the parent under
 	// its own history scope but puts the cursor on the row drilled in from.
 	// Used once: cleared when that navigation's rows first land.
-	landOn     *domain.Scope
+	landOn *domain.Scope
+	// landOnKey is the row the cursor lands on after the next navigation
+	// by item key: the row [ or ] left it on. Used once, as landOn.
+	landOnKey  models.ItemKey
 	keys       keys.KeyMap
 	kubeConfig string
 	version    string

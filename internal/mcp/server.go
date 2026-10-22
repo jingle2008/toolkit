@@ -42,6 +42,9 @@ type Server struct {
 	// drainDrivers holds the "kubeContext/node" keys of drains this
 	// process is driving, so a repeated drain_node adds no second driver.
 	drainDrivers sync.Map
+	// envCache is the repo's environments, which envGuard checks env
+	// overrides against.
+	envCache envCache
 }
 
 // NewServer constructs a server that exposes read-only category tools.
@@ -58,6 +61,7 @@ func NewServer(cfg config.Config, ld loader.Composite, logger logging.Logger, ve
 		Name:    "toolkit",
 		Version: version,
 	}, nil)
+	s.server.AddReceivingMiddleware(s.envGuard)
 	registerTools(s)
 	return s
 }
@@ -111,12 +115,9 @@ func (s *Server) envFor(in envOverride) models.Environment {
 	}
 	if in.EnvRegion != "" {
 		env.Region = in.EnvRegion
-		// envFor has no error return (15 call sites in tools.go), so an
-		// unresolvable code is passed through and left for LoadDataset to
-		// reject with "environment is not valid or in the list". That fails
-		// closed: regionByShortName is an exact lookup, so a bad code can
-		// never resolve to a *different* real region — the worst case is a
-		// rejected call with a vaguer message than the CLI would give.
+		// envFor has no error return (25 call sites), so an unresolvable
+		// code is passed through here; envGuard has already refused the
+		// call before any handler gets this far (see checkEnvOverride).
 		if r, err := models.ResolveRegion(in.EnvRegion); err != nil {
 			s.logger.Warnw("unresolvable env_region override; passing through",
 				"env_region", in.EnvRegion, "error", err)
@@ -125,7 +126,7 @@ func (s *Server) envFor(in envOverride) models.Environment {
 		}
 	}
 	if in.EnvRealm != "" {
-		env.Realm = in.EnvRealm
+		env.Realm = models.ResolveRealm(in.EnvRealm)
 	}
 	return env
 }

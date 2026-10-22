@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -100,6 +101,21 @@ func TestUpsertTenant_RejectsTakenName(t *testing.T) {
 	require.ErrorContains(t, err, `"Acme" is already used by id-a`)
 	require.Len(t, m.Tenants, 1)
 	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "id-a", Name: strptr("Acme"), Note: strptr("n")}))
+}
+
+// Names are stored trimmed and compared trimmed: "Acme " doesn't get
+// past the check as a second Acme, and a blank name is refused.
+func TestUpsertTenant_TrimsName(t *testing.T) {
+	t.Parallel()
+	m := &models.Metadata{Tenants: []models.TenantMetadata{{ID: "ocid1.tenancy.oc1..a", Name: strptr("Acme")}}}
+	err := UpsertTenant(m, models.TenantMetadata{ID: "ocid1.tenancy.oc1..b", Name: strptr("Acme ")})
+	require.ErrorContains(t, err, `"Acme" is already used by ocid1.tenancy.oc1..a`)
+
+	require.ErrorContains(t, UpsertTenant(m, models.TenantMetadata{ID: "ocid1.tenancy.oc1..b", Name: strptr("   ")}), "blank")
+	require.Len(t, m.Tenants, 1)
+
+	require.NoError(t, UpsertTenant(m, models.TenantMetadata{ID: "ocid1.tenancy.oc1..b", Name: strptr("  Beta\t")}))
+	assert.Equal(t, "Beta", *m.Tenants[1].Name)
 }
 
 // A name another realm's tenancy has is not taken.

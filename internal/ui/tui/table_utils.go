@@ -16,9 +16,8 @@ import (
 )
 
 type header struct {
-	text           string
-	ratio          float64
-	truncateMiddle bool
+	text  string
+	ratio float64
 }
 
 type tableStats map[string]int
@@ -46,7 +45,7 @@ func faultyGateFor(faultyOnly bool, ds *models.Dataset, category domain.Category
 func headersFromSet[T any](cols []columns.Column[T]) []header {
 	out := make([]header, len(cols))
 	for i, c := range cols {
-		out[i] = header{text: c.Title, ratio: c.Ratio, truncateMiddle: c.TruncateMiddle}
+		out[i] = header{text: c.Title, ratio: c.Ratio}
 	}
 	return out
 }
@@ -54,7 +53,7 @@ func headersFromSet[T any](cols []columns.Column[T]) []header {
 func headersFromGroupedSet[T any](cols []columns.GroupedColumn[T]) []header {
 	out := make([]header, len(cols))
 	for i, c := range cols {
-		out[i] = header{text: c.Title, ratio: c.Ratio, truncateMiddle: c.TruncateMiddle}
+		out[i] = header{text: c.Title, ratio: c.Ratio}
 	}
 	return out
 }
