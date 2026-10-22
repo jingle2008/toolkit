@@ -100,6 +100,22 @@ func TestListRelated_EmptyWarns(t *testing.T) {
 	assert.Contains(t, out.Warnings[len(out.Warnings)-1], `no GPUWorkload rows related to DedicatedAICluster "nope"`)
 }
 
+// When the parent has related rows and only the filter hid them, the
+// warning says so rather than blaming parent_name.
+func TestListRelated_EmptyByFilterSaysSo(t *testing.T) {
+	t.Parallel()
+	res, out := callRelated(t, map[string]any{"category": "gw", "parent_category": "dac", "parent_name": "amaaaaaa-dac1", "filter": "zzzz"})
+	require.False(t, res.IsError)
+	assert.Empty(t, out.Items)
+	require.NotEmpty(t, out.Warnings)
+	last := out.Warnings[len(out.Warnings)-1]
+	assert.Contains(t, last, `2 GPUWorkload rows are related to DedicatedAICluster "amaaaaaa-dac1", but none match`)
+	assert.NotContains(t, last, "parent_name")
+
+	_, out = callRelated(t, map[string]any{"category": "gw", "parent_category": "dac", "parent_name": "nope", "filter": "zzzz"})
+	assert.Contains(t, out.Warnings[len(out.Warnings)-1], "parent_name must match exactly", "no related rows at all still points at the name")
+}
+
 func TestListRelated_Errors(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

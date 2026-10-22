@@ -80,14 +80,29 @@ func (s *Server) handleListRelated(ctx context.Context, _ *sdk.CallToolRequest, 
 		}
 		related = s.relatedFaultyItems
 	}
-	items, warnings, err := related(ctx, child, scope, s.envFor(in.envOverride), normFilter(in.Filter))
+	env, filter := s.envFor(in.envOverride), normFilter(in.Filter)
+	items, warnings, err := related(ctx, child, scope, env, filter)
 	if err != nil {
 		return failTool[listResult[any]]("list_related", err)
 	}
 	if len(items) == 0 {
-		warnings = append(warnings, fmt.Sprintf("no %s rows related to %s %q (parent_name must match exactly)", child, parent, in.ParentName))
+		warnings = append(warnings, s.noneRelatedWarning(ctx, child, scope, env, filter, in.Faulty))
 	}
 	return jsonResult(collections.TruncateSlice(items, in.Limit), warnings)
+}
+
+// noneRelatedWarning says why list_related came back empty. Only when no
+// row at all relates to the parent does it point at parent_name, which
+// may be mistyped; when the filter or faulty-only mode hid the related
+// rows, it says that instead.
+func (s *Server) noneRelatedWarning(ctx context.Context, child domain.Category, scope *domain.Scope, env models.Environment, filter string, faulty bool) string {
+	if filter != "" || faulty {
+		if all, _, err := s.relatedItems(ctx, child, scope, env, ""); err == nil && len(all) > 0 {
+			return fmt.Sprintf("%d %s rows are related to %s %q, but none match the filter or faulty-only mode",
+				len(all), child, scope.Category, scope.Name)
+		}
+	}
+	return fmt.Sprintf("no %s rows related to %s %q (parent_name must match exactly)", child, scope.Category, scope.Name)
 }
 
 // relatedItems loads child — resolving tenant owners where a Tenant scope

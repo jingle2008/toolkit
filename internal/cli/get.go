@@ -361,14 +361,19 @@ func relatedOrFiltered[T models.NamedFilterable](
 		return collections.FilterMapOrAll(grouped, filter)
 	}
 	out := keys.Filter(grouped, related, filter, nil)
-	n := 0
-	for _, items := range out {
-		n += len(items)
-	}
-	if n == 0 {
+	if countGrouped(out) == 0 && (filter == "" || countGrouped(keys.Filter(grouped, related, "", nil)) == 0) {
 		warnNoneRelated(cat, related)
 	}
 	return out
+}
+
+// countGrouped is how many rows grouped holds.
+func countGrouped[T any](grouped map[string][]T) int {
+	n := 0
+	for _, items := range grouped {
+		n += len(items)
+	}
+	return n
 }
 
 // relatedSlice is relatedOrFiltered for a flat category.
@@ -376,7 +381,8 @@ func relatedSlice[T models.NamedFilterable](
 	keys relations.Flat[T], items []T, cat domain.Category, related *domain.Scope, filter string,
 ) []T {
 	out := collections.FilterSlice(items, nil, filter, keys.Keep(related))
-	if related != nil && len(out) == 0 {
+	if related != nil && len(out) == 0 &&
+		(filter == "" || len(collections.FilterSlice(items, nil, "", keys.Keep(related))) == 0) {
 		warnNoneRelated(cat, related)
 	}
 	return out
@@ -384,7 +390,8 @@ func relatedSlice[T models.NamedFilterable](
 
 // warnNoneRelated notes on stderr that --related-to matched nothing, so a
 // mistyped name isn't mistaken for "nothing related". stdout still gets
-// the (empty) result for scripts.
+// the (empty) result for scripts. Callers skip it when rows are related
+// and only --filter hid them: the name is fine then.
 func warnNoneRelated(cat domain.Category, related *domain.Scope) {
 	fmt.Fprintf(os.Stderr, "warning: no %s rows related to %s/%s (the name must match the %s's first column exactly)\n",
 		cat, strings.ToLower(related.Category.String()), related.Name, related.Category)
