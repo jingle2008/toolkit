@@ -14,6 +14,7 @@ updateCategory changes the current category and loads data if needed.
 This version records the navigation in history.
 */
 func (m *Model) updateCategory(category domain.Category) []tea.Cmd {
+	m.saveView()
 	cmds := m.updateCategoryCore(category)
 	m.pushHistory(category)
 	return cmds
@@ -71,7 +72,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		refresh = true
 	} else {
 		m.category = category
-		m.landOn = nil // a cursor target for an earlier navigation
+		m.landOn, m.landOnKey = nil, nil // cursor targets for an earlier navigation
 		// A scope carries over to its other children (:gw after drilling
 		// into a DAC) and to its own category (the row to land on), but
 		// not past a category it doesn't apply to: there it would be

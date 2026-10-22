@@ -4,6 +4,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // maxHistory is the maximum number of entries to keep in navigation history.
@@ -17,6 +19,49 @@ const maxHistory = 20
 type historyEntry struct {
 	category domain.Category
 	scope    *domain.Scope
+	// view is how the list was left (nil until it is): [ and ] bring the
+	// list back as it was seen, not reset.
+	view *listView
+}
+
+// listView is a list's view state as it was left: its filter (and the
+// text the input held), sort, faulty-only mode, and the selected row.
+type listView struct {
+	filter, input string
+	sortColumn    string
+	sortAsc       bool
+	showFaulty    bool
+	cursor        models.ItemKey
+}
+
+// saveView records how the current list looks on its history entry, as
+// it is left. The entry is matched by category alone: a drill-in or a
+// go-to sets the destination's scope just before it navigates.
+func (m *Model) saveView() {
+	if m.historyIdx < 0 || m.historyIdx >= len(m.history) || m.history[m.historyIdx].category != m.category {
+		return
+	}
+	m.history[m.historyIdx].view = &listView{
+		filter:     m.filter,
+		input:      m.textInput.Value(),
+		sortColumn: m.sortColumn,
+		sortAsc:    m.sortAsc,
+		showFaulty: m.showFaulty,
+		cursor:     itemKeyFrom(m.category, m.selectedRawRow()),
+	}
+}
+
+// restoreView brings back a list's saved view after a navigation reset
+// it; nil (never left) keeps the reset view. The cursor lands on the
+// saved row when the rows load.
+func (m *Model) restoreView(v *listView) {
+	if v == nil {
+		return
+	}
+	m.filter = v.filter
+	m.textInput.SetValue(v.input)
+	m.sortColumn, m.sortAsc, m.showFaulty = v.sortColumn, v.sortAsc, v.showFaulty
+	m.landOnKey = v.cursor
 }
 
 // copyScope returns a copy of s, so a history entry never aliases m.scope.
@@ -73,19 +118,25 @@ func (m *Model) moveHistory(dir int) tea.Cmd {
 	if target < 0 || target >= len(m.history) {
 		return nil // out of bounds
 	}
+	m.saveView()
 	m.historyIdx = target
 	e := m.history[target]
 	m.scope = copyScope(e.scope)
 	if e.category == m.category {
 		// Same list under another scope: updateCategoryCore would treat it
-		// as a refresh and keep the old filter and cursor, so redo what a
-		// navigation resets and recompute the rows for the new scope.
+		// as a refresh and keep the old view, so redo what a navigation
+		// resets, bring back the entry's view, and recompute the rows.
 		m.filter = ""
 		m.textInput.Reset()
+		m.sortColumn, m.sortAsc, m.showFaulty = common.NameCol, true, false
+		m.landOn = nil
+		m.restoreView(e.view)
 		m.applyRows(nil, nil, false)
 		return m.updateRowsAsync()
 	}
-	return tea.Sequence(m.updateCategoryNoHist(e.category)...)
+	cmds := m.updateCategoryNoHist(e.category)
+	m.restoreView(e.view)
+	return tea.Sequence(cmds...)
 }
 
 // syncHistoryScope records the current scope on the current entry, after
