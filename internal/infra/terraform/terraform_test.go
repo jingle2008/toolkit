@@ -635,3 +635,63 @@ func TestGetLocalAttributesDI_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, called)
 }
+
+// Pools come back in name order, not cty's map order, so a reload or
+// `get gpupool --limit` doesn't reshuffle them.
+func TestLoadGPUPools_SortedByName(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	ipDir := poolsConfigDir(t, dir, "instance_pools_config")
+	tf := `
+locals {
+  env_instance_pools_config = {
+    "p_f" = { shape = "GPU", size = 1 }
+    "p_c" = { shape = "GPU", size = 1 }
+    "p_a" = { shape = "GPU", size = 1 }
+    "p_e" = { shape = "GPU", size = 1 }
+    "p_b" = { shape = "GPU", size = 1 }
+    "p_d" = { shape = "GPU", size = 1 }
+  }
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(ipDir, "locals.tf"), []byte(tf), 0o600)) // #nosec G306
+	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
+
+	pools, _ := LoadGPUPools(context.Background(), dir, env)
+	names := make([]string, len(pools))
+	for i, p := range pools {
+		names[i] = p.Name
+	}
+	assert.Equal(t, []string{"p_a", "p_b", "p_c", "p_d", "p_e", "p_f"}, names)
+}
+
+// One artifact built for two GPU configs is two rows with the same name;
+// they're ordered by config too, so their order is the same every load.
+func TestLoadModelArtifacts_SameNameOrdered(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	subdir := tensorrtModelsDir(t, dir)
+	tf := `
+locals {
+  all_models_map = {
+    "model1" = {
+      "v0.8.0" = {
+        "H200" = { "2Gpu" = "art" }
+        "H100" = { "2Gpu" = "art" }
+        "A100" = { "4Gpu" = "art", "2Gpu" = "art" }
+      }
+    }
+  }
+}
+`
+	require.NoError(t, os.WriteFile(filepath.Join(subdir, "locals.tf"), []byte(tf), 0o600)) // #nosec G306
+	env := models.Environment{Realm: "test", Type: "dev", Region: "us-test-1"}
+
+	arts, err := LoadModelArtifacts(context.Background(), dir, env)
+	require.NoError(t, err)
+	got := make([]string, 0, len(arts["model1"]))
+	for _, a := range arts["model1"] {
+		got = append(got, a.Variant())
+	}
+	assert.Equal(t, []string{"2xA100", "4xA100", "2xH100", "2xH200"}, got)
+}
