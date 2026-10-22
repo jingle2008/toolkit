@@ -72,10 +72,35 @@ func PoolScaleAdd(pool models.GPUPool, requested int, given bool) (int, error) {
 	if !given {
 		return pool.Shortfall(), nil
 	}
-	if requested < 1 {
-		return 0, fmt.Errorf("add must be at least 1, got %d", requested)
+	if err := CheckPoolScaleAdd(pool, requested); err != nil {
+		return 0, err
 	}
 	return requested, nil
+}
+
+// PoolScaleAddLimit bounds the count one scale-up takes: each instance
+// is a bare-metal GPU host, so a mistyped count (100 for 10) would start
+// that many at once.
+const PoolScaleAddLimit = 100
+
+// MaxPoolScaleAdd is the most instances one scale-up of pool may add:
+// PoolScaleAddLimit, or the pool's shortfall when that is more, so
+// filling a pool to its declared size is always one step.
+func MaxPoolScaleAdd(pool models.GPUPool) int {
+	return max(PoolScaleAddLimit, pool.Shortfall())
+}
+
+// CheckPoolScaleAdd reports why n instances can't be added to pool in
+// one scale-up, or nil. Every surface (CLI --add, MCP add, the TUI's
+// count) checks with it.
+func CheckPoolScaleAdd(pool models.GPUPool, n int) error {
+	if n < 1 {
+		return fmt.Errorf("add must be at least 1, got %d", n)
+	}
+	if limit := MaxPoolScaleAdd(pool); n > limit {
+		return fmt.Errorf("add %d is more than %d, the most one scale-up adds; scale in steps, or raise size in Terraform", n, limit)
+	}
+	return nil
 }
 
 // PoolAtSizeNote is what the CLI and MCP say when a scale-up without a

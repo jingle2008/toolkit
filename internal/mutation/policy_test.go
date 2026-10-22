@@ -2,6 +2,7 @@ package mutation
 
 import (
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,6 +123,22 @@ func TestPoolScaleAdd(t *testing.T) {
 	require.Error(t, err, "an explicit 0 isn't a scale-up")
 	_, err = PoolScaleAdd(full, -1, true)
 	require.Error(t, err)
+}
+
+// One scale-up adds at most PoolScaleAddLimit instances, or the pool's
+// shortfall when that is more; a huge count is refused rather than
+// overflowing into a negative size.
+func TestCheckPoolScaleAdd_Limit(t *testing.T) {
+	t.Parallel()
+	full := models.GPUPool{Size: 4, ActualSize: 4}
+	require.NoError(t, CheckPoolScaleAdd(full, PoolScaleAddLimit))
+	require.ErrorContains(t, CheckPoolScaleAdd(full, PoolScaleAddLimit+1), "the most one scale-up adds")
+	_, err := PoolScaleAdd(full, math.MaxInt, true)
+	require.ErrorContains(t, err, "the most one scale-up adds")
+
+	empty := models.GPUPool{Size: 150, ActualSize: 0}
+	require.NoError(t, CheckPoolScaleAdd(empty, 150), "filling to the declared size is one step")
+	require.Error(t, CheckPoolScaleAdd(empty, 151))
 }
 
 func TestPoolScaleNotice(t *testing.T) {

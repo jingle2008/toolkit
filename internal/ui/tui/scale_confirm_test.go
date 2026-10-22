@@ -52,6 +52,22 @@ func TestConfirmScale_DefaultCount(t *testing.T) {
 	assert.Contains(t, out, "Terraform declares 4;")
 }
 
+// A count past the one-step limit says so and can't be confirmed.
+func TestConfirmScale_CountOverLimit(t *testing.T) {
+	t.Parallel()
+	pool := models.GPUPool{Name: "pool-a", ID: "p", Size: 4, ActualSize: 4, Status: "RUNNING"}
+	m, key, _ := newScaleModel(t, pool)
+	m.requestScale(key, &pool)
+	m.updateConfirmView(keyPress("backspace"))
+	for _, d := range "101" {
+		m.updateConfirmView(keyPress(string(d)))
+	}
+	assert.Contains(t, ansi.Strip(m.confirmView()), "add 101 is more than 100")
+	_, cmd := m.updateConfirmView(keyPress("enter"))
+	assert.Nil(t, cmd, "an over-limit count doesn't scale")
+	assert.Equal(t, common.ConfirmView, m.viewMode)
+}
+
 // Digits and pastes edit the count, and the notice follows; an invalid
 // count blocks confirming.
 func TestConfirmScale_EditCount(t *testing.T) {
