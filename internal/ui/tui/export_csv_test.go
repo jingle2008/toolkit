@@ -13,6 +13,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -59,11 +60,18 @@ func TestExportTableCSV_Success(t *testing.T) {
 	err := m.writeCSV(&buf)
 	require.NoError(t, err)
 
+	// The same bytes as `toolkit get tenant -o csv`, headers included.
+	cliHeaders, cliRows, err := columns.RenderTableForExport(domain.Tenant, m.dataset.Tenants, "oc1", "us-ashburn-1", nil)
+	require.NoError(t, err)
+	var cli bytes.Buffer
+	require.NoError(t, output.WriteDelimited(&cli, cliHeaders, cliRows, output.Options{}, ','))
+	assert.Equal(t, cli.String(), buf.String())
+
 	r := csv.NewReader(&buf)
 	records, err := r.ReadAll()
 	require.NoError(t, err)
 	require.Len(t, records, 3)
-	assert.Equal(t, []string{"Name", "OCID", "Internal", "Status", "Note"}, records[0])
+	assert.Equal(t, []string{"NAME", "OCID", "INTERNAL", "STATUS", "NOTE"}, records[0])
 	assert.Equal(t, []string{"alice", "ocid1.tenancy.oc1..a", "true", "", "n1"}, records[1])
 	assert.Equal(t, []string{"bob", "ocid1.tenancy.oc1..b", "false", "", "n2"}, records[2])
 }
