@@ -20,6 +20,7 @@ type toolHint int
 const (
 	hintReadOnly    toolHint = iota // no side effects
 	hintIdempotent                  // mutates, safe to repeat
+	hintDisruptive                  // mutates, safe to repeat, but evicts or overwrites
 	hintRecoverable                 // mutates, can be undone or retried
 	hintDestructive                 // mutates irreversibly
 )
@@ -50,8 +51,8 @@ var wantHints = map[string]toolHint{
 	"get_drain_status":          hintReadOnly,
 	"cordon_node":               hintIdempotent,
 	"uncordon_node":             hintIdempotent,
-	"drain_node":                hintIdempotent,
-	"set_tenant":                hintIdempotent,
+	"drain_node":                hintDisruptive,
+	"set_tenant":                hintDisruptive,
 	"restart_node":              hintRecoverable,
 	"scale_gpu_pool":            hintRecoverable,
 	"restart_inference_service": hintRecoverable,
@@ -89,9 +90,9 @@ func TestTools_Annotations(t *testing.T) {
 		// The spec defaults destructiveHint to true, so mutating tools
 		// must say false explicitly.
 		if assert.NotNil(t, a.DestructiveHint, "%s destructiveHint unset", tool.Name) {
-			assert.Equal(t, want == hintDestructive, *a.DestructiveHint, "%s destructiveHint", tool.Name)
+			assert.Equal(t, want == hintDestructive || want == hintDisruptive, *a.DestructiveHint, "%s destructiveHint", tool.Name)
 		}
-		assert.Equal(t, want == hintIdempotent, a.IdempotentHint, "%s idempotentHint", tool.Name)
+		assert.Equal(t, want == hintIdempotent || want == hintDisruptive, a.IdempotentHint, "%s idempotentHint", tool.Name)
 	}
 	for name := range wantHints {
 		assert.True(t, seen[name], "wantHints lists %q, which is not registered", name)

@@ -679,7 +679,7 @@ func registerMutationTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "drain_node",
-		Annotations: idempotent(),
+		Annotations: disruptive(),
 		Description: "Safely drain a node: cordon; refuse if it runs fine-tuning, training, or replicationJob pods;" +
 			" restart InferenceServices with minReplicas<=1 and wait (up to 20m) for them to reschedule elsewhere;" +
 			" then evict the rest (up to 10m). On failure before eviction, uncordons the node unless it was already cordoned; once eviction starts it stays cordoned." +
@@ -733,7 +733,7 @@ func registerMutationTools(s *Server) {
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "set_tenant",
-		Annotations: idempotent(),
+		Annotations: disruptive(),
 		Description: "Create or update a tenancy's metadata (name / internal flag / note), keyed by full tenancy OCID in the global metadata file." +
 			" Mutating: requires confirm=true to execute, otherwise refuses without acting; dry_run=true instead makes the write's checks and reports what it would do (status DRY_RUN, resolved.exists says whether the entry is replaced)." +
 			" Not env-scoped: env_type/env_region/env_realm do not apply.",
