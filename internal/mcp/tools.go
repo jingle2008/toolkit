@@ -99,19 +99,19 @@ func registerTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_inference_services",
 		Annotations: readOnly(),
-		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the endpoint serves a tenant-imported model (a namespaced BaseModel ref, or a tenant-labelled ClusterBaseModel, whose name is an OCID resource id). `ready` is the Ready condition status (True/False/Unknown). Items whose tenancy is known also carry `owner` ({name, id, is_internal, note, status}). Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
+		Description: "List OME InferenceService CRs (serving endpoints) across all namespaces as a flat array. Each item is {name, namespace, type, tenantId, model, importedModel, runtime, minReplicas, maxReplicas, ready, age}. `type` is \"dedicated\" (namespace is the dedicated AI cluster ID, matching a `list_dacs` item's `name`) or \"on-demand\" (shared endpoint; namespace is the model name, no `tenantId`). `importedModel` is true when the endpoint serves a tenant-imported model (a namespaced BaseModel ref, or a tenant-labelled ClusterBaseModel, whose name is an OCID resource id). `ready` is the Ready condition status (True/False/Unknown). Items whose tenancy is known also carry `owner` ({name, id, is_internal, note, status}). Legacy ome.oracle.com/v1alpha1 endpoints (on legacy DACs) carry `legacy: true`; their runtime is a legacy one, so they relate to no serving runtime. Supports `limit` (max items after filter, across all groups; 0 = unlimited).",
 	}, s.handleListInferenceServices)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_environments",
 		Annotations: readOnly(),
-		Description: "List all known toolkit environments (type/region/realm tuples). No env_override needed; returns all envs visible to the configured repo. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List every environment the configured repo declares. Each item is {name, realm, type, region}; `name` (e.g. preprod-ord) is what get_item takes. The list is the same whichever environment is selected, so env_type/env_region/env_realm overrides aren't needed (one naming no environment is refused). Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListEnvironments)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_service_tenancies",
 		Annotations: readOnly(),
-		Description: "List service tenancies declared in the toolkit repo. Returns ServiceTenancy objects {name, realm, home_region, regions, environment}. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List service tenancies declared in the toolkit repo. Returns ServiceTenancy objects {tenancy_name, realm, home_region, regions, environment}; get_item takes a tenancy as <realm>/<tenancy_name> when the name repeats across realms. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListServiceTenancies)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -346,12 +346,32 @@ func (s *Server) handleListInferenceServices(ctx context.Context, req *sdk.CallT
 	return jsonResult(flattenGrouped(grouped, in.Filter, in.Limit), warnings)
 }
 
-func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.Environment], error) {
+// environmentItem is list_environments' item: a models.Environment as it
+// marshals. The SDK derives the tool's output schema from the item type
+// and checks results against it, so the type spells the keys
+// Environment.MarshalJSON writes.
+type environmentItem struct {
+	Name   string `json:"name"`
+	Realm  string `json:"realm"`
+	Type   string `json:"type"`
+	Region string `json:"region"`
+}
+
+// GetName is what get_item matches an environment by, as it does every
+// list item.
+func (e environmentItem) GetName() string { return e.Name }
+
+func (s *Server) handleListEnvironments(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[environmentItem], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
-		return failTool[listResult[models.Environment]]("load dataset", err)
+		return failTool[listResult[environmentItem]]("load dataset", err)
 	}
-	return listFlatResult(dataset.Environments, in.Filter, in.Limit, nil)
+	envs := collections.TruncateSlice(collections.FilterSlice(dataset.Environments, nil, normFilter(in.Filter), nil), in.Limit)
+	items := make([]environmentItem, len(envs))
+	for i, e := range envs {
+		items[i] = environmentItem{Name: e.GetName(), Realm: e.Realm, Type: e.Type, Region: e.Region}
+	}
+	return jsonResult(items, nil)
 }
 
 func (s *Server) handleListServiceTenancies(ctx context.Context, req *sdk.CallToolRequest, in listInput) (*sdk.CallToolResult, listResult[models.ServiceTenancy], error) {

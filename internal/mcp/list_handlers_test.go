@@ -333,6 +333,33 @@ func TestList_Definitions_AllKinds(t *testing.T) {
 	}
 }
 
+// envsLoader's dataset declares environments.
+type envsLoader struct{ stubLoader }
+
+func (envsLoader) LoadDataset(context.Context, string, models.Environment) (*models.Dataset, error) {
+	return &models.Dataset{Environments: []models.Environment{{Realm: "oc1", Type: "preprod", Region: "us-chicago-1"}}}, nil
+}
+
+// list_environments items carry the name get_item takes, and pass the
+// tool's own output schema (the SDK validates every result against it).
+func TestList_EnvironmentsCarryName(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	t.Cleanup(cancel)
+	res, err := newTestPair(ctx, t, envsLoader{}).CallTool(ctx, &sdk.CallToolParams{Name: "list_environments"})
+	require.NoError(t, err)
+	require.False(t, res.IsError, "%+v", res)
+	assert.Contains(t, resultText(t, res), `"name":"preprod-ord"`)
+	assert.Contains(t, resultText(t, res), `"realm":"oc1"`)
+
+	res, err = newTestPair(ctx, t, envsLoader{}).CallTool(ctx, &sdk.CallToolParams{
+		Name: "get_item", Arguments: map[string]any{"category": "environment", "name": "preprod-ord"},
+	})
+	require.NoError(t, err)
+	require.False(t, res.IsError, "get_item takes the listed name: %s", resultText(t, res))
+	assert.Contains(t, resultText(t, res), `"region":"us-chicago-1"`)
+}
+
 func TestList_TenancyOverrides_AllKinds(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []string{"limit", "console_property", "property"} {

@@ -1,10 +1,26 @@
 package models
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// An environment's JSON carries the name get takes it by, with lowercase
+// keys like every other item, and reads back.
+func TestEnvironment_JSON(t *testing.T) {
+	t.Parallel()
+	env := Environment{Type: "preprod", Region: "us-chicago-1", Realm: "oc1"}
+	data, err := json.Marshal(env)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"name":"preprod-ord","realm":"oc1","type":"preprod","region":"us-chicago-1"}`, string(data))
+
+	var back Environment
+	require.NoError(t, json.Unmarshal(data, &back))
+	assert.Equal(t, env, back)
+}
 
 func TestResolveEnvType(t *testing.T) {
 	t.Parallel()
