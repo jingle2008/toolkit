@@ -94,13 +94,22 @@ shared on-demand endpoint. A missing tenancy-id label leaves TenantID
 blank rather than bucketing under UNKNOWN_TENANCY: the map is keyed by
 namespace, and on-demand endpoints legitimately have no tenant.
 */
+// optionalCount is nestedCount as a pointer: nil when the field is unset,
+// so an endpoint without one shows no replica count rather than 0.
+func optionalCount(root map[string]any, fields ...string) *int {
+	if n, ok := nestedCount(root, fields...); ok {
+		return &n
+	}
+	return nil
+}
+
 func parseInferenceService(obj *unstructured.Unstructured) models.InferenceService {
 	spec, _, _ := unstructured.NestedMap(obj.Object, "spec")
 	modelName, _, _ := unstructured.NestedString(spec, "model", "name")
 	modelKind, _, _ := unstructured.NestedString(spec, "model", "kind")
 	runtime, _, _ := unstructured.NestedString(spec, "runtime", "name")
-	minReplicas, _ := nestedCount(spec, "engine", "minReplicas")
-	maxReplicas, _ := nestedCount(spec, "engine", "maxReplicas")
+	minReplicas := optionalCount(spec, "engine", "minReplicas")
+	maxReplicas := optionalCount(spec, "engine", "maxReplicas")
 
 	ns := obj.GetNamespace()
 	svcType := models.InferenceServiceOnDemand
@@ -145,8 +154,8 @@ func parseLegacyInferenceService(obj *unstructured.Unstructured) models.Inferenc
 	}
 	runtime, _, _ := unstructured.NestedString(predictor, "model", "runtime")
 	dacRef, _, _ := unstructured.NestedString(predictor, "model", "dedicatedAIClusterRef", "name")
-	minReplicas, _ := nestedCount(predictor, "minReplicas")
-	maxReplicas, _ := nestedCount(predictor, "maxReplicas")
+	minReplicas := optionalCount(predictor, "minReplicas")
+	maxReplicas := optionalCount(predictor, "maxReplicas")
 
 	ns := obj.GetNamespace()
 	svcType := models.InferenceServiceOnDemand

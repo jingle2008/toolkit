@@ -1,6 +1,6 @@
 package models
 
-import "fmt"
+import "strconv"
 
 // Inference service types. Not a table column; carried in -o json and
 // the MCP output, and matched by filtering.
@@ -26,10 +26,12 @@ type InferenceService struct {
 	// tenant-labelled ClusterBaseModel).
 	ImportedModel bool   `json:"importedModel,omitempty"`
 	Runtime       string `json:"runtime,omitempty"`
-	MinReplicas   int    `json:"minReplicas"`
-	MaxReplicas   int    `json:"maxReplicas"`
-	Ready         string `json:"ready"`
-	Age           string `json:"age"`
+	// MinReplicas and MaxReplicas are the engine's replica range; nil
+	// when the spec doesn't set one (an endpoint with an empty spec).
+	MinReplicas *int   `json:"minReplicas,omitempty"`
+	MaxReplicas *int   `json:"maxReplicas,omitempty"`
+	Ready       string `json:"ready"`
+	Age         string `json:"age"`
 	// Legacy is true for an ome.oracle.com/v1alpha1 InferenceService —
 	// an endpoint on a legacy DAC.
 	Legacy bool    `json:"legacy,omitempty"`
@@ -73,7 +75,18 @@ func (s InferenceService) TenantName() string {
 	return s.TenantID
 }
 
-// Replicas renders the engine replica range as "min/max".
+// Replicas renders the engine replica range as "min/max", "" when the
+// spec sets neither (drawn as —, not a misleading 0/0), and — for the
+// one it doesn't set.
 func (s InferenceService) Replicas() string {
-	return fmt.Sprintf("%d/%d", s.MinReplicas, s.MaxReplicas)
+	if s.MinReplicas == nil && s.MaxReplicas == nil {
+		return ""
+	}
+	part := func(n *int) string {
+		if n == nil {
+			return "—"
+		}
+		return strconv.Itoa(*n)
+	}
+	return part(s.MinReplicas) + "/" + part(s.MaxReplicas)
 }
