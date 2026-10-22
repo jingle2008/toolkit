@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -39,6 +40,20 @@ type Environment struct {
 	Type   string
 	Region string
 	Realm  string
+}
+
+// MarshalJSON writes an environment as {name, realm, type, region}: name
+// is GetName, the form `toolkit get environment <name>` and MCP's
+// get_item take (the first column of the table), so a JSON item carries
+// what picks it again. Unmarshaling needs nothing custom: the default
+// decoder matches realm/type/region to the fields and ignores name.
+func (e Environment) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Name   string `json:"name"`
+		Realm  string `json:"realm"`
+		Type   string `json:"type"`
+		Region string `json:"region"`
+	}{e.GetName(), e.Realm, e.Type, e.Region})
 }
 
 // GetName returns the name of the environment.

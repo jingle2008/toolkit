@@ -19,6 +19,14 @@ func idempotent() *sdk.ToolAnnotations {
 	return &sdk.ToolAnnotations{DestructiveHint: new(false), IdempotentHint: true}
 }
 
+// disruptive annotates a mutating tool that is safe to repeat but not
+// only additive: it evicts or replaces what is there (a drain evicts
+// pods and restarts endpoints; set_tenant overwrites a name and note).
+// The spec reserves destructiveHint false for additive updates.
+func disruptive() *sdk.ToolAnnotations {
+	return &sdk.ToolAnnotations{DestructiveHint: new(true), IdempotentHint: true}
+}
+
 // recoverable annotates a mutating tool whose effect can be retried or
 // undone, but which acts again on every call.
 func recoverable() *sdk.ToolAnnotations {

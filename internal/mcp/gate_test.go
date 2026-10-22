@@ -303,3 +303,31 @@ func TestMutationTools_DryRunFailsOnMissingTarget(t *testing.T) {
 	}
 	assert.Empty(t, *performed)
 }
+
+// A blank required name is refused by name, before any lookup, rather
+// than passed to the cluster or OCI.
+//
+//nolint:paralleltest // replaces package-level seams
+func TestTools_BlankTargetRefused(t *testing.T) {
+	performed := stubPerformSeams(t)
+	for name, args := range mutationArgs {
+		if name == "set_tenant" {
+			continue // its name and OCID have their own checks
+		}
+		blank := with(args)
+		for k := range blank {
+			blank[k] = "  "
+		}
+		res := callTool(t, name, with(blank, "dry_run", true))
+		require.True(t, res.IsError, name)
+		assert.Contains(t, resultText(t, res), "target is required", name)
+	}
+	assert.Empty(t, *performed)
+
+	res := callTool(t, "get_drain_status", map[string]any{"node": ""})
+	require.True(t, res.IsError)
+	assert.Contains(t, resultText(t, res), "node is required")
+	res = callTool(t, "metrics_url", map[string]any{"category": "dac", "name": " "})
+	require.True(t, res.IsError)
+	assert.Contains(t, resultText(t, res), "name is required")
+}

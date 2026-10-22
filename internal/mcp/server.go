@@ -134,16 +134,20 @@ func (s *Server) envFor(in envOverride) models.Environment {
 // listInput is the common input for category list tools.
 type listInput struct {
 	Filter string `json:"filter,omitempty" jsonschema:"fuzzy substring match across the model's filterable fields (case-insensitive)"`
-	Limit  int    `json:"limit,omitempty"  jsonschema:"max items to return after filter; 0 (default) means unlimited. For grouped categories the cap is across the whole flattened result, not per group."`
+	Limit  int    `json:"limit,omitempty"  jsonschema:"max items to return after filter; 0 (default) means unlimited. The cap is on the whole result (where rows come in groups, across all of them)."`
 	envOverride
 }
 
 // kindInput extends listInput with a "kind" discriminator used by the
 // bundled definition / override tools.
 type kindInput struct {
-	Kind string `json:"kind" jsonschema:"one of: limit, console_property, property"`
+	Kind string `json:"kind" jsonschema:"one of: limit, console_property, property (case-insensitive)"`
 	listInput
 }
+
+// kind is Kind lowercased and trimmed, as category names are read, so
+// "Limit" or " limit" select the limit kind.
+func (k kindInput) kind() string { return strings.ToLower(strings.TrimSpace(k.Kind)) }
 
 // listResult is the uniform envelope returned by every list tool. It's
 // generic over T so the SDK can derive a proper OutputSchema from the

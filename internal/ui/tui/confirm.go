@@ -66,10 +66,24 @@ func newScaleAmount(pool models.GPUPool) *scaleAmount {
 	return &scaleAmount{input: in, pool: pool}
 }
 
-// value is the entered count, and whether it is a whole number ≥ 1.
+// value is the entered count, and whether one scale-up may add it: a
+// whole number from 1 to mutation.MaxPoolScaleAdd.
 func (a *scaleAmount) value() (int, bool) {
+	n, problem := a.count()
+	return n, problem == ""
+}
+
+// count is the entered count, or what is wrong with it ("" when
+// nothing), as the modal says it.
+func (a *scaleAmount) count() (n int, problem string) {
 	n, err := strconv.Atoi(strings.TrimSpace(a.input.Value()))
-	return n, err == nil && n >= 1
+	if err != nil {
+		return 0, "Enter a whole number of instances, at least 1."
+	}
+	if err := mutation.CheckPoolScaleAdd(a.pool, n); err != nil {
+		return 0, err.Error()
+	}
+	return n, ""
 }
 
 // update feeds msg to the input when it edits a count — a digit, a
@@ -388,10 +402,10 @@ func (m *Model) confirmView() string {
 	warning, warnColor := c.warning, border
 	if a := c.amount; a != nil {
 		rows = append(rows, label.Render("Add")+a.input.View()+" instances")
-		if n, ok := a.value(); ok {
+		if n, problem := a.count(); problem == "" {
 			warning = mutation.PoolScaleNotice(a.pool, n)
 		} else {
-			warning, warnColor = "Enter a whole number of instances, at least 1.", p.Danger
+			warning, warnColor = problem, p.Danger
 		}
 	}
 	body := strings.Join(rows, "\n")
