@@ -164,7 +164,7 @@ func TestPosition_ShowsTotalWhenRowsHidden(t *testing.T) {
 
 	m.filter = "zzz"
 	m.updateRows(true)
-	assert.Equal(t, "0 of 3", m.positionText())
+	assert.Equal(t, "0 of 0 (3 total)", m.positionText())
 
 	m.filter = ""
 	m.showFaulty = true
