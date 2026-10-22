@@ -72,6 +72,14 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	} else {
 		m.category = category
 		m.landOn = nil // a cursor target for an earlier navigation
+		// A scope carries over to its other children (:gw after drilling
+		// into a DAC) and to its own category (the row to land on), but
+		// not past a category it doesn't apply to: there it would be
+		// hidden, esc couldn't clear it, and the next child would come
+		// back scoped to it.
+		if m.scope != nil && m.scope.Category != category && !m.scope.Category.IsScopeOf(category) {
+			m.scope = nil
+		}
 		m.keys = keys.ResolveKeys(m.category, m.viewMode)
 		m.sortColumn = common.NameCol
 		m.sortAsc = true
