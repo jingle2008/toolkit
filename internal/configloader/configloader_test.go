@@ -462,6 +462,16 @@ func TestValidateEnvironment_Success(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// An env the repo doesn't declare is ErrUnknownEnvironment, naming it.
+func TestCheckEnvironment_Unknown(t *testing.T) {
+	t.Parallel()
+	all := []models.Environment{{Realm: "oc1", Type: "preprod", Region: "us-chicago-1"}}
+	require.NoError(t, CheckEnvironment(all[0], all))
+	err := CheckEnvironment(models.Environment{Realm: "oc99", Type: "preprod", Region: "us-chicago-1"}, all)
+	require.ErrorIs(t, err, ErrUnknownEnvironment)
+	assert.Contains(t, err.Error(), `realm "oc99", type "preprod", region "us-chicago-1"`)
+}
+
 func TestLoadDefinitionGroups_Error(t *testing.T) {
 	t.Parallel()
 	_, _, _, err := loadDefinitionGroups("/no/such/path") //nolint:dogsled // we only need err

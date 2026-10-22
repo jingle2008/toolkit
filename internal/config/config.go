@@ -49,8 +49,8 @@ const FlagMCPReadOnly = "mcp-read-only"
 /*
 Normalize canonicalizes the user-supplied env values in place: short
 region codes expand to full OCI region identifiers ("phx" ->
-"us-phoenix-1") and "ppe" becomes "preprod". Case is folded, so "PHX"
-and "PPE" resolve too.
+"us-phoenix-1"), "ppe" becomes "preprod", and the realm is lowercased.
+Case is folded, so "PHX", "PPE" and "OC1" resolve too.
 
 Empty values are left empty rather than resolved, so the
 required-setting errors in Validate and validateLoaderConfig still
@@ -66,6 +66,7 @@ func (c *Config) Normalize() error {
 	if c.EnvType != "" {
 		c.EnvType = models.ResolveEnvType(c.EnvType)
 	}
+	c.EnvRealm = models.ResolveRealm(c.EnvRealm)
 	if c.EnvRegion != "" {
 		r, err := models.ResolveRegion(c.EnvRegion)
 		if err != nil {

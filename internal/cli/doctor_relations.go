@@ -37,6 +37,12 @@ func relationChecks(ctx context.Context, cfg config.Config) []checkResult {
 			Hint:   "set them via flags, environment (TOOLKIT_*), or config.yaml",
 		}}
 	}
+	if err := checkEnvironment(ctx, cfg); err != nil {
+		return []checkResult{{
+			Name: "relations", Status: statusFail, Detail: err.Error(),
+			Hint: "fix env-realm / env-type / env-region",
+		}}
+	}
 	env := models.Environment{Type: cfg.EnvType, Region: cfg.EnvRegion, Realm: cfg.EnvRealm}
 	ds, poolNote, err := resolve.IntegrityDataset(ctx, doctorLoaderFn(ctx, cfg.MetadataFile), cfg.RepoPath, cfg.KubeConfig, env)
 	if err != nil {

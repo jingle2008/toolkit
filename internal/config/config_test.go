@@ -74,6 +74,19 @@ func TestConfig_Normalize(t *testing.T) {
 // required-setting checks: if Normalize resolved "" it would report an
 // unknown region code for a value the user never supplied, hiding the
 // "missing --env-region" message that actually tells them what to do.
+// The realm is lowercased and trimmed: the repo spells realms in lower
+// case, and they're matched exactly.
+func TestConfig_NormalizeRealm(t *testing.T) {
+	t.Parallel()
+	cfg := Config{EnvRealm: " OC1 "}
+	if err := cfg.Normalize(); err != nil {
+		t.Fatalf("Normalize: %v", err)
+	}
+	if cfg.EnvRealm != "oc1" {
+		t.Errorf("EnvRealm = %q, want oc1", cfg.EnvRealm)
+	}
+}
+
 func TestConfig_NormalizeLeavesEmptyEmpty(t *testing.T) {
 	t.Parallel()
 	cfg := Config{}
