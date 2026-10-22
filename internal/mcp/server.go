@@ -141,9 +141,13 @@ type listInput struct {
 // kindInput extends listInput with a "kind" discriminator used by the
 // bundled definition / override tools.
 type kindInput struct {
-	Kind string `json:"kind" jsonschema:"one of: limit, console_property, property"`
+	Kind string `json:"kind" jsonschema:"one of: limit, console_property, property (case-insensitive)"`
 	listInput
 }
+
+// kind is Kind lowercased and trimmed, as category names are read, so
+// "Limit" or " limit" select the limit kind.
+func (k kindInput) kind() string { return strings.ToLower(strings.TrimSpace(k.Kind)) }
 
 // listResult is the uniform envelope returned by every list tool. It's
 // generic over T so the SDK can derive a proper OutputSchema from the

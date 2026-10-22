@@ -360,6 +360,15 @@ func TestList_EnvironmentsCarryName(t *testing.T) {
 	assert.Contains(t, resultText(t, res), `"region":"us-chicago-1"`)
 }
 
+// kind is read as category names are: case and surrounding space don't
+// matter.
+func TestList_KindIsCaseInsensitive(t *testing.T) {
+	t.Parallel()
+	for _, tool := range []string{"list_definitions", "list_tenancy_overrides", "list_regional_overrides"} {
+		callList(t, tool, map[string]any{"kind": " Console_Property "})
+	}
+}
+
 func TestList_TenancyOverrides_AllKinds(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []string{"limit", "console_property", "property"} {

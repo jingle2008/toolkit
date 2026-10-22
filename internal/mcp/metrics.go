@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -45,6 +46,9 @@ func (s *Server) handleMetricsURL(ctx context.Context, _ *sdk.CallToolRequest, i
 	cat, err := domain.ParseCategory(in.Category)
 	if err != nil {
 		return failTool[metricsResult]("metrics_url", fmt.Errorf("category: %w", err))
+	}
+	if strings.TrimSpace(in.Name) == "" {
+		return failTool[metricsResult]("metrics_url", errors.New("name is required"))
 	}
 	env := s.envFor(in.envOverride)
 	item, catalog, warnings, err := mcpMetricsTargetFn(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, cat, in.Name)

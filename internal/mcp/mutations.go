@@ -169,7 +169,19 @@ func (c mutationCall[Out]) fields() []any {
 func asResult(r mutationResult) mutationResult { return r }
 
 // runMutationCall is the whole MCP mutation flow, shared by every
-// mutating tool, with the audit record of each step:
+// mutating tool. A blank target is refused first, by name, rather than
+// passed to the cluster or OCI: the schema marks it required but accepts
+// "". An InferenceService target is <namespace>/<name>, so the name is
+// what follows the last slash. Then runGatedMutation.
+func runMutationCall[Out any](s *Server, c mutationCall[Out]) (*sdk.CallToolResult, Out, error) {
+	if strings.TrimSpace(c.target[strings.LastIndex(c.target, "/")+1:]) == "" {
+		return failTool[Out](c.action.Verb, fmt.Errorf("%s target is required", c.action.Kind))
+	}
+	return runGatedMutation(s, c)
+}
+
+// runGatedMutation runs a mutation call through its gates, with the
+// audit record of each step:
 //
 //  1. Neither confirm nor dry_run: refused, before touching anything.
 //  2. plan looks the target up; a failure ends the call (audited as
@@ -182,7 +194,7 @@ func asResult(r mutationResult) mutationResult { return r }
 // The refusal and failure paths return an error, which the SDK renders
 // as IsError plus text; success is Out, which the SDK marshals into
 // StructuredContent and auto-emits as TextContent.
-func runMutationCall[Out any](s *Server, c mutationCall[Out]) (*sdk.CallToolResult, Out, error) {
+func runGatedMutation[Out any](s *Server, c mutationCall[Out]) (*sdk.CallToolResult, Out, error) {
 	p := planned{action: c.action, target: c.target}
 	audit := func(phase mutation.Phase, err error) {
 		mutation.Audit(s.logger, surfaceMCP, p.action, p.target, phase, err, c.fields()...)
@@ -409,6 +421,9 @@ func (s *Server) driveDrain(kubeContext, node string) {
 }
 
 func (s *Server) handleDrainStatus(ctx context.Context, req *sdk.CallToolRequest, in drainStatusInput) (*sdk.CallToolResult, k8s.DrainStatus, error) {
+	if strings.TrimSpace(in.Node) == "" {
+		return failTool[k8s.DrainStatus]("get drain status", errors.New("node is required"))
+	}
 	status, err := mcpDrainStatusFn(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride).KubeContext(), in.Node)
 	if err != nil {
 		return failTool[k8s.DrainStatus]("get drain status of node/"+in.Node, err)

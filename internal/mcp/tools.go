@@ -397,7 +397,7 @@ func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolReq
 	if err != nil {
 		return failTool[listResult[any]]("load dataset", err)
 	}
-	switch in.Kind {
+	switch in.kind() {
 	case "limit":
 		items := collections.FilterSlice(dataset.LimitDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
 		return jsonResult(collections.TruncateSlice(toAnySlice(items), in.Limit), nil)
@@ -418,7 +418,7 @@ func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallTo
 	if err != nil {
 		return nil, listResult[any]{}, err
 	}
-	switch in.Kind {
+	switch in.kind() {
 	case "limit":
 		flat := output.Flatten(collections.FilterMapOrAll(grp.LimitTenancyOverrideMap, normFilter(in.Filter)))
 		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
@@ -436,7 +436,7 @@ func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallTo
 
 func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
 	env := s.envFor(in.envOverride)
-	switch in.Kind {
+	switch in.kind() {
 	case "limit":
 		items, err := s.loader.LoadLimitRegionalOverrides(ctx, s.cfg.RepoPath, env)
 		if err != nil {
