@@ -1,8 +1,12 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
@@ -120,4 +124,86 @@ func TestUpdateCategoryCore_GPUNode_Cached(t *testing.T) {
 	assert.True(t,
 		hasWatchLifecycle(types),
 		"expected a watch lifecycle message, got %v", types)
+}
+
+// blockingDACLoader holds LoadDedicatedAIClusters until release is closed,
+// standing in for a slow cluster.
+type blockingDACLoader struct {
+	fakeLoader
+	release chan struct{}
+}
+
+func (b blockingDACLoader) LoadDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (map[string][]models.DedicatedAICluster, error) {
+	<-b.release
+	return b.fakeLoader.LoadDedicatedAIClusters(ctx, kubeCfg, env)
+}
+
+// runLikeProgram executes cmd the way tea.Program does: a sequence's cmds
+// one at a time, each waiting for the last, and a batch's concurrently,
+// sending every message to out as it's produced. sequenceMsg is unexported,
+// so it's recognized by shape, a slice of cmds.
+func runLikeProgram(cmd tea.Cmd, out chan<- tea.Msg) {
+	if cmd == nil {
+		return
+	}
+	switch msg := cmd().(type) {
+	case tea.BatchMsg:
+		var wg sync.WaitGroup
+		for _, c := range msg {
+			wg.Go(func() { runLikeProgram(c, out) })
+		}
+		wg.Wait()
+	default:
+		if v := reflect.ValueOf(msg); v.Kind() == reflect.Slice && v.Type().Elem() == reflect.TypeFor[tea.Cmd]() {
+			for i := range v.Len() {
+				runLikeProgram(v.Index(i).Interface().(tea.Cmd), out)
+			}
+			return
+		}
+		out <- msg
+	}
+}
+
+// TestUpdateCategory_CachedRowsDontWaitForReload: callers run a category's
+// cmds in a tea.Sequence, and the cached rows must show while the reload is
+// still out, not after it lands (the list was blank on return from the
+// Alias list until the DACs reloaded).
+func TestUpdateCategory_CachedRowsDontWaitForReload(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.Alias
+	m.dataset.DedicatedAIClusterMap = map[string][]models.DedicatedAICluster{
+		"tenant1": {{Name: "dac1"}},
+	}
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	unblock := func() { releaseOnce.Do(func() { close(release) }) }
+	t.Cleanup(unblock) // a failed wait mustn't leave the load blocked
+	m.loader = blockingDACLoader{release: release}
+
+	out := make(chan tea.Msg, 64)
+	done := make(chan struct{})
+	go func() {
+		runLikeProgram(tea.Sequence(m.updateCategory(domain.DedicatedAICluster)...), out)
+		close(done)
+	}()
+
+	waitFor := func(want string) {
+		t.Helper()
+		timeout := time.After(2 * time.Second)
+		for {
+			select {
+			case msg := <-out:
+				if msgTypeName(msg) == want {
+					return
+				}
+			case <-timeout:
+				t.Fatalf("no %s within 2s", want)
+			}
+		}
+	}
+	waitFor("tui.dataMsg") // the reload is still blocked
+	unblock()
+	waitFor("tui.dedicatedAIClustersLoadedMsg")
+	<-done
 }
