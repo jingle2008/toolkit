@@ -165,7 +165,10 @@ type gpuNodesLoadedMsg struct {
 
 type gpuWorkloadsLoadedMsg struct {
 	Items map[string][]models.GPUWorkload
-	Gen   int
+	// DACs, loaded alongside when none were, give pods without a
+	// tenancy-id label their tenant; nil when not loaded.
+	DACs map[string][]models.DedicatedAICluster
+	Gen  int
 }
 
 type dedicatedAIClustersLoadedMsg struct {

@@ -137,8 +137,8 @@ func TestParseLegacyInferenceService(t *testing.T) {
 		TenantID:    "aaaaaaaaegodxkqnjoywklqsvrafpzrvilgq56mzgbr52mlffb6x4kz2ddoa",
 		Model:       "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
 		Runtime:     "vllm-generic-v1",
-		MinReplicas: 1,
-		MaxReplicas: 1,
+		MinReplicas: new(1),
+		MaxReplicas: new(1),
 		Ready:       "True",
 		Legacy:      true,
 	}, got)
@@ -165,8 +165,8 @@ func TestParseInferenceService_Dedicated(t *testing.T) {
 		TenantID:    "aaaaaaaaysjwrhptwmm6ynuvobvsmb3yjv6v6bz7ev2veq22fgzbugsrm53q",
 		Model:       "rerank-v3-5",
 		Runtime:     "cohere-rerank-v3-5",
-		MinReplicas: 1,
-		MaxReplicas: 2,
+		MinReplicas: new(1),
+		MaxReplicas: new(2),
 		Ready:       "True",
 	}, got)
 }
@@ -248,7 +248,8 @@ status: {conditions: [{type: EngineReady, status: "True"}]}
 				t.Helper()
 				assert.Equal(t, "Unknown", s.Ready)
 				assert.True(t, s.IsFaulty())
-				assert.Equal(t, "0/0", s.Replicas())
+				assert.Empty(t, s.Replicas(), "no replicas in the spec: drawn as —, not 0/0")
+				assert.Nil(t, s.MinReplicas)
 			},
 		},
 	}

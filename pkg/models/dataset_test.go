@@ -127,6 +127,41 @@ func TestSetGPUWorkloadMap_ResolvesOwnerKeepsNodeKey(t *testing.T) {
 	}
 }
 
+// A pod without a tenancy-id label in a DAC's namespace takes the DAC's
+// tenant, whichever of the two loads first; a labelled pod keeps its
+// own, and a pod outside any DAC stays unowned.
+func TestSetGPUWorkloadMap_TenantFromDAC(t *testing.T) {
+	t.Parallel()
+	pods := func() map[string][]GPUWorkload {
+		return map[string][]GPUWorkload{"node-a": {
+			{Name: "reservation", Namespace: "dac-1"},
+			{Name: "labelled", Namespace: "dac-1", TenantID: "suffix2"},
+			{Name: "shared", Namespace: "llama"},
+		}}
+	}
+	dacs := map[string][]DedicatedAICluster{"suffix1": {{Name: "dac-1", TenantID: "suffix1"}}}
+	tenants := []Tenant{{Name: "acme", ID: "ocid1.tenancy.oc1..suffix1"}, {Name: "beta", ID: "ocid1.tenancy.oc1..suffix2"}}
+
+	check := func(d *Dataset) {
+		t.Helper()
+		got := map[string]string{}
+		for _, w := range d.GPUWorkloadMap["node-a"] {
+			got[w.Name] = w.TenantName()
+		}
+		assert.Equal(t, map[string]string{"reservation": "acme", "labelled": "beta", "shared": ""}, got)
+	}
+
+	dacsFirst := &Dataset{Tenants: tenants}
+	dacsFirst.SetDedicatedAIClusterMap(dacs)
+	dacsFirst.SetGPUWorkloadMap(pods())
+	check(dacsFirst)
+
+	podsFirst := &Dataset{Tenants: tenants}
+	podsFirst.SetGPUWorkloadMap(pods())
+	podsFirst.SetDedicatedAIClusterMap(dacs)
+	check(podsFirst)
+}
+
 func TestSetInferenceServiceMap_ResolvesOwnerKeepsNamespaceKey(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{

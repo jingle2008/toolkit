@@ -221,7 +221,7 @@ func (m *Model) handleGPUNodeCategory(refresh bool, gen int) tea.Cmd {
 
 func (m *Model) handleGPUWorkloadCategory(refresh bool, gen int) tea.Cmd {
 	if m.dataset == nil || m.dataset.GPUWorkloadMap == nil || refresh {
-		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen, m.workloadsNeedDACs())
 	}
 	return nil
 }

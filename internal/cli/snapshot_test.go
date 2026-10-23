@@ -223,8 +223,8 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 		}
 	case domain.InferenceService:
 		return map[string][]models.InferenceService{
-			"amaaaaaa-dac-1": {{Name: "is-1", Namespace: "amaaaaaa-dac-1", Type: models.InferenceServiceDedicated, TenantID: "tenant-1", Model: "amaaaaaa-model-1", ImportedModel: true, Runtime: "vllm", MinReplicas: 1, MaxReplicas: 2, Ready: "True", Age: "3d"}},
-			"embed-v4":       {{Name: "embed-v4", Namespace: "embed-v4", Type: models.InferenceServiceOnDemand, Model: "embed-v4", MinReplicas: 2, MaxReplicas: 4, Ready: "False", Age: "10d"}},
+			"amaaaaaa-dac-1": {{Name: "is-1", Namespace: "amaaaaaa-dac-1", Type: models.InferenceServiceDedicated, TenantID: "tenant-1", Model: "amaaaaaa-model-1", ImportedModel: true, Runtime: "vllm", MinReplicas: new(1), MaxReplicas: new(2), Ready: "True", Age: "3d"}},
+			"embed-v4":       {{Name: "embed-v4", Namespace: "embed-v4", Type: models.InferenceServiceOnDemand, Model: "embed-v4", MinReplicas: new(2), MaxReplicas: new(4), Ready: "False", Age: "10d"}},
 		}
 	case domain.Alias:
 		cats := make([]domain.Category, 0, len(domain.Categories))

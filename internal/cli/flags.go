@@ -35,7 +35,9 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 			"Enable only if the operator's credentials are intended to grant the agent multi-realm authority.")
 
 	rootCmd.PersistentFlags().Bool(config.FlagMCPReadOnly, false,
-		"Start `toolkit mcp` without its mutating tools (cordon, drain, restart, terminate, scale, delete, set tenant): "+
+		// No backquotes: pflag would show the quoted text as the flag's
+		// value name (--mcp-read-only toolkit mcp).
+		"Start the MCP server (toolkit mcp) without its mutating tools (cordon, drain, restart, terminate, scale, delete, set tenant): "+
 			"agents get only the read tools.")
 
 	// Hint shells that these flags take filenames (improves completion UX).

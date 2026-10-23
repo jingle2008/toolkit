@@ -49,6 +49,7 @@ metadata-file: "" # Optional path to a YAML or JSON file with additional metadat
 	cfgDir := filepath.Join(home, ".config")
 	defaultKube := filepath.Join(home, ".kube", "config")
 	defaultConfig := filepath.Join(cfgDir, "toolkit", "config.yaml")
+	defaultConfigFile = defaultConfig
 	defaultMetadata := filepath.Join(cfgDir, "toolkit", "metadata.yaml")
 
 	rootCmd := &cobra.Command{
@@ -142,11 +143,26 @@ func readConfigFile(cfgFile *string) error {
 		return nil
 	}
 	viper.SetConfigFile(*cfgFile)
-	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, os.ErrNotExist) {
+	err := viper.ReadInConfig()
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, os.ErrNotExist) && *cfgFile == defaultConfigFile:
+		// No config file at the default path is fine: flags and TOOLKIT_*
+		// can supply everything.
+		return nil
+	case errors.Is(err, os.ErrNotExist):
+		// One named with --config must exist: a typo'd path would
+		// otherwise run on whatever the flags say, as if it were empty.
+		return fmt.Errorf("config file %s does not exist", *cfgFile)
+	default:
 		return fmt.Errorf("read config file: %w", err)
 	}
-	return nil
 }
+
+// defaultConfigFile is --config's default (set by NewRootCmd), the one
+// config path that may be absent.
+var defaultConfigFile string
 
 // Execute runs the root command.
 func Execute(version string) {

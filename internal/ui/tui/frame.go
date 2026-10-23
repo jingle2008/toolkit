@@ -75,7 +75,8 @@ func (m *Model) positionText() string {
 	n := len(m.table.Rows())
 	switch {
 	case n == 0 && m.rowTotal > 0:
-		return fmt.Sprintf("0 of %d", m.rowTotal)
+		// Every row hidden: as "1 of 4 (33 total)" reads, none shown of 33.
+		return fmt.Sprintf("0 of 0 (%d total)", m.rowTotal)
 	case n == 0:
 		return ""
 	case m.rowTotal > n:

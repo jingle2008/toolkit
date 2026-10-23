@@ -172,7 +172,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		if err := cfg.Normalize(); err != nil {
 			return err
 		}
-		if err := validateGetRequest(cfg, cat, *faulty); err != nil {
+		if err := validateGetRequest(cfg, cat, *faulty, *limit); err != nil {
 			return err
 		}
 
@@ -262,8 +262,13 @@ func validateLoaderConfig(cfg config.Config) []string {
 // requested category. Unlike config.Validate (used by the TUI), it
 // does not require Category — the positional arg supplies it — and
 // only requires KubeConfig for cluster-derived categories.
-// validateGetRequest is validateGetConfig, then validateFaulty.
-func validateGetRequest(cfg config.Config, cat domain.Category, faulty bool) error {
+// validateGetRequest checks --limit (0 is unlimited; a negative one was
+// read as unlimited too, though the help didn't say so), then
+// validateGetConfig and validateFaulty.
+func validateGetRequest(cfg config.Config, cat domain.Category, faulty bool, limit int) error {
+	if limit < 0 {
+		return fmt.Errorf("--limit must be 0 (unlimited) or more, got %d", limit)
+	}
 	if err := validateGetConfig(cfg, cat); err != nil {
 		return err
 	}
@@ -409,6 +414,19 @@ func tenantDataset(ctx context.Context, ld loader.Composite, cfg config.Config, 
 	return ds
 }
 
+// workloadOwnersDataset is tenantDataset with the DACs too: they give a
+// GPU pod without a tenancy-id label its tenant. A failed DAC load only
+// leaves those pods unowned.
+func workloadOwnersDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) *models.Dataset {
+	ds := tenantDataset(ctx, ld, cfg, env)
+	if dacs, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env); err == nil {
+		ds.SetDedicatedAIClusterMap(dacs)
+	} else {
+		logging.FromContext(ctx).Warnw("dacs for workload tenants unavailable", "error", err)
+	}
+	return ds
+}
+
 //nolint:cyclop // a simple per-category switch is clearer than a registry here
 func emitCategory(
 	ctx context.Context,
@@ -481,7 +499,7 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load gpu workloads: %w", err)
 		}
-		ds := tenantDataset(ctx, ld, cfg, env)
+		ds := workloadOwnersDataset(ctx, ld, cfg, env)
 		ds.SetGPUWorkloadMap(grouped)
 		return writeMap(w, relatedOrFiltered(relations.GPUWorkload, ds.GPUWorkloadMap, domain.GPUWorkload, related, filter),
 			limit, opts, domain.GPUWorkload, env, selected)

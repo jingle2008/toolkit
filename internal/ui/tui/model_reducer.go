@@ -517,8 +517,22 @@ func (m *Model) handleGPUNodesLoaded(items map[string][]models.GPUNode, gen int)
 	m.applyLoaded(gen, func(ds *models.Dataset) { ds.GPUNodeMap = items }, domain.GPUNode, mapLen(items))
 }
 
-func (m *Model) handleGPUWorkloadsLoaded(items map[string][]models.GPUWorkload, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetGPUWorkloadMap(items) }, domain.GPUWorkload, mapLen(items))
+// handleGPUWorkloadsLoaded stores the workloads, and the DACs loaded with
+// them when none are loaded yet (a DAC load of its own may have landed
+// meanwhile, and is as fresh).
+func (m *Model) handleGPUWorkloadsLoaded(items map[string][]models.GPUWorkload, dacs map[string][]models.DedicatedAICluster, gen int) {
+	m.applyLoaded(gen, func(ds *models.Dataset) {
+		if dacs != nil && ds.DedicatedAIClusterMap == nil {
+			ds.SetDedicatedAIClusterMap(dacs)
+		}
+		ds.SetGPUWorkloadMap(items)
+	}, domain.GPUWorkload, mapLen(items))
+}
+
+// workloadsNeedDACs reports whether a GPU workload load should fetch the
+// DACs too, for the tenants of pods without a tenancy-id label.
+func (m *Model) workloadsNeedDACs() bool {
+	return m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil
 }
 
 func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {
@@ -585,7 +599,7 @@ func (m *Model) reloadCategoryCmd(cat domain.Category, gen int) tea.Cmd {
 	case domain.GPUNode:
 		return loadGPUNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	case domain.GPUWorkload:
-		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen, m.workloadsNeedDACs())
 	case domain.DedicatedAICluster:
 		return loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	case domain.InferenceService:
