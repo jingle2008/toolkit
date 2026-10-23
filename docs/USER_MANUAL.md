@@ -278,7 +278,7 @@ offered as a BaseModel, not an ImportedModel).
 - **Categories**: every category, matched by name or any alias.
 - **Environments**: recent quick-switch slots first, then every environment. Listed only in environment-scoped categories, the same as the `0`–`5` keys. An environment you switch to takes a quick-switch slot only if your kubeconfig has its context.
 - **Actions**: the selected row's actions (go to related, metrics, edit tenant, delete, …), each sort ("Sort by Tenant"), and Export CSV.
-- **Toggles**: alias view, faulty-only, preview pane.
+- **Toggles**: the Alias list, faulty-only, preview pane.
 
 With nothing typed, the items you ran this session come first, under **recent**. Each group is named on its first row, a category's hint is its short aliases, and the open category is marked `●`.
 
@@ -410,11 +410,13 @@ Press `s`, then the letter of a column, to sort by it. While `s` is pending, eac
 
 Sorting used to be on `Shift`+letter. Those keys are now free for row actions, and each one means the same action in every category: `Shift+R` is always Restart, `Shift+C` Cordon, `Shift+D` Drain, `Shift+U` Scale Up, `Shift+E` Edit Tenant.
 
-### Toggle alias view
+### Alias list
 
 ```
-Ctrl+A    → toggle between full category names and short aliases in the UI
+Ctrl+A    → open the Alias list (every category and its aliases); Ctrl+A again returns to the list before
 ```
+
+Opened on the Alias list itself (`-c alias`), there is no list before, so `Ctrl+A` goes to Tenant.
 
 ---
 
@@ -621,7 +623,7 @@ and CPU/memory remain in the TUI's detail view (`y`).
 | `[` | History back |
 | `]` | History forward |
 | `e` | Export table as CSV |
-| `Ctrl+A` | Toggle alias view |
+| `Ctrl+A` | Open the Alias list, or return from it |
 | `s` + letter | Sort by a column (`s n` Name; see [Sorting](#sorting)) |
 | `g` / `G` | First / last row |
 | `v` | Toggle the preview pane (≥160 columns) |

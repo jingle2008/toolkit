@@ -20,7 +20,7 @@
 │      │                                      /           Filter                 q           Quit              │       │
 │      │ Sort                                 p           Paste filter                                         │       │
 │      │   s n         Name                   enter       Open                 Navigation                      │       │
-│      │   s f         Free                   ^a          Toggle aliases         ↑/k         Up                │       │
+│      │   s f         Free                   ^a          Alias list             ↑/k         Up                │       │
 │      │   s t         Type                   v           Toggle preview         ↓/j         Down              │       │
 │      │   s a         Age                    e           Export CSV             u           ½ page up         │       │
 │      │                                      ^z          Faulty only            d           ½ page down       │       │

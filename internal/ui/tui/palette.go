@@ -79,7 +79,7 @@ func (m *Model) paletteItems() []paletteItem {
 	items = append(items, m.paletteActions()...)
 	items = append(items,
 		paletteItem{
-			kind: "toggle", label: "Alias view", hint: keys.ToggleAlias.Help().Key,
+			kind: "toggle", label: "Alias list", hint: keys.ToggleAlias.Help().Key,
 			run: func() tea.Cmd { return tea.Batch(m.toggleAliases()...) },
 		},
 		paletteItem{

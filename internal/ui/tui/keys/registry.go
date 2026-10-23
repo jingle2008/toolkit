@@ -234,7 +234,7 @@ var (
 	// ToggleAlias is a key binding for toggling the alias view.
 	ToggleAlias = key.NewBinding(
 		key.WithKeys("ctrl+a"),
-		key.WithHelp("^a", "Toggle aliases"),
+		key.WithHelp("^a", "Alias list"),
 	)
 	// TogglePreview shows or hides the selected row's summary beside the
 	// table, on terminals wide enough for both.

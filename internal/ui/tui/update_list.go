@@ -138,11 +138,17 @@ func (m *Model) handleNormalKeys(msg tea.KeyMsg) []tea.Cmd {
 	return cmds
 }
 
+// toggleAliases is ^a: it opens the Alias list, and from it goes back to
+// the list before. Launched on the Alias list (-c alias), there is none,
+// so it goes to Tenant, where Tab from Alias goes too.
 func (m *Model) toggleAliases() []tea.Cmd {
-	if m.category == domain.Alias {
+	if m.category != domain.Alias {
+		return m.updateCategory(domain.Alias)
+	}
+	if m.historyIdx > 0 {
 		return []tea.Cmd{m.moveHistory(-1)}
 	}
-	return m.updateCategory(domain.Alias)
+	return m.updateCategory(nextCategory(domain.Alias))
 }
 
 func (*Model) pasteFilter() tea.Cmd {

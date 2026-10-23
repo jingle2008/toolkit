@@ -57,6 +57,18 @@ func TestToggleAliases_FromAliasGoesBack(t *testing.T) {
 	assert.NotEqual(t, domain.Alias, m.category, "second toggle should leave Alias")
 }
 
+// Launched on the Alias list there is no list before it: ^a goes to
+// Tenant, as Tab from Alias does, instead of doing nothing.
+func TestToggleAliases_FromLaunchAliasGoesToTenant(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.category = domain.Alias
+	m.history, m.historyIdx = []historyEntry{{category: domain.Alias}}, 0
+
+	m.toggleAliases()
+	assert.Equal(t, domain.Tenant, m.category)
+}
+
 func TestEnterHelpView(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
