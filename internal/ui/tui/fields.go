@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -283,9 +284,40 @@ func valueLines(value string, valW int, wrap bool) []string {
 	if !wrap {
 		return []string{truncateMiddle(value, valW)}
 	}
-	lines := strings.Split(lipgloss.NewStyle().Width(valW).Render(value), "\n")
-	for i, l := range lines {
-		lines[i] = strings.TrimRight(l, " ")
+	return wrapAtSpaces(value, valW)
+}
+
+// wrapAtSpaces wraps plain text to w cells, breaking only at spaces; a
+// word wider than w is cut into w-wide pieces. A word-wrap that also
+// breaks at hyphens split an OCID at "us-chicago-" and left the rest of
+// the line empty; this fills each line instead.
+func wrapAtSpaces(s string, w int) []string {
+	if w < 1 || ansi.StringWidth(s) <= w {
+		return []string{s}
+	}
+	var lines []string
+	line := ""
+	flush := func() {
+		lines = append(lines, line)
+		line = ""
+	}
+	for _, word := range strings.Fields(s) {
+		switch {
+		case line == "" && ansi.StringWidth(word) <= w:
+			line = word
+		case line != "" && ansi.StringWidth(line)+1+ansi.StringWidth(word) <= w:
+			line += " " + word
+		default:
+			if line != "" {
+				flush()
+			}
+			pieces := strings.Split(ansi.Hardwrap(word, w, false), "\n")
+			lines = append(lines, pieces[:len(pieces)-1]...)
+			line = pieces[len(pieces)-1]
+		}
+	}
+	if line != "" {
+		flush()
 	}
 	return lines
 }
