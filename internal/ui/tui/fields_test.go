@@ -98,6 +98,18 @@ func TestRenderFields_CutOrWrap(t *testing.T) {
 	assert.Equal(t, "ID  aaaa bbbb\n    cccc dddd", renderFields(n, 14, 0, true, false, plainFields))
 }
 
+// Wrapping breaks only at spaces: an OCID with hyphens fills each line
+// rather than breaking at "us-chicago-" and leaving a gap.
+func TestWrapAtSpaces(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, []string{"ocid1.instance.oc1.us-chic", "ago-1.anxxeljrql3powickfj6"},
+		wrapAtSpaces("ocid1.instance.oc1.us-chicago-1.anxxeljrql3powickfj6", 26))
+	assert.Equal(t, []string{"a long", "value", "wrapped"}, wrapAtSpaces("a long value wrapped", 7))
+	assert.Equal(t, []string{"short", "abcdefghijkl", "mn"}, wrapAtSpaces("short abcdefghijklmn", 12),
+		"a word wider than a line starts the next one and is cut at the width")
+	assert.Equal(t, []string{"fits"}, wrapAtSpaces("fits", 10))
+}
+
 // A scalar array whose join would be ambiguous (an item holds ", ") or
 // overflow the value column lists one bulleted item per row, each wrapped
 // under its own text; short lists, and single items, stay one value.

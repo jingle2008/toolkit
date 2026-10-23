@@ -16,6 +16,8 @@ import (
 // auto-selects the remembered row (the one whose subcategory we just left).
 // For a target beyond the first page the selected row must be fully visible
 // in the rendered table, not sitting one line below the bottom edge.
+//
+// (See also TestApplyRows_LandsOnShortenedName.)
 func TestApplyRows_AutoSelect_ScrollsTargetFullyIntoView(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
@@ -58,7 +60,9 @@ func TestApplyRows_AutoSelect_ScrollsTargetFullyIntoView(t *testing.T) {
 		// to findContextIndex (scope). Without this blank step the cursor from
 		// the previous iteration would be mistaken for a preserved selection.
 		m.applyRows(nil, nil, false)
-		m.applyRows(rows, nil, true)
+		// Fresh rows each time, as a reload computes them: applyRows
+		// decorates the rows it is given in place.
+		m.applyRows(cloneRows(rows), nil, true)
 
 		require.Equal(t, tc.want, m.table.Cursor(),
 			"cursor should land on the remembered row %q", tc.name)
@@ -66,4 +70,26 @@ func TestApplyRows_AutoSelect_ScrollsTargetFullyIntoView(t *testing.T) {
 			"remembered row %q must be scrolled fully into view, not off by one;\nview:\n%s",
 			tc.name, m.table.View())
 	}
+}
+
+// The cursor lands on the remembered row even when the table is too
+// narrow to show its whole name: the name is matched against the plain
+// rows, not the shortened ones on screen.
+func TestApplyRows_LandsOnShortenedName(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	table.WithRows(nil)(m.table)
+	m.table.SetWidth(20)
+	m.table.SetHeight(7)
+	rows := make([]table.Row, 3)
+	for i := range rows {
+		rows[i] = make(table.Row, len(headersFor(domain.Tenant)))
+		rows[i][0] = fmt.Sprintf("a-very-long-tenant-name-%d", i)
+	}
+	m.category = domain.Tenant
+	m.scope = &domain.Scope{Category: domain.Tenant, Name: "a-very-long-tenant-name-2"}
+	m.applyRows(nil, nil, false)
+	m.applyRows(cloneRows(rows), nil, true)
+	require.Equal(t, 2, m.table.Cursor())
+	require.Contains(t, m.table.Rows()[2][0], "…", "precondition: the name is shortened on screen")
 }

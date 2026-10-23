@@ -29,7 +29,8 @@ their width, long ones give way down to longColumnFloor, and whole ones
 (Status) don't shrink at all — sharing what
 there is by ratio. When even the floors don't fit, columns drop from the
 right, sparing the kept ones; a dropped column has width 0, which the
-table skips.
+table skips. When the kept ones alone don't fit, the first column shrinks
+past its floor so Status stays whole.
 */
 func columnWidths(cols []columnSpec, avail, pad int) []int {
 	need := make([]int, len(cols))
@@ -46,7 +47,21 @@ func columnWidths(cols []columnSpec, avail, pad int) []int {
 	room := func() int { return avail - pad*count(visible) }
 	for room() < sumVisible(floor, visible) {
 		if !dropRightmost(cols, visible) {
-			break // only kept columns left; they overflow rather than vanish
+			break // only kept columns left
+		}
+	}
+	// The kept columns alone still don't fit (a narrow terminal and a long
+	// Status, "ERROR: Unhealthy"): the ones that may shrink give up their
+	// floor, down to one cell each, so Status stays whole and the row stays
+	// inside the panel instead of pushing its border off screen.
+	// A table not sized yet (avail 0) has nothing to fit into: leave it.
+	if deficit := sumVisible(floor, visible) - room(); deficit > 0 && avail > 0 {
+		for i := range cols {
+			if visible[i] && !cols[i].whole {
+				cut := min(deficit, floor[i]-1)
+				floor[i] -= cut
+				deficit -= cut
+			}
 		}
 	}
 

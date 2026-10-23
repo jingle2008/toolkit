@@ -79,7 +79,7 @@ func (m *Model) paletteItems() []paletteItem {
 	items = append(items, m.paletteActions()...)
 	items = append(items,
 		paletteItem{
-			kind: "toggle", label: "Alias view", hint: keys.ToggleAlias.Help().Key,
+			kind: "toggle", label: "Alias list", hint: keys.ToggleAlias.Help().Key,
 			run: func() tea.Cmd { return tea.Batch(m.toggleAliases()...) },
 		},
 		paletteItem{
@@ -146,13 +146,23 @@ func (m *Model) paletteEnvironments() []paletteItem {
 // opens from the list view (: is a list-view key).
 func (m *Model) paletteActions() []paletteItem {
 	var items []paletteItem
+	sortItem := func(h key.Help) (paletteItem, bool) {
+		col, ok := strings.CutPrefix(h.Desc, keys.SortPrefix)
+		return paletteItem{
+			kind: "action", label: "Sort by " + col, hint: h.Key,
+			run: func() tea.Cmd { return m.sortTableByColumn(col) },
+		}, ok
+	}
+	// Sorts every list view has (Name) are mode keys, not the category's.
+	for _, b := range m.keys.Mode {
+		if it, ok := sortItem(b.Help()); ok {
+			items = append(items, it)
+		}
+	}
 	for _, b := range m.keys.Context {
 		h := b.Help()
-		if col, ok := strings.CutPrefix(h.Desc, keys.SortPrefix); ok {
-			items = append(items, paletteItem{
-				kind: "action", label: "Sort by " + col, hint: h.Key,
-				run: func() tea.Cmd { return m.sortTableByColumn(col) },
-			})
+		if it, ok := sortItem(h); ok {
+			items = append(items, it)
 			continue
 		}
 		kind := "action"

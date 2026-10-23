@@ -34,6 +34,25 @@ func TestProductionRenderer_RenderJSON_Success(t *testing.T) {
 
 // trimMargins drops glamour's blank lines and shared indent but keeps
 // relative indent and styling.
+// A JSON line too long for the width wraps under its own text: no line
+// gains or loses the left margin, and the tail of a long value isn't
+// left at column one.
+func TestProductionRenderer_WrapsUnderItsLine(t *testing.T) {
+	t.Parallel()
+	json := "{\n    \"name\": \"x\",\n    \"id\": \"ocid1.tenancy.oc1..aaaaaaaaktp7zsg4rekxv3vakzy4h7l3ftungvlrzmwnqwglvpwefohc5pma\"\n}"
+	out, err := ProductionRenderer{}.RenderJSON(json, 40)
+	require.NoError(t, err)
+	lines := strings.Split(stripANSI(out), "\n")
+	assert.Equal(t, "{", lines[0], "no margin on the first line")
+	assert.Equal(t, `    "name": "x",`, lines[1])
+	for _, l := range lines {
+		assert.LessOrEqual(t, len(l), 40, "%q fits", l)
+	}
+	assert.True(t, strings.HasPrefix(lines[2], `    "id": "ocid1.`), lines[2])
+	assert.True(t, strings.HasPrefix(lines[3], "      "), "the continuation hangs under its line: %q", lines[3])
+	assert.Equal(t, "}", lines[len(lines)-1])
+}
+
 func TestTrimMargins(t *testing.T) {
 	t.Parallel()
 	in := "\n  \n    \x1b[31m{\x1b[0m\n      \"a\": 1\n    }\n\n"

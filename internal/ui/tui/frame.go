@@ -161,13 +161,14 @@ func (m *Model) statusView() string {
 	maxCtx := m.viewWidth / 2
 	contextCell := m.theme.Context.Render(truncateString(m.contextString(), maxCtx))
 
-	// On a narrow terminal the stats give way, then the category chip
-	// shrinks, so the line never overflows.
+	// On a narrow terminal the stats give way first, before the chips or
+	// the input text would be cut, then the category chip shrinks, so the
+	// line never overflows.
 	statsCell := ""
 	if text := m.statsText(); text != "" {
 		statsCell = m.theme.Stats.Render(text)
 	}
-	if w(contextCell)+w(statsCell) > m.viewWidth {
+	if w(contextCell)+m.middleWant()+w(statsCell) > m.viewWidth {
 		statsCell = ""
 	}
 	if over := w(contextCell) + w(statsCell) - m.viewWidth; over > 0 {
@@ -192,6 +193,15 @@ func (m *Model) statusView() string {
 		middle = truncateString(ansi.Strip(middle), max(room, 1))
 	}
 	return contextCell + middle + strings.Repeat(" ", max(room-w(middle), 0)) + statsCell
+}
+
+// middleWant is how wide the breadcrumb's middle wants to be: the chips,
+// or while typing the prompt and what was typed (and the cursor).
+func (m *Model) middleWant() int {
+	if m.inputMode != common.NormalInput {
+		return lipgloss.Width(m.textInput.Prompt) + lipgloss.Width(m.textInput.Value()) + 1
+	}
+	return lipgloss.Width(m.breadcrumbChips())
 }
 
 // statsText is the breadcrumb's right cell in the list: what the rows
