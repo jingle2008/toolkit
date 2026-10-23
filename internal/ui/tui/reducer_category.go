@@ -137,7 +137,11 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	if watchCmd != nil {
 		cmds = append(cmds, watchCmd)
 	}
-	return cmds
+	// One batch, so a caller's tea.Sequence runs these together: in order,
+	// the cached rows would wait for the reload they're meant to cover, and
+	// the watch would start only after it. The order they land in doesn't
+	// matter, as the redraw reads whatever the dataset holds by then.
+	return []tea.Cmd{tea.Batch(cmds...)}
 }
 
 // tenantsForOwnersCmd loads the tenancy group when a tenant-owned category
