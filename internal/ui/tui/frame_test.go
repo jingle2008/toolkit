@@ -258,6 +258,26 @@ func TestStatusView_FilterPromptIsSlash(t *testing.T) {
 	assert.Contains(t, ansi.Strip(m.statusView()), "Tenant   /acme", "aligned with the applied chip: Tenant   ⟨/acme⟩")
 }
 
+// On a narrow terminal the stats give way before the filter chip is cut;
+// with room for both, both show.
+func TestStatusView_StatsGiveWayToChips(t *testing.T) {
+	t.Parallel()
+	m := newGoldenModel(t, 40, 20)
+	showCategory(t, m, domain.Tenant)
+	m.stats = tableStats{"Free": 15, "Total": 144}
+	m.filter = "h100_cn"
+
+	line := ansi.Strip(m.statusView())
+	assert.Contains(t, line, "⟨/h100_cn⟩", "the filter chip is whole")
+	assert.NotContains(t, line, "Free: 15", "the stats gave way")
+	assert.LessOrEqual(t, ansi.StringWidth(line), 40)
+
+	m.viewWidth = 120
+	line = ansi.Strip(m.statusView())
+	assert.Contains(t, line, "⟨/h100_cn⟩")
+	assert.Contains(t, line, "Free: 15 • Total: 144")
+}
+
 // The focused panel's border is Accent in every full-screen view: the
 // list, details and the log.
 func TestFrame_FocusedPanelBorderIsAccent(t *testing.T) {
