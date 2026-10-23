@@ -87,6 +87,20 @@ func TestPalette_RunsActions(t *testing.T) {
 	assert.True(t, m.showFaulty)
 }
 
+// Sort by Name, which every list view has, is offered too, with its key.
+func TestPalette_OffersSortByName(t *testing.T) {
+	t.Parallel()
+	m := newPrefixModel(t)
+	m.sortColumn, m.sortAsc = "Tenant", true
+	typePalette(m, "sort by name")
+	require.NotEmpty(t, m.palette.matches)
+	it := m.palette.items[m.palette.matches[0].Index]
+	assert.Equal(t, "Sort by Name", it.label)
+	assert.Equal(t, "s n", it.hint)
+	_, _ = m.Update(keyPress("enter"))
+	assert.Equal(t, common.NameCol, m.sortColumn)
+}
+
 // Environments are offered where quick switch works, and switch on enter.
 func TestPalette_SwitchesEnvironment(t *testing.T) {
 	t.Parallel()
