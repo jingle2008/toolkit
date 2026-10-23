@@ -140,7 +140,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 	table.WithRows(rows)(m.table)
 
 	if autoSelect {
-		if idx := m.reselectIndex(rows, prevKey, prevIdx); idx >= 0 {
+		if idx := m.reselectIndex(prevKey, prevIdx); idx >= 0 {
 			// SetCursor moves the cursor and render window but leaves the
 			// viewport's scroll offset untouched, so a target beyond the
 			// first page lands one row below the visible window (off by
@@ -165,7 +165,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 // rows: the previously selected item (prevKey, at offset prevIdx), else the
 // scope or environment row, else, when the selected item is gone, the row
 // that took its offset. -1 for the top.
-func (m *Model) reselectIndex(rows []table.Row, prevKey models.ItemKey, prevIdx int) int {
+func (m *Model) reselectIndex(prevKey models.ItemKey, prevIdx int) int {
 	// Match identity against m.rawRows, not the just-truncated `rows`:
 	// applyMiddleTruncation may have shortened the key cells (Name/Tenant
 	// for scoped categories), which would defeat the key comparison.
@@ -181,7 +181,8 @@ func (m *Model) reselectIndex(rows []table.Row, prevKey models.ItemKey, prevIdx 
 	if idx := indexOfItemKey(m.rawRows, m.category, m.landOnKey); idx >= 0 {
 		return idx
 	}
-	if idx := m.findContextIndex(rows); idx >= 0 {
+	// The plain rows: a name the display shortened to fit wouldn't match.
+	if idx := m.findContextIndex(m.rawRows); idx >= 0 {
 		return idx
 	}
 	// The selected row is gone (deleted, or filtered out by the reload):

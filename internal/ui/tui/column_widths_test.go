@@ -89,14 +89,18 @@ func TestColumnWidths_DropsFromTheRightSparingKept(t *testing.T) {
 }
 
 // With nothing droppable left, the kept columns still get their floors.
+// When the kept columns alone don't fit, the name shrinks past its floor
+// so Status stays whole and the row stays inside the panel; only a Status
+// wider than the panel overflows.
 func TestColumnWidths_OnlyKeptColumnsLeft(t *testing.T) {
 	t.Parallel()
 	cols := []columnSpec{
 		{title: 4, content: 30, ratio: 0.5, keep: true},
-		{title: 6, content: 6, ratio: 0.5, keep: true},
+		{title: 6, content: 16, ratio: 0.5, keep: true, whole: true}, // "ERROR: Unhealthy"
 	}
-	got := columnWidths(cols, 10, 2)
-	assert.Equal(t, []int{longColumnFloor, 6}, got)
+	assert.Equal(t, []int{4, 16}, columnWidths(cols, 24, 2), "the name gives way; Status keeps 16")
+	assert.Equal(t, []int{1, 16}, columnWidths(cols, 10, 2), "a Status wider than the room still isn't cut")
+	assert.Equal(t, []int{longColumnFloor, 16}, columnWidths(cols, 0, 2), "an unsized table is left alone")
 }
 
 // A whole column (Status) keeps its full value; a droppable column goes
