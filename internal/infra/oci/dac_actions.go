@@ -7,10 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 
 	"github.com/jingle2008/toolkit/pkg/infra/logging"
@@ -130,8 +132,8 @@ func deleteEndpointsInDAC(
 
 	var count int32
 	const maxConcurrent = 5
-	sem := make(chan struct{}, maxConcurrent)
 	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxConcurrent)
 
 	for _, item := range endpoints {
 		// Skip malformed summaries: a nil cluster id on either side can never
@@ -140,11 +142,15 @@ func deleteEndpointsInDAC(
 			continue
 		}
 
-		sem <- struct{}{}
+		// Stop queueing deletions once one has failed or ctx is done: g.Go
+		// waits for a free slot and would otherwise keep launching doomed
+		// work after the group context is cancelled.
+		if gctx.Err() != nil {
+			break
+		}
 		count++
-		ep := item // capture loop variable
+		ep := item
 		g.Go(func() error {
-			defer func() { <-sem }()
 			return deleteEndpoint(gctx, client, &ep, logger)
 		})
 	}
@@ -183,6 +189,26 @@ func deleteEndpoint(
 	return nil
 }
 
+// workRequestPollInterval is how often waitForWorkRequest polls.
+const workRequestPollInterval = 5 * time.Second
+
+// isRetryableWorkRequestError reports whether a GetWorkRequest failure is
+// worth retrying. OCI service errors with a 4xx status other than 429 (an
+// expired session token's 401, 403, 404, ...) fail identically on every
+// poll, so they abort at once; 429, 5xx, and non-service (network) errors
+// are treated as transient.
+func isRetryableWorkRequestError(err error) bool {
+	var se common.ServiceError
+	if !errors.As(err, &se) {
+		return true
+	}
+	code := se.GetHTTPStatusCode()
+	if code == http.StatusTooManyRequests {
+		return true
+	}
+	return code < 400 || code >= 500
+}
+
 func waitForWorkRequest(
 	ctx context.Context,
 	client genAI,
@@ -193,8 +219,7 @@ func waitForWorkRequest(
 		return errors.New("work request id is nil")
 	}
 
-	const interval = 5 * time.Second
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(workRequestPollInterval)
 	defer ticker.Stop()
 
 	for {
@@ -205,6 +230,9 @@ func waitForWorkRequest(
 			wrReq := generativeai.GetWorkRequestRequest{WorkRequestId: workRequestID}
 			wrResp, err := client.GetWorkRequest(ctx, wrReq)
 			if err != nil {
+				if !isRetryableWorkRequestError(err) {
+					return fmt.Errorf("failed to get work request %s: %w", *workRequestID, err)
+				}
 				logger.Warnw("failed to get work request status", "workRequestId", *workRequestID, "error", err)
 				continue
 			}
