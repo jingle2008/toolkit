@@ -4,6 +4,7 @@ package oci
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -25,6 +27,10 @@ type fakeGenAI struct {
 	// call (Err fails every call), letting tests exercise the delete path
 	// after Get/ListEndpoints succeed.
 	DeleteDedicatedErr error
+	// ListEndpointsFunc and DeleteEndpointFunc, when set, replace the canned
+	// responses so tests can serve multiple pages and record deletions.
+	ListEndpointsFunc  func(req generativeai.ListEndpointsRequest) (generativeai.ListEndpointsResponse, error)
+	DeleteEndpointFunc func(req generativeai.DeleteEndpointRequest) (generativeai.DeleteEndpointResponse, error)
 }
 
 func TestDeleteDedicatedAICluster_Success(t *testing.T) {
@@ -93,11 +99,17 @@ func (f *fakeGenAI) DeleteDedicatedAiCluster(_ context.Context, _ generativeai.D
 	return f.DeleteDedicatedResp, f.Err
 }
 
-func (f *fakeGenAI) ListEndpoints(_ context.Context, _ generativeai.ListEndpointsRequest) (generativeai.ListEndpointsResponse, error) {
+func (f *fakeGenAI) ListEndpoints(_ context.Context, req generativeai.ListEndpointsRequest) (generativeai.ListEndpointsResponse, error) {
+	if f.ListEndpointsFunc != nil {
+		return f.ListEndpointsFunc(req)
+	}
 	return f.ListEndpointsResp, f.Err
 }
 
-func (f *fakeGenAI) DeleteEndpoint(_ context.Context, _ generativeai.DeleteEndpointRequest) (generativeai.DeleteEndpointResponse, error) {
+func (f *fakeGenAI) DeleteEndpoint(_ context.Context, req generativeai.DeleteEndpointRequest) (generativeai.DeleteEndpointResponse, error) {
+	if f.DeleteEndpointFunc != nil {
+		return f.DeleteEndpointFunc(req)
+	}
 	return f.DeleteEndpointResp, f.Err
 }
 
@@ -208,4 +220,76 @@ func TestDeleteDedicatedAICluster_NilEndpointClusterID_Skipped(t *testing.T) {
 	err := DeleteDedicatedAICluster(context.Background(), dac, env, &testLogger{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "reached-delete")
+}
+
+// Endpoints past the first ListEndpoints page must be deleted too: every page
+// is requested with the previous response's OpcNextPage token.
+func TestDeleteEndpointsInDAC_FollowsPages(t *testing.T) {
+	clusterID := "ocid1.dedicatedaicluster.oc1..example"
+	otherID := "ocid1.dedicatedaicluster.oc1..other"
+	workReqID := "ocid1.workrequest.oc1..workreq"
+	ep := func(id, cluster string) generativeai.EndpointSummary {
+		return generativeai.EndpointSummary{Id: strPtr(id), DedicatedAiClusterId: strPtr(cluster)}
+	}
+	pages := map[string]generativeai.ListEndpointsResponse{
+		"": {
+			EndpointCollection: generativeai.EndpointCollection{Items: []generativeai.EndpointSummary{ep("ep1", clusterID), ep("x1", otherID)}},
+			OpcNextPage:        strPtr("p2"),
+		},
+		"p2": {
+			EndpointCollection: generativeai.EndpointCollection{Items: []generativeai.EndpointSummary{ep("ep2", clusterID)}},
+			OpcNextPage:        strPtr("p3"),
+		},
+		"p3": {
+			EndpointCollection: generativeai.EndpointCollection{Items: []generativeai.EndpointSummary{ep("ep3", clusterID)}},
+		},
+	}
+
+	var mu sync.Mutex
+	var requested, deleted []string
+	fakeClient := &fakeGenAI{
+		GetWorkRequestResp: generativeai.GetWorkRequestResponse{
+			WorkRequest: generativeai.WorkRequest{Status: generativeai.OperationStatusSucceeded},
+		},
+		ListEndpointsFunc: func(req generativeai.ListEndpointsRequest) (generativeai.ListEndpointsResponse, error) {
+			assert.Equal(t, "compartment", derefOr(req.CompartmentId, ""))
+			page := derefOr(req.Page, "")
+			requested = append(requested, page)
+			return pages[page], nil
+		},
+		DeleteEndpointFunc: func(req generativeai.DeleteEndpointRequest) (generativeai.DeleteEndpointResponse, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			deleted = append(deleted, *req.EndpointId)
+			return generativeai.DeleteEndpointResponse{OpcWorkRequestId: &workReqID}, nil
+		},
+	}
+
+	// testLogger is not goroutine-safe and endpoints are deleted concurrently.
+	dac := &generativeai.DedicatedAiCluster{Id: &clusterID, CompartmentId: strPtr("compartment")}
+	err := deleteEndpointsInDAC(context.Background(), fakeClient, dac, logging.NewNoOpLogger())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"", "p2", "p3"}, requested)
+	assert.ElementsMatch(t, []string{"ep1", "ep2", "ep3"}, deleted)
+}
+
+// A failure on a later page aborts before any endpoint is deleted.
+func TestDeleteEndpointsInDAC_PageError(t *testing.T) {
+	fakeClient := &fakeGenAI{
+		ListEndpointsFunc: func(req generativeai.ListEndpointsRequest) (generativeai.ListEndpointsResponse, error) {
+			if req.Page == nil {
+				return generativeai.ListEndpointsResponse{OpcNextPage: strPtr("p2")}, nil
+			}
+			return generativeai.ListEndpointsResponse{}, errors.New("page2 boom")
+		},
+		DeleteEndpointFunc: func(generativeai.DeleteEndpointRequest) (generativeai.DeleteEndpointResponse, error) {
+			t.Error("no endpoint should be deleted")
+			return generativeai.DeleteEndpointResponse{}, nil
+		},
+	}
+	dac := &generativeai.DedicatedAiCluster{Id: strPtr("dac"), CompartmentId: strPtr("compartment")}
+	err := deleteEndpointsInDAC(context.Background(), fakeClient, dac, &testLogger{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to list endpoints")
+	assert.Contains(t, err.Error(), "page2 boom")
 }

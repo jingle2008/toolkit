@@ -182,13 +182,19 @@ func PopulateGPUPools(
 		return err
 	}
 
-	req := core.ListInstancePoolsRequest{
-		CompartmentId: &compartmentID,
-	}
-	resp, err := mgmtClient.ListInstancePools(ctx, req)
+	summaries, err := listAllPages(func(page *string) ([]core.InstancePoolSummary, *string, error) {
+		resp, err := mgmtClient.ListInstancePools(ctx, core.ListInstancePoolsRequest{
+			CompartmentId: &compartmentID,
+			Page:          page,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to list instance pools: %w, request id: %s",
+				err, derefOr(resp.OpcRequestId, ""))
+		}
+		return resp.Items, resp.OpcNextPage, nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to list instance pools: %w, request id: %s",
-			err, derefOr(resp.OpcRequestId, ""))
+		return err
 	}
 
 	gpuPoolMap := make(map[string]*models.GPUPool)
@@ -197,7 +203,7 @@ func PopulateGPUPools(
 		gpuPools[i].Status = models.GPUPoolStatusNonexistent
 	}
 
-	applyInstancePoolSummaries(gpuPoolMap, resp.Items)
+	applyInstancePoolSummaries(gpuPoolMap, summaries)
 	return nil
 }
 
