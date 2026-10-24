@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/internal/infra/fswatch"
@@ -29,16 +30,48 @@ Client implements all loader interfaces using the production utils package.
 */
 type Client struct {
 	metadataFile    string
-	metadata        *models.Metadata
+	metadata        *metadataState
 	metadataLoadErr error // non-nil when an EXISTING metadata file failed to load or validate; blocks tenant loads and writes
 	tenancy         *tenancyCache
+}
+
+// metadataState holds the tenant metadata the loads read and
+// UpsertTenantMetadata replaces. The MCP server runs tool calls
+// concurrently (set_tenant alongside list_*), so it is guarded. Client
+// holds it by pointer: the Load* methods have value receivers, and a
+// copied mutex would guard nothing.
+type metadataState struct {
+	write sync.Mutex // serializes UpsertTenantMetadata
+	mu    sync.RWMutex
+	m     *models.Metadata
+}
+
+func newMetadataState(m *models.Metadata) *metadataState {
+	return &metadataState{m: m}
+}
+
+// get returns the current metadata; nil on a zero Client. Callers must
+// not modify it: a write replaces it rather than editing it.
+func (s *metadataState) get() *models.Metadata {
+	if s == nil {
+		return nil
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.m
+}
+
+func (s *metadataState) set(m *models.Metadata) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m = m
 }
 
 // New returns a Client implementation for production use.
 func New(ctx context.Context, metadataFile string) loader.Composite {
 	l := &Client{
 		metadataFile: metadataFile,
-		metadata:     &models.Metadata{},
+		metadata:     newMetadataState(&models.Metadata{}),
 		tenancy:      newTenancyCache(),
 	}
 
@@ -51,7 +84,7 @@ func New(ctx context.Context, metadataFile string) loader.Composite {
 				l.metadataLoadErr = fmt.Errorf("existing metadata file %s failed to load: %w", metadataFile, err)
 				logging.FromContext(ctx).Errorw("failed to load metadata file", "file", metadataFile, "error", err)
 			} else {
-				l.metadata = m
+				l.metadata = newMetadataState(m)
 			}
 		}
 		// Missing file: leave empty metadata; the first save creates it.
@@ -69,7 +102,7 @@ func (l Client) LoadDataset(ctx context.Context, repo string, env models.Environ
 	if l.metadataLoadErr != nil {
 		return nil, l.metadataLoadErr
 	}
-	return configloader.LoadDataset(ctx, repo, env, l.metadata)
+	return configloader.LoadDataset(ctx, repo, env, l.metadata.get())
 }
 
 /*
@@ -161,10 +194,10 @@ func (l Client) LoadTenancyOverrideGroup(ctx context.Context, repo string, env m
 	fp, err := configloader.TenancyOverrideFingerprint(repo, env.Realm)
 	if err != nil {
 		logging.FromContext(ctx).Debugw("tenancy override fingerprint failed; loading uncached", "error", err)
-		return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, l.metadata)
+		return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, l.metadata.get())
 	}
 	key := tenancyCacheKey{repo: repo, realm: env.Realm}
-	metadata := l.metadata
+	metadata := l.metadata.get()
 	if group, ok := l.tenancy.get(key, fp, metadata); ok {
 		return group, nil
 	}
@@ -203,15 +236,15 @@ func (Client) LoadPropertyRegionalOverrides(ctx context.Context, repo string, en
 // after the write succeeds, so a failed write leaves memory and disk
 // consistent (the caller's error is the single source of truth).
 //
-// Pointer receiver: it reassigns l.metadata, so the runtime type
-// behind a loader.Composite must be *Client for the optional
-// loader.TenantMetadataWriter assertion to succeed (production.New
-// returns &Client{...}, so it does).
+// Pointer receiver: the runtime type behind a loader.Composite must be
+// *Client for the optional loader.TenantMetadataWriter assertion to
+// succeed (production.New returns &Client{...}, so it does).
 //
-// Not safe for concurrent use with the Load* methods: they share the
-// same *models.Metadata. Callers must sequence the write before any
-// concurrent read (the TUI dispatches the save, waits for its result,
-// then triggers the reload).
+// Safe for concurrent use with the Load* methods and with itself (the
+// MCP server runs set_tenant alongside list_* calls): the metadata is
+// swapped under metadataState's lock, never edited, so a load sees it
+// from before the write or after. Writes are serialized, so memory ends
+// as the last write left the file. Needs a Client from New.
 func (l *Client) UpsertTenantMetadata(entry models.TenantMetadata) error {
 	if l.metadataFile == "" {
 		return errors.New("no metadata file configured")
@@ -219,13 +252,15 @@ func (l *Client) UpsertTenantMetadata(entry models.TenantMetadata) error {
 	if l.metadataLoadErr != nil {
 		return fmt.Errorf("refusing to overwrite metadata: %w", l.metadataLoadErr)
 	}
+	l.metadata.write.Lock()
+	defer l.metadata.write.Unlock()
 	next, err := configloader.UpdateMetadata(l.metadataFile, func(m *models.Metadata) error {
 		return configloader.UpsertTenant(m, entry)
 	})
 	if err != nil {
 		return err
 	}
-	l.metadata = next
+	l.metadata.set(next)
 	return nil
 }
 

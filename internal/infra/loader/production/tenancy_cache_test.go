@@ -73,7 +73,7 @@ func TestLoadTenancyOverrideGroup_ZeroClient(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
 	writeLimitOverride(t, repo, "t1", "ocid1.tenancy.oc1..a")
-	g, err := Client{metadata: &models.Metadata{}}.LoadTenancyOverrideGroup(context.Background(), repo, models.Environment{Realm: "oc1"})
+	g, err := Client{metadata: newMetadataState(&models.Metadata{})}.LoadTenancyOverrideGroup(context.Background(), repo, models.Environment{Realm: "oc1"})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"ocid1.tenancy.oc1..a"}, tenantNames(g))
 }

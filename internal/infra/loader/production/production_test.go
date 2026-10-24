@@ -2,8 +2,10 @@ package production
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -368,4 +370,34 @@ func TestUpsertTenantMetadata_NoPathErrors(t *testing.T) {
 	if err := w.UpsertTenantMetadata(models.TenantMetadata{ID: "x", Name: sp("y"), IsInternal: bp(true)}); err == nil {
 		t.Fatal("expected error when no metadata file is configured")
 	}
+}
+
+// The MCP server runs tool calls concurrently: set_tenant's upsert can
+// land while a list_* call loads. Under -race this catches the metadata
+// being swapped unguarded.
+func TestUpsertTenantMetadata_ConcurrentWithLoads(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "metadata.yaml")
+	ld := New(context.Background(), path)
+	w, ok := ld.(loader.TenantMetadataWriter)
+	require.True(t, ok)
+	repo, env := t.TempDir(), models.Environment{Realm: "oc1", Region: "us-ashburn-1"}
+
+	var wg sync.WaitGroup
+	for i := range 4 {
+		wg.Go(func() {
+			assert.NoError(t, w.UpsertTenantMetadata(models.TenantMetadata{
+				ID: fmt.Sprintf("ocid1.tenancy.oc1..%d", i), Name: sp(fmt.Sprint(i)),
+			}))
+		})
+	}
+	for range 4 {
+		_, _ = ld.LoadDataset(context.Background(), repo, env)
+		_, _ = ld.LoadTenancyOverrideGroup(context.Background(), repo, env)
+	}
+	wg.Wait()
+
+	got, err := configloader.LoadMetadata(path)
+	require.NoError(t, err)
+	assert.Len(t, got.Tenants, 4, "serialized writes keep every entry")
 }
