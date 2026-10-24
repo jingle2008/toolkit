@@ -28,8 +28,11 @@ Destructive: requires explicit --yes; the interactive prompt is
 deliberately disabled to prevent reflex "y" answers.
 
 By default <node> is resolved against the live cluster (kube config +
-env triple required). Pass --ocid to skip the cluster lookup when you
-already know the instance OCID.`,
+env triple required). Pass --ocid to target an instance directly, without
+the cluster lookup (e.g. a node that left the cluster). The instance must
+be a member of one of the env's GPU instance pools (per --repo-path,
+checked in OCI) or the command refuses; the OCID is then the target the
+prompt, dry run and audit log name.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runNodeAction(cmd, cfgFile, mutation.TerminateNode, args[0], ocid, dryRun, yes, terminateInstanceFn)
@@ -37,6 +40,6 @@ already know the instance OCID.`,
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Required: this action has no interactive prompt")
-	cmd.Flags().StringVar(&ocid, "ocid", "", "Skip k8s lookup and target this instance OCID directly")
+	cmd.Flags().StringVar(&ocid, "ocid", "", "Target this instance OCID without the k8s lookup; it must be in one of the env's GPU pools (needs --repo-path)")
 	rootCmd.AddCommand(cmd)
 }

@@ -21,54 +21,54 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// resolveGPUNodeFn is the seam tests use to fake the k8s lookup.
-// In production it constructs a fresh loader per call and delegates
-// to internal/resolve.GPUNode.
-var resolveGPUNodeFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUNode, error) {
+// resolveGPUNodeFn is the seam tests use to fake the node lookup — in
+// the cluster by name, or, given an OCID, in the env's GPU instance
+// pools. In production it constructs a fresh loader per call and
+// delegates to internal/resolve.GPUNode.
+var resolveGPUNodeFn = func(ctx context.Context, cfg config.Config, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 	ld := production.New(ctx, cfg.MetadataFile)
-	return resolve.GPUNode(ctx, ld, cfg.KubeConfig, env, name, "")
-}
-
-// resolveGPUNode produces a *GPUNode suitable for handing to the
-// OCI compute actions. If ocid is set, a stub node is synthesized
-// (no cluster call); otherwise the live cluster is consulted via
-// resolveGPUNodeFn. name is always carried for audit / log
-// readability.
-func resolveGPUNode(ctx context.Context, cfg config.Config, env models.Environment, name, ocid string) (*models.GPUNode, error) {
-	if ocid != "" {
-		return &models.GPUNode{Name: name, ID: ocid}, nil
-	}
-	return resolveGPUNodeFn(ctx, cfg, env, name)
+	return resolve.GPUNode(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name, ocid)
 }
 
 // resolveNode is a mutationPlan.Resolve for a GPU node: it looks the node
-// up (or, given --ocid, takes the instance as is) into *node.
+// up (or, given --ocid, verifies the instance is in one of the env's GPU
+// pools) into *node.
 func resolveNode(cfg config.Config, env models.Environment, name, ocid string, node **models.GPUNode) func(context.Context, *mutationPlan) error {
 	return func(ctx context.Context, p *mutationPlan) error {
-		n, err := resolveGPUNode(ctx, cfg, env, name, ocid)
+		n, err := resolveGPUNodeFn(ctx, cfg, env, name, ocid)
 		if err != nil {
 			return err
 		}
 		*node, p.Resolved = n, mutation.ResolvedNode(n.ID)
+		if ocid != "" {
+			p.Resolved = mutation.ResolvedPoolInstance(n.ID, n.NodePool)
+		}
 		return nil
 	}
 }
 
 // runNodeAction is the RunE of `restart node` and `terminate`: act, an
-// OCI action on the instance backing GPU node name (or the --ocid
-// instance, which needs no cluster lookup).
+// OCI action on the instance backing GPU node name, or on the --ocid
+// instance. That needs no cluster lookup but the Terraform repo, whose
+// GPU pools the instance must belong to; the OCID is then the target the
+// prompt and audit name, and name only a label.
 func runNodeAction(
 	cmd *cobra.Command, cfgFile *string, a mutation.Action, name, ocid string, dryRun, yes bool,
 	act func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error,
 ) error {
-	return withMutationSetup(cfgFile, ocid == "", false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+	target, fields := name, func() []any { return nil }
+	if ocid != "" {
+		target, fields = ocid, func() []any { return []any{"node", name} }
+	}
+	return withMutationSetup(cfgFile, ocid == "", ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 		var node *models.GPUNode
 		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-			Action:  a,
-			Target:  name,
-			DryRun:  dryRun,
-			Yes:     yes,
-			Resolve: resolveNode(cfg, env, name, ocid, &node),
+			Action:      a,
+			Target:      target,
+			DryRun:      dryRun,
+			Yes:         yes,
+			Resolve:     resolveNode(cfg, env, name, ocid, &node),
+			AuditFields: fields,
 		}, func(ctx context.Context) error {
 			return act(ctx, node, env, logging.FromContext(ctx))
 		})
@@ -114,8 +114,10 @@ var resolveGPUPoolFn = func(ctx context.Context, cfg config.Config, env models.E
 //     readable; the path itself is always populated by the persistent
 //     --kubeconfig flag's default (~/.kube/config), so the "missing
 //     flag" case isn't reachable in normal use.
-//   - needsRepo=true  → mutations sourced from Terraform (scale). The
-//     repo path has no default and must be supplied.
+//   - needsRepo=true  → mutations sourced from Terraform (scale, and
+//     restart node / terminate with --ocid, whose instance must be in
+//     one of the declared GPU pools). The repo path has no default and
+//     must be supplied.
 func validateMutationConfig(cfg config.Config, needsKube, needsRepo, needsEnv bool) error {
 	var missing []string
 	if needsRepo && cfg.RepoPath == "" {

@@ -26,15 +26,19 @@ var (
 	populateGPUPoolsFn          = oci.PopulateGPUPools
 	newClientsetFromKubeFn      = k8s.NewClientsetFromKubeConfig
 	listGPUNodesByCompartmentFn = k8s.ListGPUNodes
+	findGPUPoolInstanceFn       = oci.FindGPUPoolInstance
 )
 
 // GPUNode finds a *models.GPUNode for the OCI compute actions. With
-// ocid set, no cluster call is made — a stub {Name, ID:ocid} is
-// returned. With ocid empty, the loader is consulted and the named
-// node is returned by walking every pool.
-func GPUNode(ctx context.Context, ld loader.Composite, kubeConfig string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+// ocid empty, the loader is consulted and the named node is returned by
+// walking every pool. With ocid set, no cluster call is made (the node
+// may have left the cluster): the instance must be a member of one of
+// the env's GPU instance pools, checked in OCI against the pools the
+// Terraform repo at repoPath declares, and the returned node carries
+// that pool. name is only a label then.
+func GPUNode(ctx context.Context, ld loader.Composite, repoPath, kubeConfig string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 	if ocid != "" {
-		return &models.GPUNode{Name: name, ID: ocid}, nil
+		return gpuNodeByOCID(ctx, ld, repoPath, env, name, ocid)
 	}
 	grouped, err := ld.LoadGPUNodesByPool(ctx, kubeConfig, env)
 	if err != nil {
@@ -48,6 +52,32 @@ func GPUNode(ctx context.Context, ld loader.Composite, kubeConfig string, env mo
 		}
 	}
 	return nil, fmt.Errorf("gpu node %q not found in any pool", name)
+}
+
+// gpuNodeByOCID is GPUNode for an instance OCID: it refuses an instance
+// that isn't in one of the env's GPU pools. A partial Terraform load is
+// tolerated — an instance of a pool that failed to load is refused, never
+// let through.
+func gpuNodeByOCID(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+	pools, err := ld.LoadGPUPools(ctx, repoPath, env)
+	if err != nil {
+		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {
+			return nil, fmt.Errorf("load gpu pools: %w", err)
+		}
+		logging.FromContext(ctx).Warnw("gpu pools loaded with partial failures", "error", err)
+	}
+	if len(pools) == 0 {
+		return nil, fmt.Errorf("instance %s: no GPU pools in repo to check it against", ocid)
+	}
+	names := make([]string, len(pools))
+	for i := range pools {
+		names[i] = pools[i].Name
+	}
+	found, err := findGPUPoolInstanceFn(ctx, env, ocid, names)
+	if err != nil {
+		return nil, fmt.Errorf("verify instance %s: %w", ocid, err)
+	}
+	return &models.GPUNode{Name: name, ID: found.ID, NodePool: found.PoolName, CompartmentID: found.CompartmentID}, nil
 }
 
 // GPUPool loads GPU pools from the Terraform repo, finds the named

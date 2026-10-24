@@ -13,7 +13,7 @@ import (
 )
 
 func TestTerminateCmd_DryRun_DoesNotCallOCI(t *testing.T) {
-	stageMutationEnv(t)
+	stageOCIDEnv(t)
 	called := false
 	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
 		called = true
@@ -28,13 +28,13 @@ func TestTerminateCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 	if called {
 		t.Fatal("--dry-run must not call OCI")
 	}
-	if !strings.Contains(out, "DRY-RUN: would terminate node/node-a") {
+	if !strings.Contains(out, "DRY-RUN: would terminate node/ocid1.instance.fake (gpu_pool=pool-a, instance_id=ocid1.instance.fake)") {
 		t.Errorf("expected DRY-RUN line, got: %q", out)
 	}
 }
 
 func TestTerminateCmd_RequiresExplicitYes(t *testing.T) {
-	stageMutationEnv(t)
+	stageOCIDEnv(t)
 	called := false
 	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
 		called = true
@@ -54,7 +54,7 @@ func TestTerminateCmd_RequiresExplicitYes(t *testing.T) {
 }
 
 func TestTerminateCmd_YesCallsOCI(t *testing.T) {
-	stageMutationEnv(t)
+	stageOCIDEnv(t)
 	var gotNode *models.GPUNode
 	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
 		gotNode = n
@@ -66,16 +66,16 @@ func TestTerminateCmd_YesCallsOCI(t *testing.T) {
 		t.Fatalf("execute: %v", err)
 	}
 	if gotNode == nil || gotNode.ID != "ocid1.instance.fake" {
-		t.Errorf("expected synthesized node from --ocid, got: %+v", gotNode)
+		t.Errorf("expected the verified --ocid node, got: %+v", gotNode)
 	}
-	if !strings.Contains(out, "terminate node/node-a: OK") {
+	if !strings.Contains(out, "terminate node/ocid1.instance.fake: OK") {
 		t.Errorf("expected OK, got: %q", out)
 	}
 }
 
 func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 	stageMutationEnv(t)
-	defer swap(&resolveGPUNodeFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUNode, error) {
+	defer swap(&resolveGPUNodeFn, func(_ context.Context, _ config.Config, _ models.Environment, name, _ string) (*models.GPUNode, error) {
 		return &models.GPUNode{Name: name, ID: "ocid1.resolved"}, nil
 	})()
 	var gotNode *models.GPUNode
@@ -93,7 +93,7 @@ func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 }
 
 func TestTerminateCmd_PerformError(t *testing.T) {
-	stageMutationEnv(t)
+	stageOCIDEnv(t)
 	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
 		return errors.New("instance already terminating")
 	})()

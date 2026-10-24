@@ -4,6 +4,7 @@ package resolve
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -81,14 +83,60 @@ func (l stubLoader) LoadPropertyRegionalOverrides(context.Context, string, model
 
 // -- GPUNode -------------------------------------------------------
 
-func TestGPUNode_OcidBypassesLoader(t *testing.T) {
-	t.Parallel()
-	ld := stubLoader{nodesErr: errors.New("loader must not be called")}
-	node, err := GPUNode(context.Background(), ld, "/dev/null", models.Environment{}, "n1", "ocid1.instance.fake")
+// fakeFindPoolInstance swaps the OCI membership check, recording the
+// pool names it was asked to search.
+func fakeFindPoolInstance(t *testing.T, found *oci.PoolInstance, ferr error) *[]string {
+	t.Helper()
+	orig := findGPUPoolInstanceFn
+	t.Cleanup(func() { findGPUPoolInstanceFn = orig })
+	var searched []string
+	findGPUPoolInstanceFn = func(_ context.Context, _ models.Environment, _ string, names []string) (*oci.PoolInstance, error) {
+		searched = names
+		return found, ferr
+	}
+	return &searched
+}
+
+func TestGPUNode_OcidInGPUPool(t *testing.T) {
+	searched := fakeFindPoolInstance(t, &oci.PoolInstance{
+		ID: "ocid1.instance.fake", CompartmentID: "ocid1.compartment", PoolName: "p2", PoolID: "ocid1.instancepool.p2",
+	}, nil)
+	// The cluster is never consulted: the node may have left it.
+	ld := stubLoader{
+		pools:    []models.GPUPool{{Name: "p1"}, {Name: "p2"}},
+		poolsErr: &terraform.PartialLoadError{Source: "GPUPools", Errs: []error{errors.New("oke source missing")}},
+		nodesErr: errors.New("loader must not be called"),
+	}
+	node, err := GPUNode(context.Background(), ld, "/repo", "/dev/null", models.Environment{}, "n1", "ocid1.instance.fake")
 	require.NoError(t, err)
-	require.NotNil(t, node)
-	assert.Equal(t, "n1", node.Name)
-	assert.Equal(t, "ocid1.instance.fake", node.ID)
+	assert.Equal(t, &models.GPUNode{Name: "n1", ID: "ocid1.instance.fake", NodePool: "p2", CompartmentID: "ocid1.compartment"}, node)
+	assert.Equal(t, []string{"p1", "p2"}, *searched)
+}
+
+func TestGPUNode_OcidNotInGPUPool(t *testing.T) {
+	fakeFindPoolInstance(t, nil, fmt.Errorf("instance x: %w", oci.ErrNotGPUPoolInstance))
+	ld := stubLoader{pools: []models.GPUPool{{Name: "p1"}}}
+	_, err := GPUNode(context.Background(), ld, "/repo", "/dev/null", models.Environment{}, "n1", "ocid1.instance.x")
+	require.ErrorIs(t, err, oci.ErrNotGPUPoolInstance)
+	assert.Contains(t, err.Error(), "verify instance ocid1.instance.x")
+}
+
+func TestGPUNode_OcidLookupFails(t *testing.T) {
+	fakeFindPoolInstance(t, nil, errors.New("failed to get instance: 404"))
+	ld := stubLoader{pools: []models.GPUPool{{Name: "p1"}}}
+	_, err := GPUNode(context.Background(), ld, "/repo", "/dev/null", models.Environment{}, "n1", "ocid1.instance.x")
+	require.ErrorContains(t, err, "failed to get instance: 404")
+}
+
+func TestGPUNode_OcidNeedsGPUPools(t *testing.T) {
+	fakeFindPoolInstance(t, nil, errors.New("must not be called"))
+	ctx := context.Background()
+
+	_, err := GPUNode(ctx, stubLoader{poolsErr: errors.New("repo unreadable")}, "/repo", "", models.Environment{}, "n1", "ocid1.instance.x")
+	require.ErrorContains(t, err, "load gpu pools: repo unreadable")
+
+	_, err = GPUNode(ctx, stubLoader{}, "/repo", "", models.Environment{}, "n1", "ocid1.instance.x")
+	require.ErrorContains(t, err, "no GPU pools in repo")
 }
 
 func TestGPUNode_FoundInCluster(t *testing.T) {
@@ -97,7 +145,7 @@ func TestGPUNode_FoundInCluster(t *testing.T) {
 		"pool-a": {{Name: "n1", ID: "ocid1.a"}, {Name: "n2", ID: "ocid1.b"}},
 		"pool-b": {{Name: "n3", ID: "ocid1.c"}},
 	}}
-	node, err := GPUNode(context.Background(), ld, "/dev/null", models.Environment{}, "n2", "")
+	node, err := GPUNode(context.Background(), ld, "/repo", "/dev/null", models.Environment{}, "n2", "")
 	require.NoError(t, err)
 	assert.Equal(t, "ocid1.b", node.ID)
 }
@@ -107,7 +155,7 @@ func TestGPUNode_NotFound(t *testing.T) {
 	ld := stubLoader{nodes: map[string][]models.GPUNode{
 		"pool-a": {{Name: "n1"}},
 	}}
-	_, err := GPUNode(context.Background(), ld, "/dev/null", models.Environment{}, "n-missing", "")
+	_, err := GPUNode(context.Background(), ld, "/repo", "/dev/null", models.Environment{}, "n-missing", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
@@ -115,7 +163,7 @@ func TestGPUNode_NotFound(t *testing.T) {
 func TestGPUNode_LoaderError(t *testing.T) {
 	t.Parallel()
 	ld := stubLoader{nodesErr: errors.New("kube unreachable")}
-	_, err := GPUNode(context.Background(), ld, "/dev/null", models.Environment{}, "n1", "")
+	_, err := GPUNode(context.Background(), ld, "/repo", "/dev/null", models.Environment{}, "n1", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "load gpu nodes")
 	assert.Contains(t, err.Error(), "kube unreachable")

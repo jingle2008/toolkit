@@ -40,7 +40,7 @@ var (
 	mcpPlanOrphanISVCFn   = k8s.PlanOrphanInferenceServiceDelete
 	mcpDeleteOrphanISVCFn = k8s.DeleteOrphanInferenceService
 	mcpResolveGPUNodeFn   = func(ctx context.Context, s *Server, env models.Environment, name, ocid string) (*models.GPUNode, error) {
-		return resolve.GPUNode(ctx, s.loader, s.cfg.KubeConfig, env, name, ocid)
+		return resolve.GPUNode(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name, ocid)
 	}
 	mcpResolveGPUPoolFn = func(ctx context.Context, s *Server, env models.Environment, name string) (*models.GPUPool, error) {
 		return resolve.GPUPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
@@ -76,7 +76,7 @@ type confirmGate struct {
 // doesn't run it: the agent must also name the target it means — the
 // MCP counterpart of the TUI's capital Y and the CLI's mandatory --yes.
 type irreversibleGate struct {
-	ConfirmTarget string `json:"confirm_target,omitempty" jsonschema:"required to execute this irreversible action: the target repeated exactly, as you named it or as dry_run reports it"`
+	ConfirmTarget string `json:"confirm_target,omitempty" jsonschema:"required to execute this irreversible action: the target repeated exactly, as you named it or as dry_run reports it (for a node given by ocid, the OCID)"`
 }
 
 // surfaceMCP is the audit record's surface for every MCP mutation.
@@ -269,14 +269,14 @@ type drainNodeResult struct {
 
 type restartNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
-	OCID string `json:"ocid,omitempty" jsonschema:"skip k8s lookup and target this instance OCID directly"`
+	OCID string `json:"ocid,omitempty" jsonschema:"skip the k8s lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
 	confirmGate
 	envOverride
 }
 
 type terminateNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
-	OCID string `json:"ocid,omitempty" jsonschema:"skip k8s lookup and target this instance OCID directly"`
+	OCID string `json:"ocid,omitempty" jsonschema:"skip the k8s lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
 	confirmGate
 	irreversibleGate
 	envOverride
@@ -431,8 +431,9 @@ func (s *Server) handleDrainStatus(ctx context.Context, req *sdk.CallToolRequest
 	return &sdk.CallToolResult{}, status, nil
 }
 
-// planGPUNode looks the node up (or, given an OCID, takes it as is) into
-// *node, reporting the instance a dry run would act on.
+// planGPUNode looks the node up (or, given an OCID, verifies the instance
+// is in one of the env's GPU pools) into *node, reporting the instance a
+// dry run would act on.
 func (s *Server) planGPUNode(ctx context.Context, env models.Environment, name, ocid string, node **models.GPUNode) func(*planned) error {
 	return func(p *planned) error {
 		n, err := mcpResolveGPUNodeFn(ctx, s, env, name, ocid)
@@ -441,16 +442,31 @@ func (s *Server) planGPUNode(ctx context.Context, env models.Environment, name, 
 		}
 		*node = n
 		p.resolved = mutation.ResolvedNode(n.ID)
+		if ocid != "" {
+			p.resolved = mutation.ResolvedPoolInstance(n.ID, n.NodePool)
+		}
 		return nil
 	}
 }
 
+// nodeTarget is a GPU node action's target and its own audit fields:
+// the node as named, or, given an OCID, the OCID — so an irreversible
+// action's confirm_target must repeat it, not the free-form node label,
+// which the audit record carries beside it.
+func nodeTarget(node, ocid string) (string, func() []any) {
+	if ocid == "" {
+		return node, nil
+	}
+	return ocid, func() []any { return []any{"node", node} }
+}
+
 func (s *Server) handleRestartNode(ctx context.Context, req *sdk.CallToolRequest, in restartNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	a := mutation.RestartNode
-	env := s.effectiveMutationEnv(a, in.Node, in.envOverride)
+	target, fields := nodeTarget(in.Node, in.OCID)
+	env := s.effectiveMutationEnv(a, target, in.envOverride)
 	var node *models.GPUNode
 	return runMutationCall(s, mutationCall[mutationResult]{
-		action: a, target: in.Node, gate: in.confirmGate, envelope: asResult,
+		action: a, target: target, gate: in.confirmGate, envelope: asResult, auditFields: fields,
 		plan: s.planGPUNode(ctx, env, in.Node, in.OCID, &node),
 		perform: func(p planned) (mutationResult, error) {
 			return p.ok(), mcpSoftResetFn(ctx, node, env, logging.FromContext(ctx))
@@ -460,10 +476,11 @@ func (s *Server) handleRestartNode(ctx context.Context, req *sdk.CallToolRequest
 
 func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolRequest, in terminateNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	a := mutation.TerminateNode
-	env := s.effectiveMutationEnv(a, in.Node, in.envOverride)
+	target, fields := nodeTarget(in.Node, in.OCID)
+	env := s.effectiveMutationEnv(a, target, in.envOverride)
 	var node *models.GPUNode
 	return runMutationCall(s, mutationCall[mutationResult]{
-		action: a, target: in.Node, gate: in.confirmGate, confirmTarget: in.ConfirmTarget, envelope: asResult,
+		action: a, target: target, gate: in.confirmGate, confirmTarget: in.ConfirmTarget, envelope: asResult, auditFields: fields,
 		plan: s.planGPUNode(ctx, env, in.Node, in.OCID, &node),
 		perform: func(p planned) (mutationResult, error) {
 			return p.ok(), mcpTerminateFn(ctx, node, env, logging.FromContext(ctx))
@@ -666,6 +683,10 @@ const mutationToolFooter = " Mutating: requires confirm=true to execute, otherwi
 const irreversibleFooter = " IRREVERSIBLE: confirm=true is not enough; also set confirm_target to the target exactly," +
 	" as you named it or as dry_run reports it, else the call is refused."
 
+// ocidToolNote is in the description of the node tools that take an ocid.
+const ocidToolNote = " With ocid, the instance is targeted without a cluster lookup, but only if it is in one of" +
+	" the environment's GPU instance pools; the OCID is then the target."
+
 // registerMutationTools adds the mutating tools. Each requires
 // confirm=true at the input level; the tool description tells the
 // agent explicitly so the contract is discoverable without running
@@ -706,13 +727,14 @@ func registerMutationTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "restart_node",
 		Annotations: recoverable(),
-		Description: "Soft-reset the OCI instance backing a GPU node. Fire-and-forget." + mutationToolFooter,
+		Description: "Soft-reset the OCI instance backing a GPU node. Fire-and-forget." + ocidToolNote + mutationToolFooter,
 	}, s.handleRestartNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "terminate_node",
 		Annotations: destructive(),
-		Description: "Terminate the OCI instance backing a GPU node (boot volume destroyed). DESTRUCTIVE." + mutationToolFooter + irreversibleFooter,
+		Description: "Terminate the OCI instance backing a GPU node (boot volume destroyed). DESTRUCTIVE." + ocidToolNote +
+			mutationToolFooter + irreversibleFooter + " With ocid set, confirm_target must be that OCID, not the node name.",
 	}, s.handleTerminateNode)
 
 	sdk.AddTool(s.server, &sdk.Tool{

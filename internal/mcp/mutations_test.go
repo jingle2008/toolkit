@@ -267,6 +267,7 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
+	stubOCIDResolver(t)
 	var gotNode *models.GPUNode
 	orig := mcpTerminateFn
 	defer func() { mcpTerminateFn = orig }()
@@ -283,13 +284,13 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 			"node":           "node-a",
 			"ocid":           "ocid1.instance.fake",
 			"confirm":        true,
-			"confirm_target": "node-a",
+			"confirm_target": "ocid1.instance.fake",
 		},
 	})
 	require.NoError(t, err)
 	assert.False(t, res.IsError)
 	if gotNode == nil || gotNode.ID != "ocid1.instance.fake" {
-		t.Errorf("expected synthesized node, got: %+v", gotNode)
+		t.Errorf("expected the verified node, got: %+v", gotNode)
 	}
 }
 
@@ -297,6 +298,7 @@ func TestIntegration_RestartNodeTool_ConfirmTrueExecutes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
+	stubOCIDResolver(t)
 	var gotNode *models.GPUNode
 	orig := mcpSoftResetFn
 	defer func() { mcpSoftResetFn = orig }()
@@ -321,7 +323,7 @@ func TestIntegration_RestartNodeTool_ConfirmTrueExecutes(t *testing.T) {
 	if gotNode == nil || gotNode.ID != "ocid1.instance.fake" {
 		t.Errorf("expected synthesized node from --ocid, got: %+v", gotNode)
 	}
-	assertMutationOK(t, res, "restart", "node", "node-a")
+	assertMutationOK(t, res, "restart", "node", "ocid1.instance.fake")
 }
 
 func TestIntegration_ScaleGPUPoolTool_ConfirmTrueExecutes(t *testing.T) {
@@ -508,7 +510,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 			"node":           "node-a",
 			"ocid":           "ocid1.instance.fake",
 			"confirm":        true,
-			"confirm_target": "node-a",
+			"confirm_target": "ocid1.instance.fake",
 			"env_realm":      "oc2",
 		},
 	})
