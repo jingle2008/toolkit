@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -124,7 +124,7 @@ func TestModel_LoadData_TableDriven(t *testing.T) {
 				WithRepoPath("repo"),
 				WithEnvironment(models.Environment{Type: "t", Region: "r", Realm: "rl"}),
 				WithLoader(tc.loader),
-				WithLogger(logging.NewNoOpLogger()),
+				WithLogger(logging.Discard()),
 			)
 			if err != nil {
 				t.Fatalf("NewModel failed: %v", err)
@@ -191,7 +191,7 @@ func newTestModel(t *testing.T) *Model {
 		WithRepoPath("testrepo"),
 		WithEnvironment(env),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	m.dataset = &models.Dataset{
@@ -308,7 +308,7 @@ func TestNewModelInitializesFields(t *testing.T) {
 		WithEnvironment(env),
 		WithCategory(domain.Tenant),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, m)
@@ -329,7 +329,7 @@ func TestModelContextStringAndInfoView(t *testing.T) {
 		WithEnvironment(env),
 		WithCategory(domain.LimitTenancyOverride),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	// Set scope.Category to Tenant, m.category to LimitTenancyOverride
@@ -450,7 +450,7 @@ func TestModel_GetCurrentItem_and_HandleAdditionalKeys(t *testing.T) {
 		WithRepoPath("testrepo"),
 		WithEnvironment(env),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	m.dataset = ds
@@ -473,7 +473,7 @@ func TestLongOpCtx_NoShortCapAndCancelsOnShutdown(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 		WithContext(parent),
 	)
 	require.NoError(t, err)
@@ -500,7 +500,7 @@ func TestModel_Init(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	cmd := m.Init()
@@ -513,7 +513,7 @@ func TestModel_updateColumns(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	m.table.SetWidth(80)
 	m.category = domain.BaseModel
@@ -527,7 +527,7 @@ func TestModel_updateCategory(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	m.dataset = &models.Dataset{}
 	cmd := m.updateCategory(domain.BaseModel)
@@ -540,7 +540,7 @@ func TestModel_openCategory(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	m.dataset = &models.Dataset{
 		BaseModels:            []models.BaseModel{},
@@ -558,7 +558,7 @@ func TestModel_enterContext(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phoenix-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	// Region.Code("us-phoenix-1") == "phx", so Environment.GetName() == "dev-phx".
 	m.table.SetColumns([]table.Column{{Title: "Region", Width: 10}})

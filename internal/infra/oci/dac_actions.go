@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/generativeai"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -65,7 +65,7 @@ func GetDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluster, 
 /*
 DeleteDedicatedAICluster deletes a DedicatedAICluster using the OCI Generative AI SDK.
 */
-func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluster, env models.Environment, logger logging.Logger) error {
+func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluster, env models.Environment, logger *slog.Logger) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -83,7 +83,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 		return fmt.Errorf("failed to get DedicatedAiCluster: %w", err)
 	}
 
-	logger.Infow("deleting DedicatedAiCluster", "id", getResp.Id, "name", getResp.DisplayName)
+	logger.Info("deleting DedicatedAiCluster", "id", getResp.Id, "name", getResp.DisplayName)
 	if err := deleteEndpointsInDAC(ctx, client, &getResp.DedicatedAiCluster, logger); err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func DeleteDedicatedAICluster(ctx context.Context, dac *models.DedicatedAICluste
 		return fmt.Errorf("DedicatedAICluster deletion did not complete successfully: %w", err)
 	}
 
-	logger.Infow("DedicatedAICluster is deleted successfully", "id",
+	logger.Info("DedicatedAICluster is deleted successfully", "id",
 		dacID, "opc-request-id", delResp.OpcRequestId)
 
 	return nil
@@ -112,7 +112,7 @@ func deleteEndpointsInDAC(
 	ctx context.Context,
 	client genAI,
 	dac *generativeai.DedicatedAiCluster,
-	logger logging.Logger,
+	logger *slog.Logger,
 ) error {
 	endpoints, err := listAllPages(func(page *string) ([]generativeai.EndpointSummary, *string, error) {
 		resp, err := client.ListEndpoints(ctx, generativeai.ListEndpointsRequest{
@@ -128,7 +128,7 @@ func deleteEndpointsInDAC(
 		return err
 	}
 
-	logger.Infow("endpoints found", "count", len(endpoints))
+	logger.Info("endpoints found", "count", len(endpoints))
 
 	var count int32
 	const maxConcurrent = 5
@@ -159,7 +159,7 @@ func deleteEndpointsInDAC(
 		return err
 	}
 
-	logger.Infow("endpoints deleted", "count", count)
+	logger.Info("endpoints deleted", "count", count)
 	return nil
 }
 
@@ -167,9 +167,9 @@ func deleteEndpoint(
 	ctx context.Context,
 	client genAI,
 	endpoint *generativeai.EndpointSummary,
-	logger logging.Logger,
+	logger *slog.Logger,
 ) error {
-	logger.Infow("deleting endpoint", "id", endpoint.Id, "name", endpoint.DisplayName)
+	logger.Info("deleting endpoint", "id", endpoint.Id, "name", endpoint.DisplayName)
 	delReq := generativeai.DeleteEndpointRequest{
 		EndpointId: endpoint.Id,
 	}
@@ -183,7 +183,7 @@ func deleteEndpoint(
 		return fmt.Errorf("endpoint deletion did not complete successfully: %w", err)
 	}
 
-	logger.Infow("endpoint is deleted successfully", "id",
+	logger.Info("endpoint is deleted successfully", "id",
 		endpoint.Id, "opc-request-id", delResp.OpcRequestId)
 
 	return nil
@@ -213,7 +213,7 @@ func waitForWorkRequest(
 	ctx context.Context,
 	client genAI,
 	workRequestID *string,
-	logger logging.Logger,
+	logger *slog.Logger,
 ) error {
 	if workRequestID == nil {
 		return errors.New("work request id is nil")
@@ -233,7 +233,7 @@ func waitForWorkRequest(
 				if !isRetryableWorkRequestError(err) {
 					return fmt.Errorf("failed to get work request %s: %w", *workRequestID, err)
 				}
-				logger.Warnw("failed to get work request status", "workRequestId", *workRequestID, "error", err)
+				logger.Warn("failed to get work request status", "workRequestId", *workRequestID, "error", err)
 				continue
 			}
 			status := string(wrResp.Status)

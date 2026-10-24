@@ -9,8 +9,8 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mcp"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 // addMCPCommand wires the `toolkit mcp` subcommand that boots a
@@ -63,12 +63,12 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		}
 
 		// Stdout is reserved for MCP frames — logs go to cfg.LogFile.
-		logger, err := initLogger(cfg)
+		logger, logFile, err := initLogger(cfg)
 		if err != nil {
 			return err
 		}
-		logger = logger.WithFields("cmd", "mcp", "version", version)
-		defer func() { _ = logger.Sync() }()
+		logger = logger.With("cmd", "mcp", "version", version)
+		defer func() { _ = logFile.Close() }()
 		logEnvAliases(logger, rawType, rawRegion, cfg)
 
 		ctx := logging.WithContext(cmd.Context(), logger)
@@ -78,7 +78,7 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 
 		ld := production.New(ctx, cfg.MetadataFile)
 		srv := mcp.NewServer(cfg, ld, logger, version)
-		logger.Infow(
+		logger.Info(
 			"mcp server starting",
 			"repo", cfg.RepoPath,
 			"env_type", cfg.EnvType,

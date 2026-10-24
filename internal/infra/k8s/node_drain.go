@@ -19,7 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/drain"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 /*
@@ -287,9 +287,9 @@ func DrainProgressFrom(ctx context.Context) DrainProgressFunc {
 func note(ctx context.Context, warn bool, msg string, kv ...any) {
 	logger := logging.FromContext(ctx)
 	if warn {
-		logger.Warnw(msg, kv...)
+		logger.Warn(msg, kv...)
 	} else {
-		logger.Infow(msg, kv...)
+		logger.Info(msg, kv...)
 	}
 	var b strings.Builder
 	b.WriteString(msg)
@@ -347,7 +347,7 @@ func (d *drainer) start(ctx context.Context) (DrainStatus, error) {
 	status, err := d.status(ctx)
 	if err != nil {
 		// The step succeeded; report it without the live view.
-		logging.FromContext(ctx).Warnw("drain: status read failed", "node", d.node, "error", err)
+		logging.FromContext(ctx).Warn("drain: status read failed", "node", d.node, "error", err)
 		status = DrainStatus{Node: d.node, DrainState: st}
 	}
 	if st.Phase == DrainFailed {
@@ -663,7 +663,7 @@ func readDrainState(ctx context.Context, node *corev1.Node) DrainState {
 	}
 	var st DrainState
 	if err := json.Unmarshal([]byte(raw), &st); err != nil || st.Phase == "" {
-		logging.FromContext(ctx).Warnw("drain: ignoring unreadable drain annotation", "node", node.Name, "value", raw, "error", err)
+		logging.FromContext(ctx).Warn("drain: ignoring unreadable drain annotation", "node", node.Name, "value", raw, "error", err)
 		return DrainState{Phase: DrainNone}
 	}
 	return st

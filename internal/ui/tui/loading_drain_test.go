@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -31,7 +32,7 @@ func TestStartupHang_LazyCategory(t *testing.T) {
 		category:       domain.ImportedModel,
 		loadingSpinner: &spinner.Model{},
 		loadingTimer:   &stopwatch.Model{},
-		logger:         fakeLogger{},
+		logger:         logging.Discard(),
 		viewMode:       common.ListView,
 	}
 
@@ -87,7 +88,7 @@ func TestLoadedMsg_ArrivesDuringDetailsView(t *testing.T) {
 		category:       domain.ImportedModel,
 		loadingSpinner: &s,
 		loadingTimer:   &w,
-		logger:         fakeLogger{},
+		logger:         logging.Discard(),
 		viewMode:       common.DetailsView, // user navigated away during the load
 		dataset:        &models.Dataset{},  // already past first boot
 		table:          &tbl,
@@ -127,7 +128,7 @@ func TestBeginTask_KeepsActiveViewWhenDatasetExists(t *testing.T) {
 	m := &Model{
 		loadingSpinner: &spinner.Model{},
 		loadingTimer:   &stopwatch.Model{},
-		logger:         fakeLogger{},
+		logger:         logging.Discard(),
 		viewMode:       common.ListView,
 		dataset:        &models.Dataset{}, // already loaded
 	}

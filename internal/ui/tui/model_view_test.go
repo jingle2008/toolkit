@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -22,7 +22,7 @@ func TestModel_updateContent_and_View(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	m.table.SetColumns([]table.Column{{Title: "Region", Width: 10}})
 	m.table.SetRows([]table.Row{{"dev-UNKNOWN"}})
@@ -48,7 +48,7 @@ func makeTestModel() *Model {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	m.viewWidth = 80
 	m.viewHeight = 24

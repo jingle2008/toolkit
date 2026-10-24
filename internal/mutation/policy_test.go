@@ -2,13 +2,14 @@ package mutation
 
 import (
 	"errors"
+	"log/slog"
 	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -65,9 +66,9 @@ func fields(e logging.Entry) map[string]any {
 func TestAudit_Record(t *testing.T) {
 	t.Parallel()
 	sink := logging.NewRingSink(8)
-	Audit(sink, "cli", TerminateNode, "n1", PhaseBegin, nil)
-	Audit(sink, "mcp", DeleteDAC, "d1", PhaseFailed, errors.New("boom"))
-	Audit(sink, "cli", CordonNode, "n1", PhaseDryRun, nil)
+	Audit(slog.New(sink), "cli", TerminateNode, "n1", PhaseBegin, nil)
+	Audit(slog.New(sink), "mcp", DeleteDAC, "d1", PhaseFailed, errors.New("boom"))
+	Audit(slog.New(sink), "cli", CordonNode, "n1", PhaseDryRun, nil)
 
 	got := sink.Snapshot()
 	require.Len(t, got, 3)
@@ -156,11 +157,11 @@ func TestPoolScaleNotice(t *testing.T) {
 func TestAudit_Fields(t *testing.T) {
 	t.Parallel()
 	sink := logging.NewRingSink(2)
-	Audit(sink, "cli", ScaleGPUPool, "p", PhaseDone, nil, "add", 2, "to", 6)
+	Audit(slog.New(sink), "cli", ScaleGPUPool, "p", PhaseDone, nil, "add", 2, "to", 6)
 	got := sink.Snapshot()
 	require.Len(t, got, 1)
 	f := fields(got[0])
 	assert.Equal(t, "p", f["target"])
-	assert.Equal(t, 2, f["add"])
-	assert.Equal(t, 6, f["to"])
+	assert.Equal(t, int64(2), f["add"]) // slog normalizes ints to int64
+	assert.Equal(t, int64(6), f["to"])
 }

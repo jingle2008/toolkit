@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -13,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 func TestConfirmAction(t *testing.T) {
@@ -261,7 +262,7 @@ func TestRunMutation_Audits(t *testing.T) {
 	t.Parallel()
 	phasesIn := func(stdin string, plan mutationPlan, perform func(context.Context) error) []string {
 		sink := logging.NewRingSink(8)
-		ctx := logging.WithContext(context.Background(), sink)
+		ctx := logging.WithContext(context.Background(), slog.New(sink))
 		_ = runMutation(ctx, strings.NewReader(stdin), &bytes.Buffer{}, plan, perform)
 		var got []string
 		for _, e := range sink.Snapshot() {

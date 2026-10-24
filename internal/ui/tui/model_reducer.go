@@ -414,7 +414,7 @@ func (m *Model) handleDataMsg(msg dataMsg) {
 	}
 	if msg.Data != nil {
 		m.endTask(true)
-		m.logger.Infow("data loaded", "category", m.category, "pendingTasks", m.pendingTasks)
+		m.logger.Info("data loaded", "category", m.category, "pendingTasks", m.pendingTasks)
 	}
 	m.refreshDisplay()
 }
@@ -488,7 +488,7 @@ func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category
 		m.loadFailed = false
 	}
 	m.endTask(true)
-	m.logger.Infow("data loaded", "category", category, "count", count, "pendingTasks", m.pendingTasks)
+	m.logger.Info("data loaded", "category", category, "count", count, "pendingTasks", m.pendingTasks)
 	// Only rebuild the visible table when the load is for the category
 	// currently on screen. A background load for another category — e.g. a
 	// model catalog fetched to resolve a DAC's metrics capability while the
@@ -656,12 +656,12 @@ func (m *Model) reloadCategoryCmd(cat domain.Category, gen int) tea.Cmd {
 // the watch goroutine is already being torn down via loadCtx cancel.
 func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
 	if msg.Gen != m.gens.msg {
-		m.logger.Debugw("watch started ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
+		m.logger.Debug("watch started ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
 	m.watch.k8sActive = true
 	m.watch.k8sTrigger = msg.Trigger
-	m.logger.Infow("watch started", "category", msg.Cat, "gen", msg.Gen)
+	m.logger.Info("watch started", "category", msg.Cat, "gen", msg.Gen)
 	wait := waitForK8sTriggerCmd(msg.Cat, msg.Trigger, msg.Gen)
 	// The version is fetched once per environment; if that failed (an
 	// expired session since renewed), a watch starting shows the cluster
@@ -677,10 +677,10 @@ func (m *Model) handleK8sWatchStarted(msg k8sWatchStartedMsg) tea.Cmd {
 // messages (msg.Gen != m.gens.msg) are ignored without side effects.
 func (m *Model) handleK8sWatchTriggered(msg k8sWatchTriggeredMsg) tea.Cmd {
 	if msg.Gen != m.gens.msg || msg.Cat != m.category {
-		m.logger.Debugw("watch triggered ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
+		m.logger.Debug("watch triggered ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
-	m.logger.Debugw("watch triggered", "category", msg.Cat, "gen", msg.Gen)
+	m.logger.Debug("watch triggered", "category", msg.Cat, "gen", msg.Gen)
 	reload := m.reloadCategoryCmd(msg.Cat, msg.Gen)
 	if reload == nil {
 		return nil
@@ -696,11 +696,11 @@ func (m *Model) handleK8sWatchClosed(msg k8sWatchClosedMsg) tea.Cmd {
 	// close is then still current, but for a category no longer shown,
 	// and must not reload it in the background.
 	if msg.Gen != m.gens.msg || msg.Cat != m.category {
-		m.logger.Debugw("watch closed ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
+		m.logger.Debug("watch closed ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return nil
 	}
 	m.watch.k8sActive = false
-	m.logger.Infow("watch closed — clearing live indicator (no reconnect)", "category", msg.Cat, "gen", msg.Gen)
+	m.logger.Info("watch closed — clearing live indicator (no reconnect)", "category", msg.Cat, "gen", msg.Gen)
 	reload := m.reloadCategoryCmd(msg.Cat, msg.Gen)
 	if reload == nil {
 		return nil
@@ -712,11 +712,11 @@ func (m *Model) handleK8sWatchClosed(msg k8sWatchClosedMsg) tea.Cmd {
 // static load result remains on screen.
 func (m *Model) handleK8sWatchUnavailable(msg k8sWatchUnavailableMsg) {
 	if msg.Gen != m.gens.msg {
-		m.logger.Debugw("watch unavailable ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
+		m.logger.Debug("watch unavailable ignored (stale gen)", "category", msg.Cat, "msgGen", msg.Gen, "gen", m.gens.msg)
 		return
 	}
 	m.watch.k8sActive = false
-	m.logger.Infow("watch unavailable (no live watch)", "category", msg.Cat, "gen", msg.Gen)
+	m.logger.Info("watch unavailable (no live watch)", "category", msg.Cat, "gen", msg.Gen)
 }
 
 // waitForK8sTrigger re-arms the listener on the stored trigger channel.
@@ -775,7 +775,7 @@ func (m *Model) endTask(success bool) {
 	}
 	if m.pendingTasks == 0 {
 		elapsed := m.loadingTimer.Elapsed().String()
-		m.logger.Infow(
+		m.logger.Info(
 			"data load completed",
 			"category", m.category,
 			"success", success,

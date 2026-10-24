@@ -7,8 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -18,7 +18,7 @@ func TestTypedLoadBaseModelsCmd_Run(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	// Use a background context for the typed command constructor
 	gen := m.bumpGen()
@@ -33,7 +33,7 @@ func TestModelUpdate_QuitKey(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	msg := keyPress("ctrl+c")
 	_, cmd := m.Update(msg)
@@ -46,7 +46,7 @@ func TestModelUpdate_WindowSizeMsg(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	msg := tea.WindowSizeMsg{Width: 80, Height: 24}
 	_, cmd := m.Update(msg)
@@ -61,7 +61,7 @@ func TestModelReduce_ViewModes(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	// HelpView
 	m.viewMode = common.HelpView
@@ -83,7 +83,7 @@ func TestEnterEditModeAndExitEditMode(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	m.enterFilterMode()
 	assert.Equal(t, common.EditInput, m.inputMode)

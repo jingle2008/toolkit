@@ -17,10 +17,10 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/internal/resolve"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -178,12 +178,12 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		// users who configured `log-format: json` for scripting actually get
 		// JSON. Logs still go to cfg.LogFile by default, keeping stdout
 		// clean for piping.
-		logger, err := initLogger(cfg)
+		logger, logFile, err := initLogger(cfg)
 		if err != nil {
 			return err
 		}
-		logger = logger.WithFields("cmd", "get")
-		defer func() { _ = logger.Sync() }()
+		logger = logger.With("cmd", "get")
+		defer func() { _ = logFile.Close() }()
 		logEnvAliases(logger, rawType, rawRegion, cfg)
 
 		ctx := logging.WithContext(cmd.Context(), logger)
@@ -404,7 +404,7 @@ func warnNoneRelated(cat domain.Category, related *domain.Scope) {
 func tenantDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) *models.Dataset {
 	ds, err := resolve.TenantDataset(ctx, ld, cfg.RepoPath, env)
 	if err != nil {
-		logging.FromContext(ctx).Warnw("tenant resolution unavailable", "error", err)
+		logging.FromContext(ctx).Warn("tenant resolution unavailable", "error", err)
 		fmt.Fprintf(os.Stderr, "warning: tenant names unresolved: %s\n", err)
 	}
 	return ds
@@ -418,7 +418,7 @@ func workloadOwnersDataset(ctx context.Context, ld loader.Composite, cfg config.
 	if dacs, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env); err == nil {
 		ds.SetDedicatedAIClusterMap(dacs)
 	} else {
-		logging.FromContext(ctx).Warnw("dacs for workload tenants unavailable", "error", err)
+		logging.FromContext(ctx).Warn("dacs for workload tenants unavailable", "error", err)
 	}
 	return ds
 }
@@ -466,7 +466,7 @@ func emitCategory(
 			// the per-source failures on stderr so scripts and LLM
 			// consumers know the result is incomplete, then proceed.
 			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
-				logging.FromContext(ctx).Warnw("load gpu pools: partial failure", "error", partial)
+				logging.FromContext(ctx).Warn("load gpu pools: partial failure", "error", partial)
 				fmt.Fprintf(os.Stderr, "warning: load gpu pools: %s\n", partial.Error())
 			} else {
 				return fmt.Errorf("load gpu pools: %w", err)
@@ -477,7 +477,7 @@ func emitCategory(
 		// failure so an offline / no-OCI-auth session still prints the
 		// Terraform-derived columns.
 		if err := resolve.EnrichGPUPools(ctx, items, cfg.KubeConfig, env); err != nil {
-			logging.FromContext(ctx).Warnw("gpu pool enrichment incomplete", "error", err)
+			logging.FromContext(ctx).Warn("gpu pool enrichment incomplete", "error", err)
 			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", err)
 		}
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GPUPool, env, selected)

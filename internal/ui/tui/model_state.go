@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"image/color"
+	"log/slog"
 	"os"
 	"time"
 
@@ -20,12 +21,12 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/internal/uistate"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -103,7 +104,7 @@ It manages state, events, and rendering for the Bubble Tea UI.
 */
 type Model struct {
 	pendingTasks  int
-	logger        logging.Logger
+	logger        *slog.Logger
 	parentCtx     context.Context //nolint:containedctx // stored to manage lifecycle across async loads
 	loadCtx       context.Context //nolint:containedctx // stored to manage lifecycle across async loads
 	loadCancel    context.CancelFunc
@@ -357,7 +358,7 @@ func (m *Model) newLoadContext() {
 		// Cancel any in-flight load to prevent stale work
 		m.loadCancel()
 		if m.logger != nil {
-			m.logger.Infow("canceled in-flight load")
+			m.logger.Info("canceled in-flight load")
 		}
 	}
 	parent := m.parentCtx
@@ -448,7 +449,7 @@ func (m *Model) cancelInFlight() {
 	if m.loadCancel != nil {
 		m.loadCancel()
 		if m.logger != nil {
-			m.logger.Infow("canceled in-flight tasks")
+			m.logger.Info("canceled in-flight tasks")
 		}
 	}
 }

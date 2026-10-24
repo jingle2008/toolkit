@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 // restartedAtAnnotation is the InferenceService annotation the OME
@@ -141,7 +141,7 @@ func patchRestartedAt(ctx context.Context, client dynamic.Interface, gvr schema.
 		Patch(ctx, name, types.MergePatchType, patch, v1.PatchOptions{}); err != nil {
 		return fmt.Errorf("restart InferenceService %s/%s: %w", namespace, name, err)
 	}
-	logging.FromContext(ctx).Infow("restarted inference service",
+	logging.FromContext(ctx).Info("restarted inference service",
 		"namespace", namespace, "name", name, "apiGroup", gvr.Group, restartedAtAnnotation, restartedAt)
 	return nil
 }

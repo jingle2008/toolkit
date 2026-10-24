@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -20,10 +21,10 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui"
 	"github.com/jingle2008/toolkit/internal/uistate"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -110,7 +111,7 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 			return err
 		}
 
-		logger, err := initLogger(cfg)
+		logger, logFile, err := initLogger(cfg)
 		if err != nil {
 			return err
 		}
@@ -118,10 +119,8 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 		// Tag every line in the shared log file with the originating
 		// command + build, so concurrent tui/cli/mcp sessions writing the
 		// same file stay distinguishable.
-		logger = logger.WithFields("cmd", "tui", "version", version)
-		defer func() {
-			_ = logger.Sync()
-		}()
+		logger = logger.With("cmd", "tui", "version", version)
+		defer func() { _ = logFile.Close() }()
 
 		// Validate config after log options so flag errors surface first.
 		if err := cfg.Validate(); err != nil {
@@ -132,7 +131,7 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 		// sent from outside, cancels it. Ctrl+C typed in the TUI is not a
 		// signal (the terminal is in raw mode); Bubble Tea sees it as a key.
 		if err := runToolkit(cmd.Context(), logger, cfg, version); err != nil {
-			logger.Errorw("fatal error", "error", err)
+			logger.Error("fatal error", "error", err)
 			return err
 		}
 		return nil
@@ -187,7 +186,7 @@ func execute(version string) error {
 }
 
 // runToolkit wires the loaded config into the TUI and runs the Bubble Tea program.
-func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, version string) error {
+func runToolkit(ctx context.Context, logger *slog.Logger, cfg config.Config, version string) error {
 	category, _ := domain.ParseCategory(cfg.Category)
 	env := models.Environment{
 		Type:   cfg.EnvType,
@@ -199,12 +198,14 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 
 	// Capture the log stream in memory (all levels) so the TUI's log
 	// overlay can render it live, while the file logger keeps writing.
-	// The ring is teed raw, so on-screen lines omit the cmd/version
-	// correlation prefix the file log carries.
+	// The ring leg starts without the file leg's bound attrs, so
+	// on-screen lines omit the cmd/version correlation prefix the file
+	// log carries. klog is re-routed so client-go lines show there too.
 	ring := logging.NewRingSink(1000)
-	logger = logging.NewTee(logger, ring)
+	logger = slog.New(logging.NewFanout(logger.Handler(), ring))
+	routeKlog(logger)
 	ctx = logging.WithContext(ctx, logger)
-	logger.Infow(
+	logger.Info(
 		"starting toolkit",
 		"repo", repoPath,
 		"env", env,
@@ -229,14 +230,14 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 	recentPath := filepath.Join(home, ".config", "toolkit", "state.yaml")
 	recent, err := recentenv.Load(recentPath)
 	if err != nil {
-		logger.Warnw("failed to load recent contexts", "path", recentPath, "error", err)
+		logger.Warn("failed to load recent contexts", "path", recentPath, "error", err)
 	}
 	// UI preferences (the keymap version behind the keys-changed hint)
 	// live beside it; a broken file just shows the hint once more.
 	uiPath := filepath.Join(home, ".config", "toolkit", "ui.yaml")
 	ui, err := uistate.Load(uiPath)
 	if err != nil {
-		logger.Warnw("failed to load ui state", "path", uiPath, "error", err)
+		logger.Warn("failed to load ui state", "path", uiPath, "error", err)
 	}
 
 	model, err := tui.NewModel(
@@ -254,13 +255,13 @@ func runToolkit(ctx context.Context, logger logging.Logger, cfg config.Config, v
 		tui.WithUIState(ui, uiPath),
 	)
 	if err != nil {
-		logger.Errorw("failed to create toolkit model", "error", err)
+		logger.Error("failed to create toolkit model", "error", err)
 		return fmt.Errorf("create toolkit model: %w", err)
 	}
 	p := tea.NewProgram(model, tea.WithContext(ctx))
 	_, err = p.Run()
 	if err != nil && !errors.Is(err, context.Canceled) {
-		logger.Errorw("program error", "error", err)
+		logger.Error("program error", "error", err)
 		return fmt.Errorf("program error: %w", err)
 	}
 	return nil

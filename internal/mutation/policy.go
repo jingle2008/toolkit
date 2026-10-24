@@ -6,7 +6,7 @@
 // another, or audited under different names).
 package mutation
 
-import "github.com/jingle2008/toolkit/pkg/infra/logging"
+import "log/slog"
 
 // Tier classifies an action by blast radius.
 type Tier int
@@ -95,7 +95,7 @@ const (
 // which logs at error level; every other phase logs at info. fields are
 // the action's own key-value pairs (a scale's sizes), appended after the
 // standard ones so a search on target still matches.
-func Audit(logger logging.Logger, surface string, a Action, target string, phase Phase, err error, fields ...any) {
+func Audit(logger *slog.Logger, surface string, a Action, target string, phase Phase, err error, fields ...any) {
 	kv := append([]any{
 		"action", a.Verb,
 		"kind", a.Kind,
@@ -105,8 +105,8 @@ func Audit(logger logging.Logger, surface string, a Action, target string, phase
 		"dry_run", phase == PhaseDryRun,
 	}, fields...)
 	if phase == PhaseFailed {
-		logger.Errorw("mutation", append(kv, "error", err)...)
+		logger.Error("mutation", append(kv, "error", err)...)
 		return
 	}
-	logger.Infow("mutation", kv...)
+	logger.Info("mutation", kv...)
 }

@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -37,7 +37,7 @@ func newQuickSwitchModel(t *testing.T, path string) *Model {
 		WithRepoPath("repo"),
 		WithEnvironment(envPHX),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 		WithCategory(domain.GPUNode),
 		WithRecentEnvs(recent, path),
 	)
@@ -246,7 +246,7 @@ func TestInit_RecordsStartupEnv(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(envIAD),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	_ = m.Init()

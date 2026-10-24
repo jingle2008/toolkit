@@ -11,20 +11,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
-
-type dummyLogger struct{}
-
-func (dummyLogger) Errorw(string, ...any)            {}
-func (dummyLogger) Debugw(string, ...any)            {}
-func (dummyLogger) Infow(string, ...any)             {}
-func (dummyLogger) Warnw(string, ...any)             {}
-func (dummyLogger) Sync() error                      { return nil }
-func (dummyLogger) WithFields(...any) logging.Logger { return dummyLogger{} }
-func (dummyLogger) DebugEnabled() bool               { return false }
 
 type dummyLoader struct{}
 
@@ -112,7 +102,7 @@ func Test_Update_DataMsgWithEmptyData(t *testing.T) {
 		WithRepoPath("/tmp"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "e"}),
 		WithLoader(dummyLoader{}),
-		WithLogger(dummyLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	m.viewMode = common.LoadingView
@@ -127,7 +117,7 @@ func Test_Update_ErrMsgEmitsToast(t *testing.T) {
 		WithRepoPath("/tmp"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "e"}),
 		WithLoader(dummyLoader{}),
-		WithLogger(dummyLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	m.viewMode = common.LoadingView
@@ -143,7 +133,7 @@ func Test_updateHelpView_KeyMsg(t *testing.T) {
 		WithRepoPath("/tmp"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "e"}),
 		WithLoader(dummyLoader{}),
-		WithLogger(dummyLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	m.viewMode = common.HelpView
@@ -160,7 +150,7 @@ func Test_updateHelpView_OtherMsg(t *testing.T) {
 		WithRepoPath("/tmp"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "e"}),
 		WithLoader(dummyLoader{}),
-		WithLogger(dummyLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	m.viewMode = common.HelpView
@@ -175,7 +165,7 @@ func Test_updateDetailView_NoSelectedRow(t *testing.T) {
 		WithRepoPath("/tmp"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "e"}),
 		WithLoader(dummyLoader{}),
-		WithLogger(dummyLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	m.viewMode = common.DetailsView
@@ -191,7 +181,7 @@ func Test_updateDetailView_WithSelectedRow(t *testing.T) {
 		WithRepoPath("/tmp"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "e"}),
 		WithLoader(dummyLoader{}),
-		WithLogger(dummyLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	m.viewMode = common.DetailsView

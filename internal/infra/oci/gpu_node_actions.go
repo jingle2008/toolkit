@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -37,14 +37,14 @@ func SoftResetInstance(
 	ctx context.Context,
 	node *models.GPUNode,
 	env models.Environment,
-	logger logging.Logger,
+	logger *slog.Logger,
 ) error {
 	client, err := newComputeClient(env)
 	if err != nil {
 		return fmt.Errorf("failed to create compute client: %w", err)
 	}
 
-	logger.Infow("restarting node", "id", node.ID, "name", node.Name)
+	logger.Info("restarting node", "id", node.ID, "name", node.Name)
 	resp, err := client.InstanceAction(ctx, core.InstanceActionRequest{
 		InstanceId: common.String(node.ID),
 		Action:     core.InstanceActionActionSoftreset,
@@ -57,7 +57,7 @@ func SoftResetInstance(
 		return fmt.Errorf("failed to soft reset instance: %w, request id: %s", err, reqID)
 	}
 
-	logger.Infow("restart request is submitted successfully", "id",
+	logger.Info("restart request is submitted successfully", "id",
 		node.ID, "opc-request-id", resp.OpcRequestId)
 	return nil
 }
@@ -93,7 +93,7 @@ func IncreasePoolSize(
 	pool *models.GPUPool,
 	add int,
 	env models.Environment,
-	logger logging.Logger,
+	logger *slog.Logger,
 ) (PoolScale, error) {
 	scale := PoolScale{Shown: pool.ActualSize}
 	if pool.ID == "" {
@@ -117,7 +117,7 @@ func IncreasePoolSize(
 	scale.Before = *current.Size
 	scale.After = scale.Before + add
 	newSize := scale.After
-	logger.Infow("scaling up instance pool", "id", pool.ID, "name", pool.Name, "from", scale.Before, "newSize", newSize)
+	logger.Info("scaling up instance pool", "id", pool.ID, "name", pool.Name, "from", scale.Before, "newSize", newSize)
 	resp, err := mgmtClient.UpdateInstancePool(ctx, core.UpdateInstancePoolRequest{
 		InstancePoolId: common.String(pool.ID),
 		UpdateInstancePoolDetails: core.UpdateInstancePoolDetails{
@@ -131,7 +131,7 @@ func IncreasePoolSize(
 		}
 		return scale, fmt.Errorf("failed to update instance pool: %w, request id: %s", err, reqID)
 	}
-	logger.Infow("scaling request is submitted successfully", "id",
+	logger.Info("scaling request is submitted successfully", "id",
 		pool.ID, "opc-request-id", resp.OpcRequestId)
 	return scale, nil
 }
@@ -141,14 +141,14 @@ func TerminateInstance(
 	ctx context.Context,
 	node *models.GPUNode,
 	env models.Environment,
-	logger logging.Logger,
+	logger *slog.Logger,
 ) error {
 	client, err := newComputeClient(env)
 	if err != nil {
 		return fmt.Errorf("failed to create compute client: %w", err)
 	}
 
-	logger.Infow("deleting node", "id", node.ID, "name", node.Name)
+	logger.Info("deleting node", "id", node.ID, "name", node.Name)
 	resp, err := client.TerminateInstance(ctx, core.TerminateInstanceRequest{
 		InstanceId:         common.String(node.ID),
 		PreserveBootVolume: common.Bool(false),
@@ -160,7 +160,7 @@ func TerminateInstance(
 		}
 		return fmt.Errorf("failed to terminate instance: %w, request id: %s", err, reqID)
 	}
-	logger.Infow("deletion request is submitted successfully", "id",
+	logger.Info("deletion request is submitted successfully", "id",
 		node.ID, "opc-request-id", resp.OpcRequestId)
 	return nil
 }
