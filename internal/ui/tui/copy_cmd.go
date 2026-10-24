@@ -7,8 +7,9 @@ import (
 )
 
 func (m *Model) copyItemNameCmd(item any) tea.Cmd {
+	env, logger, item := m.environment, m.logger, snapshotItem(item)
 	return func() tea.Msg {
-		actions.CopyItemName(item, m.environment, m.logger)
+		actions.CopyItemName(item, env, logger)
 		return nil
 	}
 }

@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"maps"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -280,6 +282,28 @@ func findItem(dataset *models.Dataset, category domain.Category, key models.Item
 	return src.find(dataset, key)
 }
 
+// snapshotItem returns a copy of a looked-up item, keeping its pointer
+// type, for a tea.Cmd to read off the Update loop: the Cmd then never
+// reads the dataset's own element, which Update may replace meanwhile.
+// The copy is shallow; Update replaces dataset slices and maps rather
+// than writing into them (copy-on-write), so what it shares stays put.
+// A missing item is returned as is.
+func snapshotItem(item any) any {
+	if isNilItem(item) {
+		return item
+	}
+	rv := reflect.ValueOf(item)
+	if rv.Kind() != reflect.Pointer {
+		return item
+	}
+	cp := reflect.New(rv.Elem().Type())
+	cp.Elem().Set(rv.Elem())
+	return cp.Interface()
+}
+
+// removeItemFromDataset drops the item from its category's map. The map
+// and the group's slice are replaced, not edited, as a tea.Cmd may still
+// be reading the old ones (snapshotItem).
 func removeItemFromDataset(dataset *models.Dataset, category domain.Category, key models.ItemKey) {
 	if key == nil {
 		return
@@ -287,22 +311,43 @@ func removeItemFromDataset(dataset *models.Dataset, category domain.Category, ke
 
 	switch category {
 	case domain.DedicatedAICluster:
-		deleteItemInMap(dataset.DedicatedAIClusterMap, key)
+		dataset.DedicatedAIClusterMap = deleteItemInMap(dataset.DedicatedAIClusterMap, key)
 	case domain.GPUNode:
-		deleteItemInMap(dataset.GPUNodeMap, key)
+		dataset.GPUNodeMap = deleteItemInMap(dataset.GPUNodeMap, key)
 	default:
 		// exhaustive
 	}
 }
 
-func deleteItemInMap[T models.NamedItem](m map[string][]T, key models.ItemKey) {
+// deleteItemInMap returns a copy of m without the keyed item; m itself
+// is left as it was.
+func deleteItemInMap[T models.NamedItem](m map[string][]T, key models.ItemKey) map[string][]T {
 	k := key.(models.ScopedItemKey)
-	if items, ok := m[k.Scope]; ok {
-		items = slices.DeleteFunc(items, func(item T) bool {
-			return item.GetName() == k.Name
-		})
-		m[k.Scope] = items
+	items, ok := m[k.Scope]
+	if !ok {
+		return m
 	}
+	out := maps.Clone(m)
+	out[k.Scope] = slices.DeleteFunc(slices.Clone(items), func(item T) bool {
+		return item.GetName() == k.Name
+	})
+	return out
+}
+
+// updateItemInMap returns a copy of m with fn applied to a copy of the
+// keyed item, and whether the item was there; m itself is left as it
+// was, for a tea.Cmd still reading it.
+func updateItemInMap[T models.NamedItem](m map[string][]T, key models.ScopedItemKey, fn func(*T)) (map[string][]T, bool) {
+	items := m[key.Scope]
+	i := slices.IndexFunc(items, func(item T) bool { return item.GetName() == key.Name })
+	if i < 0 {
+		return m, false
+	}
+	group := slices.Clone(items)
+	fn(&group[i])
+	out := maps.Clone(m)
+	out[key.Scope] = group
+	return out, true
 }
 
 /*

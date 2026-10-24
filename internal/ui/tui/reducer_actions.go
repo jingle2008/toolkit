@@ -95,9 +95,9 @@ func (m *Model) handleRefresh() tea.Cmd {
 }
 
 func (m *Model) copyTenantID(item any) tea.Cmd {
-	env := m.environment
+	env, logger, item := m.environment, m.logger, snapshotItem(item)
 	return func() tea.Msg {
-		actions.CopyTenantID(item, env, m.logger)
+		actions.CopyTenantID(item, env, logger)
 		return nil
 	}
 }
@@ -110,9 +110,9 @@ func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey, add int) tea.Cm
 		m.logger.Errorw("no GPU pool selected for scale up")
 		return nil
 	}
-	env, snapshot := m.environment, *pool
+	env, snapshot, opCtx, logger := m.environment, *pool, m.opCtxFunc(), m.logger
 	return m.trackAction("scale up "+pool.Name, "Scaling", itemKey, func(func(string)) tea.Msg {
-		ctx, cancel := m.opCtx()
+		ctx, cancel := opCtx()
 		defer cancel()
 		var scale oci.PoolScale
 		fields := func() []any {
@@ -121,9 +121,9 @@ func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey, add int) tea.Cm
 			}
 			return []any{"add", add, "from", scale.Before, "to", scale.After}
 		}
-		err := auditedWith(m.logger, mutation.ScaleGPUPool, snapshot.Name, fields, func() error {
+		err := auditedWith(logger, mutation.ScaleGPUPool, snapshot.Name, fields, func() error {
 			var err error
-			scale, err = increasePoolSizeFn(ctx, &snapshot, add, env, m.logger)
+			scale, err = increasePoolSizeFn(ctx, &snapshot, add, env, logger)
 			return err
 		})
 		return gpuPoolScaleResultMsg{key: itemKey, err: err, env: env, scale: scale, declared: snapshot.Size}
@@ -148,11 +148,12 @@ func (m *Model) cordonNode(item any, itemKey models.ItemKey, a mutation.Action) 
 		return nil
 	}
 	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
+	opCtx, logger := m.opCtxFunc(), m.logger
 	unschedulable := a == mutation.CordonNode
 	return m.trackAction(strings.ToLower(confirmLabels[a].verb)+" "+name, "", itemKey, func(func(string)) tea.Msg {
-		ctx, cancel := m.opCtx()
+		ctx, cancel := opCtx()
 		defer cancel()
-		err := audited(m.logger, a, name, func() error {
+		err := audited(logger, a, name, func() error {
 			_, err := setCordonFn(ctx, kubeConfig, env.KubeContext(), name, unschedulable)
 			return err
 		})
@@ -171,14 +172,15 @@ func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 		return nil
 	}
 	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
+	// Draining restarts single-replica services and waits for them to
+	// reschedule, which can take tens of minutes under its own internal
+	// timeouts; the 30s one-shot cap would abort it midway.
+	parent, logger := m.longOpCtx(), m.logger
 	return m.trackAction("drain "+name, "Draining", itemKey, func(progress func(string)) tea.Msg {
-		// Draining restarts single-replica services and waits for them to
-		// reschedule, which can take tens of minutes under its own internal
-		// timeouts; the 30s one-shot cap would abort it midway.
-		ctx := k8s.WithDrainProgress(m.longOpCtx(), func(line string) {
+		ctx := k8s.WithDrainProgress(parent, func(line string) {
 			progress(strings.TrimPrefix(line, "drain: "))
 		})
-		err := audited(m.logger, mutation.DrainNode, name, func() error {
+		err := audited(logger, mutation.DrainNode, name, func() error {
 			return k8s.DrainNode(ctx, kubeConfig, env.KubeContext(), name)
 		})
 		return drainNodeResultMsg{key: itemKey, err: err, env: env}
