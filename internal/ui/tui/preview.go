@@ -7,9 +7,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // previewMinWidth is the narrowest terminal that shows the preview pane;
@@ -61,12 +63,53 @@ func (m *Model) previewPanel(height int) string {
 		lipgloss.NewStyle().Foreground(p.Text).Bold(true), width)
 }
 
+// previewCache memoizes the preview body, which View would otherwise
+// rebuild (find, marshal, parse, lay out) on every frame, spinner ticks
+// included. The key is everything the body depends on; a different key
+// is a miss.
+type previewCache struct {
+	key  previewKey
+	body string
+	ok   bool
+}
+
+// previewKey is what the preview body is a function of. The dataset is
+// keyed by identity: every update installs a new *Dataset rather than
+// editing the old one (editDataset), so a new pointer is a new
+// generation; holding it keeps its address from being reused. The theme
+// is keyed by its generation (themeGen).
+type previewKey struct {
+	dataset  *models.Dataset
+	category domain.Category
+	item     models.ItemKey // a string, a ScopedItemKey or nil: comparable
+	width    int
+	theme    int
+}
+
 // previewBody is the selected item's fields, width columns wide: one
 // level of nested objects as indented sections, deeper ones collapsed,
-// each value cut to one line.
+// each value cut to one line. It is rebuilt only when what it shows
+// changes (previewCache).
 func (m *Model) previewBody(width int) string {
+	key := previewKey{
+		dataset:  m.dataset,
+		category: m.category,
+		item:     itemKeyFrom(m.category, m.selectedRawRow()),
+		width:    width,
+		theme:    m.themeGen,
+	}
+	if c := &m.previewMemo; c.ok && c.key == key {
+		return c.body
+	}
+	body := m.renderPreviewBody(key.item, width)
+	m.previewMemo = previewCache{key: key, body: body, ok: true}
+	return body
+}
+
+// renderPreviewBody lays out the keyed item of the current category.
+func (m *Model) renderPreviewBody(key models.ItemKey, width int) string {
 	muted := lipgloss.NewStyle().Foreground(m.theme.Palette.Muted)
-	item := findItem(m.dataset, m.category, itemKeyFrom(m.category, m.selectedRawRow()))
+	item := findItem(m.dataset, m.category, key)
 	if item == nil {
 		return muted.Render("nothing selected")
 	}
