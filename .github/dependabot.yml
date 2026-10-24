@@ -14,6 +14,21 @@ updates:
       - dependency-name: "golang.org/x/tools"
         update-types: ["version-update:semver-major"]
 
+  # Dev tools (golangci-lint, gofumpt, goimports) live in their own module
+  # so their dependency trees stay out of the main go.mod. prefix "build"
+  # keeps tool bumps out of the release notes (GoReleaser filters build:),
+  # since they never change the shipped binary.
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+    labels:
+      - "dependencies"
+      - "automerge"
+
   # Without this, action versions only get bumped when someone notices a
   # deprecation warning in a run log — which is how codeql-action sat on
   # v3 from October 2025 until it started warning about Node 20.

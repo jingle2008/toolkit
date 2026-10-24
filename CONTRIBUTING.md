@@ -25,9 +25,13 @@
   ```
   or directly:
   ```
-  gofumpt -w .
-  goimports -w -local github.com/jingle2008/toolkit .
+  go tool -modfile=tools/go.mod gofumpt -w .
+  go tool -modfile=tools/go.mod goimports -w -local github.com/jingle2008/toolkit .
   ```
+  The tools are pinned by `tool` directives in the separate `tools/go.mod`
+  module (kept apart so their dependencies stay out of the main `go.mod`),
+  so there is nothing to install — `go tool` builds them on first use.
+  Bump one with `go -C tools get -tool <module>@<version>`.
   Consider enabling pre-commit hooks — install both hook types, since
   govulncheck is wired to pre-push (too slow to run per commit):
   ```
@@ -57,7 +61,7 @@
 - [ ] All new and changed code is covered by tests.
 - [ ] Tests use `t.Parallel()` where possible.
 - [ ] Lint and static analysis pass (`make lint`).
-- [ ] Code is formatted with `gofumpt -w .`.
+- [ ] Code is formatted (`make fmt goimports`).
 - [ ] Code coverage is at least 80% (`make cover-check`).
 - [ ] Benchmarks are added for performance-critical code.
 - [ ] Golden files and fuzz corpora are updated as needed.

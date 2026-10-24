@@ -4,16 +4,24 @@
 #   make cover     - Unit test coverage report
 #   make cover-int - Integration test coverage report
 
-.PHONY: build lint vet test bench bench-int tidy fmt fmt-check goimports goimports-check cover cover-int cover-check install-lint setup ci clean
+.PHONY: build lint vet test bench test-int bench-int tidy fmt fmt-check goimports goimports-check cover cover-int cover-check install-lint setup ci clean
 
 VERSION ?= $(shell git describe --tags --always --dirty)
+
+# Dev tools (golangci-lint, gofumpt, goimports) are pinned by `tool`
+# directives in the separate tools module (tools/go.mod), which keeps their
+# dependency trees out of the main module graph. tools/go.mod is the single
+# source of truth for their versions; bump with:
+#   go -C tools get -tool <module>@<version>
+GOTOOL := go tool -modfile=tools/go.mod
+LOCAL_PREFIX := github.com/jingle2008/toolkit
 
 build:
 	go install -trimpath -ldflags "-s -w -X main.version=$(VERSION)" ./cmd/...
 
 lint:
-	golangci-lint config verify
-	golangci-lint run ./...
+	$(GOTOOL) golangci-lint config verify
+	$(GOTOOL) golangci-lint run ./...
 
 vet:
 	go vet ./...
@@ -32,19 +40,20 @@ bench-int:
 
 tidy:
 	go mod tidy
+	go -C tools mod tidy
 
 fmt:
-	gofumpt -w .
+	$(GOTOOL) gofumpt -w .
 
 fmt-check:
-	@diffs=$$(gofumpt -l .); if [ -n "$$diffs" ]; then echo "Run 'make fmt' to format the following files:"; echo "$$diffs"; exit 1; fi
+	@diffs=$$($(GOTOOL) gofumpt -l .); if [ -n "$$diffs" ]; then echo "Run 'make fmt' to format the following files:"; echo "$$diffs"; exit 1; fi
 
 # Format imports using goimports (enforces import grouping)
 goimports:
-	goimports -w -local github.com/jingle2008/toolkit .
+	$(GOTOOL) goimports -w -local $(LOCAL_PREFIX) .
 
 goimports-check:
-	@diffs=$$(goimports -l -local github.com/jingle2008/toolkit .); if [ -n "$$diffs" ]; then echo "Run 'make goimports' to fix imports in:"; echo "$$diffs"; exit 1; fi
+	@diffs=$$($(GOTOOL) goimports -l -local $(LOCAL_PREFIX) .); if [ -n "$$diffs" ]; then echo "Run 'make goimports' to fix imports in:"; echo "$$diffs"; exit 1; fi
 
 cover:
 	go test ./... -coverprofile=coverage.out
@@ -60,21 +69,17 @@ cover-check:
 	go test ./... -race -shuffle=on -count=1 -covermode=atomic -coverprofile=coverage.out
 	go tool cover -func=coverage.out | awk '/total:/ {if ($$3+0 < 80) {print "Coverage below 80%"; exit 1}}'
 
-# Keep these in sync with the module pins in go.mod (single source of truth):
-#   golangci-lint -> github.com/golangci/golangci-lint/v2
-#   gofumpt       -> mvdan.cc/gofumpt
-#   goimports     -> golang.org/x/tools
-LINT_VERSION ?= v2.12.2
-GOFUMPT_VERSION ?= v0.10.0
-GOIMPORTS_VERSION ?= v0.46.0
-
+# Nothing is installed into GOBIN: `go tool` builds each tool on first use
+# and caches the binary. These targets just download and prebuild them so
+# the first lint/fmt run (and CI) doesn't pay that cost mid-check.
 install-lint:
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(LINT_VERSION)
+	$(GOTOOL) golangci-lint version
 
 setup:
+	go -C tools mod download
 	$(MAKE) install-lint
-	go install mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
-	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
+	$(GOTOOL) gofumpt --version
+	$(GOTOOL) goimports </dev/null
 
 ci: fmt-check goimports-check lint vet cover-check
 

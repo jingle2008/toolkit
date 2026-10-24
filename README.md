@@ -386,7 +386,7 @@ go test ./...
 
 ## Developer Workflow
 
-- One-time setup: `make setup` (installs golangci-lint, gofumpt, goimports)
+- Dev tools (golangci-lint, gofumpt, goimports) are pinned in `tools/go.mod` and run via `go tool -modfile=tools/go.mod <tool>` — nothing to install. `make setup` optionally prebuilds them.
 - Optional: enable git hooks with pre-commit (both hook types — govulncheck runs on pre-push):
   `pre-commit install --hook-type pre-commit --hook-type pre-push`
 - Run `make ci` before pushing to ensure code passes lint and tests.
