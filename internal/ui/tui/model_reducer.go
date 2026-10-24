@@ -432,24 +432,58 @@ func (m *Model) mergeRepoDataset(fresh *models.Dataset) {
 		m.dataset = fresh
 		return
 	}
-	m.dataset.MergeReloadedRepoData(fresh)
-	resolveTenantOwners(m.dataset)
+	m.editDataset(func(ds *models.Dataset) {
+		ds.MergeReloadedRepoData(fresh)
+		resolveTenantOwners(ds)
+	})
+}
+
+/*
+editDataset applies fn to a shallow copy of the dataset (an empty one when
+there is none) and installs the copy, so the Dataset a tea.Cmd may still
+hold is never written to. fn must in turn replace the slices and maps it
+changes rather than write into them (see updateItemInMap, cloneGroups).
+*/
+func (m *Model) editDataset(fn func(*models.Dataset)) {
+	var ds models.Dataset
+	if m.dataset != nil {
+		ds = *m.dataset
+	}
+	fn(&ds)
+	m.dataset = &ds
+}
+
+// cloneGroups copies mm and each of its groups, for a setter that writes
+// into the groups' elements; nil stays nil (not loaded).
+func cloneGroups[T any](mm map[string][]T) map[string][]T {
+	if mm == nil {
+		return nil
+	}
+	out := make(map[string][]T, len(mm))
+	for k, v := range mm {
+		out[k] = slices.Clone(v)
+	}
+	return out
+}
+
+// setDedicatedAIClusters stores the DACs. SetDedicatedAIClusterMap
+// re-resolves the loaded GPU workloads' tenants in place, so they are
+// copied first.
+func setDedicatedAIClusters(ds *models.Dataset, dacs map[string][]models.DedicatedAICluster) {
+	ds.GPUWorkloadMap = cloneGroups(ds.GPUWorkloadMap)
+	ds.SetDedicatedAIClusterMap(dacs)
 }
 
 /*
 applyDataset standardizes how dataset mutations are applied and the UI is refreshed.
 It:
-- Ensures m.dataset is non-nil
-- Applies the provided mutation
+- Applies the provided mutation to a copy of the dataset (editDataset)
 - Calls endTask(true)
 - Logs a consistent "data loaded" message with category and count
 - Refreshes the display
 */
 func (m *Model) applyDataset(mut func(*models.Dataset), category domain.Category, count int) {
-	if m.dataset == nil {
-		m.dataset = &models.Dataset{}
-	}
-	mut(m.dataset)
+	m.editDataset(mut)
 	if category == m.category {
 		m.loadFailed = false
 	}
@@ -531,7 +565,7 @@ func (m *Model) handleGPUNodesLoaded(items map[string][]models.GPUNode, gen int)
 func (m *Model) handleGPUWorkloadsLoaded(items map[string][]models.GPUWorkload, dacs map[string][]models.DedicatedAICluster, gen int) {
 	m.applyLoaded(gen, func(ds *models.Dataset) {
 		if dacs != nil && ds.DedicatedAIClusterMap == nil {
-			ds.SetDedicatedAIClusterMap(dacs)
+			setDedicatedAIClusters(ds, dacs)
 		}
 		ds.SetGPUWorkloadMap(items)
 	}, domain.GPUWorkload, mapLen(items))
@@ -544,7 +578,7 @@ func (m *Model) workloadsNeedDACs() bool {
 }
 
 func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetDedicatedAIClusterMap(items) }, domain.DedicatedAICluster, mapLen(items))
+	m.applyLoaded(gen, func(ds *models.Dataset) { setDedicatedAIClusters(ds, items) }, domain.DedicatedAICluster, mapLen(items))
 }
 
 func (m *Model) handleInferenceServicesLoaded(items map[string][]models.InferenceService, gen int) {
