@@ -2,9 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -67,9 +64,7 @@ Examples:
 			if err := viper.Unmarshal(&cfg); err != nil {
 				return fmt.Errorf("unmarshal config: %w", err)
 			}
-			ctx, stop := signal.NotifyContext(c.Context(), os.Interrupt, syscall.SIGTERM)
-			defer stop()
-			return tenantsync.Run(ctx, tenantsync.Config{
+			return tenantsync.Run(c.Context(), tenantsync.Config{
 				RepoPath:     cfg.RepoPath,
 				MetadataFile: cfg.MetadataFile,
 				CacheDir:     cacheDir,

@@ -47,7 +47,7 @@ func TestDeriveSortKeys_Fallback(t *testing.T) {
 // Every sort key is unique within its category, so s⟨key⟩ is unambiguous.
 func TestSortKeys_UniquePerCategory(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		cols := sortColumns(cat)
 		keys := SortKeys(cat)
 		assert.Len(t, keys, len(cols), "%s: a column has no key", cat)
@@ -66,7 +66,7 @@ func TestSortKeys_UniquePerCategory(t *testing.T) {
 func TestShiftLetters_OneMeaningEverywhere(t *testing.T) {
 	t.Parallel()
 	meaning := map[string]string{}
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		for _, mode := range []common.ViewMode{common.ListView, common.DetailsView} {
 			km := ResolveKeys(cat, mode)
 			for _, b := range append(append(km.Global, km.Mode...), km.Context...) {

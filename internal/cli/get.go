@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -74,7 +72,7 @@ discover them.`,
 			if len(args) > 0 {
 				return nil, cobra.ShellCompDirectiveNoFileComp // a row name: no completion
 			}
-			return domain.Aliases, cobra.ShellCompDirectiveNoFileComp
+			return domain.AllAliases(), cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: runGet(cfgFile, &format, &noHeaders, &pretty, &limit, &selectedColumns, &relatedTo, &faulty),
 	}
@@ -188,9 +186,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		defer func() { _ = logger.Sync() }()
 		logEnvAliases(logger, rawType, rawRegion, cfg)
 
-		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-		ctx = logging.WithContext(ctx, logger)
+		ctx := logging.WithContext(cmd.Context(), logger)
 		if err := checkGetEnvironment(ctx, cfg, cat); err != nil {
 			return err
 		}
@@ -276,7 +272,7 @@ func validateGetRequest(cfg config.Config, cat domain.Category, faulty bool, lim
 }
 
 func validateGetConfig(cfg config.Config, cat domain.Category) error {
-	// Alias is a static dump of domain.Aliases — it never reaches the
+	// Alias is a static dump of domain.AllAliases() — it never reaches the
 	// loader, so don't gate it on repo_path / env_*.
 	if cat == domain.Alias {
 		return nil

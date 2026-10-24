@@ -187,7 +187,7 @@ var rowSources = map[domain.Category]rowSource{
 	// for Alias and the TUI copy/detail actions degrade gracefully to
 	// "no item selected".
 	domain.Alias: flatSourceNoFind(columns.AliasColumns,
-		func(*models.Dataset) []domain.Category { return domain.Categories }),
+		func(*models.Dataset) []domain.Category { return domain.Categories() }),
 	domain.Tenant: flatSource(columns.TenantColumns,
 		func(d *models.Dataset) []models.Tenant { return d.Tenants }),
 	domain.LimitDefinition: flatSource(columns.LimitDefinitionColumns,

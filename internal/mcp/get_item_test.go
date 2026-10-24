@@ -65,7 +65,7 @@ func TestGetItem_OneRow(t *testing.T) {
 // list tool: pickItem must not fall through for any of them.
 func TestGetItem_EveryCategory(t *testing.T) {
 	t.Parallel()
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		if c == domain.Alias {
 			continue
 		}

@@ -121,7 +121,7 @@ func Test_getTableRows_empty_dataset(t *testing.T) {
 	// A zero-value Dataset has nil slices and maps for every
 	// category; every dataset-backed category should produce zero
 	// rows without panicking. Alias is excluded — its rows are
-	// sourced from domain.Categories, not the Dataset, so the view
+	// sourced from domain.Categories(), not the Dataset, so the view
 	// is non-empty even with no data.
 	ds := &models.Dataset{}
 	for cat := domain.Tenant; cat <= domain.Alias; cat++ {
@@ -436,7 +436,7 @@ func TestGetTableRows_AliasCategory(t *testing.T) {
 	t.Parallel()
 	dataset := &models.Dataset{}
 	rows, _ := computeTableRows(dataset, domain.Alias, nil, "", "", true, false)
-	assert.Equal(t, len(domain.Categories), len(rows), "should return one row per category")
+	assert.Equal(t, len(domain.Categories()), len(rows), "should return one row per category")
 
 	// Find GPUNode row
 	found := false

@@ -200,14 +200,12 @@ func uppercaseLetters(s string) string {
 	return strings.Join(initials, "")
 }
 
+// Built once by init and never modified afterwards; callers get copies
+// via Categories and AllAliases so none can corrupt the shared tables.
 var (
 	aliasToCat map[string]Category
-
-	// Aliases contains all known aliases for categories.
-	Aliases []string
-
-	// Categories contains all defined categories.
-	Categories []Category
+	allAliases []string
+	categories []Category
 )
 
 func init() {
@@ -217,16 +215,28 @@ func init() {
 		for _, a := range c.Aliases() {
 			aliasToCat[a] = c
 		}
-		Categories = append(Categories, c)
+		categories = append(categories, c)
 	}
 
-	Aliases = make([]string, 0, len(aliasToCat))
+	allAliases = make([]string, 0, len(aliasToCat))
 	for k := range aliasToCat {
-		Aliases = append(Aliases, k)
+		allAliases = append(allAliases, k)
 	}
 	// Keep ordering stable so shell completion and TUI suggestions
 	// don't reshuffle across runs of the program.
-	sort.Strings(Aliases)
+	sort.Strings(allAliases)
+}
+
+// Categories returns every defined category, in enum order. The slice is
+// a fresh copy the caller may modify.
+func Categories() []Category {
+	return slices.Clone(categories)
+}
+
+// AllAliases returns every known category alias, sorted. The slice is a
+// fresh copy the caller may modify.
+func AllAliases() []string {
+	return slices.Clone(allAliases)
 }
 
 // ErrUnknownCategory is returned when a string cannot be parsed into a known Category.
@@ -252,8 +262,8 @@ type AliasEntry struct {
 
 // AliasEntries lists every category with its aliases, in category order.
 func AliasEntries() []AliasEntry {
-	out := make([]AliasEntry, 0, len(Categories))
-	for _, c := range Categories {
+	out := make([]AliasEntry, 0, len(categories))
+	for _, c := range categories {
 		if c == CategoryUnknown {
 			continue
 		}

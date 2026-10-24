@@ -50,7 +50,7 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			addGiven := cmd.Flags().Changed("add")
-			return withMutationSetup(cfgFile, true, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			return withMutationSetup(cmd.Context(), cfgFile, true, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				var (
 					pool   *models.GPUPool
 					n      int

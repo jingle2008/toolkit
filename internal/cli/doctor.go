@@ -6,10 +6,8 @@ import (
 	"io"
 	"maps"
 	"os"
-	"os/signal"
 	"slices"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -69,10 +67,9 @@ Examples:
 			// A config file that doesn't read is a finding, not a reason to
 			// stop: doctor reports it with the other checks.
 			readErr := readConfigFile(cfgFile)
-			// Ctrl+C cancels the cluster loads of --relations.
-			ctx, stop := signal.NotifyContext(c.Context(), os.Interrupt, syscall.SIGTERM)
-			defer stop()
-			return runDoctor(ctx, c.OutOrStdout(), *cfgFile, format, relations,
+			// Ctrl+C cancels the cluster loads of --relations (c.Context()
+			// is Execute's signal context).
+			return runDoctor(c.Context(), c.OutOrStdout(), *cfgFile, format, relations,
 				configFileRead{err: readErr, knownKeys: settingKeys(c.Root())})
 		},
 	}

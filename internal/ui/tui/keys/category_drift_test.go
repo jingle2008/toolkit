@@ -61,7 +61,7 @@ func TestSortBindings_NameRealColumns(t *testing.T) {
 
 func TestCatContext_EveryCategoryAccountedFor(t *testing.T) {
 	t.Parallel()
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		_, hasKeys := catContext[c]
 		_, excluded := noContextKeys[c]
 		assert.Truef(t, hasKeys != excluded,

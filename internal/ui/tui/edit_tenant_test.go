@@ -278,7 +278,7 @@ func TestIsToggleKey(t *testing.T) {
 // Every category with a Tenant column binds E (edit tenant).
 func TestEditTenant_BoundWhereverTenantColumn(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		hasTenant := false
 		for _, h := range headersFor(cat) {
 			hasTenant = hasTenant || h.text == common.TenantCol

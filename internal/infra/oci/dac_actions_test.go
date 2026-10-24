@@ -31,6 +31,8 @@ type fakeGenAI struct {
 	// responses so tests can serve multiple pages and record deletions.
 	ListEndpointsFunc  func(req generativeai.ListEndpointsRequest) (generativeai.ListEndpointsResponse, error)
 	DeleteEndpointFunc func(req generativeai.DeleteEndpointRequest) (generativeai.DeleteEndpointResponse, error)
+	// GetWorkRequestFunc, when set, replaces the canned work-request response.
+	GetWorkRequestFunc func() (generativeai.GetWorkRequestResponse, error)
 }
 
 func TestDeleteDedicatedAICluster_Success(t *testing.T) {
@@ -114,6 +116,9 @@ func (f *fakeGenAI) DeleteEndpoint(_ context.Context, req generativeai.DeleteEnd
 }
 
 func (f *fakeGenAI) GetWorkRequest(_ context.Context, _ generativeai.GetWorkRequestRequest) (generativeai.GetWorkRequestResponse, error) {
+	if f.GetWorkRequestFunc != nil {
+		return f.GetWorkRequestFunc()
+	}
 	return f.GetWorkRequestResp, f.Err
 }
 
