@@ -18,8 +18,11 @@ func TestMarkedTableView_MarkerInPadding(t *testing.T) {
 	m := newGoldenModel(t, 120, 40)
 	showCategory(t, m, domain.DedicatedAICluster)
 	m.table.MoveDown(1)
+	tableBefore := m.table.View()
 	view := m.markedTableView()
 	assert.NotContains(t, view, rowTag)
+	assert.Equal(t, tableBefore, m.table.View(), "View leaves the table's rendering alone")
+	assert.Equal(t, view, m.markedTableView(), "the same frame twice")
 	lines := strings.Split(ansi.Strip(view), "\n")
 	var sel, other string
 	for _, l := range lines {
