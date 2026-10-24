@@ -84,6 +84,48 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 }
 
 /*
+NewWatchConfig is NewConfig for long-lived watch streams: identical except
+Timeout is zero. client-go turns Config.Timeout into http.Client.Timeout,
+which bounds reading the response body too — so a 30s Timeout cuts every
+watch stream at 30s, before the server's ~1m bookmarks can advance the
+resume resourceVersion; once etcd compacts past it, the reconnect fails
+with 410 Expired and the watch dies. Watches are bounded instead by ctx
+cancellation and the server-side TimeoutSeconds durableOpener sets.
+*/
+func NewWatchConfig(kubeconfig, ctx string) (*rest.Config, error) {
+	config, err := NewConfig(kubeconfig, ctx)
+	if err != nil {
+		return nil, err
+	}
+	config.Timeout = 0
+	return config, nil
+}
+
+/*
+NewWatchClientsetFromKubeConfig is NewClientsetFromKubeConfig built on
+NewWatchConfig, for clientsets that open watches.
+*/
+func NewWatchClientsetFromKubeConfig(kubeconfig, ctx string) (kubernetes.Interface, error) {
+	config, err := NewWatchConfig(kubeconfig, ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config from kubeconfig: %w", err)
+	}
+	return NewClientsetFromRestConfig(config)
+}
+
+/*
+NewWatchDynamicClientFromKubeConfig is NewDynamicClientFromKubeConfig built
+on NewWatchConfig, for dynamic clients that open watches.
+*/
+func NewWatchDynamicClientFromKubeConfig(kubeconfig, ctx string) (dynamic.Interface, error) {
+	config, err := NewWatchConfig(kubeconfig, ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config from kubeconfig: %w", err)
+	}
+	return NewDynamicClient(config)
+}
+
+/*
 NewClientsetFromRestConfig creates a new Kubernetes clientset from the given rest.Config.
 Returns an error if the config is nil or client creation fails.
 */

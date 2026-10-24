@@ -116,6 +116,52 @@ func TestNewConfig_AppliesRequestTimeout(t *testing.T) { //nolint:paralleltest /
 	}
 }
 
+// TestNewWatchConfig_NoTimeout guards the watch/request split: client-go
+// applies Config.Timeout to the whole HTTP exchange, body included, so a
+// watch config must have none while NewConfig still bounds regular calls.
+func TestNewWatchConfig_NoTimeout(t *testing.T) { //nolint:paralleltest // reads package-level RequestTimeout
+	validConfig := api.NewConfig()
+	validConfig.Clusters["test"] = &api.Cluster{Server: "https://127.0.0.1"}
+	validConfig.Contexts["test"] = &api.Context{Cluster: "test", AuthInfo: "user"}
+	validConfig.AuthInfos["user"] = &api.AuthInfo{}
+	validConfig.CurrentContext = "test"
+	path := writeTempKubeconfig(t, validConfig)
+
+	cfg, err := NewConfig(path, "test")
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	if cfg.Timeout != DefaultRequestTimeout {
+		t.Errorf("NewConfig Timeout = %v, want %v", cfg.Timeout, DefaultRequestTimeout)
+	}
+	wcfg, err := NewWatchConfig(path, "test")
+	if err != nil {
+		t.Fatalf("NewWatchConfig: %v", err)
+	}
+	if wcfg.Timeout != 0 {
+		t.Errorf("NewWatchConfig Timeout = %v, want 0", wcfg.Timeout)
+	}
+	if wcfg.QPS != cfg.QPS || wcfg.Burst != cfg.Burst || wcfg.UserAgent != cfg.UserAgent {
+		t.Error("NewWatchConfig must otherwise match NewConfig")
+	}
+
+	if _, err := NewWatchConfig("/nonexistent/path", "test"); err == nil {
+		t.Error("expected error for bad kubeconfig path")
+	}
+	if _, err := NewWatchClientsetFromKubeConfig(path, "test"); err != nil {
+		t.Errorf("NewWatchClientsetFromKubeConfig: %v", err)
+	}
+	if _, err := NewWatchClientsetFromKubeConfig("/nonexistent/path", "test"); err == nil {
+		t.Error("expected error for bad kubeconfig path")
+	}
+	if _, err := NewWatchDynamicClientFromKubeConfig(path, "test"); err != nil {
+		t.Errorf("NewWatchDynamicClientFromKubeConfig: %v", err)
+	}
+	if _, err := NewWatchDynamicClientFromKubeConfig("/nonexistent/path", "test"); err == nil {
+		t.Error("expected error for bad kubeconfig path")
+	}
+}
+
 func TestNewClientsetFromRestConfig(t *testing.T) {
 	t.Parallel()
 	// Use a minimal valid rest.Config for fake client

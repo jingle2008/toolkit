@@ -235,7 +235,7 @@ var _ loader.Watcher = (*Client)(nil)
 
 // WatchBaseModels establishes a watch on ClusterBaseModel CRs.
 func (Client) WatchBaseModels(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
-	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	client, err := k8s.NewWatchDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (Client) WatchBaseModels(ctx context.Context, kubeCfg string, env models.En
 
 // WatchServingRuntimes establishes a watch on ClusterServingRuntime CRs.
 func (Client) WatchServingRuntimes(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
-	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	client, err := k8s.NewWatchDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (Client) WatchServingRuntimes(ctx context.Context, kubeCfg string, env mode
 
 // WatchInferenceServices establishes a watch on InferenceService CRs.
 func (Client) WatchInferenceServices(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
-	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	client, err := k8s.NewWatchDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func (Client) WatchInferenceServices(ctx context.Context, kubeCfg string, env mo
 
 // WatchImportedModels establishes a watch on the imported-model sources.
 func (Client) WatchImportedModels(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
-	client, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
+	client, err := k8s.NewWatchDynamicClientFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func (Client) WatchImportedModels(ctx context.Context, kubeCfg string, env model
 
 // WatchGPUNodes establishes a watch on GPU nodes and GPU pods.
 func (Client) WatchGPUNodes(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
-	cs, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
+	cs, err := k8s.NewWatchClientsetFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func (Client) WatchGPUNodes(ctx context.Context, kubeCfg string, env models.Envi
 
 // WatchGPUWorkloads establishes a watch on GPU pods.
 func (Client) WatchGPUWorkloads(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
-	cs, err := k8s.NewClientsetFromKubeConfig(kubeCfg, env.KubeContext())
+	cs, err := k8s.NewWatchClientsetFromKubeConfig(kubeCfg, env.KubeContext())
 	if err != nil {
 		return nil, err
 	}
@@ -290,11 +290,11 @@ func (Client) WatchGPUWorkloads(ctx context.Context, kubeCfg string, env models.
 // WatchDedicatedAIClusters establishes a watch on DAC CRs and GPU pods.
 func (Client) WatchDedicatedAIClusters(ctx context.Context, kubeCfg string, env models.Environment) (<-chan struct{}, error) {
 	kubeCtx := env.KubeContext()
-	dyn, err := k8s.NewDynamicClientFromKubeConfig(kubeCfg, kubeCtx)
+	dyn, err := k8s.NewWatchDynamicClientFromKubeConfig(kubeCfg, kubeCtx)
 	if err != nil {
 		return nil, err
 	}
-	cs, err := k8s.NewClientsetFromKubeConfig(kubeCfg, kubeCtx)
+	cs, err := k8s.NewWatchClientsetFromKubeConfig(kubeCfg, kubeCtx)
 	if err != nil {
 		return nil, err
 	}
