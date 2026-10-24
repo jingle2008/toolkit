@@ -18,6 +18,12 @@ type Resolved map[string]any
 // ResolvedNode is a GPU node's lookup: the instance the action targets.
 func ResolvedNode(instanceID string) Resolved { return Resolved{"instance_id": instanceID} }
 
+// ResolvedPoolInstance is a GPU node's lookup by instance OCID: the
+// instance and the GPU pool it was verified to be a member of.
+func ResolvedPoolInstance(instanceID, pool string) Resolved {
+	return Resolved{"instance_id": instanceID, "gpu_pool": pool}
+}
+
 // ResolvedCordon is a cordon or uncordon's lookup: whether the node is
 // cordoned now (the action changes nothing when it already has the state
 // it asks for).

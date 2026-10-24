@@ -219,12 +219,12 @@ Maintenance operations the TUI exposes via keyboard shortcuts are also available
 | ------- | ------ |
 | `toolkit cordon <node>` / `toolkit uncordon <node>` | Toggle scheduling on a Kubernetes node |
 | `toolkit drain <node>` | Safely drain a node: cordon, refuse nodes running fine-tuning / training / replicationJob pods, rolling-restart single-replica InferenceServices so they move off first, then evict the rest. Blocks until done; the drain is recorded on the Node (`toolkit/drain` annotation), so re-running resumes an interrupted drain. `--status` prints the recorded drain instead (phase, deadline, what it still waits on; `-o yaml\|json`), as MCP's `get_drain_status`. |
-| `toolkit restart node <node>` | Soft-reset (restart) the node's underlying OCI instance |
+| `toolkit restart node <node>` | Soft-reset (restart) the node's underlying OCI instance. `--ocid <instance>` skips the cluster lookup (for a node that left it) but needs `--repo-path`: the instance must be in one of the env's GPU pools, and the prompt, dry run and audit name the OCID |
 | `toolkit restart inference-service <name> [--namespace <ns>]` | Rolling-restart an OME InferenceService by bumping its `restartedAt` annotation. Without `--namespace`, the name must be unique across namespaces. Alias `isvc`. |
 | `toolkit scale gpu-pool <name> [--add N]` | Without `--add`, fill the OCI instance pool to the Terraform-declared size (nothing to do when it's there). `--add N` adds N instances to OCI's current size, past the Terraform size if need be; the next `terraform apply` shrinks it back, which the prompt and `--dry-run` warn about. The `gpupool` alias is accepted for back-compat. |
 | `toolkit delete dac <name>` | Delete a dedicated AI cluster (destructive — requires `--yes`) |
 | `toolkit delete inference-service <name> [--namespace <ns>]` | Delete an orphaned InferenceService — a dedicated endpoint whose DAC no longer exists. Refused for shared endpoints and for endpoints whose DAC exists. One stuck deleting for over 10 minutes is force-deleted by removing its finalizer. Destructive — requires `--yes`. Alias `isvc`. |
-| `toolkit terminate <node>` | Terminate the underlying OCI instance (destructive — requires `--yes`) |
+| `toolkit terminate <node>` | Terminate the underlying OCI instance (destructive — requires `--yes`). `--ocid` as for `restart node` |
 
 Example:
 
@@ -302,7 +302,7 @@ Every read tool takes an optional `filter` (fuzzy substring) and optional `env_t
 | `scale_gpu_pool` | Grow an OCI GPU instance pool: to its Terraform size, or by `add` instances past it (status `NOOP` when there's nothing to do) |
 | `delete_dac` | Delete a dedicated AI cluster (irreversible: needs `confirm_target`) |
 | `delete_inference_service` | Delete an orphaned InferenceService (its DAC is gone); force-deletes one stuck deleting (`namespace` optional; irreversible: needs `confirm_target`) |
-| `terminate_node` | Terminate the underlying OCI instance (irreversible: needs `confirm_target`) |
+| `terminate_node` | Terminate the underlying OCI instance (irreversible: needs `confirm_target`). With `ocid`, the instance must be in one of the env's GPU pools, and `confirm_target` is the OCID |
 
 By default, mutation tools ignore any per-call `env_type` / `env_region` / `env_realm` (MCP tool input fields — these stay snake_case as the JSON-schema field names) and only act in the startup env — the operator's credentials decide the maximum blast radius, not the agent. Pass `--mutation-env-override-allowed` at server start to opt in to per-call env routing.
 

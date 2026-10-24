@@ -37,6 +37,21 @@ func stageMutationEnv(t *testing.T) {
 	stubTargetLookups(t)
 }
 
+// stageOCIDEnv is stageMutationEnv for a node action given --ocid: it
+// adds the repo path that check needs, and stubs the lookup so the OCID
+// is an instance of GPU pool pool-a.
+func stageOCIDEnv(t *testing.T) {
+	t.Helper()
+	stageMutationEnv(t)
+	t.Setenv("TOOLKIT_REPO_PATH", t.TempDir())
+	t.Cleanup(swap(&resolveGPUNodeFn, func(_ context.Context, _ config.Config, _ models.Environment, name, ocid string) (*models.GPUNode, error) {
+		if ocid == "" {
+			t.Errorf("node %q resolved without --ocid", name)
+		}
+		return &models.GPUNode{Name: name, ID: ocid, NodePool: "pool-a"}, nil
+	}))
+}
+
 // stubTargetLookups makes the read-only target lookups that cordon,
 // drain, delete dac and set tenant run before a dry run or prompt find
 // their target, so no test reaches a cluster, OCI or the metadata file.

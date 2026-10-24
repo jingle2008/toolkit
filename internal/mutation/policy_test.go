@@ -94,6 +94,7 @@ func TestResolved(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, "actual_size=1, add=3, pool_id=p, size=2, target_size=4", ResolvedPool("p", 2, 1, 3).String())
 	assert.Equal(t, "instance_id=i", ResolvedNode("i").String())
+	assert.Equal(t, "gpu_pool=p, instance_id=i", ResolvedPoolInstance("i", "p").String())
 	assert.Equal(t, "namespace=ns", ResolvedNamespace("ns").String())
 	assert.Empty(t, Resolved(nil).String())
 }
