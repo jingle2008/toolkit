@@ -34,8 +34,8 @@ func TestNeedsKubeConfig_EveryCategoryAccountedFor(t *testing.T) {
 		ServingRuntime:                  true,
 		Alias:                           false,
 	}
-	require.Len(t, want, len(Categories), "every category must have an expected NeedsKubeConfig value")
-	for _, c := range Categories {
+	require.Len(t, want, len(Categories()), "every category must have an expected NeedsKubeConfig value")
+	for _, c := range Categories() {
 		exp, ok := want[c]
 		require.Truef(t, ok, "no expected NeedsKubeConfig value for %s", c)
 		assert.Equalf(t, exp, c.NeedsKubeConfig(), "NeedsKubeConfig mismatch for %s", c)
@@ -69,8 +69,8 @@ func TestIsEnvironmentScoped_EveryCategoryAccountedFor(t *testing.T) {
 		ServingRuntime:                  true,
 		Alias:                           false,
 	}
-	require.Len(t, want, len(Categories), "every category must have an expected IsEnvironmentScoped value")
-	for _, c := range Categories {
+	require.Len(t, want, len(Categories()), "every category must have an expected IsEnvironmentScoped value")
+	for _, c := range Categories() {
 		exp, ok := want[c]
 		require.Truef(t, ok, "no expected IsEnvironmentScoped value for %s", c)
 		assert.Equalf(t, exp, c.IsEnvironmentScoped(), "IsEnvironmentScoped mismatch for %s", c)
@@ -97,7 +97,7 @@ func TestScopeGraph_RoundTrips(t *testing.T) {
 func TestAliases_UniqueAndRoundTrip(t *testing.T) {
 	t.Parallel()
 	seen := map[string]Category{}
-	for _, c := range Categories {
+	for _, c := range Categories() {
 		aliases := c.Aliases()
 		assert.NotEmptyf(t, aliases, "%s must have at least one alias", c)
 		for _, a := range aliases {
@@ -151,7 +151,7 @@ func TestRelations_WellFormed(t *testing.T) {
 		}
 		state[c] = done
 	}
-	for _, c := range Categories {
+	for _, c := range Categories() {
 		visit(c, nil)
 	}
 }

@@ -22,7 +22,7 @@ import (
 // column or after a deliberate behavior change).
 func TestCSVSnapshots(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		if cat == domain.CategoryUnknown {
 			continue
 		}
@@ -227,8 +227,8 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 			"embed-v4":       {{Name: "embed-v4", Namespace: "embed-v4", Type: models.InferenceServiceOnDemand, Model: "embed-v4", MinReplicas: new(2), MaxReplicas: new(4), Ready: "False", Age: "10d"}},
 		}
 	case domain.Alias:
-		cats := make([]domain.Category, 0, len(domain.Categories))
-		for _, c := range domain.Categories {
+		cats := make([]domain.Category, 0, len(domain.Categories()))
+		for _, c := range domain.Categories() {
 			if c != domain.CategoryUnknown {
 				cats = append(cats, c)
 			}

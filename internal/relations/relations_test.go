@@ -31,7 +31,7 @@ var keySets = map[domain.Category]interface{ Parents() []domain.Category }{
 // make a relation unfilterable, an extra one dead code.
 func TestKeysMatchRelations(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		want := cat.ScopedBy()
 		slices.Sort(want)
 		ks, ok := keySets[cat]

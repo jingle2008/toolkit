@@ -26,7 +26,7 @@ func (m *Model) beginEditInput(target common.EditTarget) {
 // unscoped table.
 func (m *Model) enterFilterMode() tea.Cmd {
 	m.beginEditInput(common.FilterTarget)
-	keys := domain.Aliases
+	keys := domain.AllAliases()
 	var cmd tea.Cmd
 	if len(m.textInput.Value()) > 0 {
 		keys = append(keys, m.textInput.Value())

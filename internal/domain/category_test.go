@@ -155,7 +155,7 @@ func TestCategory_IsScopeOf(t *testing.T) {
 
 func TestAliases(t *testing.T) {
 	t.Parallel()
-	aliases := Aliases
+	aliases := AllAliases()
 	assert.NotEmpty(t, aliases, "Aliases should not be empty")
 
 	// Check that all aliases in Aliases are present in the aliasToCat map
@@ -190,7 +190,7 @@ func TestParseCategory_GPUNodeShortAlias(t *testing.T) {
 func TestAliases_ContainsAllCatLookupKeys(t *testing.T) {
 	t.Parallel()
 	// catLookup is private, but we can check that all aliases in Aliases are parseable
-	for _, alias := range Aliases {
+	for _, alias := range AllAliases() {
 		cat, err := ParseCategory(alias)
 		require.NoError(t, err, "Alias %q should be parseable", alias)
 		assert.NotEqual(t, CategoryUnknown, cat, "Alias %q should not map to CategoryUnknown", alias)
@@ -266,7 +266,7 @@ func TestAliasEntries(t *testing.T) {
 	t.Parallel()
 	entries := AliasEntries()
 	var want []string
-	for _, c := range Categories {
+	for _, c := range Categories() {
 		if c != CategoryUnknown {
 			want = append(want, c.String())
 		}
@@ -284,4 +284,21 @@ func TestAliasEntries(t *testing.T) {
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("AliasEntries names = %v, want %v", got, want)
 	}
+}
+
+// Categories and AllAliases hand out copies: a caller sorting or
+// overwriting its slice must not change what the next caller sees.
+func TestCategoriesAndAliases_ReturnCopies(t *testing.T) {
+	t.Parallel()
+	cats := Categories()
+	require.NotEmpty(t, cats)
+	first := cats[0]
+	cats[0] = CategoryUnknown
+	assert.Equal(t, first, Categories()[0])
+
+	aliases := AllAliases()
+	require.NotEmpty(t, aliases)
+	firstAlias := aliases[0]
+	aliases[0] = "clobbered"
+	assert.Equal(t, firstAlias, AllAliases()[0])
 }

@@ -24,7 +24,7 @@ func TestRowSources_ParentKeysMatchRelations(t *testing.T) {
 	for _, r := range domain.Relations() {
 		want[r.Child] = append(want[r.Child], r.Parent)
 	}
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		exp := want[cat]
 		slices.Sort(exp)
 		assert.Equalf(t, exp, rowSources[cat].parents, "%s: row-source parent keys differ from relations", cat)
