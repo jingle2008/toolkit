@@ -5,8 +5,10 @@ package logging
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -43,15 +45,32 @@ func ParseLevel(level string, debug bool) slog.Level {
 }
 
 // NewHandler returns a handler writing format-encoded records at or
-// above level to w. Records carry their real call site (AddSource).
-// FormatConsole selects the text handler; anything else (json, the
-// deprecated slog alias) the JSON handler.
+// above level to w. Records carry their real call site (AddSource),
+// shortened to dir/file.go:line (shortSource). FormatConsole selects the
+// text handler; anything else (json, the deprecated slog alias) the JSON
+// handler.
 func NewHandler(w io.Writer, format string, level slog.Leveler) slog.Handler {
-	opts := &slog.HandlerOptions{Level: level, AddSource: true}
+	opts := &slog.HandlerOptions{Level: level, AddSource: true, ReplaceAttr: shortSource}
 	if format == FormatConsole {
 		return slog.NewTextHandler(w, opts)
 	}
 	return slog.NewJSONHandler(w, opts)
+}
+
+// shortSource rewrites the top-level source attr to "dir/file.go:line",
+// as zap's caller field read: the absolute path slog records is long and
+// names the build machine's directories.
+func shortSource(groups []string, a slog.Attr) slog.Attr {
+	if len(groups) > 0 || a.Key != slog.SourceKey {
+		return a
+	}
+	src, ok := a.Value.Any().(*slog.Source)
+	if !ok || src == nil {
+		return a
+	}
+	dir, file := filepath.Split(src.File)
+	short := filepath.Join(filepath.Base(dir), file)
+	return slog.String(slog.SourceKey, fmt.Sprintf("%s:%d", short, src.Line))
 }
 
 // NewFile returns a logger writing to filename through lumberjack
