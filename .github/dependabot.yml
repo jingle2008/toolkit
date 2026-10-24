@@ -36,6 +36,10 @@ updates:
   # prefix "ci" (not "deps") is deliberate: GoReleaser's changelog
   # filters drop ci: commits, so action bumps stay out of the release
   # notes, while gomod's deps: bumps are listed under Dependencies.
+  #
+  # No "automerge" label here (unlike gomod): an action bump changes
+  # code that runs with release.yml's signing and notarization secrets,
+  # so every one gets a human review before it merges.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -45,4 +49,3 @@ updates:
       prefix: "ci"
     labels:
       - "dependencies"
-      - "automerge"

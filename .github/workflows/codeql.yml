@@ -8,13 +8,18 @@ on:
   schedule:
     - cron: '0 8 * * 1'
 
+# Read-only token by default; the analyze job adds only what upload needs.
+permissions:
+  contents: read
+
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
+      # Uploading SARIF results to code scanning. (The template's
+      # `actions: read` is only needed in private repos; this one is public.)
       security-events: write
 
     strategy:
@@ -22,19 +27,21 @@ jobs:
       matrix:
         language: [ 'go' ]
 
+    # Actions are pinned to full commit SHAs (tags are mutable); the
+    # trailing # vX.Y.Z comment is what Dependabot reads and bumps.
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4
+      uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
       with:
         languages: ${{ matrix.language }}
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v4
+      uses: github/codeql-action/autobuild@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
       with:
         category: "/language:${{matrix.language}}"
