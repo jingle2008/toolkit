@@ -26,6 +26,11 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          # tools/go.sum too: make setup builds the dev tools from the
+          # separate tools module, and the cache key must cover it.
+          cache-dependency-path: |
+            go.sum
+            tools/go.sum
       - name: Setup dev tools
         run: make setup
       - name: Lint, test, coverage threshold
