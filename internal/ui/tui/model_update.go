@@ -196,7 +196,7 @@ func (m *Model) handleKubeVersionMsg(msg kubeVersionMsg) tea.Cmd {
 	env := *m.pendingRecent
 	m.pendingRecent = nil
 	if msg.NoContext {
-		m.logger.Infow("not remembering an environment without a kube context", "context", msg.Context)
+		m.logger.Info("not remembering an environment without a kube context", "context", msg.Context)
 		return nil
 	}
 	m.recentEnvs.Touch(env)

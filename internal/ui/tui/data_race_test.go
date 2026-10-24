@@ -15,9 +15,9 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -174,7 +174,7 @@ func TestCordonNode_ActionReadsNothingOfTheModel(t *testing.T) {
 	var msg tea.Msg
 	runConcurrently(func() tea.Msg { msg = actionResult(t, cmd); return nil }, func() {
 		m.parentCtx = cancelled
-		m.logger = logging.NewNoOpLogger()
+		m.logger = logging.Discard()
 	})
 	res, ok := msg.(cordonNodeResultMsg)
 	require.True(t, ok)

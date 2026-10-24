@@ -27,7 +27,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
 	rootCmd.PersistentFlags().String("log-file", "toolkit.log", "Path to log file")
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Enable debug logging")
-	rootCmd.PersistentFlags().String("log-format", "console", "Log format: console|json|slog")
+	rootCmd.PersistentFlags().String("log-format", "console", "Log format: console|json (slog: deprecated alias of json)")
 	rootCmd.PersistentFlags().String("log-level", "", "Minimum log level: debug|info|warn|error (empty uses debug flag)")
 	rootCmd.PersistentFlags().Bool(config.FlagMutationEnvOverrideAllowed, false,
 		"Allow MCP mutation tools to override the startup env_realm/env_region/env_type per call. "+
@@ -47,7 +47,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	_ = rootCmd.MarkFlagFilename("log-file")
 	// Shell completion for enumerated flags.
 	_ = rootCmd.RegisterFlagCompletionFunc("log-format", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
-		return []string{"console", "json", "slog"}, cobra.ShellCompDirectiveNoFileComp
+		return []string{"console", "json"}, cobra.ShellCompDirectiveNoFileComp
 	})
 	_ = rootCmd.RegisterFlagCompletionFunc("log-level", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		return []string{"debug", "info", "warn", "error"}, cobra.ShellCompDirectiveNoFileComp

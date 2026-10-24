@@ -24,7 +24,7 @@ It targets day-to-day DevOps & development automation: querying Kubernetes, pars
 | **Config loading & validation** | `internal/config`, `internal/configloader` | JSON / YAML with defaulting & schema checks |
 | **Collections helpers** | `internal/collections` | Generic filter/sort with predicates |
 | **Encoding helpers** | `internal/encoding/jsonutil` | Fast JSON pointer traversal |
-| **Error & logging** | `pkg/infra/logging` | Typed errors via std errors; zap logger |
+| **Error & logging** | `internal/logging` | Typed errors via std errors; log/slog logger |
 
 ## Architecture at a glance
 
@@ -126,7 +126,7 @@ toolkit --help                # all global flags
 | `--kubeconfig` | `~/.kube/config` | Path to kubeconfig file |
 | `--log-file` | `toolkit.log` | Path to log file |
 | `--debug, -d` | `false` | Enable debug logging |
-| `--log-format` | `console` | Log format: `console`, `json`, or `slog` |
+| `--log-format` | `console` | Log format: `console` or `json` (`slog`: deprecated alias of `json`) |
 | `--log-level` | | Minimum log level: `debug`, `info`, `warn`, `error` (empty uses `--debug` flag) |
 | `--mutation-env-override-allowed` | `false` | Allow MCP mutation tools to override the startup env per call (off by default for safety) |
 | `--mcp-read-only` | `false` | Start `toolkit mcp` with only the read tools (plus `get_drain_status`); mutation tools aren't registered |
@@ -324,10 +324,10 @@ To give an agent read access only, start the server with `--mcp-read-only` (or `
 │   │   └── terraform/      # Terraform provider
 │   ├── config/             # typed config structs
 │   ├── configloader/       # env + file loader
+│   ├── logging/            # log/slog logger, fan-out, TUI log ring
 │   ├── collections/        # generic filter/sort
 │   └── encoding/jsonutil/  # JSON helpers
 ├── pkg/
-│   ├── infra/logging/      # zap-based logging
 │   └── models/             # domain models and types
 └── test/
     └── integration/
@@ -401,11 +401,11 @@ Toolkit follows a modular, testable architecture:
 - **TUI Model**: `internal/ui/tui` contains Bubble Tea models, views, and update loop; composed via functional options.
 - **Domain types**: `pkg/models` defines strongly-typed domain models used across loaders and UI.
 - **Category enum**: `internal/domain/category.go` provides strongly-typed categories and parsing.
-- **Logging**: `pkg/infra/logging` wraps zap for structured logs with configurable format and file path.
+- **Logging**: `internal/logging` builds a `log/slog` logger with configurable format and file path, fanned out to the TUI log view.
 
 ## Logging
 
-Toolkit uses [zap](https://github.com/uber-go/zap) for structured, machine-readable logging. By default logs are written to `toolkit.log` (configurable via `--log-file`) and support `--log-format` of `console`, `json`, or `slog`. The minimum log level can be set via `--log-level` (`debug`, `info`, `warn`, `error`).
+Toolkit uses Go's [log/slog](https://pkg.go.dev/log/slog) for structured, machine-readable logging; each line carries its source location, and client-go's klog output is routed into the same log. By default logs are written to `toolkit.log` (configurable via `--log-file`) and support `--log-format` of `console` (key=value text) or `json` (`slog` is a deprecated alias of `json`). The minimum log level can be set via `--log-level` (`debug`, `info`, `warn`, `error`).
 
 ## Contributing
 

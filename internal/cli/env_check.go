@@ -6,7 +6,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/configloader"
 	"github.com/jingle2008/toolkit/internal/domain"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -35,7 +35,7 @@ func checkEnvironment(ctx context.Context, cfg config.Config) error {
 	}
 	all, err := loadEnvironmentsFn(ctx, cfg.RepoPath)
 	if err != nil {
-		logging.FromContext(ctx).Warnw("environment not checked: repo environments didn't load", "error", err)
+		logging.FromContext(ctx).Warn("environment not checked: repo environments didn't load", "error", err)
 		return nil
 	}
 	return configloader.CheckEnvironment(models.Environment{Type: cfg.EnvType, Region: cfg.EnvRegion, Realm: cfg.EnvRealm}, all)

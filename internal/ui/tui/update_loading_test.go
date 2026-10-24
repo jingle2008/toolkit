@@ -5,6 +5,8 @@ import (
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/stopwatch"
+
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 type fakeErrMsg string
@@ -31,7 +33,7 @@ func TestUpdate_ErrMsgRoutesToToast(t *testing.T) {
 	m := &Model{}
 	m.loadingSpinner = &spinner.Model{}
 	m.loadingTimer = &stopwatch.Model{}
-	m.logger = &fakeLogger{}
+	m.logger = logging.Discard()
 	m.Update(errMsg{err: fakeErrMsg("fail")})
 	if m.toasts.active == nil || m.toasts.active.msg != "fail" || m.toasts.active.sev != toastError {
 		t.Errorf("expected error toast with msg 'fail', got %+v", m.toasts.active)

@@ -14,7 +14,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/jingle2008/toolkit/internal/fileutil"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 )
 
 const (
@@ -116,13 +116,13 @@ func (r *resolver) resolveReady(ctx context.Context) bool {
 func (r *resolver) breakCycle(ctx context.Context) bool {
 	for _, key := range r.localOrder() {
 		if v, ok := r.evalLocal(key); ok {
-			logging.FromContext(ctx).Debugw("breaking a reference cycle", "local", key, "dir", r.dirPath)
+			logging.FromContext(ctx).Debug("breaking a reference cycle", "local", key, "dir", r.dirPath)
 			r.setLocal(key, v)
 			return true
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(r.calls)) {
-		logging.FromContext(ctx).Debugw("breaking a reference cycle", "module", name, "dir", r.dirPath)
+		logging.FromContext(ctx).Debug("breaking a reference cycle", "module", name, "dir", r.dirPath)
 		r.settleCall(ctx, name)
 		return true
 	}
@@ -175,7 +175,7 @@ func (r *resolver) settleCall(ctx context.Context, name string) {
 	inputs := moduleInputs(ctx, name, call.block, r.evalCtx)
 	out, err := evalModule(ctx, filepath.Join(r.dirPath, call.source), inputs, r.evalCtx, r.depth+1)
 	if err != nil {
-		logging.FromContext(ctx).Warnw("cannot evaluate module", "module", name, "source", call.source, "error", err)
+		logging.FromContext(ctx).Warn("cannot evaluate module", "module", name, "module_source", call.source, "error", err)
 		return
 	}
 	r.outputs[name] = out
@@ -232,7 +232,7 @@ func moduleCalls(ctx context.Context, dirPath string, depth int) map[string]modu
 			continue
 		}
 		if depth >= maxModuleDepth {
-			logging.FromContext(ctx).Warnw("module calls nested too deep; skipping", "module", name, "dir", dirPath)
+			logging.FromContext(ctx).Warn("module calls nested too deep; skipping", "module", name, "dir", dirPath)
 			continue
 		}
 		calls[name] = moduleCall{block: b, source: source}
@@ -257,7 +257,7 @@ func localModuleSource(ctx context.Context, call *hclsyntax.Block) (name, source
 	}
 	source = v.AsString()
 	if !strings.HasPrefix(source, "./") && !strings.HasPrefix(source, "../") {
-		logging.FromContext(ctx).Debugw("skipping non-local module", "module", name, "source", source)
+		logging.FromContext(ctx).Debug("skipping non-local module", "module", name, "module_source", source)
 		return "", "", false
 	}
 	return name, source, true
@@ -274,7 +274,7 @@ func moduleInputs(ctx context.Context, name string, call *hclsyntax.Block, paren
 		}
 		v, diags := attr.Expr.Value(parent)
 		if diags.HasErrors() || !v.IsWhollyKnown() {
-			logging.FromContext(ctx).Debugw("module input unresolved", "module", name, "input", key, "errors", diags.Errs())
+			logging.FromContext(ctx).Debug("module input unresolved", "module", name, "input", key, "errors", diags.Errs())
 			continue
 		}
 		inputs[key] = v
@@ -325,7 +325,7 @@ func evalModule(ctx context.Context, dir string, inputs map[string]cty.Value, pa
 		}
 		v, diags := attr.Expr.Value(&evalCtx)
 		if diags.HasErrors() || !v.IsWhollyKnown() {
-			logger.Debugw("module output unresolved", "dir", dir, "output", o.Labels[0], "errors", diags.Errs())
+			logger.Debug("module output unresolved", "dir", dir, "output", o.Labels[0], "errors", diags.Errs())
 			continue
 		}
 		out[o.Labels[0]] = v

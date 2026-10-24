@@ -2,13 +2,14 @@ package tui
 
 import (
 	"context"
+	"log/slog"
 
 	"charm.land/bubbles/v2/table"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/recentenv"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -72,7 +73,7 @@ func WithLoader(l loader.Composite) ModelOption {
 }
 
 // WithLogger sets the logger for the Model.
-func WithLogger(logger logging.Logger) ModelOption {
+func WithLogger(logger *slog.Logger) ModelOption {
 	return func(m *Model) {
 		m.logger = logger
 	}

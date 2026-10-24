@@ -3,9 +3,10 @@
 package actions
 
 import (
+	"log/slog"
+
 	"github.com/atotto/clipboard"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -14,22 +15,22 @@ var clipboardWriteAll = clipboard.WriteAll
 // CopyItemName copies the name or ID of an item to the clipboard.
 // RealmedID implementers (DAC, ImportedModel) get their full OCID;
 // other NamedItem implementers get their raw name.
-func CopyItemName(item any, env models.Environment, logger logging.Logger) {
+func CopyItemName(item any, env models.Environment, logger *slog.Logger) {
 	if item == nil {
-		logger.Errorw("no item selected for copying name")
+		logger.Error("no item selected for copying name")
 		return
 	}
 
 	if r, ok := item.(models.RealmedID); ok {
 		if err := clipboardWriteAll(r.OCID(env.Realm, env.Region)); err != nil {
-			logger.Errorw("failed to copy id to clipboard", "error", err)
+			logger.Error("failed to copy id to clipboard", "error", err)
 		}
 	} else if to, ok := item.(models.NamedItem); ok {
 		if err := clipboardWriteAll(to.GetName()); err != nil {
-			logger.Errorw("failed to copy name to clipboard", "error", err)
+			logger.Error("failed to copy name to clipboard", "error", err)
 		}
 	} else {
-		logger.Errorw("unsupported item type for copying name", "item", item)
+		logger.Error("unsupported item type for copying name", "item", item)
 	}
 }
 
@@ -37,9 +38,9 @@ func CopyItemName(item any, env models.Environment, logger logging.Logger) {
 // clipboard. RealmedTenancyID implementers (DAC, ImportedModel) get
 // their full tenancy OCID; TenancyOverride implementers (file-backed
 // override types) get whatever's stored in their TenantID field.
-func CopyTenantID(item any, env models.Environment, logger logging.Logger) {
+func CopyTenantID(item any, env models.Environment, logger *slog.Logger) {
 	if item == nil {
-		logger.Errorw("no item selected for copying tenant ID")
+		logger.Error("no item selected for copying tenant ID")
 		return
 	}
 
@@ -47,17 +48,17 @@ func CopyTenantID(item any, env models.Environment, logger logging.Logger) {
 		ocid := r.TenancyOCID(env.Realm)
 		if ocid == "" {
 			// e.g. an on-demand InferenceService, which has no tenant.
-			logger.Infow("selected item has no tenant ID to copy")
+			logger.Info("selected item has no tenant ID to copy")
 			return
 		}
 		if err := clipboardWriteAll(ocid); err != nil {
-			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
+			logger.Error("failed to copy tenantID to clipboard", "error", err)
 		}
 	} else if to, ok := item.(models.TenancyOverride); ok {
 		if err := clipboardWriteAll(to.GetTenantID()); err != nil {
-			logger.Errorw("failed to copy tenantID to clipboard", "error", err)
+			logger.Error("failed to copy tenantID to clipboard", "error", err)
 		}
 	} else {
-		logger.Errorw("unsupported item type for copying tenant ID", "item", item)
+		logger.Error("unsupported item type for copying tenant ID", "item", item)
 	}
 }

@@ -123,16 +123,16 @@ The drain's progress lives on the Node (annotation `toolkit/drain`), so an inter
 Every mutation writes a structured line to the log (configured via `--log-file` / `log-file:` — defaults to `toolkit.log`). Set `log-format: json` to make it `jq`-friendly:
 
 ```bash
-jq 'select(.msg=="mutation") | {ts, action, target, phase, dry_run, error}' toolkit.log
+jq 'select(.msg=="mutation") | {time, action, target, phase, dry_run, error}' toolkit.log
 ```
 
 Typical output (pretty-printed):
 
 ```jsonc
-{ "ts": "...", "action": "cordon",  "target": "gpu-node-42", "phase": "begin", "dry_run": false }
-{ "ts": "...", "action": "cordon",  "target": "gpu-node-42", "phase": "done",  "dry_run": false }
-{ "ts": "...", "action": "drain",   "target": "gpu-node-42", "phase": "begin", "dry_run": false }
-{ "ts": "...", "action": "drain",   "target": "gpu-node-42", "phase": "done",  "dry_run": false }
+{ "time": "...", "action": "cordon",  "target": "gpu-node-42", "phase": "begin", "dry_run": false }
+{ "time": "...", "action": "cordon",  "target": "gpu-node-42", "phase": "done",  "dry_run": false }
+{ "time": "...", "action": "drain",   "target": "gpu-node-42", "phase": "begin", "dry_run": false }
+{ "time": "...", "action": "drain",   "target": "gpu-node-42", "phase": "done",  "dry_run": false }
 ```
 
 `phase` is `begin` / `done` / `failed`, or `dry_run` for a `--dry-run`

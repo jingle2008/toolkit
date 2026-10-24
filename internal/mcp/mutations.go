@@ -13,9 +13,9 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/resolve"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -91,7 +91,7 @@ func (s *Server) effectiveMutationEnv(a mutation.Action, target string, in envOv
 	startup := s.envFor(envOverride{})
 	if !s.cfg.MutationEnvOverrideAllowed {
 		if in.EnvType != "" || in.EnvRegion != "" || in.EnvRealm != "" {
-			s.logger.Infow(
+			s.logger.Info(
 				"mutation env_override ignored (server disallows)",
 				"action", a.Verb, "kind", a.Kind, "target", target, "surface", surfaceMCP,
 				"requested_env_type", in.EnvType,
@@ -103,7 +103,7 @@ func (s *Server) effectiveMutationEnv(a mutation.Action, target string, in envOv
 	}
 	effective := s.envFor(in)
 	if effective != startup {
-		s.logger.Infow(
+		s.logger.Info(
 			"mutation env override active (deviation from startup)",
 			"level", "warn",
 			"action", a.Verb, "kind", a.Kind, "target", target, "surface", surfaceMCP,
@@ -411,11 +411,11 @@ func (s *Server) driveDrain(kubeContext, node string) {
 	go func() {
 		defer s.drainDrivers.Delete(key)
 		if err := mcpAwaitDrainFn(s.bgCtx, s.cfg.KubeConfig, kubeContext, node); err != nil {
-			s.logger.Errorw("mutation", "action", "drain", "kind", "node", "target", node, "surface", surfaceMCP,
+			s.logger.Error("mutation", "action", "drain", "kind", "node", "target", node, "surface", surfaceMCP,
 				"phase", "background-failed", "error", err)
 			return
 		}
-		s.logger.Infow("mutation", "action", "drain", "kind", "node", "target", node, "surface", surfaceMCP,
+		s.logger.Info("mutation", "action", "drain", "kind", "node", "target", node, "surface", surfaceMCP,
 			"phase", "background-done")
 	}()
 }

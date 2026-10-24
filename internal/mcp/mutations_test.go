@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -93,17 +93,17 @@ func stubAllMutationSeams() (*bool, func()) {
 		mark()
 		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
-	mcpSoftResetFn = func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error { mark(); return nil }
-	mcpTerminateFn = func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error { mark(); return nil }
+	mcpSoftResetFn = func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error { mark(); return nil }
+	mcpTerminateFn = func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error { mark(); return nil }
 	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GPUPool, error) {
 		mark()
 		return &models.GPUPool{Name: name, ID: "ocid1.pool", Size: 1}, nil
 	}
-	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, logging.Logger) (oci.PoolScale, error) {
+	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
 		mark()
 		return oci.PoolScale{}, nil
 	}
-	mcpDeleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+	mcpDeleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		mark()
 		return nil
 	}
@@ -271,7 +271,7 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 	var gotNode *models.GPUNode
 	orig := mcpTerminateFn
 	defer func() { mcpTerminateFn = orig }()
-	mcpTerminateFn = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
+	mcpTerminateFn = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
 		gotNode = n
 		return nil
 	}
@@ -302,7 +302,7 @@ func TestIntegration_RestartNodeTool_ConfirmTrueExecutes(t *testing.T) {
 	var gotNode *models.GPUNode
 	orig := mcpSoftResetFn
 	defer func() { mcpSoftResetFn = orig }()
-	mcpSoftResetFn = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
+	mcpSoftResetFn = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
 		gotNode = n
 		return nil
 	}
@@ -341,7 +341,7 @@ func TestIntegration_ScaleGPUPoolTool_ConfirmTrueExecutes(t *testing.T) {
 	var gotPool *models.GPUPool
 	origInc := mcpIncreasePoolSizeFn
 	defer func() { mcpIncreasePoolSizeFn = origInc }()
-	mcpIncreasePoolSizeFn = func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ logging.Logger) (oci.PoolScale, error) {
+	mcpIncreasePoolSizeFn = func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotPool = p
 		return oci.PoolScale{Shown: 4, Before: 4, After: 4 + add}, nil
 	}
@@ -398,7 +398,7 @@ func TestIntegration_MutationTool_HonorsEnvOverride_WhenAllowed(t *testing.T) {
 	var gotEnv models.Environment
 	orig := mcpDeleteDACFn
 	defer func() { mcpDeleteDACFn = orig }()
-	mcpDeleteDACFn = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ logging.Logger) error {
+	mcpDeleteDACFn = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ *slog.Logger) error {
 		gotEnv = env
 		return nil
 	}
@@ -433,7 +433,7 @@ func TestIntegration_MutationTool_IgnoresEnvOverride_WhenDisallowed(t *testing.T
 	var gotEnv models.Environment
 	orig := mcpDeleteDACFn
 	defer func() { mcpDeleteDACFn = orig }()
-	mcpDeleteDACFn = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ logging.Logger) error {
+	mcpDeleteDACFn = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ *slog.Logger) error {
 		gotEnv = env
 		return nil
 	}
@@ -474,7 +474,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	}
 	origReset := mcpSoftResetFn
 	defer func() { mcpSoftResetFn = origReset }()
-	mcpSoftResetFn = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ logging.Logger) error {
+	mcpSoftResetFn = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ *slog.Logger) error {
 		gotActionEnv = env
 		return nil
 	}
@@ -500,7 +500,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	gotActionEnv = models.Environment{}
 	origTerm := mcpTerminateFn
 	defer func() { mcpTerminateFn = origTerm }()
-	mcpTerminateFn = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ logging.Logger) error {
+	mcpTerminateFn = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ *slog.Logger) error {
 		gotActionEnv = env
 		return nil
 	}
@@ -528,7 +528,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	}
 	origInc := mcpIncreasePoolSizeFn
 	defer func() { mcpIncreasePoolSizeFn = origInc }()
-	mcpIncreasePoolSizeFn = func(_ context.Context, _ *models.GPUPool, _ int, env models.Environment, _ logging.Logger) (oci.PoolScale, error) {
+	mcpIncreasePoolSizeFn = func(_ context.Context, _ *models.GPUPool, _ int, env models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotActionEnv = env
 		return oci.PoolScale{}, nil
 	}
@@ -552,7 +552,7 @@ func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
 	var gotDAC *models.DedicatedAICluster
 	orig := mcpDeleteDACFn
 	defer func() { mcpDeleteDACFn = orig }()
-	mcpDeleteDACFn = func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ logging.Logger) error {
+	mcpDeleteDACFn = func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ *slog.Logger) error {
 		gotDAC = d
 		return nil
 	}

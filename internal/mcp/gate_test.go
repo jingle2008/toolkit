@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -90,22 +90,22 @@ func stubPerformSeams(t *testing.T) *[]string {
 	mcpResolveGPUNodeFn = func(_ context.Context, _ *Server, _ models.Environment, name, _ string) (*models.GPUNode, error) {
 		return &models.GPUNode{Name: name, ID: "ocid1.instance.resolved"}, nil
 	}
-	mcpSoftResetFn = func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
+	mcpSoftResetFn = func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error {
 		did("reset")
 		return nil
 	}
-	mcpTerminateFn = func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
+	mcpTerminateFn = func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error {
 		did("terminate")
 		return nil
 	}
 	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GPUPool, error) {
 		return &models.GPUPool{Name: name, ID: "ocid1.pool", Size: 4, ActualSize: 2}, nil
 	}
-	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, logging.Logger) (oci.PoolScale, error) {
+	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
 		did("scale")
 		return oci.PoolScale{}, nil
 	}
-	mcpDeleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+	mcpDeleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		did("delete-dac")
 		return nil
 	}

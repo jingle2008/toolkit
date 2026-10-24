@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -10,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -42,8 +43,8 @@ func TestRenderLogEntries_NilStore(t *testing.T) {
 func TestRenderLogEntries_OrdersOldestToNewest(t *testing.T) {
 	t.Parallel()
 	ring := logging.NewRingSink(8)
-	ring.Infow("first")
-	ring.Errorw("second")
+	slog.New(ring).Info("first")
+	slog.New(ring).Error("second")
 	m := &Model{log: logOverlay{store: ring}}
 	out, _, _ := m.renderLogEntries(120)
 	assert.Less(t, strings.Index(out, "first"), strings.Index(out, "second"))
@@ -56,7 +57,7 @@ func TestRenderLogEntries_WrapsInsteadOfTruncating(t *testing.T) {
 	t.Parallel()
 	ring := logging.NewRingSink(4)
 	long := strings.Repeat("x", 100) // one unbroken token, no color (Info)
-	ring.Infow(long)
+	slog.New(ring).Info(long)
 	m := &Model{log: logOverlay{store: ring}}
 
 	out, _, _ := m.renderLogEntries(40)
@@ -73,7 +74,7 @@ func newLogModel(t *testing.T, ring *logging.RingSink) *Model {
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithCategory(domain.Tenant),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 		WithLogStore(ring),
 	)
 	if err != nil {
@@ -112,7 +113,7 @@ func TestLogOverlay_PauseAndResume(t *testing.T) {
 	t.Parallel()
 	ring := logging.NewRingSink(200)
 	for i := 0; i < 100; i++ {
-		ring.Infow("line")
+		slog.New(ring).Info("line")
 	}
 	m := newLogModel(t, ring)
 	m.viewMode = common.ListView
@@ -140,7 +141,7 @@ func TestLogOverlay_NilStoreDoesNotPanic(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	m.viewWidth, m.viewHeight = 80, 12
 	m.viewMode = common.ListView
@@ -154,10 +155,10 @@ func TestLogOverlay_NilStoreDoesNotPanic(t *testing.T) {
 func openLog(t *testing.T) *Model {
 	t.Helper()
 	ring := logging.NewRingSink(16)
-	ring.Debugw("probe detail")
-	ring.Infow("loaded tenants")
-	ring.Warnw("slow watch")
-	ring.Errorw("drain failed", "node", "n1")
+	slog.New(ring).Debug("probe detail")
+	slog.New(ring).Info("loaded tenants")
+	slog.New(ring).Warn("slow watch")
+	slog.New(ring).Error("drain failed", "node", "n1")
 	m := newLogModel(t, ring)
 	m.viewMode = common.ListView
 	_, _ = m.Update(backtick)

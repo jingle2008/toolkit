@@ -13,6 +13,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/columns"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -53,7 +54,7 @@ func TestExportTableCSV_Success(t *testing.T) {
 			},
 		},
 		loader: fakeLoader{dataset: &models.Dataset{}},
-		logger: fakeLogger{},
+		logger: logging.Discard(),
 	}
 
 	var buf bytes.Buffer
@@ -125,7 +126,7 @@ func TestExportTableCSV_DACUsesFullOCIDs(t *testing.T) {
 			},
 		},
 		loader: fakeLoader{dataset: &models.Dataset{}},
-		logger: fakeLogger{},
+		logger: logging.Discard(),
 	}
 
 	var buf bytes.Buffer
@@ -166,7 +167,7 @@ func TestExportTableCSV_CreateFileError(t *testing.T) {
 		environment: models.Environment{Region: "us-ashburn-1", Realm: "oc1"},
 		dataset:     &models.Dataset{},
 		loader:      fakeLoader{dataset: &models.Dataset{}},
-		logger:      fakeLogger{},
+		logger:      logging.Discard(),
 	}
 	badPath := filepath.Join("no_such_dir", "out.csv")
 	err := m.exportTableCSV(badPath)
@@ -179,7 +180,7 @@ func TestExportFilename(t *testing.T) {
 		environment: models.Environment{Region: "iad"},
 		category:    domain.Tenant,
 		loader:      fakeLoader{dataset: &models.Dataset{}},
-		logger:      fakeLogger{},
+		logger:      logging.Discard(),
 	}
 	got := m.exportFilename()
 	assert.Equal(t, "iad-Tenant.csv", got)
@@ -229,7 +230,7 @@ func TestExportTableCSV_IgnoresInteractiveSort(t *testing.T) {
 		sortColumn: "Name",
 		sortAsc:    false,
 		loader:     fakeLoader{dataset: &models.Dataset{}},
-		logger:     fakeLogger{},
+		logger:     logging.Discard(),
 	}
 
 	var buf bytes.Buffer
@@ -307,7 +308,7 @@ func TestExportView_ContainsFilenameAndPrompt(t *testing.T) {
 		environment: models.Environment{Region: "phx"},
 		category:    domain.Tenant,
 		loader:      fakeLoader{dataset: &models.Dataset{}},
-		logger:      fakeLogger{},
+		logger:      logging.Discard(),
 	}
 	setDefaults(m)
 	m.enterExportView()
