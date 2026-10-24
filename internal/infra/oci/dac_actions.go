@@ -112,23 +112,28 @@ func deleteEndpointsInDAC(
 	dac *generativeai.DedicatedAiCluster,
 	logger logging.Logger,
 ) error {
-	compartmentID := dac.CompartmentId
-	listReq := generativeai.ListEndpointsRequest{
-		CompartmentId: compartmentID,
-	}
-	listResp, err := client.ListEndpoints(ctx, listReq)
+	endpoints, err := listAllPages(func(page *string) ([]generativeai.EndpointSummary, *string, error) {
+		resp, err := client.ListEndpoints(ctx, generativeai.ListEndpointsRequest{
+			CompartmentId: dac.CompartmentId,
+			Page:          page,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to list endpoints: %w", err)
+		}
+		return resp.Items, resp.OpcNextPage, nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to list endpoints: %w", err)
+		return err
 	}
 
-	logger.Infow("endpoints found", "count", len(listResp.Items))
+	logger.Infow("endpoints found", "count", len(endpoints))
 
 	var count int32
 	const maxConcurrent = 5
 	sem := make(chan struct{}, maxConcurrent)
 	g, gctx := errgroup.WithContext(ctx)
 
-	for _, item := range listResp.Items {
+	for _, item := range endpoints {
 		// Skip malformed summaries: a nil cluster id on either side can never
 		// match, and dereferencing it would crash the whole deletion.
 		if item.DedicatedAiClusterId == nil || dac.Id == nil || *item.DedicatedAiClusterId != *dac.Id {

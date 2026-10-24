@@ -297,5 +297,63 @@ func TestPopulateGPUPools_NilSummaryFields(t *testing.T) {
 	require.Equal(t, "RUNNING", pools[1].Status)
 }
 
+// Pools listed past the first ListInstancePools page must be enriched, not
+// left NONEXIST: every page is requested with the previous OpcNextPage.
+func TestPopulateGPUPools_FollowsPages(t *testing.T) {
+	orig := newComputeMgmtClient
+	defer func() { newComputeMgmtClient = orig }()
+
+	summary := func(name, id string, size int) core.InstancePoolSummary {
+		return core.InstancePoolSummary{DisplayName: strPtr(name), Id: strPtr(id), Size: intPtr(size), LifecycleState: "RUNNING"}
+	}
+	pages := map[string]core.ListInstancePoolsResponse{
+		"":   {Items: []core.InstancePoolSummary{summary("p1", "id1", 1)}, OpcNextPage: strPtr("t2")},
+		"t2": {Items: []core.InstancePoolSummary{summary("p2", "id2", 2)}, OpcNextPage: strPtr("t3")},
+		"t3": {Items: []core.InstancePoolSummary{summary("p3", "id3", 3)}},
+	}
+	var requested []string
+	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
+		return &fakeMgmtClient{
+			ListInstancePoolsFunc: func(_ context.Context, req core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error) {
+				require.Equal(t, "comp", derefOr(req.CompartmentId, ""))
+				page := derefOr(req.Page, "")
+				requested = append(requested, page)
+				return pages[page], nil
+			},
+		}, nil
+	}
+
+	pools := []models.GPUPool{{Name: "p3"}, {Name: "p1"}, {Name: "p2"}, {Name: "gone"}}
+	err := PopulateGPUPools(context.Background(), pools, makeEnv(), "comp")
+	require.NoError(t, err)
+	require.Equal(t, []string{"", "t2", "t3"}, requested)
+	require.Equal(t, "id3", pools[0].ID)
+	require.Equal(t, 3, pools[0].ActualSize)
+	require.Equal(t, "id1", pools[1].ID)
+	require.Equal(t, "id2", pools[2].ID)
+	require.Equal(t, "RUNNING", pools[2].Status)
+	require.Equal(t, "NONEXIST", pools[3].Status)
+}
+
+// An error on a later page fails the whole populate with that page's request id.
+func TestPopulateGPUPools_PageError(t *testing.T) {
+	orig := newComputeMgmtClient
+	defer func() { newComputeMgmtClient = orig }()
+	newComputeMgmtClient = func(_ models.Environment) (computeMgmtClient, error) {
+		return &fakeMgmtClient{
+			ListInstancePoolsFunc: func(_ context.Context, req core.ListInstancePoolsRequest) (core.ListInstancePoolsResponse, error) {
+				if req.Page == nil {
+					return core.ListInstancePoolsResponse{OpcNextPage: strPtr("t2")}, nil
+				}
+				return core.ListInstancePoolsResponse{OpcRequestId: strPtr("reqid2")}, errors.New("page2 fail")
+			},
+		}, nil
+	}
+	err := PopulateGPUPools(context.Background(), []models.GPUPool{{Name: "p1"}}, makeEnv(), "comp")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "page2 fail")
+	require.Contains(t, err.Error(), "reqid2")
+}
+
 func strPtr(s string) *string { return &s }
 func intPtr(i int) *int       { return &i }
