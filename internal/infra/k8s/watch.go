@@ -210,13 +210,34 @@ func durableOpener(
 	watchFn func(context.Context, metav1.ListOptions) (watch.Interface, error),
 ) func(context.Context) (watch.Interface, error) {
 	return func(ctx context.Context) (watch.Interface, error) {
-		rv, err := listRV(ctx)
+		// Watch clients carry no client-side Timeout (NewWatchConfig), so
+		// bound the initial list here to keep a broken cluster failing fast.
+		listCtx := ctx
+		if RequestTimeout > 0 {
+			var cancel context.CancelFunc
+			listCtx, cancel = context.WithTimeout(ctx, RequestTimeout)
+			defer cancel()
+		}
+		rv, err := listRV(listCtx)
 		if err != nil {
 			return nil, err
 		}
-		return watchtools.NewRetryWatcherWithContext(ctx, rv, watcherFunc(watchFn))
+		return watchtools.NewRetryWatcherWithContext(ctx, rv, watcherFunc(
+			func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+				if opts.TimeoutSeconds == nil {
+					ts := watchTimeoutSeconds
+					opts.TimeoutSeconds = &ts
+				}
+				return watchFn(ctx, opts)
+			},
+		))
 	}
 }
+
+// watchTimeoutSeconds asks the API server to end each watch stream cleanly
+// after 5 minutes; RetryWatcher resumes from the last event or bookmark
+// resourceVersion, so streams rotate without relying on a client-side cut.
+var watchTimeoutSeconds int64 = 300
 
 // crWatchOpener returns a durable opener that watches all objects of one GVR.
 func crWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResource) func(context.Context) (watch.Interface, error) {

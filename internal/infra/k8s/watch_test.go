@@ -214,6 +214,45 @@ func TestDurableOpener_WatchesFromListedResourceVersion(t *testing.T) {
 	}
 }
 
+// TestDurableOpener_BoundsListAndSetsServerTimeout guards the watch-timeout
+// split: watch clients carry no client-side Timeout (NewWatchConfig), so the
+// initial list must get a RequestTimeout deadline of its own, and each watch
+// must ask the server to rotate the stream via TimeoutSeconds.
+//
+//nolint:paralleltest // RetryWatcher opens the watch from a background goroutine
+func TestDurableOpener_BoundsListAndSetsServerTimeout(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var listHadDeadline bool
+	gotTimeout := make(chan *int64, 1)
+	opener := durableOpener(
+		func(ctx context.Context) (string, error) {
+			_, listHadDeadline = ctx.Deadline()
+			return "1", nil
+		},
+		func(_ context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+			select {
+			case gotTimeout <- opts.TimeoutSeconds:
+			default:
+			}
+			return watch.NewFake(), nil
+		},
+	)
+	w, err := opener(ctx)
+	require.NoError(t, err)
+	defer w.Stop()
+
+	assert.True(t, listHadDeadline, "initial list must be bounded by RequestTimeout")
+	select {
+	case ts := <-gotTimeout:
+		require.NotNil(t, ts, "watch must set server-side TimeoutSeconds")
+		assert.Equal(t, watchTimeoutSeconds, *ts)
+	case <-time.After(2 * time.Second):
+		t.Fatal("watch was never opened")
+	}
+}
+
 // TestWatchGPUNodes_AppliesSelectors guards selector propagation: the node
 // watch must carry the GPU node label selector, and every pod watch must carry
 // one bounded GPU pod label selector plus the Running field selector. A
