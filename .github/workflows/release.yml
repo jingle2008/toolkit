@@ -5,12 +5,25 @@ on:
     tags:
       - "v*"
 
+# Read-only token by default; the goreleaser job widens it below.
+permissions:
+  contents: read
+
+# Third-party actions are pinned to full commit SHAs (tags are mutable);
+# the trailing # vX.Y.Z comment is what Dependabot reads and bumps. This
+# workflow holds the signing and notarization secrets, so a moved tag
+# here would be the expensive kind of supply-chain incident.
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+    permissions:
+      # GoReleaser creates the GitHub release and uploads its assets.
+      # (It authenticates with secrets.GH_TOKEN below, a PAT that can also
+      # push to homebrew-tap; this grant covers the built-in token.)
+      contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # GoReleaser builds the changelog from the commits since the
           # previous tag; a shallow clone has neither, so the release
@@ -18,12 +31,12 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
 
       - name: Install syft (SBOM generator)
-        uses: anchore/sbom-action/download-syft@v0
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
 
       - name: Import GPG private key
         if: env.GPG_PRIVATE_KEY != ''
@@ -39,7 +52,7 @@ jobs:
           echo "$KEY_ID:6:" | gpg --import-ownertrust
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           version: "~> v2"  # or 'latest' once you confirm it's v2+
           args: release --clean

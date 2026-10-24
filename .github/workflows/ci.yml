@@ -1,20 +1,29 @@
 name: CI
 
 on:
+  # push is limited to main so a PR branch doesn't run every job twice
+  # (once for the push, once for the pull_request event). PRs from any
+  # branch are still covered by pull_request.
   push:
-    branches: [ "**" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "**" ]
   schedule:
     - cron: "0 3 * * *" # Nightly at 3am UTC
 
+# Read-only token by default; no job here writes to the repo. Codecov
+# authenticates with CODECOV_TOKEN, not OIDC, so no id-token grant.
+permissions:
+  contents: read
+
+# Third-party actions are pinned to full commit SHAs (tags are mutable);
+# the trailing # vX.Y.Z comment is what Dependabot reads and bumps.
 jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - name: Setup dev tools
@@ -22,34 +31,33 @@ jobs:
       - name: Lint, test, coverage threshold
         run: make ci
       - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        # Pinned rather than @latest so a new govulncheck release can't
+        # change CI results without a commit here.
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out
           fail_ci_if_error: true
 
   integration-test:
+    # Lint, unit tests and govulncheck already run in unit-test; this job
+    # only adds the integration suite (via make test-int, so the build
+    # tag stays defined in one place), with the race detector on.
     if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - name: Setup dev tools
-        run: make setup
-      - name: Lint, test, coverage threshold
-        run: make ci
-      - name: Run govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
       - name: Run integration tests (race)
-        run: go test -race ./test/integration/...
-      - name: Run make test-int
         run: make test-int
+        env:
+          GOFLAGS: -race
 
   release-snapshot:
     # Exercises .goreleaser.yaml on every push/PR so config drift fails
@@ -57,15 +65,15 @@ jobs:
     # are CI-only and tested for real by .github/workflows/release.yml.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # GoReleaser needs full history for changelog
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - name: GoReleaser snapshot
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           version: "~> v2"
           args: release --snapshot --clean --skip=publish,sign,sbom
