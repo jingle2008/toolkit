@@ -176,9 +176,13 @@ func Execute(version string) {
 // execute runs the root command under the one signal context every
 // command shares (via cmd.Context()): SIGINT or SIGTERM cancels it so
 // in-flight work unwinds instead of the process dying mid-operation.
+// Only the first signal is caught: once ctx is cancelled, stop restores
+// the default handling, so a second Ctrl+C kills a command that isn't
+// watching ctx.
 func execute(version string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	context.AfterFunc(ctx, stop)
 	return NewRootCmd(version).ExecuteContext(ctx)
 }
 

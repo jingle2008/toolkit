@@ -315,7 +315,7 @@ func runMutation(
 
 	plan.printNotice(out)
 	if !plan.Yes {
-		ok, err := confirmAction(in, out, fmt.Sprintf("Confirm %s? [y/N]: ", desc))
+		ok, err := confirmAction(ctx, in, out, fmt.Sprintf("Confirm %s? [y/N]: ", desc))
 		if err != nil {
 			return fmt.Errorf("read confirmation: %w", err)
 		}
@@ -374,17 +374,32 @@ const surfaceCLI = "cli"
 // said yes. Anything other than "y" / "yes" (case-insensitive,
 // trimmed) is treated as no — including EOF, blank line, and any
 // other input. Conservative-by-default: typos must mean abort.
-func confirmAction(in io.Reader, out io.Writer, prompt string) (bool, error) {
+//
+// A cancelled ctx (Ctrl+C at the prompt) returns ctx's error at once. The
+// read itself can't be interrupted, so its goroutine is left blocked on
+// in; the process is about to exit.
+func confirmAction(ctx context.Context, in io.Reader, out io.Writer, prompt string) (bool, error) {
 	if _, err := fmt.Fprint(out, prompt); err != nil {
 		return false, err
 	}
-	sc := bufio.NewScanner(in)
-	if !sc.Scan() {
-		if err := sc.Err(); err != nil {
-			return false, err
-		}
-		return false, nil
+	type answer struct {
+		yes bool
+		err error
 	}
-	ans := strings.ToLower(strings.TrimSpace(sc.Text()))
-	return ans == "y" || ans == "yes", nil
+	done := make(chan answer, 1)
+	go func() {
+		sc := bufio.NewScanner(in)
+		if !sc.Scan() {
+			done <- answer{err: sc.Err()}
+			return
+		}
+		ans := strings.ToLower(strings.TrimSpace(sc.Text()))
+		done <- answer{yes: ans == "y" || ans == "yes"}
+	}()
+	select {
+	case a := <-done:
+		return a.yes, a.err
+	case <-ctx.Done():
+		return false, ctx.Err()
+	}
 }
