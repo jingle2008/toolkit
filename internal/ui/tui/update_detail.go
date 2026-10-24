@@ -54,15 +54,18 @@ func (m *Model) copyItemJSONByChoice() tea.Cmd {
 	return m.copyItemJSON(item)
 }
 
+// copyItemJSON copies item's JSON to the clipboard, from a copy of item
+// taken here (snapshotItem).
 func (m *Model) copyItemJSON(item any) tea.Cmd {
+	logger, item := m.logger, snapshotItem(item)
 	return func() tea.Msg {
 		content, err := jsonutil.Pretty(item)
 		if err != nil {
-			m.logger.Errorw("failed to convert item to JSON", "error", err)
+			logger.Errorw("failed to convert item to JSON", "error", err)
 			return nil
 		}
 		if err := clipboardWriteAll(content); err != nil {
-			m.logger.Errorw("failed to copy JSON to clipboard", "error", err)
+			logger.Errorw("failed to copy JSON to clipboard", "error", err)
 		}
 		return nil
 	}

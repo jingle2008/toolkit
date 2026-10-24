@@ -62,8 +62,9 @@ func (m *Model) updateGPUPoolState() tea.Cmd {
 	if m.dataset != nil {
 		pools = slices.Clone(m.dataset.GPUPools)
 	}
+	opCtx := m.opCtxFunc()
 	return func() tea.Msg {
-		ctx, cancel := m.opCtx()
+		ctx, cancel := opCtx()
 		defer cancel()
 		compartmentID, err := lookupCompartmentID(ctx, known, kubeConfig, env)
 		if err == nil {
@@ -87,7 +88,13 @@ func (m *Model) updateRows(autoSelect bool) {
 
 func (m *Model) updateRowsAsync() tea.Cmd {
 	gen := m.gens.nextRows()
-	dataset := m.dataset
+	// A shallow copy: Update may replace the dataset's fields meanwhile.
+	// It replaces their slices and maps rather than writing into them.
+	var dataset *models.Dataset
+	if m.dataset != nil {
+		ds := *m.dataset
+		dataset = &ds
+	}
 	category := m.category
 	scope := m.scope
 	filter := m.filter

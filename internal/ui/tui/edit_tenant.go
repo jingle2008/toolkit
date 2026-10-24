@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -345,12 +346,12 @@ func (m *Model) openPortalCmd() tea.Cmd {
 // writer interface, off the UI goroutine.
 func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 	writer, ok := m.loader.(loader.TenantMetadataWriter)
-	path, realm := m.metadataPath(), m.environment.Realm
+	path, realm, logger := m.metadataPath(), m.environment.Realm, m.logger
 	return m.trackAction("save tenant "+entry.ID, "", nil, func(func(string)) tea.Msg {
 		if !ok {
 			return tenantSaveErrMsg{err: errors.New("loader does not support writing metadata")}
 		}
-		if err := audited(m.logger, mutation.SetTenant, entry.ID, func() error {
+		if err := audited(logger, mutation.SetTenant, entry.ID, func() error {
 			return writer.UpsertTenantMetadata(entry)
 		}); err != nil {
 			return tenantSaveErrMsg{err: err}
@@ -459,13 +460,12 @@ func tenantFromEntry(e models.TenantMetadata) models.Tenant {
 // tenancy override's tenant is already present, named by its OCID, and is
 // replaced by its newly named self.
 func upsertTenantByID(tenants []models.Tenant, t models.Tenant) []models.Tenant {
-	for i := range tenants {
-		if tenants[i].ID == t.ID {
-			tenants[i] = t
-			return tenants
-		}
+	if i := slices.IndexFunc(tenants, func(e models.Tenant) bool { return e.ID == t.ID }); i >= 0 {
+		tenants = slices.Clone(tenants) // a tea.Cmd may hold the old element
+		tenants[i] = t
+		return tenants
 	}
-	return append(tenants, t)
+	return append(slices.Clip(tenants), t)
 }
 
 // rawByTenantID rebuilds the raw (TenantID-keyed) map from an

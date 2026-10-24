@@ -50,7 +50,8 @@ func (m *Model) updateContentAsync() tea.Cmd {
 	}
 
 	gen := m.gens.nextDetail()
-	item := findItem(m.dataset, m.category, m.selectedKey)
+	// The Cmd renders a copy (snapshotItem), never the dataset's element.
+	item := snapshotItem(findItem(m.dataset, m.category, m.selectedKey))
 	// An item deleted while details is open stays on screen, marked gone,
 	// rendered from what details last showed.
 	if m.detailGone = isNilItem(item) && m.detailItem != nil; m.detailGone {

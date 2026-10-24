@@ -47,9 +47,9 @@ func (m *Model) planDeleteInferenceService(itemKey models.ItemKey, item any) tea
 		return nil
 	}
 	namespace, name := svc.Namespace, svc.Name
-	env, kubeConfig := m.environment, m.kubeConfig
+	env, kubeConfig, opCtx := m.environment, m.kubeConfig, m.opCtxFunc()
 	return func() tea.Msg {
-		ctx, cancel := m.opCtx()
+		ctx, cancel := opCtx()
 		defer cancel()
 		outcome, err := planOrphanISVCDeleteFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
 		return isvcDeletePlannedMsg{key: itemKey, outcome: outcome, err: err, env: env}
@@ -88,12 +88,12 @@ func (m *Model) deleteOrphanInferenceService(itemKey models.ItemKey, a mutation.
 		return m.showToast(itemKeyString(itemKey)+" is gone", toastInfo)
 	}
 	namespace, name := svc.Namespace, svc.Name
-	env, kubeConfig := m.environment, m.kubeConfig
+	env, kubeConfig, opCtx, logger := m.environment, m.kubeConfig, m.opCtxFunc(), m.logger
 	return m.trackAction(strings.ToLower(confirmLabels[a].verb)+" "+namespace+"/"+name, "", itemKey, func(func(string)) tea.Msg {
-		ctx, cancel := m.opCtx()
+		ctx, cancel := opCtx()
 		defer cancel()
 		var outcome k8s.OrphanDeleteOutcome
-		err := audited(m.logger, a, namespace+"/"+name, func() error {
+		err := audited(logger, a, namespace+"/"+name, func() error {
 			var err error
 			outcome, err = deleteOrphanISVCFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
 			return err

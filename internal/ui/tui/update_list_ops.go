@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -49,15 +50,15 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
 	}
-	env := m.environment
+	// DAC deletion is a multi-minute workflow with its own internal
+	// timeout; use longOpCtx so the 30s one-shot cap doesn't cancel it
+	// after endpoint deletion but before the cluster delete completes.
+	// The action reads only what is captured here, never m.
+	env, ctx, log, snapshot := m.environment, m.longOpCtx(), m.logger, *dac
 	return m.trackAction("delete "+dac.Name, "Deleting", itemKey, func(progress func(string)) tea.Msg {
-		// DAC deletion is a multi-minute workflow with its own internal
-		// timeout; use longOpCtx so the 30s one-shot cap doesn't cancel it
-		// after endpoint deletion but before the cluster delete completes.
-		ctx := m.longOpCtx()
-		logger := progressLogger{Logger: m.logger, report: progress}
-		err := audited(m.logger, mutation.DeleteDAC, dac.Name, func() error {
-			return oci.DeleteDedicatedAICluster(ctx, dac, env, logger)
+		logger := progressLogger{Logger: log, report: progress}
+		err := audited(log, mutation.DeleteDAC, snapshot.Name, func() error {
+			return oci.DeleteDedicatedAICluster(ctx, &snapshot, env, logger)
 		})
 		if err != nil {
 			return deleteErrMsg{err: err, category: domain.DedicatedAICluster, key: itemKey, env: env}
@@ -73,12 +74,12 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
 	}
-	env := m.environment
+	env, opCtx, logger, snapshot := m.environment, m.opCtxFunc(), m.logger, *node
 	return m.trackAction("terminate "+node.Name, "Terminating", itemKey, func(func(string)) tea.Msg {
-		ctx, cancel := m.opCtx()
+		ctx, cancel := opCtx()
 		defer cancel()
-		err := audited(m.logger, mutation.TerminateNode, node.Name, func() error {
-			return oci.TerminateInstance(ctx, node, env, m.logger)
+		err := audited(logger, mutation.TerminateNode, snapshot.Name, func() error {
+			return oci.TerminateInstance(ctx, &snapshot, env, logger)
 		})
 		if err != nil {
 			return deleteErrMsg{err: err, category: domain.GPUNode, key: itemKey, env: env}
@@ -97,12 +98,12 @@ func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 		m.logger.Errorw("unsupported item type for restart operation", "item", item)
 		return nil
 	}
-	env := m.environment
+	env, opCtx, logger, snapshot := m.environment, m.opCtxFunc(), m.logger, *node
 	return m.trackAction("restart "+node.Name, "Restarting", itemKey, func(func(string)) tea.Msg {
-		ctx, cancel := m.opCtx()
+		ctx, cancel := opCtx()
 		defer cancel()
-		err := audited(m.logger, mutation.RestartNode, node.Name, func() error {
-			return oci.SoftResetInstance(ctx, node, env, m.logger)
+		err := audited(logger, mutation.RestartNode, snapshot.Name, func() error {
+			return oci.SoftResetInstance(ctx, &snapshot, env, logger)
 		})
 		return restartNodeResultMsg{key: itemKey, err: err, env: env}
 	})
@@ -150,7 +151,8 @@ func deleteVerb(cat domain.Category) string {
 // each current pool takes the enriched ID, actual size and status of the
 // snapshot pool of its name. A pool added since the snapshot keeps its
 // state until the next enrichment. While a pool is mid-transition (e.g.
-// SCALING) it schedules the next enrichment.
+// SCALING) it schedules the next enrichment. The pool list is replaced,
+// not written through: a tea.Cmd may still be reading the old one.
 func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) tea.Cmd {
 	if msg.err != nil {
 		m.logger.Errorw("failed to update data", "category", msg.category, "error", msg.err)
@@ -162,8 +164,9 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) tea.Cmd {
 	for _, p := range msg.pools {
 		enriched[p.Name] = p
 	}
-	for i := range m.dataset.GPUPools {
-		pool := &m.dataset.GPUPools[i]
+	pools := slices.Clone(m.dataset.GPUPools)
+	for i := range pools {
+		pool := &pools[i]
 		if msg.err != nil {
 			pool.Status = models.GPUPoolStatusUnknown
 			continue
@@ -172,6 +175,7 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) tea.Cmd {
 			pool.ID, pool.ActualSize, pool.Status = e.ID, e.ActualSize, e.Status
 		}
 	}
+	m.dataset.GPUPools = pools
 
 	// update view if current
 	if msg.category == m.category {
@@ -214,12 +218,14 @@ func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) tea.Cmd {
 		m.logger.Errorw("failed to toggle cordon state", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("%s %s failed: %v", verb, target, msg.err), keys.ToggleCordon.Help().Key+" retry")
 	}
-	if m.inCurrentEnv(msg.env) {
-		if node, ok := findItem(m.dataset, domain.GPUNode, msg.key).(*models.GPUNode); ok && node != nil {
-			node.IsSchedulingDisabled = msg.state
-			if m.category == domain.GPUNode {
-				m.updateRows(false)
-			}
+	// The node is replaced, not written through (updateItemInMap).
+	if k, ok := msg.key.(models.ScopedItemKey); ok && m.dataset != nil && m.inCurrentEnv(msg.env) {
+		var found bool
+		m.dataset.GPUNodeMap, found = updateItemInMap(m.dataset.GPUNodeMap, k, func(n *models.GPUNode) {
+			n.IsSchedulingDisabled = msg.state
+		})
+		if found && m.category == domain.GPUNode {
+			m.updateRows(false)
 		}
 	}
 	return m.showToast(verb+"ed "+target, toastInfo)
@@ -245,11 +251,11 @@ func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cm
 		return nil
 	}
 	namespace, name := svc.Namespace, svc.Name
-	env, kubeConfig := m.environment, m.kubeConfig
+	env, kubeConfig, opCtx, logger := m.environment, m.kubeConfig, m.opCtxFunc(), m.logger
 	return m.trackAction("restart "+namespace+"/"+name, "", itemKey, func(func(string)) tea.Msg {
-		ctx, cancel := m.opCtx()
+		ctx, cancel := opCtx()
 		defer cancel()
-		err := audited(m.logger, mutation.RestartInferenceService, namespace+"/"+name, func() error {
+		err := audited(logger, mutation.RestartInferenceService, namespace+"/"+name, func() error {
 			return restartInferenceServiceFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
 		})
 		return restartServiceResultMsg{key: itemKey, err: err, env: env}

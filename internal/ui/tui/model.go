@@ -19,12 +19,13 @@ func (m *Model) bumpGen() int {
 // loadData loads the dataset for the current model.
 func (m *Model) loadData() []tea.Cmd {
 	m.newLoadContext()
+	ld, ctx, repoPath, env := m.loader, m.loadCtx, m.repoPath, m.environment
 
 	return []tea.Cmd{
 		m.loadingTimer.Init(),
 		m.beginTask(),
 		func() tea.Msg {
-			dataset, err := m.loader.LoadDataset(m.loadCtx, m.repoPath, m.environment)
+			dataset, err := ld.LoadDataset(ctx, repoPath, env)
 			if err != nil {
 				// Gen 0: the foundational Init load; never stale-dropped.
 				return errMsg{err: err}

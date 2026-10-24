@@ -106,9 +106,15 @@ func (m *Model) startExport() tea.Cmd {
 	return m.exportTableCSVCmd(filepath.Join(m.dirPicker.CurrentDirectory, name))
 }
 
+// exportTableCSVCmd writes the table to outPath. The CSV is built here,
+// on the Update loop; the Cmd only writes the file.
 func (m *Model) exportTableCSVCmd(outPath string) tea.Cmd {
+	data, err := m.csvSnapshot()
 	return func() tea.Msg {
-		if err := m.exportTableCSV(outPath); err != nil {
+		if err == nil {
+			err = data.writeFile(outPath)
+		}
+		if err != nil {
 			return exportErrMsg{err: err}
 		}
 		return exportDoneMsg{path: outPath}

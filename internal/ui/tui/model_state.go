@@ -461,11 +461,20 @@ func (m *Model) sessionCtx() context.Context {
 // when the TUI shuts down, but unlike m.loadCtx it survives navigation /
 // refresh so a user pressing 'r' mid-cordon doesn't abort the cordon.
 func (m *Model) opCtx() (context.Context, context.CancelFunc) {
+	return m.opCtxFunc()()
+}
+
+// opCtxFunc returns opCtx with the parent context read now, on the
+// Update loop, for a tea.Cmd to call when it runs: calling m.opCtx from
+// the Cmd's goroutine would read the model concurrently with Update.
+func (m *Model) opCtxFunc() func() (context.Context, context.CancelFunc) {
 	parent := m.parentCtx
 	if parent == nil {
 		parent = context.Background()
 	}
-	return context.WithTimeout(parent, 30*time.Second)
+	return func() (context.Context, context.CancelFunc) {
+		return context.WithTimeout(parent, 30*time.Second)
+	}
 }
 
 // longOpCtx returns the context for a long-running workflow (e.g. DAC deletion,
