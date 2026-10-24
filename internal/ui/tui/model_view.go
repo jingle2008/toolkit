@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -255,15 +256,17 @@ func (m *Model) markedTableView() string {
 	if a := m.theme.Palette.Accent; a != nil {
 		marker = fgSeq(a) + selectionMarker + "\x1b[39m"
 	}
-	// The table renders its visible rows ahead of View, so re-render with
-	// the tag, then again without it to leave the table as it was.
-	saved := rows[c][0]
-	rows[c][0] = rowTag + saved
-	m.table.UpdateViewport()
-	view := m.table.View()
-	rows[c][0] = saved
-	m.table.UpdateViewport()
-	return taggedPad.ReplaceAllString(view, marker+"$1")
+	// The table renders its visible rows ahead of View, so render a copy
+	// of it whose selected row carries the tag. The copy gets its own row
+	// slice and row, and SetRows replaces (never edits) the viewport's
+	// lines, so the model's table is left untouched: View has no side
+	// effects.
+	tagged := slices.Clone(rows)
+	tagged[c] = slices.Clone(rows[c])
+	tagged[c][0] = rowTag + rows[c][0]
+	t := *m.table
+	t.SetRows(tagged)
+	return taggedPad.ReplaceAllString(t.View(), marker+"$1")
 }
 
 // emptyMessage says why the list has no rows: still loading, the load

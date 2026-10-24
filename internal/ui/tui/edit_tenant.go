@@ -372,13 +372,14 @@ func (m *Model) saveTenantMetadataCmd(entry models.TenantMetadata) tea.Cmd {
 // when its owners don't change: upsertTenantByID may reallocate
 // ds.Tenants, which would leave Owner pointers into the old array.
 func (m *Model) applyTenantSave(entry models.TenantMetadata) {
-	ds := m.dataset
-	if ds == nil {
+	if m.dataset == nil {
 		return
 	}
-	ds.Tenants = upsertTenantByID(ds.Tenants, tenantFromEntry(entry))
-	resolveTenantOwners(ds)
-	renameOverrideTenants(ds)
+	m.editDataset(func(ds *models.Dataset) {
+		ds.Tenants = upsertTenantByID(ds.Tenants, tenantFromEntry(entry))
+		resolveTenantOwners(ds)
+		renameOverrideTenants(ds)
+	})
 	m.refreshDisplay()
 }
 
@@ -422,8 +423,11 @@ func regroupByTenant[T models.TenancyOverride](mm map[string][]T, nameOf map[str
 // everywhere at once. Each item retains its raw TenantID after the
 // earlier name-keying, so the suffix-keyed raw map is reconstructed from
 // what's already loaded. The GPUWorkload and InferenceService maps are
-// keyed by node/namespace, so their owners are re-resolved in place.
+// keyed by node/namespace, so their owners are re-resolved in place, on
+// copies: a tea.Cmd may still be reading the old ones.
 func resolveTenantOwners(ds *models.Dataset) {
+	ds.GPUWorkloadMap = cloneGroups(ds.GPUWorkloadMap)
+	ds.InferenceServiceMap = cloneGroups(ds.InferenceServiceMap)
 	if ds.DedicatedAIClusterMap != nil {
 		ds.SetDedicatedAIClusterMap(rawByTenantID(ds.DedicatedAIClusterMap,
 			func(d models.DedicatedAICluster) string { return d.TenantID }))

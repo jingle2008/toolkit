@@ -127,7 +127,7 @@ func (m *Model) handleDeleteDoneMsg(msg deleteDoneMsg) tea.Cmd {
 	if !m.inCurrentEnv(msg.env) {
 		return toast
 	}
-	removeItemFromDataset(m.dataset, msg.category, msg.key)
+	m.editDataset(func(ds *models.Dataset) { removeItemFromDataset(ds, msg.category, msg.key) })
 	if msg.category == m.category {
 		idx := m.table.Cursor()
 		if idx+1 >= len(m.table.Rows()) {
@@ -175,7 +175,7 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) tea.Cmd {
 			pool.ID, pool.ActualSize, pool.Status = e.ID, e.ActualSize, e.Status
 		}
 	}
-	m.dataset.GPUPools = pools
+	m.editDataset(func(ds *models.Dataset) { ds.GPUPools = pools })
 
 	// update view if current
 	if msg.category == m.category {
@@ -220,10 +220,12 @@ func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) tea.Cmd {
 	}
 	// The node is replaced, not written through (updateItemInMap).
 	if k, ok := msg.key.(models.ScopedItemKey); ok && m.dataset != nil && m.inCurrentEnv(msg.env) {
-		var found bool
-		m.dataset.GPUNodeMap, found = updateItemInMap(m.dataset.GPUNodeMap, k, func(n *models.GPUNode) {
+		nodes, found := updateItemInMap(m.dataset.GPUNodeMap, k, func(n *models.GPUNode) {
 			n.IsSchedulingDisabled = msg.state
 		})
+		if found {
+			m.editDataset(func(ds *models.Dataset) { ds.GPUNodeMap = nodes })
+		}
 		if found && m.category == domain.GPUNode {
 			m.updateRows(false)
 		}

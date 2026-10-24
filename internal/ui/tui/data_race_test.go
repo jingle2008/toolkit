@@ -200,3 +200,64 @@ func TestPlanDeleteInferenceService_ReadsNothingOfTheModel(t *testing.T) {
 	require.True(t, ok)
 	require.NoError(t, planned.err)
 }
+
+// Loads, a repo reload and a pool reload install a new dataset rather
+// than write into the one a Cmd took: the Cmd reads its tenants and the
+// owners resolved on its workloads and services while they land, and
+// sees them as they were.
+func TestDatasetLoads_ReplaceTheDataset(t *testing.T) {
+	t.Parallel()
+	m := newTestModel(t)
+	m.dataset.GPUWorkloadMap = map[string][]models.GPUWorkload{
+		"node1": {{Name: "w1", TenantID: "id1", Namespace: "ns1"}},
+	}
+	m.dataset.InferenceServiceMap = map[string][]models.InferenceService{
+		"ns1": {{Name: "isvc1", Namespace: "ns1", TenantID: "id1"}},
+	}
+	resolveTenantOwners(m.dataset)
+	prev := m.dataset
+	workload := prev.GPUWorkloadMap["node1"][0]
+	service := prev.InferenceServiceMap["ns1"][0]
+
+	read := func() tea.Msg {
+		var seen []any
+		for _, ws := range prev.GPUWorkloadMap {
+			for _, w := range ws {
+				seen = append(seen, w.TenantID, w.Owner.Name)
+			}
+		}
+		for _, ss := range prev.InferenceServiceMap {
+			for _, s := range ss {
+				seen = append(seen, s.TenantID, s.Owner.Name)
+			}
+		}
+		for _, tn := range prev.Tenants {
+			seen = append(seen, tn.Name)
+		}
+		return append(seen, len(prev.GPUPools), len(prev.DedicatedAIClusterMap))
+	}
+	runConcurrently(read, func() {
+		gen := m.gens.msg
+		m.handleDedicatedAIClustersLoaded(map[string][]models.DedicatedAICluster{
+			"id1": {{Name: "dac1", TenantID: "id1"}},
+		}, gen)
+		m.handleTenancyOverridesLoaded(models.TenancyOverrideGroup{
+			Tenants: []models.Tenant{{Name: "renamed", ID: "id1"}},
+		}, gen)
+		m.mergeRepoDataset(&models.Dataset{Tenants: []models.Tenant{{Name: "fresh", ID: "id1"}}})
+		m.handleGPUPoolsReloaded(gpuPoolsReloadedMsg{Items: []models.GPUPool{{Name: "pool1"}}, env: m.environment})
+	})
+
+	assert.NotSame(t, prev, m.dataset)
+	assert.Equal(t, "tenant1", prev.Tenants[0].Name)
+	assert.Equal(t, workload, prev.GPUWorkloadMap["node1"][0])
+	assert.Equal(t, service, prev.InferenceServiceMap["ns1"][0])
+	assert.Empty(t, prev.GPUPools)
+	assert.Nil(t, prev.DedicatedAIClusterMap)
+
+	assert.Equal(t, "fresh", m.dataset.Tenants[0].Name)
+	assert.Equal(t, "fresh", m.dataset.GPUWorkloadMap["node1"][0].Owner.Name)
+	assert.Equal(t, "fresh", m.dataset.InferenceServiceMap["ns1"][0].Owner.Name)
+	assert.Len(t, m.dataset.GPUPools, 1)
+	assert.Len(t, m.dataset.DedicatedAIClusterMap["fresh"], 1)
+}

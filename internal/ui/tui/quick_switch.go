@@ -57,9 +57,9 @@ func (m *Model) switchEnvironment(env models.Environment, target domain.Category
 	switch {
 	case m.dataset == nil:
 	case sameRealm:
-		m.dataset.ResetEnvironmentScopedFields()
+		m.editDataset((*models.Dataset).ResetEnvironmentScopedFields)
 	default:
-		m.dataset.ResetRealmScopedFields()
+		m.editDataset((*models.Dataset).ResetRealmScopedFields)
 	}
 	m.k8sVersion = ""
 	m.pendingRecent = &env // remembered once its context is known to exist
