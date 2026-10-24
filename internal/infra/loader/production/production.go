@@ -15,7 +15,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -82,7 +82,7 @@ func New(ctx context.Context, metadataFile string) loader.Composite {
 			m, err := configloader.LoadMetadata(metadataFile)
 			if err != nil {
 				l.metadataLoadErr = fmt.Errorf("existing metadata file %s failed to load: %w", metadataFile, err)
-				logging.FromContext(ctx).Errorw("failed to load metadata file", "file", metadataFile, "error", err)
+				logging.FromContext(ctx).Error("failed to load metadata file", "file", metadataFile, "error", err)
 			} else {
 				l.metadata = newMetadataState(m)
 			}
@@ -193,7 +193,7 @@ func (l Client) LoadTenancyOverrideGroup(ctx context.Context, repo string, env m
 	}
 	fp, err := configloader.TenancyOverrideFingerprint(repo, env.Realm)
 	if err != nil {
-		logging.FromContext(ctx).Debugw("tenancy override fingerprint failed; loading uncached", "error", err)
+		logging.FromContext(ctx).Debug("tenancy override fingerprint failed; loading uncached", "error", err)
 		return configloader.LoadTenancyOverrideGroup(ctx, repo, env.Realm, l.metadata.get())
 	}
 	key := tenancyCacheKey{repo: repo, realm: env.Realm}

@@ -4,6 +4,8 @@ package oci
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"sync"
 	"testing"
 
 	"github.com/oracle/oci-go-sdk/v65/common"
@@ -11,22 +13,33 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
+// testLogger is a slog.Handler capturing info and error messages; log
+// through slog.New(logger). It is safe for concurrent use.
 type testLogger struct {
+	mu     sync.Mutex
 	Infos  []string
 	Errors []string
 }
 
-func (f *testLogger) Infow(msg string, _ ...any)       { f.Infos = append(f.Infos, msg) }
-func (f *testLogger) Warnw(string, ...any)             {}
-func (f *testLogger) Errorw(msg string, _ ...any)      { f.Errors = append(f.Errors, msg) }
-func (f *testLogger) Debugw(string, ...any)            {}
-func (f *testLogger) Sync() error                      { return nil }
-func (f *testLogger) WithFields(...any) logging.Logger { return f }
-func (f *testLogger) DebugEnabled() bool               { return false }
+func (f *testLogger) Enabled(context.Context, slog.Level) bool { return true }
+
+func (f *testLogger) Handle(_ context.Context, r slog.Record) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	switch r.Level {
+	case slog.LevelInfo:
+		f.Infos = append(f.Infos, r.Message)
+	case slog.LevelError:
+		f.Errors = append(f.Errors, r.Message)
+	}
+	return nil
+}
+
+func (f *testLogger) WithAttrs([]slog.Attr) slog.Handler { return f }
+func (f *testLogger) WithGroup(string) slog.Handler      { return f }
 
 type fakeComputeClient struct {
 	core.ComputeClient
@@ -73,7 +86,7 @@ func TestSoftResetInstance_Success(t *testing.T) {
 	}
 	node := &models.GPUNode{ID: "id1", Name: "n1"}
 	logger := &testLogger{}
-	err := SoftResetInstance(context.Background(), node, makeEnv(), logger)
+	err := SoftResetInstance(context.Background(), node, makeEnv(), slog.New(logger))
 	require.NoError(t, err)
 	require.Contains(t, logger.Infos[0], "restarting node")
 	require.Contains(t, logger.Infos[1], "restart request is submitted successfully")
@@ -91,7 +104,7 @@ func TestSoftResetInstance_Error(t *testing.T) {
 	}
 	node := &models.GPUNode{ID: "id1", Name: "n1"}
 	logger := &testLogger{}
-	err := SoftResetInstance(context.Background(), node, makeEnv(), logger)
+	err := SoftResetInstance(context.Background(), node, makeEnv(), slog.New(logger))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "fail")
 	require.Contains(t, err.Error(), "reqid")
@@ -124,7 +137,7 @@ func TestIncreasePoolSize_AddsToOCISize(t *testing.T) {
 	gotSize := fakePoolMgmt(t, 3, nil)
 	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 3, Size: 3}
 	logger := &testLogger{}
-	scale, err := IncreasePoolSize(context.Background(), pool, 2, makeEnv(), logger)
+	scale, err := IncreasePoolSize(context.Background(), pool, 2, makeEnv(), slog.New(logger))
 	require.NoError(t, err)
 	assert.Equal(t, 5, *gotSize, "two past the declared size")
 	assert.Equal(t, PoolScale{Shown: 3, Before: 3, After: 5}, scale)
@@ -138,7 +151,7 @@ func TestIncreasePoolSize_AddsToOCISize(t *testing.T) {
 func TestIncreasePoolSize_StaleActualSize(t *testing.T) {
 	gotSize := fakePoolMgmt(t, 5, nil)
 	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 4, Size: 4}
-	scale, err := IncreasePoolSize(context.Background(), pool, 2, makeEnv(), &testLogger{})
+	scale, err := IncreasePoolSize(context.Background(), pool, 2, makeEnv(), slog.New(&testLogger{}))
 	require.NoError(t, err)
 	assert.Equal(t, 7, *gotSize)
 	assert.Equal(t, "5 → 7 instances (was 5, not 4)", scale.String())
@@ -152,16 +165,16 @@ func TestIncreasePoolSize_Refusals(t *testing.T) {
 		t.Fatal("must not reach OCI")
 		return nil, errors.New("unreachable")
 	}
-	_, err := IncreasePoolSize(context.Background(), &models.GPUPool{Name: "gone", Status: models.GPUPoolStatusNonexistent}, 1, makeEnv(), &testLogger{})
+	_, err := IncreasePoolSize(context.Background(), &models.GPUPool{Name: "gone", Status: models.GPUPoolStatusNonexistent}, 1, makeEnv(), slog.New(&testLogger{}))
 	require.ErrorIs(t, err, ErrNoInstancePool)
-	_, err = IncreasePoolSize(context.Background(), &models.GPUPool{ID: "pid", Name: "p"}, 0, makeEnv(), &testLogger{})
+	_, err = IncreasePoolSize(context.Background(), &models.GPUPool{ID: "pid", Name: "p"}, 0, makeEnv(), slog.New(&testLogger{}))
 	require.ErrorContains(t, err, "at least 1")
 }
 
 func TestIncreasePoolSize_Error(t *testing.T) {
 	fakePoolMgmt(t, 2, errors.New("fail"))
 	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 2, Size: 3}
-	_, err := IncreasePoolSize(context.Background(), pool, 1, makeEnv(), &testLogger{})
+	_, err := IncreasePoolSize(context.Background(), pool, 1, makeEnv(), slog.New(&testLogger{}))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "fail")
 	require.Contains(t, err.Error(), "reqid")
@@ -179,7 +192,7 @@ func TestTerminateInstance_Success(t *testing.T) {
 	}
 	node := &models.GPUNode{ID: "id1", Name: "n1"}
 	logger := &testLogger{}
-	err := TerminateInstance(context.Background(), node, makeEnv(), logger)
+	err := TerminateInstance(context.Background(), node, makeEnv(), slog.New(logger))
 	require.NoError(t, err)
 	require.Contains(t, logger.Infos[0], "deleting node")
 	require.Contains(t, logger.Infos[1], "deletion request is submitted successfully")
@@ -197,7 +210,7 @@ func TestTerminateInstance_Error(t *testing.T) {
 	}
 	node := &models.GPUNode{ID: "id1", Name: "n1"}
 	logger := &testLogger{}
-	err := TerminateInstance(context.Background(), node, makeEnv(), logger)
+	err := TerminateInstance(context.Background(), node, makeEnv(), slog.New(logger))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "fail")
 	require.Contains(t, err.Error(), "reqid")

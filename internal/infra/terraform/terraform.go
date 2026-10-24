@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
@@ -26,7 +27,7 @@ import (
 	"github.com/zclconf/go-cty/cty/function/stdlib"
 
 	"github.com/jingle2008/toolkit/internal/fileutil"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -205,7 +206,7 @@ func getVariableDefaults(ctx context.Context, dirPath string) (map[string]cty.Va
 				// "unset" (matches terraform without -var) but record
 				// at debug level so users tracing unresolved refs can
 				// see the default existed.
-				logger.Debugw("skipping non-literal variable default",
+				logger.Debug("skipping non-literal variable default",
 					"var", block.Labels[0], "file", fpath, "errors", vdiags.Errs())
 				continue
 			}
@@ -282,7 +283,7 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 
 		value, diags := attr.Expr.Value(&context)
 		if diags.HasErrors() {
-			logger.Errorw(
+			logger.Error(
 				"cannot resolve local",
 				"local", key,
 				"errors", diags.Errs(),
@@ -292,8 +293,8 @@ func loadLocalValueMap(ctx context.Context, dirPath string, env models.Environme
 
 		// value.GoString() formats the whole cty value — only pay for it
 		// when debug logging is actually enabled.
-		if logger.DebugEnabled() {
-			logger.Debugw(
+		if logger.Enabled(ctx, slog.LevelDebug) {
+			logger.Debug(
 				"cannot resolve local value",
 				"local", key,
 				"value", value.GoString(),
@@ -332,7 +333,7 @@ func LoadServiceTenancies(ctx context.Context, repoPath string) ([]models.Servic
 	// The oc1 targets come from a child module (module.oc1_inventory).
 	localObject := resolveLocalsAndModules(ctx, dirPath, &evalCtx, cty.EmptyObjectVal, attributes, 0)
 	for key := range attributes {
-		logger.Warnw("skipping unresolved shep_targets local", "local", key)
+		logger.Warn("skipping unresolved shep_targets local", "local", key)
 	}
 
 	tenancyMap := make(map[string]*models.ServiceTenancy)
@@ -464,7 +465,7 @@ func LoadGPUPools(ctx context.Context, repoPath string, env models.Environment) 
 	for _, s := range sources {
 		pools, err := loadGPUPools(ctx, s.dir, s.localName, s.isOkeManaged, env)
 		if err != nil {
-			logger.Warnw("skipping unresolved GPUPool source",
+			logger.Warn("skipping unresolved GPUPool source",
 				"dir", s.dir, "local", s.localName, "error", err)
 			errs = append(errs, fmt.Errorf("%s: %w", s.localName, err))
 			continue
@@ -472,7 +473,7 @@ func LoadGPUPools(ctx context.Context, repoPath string, env models.Environment) 
 		gpuPools = append(gpuPools, pools...)
 	}
 
-	logger.Debugw("loaded gpu pools",
+	logger.Debug("loaded gpu pools",
 		"pools", len(gpuPools), "sources", len(sources), "failed_sources", len(errs))
 
 	switch {

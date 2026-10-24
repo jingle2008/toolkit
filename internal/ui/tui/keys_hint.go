@@ -61,7 +61,7 @@ func (m *Model) dismissKeysHint() tea.Cmd {
 	s, path, logger := m.uiState, m.uiStatePath, m.logger
 	return func() tea.Msg {
 		if err := s.Save(path); err != nil && logger != nil {
-			logger.Warnw("failed to save ui state", "path", path, "error", err)
+			logger.Warn("failed to save ui state", "path", path, "error", err)
 		}
 		return nil
 	}

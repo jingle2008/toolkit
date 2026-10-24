@@ -61,11 +61,11 @@ func (m *Model) copyItemJSON(item any) tea.Cmd {
 	return func() tea.Msg {
 		content, err := jsonutil.Pretty(item)
 		if err != nil {
-			logger.Errorw("failed to convert item to JSON", "error", err)
+			logger.Error("failed to convert item to JSON", "error", err)
 			return nil
 		}
 		if err := clipboardWriteAll(content); err != nil {
-			logger.Errorw("failed to copy JSON to clipboard", "error", err)
+			logger.Error("failed to copy JSON to clipboard", "error", err)
 		}
 		return nil
 	}

@@ -14,7 +14,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 // Watch establishes a recursive filesystem watch rooted at root and returns a
@@ -68,13 +68,13 @@ func run(ctx context.Context, w *fsnotify.Watcher, root string, window time.Dura
 	defer close(out)
 	defer func() { _ = w.Close() }()
 
-	logging.FromContext(ctx).Infow("fs watch established", "root", root)
+	logging.FromContext(ctx).Info("fs watch established", "root", root)
 
 	var timerC <-chan time.Time
 	for {
 		select {
 		case <-ctx.Done():
-			logging.FromContext(ctx).Debugw("fs watch stopped: context canceled")
+			logging.FromContext(ctx).Debug("fs watch stopped: context canceled")
 			return
 		case ev, ok := <-w.Events:
 			if !ok {
@@ -97,7 +97,7 @@ func run(ctx context.Context, w *fsnotify.Watcher, root string, window time.Dura
 			if !ok {
 				return
 			}
-			logging.FromContext(ctx).Warnw("fs watch error; live repo watch will drop")
+			logging.FromContext(ctx).Warn("fs watch error; live repo watch will drop")
 			return
 		case <-timerC:
 			timerC = nil

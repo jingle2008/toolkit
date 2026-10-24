@@ -84,7 +84,7 @@ func (s *Server) checkEnvOverride(ctx context.Context, in envOverride) error {
 	// may have gained the environment since.
 	envs, err := mcpLoadEnvironmentsFn(ctx, s.cfg.RepoPath)
 	if err != nil {
-		s.logger.Warnw("env override not checked: repo environments didn't load", "error", err)
+		s.logger.Warn("env override not checked: repo environments didn't load", "error", err)
 		return nil
 	}
 	s.envCache.envs = envs

@@ -1,9 +1,10 @@
 package tui
 
 import (
+	"log/slog"
+
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -15,14 +16,14 @@ const surfaceTUI = "tui"
 // failed. Commands call it off the Update loop, where the action runs.
 // target is the resource's own name (a node, pool or DAC name, or
 // <namespace>/<name>), as the other surfaces audit it.
-func audited(logger logging.Logger, a mutation.Action, target string, perform func() error) error {
+func audited(logger *slog.Logger, a mutation.Action, target string, perform func() error) error {
 	return auditedWith(logger, a, target, nil, perform)
 }
 
 // auditedWith is audited with the action's own fields on every record.
 // fields is called per record, so ones perform fills in (a scale's
 // actual sizes) reach the done record; nil adds none.
-func auditedWith(logger logging.Logger, a mutation.Action, target string, fields func() []any, perform func() error) error {
+func auditedWith(logger *slog.Logger, a mutation.Action, target string, fields func() []any, perform func() error) error {
 	audit := func(phase mutation.Phase, err error) {
 		var kv []any
 		if fields != nil {

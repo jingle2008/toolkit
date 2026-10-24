@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 

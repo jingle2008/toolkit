@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -56,7 +57,7 @@ func loadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, 
 			// the rows we could load, and the per-source error has
 			// already been logged inside the terraform package.
 			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
-				logging.FromContext(ctx).Warnw("loaded GPU pools with partial failures",
+				logging.FromContext(ctx).Warn("loaded GPU pools with partial failures",
 					"category", domain.GPUPool, "error", partial)
 				return gpuPoolsLoadedMsg{Items: items, Gen: gen}
 			}
@@ -239,11 +240,11 @@ func waitForRepoTriggerCmd(trigger <-chan struct{}) tea.Cmd {
 // message, keeping the current data: a background refresh must not disturb
 // the loading state, but a repo edit that broke the load (a malformed
 // file) must not go unnoticed under LIVE either.
-func reloadDatasetCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, logger logging.Logger) tea.Cmd {
+func reloadDatasetCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, logger *slog.Logger) tea.Cmd {
 	return func() tea.Msg {
 		ds, err := ld.LoadDataset(ctx, repoPath, env)
 		if err != nil {
-			logger.Warnw("background dataset reload failed; keeping current data", "error", err)
+			logger.Warn("background dataset reload failed; keeping current data", "error", err)
 			return datasetReloadedMsg{env: env, err: err}
 		}
 		return datasetReloadedMsg{Dataset: ds, env: env}
@@ -252,11 +253,11 @@ func reloadDatasetCmd(ctx context.Context, ld loader.Composite, repoPath string,
 
 // reloadGPUPoolsCmd re-runs LoadGPUPools on the session context and returns
 // gpuPoolsReloadedMsg. Like reloadDatasetCmd it is quiet on error.
-func reloadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, logger logging.Logger) tea.Cmd {
+func reloadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, logger *slog.Logger) tea.Cmd {
 	return func() tea.Msg {
 		items, err := ld.LoadGPUPools(ctx, repoPath, env)
 		if err != nil {
-			logger.Warnw("background GPU pool reload failed; keeping current data", "error", err)
+			logger.Warn("background GPU pool reload failed; keeping current data", "error", err)
 			return nil
 		}
 		return gpuPoolsReloadedMsg{Items: items, env: env}

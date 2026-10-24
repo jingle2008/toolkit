@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -12,7 +14,6 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -220,39 +221,51 @@ func (b *progressBox) next(id int) tea.Cmd {
 	}
 }
 
-// progressLogger is a Logger that also reports each info, warning and
-// error line as progress, for operations that log their steps rather
-// than take a progress hook (DAC delete).
-type progressLogger struct {
-	logging.Logger
+// newProgressLogger returns a logger that writes through l and also
+// reports each info, warning and error record as progress, for
+// operations that log their steps rather than take a progress hook (DAC
+// delete).
+func newProgressLogger(l *slog.Logger, report func(string)) *slog.Logger {
+	return slog.New(progressHandler{Handler: l.Handler(), report: report})
+}
+
+// progressHandler wraps the app's handler, reporting info and above as
+// progress lines whatever level the wrapped handler writes at.
+type progressHandler struct {
+	slog.Handler
 	report func(string)
 }
 
-func (l progressLogger) Infow(msg string, kv ...any) {
-	l.Logger.Infow(msg, kv...)
-	l.report(progressLine(msg, kv))
+func (h progressHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return level >= slog.LevelInfo || h.Handler.Enabled(ctx, level)
 }
 
-func (l progressLogger) Warnw(msg string, kv ...any) {
-	l.Logger.Warnw(msg, kv...)
-	l.report(progressLine(msg, kv))
-}
-
-func (l progressLogger) Errorw(msg string, kv ...any) {
-	l.Logger.Errorw(msg, kv...)
-	l.report(progressLine(msg, kv))
-}
-
-func (l progressLogger) WithFields(kv ...any) logging.Logger {
-	return progressLogger{Logger: l.Logger.WithFields(kv...), report: l.report}
-}
-
-// progressLine is a log line as one progress summary: msg and its fields.
-func progressLine(msg string, kv []any) string {
-	var b strings.Builder
-	b.WriteString(msg)
-	for i := 0; i+1 < len(kv); i += 2 {
-		fmt.Fprintf(&b, " %v=%v", kv[i], kv[i+1])
+func (h progressHandler) Handle(ctx context.Context, r slog.Record) error {
+	if r.Level >= slog.LevelInfo {
+		h.report(progressLine(r))
 	}
+	if !h.Handler.Enabled(ctx, r.Level) {
+		return nil
+	}
+	return h.Handler.Handle(ctx, r)
+}
+
+func (h progressHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return progressHandler{Handler: h.Handler.WithAttrs(attrs), report: h.report}
+}
+
+func (h progressHandler) WithGroup(name string) slog.Handler {
+	return progressHandler{Handler: h.Handler.WithGroup(name), report: h.report}
+}
+
+// progressLine is a log record as one progress summary: its message and
+// the fields of that call (not those bound with With).
+func progressLine(r slog.Record) string {
+	var b strings.Builder
+	b.WriteString(r.Message)
+	r.Attrs(func(a slog.Attr) bool {
+		fmt.Fprintf(&b, " %s=%v", a.Key, a.Value.Resolve().Any())
+		return true
+	})
 	return b.String()
 }

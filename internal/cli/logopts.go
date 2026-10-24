@@ -2,12 +2,15 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"log/slog"
 	"strings"
 
 	"github.com/spf13/viper"
+	"k8s.io/klog/v2"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 func logOptionsFromViper() (string, string, error) {
@@ -25,17 +28,22 @@ func logOptionsFromViper() (string, string, error) {
 // initLogger reads log-format/log-level from viper and constructs a
 // file-backed logger writing to cfg.LogFile. Stdout is reserved for
 // command output (get) or MCP frames (mcp), so logs never bleed into
-// the data stream.
-func initLogger(cfg config.Config) (logging.Logger, error) {
+// the data stream. It also routes client-go's klog output into the
+// logger. Close the returned closer on shutdown.
+func initLogger(cfg config.Config) (*slog.Logger, io.Closer, error) {
 	logFormat, logLevel, err := logOptionsFromViper()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	logger, err := logging.NewFileLoggerWithLevel(cfg.Debug, cfg.LogFile, logFormat, logLevel)
-	if err != nil {
-		return nil, fmt.Errorf("initialize logger: %w", err)
-	}
-	return logger, nil
+	logger, closer := logging.NewFile(cfg.LogFile, logFormat, logLevel, cfg.Debug)
+	routeKlog(logger)
+	return logger, closer, nil
+}
+
+// routeKlog sends klog (client-go's logger) through logger, so its lines
+// land in the log file (and the TUI's log overlay) instead of on stderr.
+func routeKlog(logger *slog.Logger) {
+	klog.SetSlogLogger(logger)
 }
 
 func validateLogFormat(logFormat string) error {

@@ -97,7 +97,7 @@ metadata-file: ""
 
 # Logging
 log-file:   "toolkit.log"
-log-format: "console"   # console | json | slog
+log-format: "console"   # console | json
 log-level:  ""           # debug | info | warn | error (empty = default)
 debug:      false
 ```
@@ -123,7 +123,7 @@ All flags can be set in the config file or passed directly on the command line. 
 | `config`        | `--config`         | `~/.config/toolkit/config.yaml`      | No       | Path to the config file itself               |
 | `log-file`      | `--log-file`       | `toolkit.log`                        | No       | Log output path                              |
 | `debug`         | `-d / --debug`     | `false`                              | No       | Enable debug-level logging                   |
-| `log-format`    | `--log-format`     | `console`                            | No       | Log format: `console`, `json`, or `slog`     |
+| `log-format`    | `--log-format`     | `console`                            | No       | Log format: `console` or `json`               |
 | `log-level`     | `--log-level`      | `""`                                 | No       | Minimum log level: `debug` `info` `warn` `error` |
 
 ---
@@ -688,7 +688,7 @@ toolkit --log-level warn
 
 Supported log levels (from most to least verbose): `debug` → `info` → `warn` → `error`.
 
-Supported log formats: `console` (human-readable), `json` (structured), `slog` (Go slog).
+Supported log formats: `console` (human-readable key=value), `json` (structured). `slog` is accepted as a deprecated alias of `json`.
 
 ### In-app log
 

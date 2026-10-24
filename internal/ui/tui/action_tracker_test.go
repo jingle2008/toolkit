@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"bytes"
 	"errors"
+	"log/slog"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -9,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -126,12 +129,20 @@ func TestProgressBox(t *testing.T) {
 	assert.Nil(t, b.next(7)())
 }
 
-// progressLogger reports what it logs, with the fields.
+// The progress logger reports info and above with the call's fields
+// (not those bound with With), whatever level the wrapped handler
+// writes at, and still writes through to it.
 func TestProgressLogger(t *testing.T) {
 	t.Parallel()
 	var got []string
-	l := progressLogger{Logger: newTestModel(t).logger, report: func(s string) { got = append(got, s) }}
-	l.Infow("deleting endpoint", "name", "ep1")
-	l.WithFields("dac", "d1").Warnw("failed to get work request status")
+	ring := logging.NewRingSink(8)
+	var file bytes.Buffer
+	base := slog.New(logging.NewFanout(slog.NewTextHandler(&file, &slog.HandlerOptions{Level: slog.LevelError}), ring))
+	l := newProgressLogger(base, func(s string) { got = append(got, s) })
+	l.Debug("probe")
+	l.Info("deleting endpoint", "name", "ep1")
+	l.With("dac", "d1").WithGroup("g").Warn("failed to get work request status")
 	assert.Equal(t, []string{"deleting endpoint name=ep1", "failed to get work request status"}, got)
+	assert.Len(t, ring.Snapshot(), 3, "every record still reaches the wrapped handler's legs")
+	assert.Empty(t, file.String(), "the wrapped handler's own level still applies")
 }

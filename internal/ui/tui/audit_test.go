@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,7 +10,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -41,7 +42,7 @@ func newGPUNodeModel(t *testing.T, node models.GPUNode) (*Model, models.ItemKey,
 	t.Helper()
 	m := newTestModel(t)
 	sink := logging.NewRingSink(16)
-	m.logger = sink
+	m.logger = slog.New(sink)
 	m.category = domain.GPUNode
 	m.dataset.GPUNodeMap = map[string][]models.GPUNode{"pool1": {node}}
 	return m, models.ScopedItemKey{Scope: "pool1", Name: node.Name}, sink
@@ -113,7 +114,7 @@ func TestISVCDelete_ConfirmedIsAuditedAsPlanned(t *testing.T) {
 
 	m := newInferenceServiceModel(t)
 	sink := logging.NewRingSink(16)
-	m.logger = sink
+	m.logger = slog.New(sink)
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
 	_, cmd := m.updateConfirmView(keyPress("Y"))
 	require.NotNil(t, cmd)
@@ -134,7 +135,7 @@ func TestISVCDelete_CancelledIsAuditedRefused(t *testing.T) {
 	stubOrphanPlan(t, k8s.OrphanDeleted, nil)
 	m := newInferenceServiceModel(t)
 	sink := logging.NewRingSink(16)
-	m.logger = sink
+	m.logger = slog.New(sink)
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
 	_, cmd := m.updateConfirmView(keyPress("n"))
 	assert.Nil(t, cmd)

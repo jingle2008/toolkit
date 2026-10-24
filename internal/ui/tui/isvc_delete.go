@@ -105,7 +105,7 @@ func (m *Model) deleteOrphanInferenceService(itemKey models.ItemKey, a mutation.
 func (m *Model) handleISVCDeleteResultMsg(msg isvcDeleteResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
-		m.logger.Errorw("failed to delete inference service", "key", msg.key, "error", msg.err)
+		m.logger.Error("failed to delete inference service", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("delete %s failed: %v", target, msg.err), keys.Delete.Help().Key+" retry")
 	}
 	return m.showToast(msg.outcome.Summary(target), toastInfo)

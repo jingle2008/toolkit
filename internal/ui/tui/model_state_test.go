@@ -10,19 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
-
-type fakeLogger struct{}
-
-func (fakeLogger) Debugw(string, ...any)            {}
-func (fakeLogger) Infow(string, ...any)             {}
-func (fakeLogger) Warnw(string, ...any)             {}
-func (fakeLogger) Errorw(string, ...any)            {}
-func (fakeLogger) WithFields(...any) logging.Logger { return fakeLogger{} }
-func (fakeLogger) DebugEnabled() bool               { return false }
-func (fakeLogger) Sync() error                      { return nil }
 
 func TestNewModel_Valid(t *testing.T) {
 	t.Parallel()
@@ -30,7 +20,7 @@ func TestNewModel_Valid(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	assert.NotNil(t, m)
@@ -49,7 +39,7 @@ func TestNewModel_MissingRepoPath(t *testing.T) {
 	_, err := NewModel(
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "repoPath")
@@ -60,7 +50,7 @@ func TestNewModel_MissingEnvironment(t *testing.T) {
 	_, err := NewModel(
 		WithRepoPath("repo"),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "environment")
@@ -71,7 +61,7 @@ func TestNewModel_MissingLoader(t *testing.T) {
 	_, err := NewModel(
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "loader")
@@ -126,7 +116,7 @@ func TestValidateModel_AllValid(t *testing.T) {
 		repoPath:    "repo",
 		environment: models.Environment{Region: "r", Type: "t", Realm: "rl"},
 		loader:      fakeLoader{},
-		logger:      fakeLogger{},
+		logger:      logging.Discard(),
 	}
 	assert.NoError(t, validateModel(m))
 }
@@ -149,7 +139,7 @@ func TestValidateModel_MissingFields(t *testing.T) {
 	err = validateModel(m)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "logger")
-	m.logger = fakeLogger{}
+	m.logger = logging.Discard()
 	assert.NoError(t, validateModel(m))
 }
 
@@ -174,7 +164,7 @@ func TestNewModel_OptionsApplied(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Region: "r", Type: "t", Realm: "rl"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(fakeLogger{}),
+		WithLogger(logging.Discard()),
 	)
 	require.NoError(t, err)
 	assert.Equal(t, "repo", m.repoPath)

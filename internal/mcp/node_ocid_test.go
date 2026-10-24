@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -94,24 +94,26 @@ func TestNodeTools_OCIDNotInGPUPoolRefused(t *testing.T) {
 	assert.Empty(t, *performed)
 }
 
-// auditLogger records the key/values of every log call.
+// auditLogger is a slog.Handler recording the key/values of every info
+// and higher record; log through slog.New(rec).
 type auditLogger struct{ records []map[string]any }
 
-func (l *auditLogger) record(kv []any) {
-	r := map[string]any{}
-	for i := 0; i+1 < len(kv); i += 2 {
-		r[fmt.Sprint(kv[i])] = kv[i+1]
-	}
-	l.records = append(l.records, r)
+func (l *auditLogger) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= slog.LevelInfo
 }
 
-func (l *auditLogger) Infow(_ string, kv ...any)        { l.record(kv) }
-func (l *auditLogger) Warnw(_ string, kv ...any)        { l.record(kv) }
-func (l *auditLogger) Errorw(_ string, kv ...any)       { l.record(kv) }
-func (l *auditLogger) Debugw(string, ...any)            {}
-func (l *auditLogger) Sync() error                      { return nil }
-func (l *auditLogger) WithFields(...any) logging.Logger { return l }
-func (l *auditLogger) DebugEnabled() bool               { return false }
+func (l *auditLogger) Handle(_ context.Context, rec slog.Record) error {
+	r := map[string]any{}
+	rec.Attrs(func(a slog.Attr) bool {
+		r[a.Key] = a.Value.Any()
+		return true
+	})
+	l.records = append(l.records, r)
+	return nil
+}
+
+func (l *auditLogger) WithAttrs([]slog.Attr) slog.Handler { return l }
+func (l *auditLogger) WithGroup(string) slog.Handler      { return l }
 
 // The audit records name the OCID as the target, with the node label
 // beside it.
@@ -120,7 +122,7 @@ func (l *auditLogger) DebugEnabled() bool               { return false }
 func TestTerminateNode_OCIDAudited(t *testing.T) {
 	stubPoolInstance(t)
 	rec := &auditLogger{}
-	s := &Server{cfg: config.Config{EnvType: "dev", EnvRegion: "us-ashburn-1", EnvRealm: "oc1"}, logger: rec}
+	s := &Server{cfg: config.Config{EnvType: "dev", EnvRegion: "us-ashburn-1", EnvRealm: "oc1"}, logger: slog.New(rec)}
 	in := terminateNodeInput{Node: "node-a", OCID: testInstanceOCID}
 	in.Confirm, in.ConfirmTarget = true, testInstanceOCID
 

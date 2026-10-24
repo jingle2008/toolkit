@@ -4,12 +4,12 @@ package cli
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -29,7 +29,7 @@ func stageDACEnv(t *testing.T) {
 func TestDeleteDAC_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageDACEnv(t)
 	called := false
-	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		called = true
 		return nil
 	})()
@@ -49,7 +49,7 @@ func TestDeleteDAC_DryRun_DoesNotCallOCI(t *testing.T) {
 func TestDeleteDAC_RequiresExplicitYes(t *testing.T) {
 	stageDACEnv(t)
 	called := false
-	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		called = true
 		return nil
 	})()
@@ -69,7 +69,7 @@ func TestDeleteDAC_RequiresExplicitYes(t *testing.T) {
 func TestDeleteDAC_YesCallsOCI(t *testing.T) {
 	stageDACEnv(t)
 	var gotDAC *models.DedicatedAICluster
-	defer swap(&deleteDACFn, func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ logging.Logger) error {
+	defer swap(&deleteDACFn, func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ *slog.Logger) error {
 		gotDAC = d
 		return nil
 	})()
@@ -88,7 +88,7 @@ func TestDeleteDAC_YesCallsOCI(t *testing.T) {
 
 func TestDeleteDAC_PerformError(t *testing.T) {
 	stageDACEnv(t)
-	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, logging.Logger) error {
+	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		return errors.New("work request FAILED")
 	})()
 

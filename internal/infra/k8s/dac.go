@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -143,7 +143,7 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 	logger := logging.FromContext(ctx)
 	profilePodCounts, err := listDACProfilePodCounts(ctx, client)
 	if err != nil {
-		logger.Warnw("failed to list DAC profiles; Size falls back to pod count", "error", err)
+		logger.Warn("failed to list DAC profiles; Size falls back to pod count", "error", err)
 	}
 
 	gvr := schema.GroupVersionResource{
@@ -162,7 +162,7 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 			// (rounding up: a partial unit still occupies capacity).
 			podsPerUnit, ok := profilePodCounts[dac.Profile]
 			if !ok {
-				logger.Warnw("DAC profile not found; Size falls back to pod count",
+				logger.Warn("DAC profile not found; Size falls back to pod count",
 					"dac", dac.Name, "profile", dac.Profile)
 				dac.Size = int(count)
 				return

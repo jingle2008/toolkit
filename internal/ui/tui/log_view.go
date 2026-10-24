@@ -11,9 +11,9 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 // levelLabel returns the fixed-width display label for a log level.

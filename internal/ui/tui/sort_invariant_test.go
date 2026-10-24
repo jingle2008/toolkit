@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -78,7 +78,7 @@ func TestUpdateColumns_SortIndicator(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	m.table.SetWidth(200) // wide enough that nothing truncates
 	m.category = domain.DedicatedAICluster
@@ -136,7 +136,7 @@ func TestApplyMiddleTruncation_DACNameAndTenant(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	m.category = domain.DedicatedAICluster
 	m.keys = keys.ResolveKeys(m.category, common.ListView)
@@ -213,7 +213,7 @@ func TestApplyRows_PreservesRawRowForKeyLookup(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Type: "dev", Region: "us-phx-1", Realm: "oc1"}),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 	)
 	m.category = domain.DedicatedAICluster
 	m.keys = keys.ResolveKeys(m.category, common.ListView)

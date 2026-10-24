@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"charm.land/bubbles/v2/table"
@@ -12,8 +13,8 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -23,7 +24,7 @@ func newScaleModel(t *testing.T, pool models.GPUPool) (*Model, models.ItemKey, *
 	t.Helper()
 	m := newConfirmTestModel(t)
 	sink := logging.NewRingSink(16)
-	m.logger = sink
+	m.logger = slog.New(sink)
 	m.updateLayout(120, 40)
 	m.category = domain.GPUPool
 	m.dataset = &models.Dataset{GPUPools: []models.GPUPool{pool}}
@@ -110,7 +111,7 @@ func TestConfirmScale_ConfirmedScalesByCount(t *testing.T) {
 	orig := increasePoolSizeFn
 	t.Cleanup(func() { increasePoolSizeFn = orig })
 	gotAdd := 0
-	increasePoolSizeFn = func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ logging.Logger) (oci.PoolScale, error) {
+	increasePoolSizeFn = func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotAdd = add
 		return oci.PoolScale{Shown: p.ActualSize, Before: p.ActualSize, After: p.ActualSize + add}, nil
 	}
@@ -132,7 +133,7 @@ func TestConfirmScale_ConfirmedScalesByCount(t *testing.T) {
 	entries := sink.Snapshot()
 	require.NotEmpty(t, entries)
 	done := entries[len(entries)-1].Fields
-	assert.Subset(t, done, []any{"phase", "done", "add", 3, "from", 4, "to", 7})
+	assert.Subset(t, done, []any{"phase", "done", "add", int64(3), "from", int64(4), "to", int64(7)}) // slog normalizes ints
 }
 
 // A pool with no instance pool ID can't be scaled: the modal doesn't

@@ -17,7 +17,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -131,7 +131,7 @@ func newTestPair(ctx context.Context, t *testing.T, ld loader.Composite, opts ..
 	srv := NewServer(
 		cfg,
 		ld,
-		logging.NewNoOpLogger(),
+		logging.Discard(),
 		"test",
 	)
 
@@ -310,7 +310,7 @@ func TestIntegration_ToolsListAndCall(t *testing.T) {
 			EnvRealm:  "oc1",
 		},
 		stubLoader{},
-		logging.NewNoOpLogger(),
+		logging.Discard(),
 		"test",
 	)
 

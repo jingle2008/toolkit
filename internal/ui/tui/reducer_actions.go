@@ -107,7 +107,7 @@ func (m *Model) copyTenantID(item any) tea.Cmd {
 func (m *Model) scaleUpGPUPool(item any, itemKey models.ItemKey, add int) tea.Cmd {
 	pool, ok := item.(*models.GPUPool)
 	if !ok || pool == nil {
-		m.logger.Errorw("no GPU pool selected for scale up")
+		m.logger.Error("no GPU pool selected for scale up")
 		return nil
 	}
 	env, snapshot, opCtx, logger := m.environment, *pool, m.opCtxFunc(), m.logger
@@ -139,12 +139,12 @@ func (m *Model) toggleFaultyList() tea.Cmd {
 // asks, as the CLI and MCP do; a node already there is left as is.
 func (m *Model) cordonNode(item any, itemKey models.ItemKey, a mutation.Action) tea.Cmd {
 	if item == nil {
-		m.logger.Errorw("no item selected for cordon operation", "category", m.category)
+		m.logger.Error("no item selected for cordon operation", "category", m.category)
 		return nil
 	}
 	node, ok := item.(*models.GPUNode)
 	if !ok {
-		m.logger.Errorw("unsupported item type for cordon operation", "item", item)
+		m.logger.Error("unsupported item type for cordon operation", "item", item)
 		return nil
 	}
 	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
@@ -163,12 +163,12 @@ func (m *Model) cordonNode(item any, itemKey models.ItemKey, a mutation.Action) 
 
 func (m *Model) drainNode(item any, itemKey models.ItemKey) tea.Cmd {
 	if item == nil {
-		m.logger.Errorw("no item selected for draining", "category", m.category)
+		m.logger.Error("no item selected for draining", "category", m.category)
 		return nil
 	}
 	node, ok := item.(*models.GPUNode)
 	if !ok {
-		m.logger.Errorw("unsupported item type for draining", "item", item)
+		m.logger.Error("unsupported item type for draining", "item", item)
 		return nil
 	}
 	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name

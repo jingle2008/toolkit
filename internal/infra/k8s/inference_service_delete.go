@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -168,13 +168,13 @@ func deleteOrphanInferenceService(ctx context.Context, client dynamic.Interface,
 		if err := removeFinalizers(ctx, client, p.gvr, p.obj); err != nil {
 			return "", fmt.Errorf("finalize InferenceService %s: %w", target, err)
 		}
-		logger.Infow("finalized orphaned inference service", "namespace", namespace, "name", name,
+		logger.Info("finalized orphaned inference service", "namespace", namespace, "name", name,
 			"apiGroup", p.gvr.Group, "deletionRequested", p.obj.GetDeletionTimestamp().UTC().Format(time.RFC3339))
 	default:
 		if err := client.Resource(p.gvr).Namespace(namespace).Delete(ctx, name, v1.DeleteOptions{}); err != nil {
 			return "", fmt.Errorf("delete InferenceService %s: %w", target, err)
 		}
-		logger.Infow("deleted orphaned inference service", "namespace", namespace, "name", name, "apiGroup", p.gvr.Group)
+		logger.Info("deleted orphaned inference service", "namespace", namespace, "name", name, "apiGroup", p.gvr.Group)
 	}
 	return p.outcome, nil
 }

@@ -9,10 +9,10 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/internal/relations"
 	"github.com/jingle2008/toolkit/internal/resolve"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -61,7 +61,7 @@ func emitFaulty(
 		return fmt.Errorf("--faulty: %w", err)
 	}
 	for _, msg := range warnings {
-		logging.FromContext(ctx).Warnw("get --faulty", "warning", msg)
+		logging.FromContext(ctx).Warn("get --faulty", "warning", msg)
 		fmt.Fprintf(os.Stderr, "warning: %s\n", msg)
 	}
 	switch cat { //nolint:exhaustive // validateFaulty admits only relations.FaultyCategories
