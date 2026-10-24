@@ -42,16 +42,17 @@ func TestNewHandler_FormatsAndSource(t *testing.T) {
 	slog.New(NewHandler(&text, FormatConsole, slog.LevelInfo)).Info("hello", "k", "v")
 	slog.New(NewHandler(&js, FormatJSON, slog.LevelInfo)).Info("hello", "k", "v")
 
-	if got := text.String(); !strings.Contains(got, "msg=hello k=v") || !strings.Contains(got, "source=") ||
-		!strings.Contains(got, "logging_test.go:") {
-		t.Errorf("text line = %q, want msg, kv and the test's source location", got)
+	// The source is the short dir/file.go:line form, not an absolute path.
+	if got := text.String(); !strings.Contains(got, "msg=hello k=v") ||
+		!strings.Contains(got, "source=logging/logging_test.go:") {
+		t.Errorf("text line = %q, want msg, kv and the test's short source location", got)
 	}
 	var rec map[string]any
 	if err := json.Unmarshal(js.Bytes(), &rec); err != nil {
 		t.Fatalf("json line %q: %v", js.String(), err)
 	}
-	src, _ := rec["source"].(map[string]any)
-	if rec["msg"] != "hello" || rec["k"] != "v" || !strings.HasSuffix(src["file"].(string), "logging_test.go") {
+	src, _ := rec["source"].(string)
+	if rec["msg"] != "hello" || rec["k"] != "v" || !strings.HasPrefix(src, "logging/logging_test.go:") {
 		t.Errorf("json record = %v", rec)
 	}
 }
