@@ -66,7 +66,7 @@ no process is driving it: run the drain again to resume.`,
 			if cmd.Flags().Changed("output") {
 				return fmt.Errorf("-o applies only with --status")
 			}
-			return withMutationSetup(cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action: mutation.DrainNode,
 					Target: nodeName,
@@ -110,7 +110,7 @@ func runDrainStatus(cmd *cobra.Command, cfgFile *string, nodeName, format string
 	if fmtChoice != output.FormatYAML && fmtChoice != output.FormatJSON {
 		return fmt.Errorf("--status prints yaml or json, not %s", fmtChoice)
 	}
-	return withCommandSetup(cfgFile, "drain-status", true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+	return withCommandSetup(cmd.Context(), cfgFile, "drain-status", true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 		st, err := drainStatusFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 		if err != nil {
 			return fmt.Errorf("get drain status of node/%s: %w", nodeName, err)

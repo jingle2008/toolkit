@@ -58,7 +58,7 @@ Examples:
 			if err != nil {
 				return fmt.Errorf("unknown category %q", args[0])
 			}
-			return withCommandSetup(cfgFile, "metrics", true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			return withCommandSetup(cmd.Context(), cfgFile, "metrics", true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				ld := production.New(ctx, cfg.MetadataFile)
 				return emitMetrics(ctx, cmd.OutOrStdout(), ld, cfg, env, cat, args[1], dac, time.Now())
 			})

@@ -88,7 +88,7 @@ Examples:
 				noteVal := note
 				entry.Note = &noteVal
 			}
-			return withMutationSetup(cfgFile, false, false, false, func(ctx context.Context, cfg config.Config, _ models.Environment) error {
+			return withMutationSetup(cmd.Context(), cfgFile, false, false, false, func(ctx context.Context, cfg config.Config, _ models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action: mutation.SetTenant,
 					Target: ocid,

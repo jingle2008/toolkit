@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -188,9 +186,7 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 		defer func() { _ = logger.Sync() }()
 		logEnvAliases(logger, rawType, rawRegion, cfg)
 
-		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-		ctx = logging.WithContext(ctx, logger)
+		ctx := logging.WithContext(cmd.Context(), logger)
 		if err := checkGetEnvironment(ctx, cfg, cat); err != nil {
 			return err
 		}

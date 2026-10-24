@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,7 +58,7 @@ func runNodeAction(
 	if ocid != "" {
 		target, fields = ocid, func() []any { return []any{"node", name} }
 	}
-	return withMutationSetup(cfgFile, ocid == "", ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+	return withMutationSetup(cmd.Context(), cfgFile, ocid == "", ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 		var node *models.GPUNode
 		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 			Action:      a,
@@ -151,23 +149,24 @@ func validateMutationConfig(cfg config.Config, needsKube, needsRepo, needsEnv bo
 
 // withMutationSetup runs the standard prelude every mutation
 // subcommand shares — read the config file, unmarshal, validate per
-// needsKube/needsRepo/needsEnv, init the logger (deferred Sync), wire a
-// signal-cancellable context with the logger attached, and build the
-// Environment triple — then invokes fn with the resolved cfg / env /
-// ctx. Keeps the setup uniform so individual subcommands focus only
-// on flag parsing and their perform closure.
+// needsKube/needsRepo/needsEnv, init the logger (deferred Sync), attach
+// the logger to ctx (the command's signal-cancellable context from
+// Execute), and build the Environment triple — then invokes fn with the
+// resolved cfg / env / ctx. Keeps the setup uniform so individual
+// subcommands focus only on flag parsing and their perform closure.
 func withMutationSetup(
+	ctx context.Context,
 	cfgFile *string,
 	needsKube, needsRepo, needsEnv bool,
 	fn func(ctx context.Context, cfg config.Config, env models.Environment) error,
 ) error {
-	return withCommandSetup(cfgFile, "mutate", needsKube, needsRepo, needsEnv, fn)
+	return withCommandSetup(ctx, cfgFile, "mutate", needsKube, needsRepo, needsEnv, fn)
 }
 
 // withCommandSetup is withMutationSetup for any command that reaches the
-// loader: config, the needs checks, a logger tagged cmd=name, a signal
-// context, and the env.
+// loader: config, the needs checks, a logger tagged cmd=name, and the env.
 func withCommandSetup(
+	ctx context.Context,
 	cfgFile *string,
 	name string,
 	needsKube, needsRepo, needsEnv bool,
@@ -197,8 +196,6 @@ func withCommandSetup(
 	// belongs in the log (for mutations, the audit trail) alongside them.
 	logEnvAliases(logger, rawType, rawRegion, cfg)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 	ctx = logging.WithContext(ctx, logger)
 	if needsEnv {
 		if err := checkEnvironment(ctx, cfg); err != nil {
