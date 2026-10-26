@@ -16,6 +16,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/telemetry"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
+	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -150,7 +151,7 @@ func (m *Model) cordonNode(item any, itemKey models.ItemKey, a mutation.Action) 
 	env, kubeConfig, name := m.environment, m.kubeConfig, node.Name
 	opCtx, logger := m.opCtxFunc(), m.logger
 	unschedulable := a == mutation.CordonNode
-	return m.trackAction(strings.ToLower(confirmLabels[a].verb)+" "+name, "", itemKey, func(func(string)) tea.Msg {
+	return m.trackAction(strings.ToLower(confirm.Verb(a))+" "+name, "", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := opCtx()
 		defer cancel()
 		err := audited(logger, a, name, func() error {

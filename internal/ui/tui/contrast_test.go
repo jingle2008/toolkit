@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 )
 
 // Every text role reads at 4.5:1 on common terminal backgrounds and on
@@ -78,7 +79,7 @@ func TestColorless_FocusInReverse(t *testing.T) {
 	_, _ = m.Update(tea.BackgroundColorMsg{Color: color.White})
 	assert.True(t, m.styles.Selected.GetReverse(), "a later background report keeps it")
 
-	m.requestConfirm(confirmOverlay{act: mutation.DrainNode, target: "n1", run: func() tea.Cmd { return nil }})
+	m.requestConfirm(confirmRequest{Request: confirm.Request{Action: mutation.DrainNode, Target: "n1"}, run: func(int) tea.Cmd { return nil }})
 	assert.Contains(t, m.confirmView(), "\x1b[1;7m", "the focused button is bold reverse")
 
 	_, _ = m.Update(tea.ColorProfileMsg{Profile: colorprofile.TrueColor})

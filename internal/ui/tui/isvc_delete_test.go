@@ -48,9 +48,9 @@ func TestCtrlX_InInferenceService_PlansThenConfirms(t *testing.T) {
 			assert.Equal(t, common.ListView, m.viewMode, "no modal before the plan lands")
 			m.handleISVCDeletePlannedMsg(cmd().(isvcDeletePlannedMsg))
 			require.Equal(t, common.ConfirmView, m.viewMode)
-			assert.Equal(t, mutation.Irreversible, m.confirm.act.Tier)
-			assert.Equal(t, tc.action, m.confirm.verb())
-			assert.Equal(t, "ns1/svc1", m.confirm.target)
+			assert.Equal(t, mutation.Irreversible, m.confirm.Request().Action.Tier)
+			assert.Equal(t, tc.action, m.confirm.Request().Verb())
+			assert.Equal(t, "ns1/svc1", m.confirm.Request().Target)
 		})
 	}
 }

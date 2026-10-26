@@ -24,6 +24,7 @@ import (
 	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
@@ -120,10 +121,13 @@ type Model struct {
 	helpFilter string
 	helpInput  textinput.Model
 	helpTyping bool
-	prefix     string         // pending prefix key (keys.SortLeader) or ""
-	confirm    confirmOverlay // destructive-action confirmation modal state
-	rowPicker  rowPickerState // modal row picker state (go to, metrics DAC)
-	palette    paletteState   // command palette state
+	prefix     string        // pending prefix key (keys.SortLeader) or ""
+	confirm    confirm.Model // destructive-action confirmation modal (confirm.go)
+	// confirmPending is the open confirmation's parent half: its command,
+	// audit name and return view.
+	confirmPending confirmPending
+	rowPicker      rowPickerState // modal row picker state (go to, metrics DAC)
+	palette        paletteState   // command palette state
 
 	// actions are the mutations in flight, oldest first (action_tracker.go);
 	// actionSeq numbers them.

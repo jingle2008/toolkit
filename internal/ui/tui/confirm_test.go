@@ -13,6 +13,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -38,28 +39,28 @@ func TestRequestConfirm_OpensModalAndCapturesReturnView(t *testing.T) {
 	m := newConfirmTestModel(t)
 	m.viewMode = common.ListView
 
-	cmd := m.requestConfirm(confirmOverlay{
-		act:    mutation.DrainNode,
-		target: "gpu-1",
-		run:    func() tea.Cmd { return nil },
+	cmd := m.requestConfirm(confirmRequest{
+		Request: confirm.Request{Action: mutation.DrainNode, Target: "gpu-1"},
+		run:     func(int) tea.Cmd { return nil },
 	})
 
 	assert.Nil(t, cmd, "opening the modal issues no command")
 	assert.Equal(t, common.ConfirmView, m.viewMode)
-	assert.Equal(t, common.ListView, m.confirm.returnView)
-	assert.Equal(t, "Drain", m.confirm.verb())
+	assert.Equal(t, common.ListView, m.confirmPending.returnView)
+	assert.Equal(t, "Drain", m.confirm.Request().Verb())
 }
 
 func TestDismissConfirm_RestoresViewAndClears(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	m.viewMode = common.ListView
-	m.requestConfirm(confirmOverlay{act: mutation.DrainNode, run: func() tea.Cmd { return nil }})
+	m.requestConfirm(confirmRequest{Request: confirm.Request{Action: mutation.DrainNode}, run: func(int) tea.Cmd { return nil }})
 
 	m.dismissConfirm()
 
 	assert.Equal(t, common.ListView, m.viewMode)
-	assert.Equal(t, confirmOverlay{}, m.confirm, "overlay must be cleared")
+	assert.Equal(t, confirm.Model{}, m.confirm, "overlay must be cleared")
+	assert.Equal(t, confirmPending{}, m.confirmPending, "pending action must be cleared")
 }
 
 // armConfirm puts the model into ConfirmView with a run thunk that records
@@ -70,13 +71,11 @@ func armConfirm(m *Model, tier mutation.Tier) *bool {
 	if tier == mutation.Irreversible {
 		act = mutation.DeleteDAC
 	}
-	m.confirm = confirmOverlay{
-		act:        act,
-		target:     "dac-1",
-		returnView: common.ListView,
-		run:        func() tea.Cmd { ran = true; return nil },
-	}
-	m.viewMode = common.ConfirmView
+	m.viewMode = common.ListView
+	m.requestConfirm(confirmRequest{
+		Request: confirm.Request{Action: act, Target: "dac-1"},
+		run:     func(int) tea.Cmd { ran = true; return nil },
+	})
 	return &ran
 }
 
@@ -133,7 +132,7 @@ func TestUpdateConfirmView_Irreversible(t *testing.T) {
 		_, _ = m.updateConfirmView(keyPress("y"))
 		assert.False(t, *ran, "lowercase y must not run an irreversible action")
 		assert.Equal(t, common.ConfirmView, m.viewMode, "lowercase y keeps the modal open")
-		assert.True(t, m.confirm.nudge, "lowercase y prompts for capital Y")
+		assert.True(t, m.confirm.Nudged(), "lowercase y prompts for capital Y")
 		_, _ = m.updateConfirmView(keyPress("Y"))
 		assert.True(t, *ran, "capital Y still confirms after the nudge")
 	})
@@ -154,25 +153,25 @@ func TestConfirmDelete_TierByCategory(t *testing.T) {
 	m := newConfirmTestModel(t)
 	m.category = domain.DedicatedAICluster
 	dac := m.confirmDelete(key, "")
-	assert.Equal(t, mutation.Irreversible, dac.act.Tier)
-	assert.Equal(t, "Delete", dac.verb())
-	assert.Equal(t, "DAC", dac.noun())
-	assert.Equal(t, itemKeyString(key), dac.target)
-	assert.NotEmpty(t, dac.warning)
+	assert.Equal(t, mutation.Irreversible, dac.Action.Tier)
+	assert.Equal(t, "Delete", dac.Verb())
+	assert.Equal(t, "DAC", dac.Noun())
+	assert.Equal(t, itemKeyString(key), dac.Target)
+	assert.NotEmpty(t, dac.Warning)
 	assert.NotNil(t, dac.run)
 
 	m.category = domain.GPUNode
 	node := m.confirmDelete(key, "")
-	assert.Equal(t, mutation.Irreversible, node.act.Tier)
-	assert.Equal(t, "Terminate", node.verb())
-	assert.Equal(t, "node", node.noun())
+	assert.Equal(t, mutation.Irreversible, node.Action.Tier)
+	assert.Equal(t, "Terminate", node.Verb())
+	assert.Equal(t, "node", node.Noun())
 
 	m.category = domain.InferenceService
 	isvc := m.confirmDelete(key, k8s.OrphanDeleted)
-	assert.Equal(t, mutation.Irreversible, isvc.act.Tier)
-	assert.Equal(t, "Delete", isvc.verb())
-	assert.Equal(t, "orphaned InferenceService", isvc.noun())
-	assert.Equal(t, "Force-delete", m.confirmDelete(key, k8s.OrphanFinalized).verb())
+	assert.Equal(t, mutation.Irreversible, isvc.Action.Tier)
+	assert.Equal(t, "Delete", isvc.Verb())
+	assert.Equal(t, "orphaned InferenceService", isvc.Noun())
+	assert.Equal(t, "Force-delete", m.confirmDelete(key, k8s.OrphanFinalized).Verb())
 }
 
 func TestConfirmRecoverableBuilders(t *testing.T) {
@@ -183,7 +182,7 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 
 	for _, tc := range []struct {
 		name   string
-		got    confirmOverlay
+		got    confirmRequest
 		action string
 		kind   string
 	}{
@@ -195,11 +194,11 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, mutation.Recoverable, tc.got.act.Tier)
-			assert.Equal(t, tc.action, tc.got.verb())
-			assert.Equal(t, tc.kind, tc.got.noun())
+			assert.Equal(t, mutation.Recoverable, tc.got.Action.Tier)
+			assert.Equal(t, tc.action, tc.got.Verb())
+			assert.Equal(t, tc.kind, tc.got.Noun())
 			if tc.name != "scale" { // its notice follows the count; see scale_confirm_test.go
-				assert.NotEmpty(t, tc.got.warning, "recoverable actions say what they do")
+				assert.NotEmpty(t, tc.got.Warning, "recoverable actions say what they do")
 			}
 			assert.NotNil(t, tc.got.run)
 		})
@@ -209,7 +208,7 @@ func TestConfirmRecoverableBuilders(t *testing.T) {
 func TestConfirmView_RecoverableRender(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
-	m.confirm = confirmOverlay{act: mutation.DrainNode, target: "gpu-1"}
+	m.confirm = confirm.New(confirm.Request{Action: mutation.DrainNode, Target: "gpu-1"})
 	out := ansi.Strip(m.confirmView())
 	assert.Contains(t, out, "Drain node")
 	assert.Contains(t, out, "gpu-1")
@@ -221,9 +220,9 @@ func TestConfirmView_RecoverableRender(t *testing.T) {
 func TestConfirmView_IrreversibleRender(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
-	m.confirm = confirmOverlay{
-		act: mutation.TerminateNode, target: "gpu-1", warning: "Boot volume destroyed. Cannot undo.",
-	}
+	m.confirm = confirm.New(confirm.Request{
+		Action: mutation.TerminateNode, Target: "gpu-1", Warning: "Boot volume destroyed. Cannot undo.",
+	})
 	out := ansi.Strip(m.confirmView())
 	assert.Contains(t, out, "⚠ Terminate node")
 	assert.Contains(t, out, "gpu-1")
@@ -232,28 +231,11 @@ func TestConfirmView_IrreversibleRender(t *testing.T) {
 	assert.Contains(t, out, "[ Terminate ]")
 }
 
-// The modal names every action it can confirm — all but set tenant,
-// which the edit-tenant form confirms — and a label names one action.
-func TestConfirmLabels_CoverModalActions(t *testing.T) {
-	t.Parallel()
-	for _, a := range mutation.Actions() {
-		if a == mutation.SetTenant {
-			continue
-		}
-		l, ok := confirmLabels[a]
-		if assert.True(t, ok, "no modal label for %s", a) {
-			assert.NotEmpty(t, l.verb, a.String())
-			assert.NotEmpty(t, l.noun, a.String())
-		}
-	}
-	assert.NotContains(t, confirmLabels, mutation.SetTenant)
-}
-
 func TestConfirmView_ProductionContext(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	m.updateLayout(120, 40)
-	m.requestConfirm(confirmOverlay{act: mutation.DrainNode, target: "n1", run: func() tea.Cmd { return nil }})
+	m.requestConfirm(confirmRequest{Request: confirm.Request{Action: mutation.DrainNode, Target: "n1"}, run: func(int) tea.Cmd { return nil }})
 	assert.NotContains(t, ansi.Strip(m.confirmView()), "PRODUCTION")
 
 	m.environment.Type = "prod"
@@ -266,6 +248,6 @@ func TestConfirmView_KindIsCategory(t *testing.T) {
 	m := newConfirmTestModel(t)
 	m.updateLayout(120, 40)
 	m.category = domain.GPUNode
-	m.requestConfirm(confirmOverlay{act: mutation.DrainNode, target: "n1", run: func() tea.Cmd { return nil }})
+	m.requestConfirm(confirmRequest{Request: confirm.Request{Action: mutation.DrainNode, Target: "n1"}, run: func(int) tea.Cmd { return nil }})
 	assert.Contains(t, ansi.Strip(m.confirmView()), "Kind     GPUNode")
 }

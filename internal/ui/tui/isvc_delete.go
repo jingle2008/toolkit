@@ -11,6 +11,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -89,7 +90,7 @@ func (m *Model) deleteOrphanInferenceService(itemKey models.ItemKey, a mutation.
 	}
 	namespace, name := svc.Namespace, svc.Name
 	env, kubeConfig, opCtx, logger := m.environment, m.kubeConfig, m.opCtxFunc(), m.logger
-	return m.trackAction(strings.ToLower(confirmLabels[a].verb)+" "+namespace+"/"+name, "", itemKey, func(func(string)) tea.Msg {
+	return m.trackAction(strings.ToLower(confirm.Verb(a))+" "+namespace+"/"+name, "", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := opCtx()
 		defer cancel()
 		var outcome k8s.OrphanDeleteOutcome
