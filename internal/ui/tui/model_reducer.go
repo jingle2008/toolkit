@@ -433,7 +433,7 @@ func (m *Model) mergeRepoDataset(fresh *models.Dataset) {
 		return
 	}
 	m.editDataset(func(ds *models.Dataset) {
-		ds.MergeReloadedRepoData(fresh)
+		mergeReloadedRepoData(ds, fresh)
 		resolveTenantOwners(ds)
 	})
 }
