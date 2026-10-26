@@ -4,12 +4,12 @@ package cli
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -30,7 +30,7 @@ func TestScaleGPUPool_DryRun_DoesNotCallOCI(t *testing.T) {
 		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 8, ActualSize: 4}, nil
 	})()
 	called := false
-	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, int, models.Environment, logging.Logger) (oci.PoolScale, error) {
+	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
 		called = true
 		return oci.PoolScale{}, nil
 	})()
@@ -59,7 +59,7 @@ func TestScaleGPUPool_HappyPath(t *testing.T) {
 		gotPool *models.GPUPool
 		gotAdd  int
 	)
-	defer swap(&increasePoolSizeFn, func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ logging.Logger) (oci.PoolScale, error) {
+	defer swap(&increasePoolSizeFn, func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotPool, gotAdd = p, add
 		return oci.PoolScale{Shown: 4, Before: 4, After: 4 + add}, nil
 	})()
@@ -87,7 +87,7 @@ func TestScaleGPUPool_AddPastTerraformSize(t *testing.T) {
 		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 4, ActualSize: 4}, nil
 	})()
 	gotAdd := 0
-	defer swap(&increasePoolSizeFn, func(_ context.Context, _ *models.GPUPool, add int, _ models.Environment, _ logging.Logger) (oci.PoolScale, error) {
+	defer swap(&increasePoolSizeFn, func(_ context.Context, _ *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotAdd = add
 		return oci.PoolScale{Shown: 4, Before: 4, After: 4 + add}, nil
 	})()
@@ -118,7 +118,7 @@ func TestScaleGPUPool_AtSizeWithoutAddSkips(t *testing.T) {
 	defer swap(&resolveGPUPoolFn, func(_ context.Context, _ config.Config, _ models.Environment, name string) (*models.GPUPool, error) {
 		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 4, ActualSize: 4}, nil
 	})()
-	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, int, models.Environment, logging.Logger) (oci.PoolScale, error) {
+	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
 		t.Fatal("must not call OCI")
 		return oci.PoolScale{}, nil
 	})()
@@ -139,7 +139,7 @@ func TestScaleGPUPool_Refusals(t *testing.T) {
 		p := pool
 		return &p, nil
 	})()
-	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, int, models.Environment, logging.Logger) (oci.PoolScale, error) {
+	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
 		t.Fatal("must not call OCI")
 		return oci.PoolScale{}, nil
 	})()
@@ -188,7 +188,7 @@ func TestScaleGPUPool_InteractiveBail(t *testing.T) {
 		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 8, ActualSize: 4}, nil
 	})()
 	called := false
-	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, int, models.Environment, logging.Logger) (oci.PoolScale, error) {
+	defer swap(&increasePoolSizeFn, func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
 		called = true
 		return oci.PoolScale{}, nil
 	})()

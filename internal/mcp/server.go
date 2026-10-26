@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -25,8 +26,8 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -34,7 +35,7 @@ import (
 type Server struct {
 	cfg    config.Config
 	loader loader.Composite
-	logger logging.Logger
+	logger *slog.Logger
 	server *sdk.Server
 	// bgCtx scopes work that outlives a tool call (drain drivers) to the
 	// server's lifetime; Run replaces it with its own ctx.
@@ -50,7 +51,7 @@ type Server struct {
 // NewServer constructs a server that exposes read-only category tools.
 // cfg supplies the startup env defaults; each tool call may override
 // env_type / env_region / env_realm per-call.
-func NewServer(cfg config.Config, ld loader.Composite, logger logging.Logger, version string) *Server {
+func NewServer(cfg config.Config, ld loader.Composite, logger *slog.Logger, version string) *Server {
 	s := &Server{
 		cfg:    cfg,
 		loader: ld,
@@ -119,7 +120,7 @@ func (s *Server) envFor(in envOverride) models.Environment {
 		// code is passed through here; envGuard has already refused the
 		// call before any handler gets this far (see checkEnvOverride).
 		if r, err := models.ResolveRegion(in.EnvRegion); err != nil {
-			s.logger.Warnw("unresolvable env_region override; passing through",
+			s.logger.Warn("unresolvable env_region override; passing through",
 				"env_region", in.EnvRegion, "error", err)
 		} else {
 			env.Region = string(r)

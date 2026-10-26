@@ -9,7 +9,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -38,7 +38,7 @@ func TestEnvFor_NormalizesOverrides(t *testing.T) {
 	t.Parallel()
 	s := &Server{
 		cfg:    config.Config{EnvType: "dev", EnvRegion: "us-ashburn-1", EnvRealm: "oc1"},
-		logger: logging.NewNoOpLogger(),
+		logger: logging.Discard(),
 	}
 
 	// An agent handing us the forms that appear in tickets and dashboards.

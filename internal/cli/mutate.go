@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -13,9 +14,9 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/resolve"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -52,7 +53,7 @@ func resolveNode(cfg config.Config, env models.Environment, name, ocid string, n
 // prompt and audit name, and name only a label.
 func runNodeAction(
 	cmd *cobra.Command, cfgFile *string, a mutation.Action, name, ocid string, dryRun, yes bool,
-	act func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error,
+	act func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error,
 ) error {
 	target, fields := name, func() []any { return nil }
 	if ocid != "" {
@@ -186,12 +187,12 @@ func withCommandSetup(
 	if err := validateMutationConfig(cfg, needsKube, needsRepo, needsEnv); err != nil {
 		return err
 	}
-	logger, err := initLogger(cfg)
+	logger, logFile, err := initLogger(cfg)
 	if err != nil {
 		return err
 	}
-	logger = logger.WithFields("cmd", name)
-	defer func() { _ = logger.Sync() }()
+	logger = logger.With("cmd", name)
+	defer func() { _ = logFile.Close() }()
 	// Commands act on whatever env this resolves to, so the expansion
 	// belongs in the log (for mutations, the audit trail) alongside them.
 	logEnvAliases(logger, rawType, rawRegion, cfg)

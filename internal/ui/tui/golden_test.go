@@ -3,6 +3,7 @@ package tui
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,11 +17,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/internal/uistate"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -90,7 +91,7 @@ func newGoldenModel(t *testing.T, w, h int) *Model {
 		WithRepoPath("testrepo"),
 		WithEnvironment(env),
 		WithLoader(fakeLoader{}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 		WithLogStore(ring),
 		WithVersion("v1.2.3"),
 	)
@@ -122,7 +123,7 @@ func newGoldenModel(t *testing.T, w, h int) *Model {
 		},
 	}
 	for i := range 60 {
-		ring.Infow(fmt.Sprintf("loaded category %d", i), "rows", i*3)
+		slog.New(ring).Info(fmt.Sprintf("loaded category %d", i), "rows", i*3)
 	}
 	m.updateLayout(w, h)
 	return m

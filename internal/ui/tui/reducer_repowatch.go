@@ -12,7 +12,7 @@ import (
 func (m *Model) handleRepoWatchStarted(msg repoWatchStartedMsg) tea.Cmd {
 	m.watch.repoActive = true
 	m.watch.repoTrigger = msg.Trigger
-	m.logger.Infow("repo watch started")
+	m.logger.Info("repo watch started")
 	return waitForRepoTriggerCmd(msg.Trigger)
 }
 
@@ -20,7 +20,7 @@ func (m *Model) handleRepoWatchStarted(msg repoWatchStartedMsg) tea.Cmd {
 // pools when loaded) and re-arms the listener. No beginTask: a working-tree
 // change must not flash the loading spinner.
 func (m *Model) handleRepoWatchTriggered() tea.Cmd {
-	m.logger.Debugw("repo watch triggered; reloading dataset")
+	m.logger.Debug("repo watch triggered; reloading dataset")
 	cmds := []tea.Cmd{
 		reloadDatasetCmd(m.sessionCtx(), m.loader, m.repoPath, m.environment, m.logger),
 	}
@@ -38,7 +38,7 @@ func (m *Model) handleRepoWatchTriggered() tea.Cmd {
 // maybeStartRepoWatchCmd).
 func (m *Model) handleRepoWatchClosed() {
 	m.watch.repoActive = false
-	m.logger.Warnw("repo watch closed; live repo indicator dropped")
+	m.logger.Warn("repo watch closed; live repo indicator dropped")
 }
 
 // maybeStartRepoWatchCmd returns a command to (re)establish the repo

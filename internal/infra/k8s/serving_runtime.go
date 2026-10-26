@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -30,7 +30,7 @@ func LoadServingRuntimes(ctx context.Context, client dynamic.Interface) ([]model
 	for _, item := range list.Items {
 		result = append(result, parseServingRuntime(ctx, &item))
 	}
-	logging.FromContext(ctx).Debugw("loaded serving runtimes", "count", len(result))
+	logging.FromContext(ctx).Debug("loaded serving runtimes", "count", len(result))
 	return result, nil
 }
 
@@ -267,7 +267,7 @@ func instanceTypesFrom(ctx context.Context, spec, engine map[string]any) []strin
 	if len(types) == 0 {
 		types = instanceTypesFromAffinity(spec)
 	} else if fallback := instanceTypesFromAffinity(spec); len(fallback) > 0 && !equalStrings(types, fallback) {
-		logging.FromContext(ctx).Debugw("serving runtime affinity differs between engineConfig and spec",
+		logging.FromContext(ctx).Debug("serving runtime affinity differs between engineConfig and spec",
 			"engineConfig", types, "spec", fallback)
 	}
 	return types
@@ -335,7 +335,7 @@ func logRunnerDivergence(ctx context.Context, name string, spec, engine map[stri
 			continue
 		}
 		if img, _, _ := unstructured.NestedString(container, "image"); img != "" && img != engineImage {
-			logging.FromContext(ctx).Debugw("serving runtime image differs between engineConfig and spec",
+			logging.FromContext(ctx).Debug("serving runtime image differs between engineConfig and spec",
 				"runtime", name, "engineConfig", engineImage, "spec", img, "using", chosen)
 		}
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/infra/loader"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -66,13 +66,13 @@ func TestReloadDatasetCmd_SuccessAndError(t *testing.T) {
 	t.Parallel()
 	ds := &models.Dataset{Tenants: []models.Tenant{{Name: "t"}}}
 	okLoader := fakeLoader{dataset: ds}
-	msg := reloadDatasetCmd(context.Background(), okLoader, "/repo", models.Environment{}, logging.NewNoOpLogger())()
+	msg := reloadDatasetCmd(context.Background(), okLoader, "/repo", models.Environment{}, logging.Discard())()
 	reloaded, ok := msg.(datasetReloadedMsg)
 	require.True(t, ok, "expected datasetReloadedMsg, got %T", msg)
 	require.Same(t, ds, reloaded.Dataset)
 
 	errLoader := fakeLoader{err: errors.New("boom")}
-	msg = reloadDatasetCmd(context.Background(), errLoader, "/repo", models.Environment{}, logging.NewNoOpLogger())()
+	msg = reloadDatasetCmd(context.Background(), errLoader, "/repo", models.Environment{}, logging.Discard())()
 	failed, ok := msg.(datasetReloadedMsg)
 	require.True(t, ok, "expected datasetReloadedMsg, got %T", msg)
 	require.EqualError(t, failed.err, "boom")

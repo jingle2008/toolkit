@@ -28,7 +28,7 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	// endTask still runs to keep pendingTasks balanced.
 	if msg.Gen != 0 && msg.Gen != m.gens.msg {
 		if m.logger != nil {
-			m.logger.Debugw("dropping stale load error", "msgGen", msg.Gen, "gen", m.gens.msg, "error", err)
+			m.logger.Debug("dropping stale load error", "msgGen", msg.Gen, "gen", m.gens.msg, "error", err)
 		}
 		m.endTask(false)
 		return nil
@@ -41,7 +41,7 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	// pendingTasks balanced.
 	if err != nil && errors.Is(err, context.Canceled) {
 		if m.logger != nil {
-			m.logger.Debugw("in-flight load canceled", "category", m.category, "error", err)
+			m.logger.Debug("in-flight load canceled", "category", m.category, "error", err)
 		}
 		m.endTask(false)
 		return nil
@@ -51,7 +51,7 @@ func (m *Model) handleErrMsg(msg errMsg) tea.Cmd {
 	// Without this the only trace of a failed load lives in the banner
 	// for 8s, then nothing.
 	if m.logger != nil {
-		m.logger.Errorw("data load failed", "category", m.category, "error", err)
+		m.logger.Error("data load failed", "category", m.category, "error", err)
 	}
 	if m.ownLoadFailed(msg.Cat) {
 		m.loadFailed = true

@@ -16,7 +16,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -64,7 +64,7 @@ func gpuNodeByOCID(ctx context.Context, ld loader.Composite, repoPath string, en
 		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {
 			return nil, fmt.Errorf("load gpu pools: %w", err)
 		}
-		logging.FromContext(ctx).Warnw("gpu pools loaded with partial failures", "error", err)
+		logging.FromContext(ctx).Warn("gpu pools loaded with partial failures", "error", err)
 	}
 	if len(pools) == 0 {
 		return nil, fmt.Errorf("instance %s: no GPU pools in repo to check it against", ocid)
@@ -91,7 +91,7 @@ func GPUPool(ctx context.Context, ld loader.Composite, repoPath, kubeConfig stri
 		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {
 			return nil, fmt.Errorf("load gpu pools: %w", err)
 		}
-		logging.FromContext(ctx).Warnw("gpu pools loaded with partial failures", "error", err)
+		logging.FromContext(ctx).Warn("gpu pools loaded with partial failures", "error", err)
 	}
 
 	idx := -1
@@ -141,11 +141,11 @@ func EnrichGPUPools(ctx context.Context, pools []models.GPUPool, kubeConfig stri
 	logger := logging.FromContext(ctx)
 	compartmentID, err := CompartmentID(ctx, kubeConfig, env)
 	if err != nil {
-		logger.Infow("gpu pool enrichment failed", "step", "compartment_id", "error", err)
+		logger.Info("gpu pool enrichment failed", "step", "compartment_id", "error", err)
 		return fmt.Errorf("compartment lookup failed: %w", err)
 	}
 	if err := populateGPUPoolsFn(ctx, pools, env, compartmentID); err != nil {
-		logger.Infow("gpu pool enrichment failed", "step", "populate", "error", err)
+		logger.Info("gpu pool enrichment failed", "step", "populate", "error", err)
 		return fmt.Errorf("OCI populate failed: %w", err)
 	}
 	return nil

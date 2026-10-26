@@ -2,13 +2,12 @@ package k8s
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/drain"
-
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 /*
@@ -41,10 +40,10 @@ func NodeCordoned(ctx context.Context, kubeconfig, contextName, nodeName string)
 	return node.Spec.Unschedulable, nil
 }
 
-type logWriter struct{ logger logging.Logger }
+type logWriter struct{ logger *slog.Logger }
 
 func (w logWriter) Write(p []byte) (int, error) {
-	w.logger.Infow("kubectl-drain", "msg", strings.TrimSpace(string(p)))
+	w.logger.Info("kubectl-drain", "output", strings.TrimSpace(string(p)))
 	return len(p), nil
 }
 

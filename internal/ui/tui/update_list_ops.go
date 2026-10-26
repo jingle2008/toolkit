@@ -47,7 +47,7 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
 	dac, ok := item.(*models.DedicatedAICluster)
 	if !ok || dac == nil {
-		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
+		m.logger.Error("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
 	}
 	// DAC deletion is a multi-minute workflow with its own internal
@@ -56,7 +56,7 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	// The action reads only what is captured here, never m.
 	env, ctx, log, snapshot := m.environment, m.longOpCtx(), m.logger, *dac
 	return m.trackAction("delete "+dac.Name, "Deleting", itemKey, func(progress func(string)) tea.Msg {
-		logger := progressLogger{Logger: log, report: progress}
+		logger := newProgressLogger(log, progress)
 		err := audited(log, mutation.DeleteDAC, snapshot.Name, func() error {
 			return oci.DeleteDedicatedAICluster(ctx, &snapshot, env, logger)
 		})
@@ -71,7 +71,7 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 	item := findItem(m.dataset, m.category, itemKey)
 	node, ok := item.(*models.GPUNode)
 	if !ok || node == nil {
-		m.logger.Errorw("item not found for delete operation", "category", m.category, "key", itemKey)
+		m.logger.Error("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
 	}
 	env, opCtx, logger, snapshot := m.environment, m.opCtxFunc(), m.logger, *node
@@ -90,12 +90,12 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 
 func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 	if item == nil {
-		m.logger.Errorw("no item selected for restart operation", "category", m.category)
+		m.logger.Error("no item selected for restart operation", "category", m.category)
 		return nil
 	}
 	node, ok := item.(*models.GPUNode)
 	if !ok {
-		m.logger.Errorw("unsupported item type for restart operation", "item", item)
+		m.logger.Error("unsupported item type for restart operation", "item", item)
 		return nil
 	}
 	env, opCtx, logger, snapshot := m.environment, m.opCtxFunc(), m.logger, *node
@@ -111,7 +111,7 @@ func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 
 // handleDeleteErrMsg says a delete failed, wherever it ran.
 func (m *Model) handleDeleteErrMsg(msg deleteErrMsg) tea.Cmd {
-	m.logger.Errorw("failed to delete item", "key", msg.key, "error", msg.err)
+	m.logger.Error("failed to delete item", "key", msg.key, "error", msg.err)
 	return m.showErrorWithNext(fmt.Sprintf("%s %s failed%s: %v", deleteVerb(msg.category), itemKeyString(msg.key), m.envNote(msg.env), msg.err),
 		keys.Delete.Help().Key+" retry")
 }
@@ -155,7 +155,7 @@ func deleteVerb(cat domain.Category) string {
 // not written through: a tea.Cmd may still be reading the old one.
 func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) tea.Cmd {
 	if msg.err != nil {
-		m.logger.Errorw("failed to update data", "category", msg.category, "error", msg.err)
+		m.logger.Error("failed to update data", "category", msg.category, "error", msg.err)
 	}
 	if m.dataset == nil || !m.inCurrentEnv(msg.env) {
 		return nil
@@ -194,7 +194,7 @@ func (m *Model) handleUpdateDoneMsg(msg updateDoneMsg) tea.Cmd {
 func (m *Model) handleGPUPoolScaleResultMsg(msg gpuPoolScaleResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
-		m.logger.Errorw("failed to scale GPU pool", "key", msg.key, "error", msg.err)
+		m.logger.Error("failed to scale GPU pool", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("scale up %s failed: %v", target, msg.err), keys.ScaleUp.Help().Key+" retry")
 	}
 	text := fmt.Sprintf("scale-up requested for %s: %s", target, msg.scale)
@@ -215,7 +215,7 @@ func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) tea.Cmd {
 	}
 	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
-		m.logger.Errorw("failed to toggle cordon state", "key", msg.key, "error", msg.err)
+		m.logger.Error("failed to toggle cordon state", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("%s %s failed: %v", verb, target, msg.err), keys.ToggleCordon.Help().Key+" retry")
 	}
 	// The node is replaced, not written through (updateItemInMap).
@@ -236,7 +236,7 @@ func (m *Model) handleCordonNodeResultMsg(msg cordonNodeResultMsg) tea.Cmd {
 func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
-		m.logger.Errorw("failed to drain node", "key", msg.key, "error", msg.err)
+		m.logger.Error("failed to drain node", "key", msg.key, "error", msg.err)
 		// The drain is recorded on the node, so a rerun resumes it.
 		return m.showErrorWithNext(fmt.Sprintf("drain %s failed: %v", target, msg.err), keys.DrainNode.Help().Key+" retry (resumes)")
 	}
@@ -249,7 +249,7 @@ func (m *Model) handleDrainNodeResultMsg(msg drainNodeResultMsg) tea.Cmd {
 func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cmd {
 	svc, ok := item.(*models.InferenceService)
 	if !ok || svc == nil {
-		m.logger.Errorw("unsupported item type for restart operation", "item", item)
+		m.logger.Error("unsupported item type for restart operation", "item", item)
 		return nil
 	}
 	namespace, name := svc.Namespace, svc.Name
@@ -267,7 +267,7 @@ func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cm
 func (m *Model) handleRestartServiceResultMsg(msg restartServiceResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
-		m.logger.Errorw("failed to restart inference service", "key", msg.key, "error", msg.err)
+		m.logger.Error("failed to restart inference service", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("restart %s failed: %v", target, msg.err), keys.Restart.Help().Key+" retry")
 	}
 	return m.showToast("restart requested for "+target, toastInfo)
@@ -276,7 +276,7 @@ func (m *Model) handleRestartServiceResultMsg(msg restartServiceResultMsg) tea.C
 func (m *Model) handleRestartNodeResultMsg(msg restartNodeResultMsg) tea.Cmd {
 	target := itemKeyString(msg.key) + m.envNote(msg.env)
 	if msg.err != nil {
-		m.logger.Errorw("failed to restart node", "key", msg.key, "error", msg.err)
+		m.logger.Error("failed to restart node", "key", msg.key, "error", msg.err)
 		return m.showErrorWithNext(fmt.Sprintf("restart %s failed: %v", target, msg.err), keys.Restart.Help().Key+" retry")
 	}
 	return m.showToast("restart requested for "+target, toastInfo)

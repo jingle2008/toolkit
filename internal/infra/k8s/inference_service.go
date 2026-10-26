@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -49,7 +49,7 @@ func LoadInferenceServices(ctx context.Context, client dynamic.Interface) (map[s
 		s := parseLegacyInferenceService(&legacy[i])
 		result[s.Namespace] = append(result[s.Namespace], s)
 	}
-	logging.FromContext(ctx).Debugw("loaded inference services",
+	logging.FromContext(ctx).Debug("loaded inference services",
 		"services", len(list.Items), "legacy", len(legacy), "namespaces", len(result))
 	return result, nil
 }
@@ -61,8 +61,8 @@ func listLegacyInferenceServices(ctx context.Context, client dynamic.Interface) 
 	if legacyAPIUnavailable(err) {
 		// Warn once: every reload hits the same, expected Forbidden.
 		if apierrors.IsForbidden(err) {
-			log := logging.FromContext(ctx).Debugw
-			legacyForbiddenOnce.Do(func() { log = logging.FromContext(ctx).Warnw })
+			log := logging.FromContext(ctx).Debug
+			legacyForbiddenOnce.Do(func() { log = logging.FromContext(ctx).Warn })
 			log("not allowed to list legacy InferenceServices; skipping them", "error", err)
 		}
 		return nil, nil

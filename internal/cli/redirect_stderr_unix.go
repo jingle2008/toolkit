@@ -40,7 +40,7 @@ func redirectStderr(path string) (func(), error) {
 		return nil, fmt.Errorf("redirect stderr: %w", err)
 	}
 	return func() {
-		// Restore so any post-exit writes (e.g., logger Sync errors,
+		// Restore so any post-exit writes (e.g., log-file close errors,
 		// deferred cleanups) reach the user's actual terminal. Order
 		// matters: restore fd 2 before closing f so any stderr write
 		// between the dup2 and the close lands on the real terminal,

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
-	logging "github.com/jingle2008/toolkit/pkg/infra/logging"
+	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -29,7 +29,7 @@ func TestStartupLazyCategory_KeepsFullDataset(t *testing.T) {
 		WithRepoPath("repo"),
 		WithEnvironment(models.Environment{Realm: "realm", Type: "type", Region: "region"}),
 		WithLoader(fakeLoader{dataset: ds}),
-		WithLogger(logging.NewNoOpLogger()),
+		WithLogger(logging.Discard()),
 		WithCategory(domain.DedicatedAICluster),
 	)
 	require.NoError(t, err)

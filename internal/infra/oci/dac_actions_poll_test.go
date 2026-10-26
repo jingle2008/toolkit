@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"testing"
@@ -15,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 // fakeServiceError implements common.ServiceError with a fixed status.
@@ -60,7 +61,7 @@ func TestWaitForWorkRequest_NonRetryableFailsFast(t *testing.T) {
 			return generativeai.GetWorkRequestResponse{}, fakeServiceError{http.StatusUnauthorized}
 		}}
 		start := time.Now()
-		err := waitForWorkRequest(t.Context(), client, strPtr("wr"), &testLogger{})
+		err := waitForWorkRequest(t.Context(), client, strPtr("wr"), slog.New(&testLogger{}))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "service error 401")
 		assert.Equal(t, 1, calls)
@@ -86,7 +87,7 @@ func TestWaitForWorkRequest_RetriesTransient(t *testing.T) {
 				WorkRequest: generativeai.WorkRequest{Status: generativeai.OperationStatusSucceeded},
 			}, nil
 		}}
-		require.NoError(t, waitForWorkRequest(t.Context(), client, strPtr("wr"), &testLogger{}))
+		require.NoError(t, waitForWorkRequest(t.Context(), client, strPtr("wr"), slog.New(&testLogger{})))
 		assert.Equal(t, len(errs)+1, calls)
 	})
 }
@@ -124,7 +125,7 @@ func TestDeleteEndpointsInDAC_ConcurrencyLimit(t *testing.T) {
 			},
 		}
 		dac := &generativeai.DedicatedAiCluster{Id: strPtr(clusterID), CompartmentId: strPtr("c")}
-		require.NoError(t, deleteEndpointsInDAC(t.Context(), client, dac, logging.NewNoOpLogger()))
+		require.NoError(t, deleteEndpointsInDAC(t.Context(), client, dac, logging.Discard()))
 		assert.Equal(t, 12, deleted)
 		assert.LessOrEqual(t, maxInFlight, 5)
 	})
@@ -150,7 +151,7 @@ func TestDeleteEndpointsInDAC_StopsAfterFailure(t *testing.T) {
 			},
 		}
 		dac := &generativeai.DedicatedAiCluster{Id: strPtr(clusterID), CompartmentId: strPtr("c")}
-		err := deleteEndpointsInDAC(context.Background(), client, dac, logging.NewNoOpLogger())
+		err := deleteEndpointsInDAC(context.Background(), client, dac, logging.Discard())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "boom")
 		// ep0..ep4 start at once; the slot ep0 frees may admit one more

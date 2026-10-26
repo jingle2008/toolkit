@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 const (
@@ -139,9 +139,9 @@ func processPodQueries[C any, V any](
 	if err := eg.Wait(); err != nil {
 		// Navigating away cancels a load: expected, not a failure.
 		if errors.Is(err, context.Canceled) {
-			logger.Debugw("pod load canceled", "error", err)
+			logger.Debug("pod load canceled", "error", err)
 		} else {
-			logger.Errorw("failed to load pods", "error", err)
+			logger.Error("failed to load pods", "error", err)
 		}
 		return err
 	}

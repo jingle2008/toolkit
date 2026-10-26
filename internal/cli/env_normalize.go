@@ -1,8 +1,9 @@
 package cli
 
 import (
+	"log/slog"
+
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 )
 
 /*
@@ -16,11 +17,11 @@ closes that gap without polluting the rest of the log.
 
 Silent when nothing was expanded, so the common case adds nothing.
 */
-func logEnvAliases(logger logging.Logger, rawType, rawRegion string, cfg config.Config) {
+func logEnvAliases(logger *slog.Logger, rawType, rawRegion string, cfg config.Config) {
 	if rawType != cfg.EnvType {
-		logger.Infow("resolved env-type alias", "from", rawType, "to", cfg.EnvType)
+		logger.Info("resolved env-type alias", "from", rawType, "to", cfg.EnvType)
 	}
 	if rawRegion != cfg.EnvRegion {
-		logger.Infow("resolved env-region code", "from", rawRegion, "to", cfg.EnvRegion)
+		logger.Info("resolved env-region code", "from", rawRegion, "to", cfg.EnvRegion)
 	}
 }

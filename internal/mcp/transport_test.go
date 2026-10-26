@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 // The guard passes well-formed messages on unchanged and answers every
@@ -80,7 +80,7 @@ func TestRun_SurvivesMalformedLine(t *testing.T) {
 	defer cancel()
 
 	srv := NewServer(config.Config{RepoPath: "/dev/null", EnvType: "dev", EnvRegion: "us-ashburn-1", EnvRealm: "oc1"},
-		stubLoader{}, logging.NewNoOpLogger(), "test")
+		stubLoader{}, logging.Discard(), "test")
 	inR, inW := io.Pipe()
 	outR, outW := io.Pipe()
 	done := make(chan error, 1)

@@ -194,7 +194,7 @@ func registerTools(s *Server) {
 func (s *Server) tenantDataset(ctx context.Context, env models.Environment) (*models.Dataset, []string) {
 	ds, err := resolve.TenantDataset(ctx, s.loader, s.cfg.RepoPath, env)
 	if err != nil {
-		s.logger.Warnw("tenant resolution unavailable", "surface", "mcp", "error", err)
+		s.logger.Warn("tenant resolution unavailable", "surface", "mcp", "error", err)
 		return ds, []string{"tenant names unresolved: " + err.Error()}
 	}
 	return ds, nil
@@ -277,7 +277,7 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 	// The client sees these via listResult.Warnings; the log line is for
 	// operators reading cfg.LogFile, matching what mutations already do.
 	if len(warnings) > 0 {
-		s.logger.Warnw(
+		s.logger.Warn(
 			"load gpu pools", "surface", "mcp",
 			"phase", "partial", "sources", len(warnings),
 			"warnings", strings.Join(warnings, "; "),
@@ -288,7 +288,7 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 	// or OCI call fails so callers still get Terraform-derived data.
 	if err := resolve.EnrichGPUPools(ctx, items, s.cfg.KubeConfig, env); err != nil {
 		warnings = append(warnings, "enrichment incomplete: "+err.Error())
-		s.logger.Warnw(
+		s.logger.Warn(
 			"load gpu pools", "surface", "mcp",
 			"phase", "enrichment", "error", err,
 		)

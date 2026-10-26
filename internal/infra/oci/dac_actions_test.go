@@ -4,6 +4,7 @@ package oci
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -86,7 +87,7 @@ func TestDeleteDedicatedAICluster_Success(t *testing.T) {
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
 	logger := &testLogger{}
-	err := DeleteDedicatedAICluster(context.Background(), dac, env, logger)
+	err := DeleteDedicatedAICluster(context.Background(), dac, env, slog.New(logger))
 	require.NoError(t, err)
 }
 
@@ -135,7 +136,7 @@ func TestDeleteDedicatedAICluster_ClientError(t *testing.T) {
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
 	logger := &testLogger{}
-	err := DeleteDedicatedAICluster(context.Background(), dac, env, logger)
+	err := DeleteDedicatedAICluster(context.Background(), dac, env, slog.New(logger))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create GenerativeAI client")
 }
@@ -168,7 +169,7 @@ func TestDeleteDedicatedAICluster_DeleteError_NilOpcRequestId(t *testing.T) {
 
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-	err := DeleteDedicatedAICluster(context.Background(), dac, env, &testLogger{})
+	err := DeleteDedicatedAICluster(context.Background(), dac, env, slog.New(&testLogger{}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to delete DedicatedAICluster")
 	assert.Contains(t, err.Error(), "boom")
@@ -194,7 +195,7 @@ func TestDeleteDedicatedAICluster_NilWorkRequestID(t *testing.T) {
 
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-	err := DeleteDedicatedAICluster(ctx, dac, env, &testLogger{})
+	err := DeleteDedicatedAICluster(ctx, dac, env, slog.New(&testLogger{}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "work request id is nil")
 }
@@ -222,7 +223,7 @@ func TestDeleteDedicatedAICluster_NilEndpointClusterID_Skipped(t *testing.T) {
 
 	dac := &models.DedicatedAICluster{}
 	env := models.Environment{Type: "prod", Region: "us-phoenix-1", Realm: "oc1"}
-	err := DeleteDedicatedAICluster(context.Background(), dac, env, &testLogger{})
+	err := DeleteDedicatedAICluster(context.Background(), dac, env, slog.New(&testLogger{}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "reached-delete")
 }
@@ -272,7 +273,7 @@ func TestDeleteEndpointsInDAC_FollowsPages(t *testing.T) {
 
 	// testLogger is not goroutine-safe and endpoints are deleted concurrently.
 	dac := &generativeai.DedicatedAiCluster{Id: &clusterID, CompartmentId: strPtr("compartment")}
-	err := deleteEndpointsInDAC(context.Background(), fakeClient, dac, logging.NewNoOpLogger())
+	err := deleteEndpointsInDAC(context.Background(), fakeClient, dac, logging.Discard())
 	require.NoError(t, err)
 	assert.Equal(t, []string{"", "p2", "p3"}, requested)
 	assert.ElementsMatch(t, []string{"ep1", "ep2", "ep3"}, deleted)
@@ -293,7 +294,7 @@ func TestDeleteEndpointsInDAC_PageError(t *testing.T) {
 		},
 	}
 	dac := &generativeai.DedicatedAiCluster{Id: strPtr("dac"), CompartmentId: strPtr("compartment")}
-	err := deleteEndpointsInDAC(context.Background(), fakeClient, dac, &testLogger{})
+	err := deleteEndpointsInDAC(context.Background(), fakeClient, dac, slog.New(&testLogger{}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to list endpoints")
 	assert.Contains(t, err.Error(), "page2 boom")

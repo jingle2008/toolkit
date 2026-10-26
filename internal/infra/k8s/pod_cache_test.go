@@ -6,11 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	logging "github.com/jingle2008/toolkit/internal/logging"
 )
 
 func TestGetUniqeKey(t *testing.T) {
 	t.Parallel()
-	logger := &mockLogger{}
+	logger := logging.Discard()
 	// empty map
 	assert.Equal(t, "", getUniqeKey(logger, map[string]struct{}{}, "label"))
 	// single entry

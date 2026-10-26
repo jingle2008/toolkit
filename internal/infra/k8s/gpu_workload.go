@@ -7,7 +7,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 	models "github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -89,7 +89,7 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 			break
 		}
 	}
-	logging.FromContext(ctx).Debugw("loaded gpu workloads",
+	logging.FromContext(ctx).Debug("loaded gpu workloads",
 		"workloads", total, "nodes", len(result))
 	return result, nil
 }

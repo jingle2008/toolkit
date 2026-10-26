@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	watchtools "k8s.io/client-go/tools/watch"
 
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 // DebounceWindow is the coalescing window for watch triggers: events
@@ -65,7 +65,7 @@ func watchTrigger(
 	// goroutine never blocks while the coalescer is mid-timer).
 	raw := make(chan struct{}, 1)
 
-	logging.FromContext(ctx).Infow("watch established", "watchers", len(watchers))
+	logging.FromContext(ctx).Info("watch established", "watchers", len(watchers))
 
 	var wg sync.WaitGroup
 	for _, w := range watchers {
@@ -100,7 +100,7 @@ func fanInWatcher(
 	for {
 		select {
 		case <-ctx.Done():
-			logging.FromContext(ctx).Debugw("watch fan-in stopped: context canceled")
+			logging.FromContext(ctx).Debug("watch fan-in stopped: context canceled")
 			return
 		case <-done:
 			return
@@ -112,7 +112,7 @@ func fanInWatcher(
 				// up on an unrecoverable error (e.g. 410 Expired) or was
 				// stopped. Treat it as a fallback signal: the live indicator
 				// drops and the caller does a final one-shot reload.
-				logging.FromContext(ctx).Warnw("watch ended (retry exhausted or stopped); live watch will drop")
+				logging.FromContext(ctx).Warn("watch ended (retry exhausted or stopped); live watch will drop")
 				closeDone()
 				return
 			}
@@ -320,7 +320,7 @@ func legacyCRWatchOpener(client dynamic.Interface, gvr schema.GroupVersionResour
 	return func(ctx context.Context) (watch.Interface, error) {
 		w, err := open(ctx)
 		if legacyAPIUnavailable(err) {
-			logging.FromContext(ctx).Debugw("legacy API unavailable; not watching", "resource", gvr.String(), "error", err)
+			logging.FromContext(ctx).Debug("legacy API unavailable; not watching", "resource", gvr.String(), "error", err)
 			return watch.NewFake(), nil
 		}
 		if err != nil {
@@ -345,7 +345,7 @@ func quietWhenUnavailable(ctx context.Context, inner watch.Interface, gvr schema
 		defer close(q.out)
 		for ev := range inner.ResultChan() {
 			if ev.Type == watch.Error && legacyAPIUnavailable(apierrors.FromObject(ev.Object)) {
-				logging.FromContext(ctx).Debugw("legacy API became unavailable; not watching",
+				logging.FromContext(ctx).Debug("legacy API became unavailable; not watching",
 					"resource", gvr.String(), "error", apierrors.FromObject(ev.Object))
 				<-q.stop
 				return

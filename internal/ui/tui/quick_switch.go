@@ -102,7 +102,7 @@ func (m *Model) inCurrentEnv(env models.Environment) bool {
 	if env.Equals(m.environment) {
 		return true
 	}
-	m.logger.Debugw("dropping result from a previous environment", "env", env.KubeContext(), "current", m.environment.KubeContext())
+	m.logger.Debug("dropping result from a previous environment", "env", env.KubeContext(), "current", m.environment.KubeContext())
 	return false
 }
 
@@ -140,7 +140,7 @@ func (m *Model) pruneRecentEnvs() tea.Cmd {
 		if e.Equals(m.environment) || slices.ContainsFunc(known, e.Equals) {
 			return true
 		}
-		m.logger.Debugw("dropping unknown recent environment", "realm", e.Realm, "env", e.GetName())
+		m.logger.Debug("dropping unknown recent environment", "realm", e.Realm, "env", e.GetName())
 		return false
 	})
 	if !changed {
@@ -179,7 +179,7 @@ func (m *Model) saveRecentEnvsCmd() tea.Cmd {
 		}
 		saver.written = seq
 		if err := snapshot.Save(path); err != nil {
-			logger.Warnw("failed to save recent contexts", "path", path, "error", err)
+			logger.Warn("failed to save recent contexts", "path", path, "error", err)
 		}
 		return nil
 	}

@@ -4,18 +4,18 @@ package cli
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/pkg/infra/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func TestTerminateCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 	stageOCIDEnv(t)
 	called := false
-	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error {
 		called = true
 		return nil
 	})()
@@ -36,7 +36,7 @@ func TestTerminateCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 func TestTerminateCmd_RequiresExplicitYes(t *testing.T) {
 	stageOCIDEnv(t)
 	called := false
-	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error {
 		called = true
 		return nil
 	})()
@@ -56,7 +56,7 @@ func TestTerminateCmd_RequiresExplicitYes(t *testing.T) {
 func TestTerminateCmd_YesCallsOCI(t *testing.T) {
 	stageOCIDEnv(t)
 	var gotNode *models.GPUNode
-	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
 		gotNode = n
 		return nil
 	})()
@@ -79,7 +79,7 @@ func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 		return &models.GPUNode{Name: name, ID: "ocid1.resolved"}, nil
 	})()
 	var gotNode *models.GPUNode
-	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
 		gotNode = n
 		return nil
 	})()
@@ -94,7 +94,7 @@ func TestTerminateCmd_NameResolvesViaCluster(t *testing.T) {
 
 func TestTerminateCmd_PerformError(t *testing.T) {
 	stageOCIDEnv(t)
-	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, logging.Logger) error {
+	defer swap(&terminateInstanceFn, func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error {
 		return errors.New("instance already terminating")
 	})()
 
