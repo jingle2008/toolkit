@@ -16,7 +16,7 @@ import (
 // kubeBackedCategories returns every category that loads from a live cluster.
 func kubeBackedCategories() []domain.Category {
 	var out []domain.Category
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		if c.NeedsKubeConfig() {
 			out = append(out, c)
 		}
@@ -44,7 +44,7 @@ func TestKubeBackedCategories_FullyWired(t *testing.T) {
 func TestReloadCategoryCmd_OnlyKubeBacked(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		got := m.reloadCategoryCmd(c, 1)
 		if c.NeedsKubeConfig() {
 			assert.NotNilf(t, got, "%s is kube-backed and must reload", c)
@@ -130,7 +130,7 @@ var noStatsCategories = map[domain.Category]struct{}{
 // none — a new category fails until someone decides.
 func TestStatsColumns_EveryCategoryAccountedFor(t *testing.T) {
 	t.Parallel()
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		_, hasStats := statsColumns[c]
 		_, excluded := noStatsCategories[c]
 		assert.Truef(t, hasStats != excluded,
@@ -143,7 +143,7 @@ func TestStatsColumns_EveryCategoryAccountedFor(t *testing.T) {
 func TestItemKeyFrom_NonNilForEveryCategory(t *testing.T) {
 	t.Parallel()
 	row := table.Row{"a", "b", "c", "d"}
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		assert.NotNilf(t, itemKeyFrom(c, row), "itemKeyFrom returned nil for %s", c)
 	}
 }
@@ -152,7 +152,7 @@ func TestItemKeyFrom_NonNilForEveryCategory(t *testing.T) {
 // reloads: the ones with a load handler or in the tenancy-override group.
 func TestEnvironmentScopedCategories_MatchLoadHandlers(t *testing.T) {
 	t.Parallel()
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		_, handled := categoryHandlers[c]
 		_, tenancy := tenancyOverrideCategories[c]
 		assert.Equalf(t, handled || tenancy, c.IsEnvironmentScoped(),
@@ -167,7 +167,7 @@ func TestEnvironmentScopedCategories_MatchLoadHandlers(t *testing.T) {
 func TestCategoryCycle_VisitsEveryDataCategory(t *testing.T) {
 	t.Parallel()
 	var want []domain.Category
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		if c != domain.Alias {
 			want = append(want, c)
 		}
@@ -175,7 +175,7 @@ func TestCategoryCycle_VisitsEveryDataCategory(t *testing.T) {
 
 	var forward []domain.Category
 	c := domain.Tenant
-	for range len(domain.Categories) + 1 {
+	for range len(domain.Categories()) + 1 {
 		forward = append(forward, c)
 		c = nextCategory(c)
 		if c == domain.Tenant {
@@ -186,7 +186,7 @@ func TestCategoryCycle_VisitsEveryDataCategory(t *testing.T) {
 
 	var backward []domain.Category
 	c = domain.LastDataCategory
-	for range len(domain.Categories) + 1 {
+	for range len(domain.Categories()) + 1 {
 		backward = append(backward, c)
 		c = prevCategory(c)
 		if c == domain.LastDataCategory {

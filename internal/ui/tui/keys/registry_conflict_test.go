@@ -14,7 +14,7 @@ func TestNoKeyConflictsPerCategoryAndMode(t *testing.T) {
 
 	modes := []common.ViewMode{common.ListView, common.DetailsView}
 
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		for _, mode := range modes {
 			km := ResolveKeys(cat, mode)
 			seen := map[string]string{}

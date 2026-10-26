@@ -47,7 +47,7 @@ deliberately disabled to prevent reflex "y" answers.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			return withMutationSetup(cfgFile, false, false, true, func(ctx context.Context, _ config.Config, env models.Environment) error {
+			return withMutationSetup(cmd.Context(), cfgFile, false, false, true, func(ctx context.Context, _ config.Config, env models.Environment) error {
 				dac := &models.DedicatedAICluster{Name: name}
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 					Action: mutation.DeleteDAC,
@@ -103,7 +103,7 @@ be unique. Destructive: requires explicit --yes.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			return withMutationSetup(cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				var ns string
 				resolveNS := resolveISVC(cfg, env, namespace, name, &ns)
 				out := cmd.OutOrStdout()

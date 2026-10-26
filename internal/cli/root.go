@@ -95,7 +95,7 @@ metadata-file: "" # Optional path to a YAML or JSON file with additional metadat
 
 // runRootE returns the RunE function for the root command.
 func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []string) error {
-	return func(_ *cobra.Command, _ []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
 		// Parse config file with proper error handling (kept out of OnInitialize to preserve error semantics and tests).
 		if err := readConfigFile(cfgFile); err != nil {
 			return err
@@ -128,9 +128,10 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 			return fmt.Errorf("validate config: %w (hint: run `toolkit init` to scaffold an example config)", err)
 		}
 
-		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-		if err := runToolkit(ctx, logger, cfg, version); err != nil {
+		// cmd.Context() is Execute's signal context: SIGTERM, or a SIGINT
+		// sent from outside, cancels it. Ctrl+C typed in the TUI is not a
+		// signal (the terminal is in raw mode); Bubble Tea sees it as a key.
+		if err := runToolkit(cmd.Context(), logger, cfg, version); err != nil {
 			logger.Errorw("fatal error", "error", err)
 			return err
 		}
@@ -166,11 +167,23 @@ var defaultConfigFile string
 
 // Execute runs the root command.
 func Execute(version string) {
-	cmd := NewRootCmd(version)
-	if err := cmd.Execute(); err != nil {
+	if err := execute(version); err != nil {
 		// Let Cobra print the error once; just exit with non-zero status.
 		os.Exit(1)
 	}
+}
+
+// execute runs the root command under the one signal context every
+// command shares (via cmd.Context()): SIGINT or SIGTERM cancels it so
+// in-flight work unwinds instead of the process dying mid-operation.
+// Only the first signal is caught: once ctx is cancelled, stop restores
+// the default handling, so a second Ctrl+C kills a command that isn't
+// watching ctx.
+func execute(version string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	context.AfterFunc(ctx, stop)
+	return NewRootCmd(version).ExecuteContext(ctx)
 }
 
 // runToolkit wires the loaded config into the TUI and runs the Bubble Tea program.

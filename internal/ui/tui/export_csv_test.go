@@ -294,7 +294,7 @@ func TestExportTUIPathMatchesCLIPath_DAC(t *testing.T) {
 // caught drift between two maps and not "forgot both".
 func TestRowSources_CoversAllCategories(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		if _, ok := rowSources[cat]; !ok {
 			t.Errorf("category %s has no rowSources entry — TUI table and CSV export would both be empty", cat)
 		}

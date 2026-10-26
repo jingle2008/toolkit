@@ -71,7 +71,7 @@ Examples:
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nodeName := args[0]
-			return withMutationSetup(cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				out := cmd.OutOrStdout()
 				return runMutation(ctx, cmd.InOrStdin(), out, mutationPlan{
 					Action: action,

@@ -35,7 +35,7 @@ import (
 // for every column or maintain an opt-out list.
 func TestSortBindings_MatchColumnTitles(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		cat := cat
 		t.Run(cat.String(), func(t *testing.T) {
 			t.Parallel()

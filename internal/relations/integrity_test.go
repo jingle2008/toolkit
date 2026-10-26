@@ -14,7 +14,7 @@ import (
 // name set to check against.
 func TestChildren_CoverScopedCategories(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		_, ok := children[cat]
 		assert.Equalf(t, len(cat.ScopedBy()) > 0, ok, "%s: children entry iff scoped", cat)
 	}

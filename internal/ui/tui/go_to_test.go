@@ -131,7 +131,7 @@ func TestOpenGoTo_SingleAndNone(t *testing.T) {
 // details view (where o is Copy Object), and not on parentless ones.
 func TestGoToShortcut_OfferedInSubCategoriesOnly(t *testing.T) {
 	t.Parallel()
-	for _, c := range domain.Categories {
+	for _, c := range domain.Categories() {
 		_, hasRelated := rowSources[c]
 		hasRelated = hasRelated && rowSources[c].related != nil && len(rowSources[c].parents) > 0
 		assert.Equalf(t, hasRelated, contextHas(keys.ResolveKeys(c, common.ListView), keys.GoTo),

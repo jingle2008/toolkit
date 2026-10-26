@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +37,7 @@ func TestConfirmAction(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			var out bytes.Buffer
-			got, err := confirmAction(strings.NewReader(tc.in), &out, "Confirm? ")
+			got, err := confirmAction(t.Context(), strings.NewReader(tc.in), &out, "Confirm? ")
 			if err != nil {
 				t.Fatalf("confirmAction: %v", err)
 			}
@@ -46,6 +48,28 @@ func TestConfirmAction(t *testing.T) {
 				t.Errorf("prompt missing from output: %q", out.String())
 			}
 		})
+	}
+}
+
+// Ctrl+C at the prompt cancels the command's context; the prompt must
+// give up then rather than wait for a line that never comes.
+func TestConfirmAction_CancelledWhileWaiting(t *testing.T) {
+	t.Parallel()
+	pr, pw := io.Pipe()
+	defer func() { _ = pw.Close() }()
+	ctx, cancel := context.WithCancel(t.Context())
+	var out bytes.Buffer
+	done := make(chan error, 1)
+	go func() {
+		_, err := confirmAction(ctx, pr, &out, "Confirm? ")
+		done <- err
+	}()
+	cancel()
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(5 * time.Second):
+		t.Fatal("confirmAction kept waiting after ctx was cancelled")
 	}
 }
 

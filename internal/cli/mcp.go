@@ -1,12 +1,8 @@
 package cli
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -42,7 +38,7 @@ cfg.LogFile (default toolkit.log).`,
 }
 
 func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []string) error {
-	return func(_ *cobra.Command, _ []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
 		if err := readConfigFile(cfgFile); err != nil {
 			return err
 		}
@@ -75,9 +71,7 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 		defer func() { _ = logger.Sync() }()
 		logEnvAliases(logger, rawType, rawRegion, cfg)
 
-		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-		defer stop()
-		ctx = logging.WithContext(ctx, logger)
+		ctx := logging.WithContext(cmd.Context(), logger)
 		if err := checkEnvironment(ctx, cfg); err != nil {
 			return err
 		}

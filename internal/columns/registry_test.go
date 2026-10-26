@@ -17,7 +17,7 @@ func TestRegistry_EveryCategoryRegistered(t *testing.T) {
 	t.Parallel()
 	var missing []domain.Category
 	registered := 0
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		if cat == domain.CategoryUnknown {
 			continue
 		}
@@ -39,7 +39,7 @@ func TestRegistry_EveryCategoryRegistered(t *testing.T) {
 // Keys must be unique, non-empty; `help` is reserved.
 func TestRegistry_KeysValid(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		if cat == domain.CategoryUnknown || !IsRegistered(cat) {
 			continue
 		}
@@ -67,7 +67,7 @@ func TestRegistry_KeysValid(t *testing.T) {
 // Ratios per set must sum to ~1.0 (±0.02).
 func TestRegistry_RatiosSumToOne(t *testing.T) {
 	t.Parallel()
-	for _, cat := range domain.Categories {
+	for _, cat := range domain.Categories() {
 		if cat == domain.CategoryUnknown || !IsRegistered(cat) {
 			continue
 		}
