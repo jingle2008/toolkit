@@ -14,6 +14,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 )
 
 func TestConfirmButtons_FocusAndEnter(t *testing.T) {
@@ -160,20 +161,20 @@ func TestToasts_StackAndExpire(t *testing.T) {
 	for _, s := range []string{"one", "two", "three", "four"} {
 		_ = m.showToast(s, toastInfo)
 	}
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, "four", m.toasts.active.msg)
-	require.Len(t, m.toasts.older, 2, "at most three show")
-	assert.Equal(t, "two", m.toasts.older[0].msg)
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, "four", m.toasts.Active().Msg)
+	require.Len(t, m.toasts.Older(), 2, "at most three show")
+	assert.Equal(t, "two", m.toasts.Older()[0].Msg)
 
 	stacked := ansi.Strip(m.renderToasts())
 	assert.Less(t, strings.Index(stacked, "two"), strings.Index(stacked, "four"), "newest at the bottom")
 
-	m.handleToastExpireMsg(toastExpireMsg{id: m.toasts.older[0].id}) // "two"
-	assert.Len(t, m.toasts.older, 1)
-	m.handleToastExpireMsg(toastExpireMsg{id: m.toasts.active.id}) // "four"
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, "three", m.toasts.active.msg, "the next older takes its place")
-	assert.Empty(t, m.toasts.older)
+	m.toasts, _ = m.toasts.Update(toast.ExpireMsg{ID: m.toasts.Older()[0].ID}) // "two"
+	assert.Len(t, m.toasts.Older(), 1)
+	m.toasts, _ = m.toasts.Update(toast.ExpireMsg{ID: m.toasts.Active().ID}) // "four"
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, "three", m.toasts.Active().Msg, "the next older takes its place")
+	assert.Empty(t, m.toasts.Older())
 }
 
 // A filterable picker says typing filters.

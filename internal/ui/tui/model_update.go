@@ -14,6 +14,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
@@ -62,9 +63,10 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case errMsg:
 		return m, m.handleErrMsg(msg)
-	case toastExpireMsg:
-		m.handleToastExpireMsg(msg)
-		return m, nil
+	case toast.ExpireMsg:
+		var cmd tea.Cmd
+		m.toasts, cmd = m.toasts.Update(msg)
+		return m, cmd
 	case spinner.TickMsg:
 		// Spinner ticks must fire regardless of view mode so the
 		// status-bar loading nugget keeps animating while the user

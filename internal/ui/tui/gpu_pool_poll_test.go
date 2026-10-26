@@ -65,11 +65,11 @@ func TestHandleGPUPoolScaleResultMsg_ReportsSizes(t *testing.T) {
 	require.NotNil(t, m.handleGPUPoolScaleResultMsg(gpuPoolScaleResultMsg{
 		key: "pool-a", env: m.environment, declared: 4, scale: oci.PoolScale{Shown: 2, Before: 2, After: 4},
 	}))
-	assert.Equal(t, "scale-up requested for pool-a: 2 → 4 instances", m.toasts.active.msg)
+	assert.Equal(t, "scale-up requested for pool-a: 2 → 4 instances", m.toasts.Active().Msg)
 
 	m.handleGPUPoolScaleResultMsg(gpuPoolScaleResultMsg{
 		key: "pool-a", env: m.environment, declared: 4, scale: oci.PoolScale{Shown: 4, Before: 5, After: 6},
 	})
-	assert.Contains(t, m.toasts.active.msg, "5 → 6 instances (was 5, not 4)")
-	assert.Contains(t, m.toasts.active.msg, "past its Terraform size (4) until the next terraform apply")
+	assert.Contains(t, m.toasts.Active().Msg, "5 → 6 instances (was 5, not 4)")
+	assert.Contains(t, m.toasts.Active().Msg, "past its Terraform size (4) until the next terraform apply")
 }

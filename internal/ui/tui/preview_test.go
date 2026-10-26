@@ -20,8 +20,8 @@ func TestPreview_NeedsWidth(t *testing.T) {
 	tableW := m.table.Width()
 	_, _ = m.Update(keyPress("v"))
 	assert.False(t, m.preview)
-	require.NotNil(t, m.toasts.active)
-	assert.Contains(t, m.toasts.active.msg, "≥160")
+	require.NotNil(t, m.toasts.Active())
+	assert.Contains(t, m.toasts.Active().Msg, "≥160")
 	assert.Equal(t, tableW, m.table.Width())
 }
 

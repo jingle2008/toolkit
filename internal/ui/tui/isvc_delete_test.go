@@ -64,9 +64,9 @@ func TestCtrlX_InInferenceService_RefusalToasts(t *testing.T) {
 	require.NotNil(t, cmd)
 	m.handleISVCDeletePlannedMsg(cmd().(isvcDeletePlannedMsg))
 	assert.Equal(t, common.ListView, m.viewMode, "a refusal opens no modal")
-	require.NotNil(t, m.toasts.active)
-	assert.Contains(t, m.toasts.active.msg, "delete the DAC instead")
-	assert.Equal(t, toastWarn, m.toasts.active.sev, "a refusal is the check working: it fades")
+	require.NotNil(t, m.toasts.Active())
+	assert.Contains(t, m.toasts.Active().Msg, "delete the DAC instead")
+	assert.Equal(t, toastWarn, m.toasts.Active().Sev, "a refusal is the check working: it fades")
 }
 
 // A deferred orphan delete is a refusal too; a failed check is an error
@@ -86,9 +86,9 @@ func TestCtrlX_DeferredWarnsFailureRetries(t *testing.T) {
 		stubOrphanPlan(t, "", tc.err)
 		cmd := m.handleItemActions(ctrlX())
 		m.handleISVCDeletePlannedMsg(cmd().(isvcDeletePlannedMsg))
-		require.NotNil(t, m.toasts.active)
-		assert.Equal(t, tc.sev, m.toasts.active.sev, tc.err)
-		assert.Equal(t, tc.next, m.toasts.active.next, tc.err)
+		require.NotNil(t, m.toasts.Active())
+		assert.Equal(t, tc.sev, m.toasts.Active().Sev, tc.err)
+		assert.Equal(t, tc.next, m.toasts.Active().Next, tc.err)
 	}
 }
 
@@ -128,9 +128,9 @@ func TestDeleteOrphanInferenceService_ConfirmDeletesAndToasts(t *testing.T) {
 	assert.Equal(t, "svc1", gotName)
 
 	m.handleISVCDeleteResultMsg(msg)
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, "force-deleted ns1/svc1: finalizer removed", m.toasts.active.msg)
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, "force-deleted ns1/svc1: finalizer removed", m.toasts.Active().Msg)
 
 	m.handleISVCDeleteResultMsg(isvcDeleteResultMsg{key: msg.key, err: errors.New("boom"), env: m.environment})
-	assert.Contains(t, m.toasts.active.msg, "delete ns1/svc1 failed: boom")
+	assert.Contains(t, m.toasts.Active().Msg, "delete ns1/svc1 failed: boom")
 }

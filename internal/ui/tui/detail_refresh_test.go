@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -75,6 +76,6 @@ func TestDetails_NoRenderWithoutReload(t *testing.T) {
 	m := newGoldenModel(t, 120, 30)
 	showDetails(t, m)
 	gen := m.gens.detail
-	m.Update(toastExpireMsg{id: 99})
+	m.Update(toast.ExpireMsg{ID: 99})
 	assert.Equal(t, gen, m.gens.detail)
 }

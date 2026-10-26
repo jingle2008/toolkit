@@ -122,9 +122,9 @@ func Test_Update_ErrMsgEmitsToast(t *testing.T) {
 	require.NoError(t, err)
 	m.viewMode = common.LoadingView
 	m.Update(errMsg{err: errors.New("fail")})
-	require.NotNil(t, m.toasts.active, "errMsg should set an error toast")
+	require.NotNil(t, m.toasts.Active(), "errMsg should set an error toast")
 	// An environment-scoped category's load error names its context.
-	require.Equal(t, m.environment.KubeContext()+": fail", m.toasts.active.msg)
+	require.Equal(t, m.environment.KubeContext()+": fail", m.toasts.Active().Msg)
 }
 
 func Test_updateHelpView_KeyMsg(t *testing.T) {

@@ -74,8 +74,8 @@ func TestHandleDeleteErrMsg_GPUNodeToasts(t *testing.T) {
 		env:      m.environment,
 	})
 	// The failure is shown, not only logged.
-	if m.toasts.active == nil || m.toasts.active.sev != toastError || m.toasts.active.next != "^x retry" {
-		t.Fatalf("expected an error toast naming ^x retry, got %+v", m.toasts.active)
+	if m.toasts.Active() == nil || m.toasts.Active().Sev != toastError || m.toasts.Active().Next != "^x retry" {
+		t.Fatalf("expected an error toast naming ^x retry, got %+v", m.toasts.Active())
 	}
 }
 

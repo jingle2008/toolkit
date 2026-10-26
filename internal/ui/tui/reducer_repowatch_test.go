@@ -121,8 +121,8 @@ func TestHandleDatasetReloaded_FailureWarns(t *testing.T) {
 	cmd := m.handleDatasetReloaded(datasetReloadedMsg{err: errors.New("x.json: failed to decode JSON"), env: m.environment})
 	require.NotNil(t, cmd, "a warning toast")
 	assert.Same(t, before, m.dataset, "the current data stays")
-	require.NotNil(t, m.toasts.active)
-	assert.Contains(t, m.toasts.active.msg, "x.json")
+	require.NotNil(t, m.toasts.Active())
+	assert.Contains(t, m.toasts.Active().Msg, "x.json")
 }
 
 func TestHandleDatasetReloaded_NilDatasetIgnored(t *testing.T) {

@@ -19,8 +19,8 @@ func TestUpdateExportView_DoneRestoresViewAndSaysWhere(t *testing.T) {
 	got, _ := m.updateExportView(exportDoneMsg{path: "/tmp/out.csv"})
 	require.Same(t, m, got)
 	assert.Equal(t, common.DetailsView, m.viewMode, "success returns to the view the popup came from")
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, "exported to /tmp/out.csv", m.toasts.active.msg)
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, "exported to /tmp/out.csv", m.toasts.Active().Msg)
 }
 
 func TestUpdateExportView_ErrRestoresPreviousViewAndToasts(t *testing.T) {
@@ -32,8 +32,8 @@ func TestUpdateExportView_ErrRestoresPreviousViewAndToasts(t *testing.T) {
 	got, _ := m.updateExportView(exportErrMsg{err: errors.New("disk full")})
 	require.Same(t, m, got)
 	assert.Equal(t, common.DetailsView, m.viewMode, "failure should restore the view the popup came from")
-	require.NotNil(t, m.toasts.active, "an error should surface as a toast")
-	assert.Equal(t, "e pick another folder", m.toasts.active.next)
+	require.NotNil(t, m.toasts.Active(), "an error should surface as a toast")
+	assert.Equal(t, "e pick another folder", m.toasts.Active().Next)
 }
 
 func TestExportTableCSVCmd_ErrorBecomesExportErrMsg(t *testing.T) {

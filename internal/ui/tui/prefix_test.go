@@ -119,6 +119,6 @@ func TestSortPrefix_UnknownKeyToastsTheKeys(t *testing.T) {
 	_, _ = m.Update(keyPress("s"))
 	_, _ = m.Update(keyPress("x"))
 	assert.Empty(t, m.prefix)
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, "no sort on x · try s n/i/s", m.toasts.active.msg)
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, "no sort on x · try s n/i/s", m.toasts.Active().Msg)
 }

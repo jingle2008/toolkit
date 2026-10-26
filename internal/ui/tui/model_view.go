@@ -150,7 +150,7 @@ func (m *Model) render() string {
 	if m.keysHint {
 		corner = append(corner, m.keysHintBox())
 	}
-	if m.toasts.active != nil {
+	if m.toasts.Visible() {
 		corner = append(corner, m.renderToasts())
 	}
 	if len(corner) == 0 {

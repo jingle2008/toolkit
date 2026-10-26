@@ -79,9 +79,9 @@ func TestActionResults_FromPreviousEnvNameIt(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.handleRestartNodeResultMsg(restartNodeResultMsg{key: "10.0.0.1", err: errors.New("boom"), env: otherEnv})
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, toastError, m.toasts.active.sev)
-	assert.Contains(t, m.toasts.active.msg, "("+otherEnv.KubeContext()+")")
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, toastError, m.toasts.Active().Sev)
+	assert.Contains(t, m.toasts.Active().Msg, "("+otherEnv.KubeContext()+")")
 }
 
 // A delete plan from the old environment would open a modal over the new
