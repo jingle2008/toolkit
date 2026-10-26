@@ -26,6 +26,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/rowpicker"
 	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/internal/uistate"
@@ -126,8 +127,11 @@ type Model struct {
 	// confirmPending is the open confirmation's parent half: its command,
 	// audit name and return view.
 	confirmPending confirmPending
-	rowPicker      rowPickerState // modal row picker state (go to, metrics DAC)
-	palette        paletteState   // command palette state
+	rowPicker      rowpicker.Model // modal row picker (go to, metrics DAC; row_picker.go)
+	// rowPickerPending is the open picker's parent half: what choosing
+	// does and the return view.
+	rowPickerPending rowPickerPending
+	palette          paletteState // command palette state
 
 	// actions are the mutations in flight, oldest first (action_tracker.go);
 	// actionSeq numbers them.

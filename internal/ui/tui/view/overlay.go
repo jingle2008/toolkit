@@ -60,6 +60,20 @@ func Modal(title, body, hints string, border, muted color.Color, width int) stri
 	return Box(title, body, border, titleStyle, width)
 }
 
+// FixedModal is Modal for a body that a filter narrows as it is typed:
+// body is padded to bodyH lines and bodyW columns, the size the unfiltered
+// body takes, so the box keeps its size while filtering — and, centered,
+// its place: the line being typed into doesn't move under the cursor.
+func FixedModal(title, body, hints string, border, muted color.Color, width, bodyW, bodyH int) string {
+	if n := lipgloss.Height(body); n < bodyH {
+		body += strings.Repeat("\n", bodyH-n)
+	}
+	if lipgloss.Width(body) < bodyW {
+		body = lipgloss.NewStyle().Width(bodyW).Render(body)
+	}
+	return Modal(title, body, hints, border, muted, width)
+}
+
 // Panel is Box without the padding, for full-width content such as a
 // table that draws its own cell spacing.
 func Panel(title, body string, border color.Color, titleStyle lipgloss.Style, width int) string {

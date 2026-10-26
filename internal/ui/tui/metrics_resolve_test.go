@@ -264,7 +264,7 @@ func TestOpenMetrics_ImportedModelOnSeveralDACsPicks(t *testing.T) {
 	assert.Equal(t, []domain.Scope{
 		{Category: domain.DedicatedAICluster, Name: "amaaaaaadac1"},
 		{Category: domain.DedicatedAICluster, Name: "amaaaaaadac2"},
-	}, m.rowPicker.targets)
+	}, m.rowPicker.Targets())
 	view := ansi.Strip(m.rowPickerView())
 	assert.Contains(t, view, "Open metrics for amaaaaaaim on")
 	assert.Contains(t, view, "enter open metrics")

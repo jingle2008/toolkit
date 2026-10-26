@@ -102,7 +102,7 @@ func TestGoToPicker_EscCancels(t *testing.T) {
 	_, _ = m.updateRowPickerView(keyPress("esc"))
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, domain.InferenceService, m.category)
-	assert.Empty(t, m.rowPicker.targets)
+	assert.Empty(t, m.rowPicker.Targets())
 }
 
 // One target jumps straight there; none is a toast.
@@ -159,7 +159,7 @@ func TestGoToKey_PickerKeepsListCursor(t *testing.T) {
 
 	_, _ = m.Update(keyPress("o"))
 	require.Equal(t, common.RowPickerView, m.viewMode)
-	assert.Equal(t, domain.DedicatedAICluster, m.rowPicker.targets[m.rowPicker.cursor].Category,
+	assert.Equal(t, domain.DedicatedAICluster, m.rowPicker.Targets()[m.rowPicker.Cursor()].Category,
 		"the picker starts on the endpoint's DAC, its structural parent")
 
 	_, _ = m.Update(keyPress("esc"))

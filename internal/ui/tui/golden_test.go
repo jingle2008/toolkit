@@ -227,7 +227,7 @@ var goldenViews = []struct {
 			{Category: domain.BaseModel, Name: "llama-3.1-70b"},
 			{Category: domain.ServingRuntime, Name: "vllm"},
 		}, nil)
-		m.rowPicker.cursor = 1
+		m.rowPicker = m.rowPicker.WithCursor(1)
 	}},
 	{"row-picker-long", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
