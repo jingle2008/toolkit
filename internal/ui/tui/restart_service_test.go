@@ -39,11 +39,11 @@ func TestShiftR_InInferenceService_OpensRestartConfirm(t *testing.T) {
 
 	assert.Nil(t, m.handleItemActions(shiftR()))
 	require.Equal(t, common.ConfirmView, m.viewMode)
-	assert.Equal(t, mutation.Recoverable, m.confirm.act.Tier)
-	assert.Equal(t, "Restart", m.confirm.verb())
-	assert.Equal(t, "InferenceService", m.confirm.noun())
-	assert.Equal(t, "ns1/svc1", m.confirm.target)
-	assert.Equal(t, "Ready: False", m.confirm.warning)
+	assert.Equal(t, mutation.Recoverable, m.confirm.Request().Action.Tier)
+	assert.Equal(t, "Restart", m.confirm.Request().Verb())
+	assert.Equal(t, "InferenceService", m.confirm.Request().Noun())
+	assert.Equal(t, "ns1/svc1", m.confirm.Request().Target)
+	assert.Equal(t, "Ready: False", m.confirm.Request().Warning)
 	assert.Contains(t, m.confirmView(), "Ready: False", "recoverable modal renders the warning line")
 }
 
@@ -57,8 +57,8 @@ func TestShiftR_InGPUNode_RestartsNode(t *testing.T) {
 	m.updateRows(true)
 
 	m.handleItemActions(shiftR())
-	assert.Equal(t, "Restart", m.confirm.verb())
-	assert.Equal(t, "node", m.confirm.noun())
+	assert.Equal(t, "Restart", m.confirm.Request().Verb())
+	assert.Equal(t, "node", m.confirm.Request().Noun())
 }
 
 //nolint:paralleltest // swaps the package-level restartInferenceServiceFn seam

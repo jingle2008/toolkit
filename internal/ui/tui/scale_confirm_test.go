@@ -39,7 +39,7 @@ func TestConfirmScale_DefaultCount(t *testing.T) {
 	m, key, _ := newScaleModel(t, short)
 	m.requestScale(key, &short)
 	require.Equal(t, common.ConfirmView, m.viewMode)
-	assert.Equal(t, "2", m.confirm.amount.input.Value())
+	assert.Equal(t, "2", m.confirm.CountText())
 	out := ansi.Strip(m.confirmView())
 	assert.Contains(t, out, "Grows the instance pool from 2 to 4 instances.")
 	assert.NotContains(t, out, "Terraform declares")
@@ -47,7 +47,7 @@ func TestConfirmScale_DefaultCount(t *testing.T) {
 	full := models.GPUPool{Name: "pool-a", ID: "p", Size: 4, ActualSize: 4, Status: "RUNNING"}
 	m, key, _ = newScaleModel(t, full)
 	m.requestScale(key, &full)
-	assert.Equal(t, "1", m.confirm.amount.input.Value())
+	assert.Equal(t, "1", m.confirm.CountText())
 	out = ansi.Strip(m.confirmView())
 	assert.Contains(t, out, "from 4 to 5 instances")
 	assert.Contains(t, out, "Terraform declares 4;")
@@ -87,7 +87,7 @@ func TestConfirmScale_EditCount(t *testing.T) {
 
 	m.updateConfirmView(keyPress("1"))
 	m.updateConfirmView(keyPress("2"))
-	n, ok := m.confirm.amount.value()
+	n, ok := m.confirm.Count()
 	require.True(t, ok)
 	assert.Equal(t, 12, n)
 	assert.Contains(t, ansi.Strip(m.confirmView()), "from 4 to 16 instances")
@@ -95,11 +95,11 @@ func TestConfirmScale_EditCount(t *testing.T) {
 	m.updateConfirmView(keyPress("backspace"))
 	m.updateConfirmView(keyPress("backspace"))
 	m.updateConfirmView(tea.PasteMsg{Content: "3"})
-	n, _ = m.confirm.amount.value()
+	n, _ = m.confirm.Count()
 	assert.Equal(t, 3, n, "a paste edits the count")
 
 	m.updateConfirmView(keyPress("x"))
-	n, _ = m.confirm.amount.value()
+	n, _ = m.confirm.Count()
 	assert.Equal(t, 3, n, "other keys don't type into it")
 }
 

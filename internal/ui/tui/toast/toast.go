@@ -21,7 +21,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/mattn/go-runewidth"
 
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
@@ -211,12 +210,12 @@ func box(t Toast, width int, st Styles) string {
 	case Info:
 	}
 	inner := max(width-4, 1)
-	msg := truncate(t.Msg, inner)
+	msg := view.Truncate(t.Msg, inner)
 	if t.Sev == Error {
 		lines := strings.Split(ansi.Wrap(t.Msg, inner, ""), "\n")
 		if len(lines) > MaxErrorLines {
 			lines = lines[:MaxErrorLines]
-			lines[MaxErrorLines-1] = truncate(lines[MaxErrorLines-1]+" …", inner)
+			lines[MaxErrorLines-1] = view.Truncate(lines[MaxErrorLines-1]+" …", inner)
 		}
 		hint := "esc dismiss · " + st.LogKey + " log"
 		if t.Next != "" {
@@ -227,12 +226,4 @@ func box(t Toast, width int, st Styles) string {
 	fit := min(width, max(lipgloss.Width(msg), lipgloss.Width(title)+2)+4)
 	titleStyle := lipgloss.NewStyle().Foreground(border).Bold(true)
 	return view.Box(title, msg, border, titleStyle, fit)
-}
-
-// truncate cuts s to limit cells, ending in "…" when it doesn't fit.
-func truncate(s string, limit int) string {
-	if runewidth.StringWidth(s) <= limit {
-		return s
-	}
-	return runewidth.Truncate(s, limit-1, "…")
 }

@@ -2,6 +2,16 @@ package view
 
 import "github.com/mattn/go-runewidth"
 
+// Truncate fits s within limit cells, ending in "…" (one cell to spare)
+// when it doesn't fit.
+// s is plain text.
+func Truncate(s string, limit int) string {
+	if runewidth.StringWidth(s) <= limit {
+		return s
+	}
+	return runewidth.Truncate(s, limit-1, "…")
+}
+
 // TruncateMiddle returns s shortened to fit width w by eliding the
 // middle: head + "…" + tail, where head and tail are sized to use the
 // available width minus the ellipsis. The split favors the tail by one

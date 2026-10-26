@@ -20,6 +20,7 @@ import (
 	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/internal/uistate"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -210,14 +211,14 @@ var goldenViews = []struct {
 	}},
 	{"confirm-recoverable", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.GPUNode)
-		m.requestConfirm(confirmOverlay{act: mutation.DrainNode, target: "10.0.0.11", run: nopRun})
+		m.requestConfirm(confirmRequest{Request: confirm.Request{Action: mutation.DrainNode, Target: "10.0.0.11"}, run: nopRun})
 	}},
 	{"confirm-irreversible", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
-		m.requestConfirm(confirmOverlay{
-			act: mutation.DeleteDAC, target: "dac-alpha", run: nopRun,
-			warning: "This permanently deletes the cluster and its endpoints.",
-		})
+		m.requestConfirm(confirmRequest{Request: confirm.Request{
+			Action: mutation.DeleteDAC, Target: "dac-alpha",
+			Warning: "This permanently deletes the cluster and its endpoints.",
+		}, run: nopRun})
 	}},
 	{"row-picker", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
@@ -260,7 +261,7 @@ var goldenViews = []struct {
 	}},
 }
 
-func nopRun() tea.Cmd { return nil }
+func nopRun(int) tea.Cmd { return nil }
 
 func TestGolden(t *testing.T) {
 	t.Parallel()

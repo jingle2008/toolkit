@@ -12,7 +12,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/mattn/go-runewidth"
 
 	"charm.land/bubbles/v2/key"
 
@@ -33,12 +32,7 @@ func (m *Model) contextString() string {
 	return path
 }
 
-func truncateString(s string, limit int) string {
-	if runewidth.StringWidth(s) <= limit {
-		return s
-	}
-	return runewidth.Truncate(s, limit-1, "…")
-}
+func truncateString(s string, limit int) string { return view.Truncate(s, limit) }
 
 // detailRenderWidth is the details body width inside its panel border.
 func (m *Model) detailRenderWidth() int {
@@ -179,7 +173,7 @@ func (m *Model) renderMode(mode common.ViewMode) string {
 	case common.LogView:
 		return m.logView()
 	case common.ConfirmView:
-		return m.overlayModal(m.confirm.returnView, m.confirmView())
+		return m.overlayModal(m.confirmPending.returnView, m.confirmView())
 	case common.RowPickerView:
 		return m.overlayModal(m.rowPicker.returnView, m.rowPickerView())
 	case common.PaletteView:

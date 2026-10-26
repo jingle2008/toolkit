@@ -33,11 +33,7 @@ func (m *Model) modalMaxBody() int {
 // hints sit under its body and should recede behind it.
 // width is the outer width; 0 fits the content.
 func (m *Model) modal(title, body, hints string, border color.Color, width int) string {
-	if hints != "" {
-		body += "\n\n" + lipgloss.NewStyle().Foreground(m.theme.Palette.Muted).Render(hints)
-	}
-	titleStyle := lipgloss.NewStyle().Foreground(border).Bold(true)
-	return view.Box(title, body, border, titleStyle, width)
+	return view.Modal(title, body, hints, border, m.theme.Palette.Muted, width)
 }
 
 // fixedModal is modal for a body that a filter narrows as it is typed:

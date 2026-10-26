@@ -47,6 +47,19 @@ func Box(title, body string, border color.Color, titleStyle lipgloss.Style, widt
 	return frameBox(title, body, border, titleStyle, width, 1)
 }
 
+// Modal frames body in the shared modal chrome: Box in border, with
+// hints drawn in muted on the last line after a blank one ("" for none).
+// The hints stay muted throughout, keys included: a modal's hints sit
+// under its body and should recede behind it. width is the outer width;
+// 0 fits the content.
+func Modal(title, body, hints string, border, muted color.Color, width int) string {
+	if hints != "" {
+		body += "\n\n" + lipgloss.NewStyle().Foreground(muted).Render(hints)
+	}
+	titleStyle := lipgloss.NewStyle().Foreground(border).Bold(true)
+	return Box(title, body, border, titleStyle, width)
+}
+
 // Panel is Box without the padding, for full-width content such as a
 // table that draws its own cell spacing.
 func Panel(title, body string, border color.Color, titleStyle lipgloss.Style, width int) string {
