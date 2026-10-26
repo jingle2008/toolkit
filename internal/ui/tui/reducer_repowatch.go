@@ -4,6 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // handleRepoWatchStarted records the live working-tree watch and arms the
@@ -86,7 +87,7 @@ func (m *Model) handleGPUPoolsReloaded(msg gpuPoolsReloadedMsg) tea.Cmd {
 	if m.dataset == nil || !m.inCurrentEnv(msg.env) {
 		return nil
 	}
-	m.dataset.GPUPools = msg.Items
+	m.editDataset(func(ds *models.Dataset) { ds.GPUPools = msg.Items })
 	if m.category == domain.GPUPool {
 		m.refreshDisplay()
 	}

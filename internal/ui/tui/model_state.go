@@ -172,7 +172,10 @@ type Model struct {
 	// theme holds the app-level lipgloss styles (status bar, info pane,
 	// help view). Set once via setStyles; see the Styles struct in styles.go.
 	theme Styles
-	stats tableStats
+	// themeGen counts setStyles calls, so what is rendered with the theme
+	// can tell it changed (previewCache).
+	themeGen int
+	stats    tableStats
 
 	// Spinner for loading screen
 	loadingSpinner *spinner.Model
@@ -242,6 +245,8 @@ type Model struct {
 	// it has since left the dataset, and details keeps showing it.
 	detailItem any
 	detailGone bool
+	// previewMemo memoizes the preview pane's body; see previewCache.
+	previewMemo previewCache
 
 	// Export CSV popup state: the folder list, and the file name with
 	// whether it has focus.
@@ -323,6 +328,7 @@ func setStyles(m *Model, s Styles) {
 		s = s.monochrome()
 	}
 	m.theme = s
+	m.themeGen++
 	if m.table != nil {
 		m.table.SetStyles(s.Table)
 		m.styles = s.Table

@@ -38,10 +38,10 @@ func TestKeysHint_ShowsOnceAndSaves(t *testing.T) {
 	assert.NotContains(t, ansi.Strip(m.render()), "Keys changed")
 
 	require.NotNil(t, cmd)
-	runCmd(cmd)
-	s, err := uistate.Load(path)
-	require.NoError(t, err)
-	assert.Equal(t, keymapVersion, s.KeymapVersion)
+	runCmd(t, cmd, func() bool {
+		s, err := uistate.Load(path)
+		return err == nil && s.KeymapVersion == keymapVersion
+	})
 }
 
 func TestKeysHint_HiddenWhenCurrent(t *testing.T) {
@@ -59,23 +59,39 @@ func TestKeysHint_NoPathNoHint(t *testing.T) {
 	assert.False(t, m.keysHint)
 }
 
-// runCmd runs cmd and, for a batch, each command in it, giving each a
-// moment to finish: ticks and other long waits are abandoned.
-func runCmd(cmd tea.Cmd) {
+// cmdTimeout bounds how long runCmd waits for a command's effect: ample
+// for a file write on a loaded CI runner under -race.
+const cmdTimeout = 10 * time.Second
+
+// runCmd starts cmd and, for a batch, each command in it, each on its own
+// goroutine as Bubble Tea would, and fails the test unless done reports
+// the effect within cmdTimeout. Ticks and other long waits in the batch
+// are left running; only done is waited on.
+func runCmd(t *testing.T, cmd tea.Cmd, done func() bool) {
+	t.Helper()
+	startCmd(cmd)
+	deadline := time.Now().Add(cmdTimeout)
+	for !done() {
+		if time.Now().After(deadline) {
+			t.Fatalf("command had no effect within %v", cmdTimeout)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// startCmd runs cmd on its own goroutine, and the commands of a batch it
+// returns on theirs.
+func startCmd(cmd tea.Cmd) {
 	if cmd == nil {
 		return
 	}
-	done := make(chan tea.Msg, 1)
-	go func() { done <- cmd() }()
-	select {
-	case msg := <-done:
-		if batch, ok := msg.(tea.BatchMsg); ok {
+	go func() {
+		if batch, ok := cmd().(tea.BatchMsg); ok {
 			for _, c := range batch {
-				runCmd(c)
+				startCmd(c)
 			}
 		}
-	case <-time.After(time.Second):
-	}
+	}()
 }
 
 // The hint lists every change since the version the user last saw, and
