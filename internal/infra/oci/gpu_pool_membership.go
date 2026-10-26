@@ -113,28 +113,32 @@ func gpuInstancePools(
 	for _, n := range poolNames {
 		names[n] = true
 	}
-	var out []core.InstancePoolSummary
-	req := core.ListInstancePoolsRequest{CompartmentId: common.String(compartmentID)}
-	for {
-		resp, err := mgmt.ListInstancePools(ctx, req)
+	all, err := listAllPages(func(page *string) ([]core.InstancePoolSummary, *string, error) {
+		resp, err := mgmt.ListInstancePools(ctx, core.ListInstancePoolsRequest{
+			CompartmentId: common.String(compartmentID),
+			Page:          page,
+		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to list instance pools: %w, request id: %s",
+			return nil, nil, fmt.Errorf("failed to list instance pools: %w, request id: %s",
 				err, derefOr(resp.OpcRequestId, ""))
 		}
-		for _, s := range resp.Items {
-			if s.Id != nil && s.DisplayName != nil && names[*s.DisplayName] {
-				out = append(out, s)
-			}
-		}
-		if resp.OpcNextPage == nil || *resp.OpcNextPage == "" {
-			return out, nil
-		}
-		req.Page = resp.OpcNextPage
+		return resp.Items, resp.OpcNextPage, nil
+	})
+	if err != nil {
+		return nil, err
 	}
+	var out []core.InstancePoolSummary
+	for _, s := range all {
+		if s.Id != nil && s.DisplayName != nil && names[*s.DisplayName] {
+			out = append(out, s)
+		}
+	}
+	return out, nil
 }
 
 // poolHasInstance reports whether instanceID is a member of instance
-// pool poolID, following every page of the pool's instances.
+// pool poolID, following every page of the pool's instances. It pages by
+// hand rather than through listAllPages so it can stop at the first match.
 func poolHasInstance(ctx context.Context, mgmt poolInstanceLister, compartmentID, poolID, instanceID string) (bool, error) {
 	req := core.ListInstancePoolInstancesRequest{
 		CompartmentId:  common.String(compartmentID),
