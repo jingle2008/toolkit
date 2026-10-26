@@ -25,6 +25,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/internal/uistate"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -59,17 +60,6 @@ type logOverlay struct {
 	filter   string
 	input    textinput.Model
 	typing   bool
-}
-
-// toastManager holds the transient banners shown over the active view.
-// active is the newest, nil when no toast is showing; older holds up to
-// maxStackedToasts-1 earlier ones still alive, oldest first. seq is a
-// monotonic id source that persists across toasts so toastExpireMsg can
-// match the one it was scheduled for.
-type toastManager struct {
-	active *toastState
-	older  []toastState
-	seq    int
 }
 
 // genCounters holds monotonic generation counters used to discard stale
@@ -261,9 +251,9 @@ type Model struct {
 	// log holds the log-overlay state. See the logOverlay type.
 	log logOverlay
 
-	// toasts holds the transient banner shown over the active view. See
-	// the toastManager type.
-	toasts toastManager
+	// toasts holds the transient banners shown over the active view; see
+	// the toast package.
+	toasts toast.Model
 }
 
 /*

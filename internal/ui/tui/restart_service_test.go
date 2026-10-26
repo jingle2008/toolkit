@@ -96,13 +96,13 @@ func TestHandleRestartServiceResultMsg_Toasts(t *testing.T) {
 	key := models.ScopedItemKey{Scope: "ns1", Name: "svc1"}
 
 	require.NotNil(t, m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key, env: m.environment}))
-	assert.Equal(t, "restart requested for ns1/svc1", m.toasts.active.msg)
-	assert.Equal(t, toastInfo, m.toasts.active.sev)
+	assert.Equal(t, "restart requested for ns1/svc1", m.toasts.Active().Msg)
+	assert.Equal(t, toastInfo, m.toasts.Active().Sev)
 
 	m.handleRestartServiceResultMsg(restartServiceResultMsg{key: key, err: errors.New("forbidden"), env: m.environment})
-	assert.Equal(t, "restart ns1/svc1 failed: forbidden", m.toasts.active.msg)
-	assert.Equal(t, toastError, m.toasts.active.sev)
-	assert.Equal(t, "R retry", m.toasts.active.next)
+	assert.Equal(t, "restart ns1/svc1 failed: forbidden", m.toasts.Active().Msg)
+	assert.Equal(t, toastError, m.toasts.Active().Sev)
+	assert.Equal(t, "R retry", m.toasts.Active().Next)
 }
 
 // TestRestartInferenceService_LegacyDispatches pins that a legacy
@@ -135,11 +135,11 @@ func TestHandleDrainNodeResultMsg_Toasts(t *testing.T) {
 	key := models.ScopedItemKey{Scope: "pool1", Name: "node1"}
 
 	require.NotNil(t, m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, env: m.environment}))
-	assert.Equal(t, "drained pool1/node1", m.toasts.active.msg)
-	assert.Equal(t, toastInfo, m.toasts.active.sev)
+	assert.Equal(t, "drained pool1/node1", m.toasts.Active().Msg)
+	assert.Equal(t, toastInfo, m.toasts.Active().Sev)
 
 	m.handleDrainNodeResultMsg(drainNodeResultMsg{key: key, err: errors.New("pdb violation (node uncordoned)"), env: m.environment})
-	assert.Equal(t, "drain pool1/node1 failed: pdb violation (node uncordoned)", m.toasts.active.msg)
-	assert.Equal(t, toastError, m.toasts.active.sev)
-	assert.Equal(t, "D retry (resumes)", m.toasts.active.next, "the drain is recorded on the node")
+	assert.Equal(t, "drain pool1/node1 failed: pdb violation (node uncordoned)", m.toasts.Active().Msg)
+	assert.Equal(t, toastError, m.toasts.Active().Sev)
+	assert.Equal(t, "D retry (resumes)", m.toasts.Active().Next, "the drain is recorded on the node")
 }

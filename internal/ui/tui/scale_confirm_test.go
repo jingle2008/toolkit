@@ -151,8 +151,8 @@ func TestRequestScale_NoInstancePool(t *testing.T) {
 		m.viewMode = common.ListView
 		m.requestScale(key, &pool)
 		assert.Equal(t, common.ListView, m.viewMode, tc.status)
-		require.NotNil(t, m.toasts.active, tc.status)
-		assert.Equal(t, tc.want, m.toasts.active.msg)
+		require.NotNil(t, m.toasts.Active(), tc.status)
+		assert.Equal(t, tc.want, m.toasts.Active().Msg)
 	}
 }
 

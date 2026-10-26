@@ -55,8 +55,8 @@ func TestRestartNode_AlreadyRestartingIsNoOp(t *testing.T) {
 	require.NotNil(t, m.restartNode(node, models.ItemKey("node-a")))
 	m.restartNode(node, models.ItemKey("node-a"))
 	assert.Len(t, m.actions, 1)
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, "restart node-a is already running", m.toasts.active.msg)
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, "restart node-a is already running", m.toasts.Active().Msg)
 }
 
 func TestDeleteGPUNode_ItemNotFound(t *testing.T) {

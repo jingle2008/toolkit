@@ -69,9 +69,9 @@ func TestTrackedAction_ResultFromDetailsView(t *testing.T) {
 	m, key, id := newTrackedDrain(t)
 	m.viewMode = common.DetailsView
 	m.Update(actionDoneMsg{id: id, msg: drainNodeResultMsg{key: key, err: errors.New("pdb"), env: m.environment}})
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, toastError, m.toasts.active.sev)
-	assert.Contains(t, m.toasts.active.msg, "drain pool1/10.0.0.1 failed: pdb")
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, toastError, m.toasts.Active().Sev)
+	assert.Contains(t, m.toasts.Active().Msg, "drain pool1/10.0.0.1 failed: pdb")
 }
 
 // Quitting with actions running asks first, listing them; without, it

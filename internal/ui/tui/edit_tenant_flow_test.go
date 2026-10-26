@@ -101,7 +101,7 @@ func TestHandleEditTenantKey_Confirm(t *testing.T) {
 	assert.Equal(t, "required", f.nameErr)
 	assert.Equal(t, focusName, f.focus)
 	assert.Contains(t, ansi.Strip(m.editTenantView()), "required")
-	assert.Nil(t, m.toasts.active, "inline, not a toast")
+	assert.Nil(t, m.toasts.Active(), "inline, not a toast")
 
 	// Typing a name clears the mark; enter through to the last field saves.
 	_, _ = m.handleEditTenantKey(keyPress("a"))
@@ -128,7 +128,7 @@ func TestHandleTenantSaveErrMsg_NamesRetry(t *testing.T) {
 	t.Parallel()
 	m := openForm(t)
 	m.handleTenantSaveErrMsg(tenantSaveErrMsg{err: errors.New("read-only file system")})
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, "^s retry", m.toasts.active.next)
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, "^s retry", m.toasts.Active().Next)
 	assert.NotNil(t, m.editTenant, "the form keeps the input")
 }

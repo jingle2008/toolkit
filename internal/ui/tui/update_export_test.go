@@ -157,8 +157,8 @@ func TestExport_BadNamesWarn(t *testing.T) {
 		m, _ := newExportModel(t)
 		m.exportName.SetValue(name)
 		m.updateExportView(keyPress("enter"))
-		require.NotNil(t, m.toasts.active, name)
-		assert.Equal(t, want, m.toasts.active.msg)
+		require.NotNil(t, m.toasts.Active(), name)
+		assert.Equal(t, want, m.toasts.Active().Msg)
 		assert.Equal(t, common.ExportView, m.viewMode)
 	}
 }

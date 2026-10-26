@@ -192,9 +192,9 @@ func TestFinishMetrics_UnresolvableShowsToast(t *testing.T) {
 	m := newResolveModel(t)
 	// GPUWorkload with empty Model → resolveMetricsPlan returns ok=false, reason="workload has no model"
 	m.finishMetrics(&models.GPUWorkload{Name: "p", Namespace: "amaaaaaadac1"})
-	require.NotNil(t, m.toasts.active, "toast must be set after finishMetrics on unresolvable item")
-	assert.Equal(t, "workload has no model", m.toasts.active.msg)
-	assert.Equal(t, toastWarn, m.toasts.active.sev, "no dashboard for the row is not a failure")
+	require.NotNil(t, m.toasts.Active(), "toast must be set after finishMetrics on unresolvable item")
+	assert.Equal(t, "workload has no model", m.toasts.Active().Msg)
+	assert.Equal(t, toastWarn, m.toasts.Active().Sev, "no dashboard for the row is not a failure")
 }
 
 func TestResolveMetricsPlan_InferenceService(t *testing.T) {
@@ -274,8 +274,8 @@ func TestOpenMetrics_ImportedModelOnSeveralDACsPicks(t *testing.T) {
 	_, _ = m.updateRowPickerView(keyPress("down"))
 	_, cmd := m.updateRowPickerView(keyPress("enter"))
 	require.NotNil(t, cmd, "choosing a DAC launches its dashboard")
-	if m.toasts.active != nil {
-		assert.NotEqual(t, toastError, m.toasts.active.sev, m.toasts.active.msg)
+	if m.toasts.Active() != nil {
+		assert.NotEqual(t, toastError, m.toasts.Active().Sev, m.toasts.Active().Msg)
 	}
 	assert.Equal(t, common.ListView, m.viewMode)
 

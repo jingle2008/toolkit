@@ -12,6 +12,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 )
 
 var escPress = tea.KeyPressMsg{Code: tea.KeyEscape}
@@ -25,9 +26,9 @@ func TestErrorToast_EscDismissesOnlyErrors(t *testing.T) {
 
 	m.Update(escPress)
 
-	assert.False(t, m.hasErrorToast())
-	require.NotNil(t, m.toasts.active)
-	assert.Equal(t, "copied", m.toasts.active.msg, "the info toast stays until it expires")
+	assert.False(t, m.toasts.HasError())
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, "copied", m.toasts.Active().Msg, "the info toast stays until it expires")
 	assert.Equal(t, common.ListView, m.viewMode)
 	assert.Equal(t, domain.GPUNode, m.category, "esc dismissed the error instead of backing out")
 }
@@ -41,9 +42,9 @@ func TestErrorToast_SurvivesStackOverflow(t *testing.T) {
 	for _, msg := range []string{"one", "two", "three", "four"} {
 		m.showToast(msg, toastInfo)
 	}
-	assert.True(t, m.hasErrorToast())
-	assert.Len(t, m.toasts.older, maxStackedToasts-1)
-	assert.Equal(t, "four", m.toasts.active.msg)
+	assert.True(t, m.toasts.HasError())
+	assert.Len(t, m.toasts.Older(), toast.MaxStacked-1)
+	assert.Equal(t, "four", m.toasts.Active().Msg)
 }
 
 func TestErrorToast_EscPassesThroughWhileTyping(t *testing.T) {
@@ -54,7 +55,7 @@ func TestErrorToast_EscPassesThroughWhileTyping(t *testing.T) {
 	m.inputMode = common.EditInput
 
 	assert.False(t, m.interceptToastDismiss(escPress), "esc closes the input first")
-	assert.True(t, m.hasErrorToast())
+	assert.True(t, m.toasts.HasError())
 }
 
 func TestErrorToast_EscWithoutErrorIsNotIntercepted(t *testing.T) {
@@ -73,7 +74,7 @@ func TestErrorToast_WrapsAndSaysHowToDismiss(t *testing.T) {
 
 	box := ansi.Strip(m.renderToasts())
 	lines := strings.Split(box, "\n")
-	assert.Len(t, lines, maxErrorLines+3, "borders, %d message lines and the hint", maxErrorLines)
+	assert.Len(t, lines, toast.MaxErrorLines+3, "borders, %d message lines and the hint", toast.MaxErrorLines)
 	assert.Contains(t, box, "…", "an over-long error is cut on its last line")
 	assert.Contains(t, box, "esc dismiss · ` log")
 }
@@ -85,8 +86,8 @@ func TestLoadError_NamesRetryWhereRefreshable(t *testing.T) {
 		m := newGoldenModel(t, 120, 40)
 		showCategory(t, m, cat)
 		m.handleErrMsg(errMsg{err: errors.New("boom")})
-		require.NotNil(t, m.toasts.active, cat)
-		assert.Equal(t, want, m.toasts.active.next, cat)
+		require.NotNil(t, m.toasts.Active(), cat)
+		assert.Equal(t, want, m.toasts.Active().Next, cat)
 		if want != "" {
 			assert.Contains(t, ansi.Strip(m.renderToasts()), "r retry · esc dismiss")
 		}

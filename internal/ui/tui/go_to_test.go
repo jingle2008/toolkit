@@ -124,7 +124,7 @@ func TestOpenGoTo_SingleAndNone(t *testing.T) {
 	m2.rawRows = []table.Row{{"llama"}}
 	m2.table.SetRows(m2.rawRows)
 	require.NotNil(t, m2.openGoTo())
-	assert.Equal(t, "no related rows to go to", m2.toasts.active.msg)
+	assert.Equal(t, "no related rows to go to", m2.toasts.Active().Msg)
 }
 
 // o is offered in list view on every category with a parent, never in
