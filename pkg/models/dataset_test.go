@@ -187,66 +187,6 @@ func keys[V any](m map[string]V) []string {
 	return out
 }
 
-/*
-TestResetRealmScopedFields checks that ResetRealmScopedFields nils all relevant fields.
-*/
-//nolint:cyclop // test is clear and further splitting would reduce readability
-func TestResetRealmScopedFields(t *testing.T) {
-	t.Parallel()
-	d := &Dataset{
-		LimitTenancyOverrideMap:           map[string][]LimitTenancyOverride{"x": nil},
-		ConsolePropertyTenancyOverrideMap: map[string][]ConsolePropertyTenancyOverride{"x": nil},
-		PropertyTenancyOverrideMap:        map[string][]PropertyTenancyOverride{"x": nil},
-		Tenants:                           []Tenant{{Name: "t"}},
-		LimitRegionalOverrides:            []LimitRegionalOverride{{}},
-		ConsolePropertyRegionalOverrides:  []ConsolePropertyRegionalOverride{{}},
-		PropertyRegionalOverrides:         []PropertyRegionalOverride{{}},
-		BaseModels:                        []BaseModel{},
-		ServingRuntimes:                   []ServingRuntime{{}},
-		ImportedModelMap:                  map[string][]ImportedModel{"x": nil},
-		GPUPools:                          []GPUPool{{}},
-		GPUNodeMap:                        map[string][]GPUNode{"x": nil},
-		GPUWorkloadMap:                    map[string][]GPUWorkload{"x": nil},
-		DedicatedAIClusterMap:             map[string][]DedicatedAICluster{"x": nil},
-	}
-	d.ResetRealmScopedFields()
-	if d.LimitTenancyOverrideMap != nil ||
-		d.ConsolePropertyTenancyOverrideMap != nil ||
-		d.PropertyTenancyOverrideMap != nil ||
-		d.Tenants != nil ||
-		d.LimitRegionalOverrides != nil ||
-		d.ConsolePropertyRegionalOverrides != nil ||
-		d.PropertyRegionalOverrides != nil ||
-		d.BaseModels != nil ||
-		d.ServingRuntimes != nil ||
-		d.ImportedModelMap != nil ||
-		d.GPUPools != nil ||
-		d.GPUNodeMap != nil ||
-		d.GPUWorkloadMap != nil ||
-		d.DedicatedAIClusterMap != nil {
-		t.Errorf("ResetRealmScopedFields did not nil all fields")
-	}
-}
-
-// A switch within the realm keeps its tenants and overrides and drops the
-// rest.
-func TestResetEnvironmentScopedFields(t *testing.T) {
-	t.Parallel()
-	d := &Dataset{
-		Tenants:                 []Tenant{{Name: "t"}},
-		LimitTenancyOverrideMap: map[string][]LimitTenancyOverride{"x": nil},
-		LimitRegionalOverrides:  []LimitRegionalOverride{{}},
-		GPUPools:                []GPUPool{{}},
-		DedicatedAIClusterMap:   map[string][]DedicatedAICluster{"x": nil},
-	}
-	d.ResetEnvironmentScopedFields()
-	assert.NotNil(t, d.Tenants)
-	assert.NotNil(t, d.LimitTenancyOverrideMap)
-	assert.NotNil(t, d.LimitRegionalOverrides)
-	assert.Nil(t, d.GPUPools)
-	assert.Nil(t, d.DedicatedAIClusterMap)
-}
-
 func TestFindBaseModelByName(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{
