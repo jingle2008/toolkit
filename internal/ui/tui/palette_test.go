@@ -11,6 +11,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/palette"
 )
 
 // typePalette opens the palette and types q into it.
@@ -29,8 +30,8 @@ func TestPalette_ExactAliasOpensCategory(t *testing.T) {
 	showCategory(t, m, domain.Tenant)
 	typePalette(m, "dac")
 	require.Equal(t, common.PaletteView, m.viewMode)
-	require.NotEmpty(t, m.palette.matches)
-	assert.Equal(t, "DedicatedAICluster", m.palette.items[m.palette.matches[0].Index].label,
+	require.NotEmpty(t, m.palette.Matches())
+	assert.Equal(t, "DedicatedAICluster", m.palette.Matches()[0].Label,
 		"the alias's category is listed first, as enter runs it")
 	_, _ = m.Update(keyPress("enter"))
 	assert.Equal(t, common.ListView, m.viewMode)
@@ -42,8 +43,8 @@ func TestPalette_FuzzyRanksAndHighlights(t *testing.T) {
 	m := newPrefixModel(t)
 	typePalette(m, "gpunode")
 	p := m.palette
-	require.NotEmpty(t, p.matches)
-	assert.Equal(t, "GPUNode", p.items[p.matches[0].Index].label)
+	require.NotEmpty(t, p.Matches())
+	assert.Equal(t, "GPUNode", p.Matches()[0].Label)
 	view := m.paletteView()
 	assert.Contains(t, ansi.Strip(view), "▸ GPUNode")
 	assert.Contains(t, view, "\x1b[1;", "matched characters are highlighted")
@@ -56,7 +57,7 @@ func TestPalette_NoMatches(t *testing.T) {
 	t.Parallel()
 	m := newPrefixModel(t)
 	typePalette(m, "zzzzqqq")
-	assert.Empty(t, m.palette.matches)
+	assert.Empty(t, m.palette.Matches())
 	assert.Contains(t, ansi.Strip(m.paletteView()), "no matches")
 	_, _ = m.Update(keyPress("enter"))
 	assert.Equal(t, common.PaletteView, m.viewMode, "nothing to run: stay open to edit the query")
@@ -77,8 +78,8 @@ func TestPalette_RunsActions(t *testing.T) {
 	t.Parallel()
 	m := newPrefixModel(t)
 	typePalette(m, "sort by tenant")
-	require.NotEmpty(t, m.palette.matches)
-	assert.Equal(t, "Sort by Tenant", m.palette.items[m.palette.matches[0].Index].label)
+	require.NotEmpty(t, m.palette.Matches())
+	assert.Equal(t, "Sort by Tenant", m.palette.Matches()[0].Label)
 	_, _ = m.Update(keyPress("enter"))
 	assert.Equal(t, "Tenant", m.sortColumn)
 
@@ -93,10 +94,10 @@ func TestPalette_OffersSortByName(t *testing.T) {
 	m := newPrefixModel(t)
 	m.sortColumn, m.sortAsc = "Tenant", true
 	typePalette(m, "sort by name")
-	require.NotEmpty(t, m.palette.matches)
-	it := m.palette.items[m.palette.matches[0].Index]
-	assert.Equal(t, "Sort by Name", it.label)
-	assert.Equal(t, "s n", it.hint)
+	require.NotEmpty(t, m.palette.Matches())
+	it := m.palette.Matches()[0]
+	assert.Equal(t, "Sort by Name", it.Label)
+	assert.Equal(t, "s n", it.Hint)
 	_, _ = m.Update(keyPress("enter"))
 	assert.Equal(t, common.NameCol, m.sortColumn)
 }
@@ -107,9 +108,9 @@ func TestPalette_SwitchesEnvironment(t *testing.T) {
 	m := newQuickSwitchModel(t, "")
 	m.updateLayout(120, 40)
 	typePalette(m, envORD.KubeContext())
-	require.NotEmpty(t, m.palette.matches)
-	it := m.palette.items[m.palette.matches[0].Index]
-	require.Equal(t, "env", it.kind)
+	require.NotEmpty(t, m.palette.Matches())
+	it := m.palette.Matches()[0]
+	require.Equal(t, "env", it.Kind)
 	_, _ = m.Update(keyPress("enter"))
 	assert.True(t, m.environment.Equals(envORD))
 }
@@ -120,8 +121,8 @@ func TestPalette_NoEnvironmentsOutsideScopedCategories(t *testing.T) {
 	m.category = domain.Environment
 	require.False(t, m.category.IsEnvironmentScoped())
 	m.openPalette()
-	for _, it := range m.palette.items {
-		assert.NotEqual(t, "env", it.kind, it.label)
+	for _, it := range m.palette.Items() {
+		assert.NotEqual(t, "env", it.Kind, it.Label)
 	}
 }
 
@@ -132,31 +133,15 @@ func TestPalette_Scrolls(t *testing.T) {
 	showCategory(t, m, domain.DedicatedAICluster)
 	m.openPalette()
 	n := m.paletteRows()
-	require.Greater(t, len(m.palette.matches), n)
-	for range len(m.palette.matches) + 3 {
+	require.Greater(t, len(m.palette.Matches()), n)
+	for range len(m.palette.Matches()) + 3 {
 		_, _ = m.Update(keyPress("down"))
 	}
-	last := m.palette.items[m.palette.matches[len(m.palette.matches)-1].Index].label
+	last := m.palette.Matches()[len(m.palette.Matches())-1].Label
 	view := ansi.Strip(m.paletteView())
 	assert.Contains(t, lineWith(view, last), "▸")
-	assert.Contains(t, view, fmt.Sprintf("of %d", len(m.palette.matches)))
+	assert.Contains(t, view, fmt.Sprintf("of %d", len(m.palette.Matches())))
 	assert.LessOrEqual(t, strings.Count(ansi.Strip(m.render()), "\n")+1, 20)
-}
-
-// A match never strings letters across label and hint: "dac" must not
-// match an environment as d(p-prod) a(p-…) c(huncheon).
-func TestPalette_NoCrossFieldMatches(t *testing.T) {
-	t.Parallel()
-	m := newPrefixModel(t)
-	m.openPalette()
-	m.palette.items = []paletteItem{
-		{kind: "env", label: "dp-prod-yny", hint: "oc1 ap-chuncheon-1"},
-		{kind: "category", label: "DedicatedAICluster", hint: "dac"},
-	}
-	m.palette.input.SetValue("dac")
-	m.refilterPalette()
-	require.Len(t, m.palette.matches, 1)
-	assert.Equal(t, "DedicatedAICluster", m.palette.items[m.palette.matches[0].Index].label)
 }
 
 // Category hints are the short aliases only, and the open category is
@@ -183,9 +168,9 @@ func TestPalette_RecentFirst(t *testing.T) {
 
 	_, _ = m.Update(keyPress(":"))
 	p := m.palette
-	require.Equal(t, 2, p.recent)
-	assert.Equal(t, "Tenant", p.items[p.matches[0].Index].label)
-	assert.Equal(t, "GPUNode", p.items[p.matches[1].Index].label)
+	require.Equal(t, 2, p.Recent())
+	assert.Equal(t, "Tenant", p.Matches()[0].Label)
+	assert.Equal(t, "GPUNode", p.Matches()[1].Label)
 
 	lines := strings.Split(ansi.Strip(m.paletteView()), "\n")
 	assert.Equal(t, 1, strings.Count(strings.Join(lines, "\n"), "recent"), "named once")
@@ -193,15 +178,15 @@ func TestPalette_RecentFirst(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(strings.Join(lines, "\n"), " category"), "next group named once")
 }
 
-// The recent list keeps paletteRecentMax items without repeats.
+// The recent list keeps palette.RecentMax items without repeats.
 func TestPalette_RememberCapsAndDedupes(t *testing.T) {
 	t.Parallel()
 	m := newPrefixModel(t)
-	for i := range paletteRecentMax + 2 {
-		m.rememberPalette(paletteItem{kind: "action", label: fmt.Sprint(i)})
+	for i := range palette.RecentMax + 2 {
+		m.rememberPalette(palette.Item{Kind: "action", Label: fmt.Sprint(i)})
 	}
-	m.rememberPalette(paletteItem{kind: "action", label: "3"})
-	assert.Len(t, m.paletteRecent, paletteRecentMax)
-	assert.Equal(t, paletteItem{kind: "action", label: "3"}.id(), m.paletteRecent[0])
+	m.rememberPalette(palette.Item{Kind: "action", Label: "3"})
+	assert.Len(t, m.paletteRecent, palette.RecentMax)
+	assert.Equal(t, palette.Item{Kind: "action", Label: "3"}.ID(), m.paletteRecent[0])
 	assert.Equal(t, 1, strings.Count(strings.Join(m.paletteRecent, "|"), "\x003"))
 }

@@ -177,7 +177,7 @@ func (m *Model) renderMode(mode common.ViewMode) string {
 	case common.RowPickerView:
 		return m.overlayModal(m.rowPickerPending.returnView, m.rowPickerView())
 	case common.PaletteView:
-		return m.overlayModal(m.palette.returnView, m.paletteView())
+		return m.overlayModal(m.palettePending.returnView, m.paletteView())
 	default:
 		return ""
 	}

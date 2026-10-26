@@ -57,7 +57,7 @@ func TestPaste_PaletteQuery(t *testing.T) {
 	_, _ = m.Update(keyPress(":"))
 	require.Equal(t, common.PaletteView, m.viewMode)
 	_, _ = m.Update(paste("dac"))
-	assert.Equal(t, "dac", m.palette.input.Value())
+	assert.Equal(t, "dac", m.palette.Query())
 }
 
 func TestPaste_LogFilter(t *testing.T) {
