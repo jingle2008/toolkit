@@ -1,4 +1,3 @@
-// Package models provides data structures for toolkit models.
 package models
 
 import (
