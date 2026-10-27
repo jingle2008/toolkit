@@ -8,7 +8,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
-	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -50,16 +50,8 @@ be unique; an ambiguous name errors with the candidate namespaces.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				var ns string
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action:  mutation.RestartInferenceService,
-					Target:  isvcTarget(namespace, name),
-					DryRun:  dryRun,
-					Yes:     yes,
-					Resolve: resolveISVC(cfg, env, namespace, name, &ns),
-				}, func(ctx context.Context) error {
-					return restartInferenceServiceFn(ctx, cfg.KubeConfig, env.KubeContext(), ns, name)
-				})
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes},
+					ops.RestartISVC(cliDeps(cfg), opsEnv(cfg, env), namespace, name))
 			})
 		},
 	}
@@ -97,7 +89,7 @@ or the command refuses; the OCID is then the target the
 prompt, dry run and audit log name.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNodeAction(cmd, cfgFile, mutation.RestartNode, args[0], ocid, dryRun, yes, softResetInstanceFn)
+			return runNodeAction(cmd, cfgFile, args[0], ocid, cliGate{DryRun: dryRun, Yes: yes}, ops.RestartNode)
 		},
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")

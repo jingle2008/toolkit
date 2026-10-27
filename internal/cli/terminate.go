@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/infra/oci"
-	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 )
 
 // terminateInstanceFn is the seam tests use to fake the OCI call.
@@ -36,7 +36,7 @@ or the command refuses; the OCID is then the target the
 prompt, dry run and audit log name.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNodeAction(cmd, cfgFile, mutation.TerminateNode, args[0], ocid, dryRun, yes, terminateInstanceFn)
+			return runNodeAction(cmd, cfgFile, args[0], ocid, cliGate{DryRun: dryRun, Yes: yes}, ops.TerminateNode)
 		},
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")

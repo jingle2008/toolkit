@@ -10,6 +10,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/internal/output"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -67,17 +68,8 @@ no process is driving it: run the drain again to resume.`,
 				return fmt.Errorf("-o applies only with --status")
 			}
 			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action: mutation.DrainNode,
-					Target: nodeName,
-					DryRun: dryRun,
-					Yes:    yes,
-					Resolve: func(ctx context.Context, p *mutation.Plan) error {
-						status, err := drainStatusFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
-						p.Resolved = mutation.ResolvedDrain(string(status.Phase))
-						return err
-					},
-				}, func(ctx context.Context) error {
+				op := ops.Drain(cliDeps(cfg), opsEnv(cfg, env), nodeName)
+				op.Perform = func(ctx context.Context, _ mutation.Plan) error {
 					// The drain can run for tens of minutes and the log goes to a
 					// file, so echo its milestones on stderr; stdout keeps only
 					// the result line.
@@ -86,7 +78,8 @@ no process is driving it: run the drain again to resume.`,
 						_, _ = fmt.Fprintf(errOut, "%s %s\n", time.Now().Format("15:04:05"), line)
 					})
 					return drainNodeFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
-				})
+				}
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes}, op)
 			})
 		},
 	}

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"strings"
 
@@ -17,6 +16,7 @@ import (
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -30,72 +30,51 @@ var resolveGPUNodeFn = func(ctx context.Context, cfg config.Config, env models.E
 	return resolve.GPUNode(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name, ocid)
 }
 
-// resolveNode is a mutationPlan.Resolve for a GPU node: it looks the node
-// up (or, given --ocid, verifies the instance is in one of the env's GPU
-// pools) into *node.
-func resolveNode(cfg config.Config, env models.Environment, name, ocid string, node **models.GPUNode) func(context.Context, *mutation.Plan) error {
-	return func(ctx context.Context, p *mutation.Plan) error {
-		n, err := resolveGPUNodeFn(ctx, cfg, env, name, ocid)
-		if err != nil {
-			return err
-		}
-		*node, p.Resolved = n, mutation.ResolvedNode(n.ID)
-		if ocid != "" {
-			p.Resolved = mutation.ResolvedPoolInstance(n.ID, n.NodePool)
-		}
-		return nil
+// cliDeps is ops.Deps over this package's seams, read when a command
+// runs so tests' swaps take effect.
+func cliDeps(cfg config.Config) ops.Deps {
+	return ops.Deps{
+		ResolveGPUNode: func(ctx context.Context, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+			return resolveGPUNodeFn(ctx, cfg, env, name, ocid)
+		},
+		ResolveGPUPool: func(ctx context.Context, env models.Environment, name string) (*models.GPUPool, error) {
+			return resolveGPUPoolFn(ctx, cfg, env, name)
+		},
+		NodeCordoned:     nodeCordonedFn,
+		SetCordon:        setCordonFn,
+		DrainStatus:      drainStatusFn,
+		SoftReset:        softResetInstanceFn,
+		Terminate:        terminateInstanceFn,
+		IncreasePoolSize: increasePoolSizeFn,
+		GetDAC:           getDACFn,
+		DeleteDAC:        deleteDACFn,
+		ResolveISVC:      resolveInferenceServiceFn,
+		RestartISVC:      restartInferenceServiceFn,
+		PlanOrphanISVC:   planOrphanISVCDeleteFn,
+		DeleteOrphanISVC: deleteOrphanISVCFn,
+		CheckTenant:      func(entry models.TenantMetadata) (bool, error) { return checkTenantFn(cfg, entry) },
+		UpsertTenant:     func(ctx context.Context, entry models.TenantMetadata) error { return setTenantFn(ctx, cfg, entry) },
 	}
 }
 
-// runNodeAction is the RunE of `restart node` and `terminate`: act, an
+// opsEnv is where a CLI mutation acts.
+func opsEnv(cfg config.Config, env models.Environment) ops.Env {
+	return ops.Env{KubeConfig: cfg.KubeConfig, Env: env}
+}
+
+// runNodeAction is the RunE of `restart node` and `terminate`: newOp, an
 // OCI action on the instance backing GPU node name, or on the --ocid
 // instance. That needs no lookup of the node but the Terraform repo,
 // whose GPU pools the instance must belong to, and the cluster for the
 // env's GPU compartment they're in; the OCID is then the target the
 // prompt and audit name, and name only a label.
 func runNodeAction(
-	cmd *cobra.Command, cfgFile *string, a mutation.Action, name, ocid string, dryRun, yes bool,
-	act func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error,
+	cmd *cobra.Command, cfgFile *string, name, ocid string, gate cliGate,
+	newOp func(d ops.Deps, e ops.Env, name, ocid string) mutation.Op,
 ) error {
-	target, fields := name, func() []any { return nil }
-	if ocid != "" {
-		target, fields = ocid, func() []any { return []any{"node", name} }
-	}
 	return withMutationSetup(cmd.Context(), cfgFile, true, ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-		var node *models.GPUNode
-		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-			Action:      a,
-			Target:      target,
-			DryRun:      dryRun,
-			Yes:         yes,
-			Resolve:     resolveNode(cfg, env, name, ocid, &node),
-			AuditFields: fields,
-		}, func(ctx context.Context) error {
-			return act(ctx, node, env, logging.FromContext(ctx))
-		})
+		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate, newOp(cliDeps(cfg), opsEnv(cfg, env), name, ocid))
 	})
-}
-
-// resolveISVC is a mutationPlan.Resolve for an InferenceService: it
-// finds the namespace (searching all when namespace is empty) into *ns,
-// so the target, prompt and audit name <namespace>/<name>.
-func resolveISVC(cfg config.Config, env models.Environment, namespace, name string, ns *string) func(context.Context, *mutation.Plan) error {
-	return func(ctx context.Context, p *mutation.Plan) error {
-		found, err := resolveInferenceServiceFn(ctx, cfg.KubeConfig, env.KubeContext(), namespace, name)
-		if err != nil {
-			return err
-		}
-		*ns, p.Target, p.Resolved = found, found+"/"+name, mutation.ResolvedNamespace(found)
-		return nil
-	}
-}
-
-// isvcTarget is an InferenceService target as named on the command line.
-func isvcTarget(namespace, name string) string {
-	if namespace != "" {
-		return namespace + "/" + name
-	}
-	return name
 }
 
 // resolveGPUPoolFn is the seam tests use to fake gpu-pool resolution.
@@ -214,39 +193,16 @@ func withCommandSetup(
 	return fn(ctx, cfg, env)
 }
 
-// mutationPlan captures everything a mutation subcommand needs to
-// confirm, audit, and execute uniformly. Subcommands build a plan +
-// a perform closure; runMutation handles confirmation prompt,
-// dry-run short-circuit, and structured audit logging.
-type mutationPlan struct {
-	// Action is what the subcommand does. Its tier decides the
-	// confirmation: an Irreversible action (terminate, delete) can't
-	// be confirmed interactively — only --yes lets it proceed, since
-	// typing "y" by reflex is unsafe.
-	Action mutation.Action
-	// Target is a human-readable identifier (e.g. node name,
-	// "<namespace>/<name>"). Used in prompts and audit fields.
-	Target string
-	// DryRun short-circuits before perform runs, prints a "would do X"
-	// line, and audits with dry_run=true.
+// cliGate is a CLI mutation's confirmation flags, and what its success
+// line adds.
+type cliGate struct {
+	// DryRun looks the target up, prints a "would do X" line, and audits
+	// with dry_run=true, instead of performing.
 	DryRun bool
 	// Yes skips the interactive confirmation prompt. Required for an
-	// Irreversible action.
+	// Irreversible action (terminate, delete), which can't be confirmed
+	// interactively, since typing "y" by reflex is unsafe.
 	Yes bool
-	// Resolve, when set, looks the target up without changing anything,
-	// before the dry run or the prompt — as MCP's plan step does — so a
-	// dry run proves the target exists and the prompt names what was
-	// found. It may refine the plan's Action and Target, records in
-	// Resolved what a dry run reports, and may set Noop (printed; nothing
-	// prompted, performed or audited) and Notice (printed before the
-	// prompt, with --yes too, and after the dry-run line). Its perform
-	// closure uses what it found.
-	Resolve func(ctx context.Context, p *mutation.Plan) error
-	// AuditFields, when set, adds the action's own fields to every audit
-	// record from Resolve on. It is called per record, so fields the
-	// perform closure fills in (a scale's actual sizes) reach the done
-	// record.
-	AuditFields func() []any
 	// Outcome, when set, is appended to the success line after perform:
 	// "<action> <kind>/<target>: OK (<outcome>)".
 	Outcome func() string
@@ -255,7 +211,7 @@ type mutationPlan struct {
 // errDeclined is the prompt answered no: the call ends "aborted".
 var errDeclined = errors.New("declined at the prompt")
 
-// runMutation runs plan through mutation.Run, the flow MCP's
+// runMutation runs op through mutation.Run, the flow MCP's
 // runMutationCall shares, with the CLI's gate: an Irreversible action
 // without --yes (and not a dry run) is refused before anything is
 // touched, and a real run without --yes asks at the prompt; declining is
@@ -267,26 +223,26 @@ var errDeclined = errors.New("declined at the prompt")
 //   - interactive abort: "aborted\n"
 //   - success: "<action> <kind>/<target>: OK[ (<outcome>)]\n"
 //
-// Errors from Resolve and perform are returned verbatim; callers should
+// Errors from Resolve and Perform are returned verbatim; callers should
 // let Cobra surface them.
 func runMutation(
 	ctx context.Context,
 	in io.Reader,
 	out io.Writer,
-	plan mutationPlan,
-	perform func(context.Context) error,
+	g cliGate,
+	op mutation.Op,
 ) error {
 	gate := mutation.Gate{
-		DryRun: plan.DryRun,
+		DryRun: g.DryRun,
 		Admit: func(p mutation.Plan) error {
-			if p.Action.Tier == mutation.Irreversible && !plan.Yes && !plan.DryRun {
+			if p.Action.Tier == mutation.Irreversible && !g.Yes && !g.DryRun {
 				return mutation.Refuse(fmt.Errorf("%s requires explicit --yes (no interactive prompt for destructive actions)", p.Action.Verb))
 			}
 			return nil
 		},
 		Confirm: func(ctx context.Context, p mutation.Plan) error {
 			printNotice(out, p.Notice)
-			if plan.Yes {
+			if g.Yes {
 				return nil
 			}
 			ok, err := confirmAction(ctx, in, out, fmt.Sprintf("Confirm %s? [y/N]: ", p))
@@ -299,12 +255,7 @@ func runMutation(
 			return nil
 		},
 	}
-	p, outcome, err := mutation.Run(ctx, logging.FromContext(ctx), surfaceCLI, gate, mutation.Op{
-		Plan:        mutation.Plan{Action: plan.Action, Target: plan.Target},
-		Resolve:     plan.Resolve,
-		Perform:     func(ctx context.Context, _ mutation.Plan) error { return perform(ctx) },
-		AuditFields: plan.AuditFields,
-	})
+	p, outcome, err := mutation.Run(ctx, logging.FromContext(ctx), surfaceCLI, gate, op)
 	if errors.Is(err, errDeclined) {
 		_, _ = fmt.Fprintln(out, "aborted")
 		return nil
@@ -319,17 +270,17 @@ func runMutation(
 		_, _ = fmt.Fprintln(out, "DRY-RUN: would "+p.String()+parenthesized(p.Resolved.String()))
 		printNotice(out, p.Notice)
 	case mutation.Performed:
-		_, _ = fmt.Fprintln(out, p.String()+": OK"+parenthesized(plan.outcome()))
+		_, _ = fmt.Fprintln(out, p.String()+": OK"+parenthesized(g.outcome()))
 	}
 	return nil
 }
 
-// outcome is the plan's Outcome, "" when unset.
-func (p *mutationPlan) outcome() string {
-	if p.Outcome == nil {
+// outcome is the gate's Outcome, "" when unset.
+func (g cliGate) outcome() string {
+	if g.Outcome == nil {
 		return ""
 	}
-	return p.Outcome()
+	return g.Outcome()
 }
 
 // printNotice prints notice, when there is one.

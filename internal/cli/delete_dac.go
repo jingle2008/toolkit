@@ -9,8 +9,8 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
-	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -47,21 +47,9 @@ deliberately disabled to prevent reflex "y" answers.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			return withMutationSetup(cmd.Context(), cfgFile, false, false, true, func(ctx context.Context, _ config.Config, env models.Environment) error {
-				dac := &models.DedicatedAICluster{Name: name}
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action: mutation.DeleteDAC,
-					Target: name,
-					DryRun: dryRun,
-					Yes:    yes,
-					Resolve: func(ctx context.Context, p *mutation.Plan) error {
-						found, err := getDACFn(ctx, dac, env)
-						p.Resolved = mutation.ResolvedDAC(found.ID, found.State)
-						return err
-					},
-				}, func(ctx context.Context) error {
-					return deleteDACFn(ctx, dac, env, logging.FromContext(ctx))
-				})
+			return withMutationSetup(cmd.Context(), cfgFile, false, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes},
+					ops.DeleteDAC(cliDeps(cfg), opsEnv(cfg, env), name))
 			})
 		},
 	}
@@ -104,34 +92,19 @@ be unique. Destructive: requires explicit --yes.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				var ns string
-				resolveNS := resolveISVC(cfg, env, namespace, name, &ns)
 				out := cmd.OutOrStdout()
-				return runMutation(ctx, cmd.InOrStdin(), out, mutationPlan{
-					Action: mutation.DeleteInferenceService,
-					Target: isvcTarget(namespace, name),
-					DryRun: dryRun,
-					Yes:    yes,
-					// Planning also checks it's an orphan, and picks delete
-					// or force-delete.
-					Resolve: func(ctx context.Context, p *mutation.Plan) error {
-						if err := resolveNS(ctx, p); err != nil {
-							return err
-						}
-						outcome, err := planOrphanISVCDeleteFn(ctx, cfg.KubeConfig, env.KubeContext(), ns, name)
-						if err != nil {
-							return err
-						}
-						p.Action = mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
-						return nil
-					},
-				}, func(ctx context.Context) error {
-					done, err := deleteOrphanISVCFn(ctx, cfg.KubeConfig, env.KubeContext(), ns, name)
+				// Planning also checks it's an orphan, and picks delete or
+				// force-delete.
+				op, done := ops.DeleteOrphanISVC(cliDeps(cfg), opsEnv(cfg, env), namespace, name)
+				perform := op.Perform
+				op.Perform = func(ctx context.Context, p mutation.Plan) error {
+					err := perform(ctx, p)
 					if err == nil {
-						_, _ = fmt.Fprintln(out, done.Summary(ns+"/"+name))
+						_, _ = fmt.Fprintln(out, done.Summary(p.Target))
 					}
 					return err
-				})
+				}
+				return runMutation(ctx, cmd.InOrStdin(), out, cliGate{DryRun: dryRun, Yes: yes}, op)
 			})
 		},
 	}
