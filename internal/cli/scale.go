@@ -63,7 +63,7 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 					Target: name,
 					DryRun: dryRun,
 					Yes:    yes,
-					Resolve: func(ctx context.Context, p *mutationPlan) error {
+					Resolve: func(ctx context.Context, p *mutation.Plan) error {
 						found, err := resolveGPUPoolFn(ctx, cfg, env, name)
 						if err != nil {
 							return err
@@ -75,7 +75,7 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 							return err
 						}
 						if n == 0 {
-							p.Skip = mutation.PoolAtSizeNote(*found, "--add")
+							p.Noop = mutation.PoolAtSizeNote(*found, "--add")
 							return nil
 						}
 						pool, p.Resolved = found, mutation.ResolvedPool(found.ID, found.Size, found.ActualSize, n)

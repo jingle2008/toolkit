@@ -114,24 +114,10 @@ func (s *Server) effectiveMutationEnv(a mutation.Action, target string, in envOv
 	return effective
 }
 
-// planned is what a mutation will do, once its target is looked up.
-type planned struct {
-	action mutation.Action
-	target string
-	// resolved is what the lookup found, reported by a dry run.
-	resolved mutation.Resolved
-	// noop, when the lookup sets it, ends the call as status NOOP with
-	// this note: there is nothing to do, so nothing is performed or
-	// audited.
-	noop string
-	// note is a dry run's note: what the action will do, any warning.
-	note string
+// planOK is the success envelope for p.
+func planOK(p mutation.Plan) mutationResult {
+	return mutationOK(p.Action.Verb, p.Action.Kind, p.Target)
 }
-
-func (p planned) String() string { return p.action.Verb + " " + p.action.Kind + "/" + p.target }
-
-// ok is the success envelope for p.
-func (p planned) ok() mutationResult { return mutationOK(p.action.Verb, p.action.Kind, p.target) }
 
 // mutationCall is one mutating tool call, as its handler describes it.
 type mutationCall[Out any] struct {
@@ -142,11 +128,12 @@ type mutationCall[Out any] struct {
 	// checked when the planned action is Irreversible.
 	confirmTarget string
 	// plan, when set, looks the target up without changing anything. It
-	// may refine p's action and target, and records in p.resolved what a
-	// dry run reports.
-	plan func(p *planned) error
+	// may refine p's action and target, records in p.Resolved what a dry
+	// run reports, and may set p.Noop (status NOOP) and p.Notice (the dry
+	// run's note).
+	plan func(p *mutation.Plan) error
 	// perform acts on what plan found.
-	perform func(p planned) (Out, error)
+	perform func(p mutation.Plan) (Out, error)
 	// envelope builds the tool's result from a bare envelope, for the
 	// dry-run and NOOP responses.
 	envelope func(mutationResult) Out
@@ -154,14 +141,6 @@ type mutationCall[Out any] struct {
 	// record. It is called per record, so fields perform fills in (a
 	// scale's actual sizes) reach the done record.
 	auditFields func() []any
-}
-
-// fields is the call's own audit fields, none when unset.
-func (c mutationCall[Out]) fields() []any {
-	if c.auditFields == nil {
-		return nil
-	}
-	return c.auditFields()
 }
 
 // asResult is the envelope for tools whose result is the bare envelope.
@@ -172,70 +151,78 @@ func asResult(r mutationResult) mutationResult { return r }
 // passed to the cluster or OCI: the schema marks it required but accepts
 // "". An InferenceService target is <namespace>/<name>, so the name is
 // what follows the last slash. Then runGatedMutation.
-func runMutationCall[Out any](s *Server, c mutationCall[Out]) (*sdk.CallToolResult, Out, error) {
+func runMutationCall[Out any](ctx context.Context, s *Server, c mutationCall[Out]) (*sdk.CallToolResult, Out, error) {
 	if strings.TrimSpace(c.target[strings.LastIndex(c.target, "/")+1:]) == "" {
 		return failTool[Out](c.action.Verb, fmt.Errorf("%s target is required", c.action.Kind))
 	}
-	return runGatedMutation(s, c)
+	return runGatedMutation(ctx, s, c)
 }
 
-// runGatedMutation runs a mutation call through its gates, with the
-// audit record of each step:
+// runGatedMutation runs a mutation call through mutation.Run, the flow
+// the CLI's runMutation shares, with MCP's gate:
 //
-//  1. Neither confirm nor dry_run: refused, before touching anything.
-//  2. plan looks the target up; a failure ends the call (audited as
-//     failed unless a dry run). A noop it sets ends the call as NOOP.
-//  3. dry_run: report the plan as status DRY_RUN.
-//  4. An Irreversible action whose confirm_target names neither the
-//     requested nor the resolved target: refused.
-//  5. perform, audited begin, then done or failed.
+//   - Neither confirm nor dry_run: refused, before touching anything.
+//   - An Irreversible action whose confirm_target names neither the
+//     requested nor the resolved target: refused, after a dry run would
+//     have reported.
 //
 // The refusal and failure paths return an error, which the SDK renders
 // as IsError plus text; success is Out, which the SDK marshals into
 // StructuredContent and auto-emits as TextContent.
-func runGatedMutation[Out any](s *Server, c mutationCall[Out]) (*sdk.CallToolResult, Out, error) {
-	p := planned{action: c.action, target: c.target}
-	audit := func(phase mutation.Phase, err error) {
-		mutation.Audit(s.logger, surfaceMCP, p.action, p.target, phase, err, c.fields()...)
+func runGatedMutation[Out any](ctx context.Context, s *Server, c mutationCall[Out]) (*sdk.CallToolResult, Out, error) {
+	var (
+		out        Out
+		unadmitted bool
+	)
+	gate := mutation.Gate{
+		DryRun: c.gate.DryRun,
+		Admit: func(p mutation.Plan) error {
+			if c.gate.Confirm || c.gate.DryRun {
+				return nil
+			}
+			unadmitted = true
+			return mutation.Refuse(fmt.Errorf("mutating tool requires confirm=true (target %s/%s)", p.Action.Kind, p.Target))
+		},
+		Confirm: func(_ context.Context, p mutation.Plan) error {
+			if p.Action.Tier == mutation.Irreversible &&
+				(c.confirmTarget == "" || (c.confirmTarget != c.target && c.confirmTarget != p.Target)) {
+				return mutation.Refuse(fmt.Errorf(
+					"irreversible: confirm=true is not enough; also set confirm_target to %q", p.Target,
+				))
+			}
+			return nil
+		},
 	}
-	if !c.gate.Confirm && !c.gate.DryRun {
-		audit(mutation.PhaseRefused, nil)
-		return failTool[Out](p.action.Verb,
-			fmt.Errorf("mutating tool requires confirm=true (target %s/%s)", p.action.Kind, p.target))
+	op := mutation.Op{
+		Plan: mutation.Plan{Action: c.action, Target: c.target},
+		Perform: func(_ context.Context, p mutation.Plan) error {
+			var err error
+			out, err = c.perform(p)
+			return err
+		},
+		AuditFields: c.auditFields,
 	}
 	if c.plan != nil {
-		if err := c.plan(&p); err != nil {
-			if !c.gate.DryRun {
-				audit(mutation.PhaseFailed, err)
-			}
-			return failTool[Out](p.String(), err)
-		}
+		op.Resolve = func(_ context.Context, p *mutation.Plan) error { return c.plan(p) }
 	}
-	if p.noop != "" {
-		r := p.ok()
-		r.Status, r.Note = "NOOP", p.noop
-		return &sdk.CallToolResult{}, c.envelope(r), nil
-	}
-	if c.gate.DryRun {
-		audit(mutation.PhaseDryRun, nil)
-		r := p.ok()
-		r.Status, r.Resolved, r.Note = "DRY_RUN", p.resolved, p.note
-		return &sdk.CallToolResult{}, c.envelope(r), nil
-	}
-	if p.action.Tier == mutation.Irreversible &&
-		(c.confirmTarget == "" || (c.confirmTarget != c.target && c.confirmTarget != p.target)) {
-		audit(mutation.PhaseRefused, nil)
-		return failTool[Out](p.String(), fmt.Errorf(
-			"irreversible: confirm=true is not enough; also set confirm_target to %q", p.target,
-		))
-	}
-	audit(mutation.PhaseBegin, nil)
-	out, err := c.perform(p)
+	p, outcome, err := mutation.Run(ctx, s.logger, surfaceMCP, gate, op)
 	if err != nil {
-		audit(mutation.PhaseFailed, err)
+		if unadmitted {
+			return failTool[Out](p.Action.Verb, err)
+		}
 		return failTool[Out](p.String(), err)
 	}
-	audit(mutation.PhaseDone, nil)
+	switch outcome {
+	case mutation.Noop:
+		r := planOK(p)
+		r.Status, r.Note = "NOOP", p.Noop
+		return &sdk.CallToolResult{}, c.envelope(r), nil
+	case mutation.DryRun:
+		r := planOK(p)
+		r.Status, r.Resolved, r.Note = "DRY_RUN", p.Resolved, p.Notice
+		return &sdk.CallToolResult{}, c.envelope(r), nil
+	case mutation.Performed:
+	}
 	// Empty Content lets the SDK auto-emit the structured result as text.
 	return &sdk.CallToolResult{}, out, nil
 }
@@ -344,16 +331,16 @@ func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolReques
 
 func (s *Server) setCordon(ctx context.Context, a mutation.Action, in cordonNodeInput, unschedulable bool) (*sdk.CallToolResult, mutationResult, error) {
 	env := s.effectiveMutationEnv(a, in.Node, in.envOverride)
-	return runMutationCall(s, mutationCall[mutationResult]{
+	return runMutationCall(ctx, s, mutationCall[mutationResult]{
 		action: a, target: in.Node, gate: in.confirmGate, envelope: asResult,
-		plan: func(p *planned) error {
+		plan: func(p *mutation.Plan) error {
 			cordoned, err := mcpNodeCordonedFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
-			p.resolved = mutation.ResolvedCordon(cordoned)
+			p.Resolved = mutation.ResolvedCordon(cordoned)
 			return err
 		},
-		perform: func(p planned) (mutationResult, error) {
+		perform: func(p mutation.Plan) (mutationResult, error) {
 			_, err := mcpSetCordonFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node, unschedulable)
-			return p.ok(), err
+			return planOK(p), err
 		},
 	})
 }
@@ -366,15 +353,15 @@ func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, 
 	a := mutation.DrainNode
 	env := s.effectiveMutationEnv(a, in.Node, in.envOverride)
 	var failed k8s.DrainStatus
-	res, out, err := runMutationCall(s, mutationCall[drainNodeResult]{
+	res, out, err := runMutationCall(ctx, s, mutationCall[drainNodeResult]{
 		action: a, target: in.Node, gate: in.confirmGate,
 		envelope: func(r mutationResult) drainNodeResult { return drainNodeResult{mutationResult: r} },
-		plan: func(p *planned) error {
+		plan: func(p *mutation.Plan) error {
 			status, err := mcpDrainStatusFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
-			p.resolved = mutation.ResolvedDrain(string(status.Phase))
+			p.Resolved = mutation.ResolvedDrain(string(status.Phase))
 			return err
 		},
-		perform: func(p planned) (drainNodeResult, error) {
+		perform: func(p mutation.Plan) (drainNodeResult, error) {
 			status, err := mcpStartDrainFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
 			if err != nil {
 				failed = status
@@ -383,7 +370,7 @@ func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, 
 			if status.Phase.InProgress() {
 				s.driveDrain(env.KubeContext(), in.Node)
 			}
-			return drainNodeResult{mutationResult: p.ok(), Drain: status}, nil
+			return drainNodeResult{mutationResult: planOK(p), Drain: status}, nil
 		},
 	})
 	if err != nil && failed.Phase != "" {
@@ -431,16 +418,16 @@ func (s *Server) handleDrainStatus(ctx context.Context, req *sdk.CallToolRequest
 // planGPUNode looks the node up (or, given an OCID, verifies the instance
 // is in one of the env's GPU pools) into *node, reporting the instance a
 // dry run would act on.
-func (s *Server) planGPUNode(ctx context.Context, env models.Environment, name, ocid string, node **models.GPUNode) func(*planned) error {
-	return func(p *planned) error {
+func (s *Server) planGPUNode(ctx context.Context, env models.Environment, name, ocid string, node **models.GPUNode) func(*mutation.Plan) error {
+	return func(p *mutation.Plan) error {
 		n, err := mcpResolveGPUNodeFn(ctx, s, env, name, ocid)
 		if err != nil {
 			return err
 		}
 		*node = n
-		p.resolved = mutation.ResolvedNode(n.ID)
+		p.Resolved = mutation.ResolvedNode(n.ID)
 		if ocid != "" {
-			p.resolved = mutation.ResolvedPoolInstance(n.ID, n.NodePool)
+			p.Resolved = mutation.ResolvedPoolInstance(n.ID, n.NodePool)
 		}
 		return nil
 	}
@@ -462,11 +449,11 @@ func (s *Server) handleRestartNode(ctx context.Context, req *sdk.CallToolRequest
 	target, fields := nodeTarget(in.Node, in.OCID)
 	env := s.effectiveMutationEnv(a, target, in.envOverride)
 	var node *models.GPUNode
-	return runMutationCall(s, mutationCall[mutationResult]{
+	return runMutationCall(ctx, s, mutationCall[mutationResult]{
 		action: a, target: target, gate: in.confirmGate, envelope: asResult, auditFields: fields,
 		plan: s.planGPUNode(ctx, env, in.Node, in.OCID, &node),
-		perform: func(p planned) (mutationResult, error) {
-			return p.ok(), mcpSoftResetFn(ctx, node, env, logging.FromContext(ctx))
+		perform: func(p mutation.Plan) (mutationResult, error) {
+			return planOK(p), mcpSoftResetFn(ctx, node, env, logging.FromContext(ctx))
 		},
 	})
 }
@@ -476,11 +463,11 @@ func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolReque
 	target, fields := nodeTarget(in.Node, in.OCID)
 	env := s.effectiveMutationEnv(a, target, in.envOverride)
 	var node *models.GPUNode
-	return runMutationCall(s, mutationCall[mutationResult]{
+	return runMutationCall(ctx, s, mutationCall[mutationResult]{
 		action: a, target: target, gate: in.confirmGate, confirmTarget: in.ConfirmTarget, envelope: asResult, auditFields: fields,
 		plan: s.planGPUNode(ctx, env, in.Node, in.OCID, &node),
-		perform: func(p planned) (mutationResult, error) {
-			return p.ok(), mcpTerminateFn(ctx, node, env, logging.FromContext(ctx))
+		perform: func(p mutation.Plan) (mutationResult, error) {
+			return planOK(p), mcpTerminateFn(ctx, node, env, logging.FromContext(ctx))
 		},
 	})
 }
@@ -493,10 +480,10 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 		n      int
 		result *oci.PoolScale
 	)
-	return runMutationCall(s, mutationCall[scaleGPUPoolResult]{
+	return runMutationCall(ctx, s, mutationCall[scaleGPUPoolResult]{
 		action: a, target: in.Name, gate: in.confirmGate,
 		envelope: func(r mutationResult) scaleGPUPoolResult { return scaleGPUPoolResult{mutationResult: r} },
-		plan: func(p *planned) error {
+		plan: func(p *mutation.Plan) error {
 			found, err := mcpResolveGPUPoolFn(ctx, s, env, in.Name)
 			if err != nil {
 				return err
@@ -512,12 +499,12 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 				return err
 			}
 			if n == 0 {
-				p.noop = mutation.PoolAtSizeNote(*found, "add")
+				p.Noop = mutation.PoolAtSizeNote(*found, "add")
 				return nil
 			}
 			pool = found
-			p.resolved = mutation.ResolvedPool(found.ID, found.Size, found.ActualSize, n)
-			p.note = mutation.PoolScaleNotice(*found, n)
+			p.Resolved = mutation.ResolvedPool(found.ID, found.Size, found.ActualSize, n)
+			p.Notice = mutation.PoolScaleNotice(*found, n)
 			return nil
 		},
 		auditFields: func() []any {
@@ -526,7 +513,7 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 			}
 			return []any{"add", n, "from", result.Before, "to", result.After}
 		},
-		perform: func(p planned) (scaleGPUPoolResult, error) {
+		perform: func(p mutation.Plan) (scaleGPUPoolResult, error) {
 			count := n
 			if in.Add == nil {
 				count = oci.FillPool // n was counted from the lookup; OCI's size may have moved since
@@ -536,7 +523,7 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 				return scaleGPUPoolResult{}, err
 			}
 			result = &scale
-			r := scaleGPUPoolResult{mutationResult: p.ok(), Scale: result}
+			r := scaleGPUPoolResult{mutationResult: planOK(p), Scale: result}
 			r.Note = scale.String()
 			if w := mutation.PoolOverSizeWarning(pool.Size, scale.After); w != "" {
 				r.Note += ". " + w
@@ -550,15 +537,15 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 	a := mutation.DeleteDAC
 	env := s.effectiveMutationEnv(a, in.Name, in.envOverride)
 	dac := &models.DedicatedAICluster{Name: in.Name}
-	return runMutationCall(s, mutationCall[mutationResult]{
+	return runMutationCall(ctx, s, mutationCall[mutationResult]{
 		action: a, target: in.Name, gate: in.confirmGate, confirmTarget: in.ConfirmTarget, envelope: asResult,
-		plan: func(p *planned) error {
+		plan: func(p *mutation.Plan) error {
 			found, err := mcpGetDACFn(ctx, dac, env)
-			p.resolved = mutation.ResolvedDAC(found.ID, found.State)
+			p.Resolved = mutation.ResolvedDAC(found.ID, found.State)
 			return err
 		},
-		perform: func(p planned) (mutationResult, error) {
-			return p.ok(), mcpDeleteDACFn(ctx, dac, env, logging.FromContext(ctx))
+		perform: func(p mutation.Plan) (mutationResult, error) {
+			return planOK(p), mcpDeleteDACFn(ctx, dac, env, logging.FromContext(ctx))
 		},
 	})
 }
@@ -573,14 +560,14 @@ func isvcTarget(namespace, name string) string {
 
 // planISVC resolves the InferenceService's namespace into *ns, so the
 // audit log and result always carry <namespace>/<name>, as the CLI's do.
-func (s *Server) planISVC(ctx context.Context, env models.Environment, namespace, name string, ns *string) func(*planned) error {
-	return func(p *planned) error {
+func (s *Server) planISVC(ctx context.Context, env models.Environment, namespace, name string, ns *string) func(*mutation.Plan) error {
+	return func(p *mutation.Plan) error {
 		resolved, err := mcpResolveISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), namespace, name)
 		if err != nil {
 			return err
 		}
-		*ns, p.target = resolved, resolved+"/"+name
-		p.resolved = mutation.ResolvedNamespace(resolved)
+		*ns, p.Target = resolved, resolved+"/"+name
+		p.Resolved = mutation.ResolvedNamespace(resolved)
 		return nil
 	}
 }
@@ -590,11 +577,11 @@ func (s *Server) handleRestartInferenceService(ctx context.Context, req *sdk.Cal
 	target := isvcTarget(in.Namespace, in.Name)
 	env := s.effectiveMutationEnv(a, target, in.envOverride)
 	var ns string
-	return runMutationCall(s, mutationCall[mutationResult]{
+	return runMutationCall(ctx, s, mutationCall[mutationResult]{
 		action: a, target: target, gate: in.confirmGate, envelope: asResult,
 		plan: s.planISVC(ctx, env, in.Namespace, in.Name, &ns),
-		perform: func(p planned) (mutationResult, error) {
-			return p.ok(), mcpRestartISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), ns, in.Name)
+		perform: func(p mutation.Plan) (mutationResult, error) {
+			return planOK(p), mcpRestartISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), ns, in.Name)
 		},
 	})
 }
@@ -608,12 +595,12 @@ func (s *Server) handleDeleteInferenceService(ctx context.Context, req *sdk.Call
 	env := s.effectiveMutationEnv(a, target, in.envOverride)
 	var ns string
 	resolveNS := s.planISVC(ctx, env, in.Namespace, in.Name, &ns)
-	return runMutationCall(s, mutationCall[deleteInferenceServiceResult]{
+	return runMutationCall(ctx, s, mutationCall[deleteInferenceServiceResult]{
 		action: a, target: target, gate: in.confirmGate, confirmTarget: in.ConfirmTarget,
 		envelope: func(r mutationResult) deleteInferenceServiceResult {
 			return deleteInferenceServiceResult{mutationResult: r}
 		},
-		plan: func(p *planned) error {
+		plan: func(p *mutation.Plan) error {
 			if err := resolveNS(p); err != nil {
 				return err
 			}
@@ -621,17 +608,17 @@ func (s *Server) handleDeleteInferenceService(ctx context.Context, req *sdk.Call
 			if err != nil {
 				return err
 			}
-			p.action = mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
+			p.Action = mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
 			return nil
 		},
-		perform: func(p planned) (deleteInferenceServiceResult, error) {
+		perform: func(p mutation.Plan) (deleteInferenceServiceResult, error) {
 			done, err := mcpDeleteOrphanISVCFn(ctx, s.cfg.KubeConfig, env.KubeContext(), ns, in.Name)
 			if err != nil {
 				return deleteInferenceServiceResult{}, err
 			}
 			return deleteInferenceServiceResult{
-				mutationResult: mutationOK(done.Action(), p.action.Kind, p.target),
-				Summary:        done.Summary(p.target),
+				mutationResult: mutationOK(done.Action(), p.Action.Kind, p.Target),
+				Summary:        done.Summary(p.Target),
 			}, nil
 		},
 	})
@@ -653,17 +640,17 @@ func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, 
 		note := in.Note
 		entry.Note = &note
 	}
-	return runMutationCall(s, mutationCall[mutationResult]{
+	return runMutationCall(ctx, s, mutationCall[mutationResult]{
 		action: mutation.SetTenant, target: in.OCID, gate: in.confirmGate, envelope: asResult,
 		// The write's own checks (a name another tenancy has, a file that
 		// doesn't load), so a dry run catches them too.
-		plan: func(p *planned) error {
+		plan: func(p *mutation.Plan) error {
 			exists, err := mcpCheckTenantFn(s, entry)
-			p.resolved = mutation.ResolvedTenant(exists)
+			p.Resolved = mutation.ResolvedTenant(exists)
 			return err
 		},
-		perform: func(p planned) (mutationResult, error) {
-			return p.ok(), mcpUpsertTenantFn(s, entry)
+		perform: func(p mutation.Plan) (mutationResult, error) {
+			return planOK(p), mcpUpsertTenantFn(s, entry)
 		},
 	})
 }

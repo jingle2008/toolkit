@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -32,8 +33,8 @@ var resolveGPUNodeFn = func(ctx context.Context, cfg config.Config, env models.E
 // resolveNode is a mutationPlan.Resolve for a GPU node: it looks the node
 // up (or, given --ocid, verifies the instance is in one of the env's GPU
 // pools) into *node.
-func resolveNode(cfg config.Config, env models.Environment, name, ocid string, node **models.GPUNode) func(context.Context, *mutationPlan) error {
-	return func(ctx context.Context, p *mutationPlan) error {
+func resolveNode(cfg config.Config, env models.Environment, name, ocid string, node **models.GPUNode) func(context.Context, *mutation.Plan) error {
+	return func(ctx context.Context, p *mutation.Plan) error {
 		n, err := resolveGPUNodeFn(ctx, cfg, env, name, ocid)
 		if err != nil {
 			return err
@@ -78,8 +79,8 @@ func runNodeAction(
 // resolveISVC is a mutationPlan.Resolve for an InferenceService: it
 // finds the namespace (searching all when namespace is empty) into *ns,
 // so the target, prompt and audit name <namespace>/<name>.
-func resolveISVC(cfg config.Config, env models.Environment, namespace, name string, ns *string) func(context.Context, *mutationPlan) error {
-	return func(ctx context.Context, p *mutationPlan) error {
+func resolveISVC(cfg config.Config, env models.Environment, namespace, name string, ns *string) func(context.Context, *mutation.Plan) error {
+	return func(ctx context.Context, p *mutation.Plan) error {
 		found, err := resolveInferenceServiceFn(ctx, cfg.KubeConfig, env.KubeContext(), namespace, name)
 		if err != nil {
 			return err
@@ -235,19 +236,12 @@ type mutationPlan struct {
 	// Resolve, when set, looks the target up without changing anything,
 	// before the dry run or the prompt — as MCP's plan step does — so a
 	// dry run proves the target exists and the prompt names what was
-	// found. It may refine the plan's Action and Target, and records in
-	// Resolved what a dry run reports. Its perform closure uses what it
-	// found.
-	Resolve func(ctx context.Context, p *mutationPlan) error
-	// Resolved is what Resolve found (mutation.ResolvedNode, ...).
-	Resolved mutation.Resolved
-	// Skip, when Resolve sets it, ends the call with this line: there is
-	// nothing to do, so nothing is prompted, performed or audited.
-	Skip string
-	// Notice, when Resolve sets it, is printed before the prompt (with
-	// --yes too) and after the dry-run line: what the action will do (a
-	// scale's sizes) and any warning.
-	Notice string
+	// found. It may refine the plan's Action and Target, records in
+	// Resolved what a dry run reports, and may set Noop (printed; nothing
+	// prompted, performed or audited) and Notice (printed before the
+	// prompt, with --yes too, and after the dry-run line). Its perform
+	// closure uses what it found.
+	Resolve func(ctx context.Context, p *mutation.Plan) error
 	// AuditFields, when set, adds the action's own fields to every audit
 	// record from Resolve on. It is called per record, so fields the
 	// perform closure fills in (a scale's actual sizes) reach the done
@@ -258,20 +252,17 @@ type mutationPlan struct {
 	Outcome func() string
 }
 
-// runMutation orchestrates the standard refuse / resolve / dry-run /
-// confirm / audit / perform flow shared by every mutation subcommand, in
-// the order MCP's runMutationCall uses, with the same audit records:
-//
-//  1. An Irreversible action without --yes (and not a dry run): refused,
-//     before touching anything.
-//  2. Resolve looks the target up; a failure ends the call, audited as
-//     failed unless a dry run. A Skip it sets ends the call too.
-//  3. --dry-run: report what would run and what was resolved.
-//  4. Without --yes, the prompt; declining is audited as refused.
-//  5. perform, audited begin, then done or failed.
+// errDeclined is the prompt answered no: the call ends "aborted".
+var errDeclined = errors.New("declined at the prompt")
+
+// runMutation runs plan through mutation.Run, the flow MCP's
+// runMutationCall shares, with the CLI's gate: an Irreversible action
+// without --yes (and not a dry run) is refused before anything is
+// touched, and a real run without --yes asks at the prompt; declining is
+// audited as refused.
 //
 // Output contract (writes to out):
-//   - skip: "<skip>\n"
+//   - noop: "<noop>\n"
 //   - dry-run: "DRY-RUN: would <action> <kind>/<target>[ (<resolved>)]\n[<notice>\n]"
 //   - interactive abort: "aborted\n"
 //   - success: "<action> <kind>/<target>: OK[ (<outcome>)]\n"
@@ -285,56 +276,51 @@ func runMutation(
 	plan mutationPlan,
 	perform func(context.Context) error,
 ) error {
-	logger := logging.FromContext(ctx)
-	audit := func(phase mutation.Phase, err error) {
-		mutation.Audit(logger, surfaceCLI, plan.Action, plan.Target, phase, err, plan.auditFields()...)
-	}
-
-	if plan.Action.Tier == mutation.Irreversible && !plan.Yes && !plan.DryRun {
-		audit(mutation.PhaseRefused, nil)
-		return fmt.Errorf("%s requires explicit --yes (no interactive prompt for destructive actions)", plan.Action.Verb)
-	}
-	if plan.Resolve != nil {
-		if err := plan.Resolve(ctx, &plan); err != nil {
-			if !plan.DryRun {
-				audit(mutation.PhaseFailed, err)
+	gate := mutation.Gate{
+		DryRun: plan.DryRun,
+		Admit: func(p mutation.Plan) error {
+			if p.Action.Tier == mutation.Irreversible && !plan.Yes && !plan.DryRun {
+				return mutation.Refuse(fmt.Errorf("%s requires explicit --yes (no interactive prompt for destructive actions)", p.Action.Verb))
 			}
-			return err
-		}
-	}
-	if plan.Skip != "" {
-		_, _ = fmt.Fprintln(out, plan.Skip)
-		return nil
-	}
-	desc := fmt.Sprintf("%s %s/%s", plan.Action.Verb, plan.Action.Kind, plan.Target)
-
-	if plan.DryRun {
-		_, _ = fmt.Fprintln(out, "DRY-RUN: would "+desc+parenthesized(plan.Resolved.String()))
-		plan.printNotice(out)
-		audit(mutation.PhaseDryRun, nil)
-		return nil
-	}
-
-	plan.printNotice(out)
-	if !plan.Yes {
-		ok, err := confirmAction(ctx, in, out, fmt.Sprintf("Confirm %s? [y/N]: ", desc))
-		if err != nil {
-			return fmt.Errorf("read confirmation: %w", err)
-		}
-		if !ok {
-			audit(mutation.PhaseRefused, nil)
-			_, _ = fmt.Fprintln(out, "aborted")
 			return nil
-		}
+		},
+		Confirm: func(ctx context.Context, p mutation.Plan) error {
+			printNotice(out, p.Notice)
+			if plan.Yes {
+				return nil
+			}
+			ok, err := confirmAction(ctx, in, out, fmt.Sprintf("Confirm %s? [y/N]: ", p))
+			if err != nil {
+				return fmt.Errorf("read confirmation: %w", err)
+			}
+			if !ok {
+				return mutation.Refuse(errDeclined)
+			}
+			return nil
+		},
 	}
-
-	audit(mutation.PhaseBegin, nil)
-	if err := perform(ctx); err != nil {
-		audit(mutation.PhaseFailed, err)
+	p, outcome, err := mutation.Run(ctx, logging.FromContext(ctx), surfaceCLI, gate, mutation.Op{
+		Plan:        mutation.Plan{Action: plan.Action, Target: plan.Target},
+		Resolve:     plan.Resolve,
+		Perform:     func(ctx context.Context, _ mutation.Plan) error { return perform(ctx) },
+		AuditFields: plan.AuditFields,
+	})
+	if errors.Is(err, errDeclined) {
+		_, _ = fmt.Fprintln(out, "aborted")
+		return nil
+	}
+	if err != nil {
 		return err
 	}
-	audit(mutation.PhaseDone, nil)
-	_, _ = fmt.Fprintln(out, desc+": OK"+parenthesized(plan.outcome()))
+	switch outcome {
+	case mutation.Noop:
+		_, _ = fmt.Fprintln(out, p.Noop)
+	case mutation.DryRun:
+		_, _ = fmt.Fprintln(out, "DRY-RUN: would "+p.String()+parenthesized(p.Resolved.String()))
+		printNotice(out, p.Notice)
+	case mutation.Performed:
+		_, _ = fmt.Fprintln(out, p.String()+": OK"+parenthesized(plan.outcome()))
+	}
 	return nil
 }
 
@@ -346,18 +332,10 @@ func (p *mutationPlan) outcome() string {
 	return p.Outcome()
 }
 
-// auditFields is the plan's own audit fields, none when unset.
-func (p *mutationPlan) auditFields() []any {
-	if p.AuditFields == nil {
-		return nil
-	}
-	return p.AuditFields()
-}
-
-// printNotice prints the plan's Notice, when it has one.
-func (p *mutationPlan) printNotice(out io.Writer) {
-	if p.Notice != "" {
-		_, _ = fmt.Fprintln(out, p.Notice)
+// printNotice prints notice, when there is one.
+func printNotice(out io.Writer, notice string) {
+	if notice != "" {
+		_, _ = fmt.Fprintln(out, notice)
 	}
 }
 

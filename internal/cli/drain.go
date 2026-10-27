@@ -72,7 +72,7 @@ no process is driving it: run the drain again to resume.`,
 					Target: nodeName,
 					DryRun: dryRun,
 					Yes:    yes,
-					Resolve: func(ctx context.Context, p *mutationPlan) error {
+					Resolve: func(ctx context.Context, p *mutation.Plan) error {
 						status, err := drainStatusFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 						p.Resolved = mutation.ResolvedDrain(string(status.Phase))
 						return err
