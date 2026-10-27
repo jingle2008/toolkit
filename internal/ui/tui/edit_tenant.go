@@ -3,7 +3,9 @@
 // Lets the user attach a friendly name / internal flag / note to an
 // UNRESOLVED DedicatedAICluster or ImportedModel row, persist it to the
 // metadata file via loader.TenantMetadataWriter, and auto-refresh so
-// the row resolves.
+// the row resolves. The form itself — fields, focus, validation, key
+// routing, rendering — is tenantform's; this file gates and opens it,
+// runs its outcomes, and applies a save to the dataset.
 package tui
 
 import (
@@ -11,18 +13,15 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
-	"strings"
 
-	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/ui/tui/actions"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
-	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/tenantform"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -115,24 +114,6 @@ func overrideTenant(item any) (ocid, tenantID string, named, ok bool) {
 	return id, id, name != id, true
 }
 
-// Focus indices for the form fields.
-const (
-	focusName = iota
-	focusInternal
-	focusNote
-	focusCount
-)
-
-type editTenantForm struct {
-	ocid       string
-	tenantID   string
-	name       textinput.Model
-	note       textinput.Model
-	isInternal bool
-	focus      int
-	nameErr    string // shown beside Name after a save without one
-}
-
 // tenantSavedMsg / tenantSaveErrMsg report the async upsert result.
 // tenantSavedMsg carries the persisted entry so the reducer can apply
 // the same resolution in memory (no reload).
@@ -145,66 +126,6 @@ type (
 	tenantSaveErrMsg struct{ err error }
 )
 
-func newEditTenantForm(t editTarget) *editTenantForm {
-	name := textinput.New()
-	name.CharLimit = 128
-	name.Prompt = ""
-	name.Placeholder = "required"
-	name.Focus()
-	note := textinput.New()
-	note.CharLimit = 256
-	note.Prompt = ""
-	note.Placeholder = "optional"
-	return &editTenantForm{
-		ocid:       t.ocid,
-		tenantID:   t.tenantID,
-		name:       name,
-		note:       note,
-		isInternal: true, // matches getTenants' discovered-tenant default
-		focus:      focusName,
-	}
-}
-
-func (f *editTenantForm) toggleInternal() { f.isInternal = !f.isInternal }
-
-// toEntry builds the TenantMetadata; ok is false when Name is empty or
-// only whitespace. The name is trimmed.
-func (f *editTenantForm) toEntry() (models.TenantMetadata, bool) {
-	name := strings.TrimSpace(f.name.Value())
-	if name == "" {
-		return models.TenantMetadata{}, false
-	}
-	entry := models.TenantMetadata{
-		ID:         f.ocid,
-		Name:       &name,
-		IsInternal: &f.isInternal,
-	}
-	if note := f.note.Value(); note != "" {
-		entry.Note = &note
-	}
-	return entry, true
-}
-
-// cycleFocus moves focus by dir (+1/-1) and updates textinput focus.
-func (f *editTenantForm) cycleFocus(dir int) {
-	f.focusOn((f.focus + dir + focusCount) % focusCount)
-}
-
-// focusOn moves focus to field i, focusing its text input if it has one.
-func (f *editTenantForm) focusOn(i int) {
-	f.focus = i
-	if f.focus == focusName {
-		f.name.Focus()
-	} else {
-		f.name.Blur()
-	}
-	if f.focus == focusNote {
-		f.note.Focus()
-	} else {
-		f.note.Blur()
-	}
-}
-
 // openTenantForm gates on the selected item and, when editable, opens
 // the form. Returns a cmd (toast on rejection, blink on open).
 func (m *Model) openTenantForm(item any) tea.Cmd {
@@ -212,7 +133,7 @@ func (m *Model) openTenantForm(item any) tea.Cmd {
 	if !ok {
 		return m.showToast("tenant already resolved or has no tenancy id", toastWarn)
 	}
-	m.editTenant = newEditTenantForm(tgt)
+	m.editTenant = tenantform.New(tgt.ocid, tgt.tenantID)
 	m.lastViewMode = m.viewMode
 	m.viewMode = common.EditTenantView
 	return textinput.Blink
@@ -223,21 +144,33 @@ func (m *Model) enterEditTenantView() tea.Cmd {
 	return m.openTenantForm(m.selectedItem())
 }
 
-// updateEditTenantView handles key events and pastes while the form is
-// open. The async save-result messages (tenantSavedMsg /
-// tenantSaveErrMsg) are intercepted at the top of Update so they fire
-// regardless of the active view, and therefore never reach here.
+// updateEditTenantView resolves key events and pastes while the form is
+// open: the form decides (tenantform.Model.Update), and the parent runs
+// the outcome — a save, a cancel, the portal, a quit. The async
+// save-result messages (tenantSavedMsg / tenantSaveErrMsg) are
+// intercepted at the top of Update so they fire regardless of the active
+// view, and therefore never reach here.
 func (m *Model) updateEditTenantView(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.editTenant == nil {
+	if !m.editTenant.Visible() {
 		return m, nil
 	}
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
-		return m.handleEditTenantKey(msg)
-	case tea.PasteMsg:
-		return m, m.editTenant.updateFocusedField(msg)
+	var res tenantform.Result
+	var cmd tea.Cmd
+	m.editTenant, res, cmd = m.editTenant.Update(msg, m.modalMaxWidth())
+	switch res.Outcome {
+	case tenantform.Quit:
+		return m, m.quit()
+	case tenantform.Cancel:
+		m.editTenant = tenantform.Model{}
+		m.viewMode = common.ListView
+		return m, nil
+	case tenantform.OpenPortal:
+		return m, m.openPortalCmd()
+	case tenantform.Save:
+		return m, m.saveTenantMetadataCmd(res.Entry)
+	case tenantform.None:
 	}
-	return m, nil
+	return m, cmd
 }
 
 // handleTenantSavedMsg finalizes a successful tenant-metadata save. It
@@ -245,9 +178,7 @@ func (m *Model) updateEditTenantView(msg tea.Msg) (tea.Model, tea.Cmd) {
 // form (esc) before the async write landed, so it keys off editTenant
 // state, not viewMode.
 func (m *Model) handleTenantSavedMsg(msg tenantSavedMsg) tea.Cmd {
-	if m.editTenant != nil {
-		m.editTenant = nil
-	}
+	m.editTenant = tenantform.Model{}
 	if m.viewMode == common.EditTenantView {
 		m.viewMode = common.ListView
 	}
@@ -266,74 +197,14 @@ func (m *Model) handleTenantSaveErrMsg(msg tenantSaveErrMsg) tea.Cmd {
 	return m.showErrorWithNext(fmt.Sprintf("save failed: %v", msg.err), "^s retry") // the form keeps the input
 }
 
-// handleEditTenantKey routes a key event while the form is open: tab
-// and the arrows cycle focus, enter moves to the next field and saves on
-// the last, ctrl+s saves from any field, Back cancels, and the remaining
-// keys feed the focused text field. Saving without a name marks the Name
-// field and focuses it.
-//
-//nolint:cyclop // form key router; the per-key switch is inherent and splitting it further would obscure the routing surface.
-func (m *Model) handleEditTenantKey(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	f := m.editTenant
-	k := keyMsg.String()
-	switch {
-	case k == "ctrl+c":
-		return m, m.quit()
-	case key.Matches(keyMsg, keys.Back):
-		m.editTenant = nil
-		m.viewMode = common.ListView
-		return m, nil
-	case k == "tab", k == "down":
-		f.cycleFocus(1)
-		return m, nil
-	case k == "shift+tab", k == "up":
-		f.cycleFocus(-1)
-		return m, nil
-	case key.Matches(keyMsg, keys.OpenPortal):
-		return m, m.openPortalCmd()
-	case k == "ctrl+s" || (key.Matches(keyMsg, keys.Confirm) && f.focus == focusCount-1):
-		entry, valid := f.toEntry()
-		if !valid {
-			f.nameErr = "required"
-			f.focusOn(focusName)
-			return m, nil
-		}
-		return m, m.saveTenantMetadataCmd(entry)
-	case key.Matches(keyMsg, keys.Confirm):
-		f.cycleFocus(1)
-		return m, nil
-	case f.focus == focusInternal && isToggleKey(k):
-		f.toggleInternal()
-		return m, nil
-	}
-
-	return m, f.updateFocusedField(keyMsg)
-}
-
-// updateFocusedField feeds msg (a key or a paste) to the focused text
-// field; the Internal toggle takes no text.
-func (f *editTenantForm) updateFocusedField(msg tea.Msg) tea.Cmd {
-	var cmd tea.Cmd
-	switch f.focus {
-	case focusName:
-		f.name, cmd = f.name.Update(msg)
-		if f.name.Value() != "" {
-			f.nameErr = ""
-		}
-	case focusNote:
-		f.note, cmd = f.note.Update(msg)
-	}
-	return cmd
-}
-
 // openPortalCmd launches the OCI console portal for the form's tenancy
 // OCID in the user's browser, off the UI goroutine. The URL is built
 // before the closure so it doesn't read m concurrently.
 func (m *Model) openPortalCmd() tea.Cmd {
-	if m.editTenant == nil {
+	if !m.editTenant.Visible() {
 		return nil
 	}
-	target := portalURL(m.editTenant.ocid, m.environment.Realm)
+	target := portalURL(m.editTenant.OCID(), m.environment.Realm)
 	return func() tea.Msg {
 		if err := actions.OpenURL(target); err != nil {
 			return portalOpenErrMsg{err: err}
@@ -486,48 +357,6 @@ func rawByTenantID[T any](mm map[string][]T, tenantID func(T) string) map[string
 	return raw
 }
 
-// editTenantView renders the form overlay.
-func (m *Model) editTenantView() string {
-	f := m.editTenant
-	if f == nil {
-		return ""
-	}
-	p := m.theme.Palette
-	marker := func(i int) string {
-		if f.focus == i {
-			return lipgloss.NewStyle().Foreground(p.Accent).Render("▌ ")
-		}
-		return "  "
-	}
-	label := lipgloss.NewStyle().Foreground(p.Muted).Width(10)
-	radio := func(on bool, text string) string {
-		if on {
-			return lipgloss.NewStyle().Foreground(p.Accent).Render("(•)") + " " + text
-		}
-		return "( ) " + text
-	}
-	width := min(m.modalMaxWidth(), 72)
-	field := max(width-4-2-label.GetWidth(), 1) // border+padding, marker, label
-	f.name.SetWidth(field - len("  required"))
-	f.note.SetWidth(field)
-	name := f.name.View()
-	if f.nameErr != "" {
-		name += "  " + lipgloss.NewStyle().Foreground(p.Danger).Render(f.nameErr)
-	}
-	lines := []string{
-		"  " + label.Render("Tenancy") + lipgloss.NewStyle().Bold(true).Render(f.tenantID),
-		"  " + label.Render("") + lipgloss.NewStyle().Foreground(p.Muted).
-			Render(keys.OpenPortal.Help().Key+" opens its page in the DevOps portal"),
-		"",
-		marker(focusName) + label.Render("Name") + name,
-		marker(focusInternal) + label.Render("Internal") +
-			radio(f.isInternal, "internal") + "  " + radio(!f.isInternal, "external"),
-		marker(focusNote) + label.Render("Note") + f.note.View(),
-	}
-	hints := "tab/enter next · space toggle · ^s save · esc cancel"
-	return m.modal("Set tenant info", strings.Join(lines, "\n"), hints, p.Accent, width)
-}
-
 // metadataPath returns the configured metadata file path for display,
 // best-effort via an optional getter on the loader; a placeholder when
 // unavailable.
@@ -538,13 +367,10 @@ func (m *Model) metadataPath() string {
 	return "metadata file"
 }
 
-// isToggleKey reports whether k flips the Internal field. Space is " " in
-// bubbletea v1 and "space" in v2; both are accepted so the swap needs no
-// change here.
-func isToggleKey(k string) bool {
-	switch k {
-	case " ", "space", "left", "right":
-		return true
-	}
-	return false
+// editTenantView renders the form overlay in the theme, sized to the
+// screen; "" when no form is open.
+func (m *Model) editTenantView() string {
+	p := m.theme.Palette
+	return m.editTenant.View(m.modalMaxWidth(),
+		tenantform.Styles{Accent: p.Accent, Muted: p.Muted, Danger: p.Danger})
 }

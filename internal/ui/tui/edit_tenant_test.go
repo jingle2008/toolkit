@@ -9,6 +9,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/tenantform"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -68,29 +69,26 @@ func TestEnterEditTenantView_GatingAndOpen(t *testing.T) {
 	m.environment.Realm = "oc1"
 
 	// Resolved row → no form, stays in list view.
-	m.editTenant = nil
+	m.editTenant = tenantform.Model{}
 	m.viewMode = common.ListView
 	_ = m.openTenantForm(&models.DedicatedAICluster{Name: "d", TenantID: "abc", Owner: &models.Tenant{Name: "acme"}})
-	if m.viewMode != common.ListView || m.editTenant != nil {
+	if m.viewMode != common.ListView || m.editTenant.Visible() {
 		t.Fatal("resolved row must not open the form")
 	}
 
 	// Unresolved row → form opens, seeded with internal=true default.
 	_ = m.openTenantForm(&models.DedicatedAICluster{Name: "d", TenantID: "abc"})
-	if m.viewMode != common.EditTenantView || m.editTenant == nil {
+	if m.viewMode != common.EditTenantView || !m.editTenant.Visible() {
 		t.Fatal("unresolved row should open the form")
 	}
-	if m.editTenant.ocid != "ocid1.tenancy.oc1..abc" {
-		t.Fatalf("form ocid: got %q", m.editTenant.ocid)
+	if m.editTenant.OCID() != "ocid1.tenancy.oc1..abc" {
+		t.Fatalf("form ocid: got %q", m.editTenant.OCID())
 	}
-	if !m.editTenant.isInternal {
+	if m.editTenant.TenantID() != "abc" {
+		t.Fatalf("form tenantID: got %q", m.editTenant.TenantID())
+	}
+	if !m.editTenant.Internal() {
 		t.Fatal("internal should default to true")
-	}
-
-	// Toggle internal.
-	m.editTenant.toggleInternal()
-	if m.editTenant.isInternal {
-		t.Fatal("toggleInternal should flip to false")
 	}
 }
 
@@ -101,30 +99,6 @@ func TestPortalURL(t *testing.T) {
 	want := "https://devops.oci.oraclecorp.com/account/admin/detail/metadata/ocid1.tenancy.oc1..abc?realm=oc1"
 	if got != want {
 		t.Fatalf("portalURL:\n got %q\nwant %q", got, want)
-	}
-}
-
-func TestEditTenantForm_EntryRequiresName(t *testing.T) {
-	t.Parallel()
-
-	f := newEditTenantForm(editTarget{ocid: "ocid1.tenancy.oc1..abc", tenantID: "abc"})
-	if _, ok := f.toEntry(); ok {
-		t.Fatal("empty name must be rejected")
-	}
-	f.name.SetValue("   ")
-	if _, ok := f.toEntry(); ok {
-		t.Fatal("a name of spaces must be rejected")
-	}
-	f.name.SetValue(" acme ")
-	f.note.SetValue("hi")
-	f.isInternal = true
-	entry, ok := f.toEntry()
-	if !ok {
-		t.Fatal("valid form should produce an entry")
-	}
-	if entry.ID != "ocid1.tenancy.oc1..abc" || entry.Name == nil || *entry.Name != "acme" ||
-		entry.IsInternal == nil || !*entry.IsInternal || entry.Note == nil || *entry.Note != "hi" {
-		t.Fatalf("entry mismatch: %+v", entry)
 	}
 }
 
@@ -225,7 +199,7 @@ func TestHandleTenantSavedMsg_AfterFormDismissed(t *testing.T) {
 	t.Parallel()
 	m := makeTestModel()
 	m.viewMode = common.ListView
-	m.editTenant = nil // user already pressed esc
+	m.editTenant = tenantform.Model{} // user already pressed esc
 	m.dataset = &models.Dataset{}
 	m.category = domain.DedicatedAICluster
 	cmd := m.handleTenantSavedMsg(tenantSavedMsg{
@@ -262,16 +236,6 @@ func TestHandleTenantSavedMsg_OtherRealmNotApplied(t *testing.T) {
 	}
 	if len(m.dataset.Tenants) != 0 {
 		t.Fatalf("an oc1 tenant must not join oc2's tenants: %+v", m.dataset.Tenants)
-	}
-}
-
-func TestIsToggleKey(t *testing.T) {
-	t.Parallel()
-	for _, k := range []string{" ", "space", "left", "right"} {
-		assert.True(t, isToggleKey(k), k)
-	}
-	for _, k := range []string{"tab", "x", "enter"} {
-		assert.False(t, isToggleKey(k), k)
 	}
 }
 
