@@ -30,6 +30,11 @@ type Deps struct {
 	NodeCordoned func(ctx context.Context, kubeConfig, kubeContext, node string) (bool, error)
 	SetCordon    func(ctx context.Context, kubeConfig, kubeContext, node string, unschedulable bool) (bool, error)
 	DrainStatus  func(ctx context.Context, kubeConfig, kubeContext, node string) (k8s.DrainStatus, error)
+	// DrainNode drives a drain to its end; StartDrain starts (or resumes)
+	// one and returns, for AwaitDrain to drive in the background.
+	DrainNode  func(ctx context.Context, kubeConfig, kubeContext, node string) error
+	StartDrain func(ctx context.Context, kubeConfig, kubeContext, node string) (k8s.DrainStatus, error)
+	AwaitDrain func(ctx context.Context, kubeConfig, kubeContext, node string) error
 
 	SoftReset        func(ctx context.Context, node *models.GPUNode, env models.Environment, logger *slog.Logger) error
 	Terminate        func(ctx context.Context, node *models.GPUNode, env models.Environment, logger *slog.Logger) error
@@ -47,6 +52,29 @@ type Deps struct {
 	// reporting whether the entry exists.
 	CheckTenant  func(entry models.TenantMetadata) (bool, error)
 	UpsertTenant func(ctx context.Context, entry models.TenantMetadata) error
+}
+
+// Production is Deps over the live cluster and OCI. The calls that need
+// the front-end's loader and settings — ResolveGPUNode, ResolveGPUPool,
+// CheckTenant, UpsertTenant — are the front-end's to set.
+func Production() Deps {
+	return Deps{
+		NodeCordoned:     k8s.NodeCordoned,
+		SetCordon:        k8s.SetCordon,
+		DrainStatus:      k8s.GetDrainStatus,
+		DrainNode:        k8s.DrainNode,
+		StartDrain:       k8s.StartDrain,
+		AwaitDrain:       k8s.AwaitDrain,
+		SoftReset:        oci.SoftResetInstance,
+		Terminate:        oci.TerminateInstance,
+		IncreasePoolSize: oci.IncreasePoolSize,
+		GetDAC:           oci.GetDedicatedAICluster,
+		DeleteDAC:        oci.DeleteDedicatedAICluster,
+		ResolveISVC:      k8s.ResolveInferenceService,
+		RestartISVC:      k8s.RestartInferenceService,
+		PlanOrphanISVC:   k8s.PlanOrphanInferenceServiceDelete,
+		DeleteOrphanISVC: k8s.DeleteOrphanInferenceService,
+	}
 }
 
 // Env is where a mutation acts.

@@ -28,6 +28,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -46,6 +47,8 @@ type Server struct {
 	// envCache is the repo's environments, which envGuard checks env
 	// overrides against.
 	envCache envCache
+	// deps is the mutations' infra calls; tests fake them.
+	deps *ops.Deps
 }
 
 // NewServer constructs a server that exposes read-only category tools.
@@ -58,6 +61,7 @@ func NewServer(cfg config.Config, ld loader.Composite, logger *slog.Logger, vers
 		logger: logger,
 		bgCtx:  logging.WithContext(context.Background(), logger),
 	}
+	s.deps = productionDeps(s)
 	s.server = sdk.NewServer(&sdk.Implementation{
 		Name:    "toolkit",
 		Version: version,

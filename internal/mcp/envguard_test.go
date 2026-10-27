@@ -1,4 +1,3 @@
-//nolint:paralleltest // replaces the package-level mcpLoadEnvironmentsFn seam
 package mcp
 
 import (
@@ -10,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/logging"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -31,6 +31,8 @@ var ashburnDev = models.Environment{Realm: "oc1", Type: "dev", Region: "us-ashbu
 // An override naming an environment the repo doesn't declare is refused
 // before the handler runs, instead of loading the startup cluster's rows
 // under it.
+//
+//nolint:paralleltest // swaps package-level seams
 func TestEnvGuard_RefusesUnknownOverride(t *testing.T) {
 	stubEnvironments(t, ashburnDev, models.Environment{Realm: "oc1", Type: "dev", Region: "us-phoenix-1"})
 	for _, args := range []map[string]any{
@@ -49,6 +51,8 @@ func TestEnvGuard_RefusesUnknownOverride(t *testing.T) {
 }
 
 // A declared environment passes, in any case and as a short code.
+//
+//nolint:paralleltest // swaps package-level seams
 func TestEnvGuard_AcceptsKnownOverride(t *testing.T) {
 	stubEnvironments(t, ashburnDev, models.Environment{Realm: "oc1", Type: "dev", Region: "us-phoenix-1"})
 	for _, args := range []map[string]any{
@@ -66,10 +70,13 @@ func TestEnvGuard_AcceptsKnownOverride(t *testing.T) {
 
 // Mutation tools ignore overrides without --mutation-env-override-allowed,
 // so the guard doesn't refuse them either.
+//
+//nolint:paralleltest // swaps package-level seams
 func TestEnvGuard_SkipsIgnoredMutationOverrides(t *testing.T) {
+	d := &ops.Deps{}
 	loads := stubEnvironments(t, ashburnDev)
-	performed := stubPerformSeams(t)
-	res := callTool(t, "cordon_node", with(mutationArgs["cordon_node"], "env_realm", "oc99", "dry_run", true))
+	performed := stubPerformSeams(d)
+	res := callToolWith(t, d, "cordon_node", with(mutationArgs["cordon_node"], "env_realm", "oc99", "dry_run", true))
 	require.False(t, res.IsError, resultText(t, res))
 	assert.Zero(t, *loads)
 	assert.Empty(t, *performed)
@@ -77,6 +84,8 @@ func TestEnvGuard_SkipsIgnoredMutationOverrides(t *testing.T) {
 
 // When the repo's environments don't load, nothing is refused: the
 // tool's own loaders report the repo's state.
+//
+//nolint:paralleltest // swaps package-level seams
 func TestEnvGuard_UnloadableEnvironmentsPass(t *testing.T) {
 	orig := mcpLoadEnvironmentsFn
 	t.Cleanup(func() { mcpLoadEnvironmentsFn = orig })
@@ -90,6 +99,7 @@ func TestEnvGuard_UnloadableEnvironmentsPass(t *testing.T) {
 // mutationTools names every mutating tool, so the guard knows which
 // overrides are ignored.
 func TestMutationTools_ListedForEnvGuard(t *testing.T) {
+	t.Parallel()
 	for _, tool := range listedTools(t) {
 		mutating := tool.Annotations == nil || !tool.Annotations.ReadOnlyHint
 		assert.Equal(t, mutating, mutationTools[tool.Name], tool.Name)
@@ -98,6 +108,8 @@ func TestMutationTools_ListedForEnvGuard(t *testing.T) {
 
 // A reload for an override the cache lacks doesn't hold up another
 // call's override that the cache has.
+//
+//nolint:paralleltest // swaps package-level seams
 func TestCheckEnvOverride_ReloadDoesNotBlockCachedOverrides(t *testing.T) {
 	release := make(chan struct{})
 	reloading := make(chan struct{})
