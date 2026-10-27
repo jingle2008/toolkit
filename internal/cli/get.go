@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -16,11 +15,10 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
-	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/output"
+	"github.com/jingle2008/toolkit/internal/query"
 	"github.com/jingle2008/toolkit/internal/relations"
-	"github.com/jingle2008/toolkit/internal/resolve"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -399,29 +397,13 @@ func warnNoneRelated(cat domain.Category, related *domain.Scope) {
 		cat, strings.ToLower(related.Category.String()), related.Name, related.Category)
 }
 
-// tenantDataset loads the env's tenants for resolving tenant-owned rows.
-// A load failure is a warning, not an error: the rows still print, just
-// keyed by raw tenancy-id with no owner (the pre-resolution shape).
-func tenantDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) *models.Dataset {
-	ds, err := resolve.TenantDataset(ctx, ld, cfg.RepoPath, env)
-	if err != nil {
-		logging.FromContext(ctx).Warn("tenant resolution unavailable", "error", err)
-		fmt.Fprintf(os.Stderr, "warning: tenant names unresolved: %s\n", err)
+// warnLoad prints each of a load's warnings on stderr, for scripts and
+// LLM consumers to know the result is incomplete, and logs it.
+func warnLoad(ctx context.Context, warnings []string) {
+	for _, w := range warnings {
+		logging.FromContext(ctx).Warn("load incomplete", "warning", w)
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
-	return ds
-}
-
-// workloadOwnersDataset is tenantDataset with the DACs too: they give a
-// GPU pod without a tenancy-id label its tenant. A failed DAC load only
-// leaves those pods unowned.
-func workloadOwnersDataset(ctx context.Context, ld loader.Composite, cfg config.Config, env models.Environment) *models.Dataset {
-	ds := tenantDataset(ctx, ld, cfg, env)
-	if dacs, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env); err == nil {
-		ds.SetDedicatedAIClusterMap(dacs)
-	} else {
-		logging.FromContext(ctx).Warn("dacs for workload tenants unavailable", "error", err)
-	}
-	return ds
 }
 
 //nolint:cyclop // a simple per-category switch is clearer than a registry here
@@ -438,6 +420,7 @@ func emitCategory(
 	opts output.Options,
 	selected []string,
 ) error {
+	src := query.Source{Loader: ld, RepoPath: cfg.RepoPath, KubeConfig: cfg.KubeConfig}
 	switch cat {
 	case domain.Alias:
 		// Static enum dump — no loader call. Handled before the default
@@ -450,37 +433,19 @@ func emitCategory(
 		items, err := ld.LoadServingRuntimes(ctx, cfg.KubeConfig, env)
 		return emitFlat(w, items, err, "serving runtimes", filter, limit, opts, domain.ServingRuntime, env, selected)
 	case domain.ImportedModel:
-		grouped, err := ld.LoadImportedModels(ctx, cfg.KubeConfig, env)
+		grouped, warnings, err := query.ImportedModels(ctx, src, env)
 		if err != nil {
-			return fmt.Errorf("load imported models: %w", err)
+			return err
 		}
-		// Re-key by tenant name and set each item's `owner`, as the
-		// TUI does; each item still carries its raw `tenantId`.
-		ds := tenantDataset(ctx, ld, cfg, env)
-		ds.SetImportedModelMap(grouped)
-		return writeMap(w, relatedOrFiltered(relations.ImportedModel, ds.ImportedModelMap, domain.ImportedModel, related, filter),
+		warnLoad(ctx, warnings)
+		return writeMap(w, relatedOrFiltered(relations.ImportedModel, grouped, domain.ImportedModel, related, filter),
 			limit, opts, domain.ImportedModel, env, selected)
 	case domain.GPUPool:
-		items, err := ld.LoadGPUPools(ctx, cfg.RepoPath, env)
+		items, warnings, err := query.GPUPools(ctx, src, env)
 		if err != nil {
-			// Partial success: items has the rows we could load; surface
-			// the per-source failures on stderr so scripts and LLM
-			// consumers know the result is incomplete, then proceed.
-			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
-				logging.FromContext(ctx).Warn("load gpu pools: partial failure", "error", partial)
-				fmt.Fprintf(os.Stderr, "warning: load gpu pools: %s\n", partial.Error())
-			} else {
-				return fmt.Errorf("load gpu pools: %w", err)
-			}
+			return err
 		}
-		// Enrich ActualSize / Status from OCI's ListInstancePools (same
-		// step the TUI runs after load). Degrades to placeholder on
-		// failure so an offline / no-OCI-auth session still prints the
-		// Terraform-derived columns.
-		if err := resolve.EnrichGPUPools(ctx, items, cfg.KubeConfig, env); err != nil {
-			logging.FromContext(ctx).Warn("gpu pool enrichment incomplete", "error", err)
-			fmt.Fprintf(os.Stderr, "warning: gpu pool enrichment incomplete: %s\n", err)
-		}
+		warnLoad(ctx, warnings)
 		return writeSlice(w, collections.FilterSlice(items, nil, filter, nil), limit, opts, domain.GPUPool, env, selected)
 	case domain.GPUNode:
 		grouped, err := ld.LoadGPUNodesByPool(ctx, cfg.KubeConfig, env)
@@ -492,39 +457,30 @@ func emitCategory(
 		// it from the same value used as the map key.
 		return writeMap(w, relatedOrFiltered(relations.GPUNode, grouped, domain.GPUNode, related, filter), limit, opts, domain.GPUNode, env, selected)
 	case domain.GPUWorkload:
-		// The workloads' owners load while they do.
-		owners := make(chan *models.Dataset, 1)
-		go func() { owners <- workloadOwnersDataset(ctx, ld, cfg, env) }()
-		grouped, err := ld.LoadGPUWorkloadsByNode(ctx, cfg.KubeConfig, env)
+		grouped, warnings, err := query.GPUWorkloads(ctx, src, env)
 		if err != nil {
-			return fmt.Errorf("load gpu workloads: %w", err)
+			return err
 		}
-		ds := <-owners
-		ds.SetGPUWorkloadMap(grouped)
-		return writeMap(w, relatedOrFiltered(relations.GPUWorkload, ds.GPUWorkloadMap, domain.GPUWorkload, related, filter),
+		warnLoad(ctx, warnings)
+		return writeMap(w, relatedOrFiltered(relations.GPUWorkload, grouped, domain.GPUWorkload, related, filter),
 			limit, opts, domain.GPUWorkload, env, selected)
 	case domain.DedicatedAICluster:
-		grouped, err := ld.LoadDedicatedAIClusters(ctx, cfg.KubeConfig, env)
+		grouped, warnings, err := query.DACs(ctx, src, env)
 		if err != nil {
-			return fmt.Errorf("load dedicated AI clusters: %w", err)
+			return err
 		}
-		// Re-key from raw tenancy-id to tenant name and set each
-		// item's `owner`, as the TUI does; unresolved tenancies keep
-		// the raw key. Each item still carries its raw `tenantId`.
-		ds := tenantDataset(ctx, ld, cfg, env)
-		ds.SetDedicatedAIClusterMap(grouped)
-		return writeMap(w, relatedOrFiltered(relations.DedicatedAICluster, ds.DedicatedAIClusterMap, domain.DedicatedAICluster, related, filter),
+		warnLoad(ctx, warnings)
+		return writeMap(w, relatedOrFiltered(relations.DedicatedAICluster, grouped, domain.DedicatedAICluster, related, filter),
 			limit, opts, domain.DedicatedAICluster, env, selected)
 	case domain.InferenceService:
-		grouped, err := ld.LoadInferenceServices(ctx, cfg.KubeConfig, env)
-		if err != nil {
-			return fmt.Errorf("load inference services: %w", err)
-		}
 		// No top-level `namespace` injection: InferenceService.Namespace
-		// already carries the group key. Owners are resolved in place.
-		ds := tenantDataset(ctx, ld, cfg, env)
-		ds.SetInferenceServiceMap(grouped)
-		return writeMap(w, relatedOrFiltered(relations.InferenceService, ds.InferenceServiceMap, domain.InferenceService, related, filter),
+		// already carries the group key.
+		grouped, warnings, err := query.InferenceServices(ctx, src, env)
+		if err != nil {
+			return err
+		}
+		warnLoad(ctx, warnings)
+		return writeMap(w, relatedOrFiltered(relations.InferenceService, grouped, domain.InferenceService, related, filter),
 			limit, opts, domain.InferenceService, env, selected)
 	case domain.Tenant,
 		domain.LimitTenancyOverride,

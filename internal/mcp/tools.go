@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/output"
-	"github.com/jingle2008/toolkit/internal/resolve"
+	"github.com/jingle2008/toolkit/internal/query"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -188,18 +187,6 @@ func registerTools(s *Server) {
 
 // --- Handlers -----------------------------------------------------
 
-// tenantDataset loads env's tenants for resolving tenant-owned rows. A
-// load failure degrades to a warning (rows stay keyed by raw tenancy-id
-// with no owner) rather than failing the list call.
-func (s *Server) tenantDataset(ctx context.Context, env models.Environment) (*models.Dataset, []string) {
-	ds, err := resolve.TenantDataset(ctx, s.loader, s.cfg.RepoPath, env)
-	if err != nil {
-		s.logger.Warn("tenant resolution unavailable", "surface", "mcp", "error", err)
-		return ds, []string{"tenant names unresolved: " + err.Error()}
-	}
-	return ds, nil
-}
-
 // listFlatResult applies the shared filter + limit + JSON-envelope
 // step to an already-loaded slice. Captures the trailing pattern of
 // every list_* tool that returns []T directly.
@@ -268,31 +255,11 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 	if in.Faulty {
 		return faultyFlat(ctx, s, domain.GPUPool, in, func(ds *models.Dataset) []models.GPUPool { return ds.GPUPools })
 	}
-	env := s.envFor(in.envOverride)
-	items, err := s.loader.LoadGPUPools(ctx, s.cfg.RepoPath, env)
-	warnings := warningsFromPartial(err)
-	if err != nil && len(warnings) == 0 {
-		return failTool[listResult[models.GPUPool]]("load gpu pools", err)
+	items, warnings, err := query.GPUPools(ctx, s.source(), s.envFor(in.envOverride))
+	if err != nil {
+		return failTool[listResult[models.GPUPool]]("list gpu pools", err)
 	}
-	// The client sees these via listResult.Warnings; the log line is for
-	// operators reading the log file, matching what mutations already do.
-	if len(warnings) > 0 {
-		s.logger.Warn(
-			"load gpu pools", "surface", "mcp",
-			"phase", "partial", "sources", len(warnings),
-			"warnings", strings.Join(warnings, "; "),
-		)
-	}
-	// Enrich ActualSize / Status from OCI's ListInstancePools (same
-	// step the TUI runs after load). Degrades to a warning if the K8s
-	// or OCI call fails so callers still get Terraform-derived data.
-	if err := resolve.EnrichGPUPools(ctx, items, s.cfg.KubeConfig, env); err != nil {
-		warnings = append(warnings, "enrichment incomplete: "+err.Error())
-		s.logger.Warn(
-			"load gpu pools", "surface", "mcp",
-			"phase", "enrichment", "error", err,
-		)
-	}
+	s.logLoadWarnings("gpu pools", warnings)
 	return listFlatResult(items, in.Filter, in.Limit, warnings)
 }
 

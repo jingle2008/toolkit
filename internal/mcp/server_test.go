@@ -1,14 +1,12 @@
 package mcp
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -96,21 +94,6 @@ func TestMutationOK_Shape(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, mutationResult{Status: "OK", Action: "cordon", Kind: "node", Target: "gpu-node-42"},
 		mutationOK("cordon", "node", "gpu-node-42"))
-}
-
-func TestWarningsFromPartial(t *testing.T) {
-	t.Parallel()
-	assert.Nil(t, warningsFromPartial(nil))
-	assert.Nil(t, warningsFromPartial(errors.New("plain error")))
-
-	p := &terraform.PartialLoadError{
-		Source: "GPUPools",
-		Errs: []error{
-			errors.New("source-a: nope"),
-			errors.New("source-b: also nope"),
-		},
-	}
-	assert.Equal(t, []string{"source-a: nope", "source-b: also nope"}, warningsFromPartial(p))
 }
 
 func TestNormFilter(t *testing.T) {
