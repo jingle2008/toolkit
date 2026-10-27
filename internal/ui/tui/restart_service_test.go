@@ -61,13 +61,11 @@ func TestShiftR_InGPUNode_RestartsNode(t *testing.T) {
 	assert.Equal(t, "node", actionNoun(m.confirmPending.action))
 }
 
-//nolint:paralleltest // swaps the package-level restartInferenceServiceFn seam
 func TestRestartInferenceService_ConfirmPatchesRow(t *testing.T) {
+	t.Parallel()
 	m := newInferenceServiceModel(t)
 	var gotNS, gotName string
-	orig := restartInferenceServiceFn
-	t.Cleanup(func() { restartInferenceServiceFn = orig })
-	restartInferenceServiceFn = func(_ context.Context, _, _, namespace, name string) error {
+	m.deps.RestartISVC = func(_ context.Context, _, _, namespace, name string) error {
 		gotNS, gotName = namespace, name
 		return nil
 	}
@@ -108,14 +106,11 @@ func TestHandleRestartServiceResultMsg_Toasts(t *testing.T) {
 // TestRestartInferenceService_LegacyDispatches pins that a legacy
 // (ome.oracle.com/v1alpha1) row restarts like any other: the k8s layer
 // picks the API, so the TUI just dispatches namespace/name.
-//
-//nolint:paralleltest // swaps the package-level restartInferenceServiceFn seam
 func TestRestartInferenceService_LegacyDispatches(t *testing.T) {
+	t.Parallel()
 	m := newTestModel(t)
 	var called bool
-	orig := restartInferenceServiceFn
-	t.Cleanup(func() { restartInferenceServiceFn = orig })
-	restartInferenceServiceFn = func(_ context.Context, _, _, namespace, name string) error {
+	m.deps.RestartISVC = func(_ context.Context, _, _, namespace, name string) error {
 		called = namespace == "ns1" && name == "svc1"
 		return nil
 	}

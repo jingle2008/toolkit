@@ -15,12 +15,6 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Seams tests use to fake the orphan check and the delete.
-var (
-	planOrphanISVCDeleteFn = k8s.PlanOrphanInferenceServiceDelete
-	deleteOrphanISVCFn     = k8s.DeleteOrphanInferenceService
-)
-
 // isvcDeletePlannedMsg carries the orphan check for the endpoint at key:
 // what deleting it would do, or why it's refused.
 type isvcDeletePlannedMsg struct {
@@ -47,11 +41,11 @@ func (m *Model) planDeleteInferenceService(itemKey models.ItemKey, item any) tea
 		return nil
 	}
 	namespace, name := svc.Namespace, svc.Name
-	env, kubeConfig, opCtx := m.environment, m.kubeConfig, m.opCtxFunc()
+	env, kubeConfig, opCtx, deps := m.environment, m.kubeConfig, m.opCtxFunc(), m.deps
 	return func() tea.Msg {
 		ctx, cancel := opCtx()
 		defer cancel()
-		outcome, err := planOrphanISVCDeleteFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
+		outcome, err := deps.PlanOrphanISVC(ctx, kubeConfig, env.KubeContext(), namespace, name)
 		return isvcDeletePlannedMsg{key: itemKey, outcome: outcome, err: err, env: env}
 	}
 }
@@ -88,14 +82,14 @@ func (m *Model) deleteOrphanInferenceService(itemKey models.ItemKey, a mutation.
 		return m.showToast(itemKeyString(itemKey)+" is gone", toastInfo)
 	}
 	namespace, name := svc.Namespace, svc.Name
-	env, kubeConfig, opCtx, logger := m.environment, m.kubeConfig, m.opCtxFunc(), m.logger
+	env, kubeConfig, opCtx, logger, deps := m.environment, m.kubeConfig, m.opCtxFunc(), m.logger, m.deps
 	return m.trackAction(strings.ToLower(actionVerb(a))+" "+namespace+"/"+name, "", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := opCtx()
 		defer cancel()
 		var outcome k8s.OrphanDeleteOutcome
 		err := audited(logger, a, namespace+"/"+name, func() error {
 			var err error
-			outcome, err = deleteOrphanISVCFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
+			outcome, err = deps.DeleteOrphanISVC(ctx, kubeConfig, env.KubeContext(), namespace, name)
 			return err
 		})
 		return isvcDeleteResultMsg{key: itemKey, outcome: outcome, err: err, env: env}

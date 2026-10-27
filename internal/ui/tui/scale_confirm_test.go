@@ -105,18 +105,16 @@ func TestConfirmScale_EditCount(t *testing.T) {
 
 // The confirmed count is the one scaled by, and the audit records the
 // count and the sizes OCI went from and to.
-//
-//nolint:paralleltest // swaps the package-level increasePoolSizeFn seam
 func TestConfirmScale_ConfirmedScalesByCount(t *testing.T) {
-	orig := increasePoolSizeFn
-	t.Cleanup(func() { increasePoolSizeFn = orig })
+	t.Parallel()
 	gotAdd := 0
-	increasePoolSizeFn = func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
+	fakeIncreasePoolSize := func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotAdd = add
 		return oci.PoolScale{Shown: p.ActualSize, Before: p.ActualSize, After: p.ActualSize + add}, nil
 	}
 	pool := models.GPUPool{Name: "pool-a", ID: "p", Size: 4, ActualSize: 4, Status: "RUNNING"}
 	m, key, sink := newScaleModel(t, pool)
+	m.deps.IncreasePoolSize = fakeIncreasePoolSize
 	m.requestScale(key, &pool)
 	m.updateConfirmView(keyPress("backspace"))
 	m.updateConfirmView(keyPress("3"))
@@ -138,17 +136,15 @@ func TestConfirmScale_ConfirmedScalesByCount(t *testing.T) {
 
 // A pool a reload removed while the modal was open is toasted as gone
 // when the user confirms, not scaled or silently dropped.
-//
-//nolint:paralleltest // swaps the package-level increasePoolSizeFn seam
 func TestConfirmScale_PoolGoneByConfirm(t *testing.T) {
-	orig := increasePoolSizeFn
-	t.Cleanup(func() { increasePoolSizeFn = orig })
-	increasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
+	t.Parallel()
+	fakeIncreasePoolSize := func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
 		t.Error("must not scale")
 		return oci.PoolScale{}, nil
 	}
 	pool := models.GPUPool{Name: "pool-a", ID: "p", Size: 4, ActualSize: 2, Status: "RUNNING"}
 	m, key, _ := newScaleModel(t, pool)
+	m.deps.IncreasePoolSize = fakeIncreasePoolSize
 	m.requestScale(key, &pool)
 	m.dataset = &models.Dataset{GPUPools: []models.GPUPool{{Name: "pool-b"}}}
 
