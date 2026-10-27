@@ -159,3 +159,21 @@ func TestDeleteEndpointsInDAC_StopsAfterFailure(t *testing.T) {
 		assert.LessOrEqual(t, len(deleted), 6)
 	})
 }
+
+// A ctx done before any endpoint is queued is an error, not "endpoints
+// deleted": the DAC delete must not go on as if they were.
+func TestDeleteEndpointsInDAC_CancelledBeforeQueueing(t *testing.T) {
+	t.Parallel()
+	client := &fakeGenAI{
+		ListEndpointsResp: endpointsFor("dac", 3),
+		DeleteEndpointFunc: func(generativeai.DeleteEndpointRequest) (generativeai.DeleteEndpointResponse, error) {
+			t.Error("no endpoint may be deleted")
+			return generativeai.DeleteEndpointResponse{}, nil
+		},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	dac := &generativeai.DedicatedAiCluster{Id: strPtr("dac"), CompartmentId: strPtr("c")}
+	err := deleteEndpointsInDAC(ctx, client, dac, logging.Discard())
+	require.ErrorIs(t, err, context.Canceled)
+}
