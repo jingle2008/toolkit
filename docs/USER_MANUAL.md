@@ -96,7 +96,8 @@ category: "tenant"
 metadata-file: ""
 
 # Logging
-log-file:   "toolkit.log"
+log-dir:    ""           # empty = ~/.local/state/toolkit/logs
+log-file:   ""           # optional single file instead of per-session files
 log-format: "console"   # console | json
 log-level:  ""           # debug | info | warn | error (empty = default)
 debug:      false
@@ -121,7 +122,8 @@ All flags can be set in the config file or passed directly on the command line. 
 | `filter`        | `-f / --filter`    | `""`                                 | No       | Pre-applied filter on startup                |
 | `metadata-file` | `--metadata-file`  | `~/.config/toolkit/metadata.yaml`    | No       | Optional extra metadata file                 |
 | `config`        | `--config`         | `~/.config/toolkit/config.yaml`      | No       | Path to the config file itself               |
-| `log-file`      | `--log-file`       | `toolkit.log`                        | No       | Log output path                              |
+| `log-dir`       | `--log-dir`        | `~/.local/state/toolkit/logs`        | No       | Directory for per-session log files          |
+| `log-file`      | `--log-file`       | `""`                                 | No       | Single log file instead of per-session files |
 | `debug`         | `-d / --debug`     | `false`                              | No       | Enable debug-level logging                   |
 | `log-format`    | `--log-format`     | `console`                            | No       | Log format: `console` or `json`               |
 | `log-level`     | `--log-level`      | `""`                                 | No       | Minimum log level: `debug` `info` `warn` `error` |
@@ -670,13 +672,26 @@ After sourcing the file / restarting your shell, pressing `Tab` while typing `to
 
 ## Logging & Debugging
 
-Toolkit writes structured logs to a file (default: `toolkit.log` in your working directory).
+Toolkit writes structured logs to one file per process (session) in `~/.local/state/toolkit/logs` (`$XDG_STATE_HOME/toolkit/logs` when set), named `<start>-<cmd>-<pid>.log`. Running several instances at once is safe: each has its own file. Exited sessions beyond the newest 50, or idle for 14 days, are pruned automatically.
 
 ```bash
+# Show the latest session's log, or follow it live
+toolkit logs
+toolkit logs --follow
+
+# List sessions; pick one by PID or by command
+toolkit logs ls
+toolkit logs 4242
+toolkit logs --cmd mcp --follow
+
+# The TUI's captured stderr (exec auth plugins, panics)
+toolkit logs --stderr
+
 # Enable verbose debug logging
 toolkit --debug
 
-# Write logs to a custom path
+# Write logs to a custom directory, or to one fixed file
+toolkit --log-dir /tmp/tk-logs
 toolkit --log-file /tmp/tk-debug.log
 
 # Use JSON format for log shipping / parsing

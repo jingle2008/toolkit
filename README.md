@@ -124,7 +124,8 @@ toolkit --help                # all global flags
 | `--filter, -f` |  | Initial filter for current category |
 | `--metadata-file` | `~/.config/toolkit/metadata.yaml` | Optional additional metadata file |
 | `--kubeconfig` | `~/.kube/config` | Path to kubeconfig file |
-| `--log-file` | `toolkit.log` | Path to log file |
+| `--log-dir` | `~/.local/state/toolkit/logs` | Directory for per-session log files (honors `$XDG_STATE_HOME`) |
+| `--log-file` |  | Write logs to this single file instead of per-session files |
 | `--debug, -d` | `false` | Enable debug logging |
 | `--log-format` | `console` | Log format: `console` or `json` (`slog`: deprecated alias of `json`) |
 | `--log-level` | | Minimum log level: `debug`, `info`, `warn`, `error` (empty uses `--debug` flag) |
@@ -181,7 +182,7 @@ With a name, `get` prints just that row: the name must match the row's first col
 
 `--faulty` keeps the rows the TUI's Ctrl+Z shows: rows in a bad state (an unready endpoint, a pool short of its declared size, a deleting tenant, …) or naming a parent row that doesn't exist, as `doctor --relations` reports. It applies to `basemodel`, `tenant`, `gpupool`, `gpunode`, `gpuworkload`, `servingruntime`, `dac` and `inferenceservice`, combines with `--filter` and `--related-to`, and loads every category, so it needs the cluster. For `gpupool` it also needs OCI, since a pool's live size decides; without it the command fails rather than list every pool.
 
-Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit get alias` for the full list, or enable shell completion (`toolkit completion zsh`) for tab-completion. Logs are written to `--log-file` (default `toolkit.log`) so stdout stays clean for parsing.
+Category aliases match the TUI (`t`, `bm`, `gn`, `dac`, …). Run `toolkit get alias` for the full list, or enable shell completion (`toolkit completion zsh`) for tab-completion. Logs go to a per-session file (see [Logging](#logging)) so stdout stays clean for parsing.
 
 For `gpunode`, `dac`, `modelartifact`, and the tenancy-override categories, the structured outputs (`json`, `jsonl`, `yaml`) are a flat array of objects with the originating group key injected as `pool`, `tenant`, or `model` — easier for `jq` and LLM consumers than the previous map-shaped output.
 
@@ -405,7 +406,7 @@ Toolkit follows a modular, testable architecture:
 
 ## Logging
 
-Toolkit uses Go's [log/slog](https://pkg.go.dev/log/slog) for structured, machine-readable logging; each line carries its source location, and client-go's klog output is routed into the same log. By default logs are written to `toolkit.log` (configurable via `--log-file`) and support `--log-format` of `console` (key=value text) or `json` (`slog` is a deprecated alias of `json`). The minimum log level can be set via `--log-level` (`debug`, `info`, `warn`, `error`).
+Toolkit uses Go's [log/slog](https://pkg.go.dev/log/slog) for structured, machine-readable logging; each line carries its source location, and client-go's klog output is routed into the same log. Every toolkit process (TUI, `get`, `mcp`, mutations) logs to its own session file, `<start>-<cmd>-<pid>.log`, in `~/.local/state/toolkit/logs` (`$XDG_STATE_HOME/toolkit/logs` when set, `%LocalAppData%\toolkit\logs` on Windows; change it with `--log-dir`), so concurrent instances never share a file. Exited sessions beyond the newest 50, or idle for 14 days, are pruned when the next one starts. `toolkit logs` prints the latest session (`--follow` to tail it, `--cmd mcp` to pick by command, `toolkit logs ls` to list them). `--log-file` writes to one file instead. Logs support `--log-format` of `console` (key=value text) or `json` (`slog` is a deprecated alias of `json`). The minimum log level can be set via `--log-level` (`debug`, `info`, `warn`, `error`).
 
 ## Contributing
 

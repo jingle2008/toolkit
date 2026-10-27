@@ -275,7 +275,7 @@ func (s *Server) handleListGPUPools(ctx context.Context, req *sdk.CallToolReques
 		return failTool[listResult[models.GPUPool]]("load gpu pools", err)
 	}
 	// The client sees these via listResult.Warnings; the log line is for
-	// operators reading cfg.LogFile, matching what mutations already do.
+	// operators reading the log file, matching what mutations already do.
 	if len(warnings) > 0 {
 		s.logger.Warn(
 			"load gpu pools", "surface", "mcp",

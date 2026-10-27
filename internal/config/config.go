@@ -19,6 +19,7 @@ type Config struct {
 	EnvRegion    string `mapstructure:"env-region"`
 	EnvRealm     string `mapstructure:"env-realm"`
 	Category     string `mapstructure:"category"`
+	LogDir       string `mapstructure:"log-dir"`
 	LogFile      string `mapstructure:"log-file"`
 	Debug        bool   `mapstructure:"debug"`
 	Filter       string `mapstructure:"filter"`

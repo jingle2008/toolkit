@@ -38,7 +38,8 @@ env-type: "dev"
 env-region: "us-phoenix-1"
 env-realm: "oc1"
 category: "tenant"
-log-file: "toolkit.log"
+log-dir: "" # per-session log files; empty uses ~/.local/state/toolkit/logs ($XDG_STATE_HOME)
+log-file: "" # optional single log file instead of per-session files
 log-format: "console" # console|json|slog
 log-level: "" # debug|info|warn|error (empty uses debug flag)
 debug: false
@@ -65,6 +66,7 @@ metadata-file: "" # Optional path to a YAML or JSON file with additional metadat
 	addPersistentFlags(rootCmd, &cfgFile, defaultKube, defaultConfig, defaultMetadata)
 	addInitCommand(rootCmd, defaultConfig, exampleConfig)
 	addConfigCommand(rootCmd, &cfgFile)
+	addLogsCommand(rootCmd, &cfgFile)
 	addDoctorCommand(rootCmd, &cfgFile)
 	addCompletionCommand(rootCmd)
 	addVersionCheckCommand(rootCmd, version)
@@ -111,14 +113,16 @@ func runRootE(cfgFile *string, version string) func(cmd *cobra.Command, _ []stri
 			return err
 		}
 
-		logger, logFile, err := initLogger(cfg)
+		logger, logFile, logPath, err := initLogger(cfg, "tui")
 		if err != nil {
 			return err
 		}
+		// Pin the session file so runToolkit's stderr capture sits beside it.
+		cfg.LogFile = logPath
 		logEnvAliases(logger, rawType, rawRegion, cfg)
-		// Tag every line in the shared log file with the originating
-		// command + build, so concurrent tui/cli/mcp sessions writing the
-		// same file stay distinguishable.
+		// Tag every line with the originating command + build, so lines
+		// stay attributable when --log-file points several tui/cli/mcp
+		// processes at one file.
 		logger = logger.With("cmd", "tui", "version", version)
 		defer func() { _ = logFile.Close() }()
 

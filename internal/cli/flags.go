@@ -5,6 +5,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 // addPersistentFlags adds persistent flags to the root command.
@@ -25,7 +26,8 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	rootCmd.PersistentFlags().StringP("filter", "f", "", "Initial filter for current category")
 	rootCmd.PersistentFlags().String("metadata-file", defaultMetadata, "Optional path to a YAML or JSON file with additional metadata (e.g. tenants)")
 	rootCmd.PersistentFlags().String("kubeconfig", defaultKube, "Path to kubeconfig file")
-	rootCmd.PersistentFlags().String("log-file", "toolkit.log", "Path to log file")
+	rootCmd.PersistentFlags().String("log-dir", logging.DefaultDir(), "Directory for per-session log files (one per toolkit process)")
+	rootCmd.PersistentFlags().String("log-file", "", "Write logs to this single file instead of a per-session file in --log-dir")
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Enable debug logging")
 	rootCmd.PersistentFlags().String("log-format", "console", "Log format: console|json (slog: deprecated alias of json)")
 	rootCmd.PersistentFlags().String("log-level", "", "Minimum log level: debug|info|warn|error (empty uses debug flag)")
@@ -44,6 +46,7 @@ func addPersistentFlags(rootCmd *cobra.Command, cfgFile *string, defaultKube, de
 	_ = rootCmd.MarkFlagFilename("config")
 	_ = rootCmd.MarkFlagFilename("metadata-file")
 	_ = rootCmd.MarkFlagFilename("kubeconfig")
+	_ = rootCmd.MarkFlagDirname("log-dir")
 	_ = rootCmd.MarkFlagFilename("log-file")
 	// Shell completion for enumerated flags.
 	_ = rootCmd.RegisterFlagCompletionFunc("log-format", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

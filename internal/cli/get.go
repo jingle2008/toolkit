@@ -176,9 +176,9 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 
 		// Honor the same log_format / log_level config keys the TUI uses so
 		// users who configured `log-format: json` for scripting actually get
-		// JSON. Logs still go to cfg.LogFile by default, keeping stdout
+		// JSON. Logs still go to the log file, keeping stdout
 		// clean for piping.
-		logger, logFile, err := initLogger(cfg)
+		logger, logFile, _, err := initLogger(cfg, "get")
 		if err != nil {
 			return err
 		}
