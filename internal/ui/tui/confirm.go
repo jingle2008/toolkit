@@ -130,13 +130,16 @@ func (m *Model) dismissConfirm() {
 // action (and so its labels) and warning depend on the category: a DAC is deleted, a GPU
 // node's backing instance is terminated, an orphaned InferenceService is
 // deleted or — planned as k8s.OrphanFinalized — force-deleted (outcome is
-// the plan; empty for the other categories). run re-resolves nothing
-// extra — deleteItem already re-finds its target by key at execution time.
+// the plan; empty for the other categories). deleteItem re-finds its
+// target by key at execution time; one gone by then is toasted
+// (onConfirmedItem).
 func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmRequest {
 	c := confirmRequest{
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
-		run:         func(int) tea.Cmd { return m.deleteItem(itemKey) },
+		run: func(int) tea.Cmd {
+			return m.onConfirmedItem(itemKey, func(any) tea.Cmd { return m.deleteItem(itemKey) })
+		},
 	}
 	switch m.category {
 	case domain.GPUNode:
@@ -173,7 +176,9 @@ func (m *Model) confirmCordon(itemKey models.ItemKey, item any) confirmRequest {
 		warning:     warning,
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
-		run:         func(int) tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey, a) },
+		run: func(int) tea.Cmd {
+			return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.cordonNode(item, itemKey, a) })
+		},
 	}
 }
 
@@ -185,7 +190,9 @@ func (m *Model) confirmDrain(itemKey models.ItemKey) confirmRequest {
 		warning:     "Cordons it, moves single-replica InferenceServices elsewhere, then evicts every pod. Can take tens of minutes.",
 		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
-		run:         func(int) tea.Cmd { return m.drainNode(findItem(m.dataset, m.category, itemKey), itemKey) },
+		run: func(int) tea.Cmd {
+			return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.drainNode(item, itemKey) })
+		},
 	}
 }
 
@@ -204,9 +211,13 @@ func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmRequest 
 	case domain.GPUNode:
 		c.action = mutation.RestartNode
 		c.warning = "Soft-resets the instance; pods running on it are interrupted."
-		c.run = func(int) tea.Cmd { return m.restartNode(findItem(m.dataset, m.category, itemKey), itemKey) }
+		c.run = func(int) tea.Cmd {
+			return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.restartNode(item, itemKey) })
+		}
 	default: // InferenceService
-		c.run = func(int) tea.Cmd { return m.restartInferenceService(findItem(m.dataset, m.category, itemKey), itemKey) }
+		c.run = func(int) tea.Cmd {
+			return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.restartInferenceService(item, itemKey) })
+		}
 		if svc, ok := item.(*models.InferenceService); ok && svc != nil {
 			c.warning = "Ready: " + svc.Ready
 		}
@@ -274,9 +285,21 @@ func (m *Model) confirmScale(itemKey models.ItemKey, pool models.GPUPool) confir
 		count:       func(text string) (int, string) { return scaleCount(pool, text) },
 		auditTarget: m.auditName(itemKey),
 		run: func(n int) tea.Cmd {
-			return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey, n)
+			return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.scaleUpGPUPool(item, itemKey, n) })
 		},
 	}
+}
+
+// onConfirmedItem runs act on the item at itemKey, looked up again as the
+// user confirms so a background reload can't leave it acting on a stale
+// row. An item a reload removed while the modal was open is toasted as
+// gone rather than confirmed into nothing.
+func (m *Model) onConfirmedItem(itemKey models.ItemKey, act func(item any) tea.Cmd) tea.Cmd {
+	item := findItem(m.dataset, m.category, itemKey)
+	if isNilItem(item) {
+		return m.showToast(itemKeyString(itemKey)+" is gone; nothing done", toastWarn)
+	}
+	return act(item)
 }
 
 // updateConfirmView resolves a message while the confirmation modal is

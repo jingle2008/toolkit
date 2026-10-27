@@ -136,6 +136,29 @@ func TestConfirmScale_ConfirmedScalesByCount(t *testing.T) {
 	assert.Subset(t, done, []any{"phase", "done", "add", int64(3), "from", int64(4), "to", int64(7)}) // slog normalizes ints
 }
 
+// A pool a reload removed while the modal was open is toasted as gone
+// when the user confirms, not scaled or silently dropped.
+//
+//nolint:paralleltest // swaps the package-level increasePoolSizeFn seam
+func TestConfirmScale_PoolGoneByConfirm(t *testing.T) {
+	orig := increasePoolSizeFn
+	t.Cleanup(func() { increasePoolSizeFn = orig })
+	increasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
+		t.Error("must not scale")
+		return oci.PoolScale{}, nil
+	}
+	pool := models.GPUPool{Name: "pool-a", ID: "p", Size: 4, ActualSize: 2, Status: "RUNNING"}
+	m, key, _ := newScaleModel(t, pool)
+	m.requestScale(key, &pool)
+	m.dataset = &models.Dataset{GPUPools: []models.GPUPool{{Name: "pool-b"}}}
+
+	m.updateConfirmView(keyPress("enter"))
+	assert.NotEqual(t, common.ConfirmView, m.viewMode)
+	require.NotNil(t, m.toasts.Active())
+	assert.Equal(t, toastWarn, m.toasts.Active().Sev)
+	assert.Contains(t, m.toasts.Active().Msg, "pool-a is gone; nothing done")
+}
+
 // A pool with no instance pool ID can't be scaled: the modal doesn't
 // open, and the toast says why.
 func TestRequestScale_NoInstancePool(t *testing.T) {
