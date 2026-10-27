@@ -715,3 +715,16 @@ locals {
 	}
 	assert.Equal(t, []string{"2xA100", "4xA100", "2xH100", "2xH200"}, got)
 }
+
+// A file that doesn't parse is skipped, with a warning; the other files'
+// defaults still count.
+func TestGetVariableDefaults_SkipsUnparsableFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeTempFile(t, dir, "good.tf", "variable \"region\" {\n  default = \"us-ashburn-1\"\n}\n")
+	writeTempFile(t, dir, "bad.tf", "variable \"broken\" {\n  default = \n")
+	defaults, err := getVariableDefaults(context.Background(), dir)
+	require.NoError(t, err)
+	assert.Equal(t, "us-ashburn-1", defaults["region"].AsString())
+	assert.NotContains(t, defaults, "broken")
+}

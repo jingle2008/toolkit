@@ -6,6 +6,7 @@ package fswatch
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ func addRecursive(w *fsnotify.Watcher, root string) error {
 // run consumes fsnotify events, adds newly created directories on the fly,
 // ignores hidden paths, debounces into out, and tears everything down on ctx
 // cancel or backend error.
-func run(ctx context.Context, w *fsnotify.Watcher, root string, window time.Duration, out chan<- struct{}) { //nolint:cyclop // event-select loop; splitting it would obscure the debounce/watch lifecycle without reducing real complexity
+func run(ctx context.Context, w *fsnotify.Watcher, root string, window time.Duration, out chan<- struct{}) { //nolint:cyclop // event-select loop; its arms are the debounce/watch lifecycle
 	defer close(out)
 	defer func() { _ = w.Close() }()
 
@@ -80,25 +81,19 @@ func run(ctx context.Context, w *fsnotify.Watcher, root string, window time.Dura
 			if !ok {
 				return
 			}
-			if isHidden(ev.Name) {
-				continue // ignore events under dot-dirs (e.g. .git churn)
-			}
-			// A newly created directory must be watched so its contents
-			// trigger too.
-			if ev.Op.Has(fsnotify.Create) {
-				if info, statErr := os.Stat(ev.Name); statErr == nil && info.IsDir() {
-					_ = addRecursive(w, ev.Name)
-				}
+			if !watchEvent(ctx, w, ev) {
+				continue
 			}
 			if timerC == nil {
 				timerC = time.After(window)
 			}
-		case _, ok := <-w.Errors:
-			if !ok {
+		case err, ok := <-w.Errors:
+			if !ok || !survivable(ctx, err) {
 				return
 			}
-			logging.FromContext(ctx).Warn("fs watch error; live repo watch will drop")
-			return
+			if timerC == nil {
+				timerC = time.After(window)
+			}
 		case <-timerC:
 			timerC = nil
 			select {
@@ -108,4 +103,34 @@ func run(ctx context.Context, w *fsnotify.Watcher, root string, window time.Dura
 			}
 		}
 	}
+}
+
+// watchEvent reports whether ev should trigger a reload: not under a
+// dot-dir (e.g. .git churn). A newly created directory is watched too, so
+// its contents trigger.
+func watchEvent(ctx context.Context, w *fsnotify.Watcher, ev fsnotify.Event) bool {
+	if isHidden(ev.Name) {
+		return false
+	}
+	if ev.Op.Has(fsnotify.Create) {
+		if info, statErr := os.Stat(ev.Name); statErr == nil && info.IsDir() {
+			if err := addRecursive(w, ev.Name); err != nil {
+				// Its changes won't trigger until the watch restarts.
+				logging.FromContext(ctx).Warn("fs watch: can't watch new directory", "dir", ev.Name, "error", err)
+			}
+		}
+	}
+	return true
+}
+
+// survivable reports whether the watch carries on after err, reloading
+// in its place: an overflow only lost events, so the reload they would
+// have caused still comes. Any other error ends the watch.
+func survivable(ctx context.Context, err error) bool {
+	if errors.Is(err, fsnotify.ErrEventOverflow) {
+		logging.FromContext(ctx).Warn("fs watch: events overflowed; reloading", "error", err)
+		return true
+	}
+	logging.FromContext(ctx).Warn("fs watch error; live repo watch will drop", "error", err)
+	return false
 }

@@ -166,3 +166,34 @@ func TestWatch_CancelClosesChannel(t *testing.T) {
 		t.Fatal("channel was not closed after ctx cancel")
 	}
 }
+
+// An event overflow lost events, not the watch: it triggers the reload
+// they would have, and the watch carries on.
+func TestRun_OverflowTriggersAndKeepsWatching(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	w, err := fsnotify.NewWatcher()
+	require.NoError(t, err)
+	require.NoError(t, w.Add(dir))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	out := make(chan struct{})
+	go run(ctx, w, dir, 20*time.Millisecond, out)
+
+	w.Errors <- fsnotify.ErrEventOverflow
+	select {
+	case _, ok := <-out:
+		require.True(t, ok, "an overflow triggers a reload")
+	case <-time.After(2 * time.Second):
+		t.Fatal("no trigger after an overflow")
+	}
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.yaml"), []byte("x"), 0o600))
+	select {
+	case _, ok := <-out:
+		require.True(t, ok, "the watch is still alive")
+	case <-time.After(2 * time.Second):
+		t.Fatal("no trigger after the overflow: the watch died")
+	}
+}

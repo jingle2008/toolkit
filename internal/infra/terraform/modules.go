@@ -224,7 +224,10 @@ type moduleCall struct {
 // moduleCalls returns dirPath's local-source module calls by name, or
 // none once depth reaches maxModuleDepth.
 func moduleCalls(ctx context.Context, dirPath string, depth int) map[string]moduleCall {
-	blocks, _ := scanBlocks(ctx, dirPath, moduleBlock)
+	blocks, err := scanBlocks(ctx, dirPath, moduleBlock)
+	if err != nil {
+		logging.FromContext(ctx).Warn("can't scan module calls", "dir", dirPath, "error", err)
+	}
 	calls := make(map[string]moduleCall, len(blocks))
 	for _, b := range blocks {
 		name, source, ok := localModuleSource(ctx, b)
@@ -301,7 +304,12 @@ func evalModule(ctx context.Context, dir string, inputs map[string]cty.Value, pa
 	for _, b := range localBlocks {
 		maps.Copy(locals, b.Body.Attributes)
 	}
-	vars, _ := getVariableDefaults(ctx, dir)
+	vars, err := getVariableDefaults(ctx, dir)
+	if err != nil {
+		// The module's inputs still resolve; its defaults don't.
+		logging.FromContext(ctx).Warn("module variable defaults unavailable", "dir", dir, "error", err)
+		vars = make(map[string]cty.Value)
+	}
 	maps.Copy(vars, inputs)
 	evalCtx := hcl.EvalContext{
 		Variables: map[string]cty.Value{
@@ -345,6 +353,7 @@ func scanBlocks(ctx context.Context, dir, blockType string) ([]*hclsyntax.Block,
 	for _, f := range files {
 		file, diags := hclparse.NewParser().ParseHCLFile(f)
 		if diags.HasErrors() {
+			logging.FromContext(ctx).Warn("skipping unparsable terraform file", "file", f, "block", blockType, "error", diags.Error())
 			continue
 		}
 		body, ok := file.Body.(*hclsyntax.Body)
