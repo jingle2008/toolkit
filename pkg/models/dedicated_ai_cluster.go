@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // DedicatedAICluster represents a dedicated AI cluster resource.
@@ -19,6 +20,9 @@ type DedicatedAICluster struct {
 	TotalReplicas int     `json:"totalReplicas"`
 	IdleReplicas  int     `json:"idleReplicas"`
 	Age           string  `json:"age"`
+	// CreatedAt is when the resource was created; Age is the time since,
+	// as of the load. Zero when unknown.
+	CreatedAt time.Time `json:"createdAt,omitzero"`
 }
 
 // GetName returns the name of the dedicated AI cluster.

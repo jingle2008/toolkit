@@ -71,7 +71,7 @@ var DACColumns = GroupedSet[models.DedicatedAICluster]{Columns: []GroupedColumn[
 	},
 	{
 		Title: "Age", Key: "age", Ratio: 0.06,
-		Render: func(_ string, d models.DedicatedAICluster) string { return d.Age },
+		Render: func(_ string, d models.DedicatedAICluster) string { return freshAge(d.CreatedAt, d.Age) },
 	},
 	{
 		Title: "Status", Key: "status", Ratio: 0.06,

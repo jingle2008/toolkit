@@ -67,10 +67,7 @@ func extractDAC(ctx context.Context, cache PodCache, statusField string, overlay
 		labels, _, _ := unstructured.NestedMap(item.Object, "metadata", "labels")
 		creationTimestampStr, _, _ := unstructured.NestedString(item.Object, "metadata", "creationTimestamp")
 
-		var age string
-		if t, err := time.Parse(time.RFC3339, creationTimestampStr); err == nil {
-			age = FormatAge(time.Since(t))
-		}
+		created, _ := time.Parse(time.RFC3339, creationTimestampStr)
 
 		// labels==nil (NestedMap returns nil when the field is absent
 		// or non-map) is handled by tenantIDFromLabels: it returns
@@ -93,7 +90,8 @@ func extractDAC(ctx context.Context, cache PodCache, statusField string, overlay
 			ModelName:     stats.ModelName,
 			IdleReplicas:  stats.IdlePods,
 			TotalReplicas: stats.TotalPods,
-			Age:           age,
+			Age:           models.AgeOf(created),
+			CreatedAt:     created,
 		}
 		overlay(spec, stats, &dac)
 		return dac

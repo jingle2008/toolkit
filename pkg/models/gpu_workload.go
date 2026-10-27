@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // GPUWorkload is a GPU-consuming Kubernetes pod (any pod that requests
 // nvidia.com/gpu or amd.com/gpu). Grouped by Node (spec.nodeName, which
 // equals GPUNode.Name); its parent category is GPUNode. model/runtime/mode are
@@ -14,6 +16,9 @@ type GPUWorkload struct {
 	GPUs      int    `json:"gpus"`
 	Restarts  int    `json:"restarts"`
 	Age       string `json:"age"`
+	// CreatedAt is when the resource was created; Age is the time since,
+	// as of the load. Zero when unknown.
+	CreatedAt time.Time `json:"createdAt,omitzero"`
 	// Status is the pod phase: Running, or Pending for a pod scheduled to
 	// its node (holding its GPUs) that hasn't started yet.
 	Status string `json:"status"`

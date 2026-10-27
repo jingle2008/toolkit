@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -122,7 +121,8 @@ func parseInferenceService(obj *unstructured.Unstructured) models.InferenceServi
 		MinReplicas:   minReplicas,
 		MaxReplicas:   maxReplicas,
 		Ready:         readyStatus(obj),
-		Age:           ageOf(obj),
+		Age:           models.AgeOf(obj.GetCreationTimestamp().Time),
+		CreatedAt:     obj.GetCreationTimestamp().Time,
 	}
 }
 
@@ -165,17 +165,10 @@ func parseLegacyInferenceService(obj *unstructured.Unstructured) models.Inferenc
 		MinReplicas: minReplicas,
 		MaxReplicas: maxReplicas,
 		Ready:       readyStatus(obj),
-		Age:         ageOf(obj),
+		Age:         models.AgeOf(obj.GetCreationTimestamp().Time),
+		CreatedAt:   obj.GetCreationTimestamp().Time,
 		Legacy:      true,
 	}
-}
-
-// ageOf formats the time since obj's creation, or "" when unset.
-func ageOf(obj *unstructured.Unstructured) string {
-	if ts := obj.GetCreationTimestamp(); !ts.IsZero() {
-		return FormatAge(time.Since(ts.Time))
-	}
-	return ""
 }
 
 // readyStatus returns the status of the Ready condition, or "Unknown"

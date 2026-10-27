@@ -1,10 +1,19 @@
-package k8s
+package models
 
 import (
 	"fmt"
 	"strconv"
 	"time"
 )
+
+// AgeOf is the time since created, as FormatAge writes it; "" when
+// created is unset.
+func AgeOf(created time.Time) string {
+	if created.IsZero() {
+		return ""
+	}
+	return FormatAge(time.Since(created))
+}
 
 // FormatAge returns the duration in s/m/h/d with max-granularity.
 func FormatAge(d time.Duration) string {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -129,7 +130,8 @@ func TestParseLegacyInferenceService(t *testing.T) {
 	t.Parallel()
 	got := parseLegacyInferenceService(parseYAML(t, isvcLegacyDedicated))
 	assert.NotEmpty(t, got.Age)
-	got.Age = ""
+	assert.False(t, got.CreatedAt.IsZero(), "creation time is kept")
+	got.Age, got.CreatedAt = "", time.Time{}
 	assert.Equal(t, models.InferenceService{
 		Name:        "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
 		Namespace:   "amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa",
@@ -156,7 +158,8 @@ func TestParseLegacyInferenceService(t *testing.T) {
 func TestParseInferenceService_Dedicated(t *testing.T) {
 	t.Parallel()
 	got := parseInferenceService(parseYAML(t, isvcDedicated))
-	got.Age = "" // wall-clock dependent
+	assert.False(t, got.CreatedAt.IsZero(), "creation time is kept")
+	got.Age, got.CreatedAt = "", time.Time{} // wall-clock dependent
 
 	assert.Equal(t, models.InferenceService{
 		Name:        "amaaaaaask7dceyatjkqbeheqhw5ry5dkayifvgqbaikjeg2ys676oc6j3ea",

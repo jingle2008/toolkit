@@ -49,7 +49,7 @@ var GPUWorkloadColumns = GroupedSet[models.GPUWorkload]{Columns: []GroupedColumn
 	},
 	{
 		Title: "Age", Key: "age", Ratio: 0.05,
-		Render: func(_ string, w models.GPUWorkload) string { return w.Age },
+		Render: func(_ string, w models.GPUWorkload) string { return freshAge(w.CreatedAt, w.Age) },
 	},
 	{
 		Title: "Status", Key: "status", Ratio: 0.07,

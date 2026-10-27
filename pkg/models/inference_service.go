@@ -1,6 +1,9 @@
 package models
 
-import "strconv"
+import (
+	"strconv"
+	"time"
+)
 
 // Inference service types. Not a table column; carried in -o json and
 // the MCP output, and matched by filtering.
@@ -32,6 +35,9 @@ type InferenceService struct {
 	MaxReplicas *int   `json:"maxReplicas,omitempty"`
 	Ready       string `json:"ready"`
 	Age         string `json:"age"`
+	// CreatedAt is when the resource was created; Age is the time since,
+	// as of the load. Zero when unknown.
+	CreatedAt time.Time `json:"createdAt,omitzero"`
 	// Legacy is true for an ome.oracle.com/v1alpha1 InferenceService —
 	// an endpoint on a legacy DAC.
 	Legacy bool    `json:"legacy,omitempty"`
