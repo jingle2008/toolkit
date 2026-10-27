@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jingle2008/toolkit/internal/query"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -12,16 +13,23 @@ import (
 // flattening: the list tools, list_related and get_item share them, so a
 // row looks the same from each. Errors name what failed to load.
 
-func (s *Server) importedModels(ctx context.Context, env models.Environment) (map[string][]models.ImportedModel, []string, error) {
-	grouped, err := s.loader.LoadImportedModels(ctx, s.cfg.KubeConfig, env)
-	if err != nil {
-		return nil, nil, fmt.Errorf("load imported models: %w", err)
+// source is where the server's rows load from.
+func (s *Server) source() query.Source {
+	return query.Source{Loader: s.loader, RepoPath: s.cfg.RepoPath, KubeConfig: s.cfg.KubeConfig}
+}
+
+// logLoadWarnings logs what loaded only partly, for operators reading the
+// log file; the client sees the same warnings in listResult.Warnings.
+func (s *Server) logLoadWarnings(what string, warnings []string) {
+	for _, w := range warnings {
+		s.logger.Warn("load incomplete", "surface", "mcp", "what", what, "warning", w)
 	}
-	// Each item carries its own `tenantId`; resolution adds `owner` and
-	// lets the filter match the tenant name (the re-keyed group key).
-	ds, warnings := s.tenantDataset(ctx, env)
-	ds.SetImportedModelMap(grouped)
-	return ds.ImportedModelMap, warnings, nil
+}
+
+func (s *Server) importedModels(ctx context.Context, env models.Environment) (map[string][]models.ImportedModel, []string, error) {
+	grouped, warnings, err := query.ImportedModels(ctx, s.source(), env)
+	s.logLoadWarnings("imported models", warnings)
+	return grouped, warnings, err
 }
 
 func (s *Server) gpuNodes(ctx context.Context, env models.Environment) (map[string][]models.GPUNode, error) {
@@ -33,52 +41,21 @@ func (s *Server) gpuNodes(ctx context.Context, env models.Environment) (map[stri
 }
 
 func (s *Server) gpuWorkloads(ctx context.Context, env models.Environment) (map[string][]models.GPUWorkload, []string, error) {
-	type owners struct {
-		ds       *models.Dataset
-		warnings []string
-	}
-	// The workloads' owners load while they do.
-	ownersCh := make(chan owners, 1)
-	go func() {
-		ds, warnings := s.tenantDataset(ctx, env)
-		// The DACs give a pod without a tenancy-id label its tenant; a
-		// failed load only leaves those pods unowned.
-		if dacs, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, env); err == nil {
-			ds.SetDedicatedAIClusterMap(dacs)
-		} else {
-			s.logger.Warn("dacs for workload tenants unavailable", "error", err)
-		}
-		ownersCh <- owners{ds, warnings}
-	}()
-	grouped, err := s.loader.LoadGPUWorkloadsByNode(ctx, s.cfg.KubeConfig, env)
-	if err != nil {
-		return nil, nil, fmt.Errorf("load gpu workloads: %w", err)
-	}
-	o := <-ownersCh
-	o.ds.SetGPUWorkloadMap(grouped)
-	return o.ds.GPUWorkloadMap, o.warnings, nil
+	grouped, warnings, err := query.GPUWorkloads(ctx, s.source(), env)
+	s.logLoadWarnings("gpu workloads", warnings)
+	return grouped, warnings, err
 }
 
 func (s *Server) dacs(ctx context.Context, env models.Environment) (map[string][]models.DedicatedAICluster, []string, error) {
-	grouped, err := s.loader.LoadDedicatedAIClusters(ctx, s.cfg.KubeConfig, env)
-	if err != nil {
-		return nil, nil, fmt.Errorf("load dedicated AI clusters: %w", err)
-	}
-	// Re-keyed by tenant name (so the filter matches it) with `owner` set;
-	// each value keeps its raw `tenantId`.
-	ds, warnings := s.tenantDataset(ctx, env)
-	ds.SetDedicatedAIClusterMap(grouped)
-	return ds.DedicatedAIClusterMap, warnings, nil
+	grouped, warnings, err := query.DACs(ctx, s.source(), env)
+	s.logLoadWarnings("dedicated AI clusters", warnings)
+	return grouped, warnings, err
 }
 
 func (s *Server) inferenceServices(ctx context.Context, env models.Environment) (map[string][]models.InferenceService, []string, error) {
-	grouped, err := s.loader.LoadInferenceServices(ctx, s.cfg.KubeConfig, env)
-	if err != nil {
-		return nil, nil, fmt.Errorf("load inference services: %w", err)
-	}
-	ds, warnings := s.tenantDataset(ctx, env)
-	ds.SetInferenceServiceMap(grouped)
-	return ds.InferenceServiceMap, warnings, nil
+	grouped, warnings, err := query.InferenceServices(ctx, s.source(), env)
+	s.logLoadWarnings("inference services", warnings)
+	return grouped, warnings, err
 }
 
 func (s *Server) modelArtifacts(ctx context.Context, env models.Environment) (map[string][]models.ModelArtifact, error) {

@@ -13,7 +13,6 @@ package mcp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -25,7 +24,6 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
-	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
@@ -237,21 +235,6 @@ func mutationOK(action, kind, target string) mutationResult {
 func failTool[Out any](what string, err error) (*sdk.CallToolResult, Out, error) {
 	var zero Out
 	return nil, zero, fmt.Errorf("%s: %w", what, err)
-}
-
-// warningsFromPartial pulls the per-source error strings off a
-// *terraform.PartialLoadError so MCP callers can see what loaded
-// partially without the err being treated as fatal.
-func warningsFromPartial(err error) []string {
-	partial, ok := errors.AsType[*terraform.PartialLoadError](err)
-	if !ok {
-		return nil
-	}
-	out := make([]string, 0, len(partial.Errs))
-	for _, e := range partial.Errs {
-		out = append(out, e.Error())
-	}
-	return out
 }
 
 // normFilter applies the same fuzzy substring matching the CLI uses.
