@@ -36,6 +36,9 @@ func (n GPUNode) FilterableFields() []string {
 	return []string{n.Name, n.InstanceType, n.NodePool, n.GetStatus()}
 }
 
+// GPUNodeStatusOK is GetStatus for a node with nothing wrong.
+const GPUNodeStatusOK = "OK"
+
 // GetStatus returns the status of the GPU node, derived from its state.
 // (An action running on the node shows over it in the TUI's table, from
 // the action tracker.)
@@ -52,7 +55,7 @@ func (n GPUNode) GetStatus() string {
 	case !n.IsReady:
 		return "ERROR: Not ready"
 	}
-	return "OK"
+	return GPUNodeStatusOK
 }
 
 /*
@@ -64,7 +67,7 @@ func (n GPUNode) IsHealthy() bool {
 
 // IsFaulty returns true if the node is cordoned, missing GPUs, unhealthy, or not ready.
 func (n GPUNode) IsFaulty() bool {
-	return n.GetStatus() != "OK"
+	return n.GetStatus() != GPUNodeStatusOK
 }
 
 // MarshalJSON writes GPUNode with its age as of now, from CreatedAt.

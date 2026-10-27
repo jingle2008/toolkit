@@ -3,7 +3,6 @@ package k8s
 import (
 	"path/filepath"
 	"testing"
-	"time"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -75,7 +74,7 @@ func TestHasContext(t *testing.T) {
 	}
 }
 
-func TestNewConfig_AppliesRequestTimeout(t *testing.T) { //nolint:paralleltest // mutates package-level RequestTimeout
+func TestNewConfig_AppliesRequestTimeout(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	validConfig := api.NewConfig()
 	validConfig.Clusters["test"] = &api.Cluster{Server: "https://127.0.0.1"}
 	validConfig.Contexts["test"] = &api.Context{Cluster: "test", AuthInfo: "user"}
@@ -83,43 +82,19 @@ func TestNewConfig_AppliesRequestTimeout(t *testing.T) { //nolint:paralleltest /
 	validConfig.CurrentContext = "test"
 	path := writeTempKubeconfig(t, validConfig)
 
-	// Default branch.
 	cfg, err := NewConfig(path, "test")
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
-	if cfg.Timeout != DefaultRequestTimeout {
-		t.Errorf("default Timeout = %v, want %v", cfg.Timeout, DefaultRequestTimeout)
-	}
-
-	// Override branch: setting RequestTimeout before NewConfig is the
-	// supported way to tighten or relax the bound at startup.
-	t.Cleanup(func() { RequestTimeout = DefaultRequestTimeout })
-	RequestTimeout = 5 * time.Second
-	cfg, err = NewConfig(path, "test")
-	if err != nil {
-		t.Fatalf("NewConfig: %v", err)
-	}
-	if cfg.Timeout != 5*time.Second {
-		t.Errorf("override Timeout = %v, want %v", cfg.Timeout, 5*time.Second)
-	}
-
-	// Zero disables — matches client-go's "no timeout" semantics so
-	// operators with explicit long-running calls can opt out.
-	RequestTimeout = 0
-	cfg, err = NewConfig(path, "test")
-	if err != nil {
-		t.Fatalf("NewConfig: %v", err)
-	}
-	if cfg.Timeout != 0 {
-		t.Errorf("zero override Timeout = %v, want 0", cfg.Timeout)
+	if cfg.Timeout != RequestTimeout {
+		t.Errorf("default Timeout = %v, want %v", cfg.Timeout, RequestTimeout)
 	}
 }
 
 // TestNewWatchConfig_NoTimeout guards the watch/request split: client-go
 // applies Config.Timeout to the whole HTTP exchange, body included, so a
 // watch config must have none while NewConfig still bounds regular calls.
-func TestNewWatchConfig_NoTimeout(t *testing.T) { //nolint:paralleltest // reads package-level RequestTimeout
+func TestNewWatchConfig_NoTimeout(t *testing.T) { //nolint:paralleltest // paralleltest is not supported in this package
 	validConfig := api.NewConfig()
 	validConfig.Clusters["test"] = &api.Cluster{Server: "https://127.0.0.1"}
 	validConfig.Contexts["test"] = &api.Context{Cluster: "test", AuthInfo: "user"}
@@ -131,8 +106,8 @@ func TestNewWatchConfig_NoTimeout(t *testing.T) { //nolint:paralleltest // reads
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
-	if cfg.Timeout != DefaultRequestTimeout {
-		t.Errorf("NewConfig Timeout = %v, want %v", cfg.Timeout, DefaultRequestTimeout)
+	if cfg.Timeout != RequestTimeout {
+		t.Errorf("NewConfig Timeout = %v, want %v", cfg.Timeout, RequestTimeout)
 	}
 	wcfg, err := NewWatchConfig(path, "test")
 	if err != nil {

@@ -169,8 +169,8 @@ func parseLegacyInferenceService(obj *unstructured.Unstructured) models.Inferenc
 	}
 }
 
-// readyStatus returns the status of the Ready condition, or "Unknown"
-// when the controller hasn't reported one yet.
+// readyStatus returns the status of the Ready condition, or
+// models.ConditionUnknown when the controller hasn't reported one yet.
 func readyStatus(obj *unstructured.Unstructured) string {
 	conds, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
 	for _, c := range conds {
@@ -185,5 +185,5 @@ func readyStatus(obj *unstructured.Unstructured) string {
 			return s
 		}
 	}
-	return "Unknown"
+	return models.ConditionUnknown
 }

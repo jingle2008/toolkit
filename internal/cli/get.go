@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/jingle2008/toolkit/internal/collections"
 	"github.com/jingle2008/toolkit/internal/columns"
@@ -112,12 +111,10 @@ discover them.`,
 	rootCmd.AddCommand(getCmd)
 }
 
-// runGet is the get-command handler. Its branches are orchestration
-// (parse category → parse format → parse columns → read config →
-// init logger → dispatch), each producing distinct CLI error
-// messages; splitting them into helpers would just shuffle state.
-//
-//nolint:cyclop // sequential CLI orchestration with one branch per failure mode
+// runGet is the get-command handler: it parses the category, format and
+// columns, then runs through withCommandSetup — the config, logger and
+// environment every command shares — with get's own checks, and emits
+// the rows.
 func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int, selectedColumns, relatedTo *string, faulty *bool) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		cat, err := domain.ParseCategory(args[0])
@@ -152,54 +149,21 @@ func runGet(cfgFile *string, format *string, noHeaders, pretty *bool, limit *int
 			return fmt.Errorf("--columns has no effect with -o %s; remove the flag or switch to -o table/csv/tsv", fmtChoice)
 		}
 
-		// Read the YAML config file (if present) so values like repo_path
-		// flow into viper before Unmarshal. Matches what runRootE does
-		// for the TUI command — without this, `toolkit get` ignored
-		// ~/.config/toolkit/config.yaml.
-		if err := readConfigFile(cfgFile); err != nil {
-			return err
+		checks := setupChecks{
+			validate: func(cfg config.Config) error { return validateGetRequest(cfg, cat, *faulty, *limit) },
+			checkEnv: func(ctx context.Context, cfg config.Config) error { return checkGetEnvironment(ctx, cfg, cat) },
 		}
+		return withCommandSetup(cmd.Context(), cfgFile, "get", checks, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			ld := production.New(ctx, cfg.MetadataFile)
+			filter := strings.ToLower(strings.TrimSpace(cfg.Filter))
+			opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty, Item: item}
 
-		var cfg config.Config
-		if err := viper.Unmarshal(&cfg); err != nil {
-			return fmt.Errorf("unmarshal config: %w", err)
-		}
-		rawType, rawRegion := cfg.EnvType, cfg.EnvRegion
-		if err := cfg.Normalize(); err != nil {
-			return err
-		}
-		if err := validateGetRequest(cfg, cat, *faulty, *limit); err != nil {
-			return err
-		}
-
-		// Honor the same log_format / log_level config keys the TUI uses so
-		// users who configured `log-format: json` for scripting actually get
-		// JSON. Logs still go to the log file, keeping stdout
-		// clean for piping.
-		logger, logFile, _, err := initLogger(cfg, "get")
-		if err != nil {
-			return err
-		}
-		logger = logger.With("cmd", "get")
-		defer func() { _ = logFile.Close() }()
-		logEnvAliases(logger, rawType, rawRegion, cfg)
-
-		ctx := logging.WithContext(cmd.Context(), logger)
-		if err := checkGetEnvironment(ctx, cfg, cat); err != nil {
-			return err
-		}
-
-		env := models.Environment{Type: cfg.EnvType, Region: cfg.EnvRegion, Realm: cfg.EnvRealm}
-		ld := production.New(ctx, cfg.MetadataFile)
-
-		filter := strings.ToLower(strings.TrimSpace(cfg.Filter))
-		opts := output.Options{Format: fmtChoice, NoHeaders: *noHeaders, Pretty: *pretty, Item: item}
-
-		emit := emitCategory
-		if *faulty {
-			emit = emitFaulty
-		}
-		return emit(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, related, *limit, opts, selected)
+			emit := emitCategory
+			if *faulty {
+				emit = emitFaulty
+			}
+			return emit(ctx, cmd.OutOrStdout(), ld, cat, cfg, env, filter, related, *limit, opts, selected)
+		})
 	}
 }
 

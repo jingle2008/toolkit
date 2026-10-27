@@ -130,16 +130,38 @@ func withMutationSetup(
 	needsKube, needsRepo, needsEnv bool,
 	fn func(ctx context.Context, cfg config.Config, env models.Environment) error,
 ) error {
-	return withCommandSetup(ctx, cfgFile, "mutate", needsKube, needsRepo, needsEnv, fn)
+	return withCommandSetup(ctx, cfgFile, "mutate", standardChecks(needsKube, needsRepo, needsEnv), fn)
+}
+
+// setupChecks are what a command checks of its config before it runs.
+type setupChecks struct {
+	// validate checks the normalized config: a command that can't run
+	// fails before it logs anything.
+	validate func(config.Config) error
+	// checkEnv, when set, checks the environment against the repo's, with
+	// the command's logger in ctx.
+	checkEnv func(ctx context.Context, cfg config.Config) error
+}
+
+// standardChecks are the needs checks most commands make
+// (validateMutationConfig), and the environment check when it's needed.
+func standardChecks(needsKube, needsRepo, needsEnv bool) setupChecks {
+	c := setupChecks{validate: func(cfg config.Config) error {
+		return validateMutationConfig(cfg, needsKube, needsRepo, needsEnv)
+	}}
+	if needsEnv {
+		c.checkEnv = checkEnvironment
+	}
+	return c
 }
 
 // withCommandSetup is withMutationSetup for any command that reaches the
-// loader: config, the needs checks, a logger tagged cmd=name, and the env.
+// loader: config, its checks, a logger tagged cmd=name, and the env.
 func withCommandSetup(
 	ctx context.Context,
 	cfgFile *string,
 	name string,
-	needsKube, needsRepo, needsEnv bool,
+	checks setupChecks,
 	fn func(ctx context.Context, cfg config.Config, env models.Environment) error,
 ) error {
 	if err := readConfigFile(cfgFile); err != nil {
@@ -153,7 +175,7 @@ func withCommandSetup(
 	if err := cfg.Normalize(); err != nil {
 		return err
 	}
-	if err := validateMutationConfig(cfg, needsKube, needsRepo, needsEnv); err != nil {
+	if err := checks.validate(cfg); err != nil {
 		return err
 	}
 	logger, logFile, _, err := initLogger(cfg, name)
@@ -167,8 +189,8 @@ func withCommandSetup(
 	logEnvAliases(logger, rawType, rawRegion, cfg)
 
 	ctx = logging.WithContext(ctx, logger)
-	if needsEnv {
-		if err := checkEnvironment(ctx, cfg); err != nil {
+	if checks.checkEnv != nil {
+		if err := checks.checkEnv(ctx, cfg); err != nil {
 			return err
 		}
 	}

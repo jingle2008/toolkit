@@ -15,23 +15,14 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// DefaultRequestTimeout caps every client-go call so a broken or
-// unreachable cluster fails fast instead of hanging on a TCP dial /
-// TLS handshake. Without it, an interactive run sits on the spinner
-// until SIGINT — see https://pkg.go.dev/k8s.io/client-go/rest#Config
-// ("Timeout: the maximum length of time to wait before giving up on
-// a server request. A value of zero means no timeout.").
-//
-// Override via the package-level RequestTimeout variable from main()
-// if a different bound is desired; tests use this seam to short-circuit
-// for unit tests that should fail fast.
-var DefaultRequestTimeout = 30 * time.Second
-
-// RequestTimeout is the per-call timeout applied to every rest.Config
-// returned by NewConfig. Initialized to DefaultRequestTimeout; can be
-// overridden at startup before any client is built. A zero value
-// disables the timeout (matches client-go's default of "no timeout").
-var RequestTimeout = DefaultRequestTimeout
+// RequestTimeout caps every client-go call NewConfig's configs make, so a
+// broken or unreachable cluster fails fast instead of hanging on a TCP
+// dial / TLS handshake. Without it, an interactive run sits on the
+// spinner until SIGINT — see https://pkg.go.dev/k8s.io/client-go/rest#Config
+// ("Timeout: the maximum length of time to wait before giving up on a
+// server request. A value of zero means no timeout."). A Timeout the
+// kubeconfig sets itself wins.
+const RequestTimeout = 30 * time.Second
 
 // HasContext reports whether kubeconfig defines the context name. An
 // error means the kubeconfig itself couldn't be read.
@@ -65,7 +56,7 @@ func NewConfig(kubeconfig, ctx string) (*rest.Config, error) {
 	// spinner in seconds, not 75+ seconds of TCP dial wait. Respect
 	// an explicit Timeout already set on the config (loaded from
 	// kubeconfig).
-	if config.Timeout == 0 && RequestTimeout > 0 {
+	if config.Timeout == 0 {
 		config.Timeout = RequestTimeout
 	}
 	// Force exec auth plugins (oci-cli session token, aws-iam-authenticator,

@@ -93,7 +93,7 @@ func runDrainStatus(cmd *cobra.Command, cfgFile *string, deps depsFor, nodeName,
 	if err != nil {
 		return fmt.Errorf("--status prints yaml or json: %w", err)
 	}
-	return withCommandSetup(cmd.Context(), cfgFile, "drain-status", true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+	return withCommandSetup(cmd.Context(), cfgFile, "drain-status", standardChecks(true, false, true), func(ctx context.Context, cfg config.Config, env models.Environment) error {
 		st, err := deps(cfg).DrainStatus(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 		if err != nil {
 			return fmt.Errorf("get drain status of node/%s: %w", nodeName, err)

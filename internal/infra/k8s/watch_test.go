@@ -315,18 +315,14 @@ func TestWatchGPUNodes_AppliesSelectors(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // mutates package-global DebounceWindow; must not run in parallel
 func TestWatchGPUNodes_FiresOnNodeEvent(t *testing.T) {
-	// Not parallel: this test writes the package-level DebounceWindow global.
-	old := DebounceWindow
-	DebounceWindow = 50 * time.Millisecond
-	defer func() { DebounceWindow = old }()
+	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	cs := fake.NewSimpleClientset()
-	trig, err := WatchGPUNodes(ctx, cs)
+	trig, err := watchTrigger(ctx, testDebounce, gpuNodeWatchOpeners(cs)...)
 	require.NoError(t, err)
 
 	// Creating a node produces an Added event on the Nodes watch.
@@ -345,12 +341,8 @@ func TestWatchGPUNodes_FiresOnNodeEvent(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // mutates package-global DebounceWindow; must not run in parallel
 func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
-	// Not parallel: this test writes the package-level DebounceWindow global.
-	old := DebounceWindow
-	DebounceWindow = 50 * time.Millisecond
-	defer func() { DebounceWindow = old }()
+	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	// Do NOT defer cancel() here — we call it explicitly after observing the
@@ -364,7 +356,7 @@ func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
 			{Group: "ome.io", Version: "v1beta1", Resource: "basemodels"}: "BaseModelList",
 		})
 
-	trig, err := WatchBaseModels(ctx, client)
+	trig, err := watchTrigger(ctx, testDebounce, crWatchOpener(client, clusterBaseModelGVR))
 	require.NoError(t, err)
 
 	_, err = client.Resource(gvr).Create(ctx, newCBM("m1", nil, nil, nil, nil), metav1.CreateOptions{})
@@ -386,12 +378,8 @@ func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
 
 // A cluster without the legacy InferenceService CRD still gets a live
 // watch on the ome.io endpoints, matching LoadInferenceServices.
-//
-//nolint:paralleltest // mutates package-global DebounceWindow; must not run in parallel
 func TestWatchInferenceServices_NoLegacyCRD(t *testing.T) {
-	old := DebounceWindow
-	DebounceWindow = 50 * time.Millisecond
-	defer func() { DebounceWindow = old }()
+	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
@@ -406,7 +394,7 @@ func TestWatchInferenceServices_NoLegacyCRD(t *testing.T) {
 		return true, nil, apierrors.NewNotFound(inferenceServiceV1GVR.GroupResource(), "")
 	})
 
-	trig, err := WatchInferenceServices(ctx, client)
+	trig, err := watchTrigger(ctx, testDebounce, inferenceServiceWatchOpeners(client)...)
 	require.NoError(t, err)
 
 	isvc := &unstructured.Unstructured{Object: map[string]any{
@@ -435,12 +423,8 @@ func TestWatchInferenceServices_NoLegacyCRD(t *testing.T) {
 // A role that may list the legacy InferenceServices but not watch them
 // leaves the ome.io watch live: the legacy watch goes quiet instead of
 // closing the shared trigger.
-//
-//nolint:paralleltest // mutates package-global DebounceWindow; must not run in parallel
 func TestWatchInferenceServices_LegacyWatchForbidden(t *testing.T) {
-	old := DebounceWindow
-	DebounceWindow = 50 * time.Millisecond
-	defer func() { DebounceWindow = old }()
+	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	client := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
@@ -460,7 +444,7 @@ func TestWatchInferenceServices_LegacyWatchForbidden(t *testing.T) {
 		return true, nil, apierrors.NewForbidden(inferenceServiceV1GVR.GroupResource(), "", nil)
 	})
 
-	trig, err := WatchInferenceServices(ctx, client)
+	trig, err := watchTrigger(ctx, testDebounce, inferenceServiceWatchOpeners(client)...)
 	require.NoError(t, err)
 	select {
 	case <-legacyWatched:
@@ -493,3 +477,7 @@ func TestWatchInferenceServices_LegacyWatchForbidden(t *testing.T) {
 	for range trig {
 	}
 }
+
+// testDebounce is the watch tests' debounce window: short, so a trigger
+// lands well within their wait.
+const testDebounce = 50 * time.Millisecond
