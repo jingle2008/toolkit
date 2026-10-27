@@ -95,6 +95,12 @@ type confirmPending struct {
 // capturing the current view so dismissConfirm can restore it. It returns
 // nil: opening the modal issues no command.
 func (m *Model) requestConfirm(c confirmRequest) tea.Cmd {
+	if c.action == (mutation.Action{}) {
+		// A key bound where no action is defined for it: confirming would
+		// run nothing, or the wrong thing.
+		m.logger.Error("no action to confirm", "category", m.category, "target", c.target)
+		return nil
+	}
 	verb := actionVerb(c.action)
 	m.openConfirm(confirm.New(confirm.Spec{
 		Title:   verb + " " + actionNoun(c.action),
@@ -124,37 +130,57 @@ func (m *Model) dismissConfirm() {
 	m.confirmPending = confirmPending{}
 }
 
-// confirmDelete builds the irreversible overlay for the Delete key. The
-// action (and so its labels) and warning depend on the category: a DAC is deleted, a GPU
-// node's backing instance is terminated, an orphaned InferenceService is
-// deleted or — planned as k8s.OrphanFinalized — force-deleted (outcome is
-// the plan; empty for the other categories). deleteItem re-finds its
-// target by key at execution time; one gone by then is toasted
-// (onConfirmedItem).
-func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmRequest {
-	c := confirmRequest{
-		target:      itemKeyString(itemKey),
-		auditTarget: m.auditName(itemKey),
-		run: func(int) tea.Cmd {
-			return m.onConfirmedItem(itemKey, func(any) tea.Cmd { return m.deleteItem(itemKey) })
-		},
-	}
-	switch m.category {
-	case domain.GPUNode:
-		c.action = mutation.TerminateNode
-		c.warning = "Boot volume destroyed. Cannot undo."
-	case domain.InferenceService:
+// deleteConfirms is what the Delete key confirms on a row of each
+// category that binds it: a DAC is deleted, a GPU node's backing instance
+// is terminated, an orphaned InferenceService is deleted or — planned as
+// k8s.OrphanFinalized — force-deleted (outcome is the plan; empty for
+// the other categories). A category binding Delete has an entry
+// (TestItemActionTables_MatchBindings); one without gets no modal.
+var deleteConfirms = map[domain.Category]func(m *Model, itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmRequest{
+	domain.DedicatedAICluster: func(m *Model, itemKey models.ItemKey, _ k8s.OrphanDeleteOutcome) confirmRequest {
+		return confirmRequest{
+			action:  mutation.DeleteDAC,
+			warning: "This is irreversible.",
+			run: func(int) tea.Cmd {
+				return m.onConfirmedItem(itemKey, func(any) tea.Cmd { return m.deleteDedicatedAICluster(itemKey) })
+			},
+		}
+	},
+	domain.GPUNode: func(m *Model, itemKey models.ItemKey, _ k8s.OrphanDeleteOutcome) confirmRequest {
+		return confirmRequest{
+			action:  mutation.TerminateNode,
+			warning: "Boot volume destroyed. Cannot undo.",
+			run: func(int) tea.Cmd {
+				return m.onConfirmedItem(itemKey, func(any) tea.Cmd { return m.deleteGPUNode(itemKey) })
+			},
+		}
+	},
+	domain.InferenceService: func(m *Model, itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmRequest {
 		a := mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
-		c.action = a
-		c.run = func(int) tea.Cmd { return m.deleteOrphanInferenceService(itemKey, a) }
-		c.warning = "Its DAC is gone. If it stays deleting, run again after 10m to force-delete."
+		c := confirmRequest{
+			action:  a,
+			warning: "Its DAC is gone. If it stays deleting, run again after 10m to force-delete.",
+			run:     func(int) tea.Cmd { return m.deleteOrphanInferenceService(itemKey, a) },
+		}
 		if outcome == k8s.OrphanFinalized {
 			c.warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
 		}
-	default: // DedicatedAICluster
-		c.action = mutation.DeleteDAC
-		c.warning = "This is irreversible."
+		return c
+	},
+}
+
+// confirmDelete builds the irreversible overlay for the Delete key in the
+// current category (deleteConfirms); a zero request, which requestConfirm
+// refuses, for a category that has none. The delete re-finds its target
+// by key at execution time; one gone by then is toasted
+// (onConfirmedItem).
+func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmRequest {
+	build, ok := deleteConfirms[m.category]
+	if !ok {
+		return confirmRequest{}
 	}
+	c := build(m, itemKey, outcome)
+	c.target, c.auditTarget = itemKeyString(itemKey), m.auditName(itemKey)
 	return c
 }
 
@@ -194,32 +220,46 @@ func (m *Model) confirmDrain(itemKey models.ItemKey) confirmRequest {
 	}
 }
 
-// confirmRestart builds the recoverable overlay for the Restart key: a GPU
-// node's instance is soft-reset, an InferenceService is rolling-restarted.
-// For an InferenceService the warning surfaces the current Ready state so
-// the operator sees whether the endpoint is healthy before disrupting it.
-// Other categories don't bind Restart.
-func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmRequest {
-	c := confirmRequest{
-		action:      mutation.RestartInferenceService,
-		target:      itemKeyString(itemKey),
-		auditTarget: m.auditName(itemKey),
-	}
-	switch m.category {
-	case domain.GPUNode:
-		c.action = mutation.RestartNode
-		c.warning = "Soft-resets the instance; pods running on it are interrupted."
-		c.run = func(int) tea.Cmd {
-			return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.restartNode(item, itemKey) })
+// restartConfirms is what the Restart key confirms on a row of each
+// category that binds it: a GPU node's instance is soft-reset, an
+// InferenceService is rolling-restarted — its warning shows the current
+// Ready state, so the operator sees whether the endpoint is healthy
+// before disrupting it. A category binding Restart has an entry
+// (TestItemActionTables_MatchBindings); one without gets no modal.
+var restartConfirms = map[domain.Category]func(m *Model, itemKey models.ItemKey, item any) confirmRequest{
+	domain.GPUNode: func(m *Model, itemKey models.ItemKey, _ any) confirmRequest {
+		return confirmRequest{
+			action:  mutation.RestartNode,
+			warning: "Soft-resets the instance; pods running on it are interrupted.",
+			run: func(int) tea.Cmd {
+				return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.restartNode(item, itemKey) })
+			},
 		}
-	default: // InferenceService
-		c.run = func(int) tea.Cmd {
-			return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.restartInferenceService(item, itemKey) })
+	},
+	domain.InferenceService: func(m *Model, itemKey models.ItemKey, item any) confirmRequest {
+		c := confirmRequest{
+			action: mutation.RestartInferenceService,
+			run: func(int) tea.Cmd {
+				return m.onConfirmedItem(itemKey, func(item any) tea.Cmd { return m.restartInferenceService(item, itemKey) })
+			},
 		}
 		if svc, ok := item.(*models.InferenceService); ok && svc != nil {
 			c.warning = "Ready: " + svc.Ready
 		}
+		return c
+	},
+}
+
+// confirmRestart builds the recoverable overlay for the Restart key in
+// the current category (restartConfirms); a zero request, which
+// requestConfirm refuses, for a category that has none.
+func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmRequest {
+	build, ok := restartConfirms[m.category]
+	if !ok {
+		return confirmRequest{}
 	}
+	c := build(m, itemKey, item)
+	c.target, c.auditTarget = itemKeyString(itemKey), m.auditName(itemKey)
 	return c
 }
 

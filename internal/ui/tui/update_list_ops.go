@@ -13,24 +13,6 @@ import (
 )
 
 /*
-deleteItem handles the generic delete action based on the current category.
-For DedicatedAICluster, it deletes via SDK and removes the row locally.
-*/
-func (m *Model) deleteItem(itemKey models.ItemKey) tea.Cmd {
-	switch m.category {
-	case domain.DedicatedAICluster:
-		return m.deleteDedicatedAICluster(itemKey)
-	case domain.GPUNode:
-		return m.deleteGPUNode(itemKey)
-	case domain.InferenceService:
-		return m.deleteOrphanInferenceService(itemKey, mutation.DeleteInferenceService)
-	default:
-		// exhaustive
-	}
-	return nil
-}
-
-/*
 deleteDedicatedAICluster deletes a DedicatedAICluster: its endpoints, then
 the cluster, a multi-minute OCI workflow whose steps show as progress.
 */
