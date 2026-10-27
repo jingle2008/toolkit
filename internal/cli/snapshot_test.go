@@ -209,22 +209,22 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 		return []models.GPUPool{{Name: "pool-1", Shape: "BM.GPU.H100.8", Size: 4, ActualSize: 3, CapacityType: "OnDemand", Status: "ACTIVE", AvailabilityDomain: "AD-1", IsOkeManaged: true}}
 	case domain.GPUNode:
 		return map[string][]models.GPUNode{
-			"pool-A": {{Name: "node-1", NodePool: "pool-A", InstanceType: "BM.GPU.H100.8", Allocatable: 8, Allocated: 3, IsReady: true, Age: "1d"}},
+			"pool-A": {{Name: "node-1", NodePool: "pool-A", InstanceType: "BM.GPU.H100.8", Allocatable: 8, Allocated: 3, IsReady: true, CreatedAt: daysAgo(1)}},
 		}
 	case domain.DedicatedAICluster:
 		// TenantID matches the map key — same convention as
 		// ImportedModel; the k8s loader keys by dac.TenantID.
 		return map[string][]models.DedicatedAICluster{
-			"tenant-1": {{Name: "dac-1", TenantID: "tenant-1", Type: "HOSTING", ModelName: "cohere.command", UnitShape: "AI.LARGE", Size: 4, Age: "1d", Status: "ACTIVE"}},
+			"tenant-1": {{Name: "dac-1", TenantID: "tenant-1", Type: "HOSTING", ModelName: "cohere.command", UnitShape: "AI.LARGE", Size: 4, CreatedAt: daysAgo(1), Status: "ACTIVE"}},
 		}
 	case domain.GPUWorkload:
 		return map[string][]models.GPUWorkload{
-			"node-1": {{Name: "pod-1", Node: "node-1", TenantID: "tenant-1", Namespace: "ns1", Model: "gpt-oss-120b", Runtime: "vllm", GPUs: 2, Restarts: 0, Age: "3d", Status: "Running", Mode: "RawDeployment"}},
+			"node-1": {{Name: "pod-1", Node: "node-1", TenantID: "tenant-1", Namespace: "ns1", Model: "gpt-oss-120b", Runtime: "vllm", GPUs: 2, Restarts: 0, CreatedAt: daysAgo(3), Status: "Running", Mode: "RawDeployment"}},
 		}
 	case domain.InferenceService:
 		return map[string][]models.InferenceService{
-			"amaaaaaa-dac-1": {{Name: "is-1", Namespace: "amaaaaaa-dac-1", Type: models.InferenceServiceDedicated, TenantID: "tenant-1", Model: "amaaaaaa-model-1", ImportedModel: true, Runtime: "vllm", MinReplicas: new(1), MaxReplicas: new(2), Ready: "True", Age: "3d"}},
-			"embed-v4":       {{Name: "embed-v4", Namespace: "embed-v4", Type: models.InferenceServiceOnDemand, Model: "embed-v4", MinReplicas: new(2), MaxReplicas: new(4), Ready: "False", Age: "10d"}},
+			"amaaaaaa-dac-1": {{Name: "is-1", Namespace: "amaaaaaa-dac-1", Type: models.InferenceServiceDedicated, TenantID: "tenant-1", Model: "amaaaaaa-model-1", ImportedModel: true, Runtime: "vllm", MinReplicas: new(1), MaxReplicas: new(2), Ready: "True", CreatedAt: daysAgo(3)}},
+			"embed-v4":       {{Name: "embed-v4", Namespace: "embed-v4", Type: models.InferenceServiceOnDemand, Model: "embed-v4", MinReplicas: new(2), MaxReplicas: new(4), Ready: "False", CreatedAt: daysAgo(10)}},
 		}
 	case domain.Alias:
 		cats := make([]domain.Category, 0, len(domain.Categories()))

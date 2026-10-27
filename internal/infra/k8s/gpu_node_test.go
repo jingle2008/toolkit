@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -58,31 +57,6 @@ func TestCalculatePodGPUs(t *testing.T) {
 		},
 	}
 	assert.Equal(t, int64(3), calculatePodGPUs(&pod))
-}
-
-func TestFormatAge(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		dur      time.Duration
-		expected string
-	}{
-		{time.Second * 30, "30s"},
-		{time.Minute, "1m"},
-		{time.Minute*59 + time.Second*59, "59m"},
-		{time.Hour, "1h"},
-		{time.Hour*23 + time.Minute*59, "23h"},
-		{time.Hour * 48, "2d"},
-		{time.Hour*72 + time.Minute*1, "3d"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			t.Parallel()
-			got := FormatAge(tt.dur)
-			if got != tt.expected {
-				t.Errorf("FormatAge(%v) = %q, want %q", tt.dur, got, tt.expected)
-			}
-		})
-	}
 }
 
 func TestGetNodeIssues(t *testing.T) {

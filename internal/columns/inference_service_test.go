@@ -15,7 +15,7 @@ func TestInferenceServiceColumns(t *testing.T) {
 	s := models.InferenceService{
 		Name: "e1", Namespace: "amaaaaaadac1", Type: models.InferenceServiceDedicated,
 		TenantID: "suffix1", Model: "amaaaaaam1", ImportedModel: true, Runtime: "vllm",
-		MinReplicas: new(1), MaxReplicas: new(3), Ready: "True", Age: "3d",
+		MinReplicas: new(1), MaxReplicas: new(3), Ready: "True", CreatedAt: daysAgo(3),
 		Owner: &models.Tenant{Name: "acme"},
 	}
 	got := map[string]string{}

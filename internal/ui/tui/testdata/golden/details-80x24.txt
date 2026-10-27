@@ -10,13 +10,13 @@
 │ Total replicas  4                                                            │
 │ Idle replicas   1                                                            │
 │ Age             12d                                                          │
+│ Created at      YYYY-MM-DDThh:mm:ssZ                                         │
 │                                                                              │
 │ Owner                                                                        │
 │   Name         acme                                                          │
 │   ID           ocid1.tenancy.oc1..acme                                       │
 │   Is internal  false                                                         │
 │   Status       ACTIVE                                                        │
-│                                                                              │
 │                                                                              │
 │                                                                              │
 │                                                                              │

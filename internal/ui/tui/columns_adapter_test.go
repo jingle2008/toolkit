@@ -23,7 +23,7 @@ func TestTuiRowsFlat_BaseModel(t *testing.T) {
 func TestTuiRowsGrouped_GPUNode(t *testing.T) {
 	t.Parallel()
 	m := map[string][]models.GPUNode{
-		"pool-A": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, Age: "1d"}},
+		"pool-A": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, CreatedAt: daysAgo(1)}},
 	}
 	rows := tuiRowsGrouped(columns.GPUNodeColumns, m, relations.GPUNode, nil, "", nil)
 	if len(rows) != 1 {

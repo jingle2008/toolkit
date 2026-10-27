@@ -122,7 +122,7 @@ func TestRenderTable_Flat(t *testing.T) {
 func TestRenderTable_Grouped(t *testing.T) {
 	t.Parallel()
 	items := map[string][]models.GPUNode{
-		"pool-a": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, Age: "1d"}},
+		"pool-a": {{Name: "node-1", InstanceType: "BM.GPU4.8", Allocatable: 8, Allocated: 1, IsReady: true, CreatedAt: daysAgo(1)}},
 	}
 	headers, rows, err := RenderTable(domain.GPUNode, items, nil)
 	if err != nil {

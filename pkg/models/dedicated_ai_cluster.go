@@ -1,8 +1,10 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // DedicatedAICluster represents a dedicated AI cluster resource.
@@ -18,7 +20,11 @@ type DedicatedAICluster struct {
 	ModelName     string  `json:"modelName,omitempty"`
 	TotalReplicas int     `json:"totalReplicas"`
 	IdleReplicas  int     `json:"idleReplicas"`
-	Age           string  `json:"age"`
+	// Age is where the output writes the time since CreatedAt (MarshalJSON);
+	// it is never stored, so it can't go stale. Code reads AgeOf(CreatedAt).
+	Age string `json:"age"`
+	// CreatedAt is when the resource was created; zero when unknown.
+	CreatedAt time.Time `json:"createdAt,omitzero"`
 }
 
 // GetName returns the name of the dedicated AI cluster.
@@ -38,7 +44,7 @@ func (n DedicatedAICluster) FilterableFields() []string {
 		n.OwnerState(),
 		n.ModelName,
 		n.Usage(),
-		n.Age,
+		AgeOf(n.CreatedAt),
 	}
 }
 
@@ -95,4 +101,12 @@ func (n DedicatedAICluster) OCID(realm, region string) string {
 // DedicatedAICluster, built from realm + the stored TenantID suffix.
 func (n DedicatedAICluster) TenancyOCID(realm string) string {
 	return tenancyOCID(realm, n.TenantID)
+}
+
+// MarshalJSON writes DedicatedAICluster with its age as of now, from CreatedAt.
+func (d DedicatedAICluster) MarshalJSON() ([]byte, error) {
+	type plain DedicatedAICluster
+	p := plain(d)
+	p.Age = AgeOf(d.CreatedAt)
+	return json.Marshal(p)
 }

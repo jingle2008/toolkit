@@ -64,8 +64,8 @@ func TestLoadGPUWorkloadsByNode(t *testing.T) {
 			if w.Restarts != 3 { // 2 (main) + 1 (sidecar)
 				t.Errorf("serv restarts = %d, want 3", w.Restarts)
 			}
-			if w.Age == "" {
-				t.Errorf("serv age should be populated from creationTimestamp")
+			if w.CreatedAt.IsZero() {
+				t.Errorf("serv creation time should come from creationTimestamp")
 			}
 			if !w.IsFaulty() {
 				t.Errorf("serv with restarts>0 should be faulty")

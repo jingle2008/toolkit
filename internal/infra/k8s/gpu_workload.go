@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"context"
-	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -63,10 +62,6 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 			for _, cs := range pod.Status.ContainerStatuses {
 				restarts += int(cs.RestartCount)
 			}
-			age := ""
-			if ts := pod.CreationTimestamp; !ts.IsZero() {
-				age = FormatAge(time.Since(ts.Time))
-			}
 			w := models.GPUWorkload{
 				Name:      pod.Name,
 				Node:      pod.Spec.NodeName,
@@ -76,7 +71,7 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 				Runtime:   labels["serving-runtime"],
 				GPUs:      gpus,
 				Restarts:  restarts,
-				Age:       age,
+				CreatedAt: pod.CreationTimestamp.Time,
 				Status:    string(pod.Status.Phase),
 				Mode:      annos["ome.io/deploymentMode"],
 				Legacy:    isLegacyServingPod(labels),

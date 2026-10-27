@@ -14,7 +14,7 @@ func TestGPUWorkloadColumns(t *testing.T) {
 	}
 	w := models.GPUWorkload{
 		Name: "p1", Node: "node-a", TenantID: "suffix1", Namespace: "ns1",
-		Model: "gpt", Runtime: "vllm", GPUs: 2, Restarts: 4, Age: "3d", Mode: "RawDeployment",
+		Model: "gpt", Runtime: "vllm", GPUs: 2, Restarts: 4, CreatedAt: daysAgo(3), Mode: "RawDeployment",
 		Owner: &models.Tenant{Name: "acme"},
 	}
 	got := map[string]string{}

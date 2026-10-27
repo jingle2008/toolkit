@@ -131,7 +131,7 @@ func TestParseSize(t *testing.T) {
 
 func TestSortByAgeAndSize(t *testing.T) {
 	t.Parallel()
-	// Fake k8stime.ParseAge returns 0 for "", so use numbers as string
+	// Fake models.ParseAge returns 0 for "", so use numbers as string
 	rows := []table.Row{
 		{"foo", "10h", "6B"},
 		{"bar", "2h", "3.5M"},

@@ -8,8 +8,8 @@ import (
 
 	"charm.land/bubbles/v2/table"
 
-	k8stime "github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // sortRows sorts rows in-place by column & direction.
@@ -69,7 +69,7 @@ func sortByKey(rows []table.Row, colIdx int, asc bool, cmpCells func(a, b string
 
 func sortByAge(rows []table.Row, colIdx int, asc bool) {
 	sortByKey(rows, colIdx, asc, func(a, b string) int {
-		return cmp.Compare(k8stime.ParseAge(a), k8stime.ParseAge(b))
+		return cmp.Compare(models.ParseAge(a), models.ParseAge(b))
 	})
 }
 

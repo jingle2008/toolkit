@@ -3,7 +3,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,7 +84,6 @@ func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 	gpuNodes := make([]models.GPUNode, 0, len(nodes.Items))
 	for _, node := range nodes.Items {
 		allocatable := gpuCount(node.Status.Allocatable)
-		age := FormatAge(time.Since(node.CreationTimestamp.Time))
 		issues := getNodeIssues(node.Status.Conditions)
 		// Add pod issues for this node
 		issues = append(issues, podIssueMap[node.Name]...)
@@ -99,7 +97,7 @@ func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 			Allocated:            int(gpuAllocationMap[node.Name]),
 			IsReady:              isNodeReady(node.Status.Conditions),
 			IsSchedulingDisabled: node.Spec.Unschedulable,
-			Age:                  age,
+			CreatedAt:            node.CreationTimestamp.Time,
 			Issues:               issues,
 		})
 	}

@@ -10,13 +10,13 @@
 │ Total │ General                           d           ½ page down    │       │
 │ Idle r│   ?/h         Help                b/pgup      Page up        │       │
 │ Age   │   y           Toggle details      f/pgdn      Page down      │       │
-│       │   c           Copy                                           │       │
-│ Owner │   `           Toggle log                                     │       │
-│   Name│   esc         Back/Clear                                     │       │
-│   ID  │   q           Quit                                           │       │
-│   Is i│                                                              │       │
-│   Stat│ / filter · esc close                                         │       │
-│       ╰──────────────────────────────────────────────────────────────╯       │
+│ Create│   c           Copy                                           │       │
+│       │   `           Toggle log                                     │       │
+│ Owner │   esc         Back/Clear                                     │       │
+│   Name│   q           Quit                                           │       │
+│   ID  │                                                              │       │
+│   Is i│ / filter · esc close                                         │       │
+│   Stat╰──────────────────────────────────────────────────────────────╯       │
 │                                                                              │
 │                                                                              │
 │                                                                              │
