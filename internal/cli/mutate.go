@@ -187,7 +187,7 @@ func withCommandSetup(
 	if err := validateMutationConfig(cfg, needsKube, needsRepo, needsEnv); err != nil {
 		return err
 	}
-	logger, logFile, err := initLogger(cfg)
+	logger, logFile, _, err := initLogger(cfg, name)
 	if err != nil {
 		return err
 	}

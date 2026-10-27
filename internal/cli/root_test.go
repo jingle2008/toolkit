@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
+
+	"github.com/jingle2008/toolkit/internal/logging"
 )
 
 func TestRootCmd_HelpOutput(t *testing.T) {
@@ -80,7 +82,8 @@ func TestDefaultFlags(t *testing.T) {
 	cmd := NewRootCmd("vtest")
 	tests := []struct{ name, want string }{
 		{"log-format", "console"},
-		{"log-file", "toolkit.log"},
+		{"log-file", ""},
+		{"log-dir", logging.DefaultDir()},
 	}
 	for _, tc := range tests {
 		got, _ := cmd.PersistentFlags().GetString(tc.name)

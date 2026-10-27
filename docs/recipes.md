@@ -120,10 +120,10 @@ The drain's progress lives on the Node (annotation `toolkit/drain`), so an inter
 
 ### Inspect the audit trail
 
-Every mutation writes a structured line to the log (configured via `--log-file` / `log-file:` — defaults to `toolkit.log`). Set `log-format: json` to make it `jq`-friendly:
+Every mutation writes a structured line to its session's log (in `--log-dir`, default `~/.local/state/toolkit/logs`; see `toolkit logs ls`). Set `log-format: json` to make it `jq`-friendly, and read every session at once:
 
 ```bash
-jq 'select(.msg=="mutation") | {time, action, target, phase, dry_run, error}' toolkit.log
+jq 'select(.msg=="mutation") | {time, action, target, phase, dry_run, error}' ~/.local/state/toolkit/logs/*.log
 ```
 
 Typical output (pretty-printed):

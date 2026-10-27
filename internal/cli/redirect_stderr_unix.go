@@ -24,7 +24,7 @@ import (
 func redirectStderr(path string) (func(), error) {
 	// 0600: the sink can capture exec auth-plugin output and panic stacks, so
 	// keep it private rather than world-readable, consistent with metadata/config.
-	//nolint:gosec // G304: path is the user-configured log-file location (cfg.LogFile + ".stderr").
+	//nolint:gosec // G304: path is the log file plus ".stderr", under the user's log dir or --log-file.
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open stderr sink %q: %w", path, err)
@@ -47,6 +47,11 @@ func redirectStderr(path string) (func(), error) {
 		// not a closed fd.
 		_ = unix.Dup2(orig, int(os.Stderr.Fd()))
 		_ = unix.Close(orig)
+		// Most sessions capture nothing; don't leave an empty file
+		// behind for each one.
+		if fi, err := f.Stat(); err == nil && fi.Size() == 0 {
+			_ = os.Remove(path)
+		}
 		_ = f.Close()
 	}, nil
 }

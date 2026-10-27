@@ -29,8 +29,8 @@ each tool call may override env_type/region/realm per-invocation (the
 MCP tool-input JSON schema keeps snake_case naming) so one running
 server can query multiple environments.
 
-stdout is reserved for MCP JSON-RPC frames. Logs are written to
-cfg.LogFile (default toolkit.log).`,
+stdout is reserved for MCP JSON-RPC frames. Logs are written to a
+per-session file in --log-dir (see ` + "`toolkit logs`" + `), or to --log-file.`,
 		Args: cobra.NoArgs,
 		RunE: runMCP(cfgFile, version),
 	}
@@ -62,8 +62,8 @@ func runMCP(cfgFile *string, version string) func(cmd *cobra.Command, args []str
 			)
 		}
 
-		// Stdout is reserved for MCP frames — logs go to cfg.LogFile.
-		logger, logFile, err := initLogger(cfg)
+		// Stdout is reserved for MCP frames — logs go to the log file.
+		logger, logFile, _, err := initLogger(cfg, "mcp")
 		if err != nil {
 			return err
 		}

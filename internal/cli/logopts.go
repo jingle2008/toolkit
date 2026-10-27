@@ -26,18 +26,32 @@ func logOptionsFromViper() (string, string, error) {
 }
 
 // initLogger reads log-format/log-level from viper and constructs a
-// file-backed logger writing to cfg.LogFile. Stdout is reserved for
-// command output (get) or MCP frames (mcp), so logs never bleed into
-// the data stream. It also routes client-go's klog output into the
-// logger. Close the returned closer on shutdown.
-func initLogger(cfg config.Config) (*slog.Logger, io.Closer, error) {
+// file-backed logger: a per-session file in cfg.LogDir named for cmd
+// (logging.NewSession), or cfg.LogFile when that is set. It returns the
+// file's path too. Stdout is reserved for command output (get) or MCP
+// frames (mcp), so logs never bleed into the data stream. It also
+// routes client-go's klog output into the logger. Close the returned
+// closer on shutdown.
+func initLogger(cfg config.Config, cmd string) (*slog.Logger, io.Closer, string, error) {
 	logFormat, logLevel, err := logOptionsFromViper()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	logger, closer := logging.NewFile(cfg.LogFile, logFormat, logLevel, cfg.Debug)
+	var (
+		logger *slog.Logger
+		closer io.Closer
+		path   = cfg.LogFile
+	)
+	if path != "" {
+		logger, closer = logging.NewFile(path, logFormat, logLevel, cfg.Debug)
+	} else {
+		logger, closer, path, err = logging.NewSession(logDir(cfg), cmd, logFormat, logLevel, cfg.Debug)
+		if err != nil {
+			return nil, nil, "", err
+		}
+	}
 	routeKlog(logger)
-	return logger, closer, nil
+	return logger, closer, path, nil
 }
 
 // routeKlog sends klog (client-go's logger) through logger, so its lines
