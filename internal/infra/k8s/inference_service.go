@@ -85,15 +85,6 @@ func legacyAPIUnavailable(err error) bool {
 	return apierrors.IsNotFound(err) || apierrors.IsForbidden(err)
 }
 
-/*
-parseInferenceService extracts the operator-facing fields from one CR.
-
-An endpoint is dedicated when it carries the DAC annotation or, failing
-that, lives in a namespace named after a DAC OCID; anything else is a
-shared on-demand endpoint. A missing tenancy-id label leaves TenantID
-blank rather than bucketing under UNKNOWN_TENANCY: the map is keyed by
-namespace, and on-demand endpoints legitimately have no tenant.
-*/
 // optionalCount is nestedCount as a pointer: nil when the field is unset,
 // so an endpoint without one shows no replica count rather than 0.
 func optionalCount(root map[string]any, fields ...string) *int {
@@ -103,6 +94,15 @@ func optionalCount(root map[string]any, fields ...string) *int {
 	return nil
 }
 
+/*
+parseInferenceService extracts the operator-facing fields from one CR.
+
+An endpoint is dedicated when it carries the DAC annotation or, failing
+that, lives in a namespace named after a DAC OCID; anything else is a
+shared on-demand endpoint. A missing tenancy-id label leaves TenantID
+blank rather than bucketing under UNKNOWN_TENANCY: the map is keyed by
+namespace, and on-demand endpoints legitimately have no tenant.
+*/
 func parseInferenceService(obj *unstructured.Unstructured) models.InferenceService {
 	spec, _, _ := unstructured.NestedMap(obj.Object, "spec")
 	modelName, _, _ := unstructured.NestedString(spec, "model", "name")

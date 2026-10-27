@@ -78,17 +78,25 @@ func loadGPUNodesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, e
 }
 
 // loadGPUWorkloadsCmd loads the GPU workloads and, withDACs, the DACs
-// too: they give a pod without a tenancy-id label its tenant. A failed
-// DAC load only leaves those pods unowned.
+// too, at the same time: they give a pod without a tenancy-id label its
+// tenant. A failed DAC load only leaves those pods unowned.
 func loadGPUWorkloadsCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int, withDACs bool) tea.Cmd {
 	return func() tea.Msg {
+		var dacs chan map[string][]models.DedicatedAICluster
+		if withDACs {
+			dacs = make(chan map[string][]models.DedicatedAICluster, 1)
+			go func() {
+				m, _ := ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)
+				dacs <- m
+			}()
+		}
 		items, err := ld.LoadGPUWorkloadsByNode(ctx, kubeCfg, env)
 		if err != nil {
 			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUWorkload, err), Gen: gen, Cat: domain.GPUWorkload}
 		}
 		msg := gpuWorkloadsLoadedMsg{Items: items, Gen: gen}
 		if withDACs {
-			msg.DACs, _ = ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)
+			msg.DACs = <-dacs
 		}
 		return msg
 	}

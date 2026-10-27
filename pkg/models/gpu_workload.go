@@ -23,6 +23,9 @@ type GPUWorkload struct {
 	// ome.io ClusterServingRuntime.
 	Legacy bool    `json:"legacy,omitempty"`
 	Owner  *Tenant `json:"owner,omitempty"`
+	// tenantFromDAC is set when TenantID was taken from the DAC of the
+	// pod's namespace rather than its label (Dataset.SetGPUWorkloadMap).
+	tenantFromDAC bool
 }
 
 // GetName returns the pod name.

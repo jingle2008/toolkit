@@ -158,6 +158,11 @@ func deleteEndpointsInDAC(
 	if err := g.Wait(); err != nil {
 		return err
 	}
+	// A ctx done before any deletion failed stops the queueing above
+	// with a nil Wait: the endpoints it skipped are still there.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	logger.Info("endpoints deleted", "count", count)
 	return nil

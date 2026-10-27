@@ -254,10 +254,6 @@ func validateLoaderConfig(cfg config.Config) []string {
 	return missing
 }
 
-// validateGetConfig checks the minimum fields needed to load the
-// requested category. Unlike config.Validate (used by the TUI), it
-// does not require Category — the positional arg supplies it — and
-// only requires KubeConfig for cluster-derived categories.
 // validateGetRequest checks --limit (0 is unlimited; a negative one was
 // read as unlimited too, though the help didn't say so), then
 // validateGetConfig and validateFaulty.
@@ -271,6 +267,10 @@ func validateGetRequest(cfg config.Config, cat domain.Category, faulty bool, lim
 	return validateFaulty(cfg, cat, faulty)
 }
 
+// validateGetConfig checks the minimum fields needed to load the
+// requested category. Unlike config.Validate (used by the TUI), it
+// does not require Category — the positional arg supplies it — and
+// only requires KubeConfig for cluster-derived categories.
 func validateGetConfig(cfg config.Config, cat domain.Category) error {
 	// Alias is a static dump of domain.AllAliases() — it never reaches the
 	// loader, so don't gate it on repo_path / env_*.
@@ -491,11 +491,14 @@ func emitCategory(
 		// it from the same value used as the map key.
 		return writeMap(w, relatedOrFiltered(relations.GPUNode, grouped, domain.GPUNode, related, filter), limit, opts, domain.GPUNode, env, selected)
 	case domain.GPUWorkload:
+		// The workloads' owners load while they do.
+		owners := make(chan *models.Dataset, 1)
+		go func() { owners <- workloadOwnersDataset(ctx, ld, cfg, env) }()
 		grouped, err := ld.LoadGPUWorkloadsByNode(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load gpu workloads: %w", err)
 		}
-		ds := workloadOwnersDataset(ctx, ld, cfg, env)
+		ds := <-owners
 		ds.SetGPUWorkloadMap(grouped)
 		return writeMap(w, relatedOrFiltered(relations.GPUWorkload, ds.GPUWorkloadMap, domain.GPUWorkload, related, filter),
 			limit, opts, domain.GPUWorkload, env, selected)
