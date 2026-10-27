@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
@@ -80,12 +79,7 @@ func listPodsWithSelectors(
 	labelSelector string,
 	fieldSelector string,
 ) (map[string][]*unstructured.Unstructured, error) {
-	gvr := schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "pods",
-	}
-	list, err := client.Resource(gvr).List(ctx, v1.ListOptions{
+	list, err := client.Resource(podGVR).List(ctx, v1.ListOptions{
 		LabelSelector: labelSelector,
 		FieldSelector: fieldSelector,
 	})

@@ -182,20 +182,16 @@ func deleteOrphanInferenceService(ctx context.Context, client dynamic.Interface,
 // getInferenceService fetches namespace/name from the ome.io API, then the
 // legacy one, returning the API it was found in.
 func getInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string) (*unstructured.Unstructured, schema.GroupVersionResource, error) {
-	obj, err := client.Resource(inferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
-	if err == nil {
-		return obj, inferenceServiceGVR, nil
+	var obj *unstructured.Unstructured
+	gvr, err := onInferenceService(func(gvr schema.GroupVersionResource) error {
+		var err error
+		obj, err = client.Resource(gvr).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
+		return err
+	})
+	if err != nil {
+		return nil, schema.GroupVersionResource{}, fmt.Errorf("get InferenceService %s/%s: %w", namespace, name, err)
 	}
-	if apierrors.IsNotFound(err) {
-		legacy, legacyErr := client.Resource(inferenceServiceV1GVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
-		if legacyErr == nil {
-			return legacy, inferenceServiceV1GVR, nil
-		}
-		if !apierrors.IsNotFound(legacyErr) {
-			err = legacyErr
-		}
-	}
-	return nil, schema.GroupVersionResource{}, fmt.Errorf("get InferenceService %s/%s: %w", namespace, name, err)
+	return obj, gvr, nil
 }
 
 // checkOrphan returns nil when obj is a dedicated endpoint none of whose

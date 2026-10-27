@@ -138,8 +138,6 @@ const (
 // node running any of them must not be drained.
 var drainBlockerLabels = []string{fineTuneLabel, trainingLabelV2, replicationJobLabel}
 
-var inferenceServiceV1GVR = schema.GroupVersionResource{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "inferenceservices"}
-
 // servingAPI ties a serving pod label to the InferenceService API that owns
 // the pod. The two OME generations keep minReplicas at different spec paths.
 type servingAPI struct {

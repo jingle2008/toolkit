@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,12 +54,10 @@ func RestartInferenceService(ctx context.Context, kubeconfig, contextName, names
 
 func resolveInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string) (string, error) {
 	if namespace != "" {
-		_, err := client.Resource(inferenceServiceGVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			if _, legacyErr := client.Resource(inferenceServiceV1GVR).Namespace(namespace).Get(ctx, name, v1.GetOptions{}); legacyErr == nil {
-				return namespace, nil
-			}
-		}
+		_, err := onInferenceService(func(gvr schema.GroupVersionResource) error {
+			_, err := client.Resource(gvr).Namespace(namespace).Get(ctx, name, v1.GetOptions{})
+			return err
+		})
 		if err != nil {
 			return "", fmt.Errorf("get InferenceService %s/%s: %w", namespace, name, err)
 		}
@@ -84,7 +81,7 @@ func resolveInferenceService(ctx context.Context, client dynamic.Interface, name
 
 // inferenceServiceNamespaces returns the sorted, distinct namespaces
 // holding an InferenceService called name in either API. A cluster
-// without the legacy CRD contributes no legacy matches.
+// whose legacy API can't be read contributes no legacy matches.
 func inferenceServiceNamespaces(ctx context.Context, client dynamic.Interface, name string) ([]string, error) {
 	// The field selector narrows server-side; the name check below keeps
 	// the result correct even where the selector is ignored.
@@ -96,7 +93,7 @@ func inferenceServiceNamespaces(ctx context.Context, client dynamic.Interface, n
 	items := list.Items
 	legacy, err := client.Resource(inferenceServiceV1GVR).List(ctx, opts)
 	switch {
-	case apierrors.IsNotFound(err): // no legacy CRD
+	case legacyAPIUnavailable(err): // no legacy CRD, or no access to it
 	case err != nil:
 		return nil, fmt.Errorf("list legacy InferenceService: %w", err)
 	default:
@@ -113,15 +110,10 @@ func inferenceServiceNamespaces(ctx context.Context, client dynamic.Interface, n
 }
 
 func restartInferenceService(ctx context.Context, client dynamic.Interface, namespace, name string, now time.Time) error {
-	// Try the ome.io API first, then the legacy one: the caller only has
-	// namespace/name, and an endpoint lives in exactly one of them.
-	err := patchRestartedAt(ctx, client, inferenceServiceGVR, namespace, name, now)
-	if apierrors.IsNotFound(err) {
-		legacyErr := patchRestartedAt(ctx, client, inferenceServiceV1GVR, namespace, name, now)
-		if legacyErr == nil || !apierrors.IsNotFound(legacyErr) {
-			return legacyErr
-		}
-	}
+	// The caller only has namespace/name, so patch whichever API serves it.
+	_, err := onInferenceService(func(gvr schema.GroupVersionResource) error {
+		return patchRestartedAt(ctx, client, gvr, namespace, name, now)
+	})
 	return err
 }
 

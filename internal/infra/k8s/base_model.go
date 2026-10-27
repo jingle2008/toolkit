@@ -6,7 +6,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/yaml"
 
@@ -19,18 +18,13 @@ import (
 // excluded — the toolkit's CLI / MCP / TUI surfaces are for the
 // shared / public catalog.
 func LoadBaseModels(ctx context.Context, client dynamic.Interface) ([]models.BaseModel, error) {
-	gvr := schema.GroupVersionResource{
-		Group:    "ome.io",
-		Version:  "v1beta1",
-		Resource: "clusterbasemodels",
-	}
-	list, err := client.Resource(gvr).List(ctx, v1.ListOptions{})
+	list, err := client.Resource(clusterBaseModelGVR).List(ctx, v1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("list ClusterBaseModel: %w", err)
 	}
 	result := make([]models.BaseModel, 0, len(list.Items))
 	for _, item := range list.Items {
-		if _, tenantScoped := getLabels(&item)["tenancy-id"]; tenantScoped {
+		if _, tenantScoped := getLabels(&item)[labelTenancyID]; tenantScoped {
 			continue
 		}
 		result = append(result, parseBaseModel(&item))

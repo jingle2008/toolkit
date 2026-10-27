@@ -77,14 +77,6 @@ func listLegacyInferenceServices(ctx context.Context, client dynamic.Interface) 
 // once-per-process message.
 var legacyForbiddenOnce sync.Once
 
-// legacyAPIUnavailable reports whether err means the legacy
-// ome.oracle.com API can't be read at all — the CRD isn't installed
-// (NotFound) or the user's role doesn't cover it (Forbidden) — so it
-// should contribute nothing rather than fail the ome.io results.
-func legacyAPIUnavailable(err error) bool {
-	return apierrors.IsNotFound(err) || apierrors.IsForbidden(err)
-}
-
 // optionalCount is nestedCount as a pointer: nil when the field is unset,
 // so an endpoint without one shows no replica count rather than 0.
 func optionalCount(root map[string]any, fields ...string) *int {
@@ -121,7 +113,7 @@ func parseInferenceService(obj *unstructured.Unstructured) models.InferenceServi
 		Name:      obj.GetName(),
 		Namespace: ns,
 		Type:      svcType,
-		TenantID:  obj.GetLabels()["tenancy-id"],
+		TenantID:  obj.GetLabels()[labelTenancyID],
 		Model:     modelName,
 		// Imported whether referenced as a namespaced BaseModel or as a
 		// tenant-labelled ClusterBaseModel: the name (an OCID) says so.
@@ -167,7 +159,7 @@ func parseLegacyInferenceService(obj *unstructured.Unstructured) models.Inferenc
 		Name:        obj.GetName(),
 		Namespace:   ns,
 		Type:        svcType,
-		TenantID:    obj.GetLabels()["tenancy-id"],
+		TenantID:    obj.GetLabels()[labelTenancyID],
 		Model:       modelName,
 		Runtime:     runtime,
 		MinReplicas: minReplicas,

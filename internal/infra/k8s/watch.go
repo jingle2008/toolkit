@@ -289,16 +289,6 @@ func gpuPodWatchOpeners(clientset kubernetes.Interface) []func(context.Context) 
 	return openers
 }
 
-var (
-	clusterBaseModelGVR = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "clusterbasemodels"}
-	baseModelGVR        = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "basemodels"}
-	dacV1GVR            = schema.GroupVersionResource{Group: "ome.oracle.com", Version: "v1alpha1", Resource: "dedicatedaiclusters"}
-	dacV2GVR            = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "dedicatedaiclusters"}
-
-	clusterServingRuntimeGVR = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "clusterservingruntimes"}
-	inferenceServiceGVR      = schema.GroupVersionResource{Group: "ome.io", Version: "v1beta1", Resource: "inferenceservices"}
-)
-
 // WatchInferenceServices triggers on InferenceService CR changes (both
 // API versions LoadInferenceServices merges). Like the loader, it skips
 // the legacy API when that is unavailable.
@@ -423,7 +413,7 @@ func WatchGPUWorkloads(ctx context.Context, clientset kubernetes.Interface) (<-c
 // versions) plus GPU pod changes (pods drive replica stats).
 func WatchDedicatedAIClusters(ctx context.Context, client dynamic.Interface, clientset kubernetes.Interface) (<-chan struct{}, error) {
 	openers := make([]func(context.Context) (watch.Interface, error), 0, 2+len(gpuPodSelectors))
-	openers = append(openers, crWatchOpener(client, dacV1GVR), crWatchOpener(client, dacV2GVR))
+	openers = append(openers, legacyCRWatchOpener(client, dacV1GVR), crWatchOpener(client, dacV2GVR))
 	openers = append(openers, gpuPodWatchOpeners(clientset)...)
 	return watchTrigger(ctx, DebounceWindow, openers...)
 }
