@@ -1,5 +1,7 @@
 package models
 
+import "slices"
+
 // PropertyDefinition represents a property definition.
 type PropertyDefinition struct {
 	Name         string   `json:"name"`
@@ -65,7 +67,7 @@ func (o PropertyRegionalOverride) GetValue() string {
 
 // FilterableFields returns filterable fields for the property regional override.
 func (o PropertyRegionalOverride) FilterableFields() []string {
-	return append(o.Regions, o.Name)
+	return slices.Concat(o.Regions, []string{o.Name})
 }
 
 // IsFaulty returns false by default for PropertyRegionalOverride.
@@ -98,5 +100,5 @@ func (o *PropertyTenancyOverride) SetTenantName(name string) {
 
 // FilterableFields returns filterable fields for the property tenancy override.
 func (o PropertyTenancyOverride) FilterableFields() []string {
-	return append(o.Regions, o.Name, o.TenantName, o.TenantID)
+	return slices.Concat(o.Regions, []string{o.Name, o.TenantName, o.TenantID})
 }

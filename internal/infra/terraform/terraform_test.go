@@ -558,6 +558,26 @@ output "baz" {
 	assert.Contains(t, attrs, "baz")
 }
 
+func TestUpdateLocalAttributes_MalformedOutputSkipped(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	tf := `
+output {
+  value = "unlabeled"
+}
+
+output "novalue" {
+  description = "no value attribute"
+}
+`
+	path := writeTempFile(t, dir, "output.tf", tf)
+	attrs := make(hclsyntax.Attributes)
+	require.NotPanics(t, func() {
+		require.NoError(t, updateLocalAttributes(path, attrs))
+	})
+	assert.Empty(t, attrs)
+}
+
 func TestUpdateLocalAttributes_NoRelevantBlocks(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

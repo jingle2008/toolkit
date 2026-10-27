@@ -103,9 +103,8 @@ func (s *Server) effectiveMutationEnv(a mutation.Action, target string, in envOv
 	}
 	effective := s.envFor(in)
 	if effective != startup {
-		s.logger.Info(
+		s.logger.Warn(
 			"mutation env override active (deviation from startup)",
-			"level", "warn",
 			"action", a.Verb, "kind", a.Kind, "target", target, "surface", surfaceMCP,
 			"startup_realm", startup.Realm, "effective_realm", effective.Realm,
 			"startup_region", startup.Region, "effective_region", effective.Region,
@@ -411,12 +410,10 @@ func (s *Server) driveDrain(kubeContext, node string) {
 	go func() {
 		defer s.drainDrivers.Delete(key)
 		if err := mcpAwaitDrainFn(s.bgCtx, s.cfg.KubeConfig, kubeContext, node); err != nil {
-			s.logger.Error("mutation", "action", "drain", "kind", "node", "target", node, "surface", surfaceMCP,
-				"phase", "background-failed", "error", err)
+			mutation.Audit(s.logger, surfaceMCP, mutation.DrainNode, node, mutation.PhaseBackgroundFailed, err)
 			return
 		}
-		s.logger.Info("mutation", "action", "drain", "kind", "node", "target", node, "surface", surfaceMCP,
-			"phase", "background-done")
+		mutation.Audit(s.logger, surfaceMCP, mutation.DrainNode, node, mutation.PhaseBackgroundDone, nil)
 	}()
 }
 

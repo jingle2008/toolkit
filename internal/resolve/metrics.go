@@ -58,7 +58,7 @@ func metricsCatalog(ctx context.Context, ld loader.Composite, kubeConfig string,
 		if err != nil {
 			return nil, fmt.Errorf("load imported models: %w", err)
 		}
-		ds.ImportedModelMap = grouped
+		ds.SetImportedModelMap(grouped)
 		return ds, nil
 	}
 	bms, err := ld.LoadBaseModels(ctx, kubeConfig, env)

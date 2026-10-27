@@ -110,8 +110,10 @@ func (m BaseModel) FilterableFields() []string {
 		shapeName = shape.Name
 	}
 
-	return append(m.Capabilities, m.Name, m.DisplayName, m.Status,
-		m.Type, m.Flags(), shapeName, m.Runtime, m.StorageURI)
+	return slices.Concat(m.Capabilities, []string{
+		m.Name, m.DisplayName, m.Status,
+		m.Type, m.Flags(), shapeName, m.Runtime, m.StorageURI,
+	})
 }
 
 // IsFaulty reports whether the model's Status is anything other than "Ready".

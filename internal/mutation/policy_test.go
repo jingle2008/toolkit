@@ -165,3 +165,20 @@ func TestAudit_Fields(t *testing.T) {
 	assert.Equal(t, int64(2), f["add"]) // slog normalizes ints to int64
 	assert.Equal(t, int64(6), f["to"])
 }
+
+func TestAudit_BackgroundPhases(t *testing.T) {
+	t.Parallel()
+	sink := logging.NewRingSink(2)
+	Audit(slog.New(sink), "mcp", DrainNode, "n1", PhaseBackgroundFailed, errors.New("evict"))
+	Audit(slog.New(sink), "mcp", DrainNode, "n1", PhaseBackgroundDone, nil)
+	got := sink.Snapshot()
+	require.Len(t, got, 2)
+
+	assert.Equal(t, logging.LevelError, got[0].Level)
+	assert.Equal(t, "background-failed", fields(got[0])["phase"])
+	assert.EqualError(t, fields(got[0])["error"].(error), "evict") //nolint:forcetypeassert // asserted by EqualError
+
+	assert.Equal(t, logging.LevelInfo, got[1].Level)
+	assert.Equal(t, "background-done", fields(got[1])["phase"])
+	assert.NotContains(t, fields(got[1]), "error")
+}

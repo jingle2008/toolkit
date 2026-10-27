@@ -109,8 +109,7 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, ca
 		func(spec map[string]any, _ PodStats, dac *models.DedicatedAICluster) {
 			dac.Type, _ = spec["type"].(string)
 			dac.UnitShape, _ = spec["unitShape"].(string)
-			size, _ := spec["size"].(int64)
-			dac.Size = int(size)
+			dac.Size, _ = nestedCount(spec, "size")
 		}))
 }
 
@@ -130,9 +129,9 @@ func listDACProfilePodCounts(ctx context.Context, client dynamic.Interface) (map
 	}
 	podCounts := make(map[string]int, len(list.Items))
 	for _, item := range list.Items {
-		count, found, _ := unstructured.NestedInt64(item.Object, "spec", "count")
+		count, found := nestedCount(item.Object, "spec", "count")
 		if found && count > 0 {
-			podCounts[item.GetName()] = int(count)
+			podCounts[item.GetName()] = count
 		}
 	}
 	return podCounts, nil
@@ -154,7 +153,7 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 	return listDACsWithOverlay(ctx, client, gvr, extractDAC(ctx, cache, "dacLifecycleState",
 		func(spec map[string]any, stats PodStats, dac *models.DedicatedAICluster) {
 			dac.Profile, _ = spec["profile"].(string)
-			count, _ := spec["count"].(int64)
+			count, _ := nestedCount(spec, "count")
 			dac.Type = stats.Type
 
 			// spec.count is the DAC's pod count; Size reports profile
@@ -164,10 +163,10 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 			if !ok {
 				logger.Warn("DAC profile not found; Size falls back to pod count",
 					"dac", dac.Name, "profile", dac.Profile)
-				dac.Size = int(count)
+				dac.Size = count
 				return
 			}
-			dac.Size = int((count + int64(podsPerUnit) - 1) / int64(podsPerUnit))
+			dac.Size = (count + podsPerUnit - 1) / podsPerUnit
 		}))
 }
 

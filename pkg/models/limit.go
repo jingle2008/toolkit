@@ -1,5 +1,7 @@
 package models
 
+import "slices"
+
 // LimitDefinition represents a limit definition for a service.
 type LimitDefinition struct {
 	Name                 string `json:"name"`
@@ -69,7 +71,7 @@ func (o LimitRegionalOverride) GetName() string {
 
 // FilterableFields returns filterable fields for the limit regional override.
 func (o LimitRegionalOverride) FilterableFields() []string {
-	return append(o.Regions, o.Name)
+	return slices.Concat(o.Regions, []string{o.Name})
 }
 
 // IsFaulty returns false by default for LimitRegionalOverride.
@@ -105,5 +107,5 @@ func (o *LimitTenancyOverride) SetTenantName(name string) {
 
 // FilterableFields returns filterable fields for the limit tenancy override.
 func (o LimitTenancyOverride) FilterableFields() []string {
-	return append(o.Regions, o.Name, o.TenantName, o.TenantID)
+	return slices.Concat(o.Regions, []string{o.Name, o.TenantName, o.TenantID})
 }
