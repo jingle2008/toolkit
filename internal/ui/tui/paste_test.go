@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/tenantform"
 )
 
 // Charm v2 delivers a terminal paste (cmd+v) as tea.PasteMsg, not a key
@@ -21,17 +22,18 @@ func TestPaste_EditTenantForm(t *testing.T) {
 	t.Parallel()
 	m := openForm(t)
 	m.viewMode = common.EditTenantView
-	m.editTenant.nameErr = "required"
-	m.editTenant.focusOn(focusName)
+	_, _ = m.Update(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl}) // save without a name
+	require.Equal(t, "required", m.editTenant.NameErr())
+	require.Equal(t, tenantform.FieldName, m.editTenant.Focus())
 
 	_, _ = m.Update(paste("acme"))
-	assert.Equal(t, "acme", m.editTenant.name.Value())
-	assert.Empty(t, m.editTenant.nameErr)
+	assert.Equal(t, "acme", m.editTenant.Name())
+	assert.Empty(t, m.editTenant.NameErr())
 
-	m.editTenant.focusOn(focusNote)
+	m.editTenant = m.editTenant.FocusOn(tenantform.FieldNote)
 	_, _ = m.Update(paste("shared tenancy"))
-	assert.Equal(t, "shared tenancy", m.editTenant.note.Value())
-	assert.Equal(t, "acme", m.editTenant.name.Value(), "only the focused field")
+	assert.Equal(t, "shared tenancy", m.editTenant.Note())
+	assert.Equal(t, "acme", m.editTenant.Name(), "only the focused field")
 }
 
 // A paste into the filter input sets the text and debounces the filter;

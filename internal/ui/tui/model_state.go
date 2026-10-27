@@ -28,6 +28,7 @@ import (
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/internal/ui/tui/palette"
 	"github.com/jingle2008/toolkit/internal/ui/tui/rowpicker"
+	"github.com/jingle2008/toolkit/internal/ui/tui/tenantform"
 	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 	"github.com/jingle2008/toolkit/internal/uistate"
@@ -257,8 +258,8 @@ type Model struct {
 	exportName textinput.Model
 	naming     bool
 
-	// Tenant-metadata entry form state (EditTenantView).
-	editTenant *editTenantForm
+	// Tenant-metadata entry form (EditTenantView); the zero form is none.
+	editTenant tenantform.Model
 
 	// log holds the log-overlay state. See the logOverlay type.
 	log logOverlay
