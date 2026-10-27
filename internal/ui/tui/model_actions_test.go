@@ -90,8 +90,8 @@ func TestDeleteItemActions(t *testing.T) {
 	m.updateColumns()
 	m.updateRows(true)
 	key := models.ScopedItemKey{Name: "dac1", Scope: "tenant1"}
-	if cmd := m.deleteItem(key); cmd == nil {
-		t.Fatal("expected deleteItem to return cmd for dedicated AI cluster")
+	if cmd := m.deleteDedicatedAICluster(key); cmd == nil {
+		t.Fatal("expected a cmd deleting the dedicated AI cluster")
 	}
 	assert.Equal(t, "Deleting", statusCell(t, m))
 	assert.Equal(t, "RUNNING", findItem(m.dataset, m.category, key).(*models.DedicatedAICluster).Status)
@@ -103,8 +103,8 @@ func TestDeleteItemActions(t *testing.T) {
 	m.updateColumns()
 	m.updateRows(true)
 	key = models.ScopedItemKey{Name: "node1", Scope: "pool"}
-	if cmd := m.deleteItem(key); cmd == nil {
-		t.Fatal("expected deleteItem to return cmd for gpu node")
+	if cmd := m.deleteGPUNode(key); cmd == nil {
+		t.Fatal("expected a cmd terminating the gpu node")
 	}
 	assert.Equal(t, "Terminating", statusCell(t, m))
 }
