@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/viper"
 
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -23,18 +24,18 @@ func stageDACEnv(t *testing.T) {
 	t.Setenv("TOOLKIT_ENV_REALM", "oc1")
 	viper.Reset()
 	t.Cleanup(viper.Reset)
-	stubTargetLookups(t)
 }
 
 func TestDeleteDAC_DryRun_DoesNotCallOCI(t *testing.T) {
+	d := &ops.Deps{}
 	stageDACEnv(t)
 	called := false
-	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
+	d.DeleteDAC = func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		called = true
 		return nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"delete", "dac", "dac-x", "--dry-run"}, "")
+	out, err := runRootCmdWith(t, d, []string{"delete", "dac", "dac-x", "--dry-run"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -47,14 +48,15 @@ func TestDeleteDAC_DryRun_DoesNotCallOCI(t *testing.T) {
 }
 
 func TestDeleteDAC_RequiresExplicitYes(t *testing.T) {
+	d := &ops.Deps{}
 	stageDACEnv(t)
 	called := false
-	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
+	d.DeleteDAC = func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		called = true
 		return nil
-	})()
+	}
 
-	_, err := runRootCmd(t, []string{"delete", "dac", "dac-x"}, "y\n") // typing y must NOT be enough
+	_, err := runRootCmdWith(t, d, []string{"delete", "dac", "dac-x"}, "y\n") // typing y must NOT be enough
 	if err == nil {
 		t.Fatal("expected error: destructive op requires --yes")
 	}
@@ -67,14 +69,15 @@ func TestDeleteDAC_RequiresExplicitYes(t *testing.T) {
 }
 
 func TestDeleteDAC_YesCallsOCI(t *testing.T) {
+	d := &ops.Deps{}
 	stageDACEnv(t)
 	var gotDAC *models.DedicatedAICluster
-	defer swap(&deleteDACFn, func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ *slog.Logger) error {
+	d.DeleteDAC = func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ *slog.Logger) error {
 		gotDAC = d
 		return nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"delete", "dac", "dac-x", "--yes"}, "")
+	out, err := runRootCmdWith(t, d, []string{"delete", "dac", "dac-x", "--yes"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -87,12 +90,13 @@ func TestDeleteDAC_YesCallsOCI(t *testing.T) {
 }
 
 func TestDeleteDAC_PerformError(t *testing.T) {
+	d := &ops.Deps{}
 	stageDACEnv(t)
-	defer swap(&deleteDACFn, func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
+	d.DeleteDAC = func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		return errors.New("work request FAILED")
-	})()
+	}
 
-	_, err := runRootCmd(t, []string{"delete", "dac", "dac-x", "--yes"}, "")
+	_, err := runRootCmdWith(t, d, []string{"delete", "dac", "dac-x", "--yes"}, "")
 	if err == nil {
 		t.Fatal("expected error to surface")
 	}

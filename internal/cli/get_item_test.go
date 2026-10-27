@@ -66,8 +66,8 @@ func TestGetItem_NotFound(t *testing.T) {
 
 //nolint:paralleltest // NewRootCmd uses cobra/viper global state
 func TestGetCmd_NameArgs(t *testing.T) {
-	_, err := runRootCmd(t, []string{"get", "alias", "tenant"}, "")
+	_, err := runRootCmd(t, []string{"get", "alias", "tenant"})
 	require.ErrorContains(t, err, "`get alias` takes no name")
-	_, err = runRootCmd(t, []string{"get", "tenant", "a", "b"}, "")
+	_, err = runRootCmd(t, []string{"get", "tenant", "a", "b"})
 	require.ErrorContains(t, err, "accepts between 1 and 2 arg(s)")
 }

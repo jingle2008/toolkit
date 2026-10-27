@@ -7,33 +7,25 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// setCordonFn is the seam tests use to fake the k8s call. Production
-// callers go through k8s.SetCordon, which reaches a live cluster.
-var (
-	setCordonFn    = k8s.SetCordon
-	nodeCordonedFn = k8s.NodeCordoned
-)
-
-func addCordonCommand(rootCmd *cobra.Command, cfgFile *string) {
-	addCordonOrUncordon(rootCmd, cfgFile, "cordon", true,
+func addCordonCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
+	addCordonOrUncordon(rootCmd, cfgFile, deps, "cordon", true,
 		"Mark a node unschedulable (idempotent)")
 }
 
-func addUncordonCommand(rootCmd *cobra.Command, cfgFile *string) {
-	addCordonOrUncordon(rootCmd, cfgFile, "uncordon", false,
+func addUncordonCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
+	addCordonOrUncordon(rootCmd, cfgFile, deps, "uncordon", false,
 		"Mark a node schedulable (idempotent)")
 }
 
 // addCordonOrUncordon wires either subcommand. unschedulable=true →
 // cordon (k8s Unschedulable=true), unschedulable=false → uncordon.
 // Both go through the idempotent k8s.SetCordon path.
-func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, verb string, unschedulable bool, short string) {
+func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, deps depsFor, verb string, unschedulable bool, short string) {
 	var (
 		dryRun bool
 		yes    bool
@@ -70,7 +62,7 @@ Examples:
 			nodeName := args[0]
 			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				out := cmd.OutOrStdout()
-				op, changed := ops.Cordon(cliDeps(cfg), opsEnv(cfg, env), nodeName, unschedulable)
+				op, changed := ops.Cordon(deps(cfg), opsEnv(cfg, env), nodeName, unschedulable)
 				perform := op.Perform
 				op.Perform = func(ctx context.Context, p mutation.Plan) error {
 					if err := perform(ctx, p); err != nil {

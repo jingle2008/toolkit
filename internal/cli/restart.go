@@ -6,18 +6,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/internal/infra/k8s"
-	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
-)
-
-// Seams tests use to fake the cluster lookup, the restart patch, and the
-// OCI soft reset.
-var (
-	resolveInferenceServiceFn = k8s.ResolveInferenceService
-	restartInferenceServiceFn = k8s.RestartInferenceService
-	softResetInstanceFn       = oci.SoftResetInstance
 )
 
 // addRestartCommand wires `toolkit restart node <node>` and
@@ -25,7 +15,7 @@ var (
 // namespace is resolved before runMutation so the prompt, dry-run line,
 // and audit log all carry the full <namespace>/<name> target, and a dry
 // run proves the target exists.
-func addRestartCommand(rootCmd *cobra.Command, cfgFile *string) {
+func addRestartCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 	restartCmd := &cobra.Command{
 		Use:   "restart",
 		Short: "Restart a resource: a GPU node's instance, or an InferenceService",
@@ -51,7 +41,7 @@ be unique; an ambiguous name errors with the candidate namespaces.`,
 			name := args[0]
 			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes},
-					ops.RestartISVC(cliDeps(cfg), opsEnv(cfg, env), namespace, name))
+					ops.RestartISVC(deps(cfg), opsEnv(cfg, env), namespace, name))
 			})
 		},
 	}
@@ -60,13 +50,13 @@ be unique; an ambiguous name errors with the candidate namespaces.`,
 	// No -n shorthand: every mutation command already uses -n for --dry-run.
 	isvcCmd.Flags().StringVar(&namespace, "namespace", "", "Namespace of the InferenceService (default: search all namespaces)")
 
-	restartCmd.AddCommand(newRestartNodeCommand(cfgFile), isvcCmd)
+	restartCmd.AddCommand(newRestartNodeCommand(cfgFile, deps), isvcCmd)
 	rootCmd.AddCommand(restartCmd)
 }
 
 // newRestartNodeCommand wires `toolkit restart node <node>`: an OCI soft
 // reset of the instance backing a GPU node.
-func newRestartNodeCommand(cfgFile *string) *cobra.Command {
+func newRestartNodeCommand(cfgFile *string, deps depsFor) *cobra.Command {
 	var (
 		dryRun bool
 		yes    bool
@@ -89,7 +79,7 @@ or the command refuses; the OCID is then the target the
 prompt, dry run and audit log name.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNodeAction(cmd, cfgFile, args[0], ocid, cliGate{DryRun: dryRun, Yes: yes}, ops.RestartNode)
+			return runNodeAction(cmd, cfgFile, deps, args[0], ocid, cliGate{DryRun: dryRun, Yes: yes}, ops.RestartNode)
 		},
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")

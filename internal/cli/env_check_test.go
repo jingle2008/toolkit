@@ -26,15 +26,15 @@ func TestEnvironmentCheck_RefusesUnknownEnv(t *testing.T) {
 	stageMutationEnv(t) // dev / us-ashburn-1 / oc1
 	stubRepoEnvironments(t, models.Environment{Realm: "oc1", Type: "dev", Region: "us-ashburn-1"})
 
-	out, err := runRootCmd(t, []string{"cordon", "node-a", "-n", "-m", "oc99"}, "")
+	out, err := runRootCmd(t, []string{"cordon", "node-a", "-n", "-m", "oc99"})
 	require.ErrorIs(t, err, configloader.ErrUnknownEnvironment)
 	assert.Contains(t, err.Error(), `realm "oc99"`)
 	assert.NotContains(t, out, "DRY-RUN")
 
-	_, err = runRootCmd(t, []string{"get", "gpunode", "-m", "oc99"}, "")
+	_, err = runRootCmd(t, []string{"get", "gpunode", "-m", "oc99"})
 	require.ErrorIs(t, err, configloader.ErrUnknownEnvironment)
 
-	out, err = runRootCmd(t, []string{"cordon", "node-a", "-n", "-m", "OC1"}, "")
+	out, err = runRootCmd(t, []string{"cordon", "node-a", "-n", "-m", "OC1"})
 	require.NoError(t, err)
 	assert.Contains(t, out, "DRY-RUN")
 }
@@ -47,7 +47,7 @@ func TestEnvironmentCheck_UnloadableRepoPasses(t *testing.T) {
 	defer swap(&loadEnvironmentsFn, func(context.Context, string) ([]models.Environment, error) {
 		return nil, errors.New("no service tenancies")
 	})()
-	out, err := runRootCmd(t, []string{"cordon", "node-a", "-n", "-m", "oc99"}, "")
+	out, err := runRootCmd(t, []string{"cordon", "node-a", "-n", "-m", "oc99"})
 	require.NoError(t, err)
 	assert.Contains(t, out, "DRY-RUN")
 }

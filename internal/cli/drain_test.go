@@ -13,17 +13,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 )
 
 func TestDrainCmd_DryRun_DoesNotCallK8s(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	called := false
-	defer swap(&drainNodeFn, func(context.Context, string, string, string) error {
+	d.DrainNode = func(context.Context, string, string, string) error {
 		called = true
 		return nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"drain", "node-a", "--dry-run"}, "")
+	out, err := runRootCmdWith(t, d, []string{"drain", "node-a", "--dry-run"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -36,14 +38,15 @@ func TestDrainCmd_DryRun_DoesNotCallK8s(t *testing.T) {
 }
 
 func TestDrainCmd_InteractiveBail(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	called := false
-	defer swap(&drainNodeFn, func(context.Context, string, string, string) error {
+	d.DrainNode = func(context.Context, string, string, string) error {
 		called = true
 		return nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"drain", "node-a"}, "n\n")
+	out, err := runRootCmdWith(t, d, []string{"drain", "node-a"}, "n\n")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -56,14 +59,15 @@ func TestDrainCmd_InteractiveBail(t *testing.T) {
 }
 
 func TestDrainCmd_YesCallsK8s(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	var gotNode string
-	defer swap(&drainNodeFn, func(_ context.Context, _, _, node string) error {
+	d.DrainNode = func(_ context.Context, _, _, node string) error {
 		gotNode = node
 		return nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"drain", "node-a", "-y"}, "")
+	out, err := runRootCmdWith(t, d, []string{"drain", "node-a", "-y"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -76,12 +80,13 @@ func TestDrainCmd_YesCallsK8s(t *testing.T) {
 }
 
 func TestDrainCmd_PerformError(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
-	defer swap(&drainNodeFn, func(context.Context, string, string, string) error {
+	d.DrainNode = func(context.Context, string, string, string) error {
 		return errors.New("pods stuck terminating")
-	})()
+	}
 
-	_, err := runRootCmd(t, []string{"drain", "node-a", "-y"}, "")
+	_, err := runRootCmdWith(t, d, []string{"drain", "node-a", "-y"}, "")
 	if err == nil {
 		t.Fatal("expected error to surface")
 	}
@@ -91,13 +96,14 @@ func TestDrainCmd_PerformError(t *testing.T) {
 }
 
 func TestDrainCmd_EchoesProgressOnStderr(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
-	defer swap(&drainNodeFn, func(ctx context.Context, _, _, node string) error {
+	d.DrainNode = func(ctx context.Context, _, _, node string) error {
 		k8s.DrainProgressFrom(ctx)("drain: started, node cordoned node=" + node)
 		return nil
-	})()
+	}
 
-	cmd := NewRootCmd("vtest")
+	cmd := testRootCmd(d)
 	cmd.SetArgs([]string{"drain", "node-a", "-y"})
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
@@ -115,33 +121,34 @@ func TestDrainCmd_EchoesProgressOnStderr(t *testing.T) {
 
 // --status prints the recorded drain and drains nothing.
 func TestDrainCmd_Status(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
-	defer swap(&drainNodeFn, func(context.Context, string, string, string) error {
+	d.DrainNode = func(context.Context, string, string, string) error {
 		t.Fatal("--status must not drain")
 		return nil
-	})()
-	defer swap(&drainStatusFn, func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+	}
+	d.DrainStatus = func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
 		return k8s.DrainStatus{Node: node, Remaining: []string{"ns/isvc-a"}}, nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"drain", "node-a", "--status", "-o", "json"}, "")
+	out, err := runRootCmdWith(t, d, []string{"drain", "node-a", "--status", "-o", "json"}, "")
 	require.NoError(t, err)
 	var got map[string]any
 	require.NoError(t, json.Unmarshal([]byte(out), &got), out)
 	assert.Equal(t, "node-a", got["node"])
 	assert.Equal(t, []any{"ns/isvc-a"}, got["remaining"])
 
-	out, err = runRootCmd(t, []string{"drain", "node-a", "--status"}, "")
+	out, err = runRootCmdWith(t, d, []string{"drain", "node-a", "--status"}, "")
 	require.NoError(t, err)
 	assert.Contains(t, out, "node: node-a", "yaml by default")
 }
 
 func TestDrainCmd_StatusFlagErrors(t *testing.T) {
 	stageMutationEnv(t)
-	_, err := runRootCmd(t, []string{"drain", "node-a", "-o", "json"}, "")
+	_, err := runRootCmd(t, []string{"drain", "node-a", "-o", "json"})
 	require.ErrorContains(t, err, "-o applies only with --status")
-	_, err = runRootCmd(t, []string{"drain", "node-a", "--status", "-n"}, "")
+	_, err = runRootCmd(t, []string{"drain", "node-a", "--status", "-n"})
 	require.ErrorContains(t, err, "--dry-run doesn't apply")
-	_, err = runRootCmd(t, []string{"drain", "node-a", "--status", "-o", "table"}, "")
+	_, err = runRootCmd(t, []string{"drain", "node-a", "--status", "-o", "table"})
 	require.ErrorContains(t, err, "--status prints yaml or json")
 }

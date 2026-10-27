@@ -19,7 +19,7 @@ func TestMCPCmd_MissingRequiredSettings(t *testing.T) {
 	t.Setenv("TOOLKIT_ENV_REGION", "")
 	t.Setenv("TOOLKIT_ENV_REALM", "")
 
-	out, err := runRootCmd(t, []string{"mcp"}, "")
+	out, err := runRootCmd(t, []string{"mcp"})
 	if err == nil {
 		t.Fatalf("expected error when required settings are missing; output:\n%s", out)
 	}
@@ -36,7 +36,7 @@ func TestMCPCmd_MissingRequiredSettings(t *testing.T) {
 // arg must error rather than start the server.
 func TestMCPCmd_RejectsArgs(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	_, err := runRootCmd(t, []string{"mcp", "unexpected-arg"}, "")
+	_, err := runRootCmd(t, []string{"mcp", "unexpected-arg"})
 	if err == nil {
 		t.Fatal("expected error for unexpected positional arg to `toolkit mcp`")
 	}
@@ -49,7 +49,7 @@ func TestMCPCmd_StartupValidatesLogFormat(t *testing.T) {
 	stageMutationEnv(t)                        // env triple + kubeconfig + viper.Reset
 	t.Setenv("TOOLKIT_REPO_PATH", t.TempDir()) // satisfy validateLoaderConfig
 
-	out, err := runRootCmd(t, []string{"mcp", "--log-format", "bogus"}, "")
+	out, err := runRootCmd(t, []string{"mcp", "--log-format", "bogus"})
 	if err == nil {
 		t.Fatalf("expected error for invalid log-format; output:\n%s", out)
 	}

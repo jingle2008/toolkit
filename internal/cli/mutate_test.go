@@ -263,7 +263,7 @@ func TestWithMutationSetup_InitLoggerError(t *testing.T) {
 	stageMutationEnv(t)
 	t.Setenv("TOOLKIT_LOG_FORMAT", "bad-format")
 
-	_, err := runRootCmd(t, []string{"cordon", "node-a", "-y"}, "")
+	_, err := runRootCmd(t, []string{"cordon", "node-a", "-y"})
 	if err == nil {
 		t.Fatal("expected error from invalid log_format")
 	}

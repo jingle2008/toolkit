@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 )
 
 type rootCtxKey struct{}
@@ -16,16 +18,17 @@ type rootCtxKey struct{}
 // production) is the one a command's work runs under, so cancelling it
 // reaches in-flight cluster calls.
 func TestExecuteContext_ReachesCommandWork(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), rootCtxKey{}, "root"))
 	var got context.Context
-	defer swap(&drainNodeFn, func(c context.Context, _, _, _ string) error {
+	d.DrainNode = func(c context.Context, _, _, _ string) error {
 		got = c
 		cancel()
 		return nil
-	})()
+	}
 
-	cmd := NewRootCmd("vtest")
+	cmd := testRootCmd(d)
 	cmd.SetArgs([]string{"drain", "node-a", "-y"})
 	var out bytes.Buffer
 	cmd.SetOut(&out)

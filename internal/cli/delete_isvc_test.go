@@ -8,15 +8,17 @@ import (
 	"testing"
 
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 )
 
-func stubPlanOrphan(outcome k8s.OrphanDeleteOutcome, err error) func() {
-	return swap(&planOrphanISVCDeleteFn, func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+func stubPlanOrphan(d *ops.Deps, outcome k8s.OrphanDeleteOutcome, err error) {
+	d.PlanOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		return outcome, err
-	})
+	}
 }
 
 func TestDeleteISVCCmd_DryRunNamesThePlannedAction(t *testing.T) {
+	d := &ops.Deps{}
 	for _, tc := range []struct {
 		outcome k8s.OrphanDeleteOutcome
 		want    string
@@ -27,15 +29,15 @@ func TestDeleteISVCCmd_DryRunNamesThePlannedAction(t *testing.T) {
 		t.Run(string(tc.outcome), func(t *testing.T) {
 			stageMutationEnv(t)
 			var gotNS string
-			defer stubResolveISVC(t, "ns-a", &gotNS)()
-			defer stubPlanOrphan(tc.outcome, nil)()
+			stubResolveISVC(t, d, "ns-a", &gotNS)
+			stubPlanOrphan(d, tc.outcome, nil)
 			called := false
-			defer swap(&deleteOrphanISVCFn, func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+			d.DeleteOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 				called = true
 				return "", nil
-			})()
+			}
 
-			out, err := runRootCmd(t, []string{"delete", "isvc", "isvc-a", "--dry-run"}, "")
+			out, err := runRootCmdWith(t, d, []string{"delete", "isvc", "isvc-a", "--dry-run"}, "")
 			if err != nil {
 				t.Fatalf("execute: %v", err)
 			}
@@ -51,33 +53,35 @@ func TestDeleteISVCCmd_DryRunNamesThePlannedAction(t *testing.T) {
 
 // A refusal (not an orphan) surfaces before any prompt, even on a dry run.
 func TestDeleteISVCCmd_RefusalBeforePrompt(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	var gotNS string
-	defer stubResolveISVC(t, "ns-a", &gotNS)()
-	defer stubPlanOrphan("", errors.New("not an orphaned InferenceService: its DAC dac-1 exists (ome.io); delete the DAC instead"))()
-	defer swap(&deleteOrphanISVCFn, func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+	stubResolveISVC(t, d, "ns-a", &gotNS)
+	stubPlanOrphan(d, "", errors.New("not an orphaned InferenceService: its DAC dac-1 exists (ome.io); delete the DAC instead"))
+	d.DeleteOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		t.Fatal("a refused target must not be deleted")
 		return "", nil
-	})()
+	}
 
-	_, err := runRootCmd(t, []string{"delete", "isvc", "isvc-a", "--dry-run"}, "")
+	_, err := runRootCmdWith(t, d, []string{"delete", "isvc", "isvc-a", "--dry-run"}, "")
 	if err == nil || !strings.Contains(err.Error(), "delete the DAC instead") {
 		t.Fatalf("want refusal, got %v", err)
 	}
 }
 
 func TestDeleteISVCCmd_RequiresYes(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	var gotNS string
-	defer stubResolveISVC(t, "ns-b", &gotNS)()
-	defer stubPlanOrphan(k8s.OrphanDeleted, nil)()
+	stubResolveISVC(t, d, "ns-b", &gotNS)
+	stubPlanOrphan(d, k8s.OrphanDeleted, nil)
 	called := false
-	defer swap(&deleteOrphanISVCFn, func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+	d.DeleteOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		called = true
 		return "", nil
-	})()
+	}
 
-	_, err := runRootCmd(t, []string{"delete", "inference-service", "isvc-a"}, "y\n")
+	_, err := runRootCmdWith(t, d, []string{"delete", "inference-service", "isvc-a"}, "y\n")
 	if err == nil || !strings.Contains(err.Error(), "requires explicit --yes") {
 		t.Fatalf("want explicit --yes error, got %v", err)
 	}
@@ -87,17 +91,18 @@ func TestDeleteISVCCmd_RequiresYes(t *testing.T) {
 }
 
 func TestDeleteISVCCmd_YesDeletesAndSummarizes(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	var gotNS string
-	defer stubResolveISVC(t, "ns-a", &gotNS)()
-	defer stubPlanOrphan(k8s.OrphanFinalized, nil)()
+	stubResolveISVC(t, d, "ns-a", &gotNS)
+	stubPlanOrphan(d, k8s.OrphanFinalized, nil)
 	var deletedNS, deletedName string
-	defer swap(&deleteOrphanISVCFn, func(_ context.Context, _, _, namespace, name string) (k8s.OrphanDeleteOutcome, error) {
+	d.DeleteOrphanISVC = func(_ context.Context, _, _, namespace, name string) (k8s.OrphanDeleteOutcome, error) {
 		deletedNS, deletedName = namespace, name
 		return k8s.OrphanFinalized, nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"delete", "isvc", "isvc-a", "--namespace", "ns-x", "--yes"}, "")
+	out, err := runRootCmdWith(t, d, []string{"delete", "isvc", "isvc-a", "--namespace", "ns-x", "--yes"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
