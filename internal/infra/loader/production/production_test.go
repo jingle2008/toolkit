@@ -124,10 +124,10 @@ func TestMetadataPath(t *testing.T) {
 	t.Parallel()
 	// New returns loader.Composite, so reach MetadataPath through the
 	// concrete type the way the doctor command does.
-	c := New(context.Background(), "/tmp/meta.yaml").(*Client) //nolint:errcheck,forcetypeassert // New always returns *Client
+	c := New(context.Background(), "/tmp/meta.yaml").(*Client)
 	assert.Equal(t, "/tmp/meta.yaml", c.MetadataPath())
 
-	empty := New(context.Background(), "").(*Client) //nolint:errcheck,forcetypeassert // New always returns *Client
+	empty := New(context.Background(), "").(*Client)
 	assert.Equal(t, "", empty.MetadataPath())
 }
 

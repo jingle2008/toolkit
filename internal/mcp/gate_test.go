@@ -151,7 +151,7 @@ func with(args map[string]any, kv ...any) map[string]any {
 		out[k] = v
 	}
 	for i := 0; i+1 < len(kv); i += 2 {
-		out[kv[i].(string)] = kv[i+1] //nolint:forcetypeassert // keys are strings
+		out[kv[i].(string)] = kv[i+1]
 	}
 	return out
 }

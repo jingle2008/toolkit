@@ -56,7 +56,7 @@ func TestAction_String(t *testing.T) {
 func fields(e logging.Entry) map[string]any {
 	m := map[string]any{}
 	for i := 0; i+1 < len(e.Fields); i += 2 {
-		m[e.Fields[i].(string)] = e.Fields[i+1] //nolint:forcetypeassert // keys are strings
+		m[e.Fields[i].(string)] = e.Fields[i+1]
 	}
 	return m
 }
@@ -85,7 +85,7 @@ func TestAudit_Record(t *testing.T) {
 	f := fields(got[1])
 	assert.Equal(t, "failed", f["phase"])
 	assert.Equal(t, "mcp", f["surface"])
-	assert.EqualError(t, f["error"].(error), "boom") //nolint:forcetypeassert // asserted by EqualError
+	assert.EqualError(t, f["error"].(error), "boom")
 
 	assert.Equal(t, true, fields(got[2])["dry_run"])
 	assert.Equal(t, "dry_run", fields(got[2])["phase"])
@@ -176,7 +176,7 @@ func TestAudit_BackgroundPhases(t *testing.T) {
 
 	assert.Equal(t, logging.LevelError, got[0].Level)
 	assert.Equal(t, "background-failed", fields(got[0])["phase"])
-	assert.EqualError(t, fields(got[0])["error"].(error), "evict") //nolint:forcetypeassert // asserted by EqualError
+	assert.EqualError(t, fields(got[0])["error"].(error), "evict")
 
 	assert.Equal(t, logging.LevelInfo, got[1].Level)
 	assert.Equal(t, "background-done", fields(got[1])["phase"])

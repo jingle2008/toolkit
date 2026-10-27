@@ -480,7 +480,7 @@ func TestLoadDefinitionGroups_Error(t *testing.T) {
 
 func TestLoadTenancyOverrideGroup_Error(t *testing.T) {
 	t.Parallel()
-	_, err := LoadTenancyOverrideGroup(context.Background(), "/no/such/path", "realm", &models.Metadata{}) //nolint:dogsled // we only need err
+	_, err := LoadTenancyOverrideGroup(context.Background(), "/no/such/path", "realm", &models.Metadata{})
 	require.Error(t, err)
 }
 

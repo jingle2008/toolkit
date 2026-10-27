@@ -54,7 +54,7 @@ func TestGetItem_OneRow(t *testing.T) {
 
 	res = getItem(t, map[string]any{"category": "inferenceservice", "name": "ns-b/svc"})
 	require.False(t, res.IsError, resultText(t, res))
-	assert.Equal(t, "ns-b", structured(t, res)["item"].(map[string]any)["namespace"]) //nolint:forcetypeassert // JSON
+	assert.Equal(t, "ns-b", structured(t, res)["item"].(map[string]any)["namespace"])
 
 	res = getItem(t, map[string]any{"category": "dac", "name": "dac"})
 	require.True(t, res.IsError, "a near-miss is not a match")

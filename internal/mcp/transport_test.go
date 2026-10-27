@@ -106,7 +106,7 @@ func TestRun_SurvivesMalformedLine(t *testing.T) {
 	send(`{not json`)
 	rej := next()
 	assert.Nil(t, rej["id"])
-	assert.EqualValues(t, -32700, rej["error"].(map[string]any)["code"]) //nolint:forcetypeassert // checked by the test
+	assert.EqualValues(t, -32700, rej["error"].(map[string]any)["code"])
 
 	send(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
 	resp := next()

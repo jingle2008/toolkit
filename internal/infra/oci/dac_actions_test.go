@@ -1,4 +1,4 @@
-//nolint:paralleltest
+//nolint:paralleltest // tests swap the package-level newGenAIClient seam
 package oci
 
 import (

@@ -102,7 +102,6 @@ func TestContext(t *testing.T) {
 	if got := FromContext(WithContext(context.Background(), l)); got != l {
 		t.Error("FromContext did not return the attached logger")
 	}
-	//nolint:staticcheck // SA1012: nil context is the case under test
 	for _, ctx := range []context.Context{nil, context.Background(), WithContext(context.Background(), nil)} {
 		got := FromContext(ctx)
 		if got == nil || got.Enabled(context.Background(), slog.LevelError) {

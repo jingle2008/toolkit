@@ -74,7 +74,7 @@ func metricsCatalog(ctx context.Context, ld loader.Composite, kubeConfig string,
 func metricsRow(
 	ctx context.Context, ld loader.Composite, kubeConfig string, env models.Environment, ds *models.Dataset, category domain.Category, name string,
 ) (any, error) {
-	switch category { //nolint:exhaustive // the categories with dashboards; others error below
+	switch category {
 	case domain.DedicatedAICluster:
 		grouped, lerr := ld.LoadDedicatedAIClusters(ctx, kubeConfig, env)
 		if lerr != nil {

@@ -241,8 +241,6 @@ func TestValidateMutationConfig_NeedsEnvTrue_RequiresEnvTriple(t *testing.T) {
 // without invoking fn. Without this test, a future change that broke
 // initLogger error propagation would only be caught at runtime by
 // six near-identical subcommands.
-//
-//nolint:paralleltest // mutates process env + viper singleton
 func TestWithMutationSetup_InitLoggerError(t *testing.T) {
 	stageMutationEnv(t)
 	t.Setenv("TOOLKIT_LOG_FORMAT", "bad-format")
@@ -271,7 +269,7 @@ func TestRunMutation_Audits(t *testing.T) {
 				kv[e.Fields[i]] = e.Fields[i+1]
 			}
 			if e.Message == "mutation" && kv["surface"] == "cli" && kv["action"] == plan.Action.Verb {
-				got = append(got, kv["phase"].(string)) //nolint:forcetypeassert // Audit writes a string
+				got = append(got, kv["phase"].(string))
 			}
 		}
 		return got

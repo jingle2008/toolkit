@@ -64,7 +64,7 @@ func (m *Model) overlayModal(under common.ViewMode, modal string) string {
 // (list, details, log) drawn under a modal: its keys don't work while the
 // modal is open, and the modal carries its own hint line.
 func withoutFooter(mode common.ViewMode, s string) string {
-	switch mode { //nolint:exhaustive // only these are framed
+	switch mode {
 	case common.ListView, common.DetailsView, common.LogView:
 	default:
 		return s

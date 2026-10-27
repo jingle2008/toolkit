@@ -138,6 +138,8 @@ func (e Category) Aliases() []string {
 		aliases = append(aliases, "dac")
 	case GPUWorkload:
 		aliases = append(aliases, "gw")
+	default:
+		// no pre-normalization short form
 	}
 	return aliases
 }
@@ -168,11 +170,12 @@ func (e Category) IsFaulty() bool {
 // kubeconfig. These categories are sourced from a live cluster; the
 // rest come from the on-disk repo.
 func (e Category) NeedsKubeConfig() bool {
-	switch e { //nolint:exhaustive
+	switch e {
 	case BaseModel, ImportedModel, GPUNode, DedicatedAICluster, GPUWorkload, InferenceService, ServingRuntime:
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 // IsEnvironmentScoped reports whether this category's rows depend on the
@@ -182,12 +185,13 @@ func (e Category) IsEnvironmentScoped() bool {
 	if e.NeedsKubeConfig() {
 		return true
 	}
-	switch e { //nolint:exhaustive
+	switch e {
 	case Tenant, LimitTenancyOverride, ConsolePropertyTenancyOverride, PropertyTenancyOverride,
 		LimitRegionalOverride, ConsolePropertyRegionalOverride, PropertyRegionalOverride, GPUPool:
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 // uppercaseLetters returns the concatenated uppercase-letter glyphs

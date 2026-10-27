@@ -1,4 +1,4 @@
-package common //nolint:revive // allow test package to match source for unexported access
+package common
 
 import (
 	"testing"

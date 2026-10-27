@@ -332,11 +332,13 @@ func ResolveKeys(cat domain.Category, mode common.ViewMode) KeyMap {
 	km := KeyMap{
 		Global: globalKeys,
 	}
-	switch mode { //nolint:exhaustive
+	switch mode {
 	case common.ListView:
 		km.Mode = listModeKeys
 	case common.DetailsView:
 		km.Mode = detailsModeKeys
+	default:
+		// other modes have no mode-level keys
 	}
 	if ctxByMode, ok := catContext[cat]; ok {
 		km.Context = ctxByMode[mode]

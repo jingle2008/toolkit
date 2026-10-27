@@ -322,7 +322,10 @@ func removeItemFromDataset(dataset *models.Dataset, category domain.Category, ke
 // deleteItemInMap returns a copy of m without the keyed item; m itself
 // is left as it was.
 func deleteItemInMap[T models.NamedItem](m map[string][]T, key models.ItemKey) map[string][]T {
-	k := key.(models.ScopedItemKey)
+	k, ok := key.(models.ScopedItemKey)
+	if !ok {
+		return m
+	}
 	items, ok := m[k.Scope]
 	if !ok {
 		return m

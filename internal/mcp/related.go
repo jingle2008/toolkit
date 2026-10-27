@@ -112,13 +112,13 @@ func (s *Server) noneRelatedWarning(ctx context.Context, child domain.Category, 
 //
 //nolint:cyclop // one case per scoped category, mirroring the list_* handlers
 func (s *Server) relatedItems(ctx context.Context, child domain.Category, scope *domain.Scope, env models.Environment, filter string) ([]any, []string, error) {
-	switch child { //nolint:exhaustive // validated: only scoped categories
+	switch child {
 	case domain.LimitTenancyOverride, domain.ConsolePropertyTenancyOverride, domain.PropertyTenancyOverride:
 		grp, err := s.tenancyGroup(ctx, env)
 		if err != nil {
 			return nil, nil, err
 		}
-		switch child { //nolint:exhaustive // the three tenancy overrides
+		switch child {
 		case domain.LimitTenancyOverride:
 			return flattenRelated(relations.LimitTenancyOverride, grp.LimitTenancyOverrideMap, scope, filter), nil, nil
 		case domain.ConsolePropertyTenancyOverride:
@@ -188,7 +188,7 @@ func (s *Server) relatedFaultyItems(ctx context.Context, child domain.Category, 
 	if err != nil {
 		return nil, nil, err
 	}
-	switch child { //nolint:exhaustive // validated: the faulty categories with parents
+	switch child {
 	case domain.GPUNode:
 		return flattenRelated(relations.GPUNode, relations.FaultyMap(ds, child, ds.GPUNodeMap), scope, filter), warnings, nil
 	case domain.GPUWorkload:

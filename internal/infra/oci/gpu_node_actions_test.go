@@ -34,6 +34,8 @@ func (f *testLogger) Handle(_ context.Context, r slog.Record) error {
 		f.Infos = append(f.Infos, r.Message)
 	case slog.LevelError:
 		f.Errors = append(f.Errors, r.Message)
+	default:
+		// debug and warn records aren't asserted on
 	}
 	return nil
 }

@@ -33,10 +33,25 @@ linters:
     - errorlint
     - containedctx
     - whitespace
+    - exhaustive
+    - forcetypeassert
+    - nolintlint
   settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    nolintlint:
+      require-specific: true
+      require-explanation: true
+      allow-unused: false
     cyclop:
       max-complexity: 13
     prealloc:
       simple: true
     revive:
       severity: warning
+  exclusions:
+    rules:
+      # A failed type assertion in a test panics, which already fails it.
+      - path: _test\.go
+        linters:
+          - forcetypeassert
