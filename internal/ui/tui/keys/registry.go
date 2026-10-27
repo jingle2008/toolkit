@@ -1,16 +1,39 @@
 package keys
 
 import (
+	"slices"
+	"strings"
+
 	"charm.land/bubbles/v2/key"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 )
 
-/*
-SortPrefix is the prefix used for sort key help text.
-*/
-const SortPrefix = "Sort "
+// sortPrefix starts a sort declaration's help text, "Sort Name". Only
+// sortBy writes it and only SortColumnOf reads it, so the column a
+// binding sorts by doesn't hang on how any help text reads elsewhere.
+const sortPrefix = "Sort "
+
+// SortColumnOf returns the column b sorts by, when b is a sort
+// declaration (sortBy).
+func SortColumnOf(b key.Binding) (string, bool) {
+	return strings.CutPrefix(b.Help().Desc, sortPrefix)
+}
+
+// isSort reports whether b is a sort declaration.
+func isSort(b key.Binding) bool {
+	_, ok := SortColumnOf(b)
+	return ok
+}
+
+// Same reports whether a and b are copies of one declared binding. Keys
+// alone don't tell (tab is Next category in a list and Fields/JSON in
+// details), so the help counts too; a keymap holds copies of the
+// declarations, which stay equal however their help is worded.
+func Same(a, b key.Binding) bool {
+	return slices.Equal(a.Keys(), b.Keys()) && a.Help() == b.Help()
+}
 
 // Global key bindings (always active)
 var (
@@ -361,5 +384,5 @@ var actionOrder = []key.Binding{
 // ListLevel reports whether b acts on the list rather than the row: help
 // lists those with the view's keys, not under Actions.
 func ListLevel(b key.Binding) bool {
-	return b.Help() == ToggleFaulty.Help() || b.Help() == Refresh.Help()
+	return Same(b, ToggleFaulty) || Same(b, Refresh)
 }

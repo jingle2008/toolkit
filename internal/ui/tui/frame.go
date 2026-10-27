@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -142,12 +143,11 @@ func (m *Model) quickSwitchStrip() string {
 	p := m.theme.Palette
 	key := lipgloss.NewStyle().Foreground(p.Primary).Bold(true)
 	var parts []string
-	for _, b := range m.quickSwitchBindings(m.viewMode) {
-		desc := b.Help().Desc
-		if strings.HasSuffix(desc, currentSlotMarker) {
+	for _, e := range m.quickSwitchEntries(m.viewMode) {
+		if e.Env.Equals(m.environment) {
 			continue
 		}
-		parts = append(parts, key.Render(b.Keys()[0])+" "+desc)
+		parts = append(parts, key.Render(strconv.Itoa(e.Slot))+" "+e.Env.KubeContext())
 	}
 	return strings.Join(parts, "  ")
 }

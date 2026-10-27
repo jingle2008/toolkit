@@ -37,7 +37,7 @@ func (k KeyMap) SortableColumns() map[string]bool {
 	out := map[string]bool{}
 	for _, group := range [][]key.Binding{k.Mode, k.Context} {
 		for _, b := range group {
-			if col, ok := strings.CutPrefix(b.Help().Desc, SortPrefix); ok {
+			if col, ok := SortColumnOf(b); ok {
 				out[strings.ToLower(col)] = true
 			}
 		}
@@ -51,9 +51,7 @@ func (k KeyMap) SortableColumns() map[string]bool {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	cat := slices.Concat(k.Global, k.Mode, k.Context)
 	// skip sort keys
-	cat = slices.DeleteFunc(cat, func(b key.Binding) bool {
-		return strings.HasPrefix(b.Help().Desc, SortPrefix)
-	})
+	cat = slices.DeleteFunc(cat, isSort)
 	slices.SortFunc(cat, func(c1, c2 key.Binding) int {
 		return strings.Compare(c1.Help().Desc, c2.Help().Desc)
 	})
@@ -89,12 +87,12 @@ tail to fit before it drops any core key.
 func (k KeyMap) FooterBindings() (actions, core []key.Binding) {
 	sortable := false
 	for _, b := range slices.Concat(k.Context, k.Mode) {
-		if strings.HasPrefix(b.Help().Desc, SortPrefix) {
+		if isSort(b) {
 			sortable = true
 		}
 	}
 	for _, b := range k.Context {
-		if !strings.HasPrefix(b.Help().Desc, SortPrefix) {
+		if !isSort(b) {
 			actions = append(actions, b)
 		}
 	}
@@ -103,7 +101,7 @@ func (k KeyMap) FooterBindings() (actions, core []key.Binding) {
 	}
 	active := slices.Concat(k.Global, k.Mode)
 	for _, c := range footerCore {
-		if slices.ContainsFunc(active, func(b key.Binding) bool { return b.Help() == c.Help() }) {
+		if slices.ContainsFunc(active, func(b key.Binding) bool { return Same(b, c) }) {
 			core = append(core, c)
 		}
 	}

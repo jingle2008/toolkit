@@ -38,11 +38,11 @@ func TestSortableColumns(t *testing.T) {
 	t.Parallel()
 	km := KeyMap{
 		Mode: []key.Binding{
-			key.NewBinding(key.WithKeys("N"), key.WithHelp("<shift+n>", SortPrefix+"Name")),
+			key.NewBinding(key.WithKeys("N"), key.WithHelp("<shift+n>", sortPrefix+"Name")),
 			key.NewBinding(key.WithKeys("c"), key.WithHelp("<c>", "Copy")),
 		},
 		Context: []key.Binding{
-			key.NewBinding(key.WithKeys("V"), key.WithHelp("<shift+v>", SortPrefix+"Vendor")),
+			key.NewBinding(key.WithKeys("V"), key.WithHelp("<shift+v>", sortPrefix+"Vendor")),
 			key.NewBinding(key.WithKeys("r"), key.WithHelp("<r>", "Refresh")),
 		},
 	}

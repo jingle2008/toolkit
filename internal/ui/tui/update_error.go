@@ -90,5 +90,5 @@ func (m *Model) ownLoadFailed(cat domain.Category) bool {
 
 // canRefresh reports whether r (refresh) is bound in the current category.
 func (m *Model) canRefresh() bool {
-	return slices.ContainsFunc(m.keys.Context, func(b key.Binding) bool { return b.Help() == keys.Refresh.Help() })
+	return slices.ContainsFunc(m.keys.Context, func(b key.Binding) bool { return keys.Same(b, keys.Refresh) })
 }

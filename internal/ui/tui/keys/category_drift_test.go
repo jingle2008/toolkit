@@ -28,7 +28,7 @@ TestSortBindings_NameRealColumns ties each category's sort bindings to
 its actual column titles.
 
 A sort binding carries its target column in its help text
-(SortPrefix + title); sortRows looks the title up in the rendered
+(sortPrefix + title); sortRows looks the title up in the rendered
 headers and returns early when it finds nothing. So a binding aimed at
 a column that doesn't exist — or one whose title was renamed out from
 under it — compiles, registers, appears in the help line, and silently
@@ -46,7 +46,7 @@ func TestSortBindings_NameRealColumns(t *testing.T) {
 		}
 		for _, bindings := range modes {
 			for _, b := range bindings {
-				col, ok := strings.CutPrefix(b.Help().Desc, SortPrefix)
+				col, ok := SortColumnOf(b)
 				if !ok {
 					continue
 				}
@@ -101,7 +101,7 @@ func TestCatContext_ActionOrder(t *testing.T) {
 	for cat, byMode := range catContext {
 		last := -1
 		for _, b := range byMode[common.ListView] {
-			if strings.HasPrefix(b.Help().Desc, SortPrefix) {
+			if isSort(b) {
 				continue
 			}
 			r := rank(b)

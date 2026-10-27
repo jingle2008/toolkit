@@ -18,7 +18,7 @@ const SortLeader = "s"
 // sortBy declares a sortable column. It carries no key of its own:
 // ResolveKeys gives it the category's SortLeader sequence (see SortKeys).
 func sortBy(column string) key.Binding {
-	return key.NewBinding(key.WithHelp("", SortPrefix+column))
+	return key.NewBinding(key.WithHelp("", sortPrefix+column))
 }
 
 // sortColumns lists the columns cat's list view can sort by, in binding
@@ -26,7 +26,7 @@ func sortBy(column string) key.Binding {
 func sortColumns(cat domain.Category) []string {
 	var cols []string
 	for _, b := range slices.Concat(listModeKeys, catContext[cat][common.ListView]) {
-		if col, ok := strings.CutPrefix(b.Help().Desc, SortPrefix); ok {
+		if col, ok := SortColumnOf(b); ok {
 			cols = append(cols, col)
 		}
 	}
@@ -95,7 +95,7 @@ func SortColumn(cat domain.Category, k string) (string, bool) {
 func withSortKeys(bs []key.Binding, sortKeys map[string]string) []key.Binding {
 	out := slices.Clone(bs)
 	for i, b := range out {
-		col, ok := strings.CutPrefix(b.Help().Desc, SortPrefix)
+		col, ok := SortColumnOf(b)
 		if !ok {
 			continue
 		}

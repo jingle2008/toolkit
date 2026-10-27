@@ -130,7 +130,11 @@ func TestHelp_ScrollReachesEveryBinding(t *testing.T) {
 
 	want := map[string]bool{}
 	for _, b := range m.keys.Context {
-		want[strings.TrimPrefix(b.Help().Desc, keys.SortPrefix)] = false // the Sort section lists columns
+		label := b.Help().Desc
+		if col, ok := keys.SortColumnOf(b); ok {
+			label = col // the Sort section lists columns
+		}
+		want[label] = false
 	}
 	for _, b := range m.keys.Global {
 		want[b.Help().Desc] = false
