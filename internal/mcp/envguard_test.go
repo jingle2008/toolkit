@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -93,4 +94,30 @@ func TestMutationTools_ListedForEnvGuard(t *testing.T) {
 		mutating := tool.Annotations == nil || !tool.Annotations.ReadOnlyHint
 		assert.Equal(t, mutating, mutationTools[tool.Name], tool.Name)
 	}
+}
+
+// A reload for an override the cache lacks doesn't hold up another
+// call's override that the cache has.
+func TestCheckEnvOverride_ReloadDoesNotBlockCachedOverrides(t *testing.T) {
+	release := make(chan struct{})
+	reloading := make(chan struct{})
+	orig := mcpLoadEnvironmentsFn
+	t.Cleanup(func() { mcpLoadEnvironmentsFn = orig })
+	mcpLoadEnvironmentsFn = func(context.Context, string) ([]models.Environment, error) {
+		close(reloading)
+		<-release
+		return []models.Environment{ashburnDev}, nil
+	}
+	s := &Server{logger: logging.Discard()}
+	s.envCache.envs = []models.Environment{ashburnDev}
+
+	done := make(chan error)
+	go func() {
+		done <- s.checkEnvOverride(context.Background(), envOverride{EnvRealm: "oc99", EnvType: "dev", EnvRegion: "iad"})
+	}()
+	<-reloading
+	require.NoError(t, s.checkEnvOverride(context.Background(), envOverride{EnvRealm: "oc1", EnvType: "dev", EnvRegion: "iad"}),
+		"answered from the cache while the reload runs")
+	close(release)
+	require.ErrorContains(t, <-done, "not an environment the repo declares")
 }

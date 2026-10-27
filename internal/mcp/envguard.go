@@ -27,7 +27,9 @@ var mutationTools = map[string]bool{
 	"delete_inference_service": true, "set_tenant": true,
 }
 
-// envCache holds the repo's environments, loaded on first use.
+// envCache holds the repo's environments, loaded on first use and
+// reloaded when an override isn't in them. mu guards envs only, not the
+// load.
 type envCache struct {
 	mu   sync.Mutex
 	envs []models.Environment
@@ -76,17 +78,22 @@ func (s *Server) checkEnvOverride(ctx context.Context, in envOverride) error {
 	}
 	env := s.envFor(in)
 	s.envCache.mu.Lock()
-	defer s.envCache.mu.Unlock()
-	if s.envCache.envs != nil && configloader.CheckEnvironment(env, s.envCache.envs) == nil {
+	cached := s.envCache.envs
+	s.envCache.mu.Unlock()
+	if cached != nil && configloader.CheckEnvironment(env, cached) == nil {
 		return nil
 	}
 	// Not cached yet, or not in the cached list: (re)load, since the repo
-	// may have gained the environment since.
+	// may have gained the environment since. The load reads the repo, so
+	// it runs unlocked: other calls' overrides are checked meanwhile
+	// against the cached list.
 	envs, err := mcpLoadEnvironmentsFn(ctx, s.cfg.RepoPath)
 	if err != nil {
 		s.logger.Warn("env override not checked: repo environments didn't load", "error", err)
 		return nil
 	}
+	s.envCache.mu.Lock()
 	s.envCache.envs = envs
+	s.envCache.mu.Unlock()
 	return configloader.CheckEnvironment(env, envs)
 }
