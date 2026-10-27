@@ -47,6 +47,6 @@ var InferenceServiceColumns = GroupedSet[models.InferenceService]{Columns: []Gro
 	},
 	{
 		Title: "Age", Key: "age", Ratio: 0.04,
-		Render: func(_ string, s models.InferenceService) string { return freshAge(s.CreatedAt, s.Age) },
+		Render: func(_ string, s models.InferenceService) string { return models.AgeOf(s.CreatedAt) },
 	},
 }}

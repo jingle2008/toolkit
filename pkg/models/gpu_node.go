@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -17,9 +18,10 @@ type GPUNode struct {
 	Allocated            int    `json:"allocated"`
 	IsReady              bool   `json:"isReady"`
 	IsSchedulingDisabled bool   `json:"isSchedulingDisabled"` // true if node is cordoned
-	Age                  string `json:"age"`
-	// CreatedAt is when the resource was created; Age is the time since,
-	// as of the load. Zero when unknown.
+	// Age is where the output writes the time since CreatedAt (MarshalJSON);
+	// it is never stored, so it can't go stale. Code reads AgeOf(CreatedAt).
+	Age string `json:"age"`
+	// CreatedAt is when the resource was created; zero when unknown.
 	CreatedAt time.Time `json:"createdAt,omitzero"`
 	Issues    []string  `json:"issues"`
 }
@@ -63,4 +65,12 @@ func (n GPUNode) IsHealthy() bool {
 // IsFaulty returns true if the node is cordoned, missing GPUs, unhealthy, or not ready.
 func (n GPUNode) IsFaulty() bool {
 	return n.GetStatus() != "OK"
+}
+
+// MarshalJSON writes GPUNode with its age as of now, from CreatedAt.
+func (n GPUNode) MarshalJSON() ([]byte, error) {
+	type plain GPUNode
+	p := plain(n)
+	p.Age = AgeOf(n.CreatedAt)
+	return json.Marshal(p)
 }

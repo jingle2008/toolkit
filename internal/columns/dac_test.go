@@ -15,7 +15,7 @@ func TestDACColumns(t *testing.T) {
 		UnitShape:     "BM.GPU.H100.8",
 		Profile:       "",
 		Size:          4,
-		Age:           "2d",
+		CreatedAt:     daysAgo(2),
 		Status:        "ACTIVE",
 		TotalReplicas: 10,
 		IdleReplicas:  3,

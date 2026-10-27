@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // GPUWorkload is a GPU-consuming Kubernetes pod (any pod that requests
 // nvidia.com/gpu or amd.com/gpu). Grouped by Node (spec.nodeName, which
@@ -15,9 +18,10 @@ type GPUWorkload struct {
 	Runtime   string `json:"runtime,omitempty"`
 	GPUs      int    `json:"gpus"`
 	Restarts  int    `json:"restarts"`
-	Age       string `json:"age"`
-	// CreatedAt is when the resource was created; Age is the time since,
-	// as of the load. Zero when unknown.
+	// Age is where the output writes the time since CreatedAt (MarshalJSON);
+	// it is never stored, so it can't go stale. Code reads AgeOf(CreatedAt).
+	Age string `json:"age"`
+	// CreatedAt is when the resource was created; zero when unknown.
 	CreatedAt time.Time `json:"createdAt,omitzero"`
 	// Status is the pod phase: Running, or Pending for a pod scheduled to
 	// its node (holding its GPUs) that hasn't started yet.
@@ -65,4 +69,12 @@ func (w GPUWorkload) TenantName() string {
 		return w.Owner.Name
 	}
 	return w.TenantID
+}
+
+// MarshalJSON writes GPUWorkload with its age as of now, from CreatedAt.
+func (w GPUWorkload) MarshalJSON() ([]byte, error) {
+	type plain GPUWorkload
+	p := plain(w)
+	p.Age = AgeOf(w.CreatedAt)
+	return json.Marshal(p)
 }

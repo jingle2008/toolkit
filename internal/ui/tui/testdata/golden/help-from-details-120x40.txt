@@ -10,13 +10,13 @@
 │ Total replicas  4                                                                                                    │
 │ Idle replicas   1                                                                                                    │
 │ Age       ╭─ Keys · Details view ────────────────────────────────────────────────────────────────────────╮           │
-│           │                                          | | | | |                                           │           │
-│ Owner     │                                        .-----------.                                         │           │
-│   Name    │                                       -|   _____   |-                                        │           │
-│   ID      │                                       -|  |_   _|  |-                                        │           │
-│   Is inter│                                       -|    |_|    |-                                        │           │
-│   Status  │                                        '-----------'                                         │           │
-│           │ Details view                    General                         Navigation                   │           │
+│ Created at│                                          | | | | |                                           │           │
+│           │                                        .-----------.                                         │           │
+│ Owner     │                                       -|   _____   |-                                        │           │
+│   Name    │                                       -|  |_   _|  |-                                        │           │
+│   ID      │                                       -|    |_|    |-                                        │           │
+│   Is inter│                                        '-----------'                                         │           │
+│   Status  │ Details view                    General                         Navigation                   │           │
 │           │   o           Copy object         ?/h         Help                ↑/k         Up             │           │
 │           │   tab         Fields/JSON         y           Toggle details      ↓/j         Down           │           │
 │           │                                   c           Copy                u           ½ page up      │           │

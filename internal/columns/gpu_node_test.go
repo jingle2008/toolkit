@@ -15,7 +15,7 @@ func TestGPUNodeColumns(t *testing.T) {
 		Allocatable:  8,
 		Allocated:    3,
 		IsReady:      true,
-		Age:          "1d",
+		CreatedAt:    daysAgo(1),
 	}
 
 	got := map[string]string{}
@@ -31,7 +31,7 @@ func TestGPUNodeColumns(t *testing.T) {
 		"free":    "5",
 		"healthy": "true",
 		"ready":   "true",
-		"age":     "1d",
+		"age":     "25h",
 		"status":  n.GetStatus(),
 	}
 	for k, v := range want {

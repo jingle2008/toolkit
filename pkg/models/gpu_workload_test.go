@@ -6,7 +6,7 @@ func TestGPUWorkload(t *testing.T) {
 	t.Parallel()
 	w := GPUWorkload{
 		Name: "pod-1", Node: "10.0.0.1", TenantID: "suffix1",
-		Namespace: "ns1", Model: "gpt", Runtime: "vllm", GPUs: 2, Age: "3d", Mode: "RawDeployment",
+		Namespace: "ns1", Model: "gpt", Runtime: "vllm", GPUs: 2, CreatedAt: daysAgo(3), Mode: "RawDeployment",
 	}
 	if w.GetName() != "pod-1" {
 		t.Errorf("GetName = %q", w.GetName())

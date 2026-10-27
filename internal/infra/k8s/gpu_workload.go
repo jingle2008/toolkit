@@ -71,7 +71,6 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 				Runtime:   labels["serving-runtime"],
 				GPUs:      gpus,
 				Restarts:  restarts,
-				Age:       models.AgeOf(pod.CreationTimestamp.Time),
 				CreatedAt: pod.CreationTimestamp.Time,
 				Status:    string(pod.Status.Phase),
 				Mode:      annos["ome.io/deploymentMode"],

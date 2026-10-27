@@ -97,7 +97,6 @@ func ListGPUNodes(ctx context.Context, clientset kubernetes.Interface, limit int
 			Allocated:            int(gpuAllocationMap[node.Name]),
 			IsReady:              isNodeReady(node.Status.Conditions),
 			IsSchedulingDisabled: node.Spec.Unschedulable,
-			Age:                  models.AgeOf(node.CreationTimestamp.Time),
 			CreatedAt:            node.CreationTimestamp.Time,
 			Issues:               issues,
 		})

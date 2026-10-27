@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"strconv"
 	"time"
 )
@@ -34,9 +35,10 @@ type InferenceService struct {
 	MinReplicas *int   `json:"minReplicas,omitempty"`
 	MaxReplicas *int   `json:"maxReplicas,omitempty"`
 	Ready       string `json:"ready"`
-	Age         string `json:"age"`
-	// CreatedAt is when the resource was created; Age is the time since,
-	// as of the load. Zero when unknown.
+	// Age is where the output writes the time since CreatedAt (MarshalJSON);
+	// it is never stored, so it can't go stale. Code reads AgeOf(CreatedAt).
+	Age string `json:"age"`
+	// CreatedAt is when the resource was created; zero when unknown.
 	CreatedAt time.Time `json:"createdAt,omitzero"`
 	// Legacy is true for an ome.oracle.com/v1alpha1 InferenceService —
 	// an endpoint on a legacy DAC.
@@ -95,4 +97,12 @@ func (s InferenceService) Replicas() string {
 		return strconv.Itoa(*n)
 	}
 	return part(s.MinReplicas) + "/" + part(s.MaxReplicas)
+}
+
+// MarshalJSON writes InferenceService with its age as of now, from CreatedAt.
+func (s InferenceService) MarshalJSON() ([]byte, error) {
+	type plain InferenceService
+	p := plain(s)
+	p.Age = AgeOf(s.CreatedAt)
+	return json.Marshal(p)
 }

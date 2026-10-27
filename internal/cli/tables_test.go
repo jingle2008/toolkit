@@ -193,8 +193,8 @@ func TestRenderTable_ImportedModel(t *testing.T) {
 func TestRenderTable_GPUNode(t *testing.T) {
 	t.Parallel()
 	grouped := map[string][]models.GPUNode{
-		"pool-b": {{Name: "n2", InstanceType: "BM", Age: "1d"}},
-		"pool-a": {{Name: "n1", InstanceType: "BM", Age: "2d"}},
+		"pool-b": {{Name: "n2", InstanceType: "BM", CreatedAt: daysAgo(1)}},
+		"pool-a": {{Name: "n1", InstanceType: "BM", CreatedAt: daysAgo(2)}},
 	}
 	headers, rows, err := columns.RenderTable(domain.GPUNode, grouped, nil)
 	require.NoError(t, err)

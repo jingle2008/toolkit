@@ -41,6 +41,10 @@ var logClock = regexp.MustCompile(`\b\d{2}:\d{2}:\d{2}\b`)
 // on every run.
 var exportFolder = regexp.MustCompile(`Folder  \S+`)
 
+// creationTime masks a row's creation time, which fixtures set relative to
+// now (daysAgo) so its age renders the same on every run.
+var creationTime = regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z`)
+
 // assertGolden compares the ANSI-stripped render against
 // testdata/golden/<name>.txt, rewriting it under -update.
 func assertGolden(t *testing.T, name, got string) {
@@ -108,17 +112,17 @@ func newGoldenModel(t *testing.T, w, h int) *Model {
 		},
 		DedicatedAIClusterMap: map[string][]models.DedicatedAICluster{
 			"acme": {
-				{Name: "dac-alpha", Status: "Active", TenantID: "acme", Type: "Hosting", UnitShape: "A100_80G", Size: 4, Owner: &acme, TotalReplicas: 4, IdleReplicas: 1, Age: "12d"},
-				{Name: "dac-日本語", Status: "Failed", TenantID: "acme", Type: "Fine-tuning", UnitShape: "H100", Size: 2, Owner: &acme, TotalReplicas: 2, Age: "3d"},
+				{Name: "dac-alpha", Status: "Active", TenantID: "acme", Type: "Hosting", UnitShape: "A100_80G", Size: 4, Owner: &acme, TotalReplicas: 4, IdleReplicas: 1, CreatedAt: daysAgo(12)},
+				{Name: "dac-日本語", Status: "Failed", TenantID: "acme", Type: "Fine-tuning", UnitShape: "H100", Size: 2, Owner: &acme, TotalReplicas: 2, CreatedAt: daysAgo(3)},
 			},
 			"orphan": {
-				{Name: "dac-orphan", Status: "Active", TenantID: "orphan", Type: "Hosting", UnitShape: "A10", Size: 1, TotalReplicas: 1, IdleReplicas: 1, Age: "41d"},
+				{Name: "dac-orphan", Status: "Active", TenantID: "orphan", Type: "Hosting", UnitShape: "A10", Size: 1, TotalReplicas: 1, IdleReplicas: 1, CreatedAt: daysAgo(41)},
 			},
 		},
 		GPUNodeMap: map[string][]models.GPUNode{
 			"pool-a": {
-				{Name: "10.0.0.11", InstanceType: "BM.GPU.H100.8", NodePool: "pool-a", Allocatable: 8, Allocated: 6, IsReady: true, Age: "90d"},
-				{Name: "10.0.0.12", InstanceType: "BM.GPU.H100.8", NodePool: "pool-a", Allocatable: 8, Allocated: 0, IsReady: false, IsSchedulingDisabled: true, Age: "90d", Issues: []string{"NotReady"}},
+				{Name: "10.0.0.11", InstanceType: "BM.GPU.H100.8", NodePool: "pool-a", Allocatable: 8, Allocated: 6, IsReady: true, CreatedAt: daysAgo(90)},
+				{Name: "10.0.0.12", InstanceType: "BM.GPU.H100.8", NodePool: "pool-a", Allocatable: 8, Allocated: 0, IsReady: false, IsSchedulingDisabled: true, CreatedAt: daysAgo(90), Issues: []string{"NotReady"}},
 			},
 		},
 	}
@@ -275,7 +279,7 @@ func TestGolden(t *testing.T) {
 				t.Parallel()
 				m := newGoldenModel(t, sz.w, sz.h)
 				v.setup(t, m)
-				out := ansi.Strip(m.render())
+				out := creationTime.ReplaceAllString(ansi.Strip(m.render()), "YYYY-MM-DDThh:mm:ssZ") // same width
 				switch {
 				case strings.HasPrefix(v.name, "log-"):
 					out = logClock.ReplaceAllString(out, "hh:mm:ss")

@@ -121,7 +121,6 @@ func parseInferenceService(obj *unstructured.Unstructured) models.InferenceServi
 		MinReplicas:   minReplicas,
 		MaxReplicas:   maxReplicas,
 		Ready:         readyStatus(obj),
-		Age:           models.AgeOf(obj.GetCreationTimestamp().Time),
 		CreatedAt:     obj.GetCreationTimestamp().Time,
 	}
 }
@@ -165,7 +164,6 @@ func parseLegacyInferenceService(obj *unstructured.Unstructured) models.Inferenc
 		MinReplicas: minReplicas,
 		MaxReplicas: maxReplicas,
 		Ready:       readyStatus(obj),
-		Age:         models.AgeOf(obj.GetCreationTimestamp().Time),
 		CreatedAt:   obj.GetCreationTimestamp().Time,
 		Legacy:      true,
 	}

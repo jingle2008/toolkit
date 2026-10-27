@@ -129,9 +129,8 @@ spec:
 func TestParseLegacyInferenceService(t *testing.T) {
 	t.Parallel()
 	got := parseLegacyInferenceService(parseYAML(t, isvcLegacyDedicated))
-	assert.NotEmpty(t, got.Age)
 	assert.False(t, got.CreatedAt.IsZero(), "creation time is kept")
-	got.Age, got.CreatedAt = "", time.Time{}
+	got.CreatedAt = time.Time{}
 	assert.Equal(t, models.InferenceService{
 		Name:        "amaaaaaa7mjirbaaxtzngfz2lszq4nadg2xwhn2u4gyri7idzunxg6rl5tjq",
 		Namespace:   "amaaaaaa7mjirbaaoocrt6sskewo4u3ttueiqw6y6tmtmbnc4eefwqu37isa",
@@ -159,7 +158,7 @@ func TestParseInferenceService_Dedicated(t *testing.T) {
 	t.Parallel()
 	got := parseInferenceService(parseYAML(t, isvcDedicated))
 	assert.False(t, got.CreatedAt.IsZero(), "creation time is kept")
-	got.Age, got.CreatedAt = "", time.Time{} // wall-clock dependent
+	got.CreatedAt = time.Time{} // wall-clock dependent
 
 	assert.Equal(t, models.InferenceService{
 		Name:        "amaaaaaask7dceyatjkqbeheqhw5ry5dkayifvgqbaikjeg2ys676oc6j3ea",
@@ -184,7 +183,7 @@ func TestParseInferenceService_OnDemand(t *testing.T) {
 	assert.Equal(t, "False", got.Ready)
 	assert.True(t, got.IsFaulty())
 	assert.Equal(t, "2/4", got.Replicas())
-	assert.Empty(t, got.Age, "no creationTimestamp means no age")
+	assert.True(t, got.CreatedAt.IsZero(), "no creationTimestamp means no creation time")
 }
 
 func TestParseInferenceService_Variants(t *testing.T) {
@@ -282,7 +281,7 @@ func TestLoadInferenceServices_GroupsByNamespace(t *testing.T) {
 	dac := got["amaaaaaa22gykbqa6lppvrrw7lrrclyuk5s4kw27tie7bmwr3j4m5p7hmg7a"]
 	require.Len(t, dac, 1)
 	assert.Equal(t, "rerank-v3-5", dac[0].Model)
-	assert.NotEmpty(t, dac[0].Age)
+	assert.False(t, dac[0].CreatedAt.IsZero())
 }
 
 func TestLoadInferenceServices_MergesLegacy(t *testing.T) {

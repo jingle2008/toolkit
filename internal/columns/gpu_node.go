@@ -39,7 +39,7 @@ var GPUNodeColumns = GroupedSet[models.GPUNode]{Columns: []GroupedColumn[models.
 	},
 	{
 		Title: "Age", Key: "age", Ratio: 0.06,
-		Render: func(_ string, n models.GPUNode) string { return freshAge(n.CreatedAt, n.Age) },
+		Render: func(_ string, n models.GPUNode) string { return models.AgeOf(n.CreatedAt) },
 	},
 	{
 		Title: "Status", Key: "status", Ratio: 0.18,

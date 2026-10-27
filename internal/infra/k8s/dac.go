@@ -90,7 +90,6 @@ func extractDAC(ctx context.Context, cache PodCache, statusField string, overlay
 			ModelName:     stats.ModelName,
 			IdleReplicas:  stats.IdlePods,
 			TotalReplicas: stats.TotalPods,
-			Age:           models.AgeOf(created),
 			CreatedAt:     created,
 		}
 		overlay(spec, stats, &dac)
