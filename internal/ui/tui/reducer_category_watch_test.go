@@ -41,7 +41,15 @@ func collectCmdsMsgTypes(t *testing.T, cmds []tea.Cmd) []string {
 	return types
 }
 
-func msgTypeName(msg tea.Msg) string { return fmt.Sprintf("%T", msg) }
+// msgTypeName is msg's type, and for a lazy category's rows the category:
+// "tui.categoryLoadedMsg(GPUNode)".
+func msgTypeName(msg tea.Msg) string {
+	if loaded, ok := msg.(categoryLoadedMsg); ok {
+		return fmt.Sprintf("%T(%s)", msg, loaded.Cat)
+	}
+	return fmt.Sprintf("%T", msg)
+}
+
 func contains(s []string, v string) bool {
 	for _, x := range s {
 		if x == v {
@@ -92,8 +100,8 @@ func TestUpdateCategoryCore_GPUNode_CacheMiss(t *testing.T) {
 
 	types := collectCmdsMsgTypes(t, cmds)
 	assert.True(t,
-		contains(types, "tui.gpuNodesLoadedMsg"),
-		"expected gpuNodesLoadedMsg, got %v", types)
+		contains(types, "tui.categoryLoadedMsg(GPUNode)"),
+		"expected the GPU nodes to load, got %v", types)
 	assert.True(t,
 		hasWatchLifecycle(types),
 		"expected a watch lifecycle message, got %v", types)
@@ -119,7 +127,7 @@ func TestUpdateCategoryCore_GPUNode_Cached(t *testing.T) {
 
 	types := collectCmdsMsgTypes(t, cmds)
 	assert.True(t, contains(types, "tui.dataMsg"), "cached rows are shown at once, got %v", types)
-	assert.True(t, contains(types, "tui.gpuNodesLoadedMsg"), "the stale cache is reloaded, got %v", types)
+	assert.True(t, contains(types, "tui.categoryLoadedMsg(GPUNode)"), "the stale cache is reloaded, got %v", types)
 	assert.Equal(t, 1, m.pendingTasks, "one task for the reload, ended by its result")
 	assert.True(t,
 		hasWatchLifecycle(types),
@@ -204,6 +212,6 @@ func TestUpdateCategory_CachedRowsDontWaitForReload(t *testing.T) {
 	}
 	waitFor("tui.dataMsg") // the reload is still blocked
 	unblock()
-	waitFor("tui.dedicatedAIClustersLoadedMsg")
+	waitFor("tui.categoryLoadedMsg(DedicatedAICluster)")
 	<-done
 }

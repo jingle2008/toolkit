@@ -24,18 +24,17 @@ func kubeBackedCategories() []domain.Category {
 	return out
 }
 
-// Every kube-backed category must be lazy-loaded, have a load handler, and be
-// reloadable/watchable — the cluster of planes the GPUWorkload bug missed.
+// Every kube-backed category must load on its own, watch, and be
+// reloadable — what the GPUWorkload bug missed when that took edits in
+// several places; now it is one lazySources entry.
 func TestKubeBackedCategories_FullyWired(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	for _, c := range kubeBackedCategories() {
-		_, lazy := lazyLoadedCategories[c]
-		assert.Truef(t, lazy, "%s must be in lazyLoadedCategories", c)
-
-		_, handled := categoryHandlers[c]
-		assert.Truef(t, handled, "%s must have a categoryHandlers entry", c)
-
+		src, ok := lazySources[c]
+		require.Truef(t, ok, "%s must have a lazySources entry", c)
+		assert.Falsef(t, src.withDataset, "%s loads from the cluster, not with the dataset", c)
+		assert.NotNilf(t, src.watch, "%s must watch", c)
 		assert.NotNilf(t, m.reloadCategoryCmd(c, 1), "%s must be reloadable", c)
 	}
 }
@@ -67,18 +66,15 @@ func TestStartK8sWatchCmd_CoversKubeBacked(t *testing.T) {
 }
 
 /*
-TestUpdate_RoutesEveryKubeBackedLoadedMsg guards the second dispatch
-list.
+TestUpdate_RoutesEveryKubeBackedLoadedMsg guards the route from a load
+to its rows.
 
-Update enumerates the loaded-message types it forwards to
-routeListLoadedMsg. A type missing from that list isn't a compile
-error and isn't caught by routeListLoadedMsg's own switch — the
-message is simply dropped, so applyLoaded never runs, endTask never
-fires, pendingTasks stays elevated, and the spinner ticks forever.
-That's exactly how ServingRuntime shipped broken.
+A loaded message Update doesn't route is dropped: applyLoaded never
+runs, endTask never fires, pendingTasks stays elevated, and the spinner
+ticks forever. That's how ServingRuntime once shipped broken, when each
+category had its own message type in a hand-kept list.
 
-Rather than a hand-maintained list (which is the thing that drifted),
-this drives each category's real load command, takes the message it
+This drives each category's real load command, takes the message it
 actually produces, and asserts Update drains the task.
 */
 func TestUpdate_RoutesEveryKubeBackedLoadedMsg(t *testing.T) {
@@ -96,7 +92,7 @@ func TestUpdate_RoutesEveryKubeBackedLoadedMsg(t *testing.T) {
 			m.pendingTasks = 1
 			m.Update(msg)
 			assert.Zerof(t, m.pendingTasks,
-				"%s: Update dropped %T — add it to the dispatch list in model_update.go",
+				"%s: Update dropped %T",
 				cat, msg)
 		})
 	}
@@ -153,10 +149,10 @@ func TestItemKeyFrom_NonNilForEveryCategory(t *testing.T) {
 func TestEnvironmentScopedCategories_MatchLoadHandlers(t *testing.T) {
 	t.Parallel()
 	for _, c := range domain.Categories() {
-		_, handled := categoryHandlers[c]
+		_, handled := lazySources[c]
 		_, tenancy := tenancyOverrideCategories[c]
 		assert.Equalf(t, handled || tenancy, c.IsEnvironmentScoped(),
-			"%s: IsEnvironmentScoped disagrees with categoryHandlers/tenancyOverrideCategories", c)
+			"%s: IsEnvironmentScoped disagrees with lazySources/tenancyOverrideCategories", c)
 	}
 }
 

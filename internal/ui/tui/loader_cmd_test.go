@@ -5,6 +5,12 @@ import (
 	"errors"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/jingle2008/toolkit/internal/domain"
+	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -25,42 +31,33 @@ func (e errLoader) LoadPropertyRegionalOverrides(_ context.Context, _ string, _ 
 	return nil, e.err
 }
 
+// regionalLoad runs cat's load on a model over ld.
+func regionalLoad(t *testing.T, ld loader.Composite, cat domain.Category, gen int) tea.Msg {
+	t.Helper()
+	m := newTestModel(t)
+	m.loader = ld
+	return m.loadCategoryCmd(cat, gen)()
+}
+
+var regionalOverrideCategories = []domain.Category{
+	domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride,
+}
+
 func TestLoadRegionalOverridesCmds_Success(t *testing.T) {
 	t.Parallel()
-	ld := fakeLoader{}
-	ctx := context.Background()
-	env := models.Environment{}
-	gen := 7
-
-	msg := loadLimitRegionalOverridesCmd(ctx, ld, "repo", env, gen)()
-	if got, ok := msg.(limitRegionalOverridesLoadedMsg); !ok || got.Gen != gen {
-		t.Fatalf("unexpected message: %#v", msg)
-	}
-
-	msg = loadConsolePropertyRegionalOverridesCmd(ctx, ld, "repo", env, gen)()
-	if got, ok := msg.(consolePropertyRegionalOverridesLoadedMsg); !ok || got.Gen != gen {
-		t.Fatalf("unexpected message: %#v", msg)
-	}
-
-	msg = loadPropertyRegionalOverridesCmd(ctx, ld, "repo", env, gen)()
-	if got, ok := msg.(propertyRegionalOverridesLoadedMsg); !ok || got.Gen != gen {
-		t.Fatalf("unexpected message: %#v", msg)
+	for _, cat := range regionalOverrideCategories {
+		got, ok := regionalLoad(t, fakeLoader{}, cat, 7).(categoryLoadedMsg)
+		require.Truef(t, ok, "%s: want its rows", cat)
+		assert.Equal(t, cat, got.Cat)
+		assert.Equal(t, 7, got.Gen)
 	}
 }
 
 func TestLoadRegionalOverridesCmds_Error(t *testing.T) {
 	t.Parallel()
-	ld := errLoader{err: errors.New("boom")}
-	ctx := context.Background()
-	env := models.Environment{}
-
-	if msg := loadLimitRegionalOverridesCmd(ctx, ld, "repo", env, 1)(); msg == nil {
-		t.Fatal("expected errMsg, got nil")
-	}
-	if _, ok := loadConsolePropertyRegionalOverridesCmd(ctx, ld, "repo", env, 1)().(errMsg); !ok {
-		t.Fatal("expected errMsg from console property override loader")
-	}
-	if _, ok := loadPropertyRegionalOverridesCmd(ctx, ld, "repo", env, 1)().(errMsg); !ok {
-		t.Fatal("expected errMsg from property override loader")
+	for _, cat := range regionalOverrideCategories {
+		got, ok := regionalLoad(t, errLoader{err: errors.New("boom")}, cat, 1).(errMsg)
+		require.Truef(t, ok, "%s: want an errMsg", cat)
+		assert.Equal(t, cat, got.Cat)
 	}
 }

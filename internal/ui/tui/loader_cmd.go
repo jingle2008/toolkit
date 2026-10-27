@@ -2,7 +2,6 @@ package tui
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -11,116 +10,8 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
-	"github.com/jingle2008/toolkit/internal/infra/terraform"
-	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
-
-// Pure command constructors. Each builds a tea.Cmd that loads one
-// category and returns a typed *LoadedMsg on success or errMsg on
-// failure; the gen counter lets the reducer drop stale responses.
-func loadBaseModelsCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadBaseModels(ctx, kubeCfg, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.BaseModel, err), Gen: gen, Cat: domain.BaseModel}
-		}
-		return baseModelsLoadedMsg{Items: items, Gen: gen}
-	}
-}
-
-func loadServingRuntimesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadServingRuntimes(ctx, kubeCfg, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ServingRuntime, err), Gen: gen, Cat: domain.ServingRuntime}
-		}
-		return servingRuntimesLoadedMsg{Items: items, Gen: gen}
-	}
-}
-
-func loadImportedModelsCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		grouped, err := ld.LoadImportedModels(ctx, kubeCfg, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ImportedModel, err), Gen: gen, Cat: domain.ImportedModel}
-		}
-		return importedModelsLoadedMsg{Items: grouped, Gen: gen}
-	}
-}
-
-func loadGPUPoolsCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadGPUPools(ctx, repoPath, env)
-		if err != nil {
-			// Partial-success is non-fatal in the TUI: items still has
-			// the rows we could load, and the per-source error has
-			// already been logged inside the terraform package.
-			if partial, ok := errors.AsType[*terraform.PartialLoadError](err); ok {
-				logging.FromContext(ctx).Warn("loaded GPU pools with partial failures",
-					"category", domain.GPUPool, "error", partial)
-				return gpuPoolsLoadedMsg{Items: items, Gen: gen}
-			}
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUPool, err), Gen: gen, Cat: domain.GPUPool}
-		}
-		return gpuPoolsLoadedMsg{Items: items, Gen: gen}
-	}
-}
-
-func loadGPUNodesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadGPUNodesByPool(ctx, kubeCfg, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUNode, err), Gen: gen, Cat: domain.GPUNode}
-		}
-		return gpuNodesLoadedMsg{Items: items, Gen: gen}
-	}
-}
-
-// loadGPUWorkloadsCmd loads the GPU workloads and, withDACs, the DACs
-// too, at the same time: they give a pod without a tenancy-id label its
-// tenant. A failed DAC load only leaves those pods unowned.
-func loadGPUWorkloadsCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int, withDACs bool) tea.Cmd {
-	return func() tea.Msg {
-		var dacs chan map[string][]models.DedicatedAICluster
-		if withDACs {
-			dacs = make(chan map[string][]models.DedicatedAICluster, 1)
-			go func() {
-				m, _ := ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)
-				dacs <- m
-			}()
-		}
-		items, err := ld.LoadGPUWorkloadsByNode(ctx, kubeCfg, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.GPUWorkload, err), Gen: gen, Cat: domain.GPUWorkload}
-		}
-		msg := gpuWorkloadsLoadedMsg{Items: items, Gen: gen}
-		if withDACs {
-			msg.DACs = <-dacs
-		}
-		return msg
-	}
-}
-
-func loadDedicatedAIClustersCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadDedicatedAIClusters(ctx, kubeCfg, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.DedicatedAICluster, err), Gen: gen, Cat: domain.DedicatedAICluster}
-		}
-		return dedicatedAIClustersLoadedMsg{Items: items, Gen: gen}
-	}
-}
-
-func loadInferenceServicesCmd(ctx context.Context, ld loader.Composite, kubeCfg string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadInferenceServices(ctx, kubeCfg, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.InferenceService, err), Gen: gen, Cat: domain.InferenceService}
-		}
-		return inferenceServicesLoadedMsg{Items: items, Gen: gen}
-	}
-}
 
 func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
 	return func() tea.Msg {
@@ -129,36 +20,6 @@ func loadTenancyOverrideGroupCmd(ctx context.Context, ld loader.Composite, repoP
 			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.Tenant, err), Gen: gen, Cat: domain.Tenant}
 		}
 		return tenancyOverridesLoadedMsg{Group: group, Gen: gen}
-	}
-}
-
-func loadLimitRegionalOverridesCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadLimitRegionalOverrides(ctx, repoPath, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.LimitRegionalOverride, err), Gen: gen, Cat: domain.LimitRegionalOverride}
-		}
-		return limitRegionalOverridesLoadedMsg{Items: items, Gen: gen}
-	}
-}
-
-func loadConsolePropertyRegionalOverridesCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, repoPath, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.ConsolePropertyRegionalOverride, err), Gen: gen, Cat: domain.ConsolePropertyRegionalOverride}
-		}
-		return consolePropertyRegionalOverridesLoadedMsg{Items: items, Gen: gen}
-	}
-}
-
-func loadPropertyRegionalOverridesCmd(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, gen int) tea.Cmd {
-	return func() tea.Msg {
-		items, err := ld.LoadPropertyRegionalOverrides(ctx, repoPath, env)
-		if err != nil {
-			return errMsg{err: fmt.Errorf("failed to load %s: %w", domain.PropertyRegionalOverride, err), Gen: gen, Cat: domain.PropertyRegionalOverride}
-		}
-		return propertyRegionalOverridesLoadedMsg{Items: items, Gen: gen}
 	}
 }
 
@@ -173,28 +34,11 @@ func startK8sWatchCmd(ctx context.Context, ld loader.Composite, cat domain.Categ
 		if !ok {
 			return k8sWatchUnavailableMsg{Cat: cat, Gen: gen}
 		}
-		var (
-			trigger <-chan struct{}
-			err     error
-		)
-		switch cat {
-		case domain.BaseModel:
-			trigger, err = w.WatchBaseModels(ctx, kubeCfg, env)
-		case domain.ServingRuntime:
-			trigger, err = w.WatchServingRuntimes(ctx, kubeCfg, env)
-		case domain.ImportedModel:
-			trigger, err = w.WatchImportedModels(ctx, kubeCfg, env)
-		case domain.GPUNode:
-			trigger, err = w.WatchGPUNodes(ctx, kubeCfg, env)
-		case domain.GPUWorkload:
-			trigger, err = w.WatchGPUWorkloads(ctx, kubeCfg, env)
-		case domain.DedicatedAICluster:
-			trigger, err = w.WatchDedicatedAIClusters(ctx, kubeCfg, env)
-		case domain.InferenceService:
-			trigger, err = w.WatchInferenceServices(ctx, kubeCfg, env)
-		default:
+		src := lazySources[cat]
+		if src.watch == nil {
 			return k8sWatchUnavailableMsg{Cat: cat, Gen: gen}
 		}
+		trigger, err := src.watch(ctx, w, kubeCfg, env)
 		if err != nil {
 			return k8sWatchUnavailableMsg{Cat: cat, Gen: gen}
 		}

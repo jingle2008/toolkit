@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -34,7 +35,7 @@ func applyRenders(m *Model, cmd tea.Cmd) bool {
 
 // reloadDACs delivers a DAC reload, as the live watch does.
 func reloadDACs(m *Model, items map[string][]models.DedicatedAICluster) tea.Cmd {
-	_, cmd := m.Update(dedicatedAIClustersLoadedMsg{Items: items, Gen: m.gens.msg})
+	_, cmd := m.Update(categoryLoadedMsg{Cat: domain.DedicatedAICluster, Gen: m.gens.msg, Rows: dacRows(items)})
 	return cmd
 }
 

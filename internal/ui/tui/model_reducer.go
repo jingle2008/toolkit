@@ -411,7 +411,7 @@ func (m *Model) handleDataMsg(msg dataMsg) {
 	}
 	// dataMsg has two live roles: the foundational dataset load
 	// (*models.Dataset) and a nil-payload refresh signal (refreshDataCmd).
-	// Per-category data is owned solely by the typed *LoadedMsg handlers.
+	// A lazy category's data arrives only in categoryLoadedMsg.
 	if ds, ok := msg.Data.(*models.Dataset); ok {
 		m.mergeRepoDataset(ds)
 	}
@@ -539,53 +539,10 @@ func mapLen[K comparable, V any](m map[K][]V) int {
 	return n
 }
 
-func (m *Model) handleBaseModelsLoaded(items []models.BaseModel, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.BaseModels = items }, domain.BaseModel, len(items))
-}
-
-func (m *Model) handleServingRuntimesLoaded(items []models.ServingRuntime, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.ServingRuntimes = items }, domain.ServingRuntime, len(items))
-}
-
-func (m *Model) handleImportedModelsLoaded(items map[string][]models.ImportedModel, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetImportedModelMap(items) }, domain.ImportedModel, mapLen(items))
-}
-
-func (m *Model) handleGPUPoolsLoaded(items []models.GPUPool, gen int) tea.Cmd {
-	if !m.applyLoaded(gen, func(ds *models.Dataset) { ds.GPUPools = items }, domain.GPUPool, len(items)) {
-		return nil
-	}
-	return m.updateGPUPoolState()
-}
-
-func (m *Model) handleGPUNodesLoaded(items map[string][]models.GPUNode, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.GPUNodeMap = items }, domain.GPUNode, mapLen(items))
-}
-
-// handleGPUWorkloadsLoaded stores the workloads, and the DACs loaded with
-// them when none are loaded yet (a DAC load of its own may have landed
-// meanwhile, and is as fresh).
-func (m *Model) handleGPUWorkloadsLoaded(items map[string][]models.GPUWorkload, dacs map[string][]models.DedicatedAICluster, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) {
-		if dacs != nil && ds.DedicatedAIClusterMap == nil {
-			setDedicatedAIClusters(ds, dacs)
-		}
-		ds.SetGPUWorkloadMap(items)
-	}, domain.GPUWorkload, mapLen(items))
-}
-
 // workloadsNeedDACs reports whether a GPU workload load should fetch the
 // DACs too, for the tenants of pods without a tenancy-id label.
 func (m *Model) workloadsNeedDACs() bool {
 	return m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil
-}
-
-func (m *Model) handleDedicatedAIClustersLoaded(items map[string][]models.DedicatedAICluster, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { setDedicatedAIClusters(ds, items) }, domain.DedicatedAICluster, mapLen(items))
-}
-
-func (m *Model) handleInferenceServicesLoaded(items map[string][]models.InferenceService, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.SetInferenceServiceMap(items) }, domain.InferenceService, mapLen(items))
 }
 
 func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, gen int) {
@@ -618,40 +575,14 @@ func (m *Model) handleTenancyOverridesLoaded(group models.TenancyOverrideGroup, 
 	}
 }
 
-func (m *Model) handleLimitRegionalOverridesLoaded(items []models.LimitRegionalOverride, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.LimitRegionalOverrides = items }, domain.LimitRegionalOverride, len(items))
-}
-
-func (m *Model) handleConsolePropertyRegionalOverridesLoaded(items []models.ConsolePropertyRegionalOverride, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.ConsolePropertyRegionalOverrides = items }, domain.ConsolePropertyRegionalOverride, len(items))
-}
-
-func (m *Model) handlePropertyRegionalOverridesLoaded(items []models.PropertyRegionalOverride, gen int) {
-	m.applyLoaded(gen, func(ds *models.Dataset) { ds.PropertyRegionalOverrides = items }, domain.PropertyRegionalOverride, len(items))
-}
-
-// reloadCategoryCmd returns the existing one-shot load command for a
-// watched category. Used both for the trigger-driven refresh and the
+// reloadCategoryCmd returns the one-shot load command for a watched
+// category. Used both for the trigger-driven refresh and the
 // final reload when a watch dies. Returns nil for non-watched categories.
 func (m *Model) reloadCategoryCmd(cat domain.Category, gen int) tea.Cmd {
-	switch cat {
-	case domain.BaseModel:
-		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	case domain.ServingRuntime:
-		return loadServingRuntimesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	case domain.ImportedModel:
-		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	case domain.GPUNode:
-		return loadGPUNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	case domain.GPUWorkload:
-		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen, m.workloadsNeedDACs())
-	case domain.DedicatedAICluster:
-		return loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	case domain.InferenceService:
-		return loadInferenceServicesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	default:
+	if !cat.NeedsKubeConfig() {
 		return nil
 	}
+	return m.loadCategoryCmd(cat, gen)
 }
 
 // handleK8sWatchStarted marks the category live and arms the trigger

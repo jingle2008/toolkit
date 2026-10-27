@@ -151,9 +151,9 @@ func TestLiveReload_PreservesFilterAndSelection(t *testing.T) {
 
 	// Simulate the data landing from a watch-triggered reload (same gen, same
 	// category) via the typed loaded-handler the reload command resolves to.
-	m.handleBaseModelsLoaded([]models.BaseModel{
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.BaseModel, Gen: 1, Rows: baseModelRows([]models.BaseModel{
 		{Name: "bm1"}, {Name: "bm2"}, {Name: "bm3"},
-	}, 1)
+	})})
 
 	if m.filter != "bm" {
 		t.Fatalf("live reload cleared the filter: %q", m.filter)

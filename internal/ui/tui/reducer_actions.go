@@ -260,16 +260,14 @@ func (m *Model) catalogLoaded(cat domain.Category) bool {
 	}
 }
 
-// catalogLoadCmd returns the shared loader command for one model catalog; its
-// *LoadedMsg is applied by the normal handler, caching the catalog on the
-// dataset for later navigation.
+// catalogLoadCmd returns the load of one model catalog; its rows are stored
+// as any lazy category's are, caching the catalog on the dataset for later
+// navigation.
 func (m *Model) catalogLoadCmd(cat domain.Category, gen int) tea.Cmd {
-	switch cat {
-	case domain.ImportedModel:
-		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	default:
-		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
+	if cat != domain.ImportedModel {
+		cat = domain.BaseModel
 	}
+	return m.loadCategoryCmd(cat, gen)
 }
 
 // handleOpenMetricsTrigger resolves and opens the dashboard once the catalog

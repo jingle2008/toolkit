@@ -235,9 +235,9 @@ func TestDatasetLoads_ReplaceTheDataset(t *testing.T) {
 	}
 	runConcurrently(read, func() {
 		gen := m.gens.msg
-		m.handleDedicatedAIClustersLoaded(map[string][]models.DedicatedAICluster{
+		m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.DedicatedAICluster, Gen: gen, Rows: dacRows(map[string][]models.DedicatedAICluster{
 			"id1": {{Name: "dac1", TenantID: "id1"}},
-		}, gen)
+		})})
 		m.handleTenancyOverridesLoaded(models.TenancyOverrideGroup{
 			Tenants: []models.Tenant{{Name: "renamed", ID: "id1"}},
 		}, gen)

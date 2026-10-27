@@ -61,10 +61,10 @@ func TestStartupHang_LazyCategory(t *testing.T) {
 		t.Errorf("after stale drop: pendingTasks = %d, want 1 (stale drops must still endTask)", m.pendingTasks)
 	}
 
-	m.handleImportedModelsLoaded(map[string][]models.ImportedModel{}, 1)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.ImportedModel, Gen: 1, Rows: importedModelRows(map[string][]models.ImportedModel{})})
 
 	if m.pendingTasks != 0 {
-		t.Errorf("after stale importedModelsLoadedMsg drop: pendingTasks = %d, want 0", m.pendingTasks)
+		t.Errorf("after a stale imported-models load is dropped: pendingTasks = %d, want 0", m.pendingTasks)
 	}
 	if m.viewMode == common.LoadingView {
 		t.Error("viewMode still LoadingView after all (stale) loads drained — startup hang regression")
@@ -74,7 +74,7 @@ func TestStartupHang_LazyCategory(t *testing.T) {
 // TestLoadedMsg_ArrivesDuringDetailsView pins the routing fix from
 // code review issue #2: once load failures stop trapping the user in
 // ErrorView, they can navigate into DetailsView while a load is still
-// pending. The typed *LoadedMsg must drain pendingTasks regardless of
+// pending. The loaded message must drain pendingTasks regardless of
 // the active view — if it only fires through ListView delegation, the
 // inline spinner ticks forever.
 func TestLoadedMsg_ArrivesDuringDetailsView(t *testing.T) {
@@ -104,9 +104,10 @@ func TestLoadedMsg_ArrivesDuringDetailsView(t *testing.T) {
 	// typed handler, not delegateToActiveView(DetailsView) which
 	// would silently drop it.
 	m.gens.msg = 1
-	loaded := importedModelsLoadedMsg{
-		Items: map[string][]models.ImportedModel{"acme": nil},
-		Gen:   1,
+	loaded := categoryLoadedMsg{
+		Cat:  domain.ImportedModel,
+		Gen:  1,
+		Rows: importedModelRows(map[string][]models.ImportedModel{"acme": nil}),
 	}
 	_, _ = m.Update(loaded)
 

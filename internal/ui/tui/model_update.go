@@ -88,11 +88,11 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case datasetLoadedMsg:
 		m.handleDataMsg(dataMsg{Data: msg.Dataset, Gen: msg.Gen})
 		return m, m.pruneRecentEnvs()
-	case baseModelsLoadedMsg, servingRuntimesLoadedMsg, importedModelsLoadedMsg, gpuPoolsLoadedMsg,
-		gpuNodesLoadedMsg, gpuWorkloadsLoadedMsg, dedicatedAIClustersLoadedMsg, inferenceServicesLoadedMsg, tenancyOverridesLoadedMsg,
-		limitRegionalOverridesLoadedMsg, consolePropertyRegionalOverridesLoadedMsg,
-		propertyRegionalOverridesLoadedMsg:
-		return m, tea.Batch(m.routeListLoadedMsg(msg)...)
+	case categoryLoadedMsg:
+		return m, m.handleCategoryLoaded(msg)
+	case tenancyOverridesLoadedMsg:
+		m.handleTenancyOverridesLoaded(msg.Group, msg.Gen)
+		return m, nil
 	// Tenant-save results are intercepted here so they fire from any
 	// view: the user may dismiss the form (esc) before the async write
 	// lands, otherwise the result would route to the list view and be
