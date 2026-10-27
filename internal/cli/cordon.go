@@ -78,7 +78,7 @@ Examples:
 					Target: nodeName,
 					DryRun: dryRun,
 					Yes:    yes,
-					Resolve: func(ctx context.Context, p *mutationPlan) error {
+					Resolve: func(ctx context.Context, p *mutation.Plan) error {
 						cordoned, err := nodeCordonedFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 						p.Resolved = mutation.ResolvedCordon(cordoned)
 						return err

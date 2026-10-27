@@ -54,7 +54,7 @@ deliberately disabled to prevent reflex "y" answers.`,
 					Target: name,
 					DryRun: dryRun,
 					Yes:    yes,
-					Resolve: func(ctx context.Context, p *mutationPlan) error {
+					Resolve: func(ctx context.Context, p *mutation.Plan) error {
 						found, err := getDACFn(ctx, dac, env)
 						p.Resolved = mutation.ResolvedDAC(found.ID, found.State)
 						return err
@@ -114,7 +114,7 @@ be unique. Destructive: requires explicit --yes.`,
 					Yes:    yes,
 					// Planning also checks it's an orphan, and picks delete
 					// or force-delete.
-					Resolve: func(ctx context.Context, p *mutationPlan) error {
+					Resolve: func(ctx context.Context, p *mutation.Plan) error {
 						if err := resolveNS(ctx, p); err != nil {
 							return err
 						}

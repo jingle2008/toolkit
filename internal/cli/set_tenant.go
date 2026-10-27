@@ -96,7 +96,7 @@ Examples:
 					Yes:    yes,
 					// The write's own checks (a name another tenancy has, a
 					// file that doesn't load), so a dry run catches them too.
-					Resolve: func(_ context.Context, p *mutationPlan) error {
+					Resolve: func(_ context.Context, p *mutation.Plan) error {
 						exists, err := checkTenantFn(cfg, entry)
 						p.Resolved = mutation.ResolvedTenant(exists)
 						return err

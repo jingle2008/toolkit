@@ -291,7 +291,7 @@ func TestRunMutation_Audits(t *testing.T) {
 
 	// A failed lookup is audited as failed, without a begin (nothing ran),
 	// except in a dry run.
-	lost := func(context.Context, *mutationPlan) error { return errors.New("node not found") }
+	lost := func(context.Context, *mutation.Plan) error { return errors.New("node not found") }
 	assert.Equal(t, []string{"failed"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true, Resolve: lost}, ok))
 	assert.Empty(t, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", DryRun: true, Resolve: lost}, ok))
 }
@@ -303,7 +303,7 @@ func TestRunMutation_IrreversibleRefusedBeforeLookup(t *testing.T) {
 	looked := false
 	err := runMutation(context.Background(), strings.NewReader("y\n"), &bytes.Buffer{}, mutationPlan{
 		Action: mutation.TerminateNode, Target: "n1",
-		Resolve: func(context.Context, *mutationPlan) error { looked = true; return nil },
+		Resolve: func(context.Context, *mutation.Plan) error { looked = true; return nil },
 	}, func(context.Context) error { return nil })
 	require.ErrorContains(t, err, "--yes")
 	assert.False(t, looked)
@@ -316,7 +316,7 @@ func TestRunMutation_ResolveRefinesPlan(t *testing.T) {
 	var out bytes.Buffer
 	err := runMutation(context.Background(), strings.NewReader(""), &out, mutationPlan{
 		Action: mutation.DeleteInferenceService, Target: "svc", DryRun: true,
-		Resolve: func(_ context.Context, p *mutationPlan) error {
+		Resolve: func(_ context.Context, p *mutation.Plan) error {
 			p.Action, p.Target, p.Resolved = mutation.ForceDeleteInferenceService, "ns1/svc", mutation.ResolvedNamespace("ns1")
 			return nil
 		},
