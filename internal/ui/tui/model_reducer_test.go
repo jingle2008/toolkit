@@ -22,7 +22,7 @@ func TestHandleBaseModelsLoaded(t *testing.T) {
 	m.gens.msg = 1
 	items := []models.BaseModel{{Name: "bm1"}}
 
-	m.handleBaseModelsLoaded(items, 1)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.BaseModel, Gen: 1, Rows: baseModelRows(items)})
 	if len(m.dataset.BaseModels) != 1 || m.dataset.BaseModels[0].Name != "bm1" {
 		t.Fatalf("BaseModels not updated: %#v", m.dataset.BaseModels)
 	}
@@ -36,7 +36,7 @@ func TestHandleImportedModelsLoaded(t *testing.T) {
 		"ocid1.tenancy.x": {{BaseModel: models.BaseModel{Name: "im1"}, Namespace: "team-x", TenantID: "ocid1.tenancy.x"}},
 	}
 
-	m.handleImportedModelsLoaded(items, 1)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.ImportedModel, Gen: 1, Rows: importedModelRows(items)})
 	// SetImportedModelMap re-keys to Tenant.Name when matched; the
 	// test model has no realm tenants configured, so the raw key
 	// passes through.
@@ -54,9 +54,9 @@ func TestHandleImportedModelsLoaded_GenMismatch(t *testing.T) {
 		"ocid1.tenancy.x": {{BaseModel: models.BaseModel{Name: "old"}, Namespace: "team-x", TenantID: "ocid1.tenancy.x"}},
 	}
 
-	m.handleImportedModelsLoaded(map[string][]models.ImportedModel{
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.ImportedModel, Gen: 1, Rows: importedModelRows(map[string][]models.ImportedModel{
 		"ocid1.tenancy.y": {{BaseModel: models.BaseModel{Name: "new"}, Namespace: "team-y", TenantID: "ocid1.tenancy.y"}},
-	}, 1)
+	})})
 	got := m.dataset.ImportedModelMap["ocid1.tenancy.x"]
 	if len(got) != 1 || got[0].Name != "old" {
 		t.Fatalf("ImportedModelMap updated on gen mismatch: %#v", m.dataset.ImportedModelMap)
@@ -111,7 +111,7 @@ func TestHandleBaseModelsLoaded_GenMismatch(t *testing.T) {
 	m.gens.msg = 2
 	m.dataset.BaseModels = []models.BaseModel{{Name: "old"}}
 
-	m.handleBaseModelsLoaded([]models.BaseModel{{Name: "new"}}, 1)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.BaseModel, Gen: 1, Rows: baseModelRows([]models.BaseModel{{Name: "new"}})})
 	if len(m.dataset.BaseModels) != 1 || m.dataset.BaseModels[0].Name != "old" {
 		t.Fatalf("BaseModels updated on gen mismatch: %#v", m.dataset.BaseModels)
 	}
@@ -123,7 +123,7 @@ func TestHandleGPUPoolsLoaded(t *testing.T) {
 	m.gens.msg = 1
 	items := []models.GPUPool{{Name: "pool1"}}
 
-	cmd := m.handleGPUPoolsLoaded(items, 1)
+	cmd := m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.GPUPool, Gen: 1, Rows: gpuPoolRows(items)})
 	if cmd == nil {
 		t.Fatal("expected non-nil cmd from handleGPUPoolsLoaded")
 	}
@@ -138,7 +138,7 @@ func TestHandleGPUNodesLoaded(t *testing.T) {
 	m.gens.msg = 1
 	items := map[string][]models.GPUNode{"pool": {{Name: "node1"}}}
 
-	m.handleGPUNodesLoaded(items, 1)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.GPUNode, Gen: 1, Rows: gpuNodeRows(items)})
 	if got := m.dataset.GPUNodeMap["pool"]; len(got) != 1 || got[0].Name != "node1" {
 		t.Fatalf("GPUNodeMap not updated: %#v", m.dataset.GPUNodeMap)
 	}
@@ -149,7 +149,7 @@ func TestHandleGPUWorkloadsLoaded(t *testing.T) {
 	m := newTestModel(t)
 	m.dataset = &models.Dataset{}
 	items := map[string][]models.GPUWorkload{"node-a": {{Name: "p1", Node: "node-a"}}}
-	m.handleGPUWorkloadsLoaded(items, nil, m.gens.msg)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.GPUWorkload, Gen: m.gens.msg, Rows: gpuWorkloadRows(items, nil)})
 	if got := m.dataset.GPUWorkloadMap["node-a"]; len(got) != 1 || got[0].Name != "p1" {
 		t.Fatalf("GPUWorkloadMap not applied: %+v", m.dataset.GPUWorkloadMap)
 	}
@@ -163,7 +163,7 @@ func TestHandleDedicatedAIClustersLoaded(t *testing.T) {
 		"id1": {{Name: "cluster1"}},
 	}
 
-	m.handleDedicatedAIClustersLoaded(items, 1)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.DedicatedAICluster, Gen: 1, Rows: dacRows(items)})
 	if got := m.dataset.DedicatedAIClusterMap["tenant1"]; len(got) != 1 || got[0].Name != "cluster1" {
 		t.Fatalf("DedicatedAIClusterMap not updated: %#v", m.dataset.DedicatedAIClusterMap)
 	}
@@ -210,9 +210,9 @@ func TestHandleRegionalOverridesLoaded(t *testing.T) {
 	consoleOverrides := []models.ConsolePropertyRegionalOverride{{Name: "c1"}}
 	propertyOverrides := []models.PropertyRegionalOverride{{Name: "p1"}}
 
-	m.handleLimitRegionalOverridesLoaded(limitOverrides, 1)
-	m.handleConsolePropertyRegionalOverridesLoaded(consoleOverrides, 1)
-	m.handlePropertyRegionalOverridesLoaded(propertyOverrides, 1)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.LimitRegionalOverride, Gen: 1, Rows: limitRegionalOverrideRows(limitOverrides)})
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.ConsolePropertyRegionalOverride, Gen: 1, Rows: consolePropertyRegionalOverrideRows(consoleOverrides)})
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.PropertyRegionalOverride, Gen: 1, Rows: propertyRegionalOverrideRows(propertyOverrides)})
 
 	if len(m.dataset.LimitRegionalOverrides) != 1 {
 		t.Fatalf("LimitRegionalOverrides not updated: %#v", m.dataset.LimitRegionalOverrides)
@@ -503,7 +503,7 @@ func TestOpContext(t *testing.T) {
 }
 
 // handleDataMsg owns only the foundational dataset load and the refresh
-// signal; per-category data flows through the typed *LoadedMsg handlers.
+// signal; per-category data flows through categoryLoadedMsg.
 // Feeding it per-category data must NOT mutate the dataset.
 func TestHandleDataMsg_IgnoresPerCategoryPayload(t *testing.T) {
 	t.Parallel()

@@ -7,8 +7,6 @@ package tui
 
 import (
 	tea "charm.land/bubbletea/v2"
-
-	"github.com/jingle2008/toolkit/internal/domain"
 )
 
 // bumpGen increments the message generation counter and returns the new value.
@@ -52,23 +50,11 @@ func setFilter(filter string) tea.Cmd {
 	}
 }
 
-// lazyLoadedCategories is a set of categories that are loaded on demand and never mutated.
-var lazyLoadedCategories = map[domain.Category]struct{}{
-	domain.BaseModel:          {},
-	domain.ServingRuntime:     {},
-	domain.ImportedModel:      {},
-	domain.GPUPool:            {},
-	domain.GPUNode:            {},
-	domain.GPUWorkload:        {},
-	domain.DedicatedAICluster: {},
-	domain.InferenceService:   {},
-}
-
 // Init implements the tea.Model interface and initializes the model.
 func (m *Model) Init() tea.Cmd {
 	cmds := m.loadData()
 
-	if _, ok := lazyLoadedCategories[m.category]; ok {
+	if src, ok := lazySources[m.category]; ok && !src.withDataset {
 		cmds = append(cmds, m.updateCategory(m.category)...)
 	}
 

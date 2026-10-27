@@ -269,10 +269,10 @@ func TestProcessDataAndErrorMsg(t *testing.T) {
 	m.handleDataMsg(dataMsg{Data: m.dataset})
 	m.handleDataMsg(dataMsg{})
 	// Per-category data now flows through the typed handlers.
-	m.handleBaseModelsLoaded([]models.BaseModel{{}}, m.gens.msg)
-	m.handleGPUPoolsLoaded([]models.GPUPool{{}}, m.gens.msg)
-	m.handleGPUNodesLoaded(map[string][]models.GPUNode{"pool": {}}, m.gens.msg)
-	m.handleDedicatedAIClustersLoaded(map[string][]models.DedicatedAICluster{"tenant": {}}, m.gens.msg)
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.BaseModel, Gen: m.gens.msg, Rows: baseModelRows([]models.BaseModel{{}})})
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.GPUPool, Gen: m.gens.msg, Rows: gpuPoolRows([]models.GPUPool{{}})})
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.GPUNode, Gen: m.gens.msg, Rows: gpuNodeRows(map[string][]models.GPUNode{"pool": {}})})
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.DedicatedAICluster, Gen: m.gens.msg, Rows: dacRows(map[string][]models.DedicatedAICluster{"tenant": {}})})
 	// Update with errorMsg
 	m.Update(errMsg{})
 }

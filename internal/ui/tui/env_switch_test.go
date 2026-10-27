@@ -197,9 +197,9 @@ func newSwitchDACModel(t *testing.T) *Model {
 }
 
 func loadAcmeDAC(m *Model) {
-	m.handleDedicatedAIClustersLoaded(map[string][]models.DedicatedAICluster{
+	m.handleCategoryLoaded(categoryLoadedMsg{Cat: domain.DedicatedAICluster, Gen: m.gens.msg, Rows: dacRows(map[string][]models.DedicatedAICluster{
 		"aaaaacme": {{Name: "dac1", TenantID: "aaaaacme"}}, // the label: the OCID's suffix
-	}, m.gens.msg)
+	})})
 }
 
 // Tenants and overrides are loaded per realm, so a switch within the realm

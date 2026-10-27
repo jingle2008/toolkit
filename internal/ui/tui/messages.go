@@ -138,66 +138,8 @@ type exportErrMsg struct {
 	err error
 }
 
-type baseModelsLoadedMsg struct {
-	Items []models.BaseModel
-	Gen   int
-}
-
-type servingRuntimesLoadedMsg struct {
-	Items []models.ServingRuntime
-	Gen   int
-}
-
-type importedModelsLoadedMsg struct {
-	Items map[string][]models.ImportedModel
-	Gen   int
-}
-
-type gpuPoolsLoadedMsg struct {
-	Items []models.GPUPool
-	Gen   int
-}
-
-type gpuNodesLoadedMsg struct {
-	Items map[string][]models.GPUNode
-	Gen   int
-}
-
-type gpuWorkloadsLoadedMsg struct {
-	Items map[string][]models.GPUWorkload
-	// DACs, loaded alongside when none were, give pods without a
-	// tenancy-id label their tenant; nil when not loaded.
-	DACs map[string][]models.DedicatedAICluster
-	Gen  int
-}
-
-type dedicatedAIClustersLoadedMsg struct {
-	Items map[string][]models.DedicatedAICluster
-	Gen   int
-}
-
-type inferenceServicesLoadedMsg struct {
-	Items map[string][]models.InferenceService
-	Gen   int
-}
-
 type tenancyOverridesLoadedMsg struct {
 	Group models.TenancyOverrideGroup
-	Gen   int
-}
-
-type limitRegionalOverridesLoadedMsg struct {
-	Items []models.LimitRegionalOverride
-	Gen   int
-}
-
-type consolePropertyRegionalOverridesLoadedMsg struct {
-	Items []models.ConsolePropertyRegionalOverride
-	Gen   int
-}
-
-type propertyRegionalOverridesLoadedMsg struct {
-	Items []models.PropertyRegionalOverride
 	Gen   int
 }
 

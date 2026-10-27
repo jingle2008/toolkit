@@ -28,24 +28,6 @@ func (m *Model) updateCategoryNoHist(category domain.Category) []tea.Cmd {
 	return m.updateCategoryCore(category)
 }
 
-// handlerFn loads/refreshes one category. Package-scoped so drift guards can
-// assert coverage and so the map isn't rebuilt on every navigation.
-type handlerFn func(*Model, bool, int) tea.Cmd
-
-var categoryHandlers = map[domain.Category]handlerFn{
-	domain.BaseModel:                       func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleBaseModelCategory(refresh, gen) },
-	domain.ServingRuntime:                  func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleServingRuntimeCategory(refresh, gen) },
-	domain.ImportedModel:                   func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleImportedModelCategory(refresh, gen) },
-	domain.GPUPool:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUPoolCategory(refresh, gen) },
-	domain.GPUNode:                         func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUNodeCategory(refresh, gen) },
-	domain.GPUWorkload:                     func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleGPUWorkloadCategory(refresh, gen) },
-	domain.DedicatedAICluster:              func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleDedicatedAIClusterCategory(refresh, gen) },
-	domain.InferenceService:                func(m *Model, refresh bool, gen int) tea.Cmd { return m.handleInferenceServiceCategory(refresh, gen) },
-	domain.LimitRegionalOverride:           func(m *Model, _ bool, gen int) tea.Cmd { return m.handleLimitRegionalOverrideCategory(gen) },
-	domain.ConsolePropertyRegionalOverride: func(m *Model, _ bool, gen int) tea.Cmd { return m.handleConsolePropertyRegionalOverrideCategory(gen) },
-	domain.PropertyRegionalOverride:        func(m *Model, _ bool, gen int) tea.Cmd { return m.handlePropertyRegionalOverrideCategory(gen) },
-}
-
 var tenancyOverrideCategories = map[domain.Category]struct{}{
 	domain.Tenant:                         {},
 	domain.LimitTenancyOverride:           {},
@@ -113,14 +95,14 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 	// from now on. So returning to one reloads it, showing the cached rows
 	// (cached) until the fresh ones land.
 	var cached bool
-	if fn, ok := categoryHandlers[m.category]; ok {
+	if src, ok := lazySources[m.category]; ok {
 		gen := m.bumpGen()
 		if m.category.NeedsKubeConfig() {
 			cached = !refresh
 			refresh = true
 			watchCmd = startK8sWatchCmd(m.loadCtx, m.loader, m.category, m.kubeConfig, m.environment, gen)
 		}
-		cmd = fn(m, refresh, gen)
+		cmd = m.categoryLoad(m.category, src, refresh, gen)
 	} else if _, ok := tenancyOverrideCategories[m.category]; ok {
 		gen := m.bumpGen()
 		cmd = m.handleTenancyOverridesGroup(gen)
@@ -163,83 +145,6 @@ func (m *Model) handleTenancyOverridesGroup(gen int) tea.Cmd {
 		m.dataset.ConsolePropertyTenancyOverrideMap == nil ||
 		m.dataset.PropertyTenancyOverrideMap == nil {
 		return loadTenancyOverrideGroupCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleLimitRegionalOverrideCategory(gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.LimitRegionalOverrides == nil {
-		return loadLimitRegionalOverridesCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleConsolePropertyRegionalOverrideCategory(gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.ConsolePropertyRegionalOverrides == nil {
-		return loadConsolePropertyRegionalOverridesCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handlePropertyRegionalOverrideCategory(gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.PropertyRegionalOverrides == nil {
-		return loadPropertyRegionalOverridesCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleBaseModelCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.BaseModels == nil || refresh {
-		return loadBaseModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleServingRuntimeCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.ServingRuntimes == nil || refresh {
-		return loadServingRuntimesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleImportedModelCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.ImportedModelMap == nil || refresh {
-		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleGPUPoolCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.GPUPools == nil || refresh {
-		return loadGPUPoolsCmd(m.loadCtx, m.loader, m.repoPath, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleGPUNodeCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.GPUNodeMap == nil || refresh {
-		return loadGPUNodesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleGPUWorkloadCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.GPUWorkloadMap == nil || refresh {
-		return loadGPUWorkloadsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen, m.workloadsNeedDACs())
-	}
-	return nil
-}
-
-func (m *Model) handleDedicatedAIClusterCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.DedicatedAIClusterMap == nil || refresh {
-		return loadDedicatedAIClustersCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
-	}
-	return nil
-}
-
-func (m *Model) handleInferenceServiceCategory(refresh bool, gen int) tea.Cmd {
-	if m.dataset == nil || m.dataset.InferenceServiceMap == nil || refresh {
-		return loadInferenceServicesCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	}
 	return nil
 }

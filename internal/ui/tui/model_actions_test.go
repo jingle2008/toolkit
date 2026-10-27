@@ -6,7 +6,6 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/mutation"
@@ -154,13 +153,13 @@ func TestRegionalOverrideHandlers(t *testing.T) {
 	m.dataset.ConsolePropertyRegionalOverrides = []models.ConsolePropertyRegionalOverride{{Name: "c1"}}
 	m.dataset.PropertyRegionalOverrides = []models.PropertyRegionalOverride{{Name: "p1"}}
 
-	if cmd := m.handleLimitRegionalOverrideCategory(1); cmd != nil {
+	if cmd := m.categoryLoad(domain.LimitRegionalOverride, lazySources[domain.LimitRegionalOverride], false, 1); cmd != nil {
 		t.Fatal("expected nil cmd when limit regional overrides already loaded")
 	}
-	if cmd := m.handleConsolePropertyRegionalOverrideCategory(1); cmd != nil {
+	if cmd := m.categoryLoad(domain.ConsolePropertyRegionalOverride, lazySources[domain.ConsolePropertyRegionalOverride], false, 1); cmd != nil {
 		t.Fatal("expected nil cmd when console property regional overrides already loaded")
 	}
-	if cmd := m.handlePropertyRegionalOverrideCategory(1); cmd != nil {
+	if cmd := m.categoryLoad(domain.PropertyRegionalOverride, lazySources[domain.PropertyRegionalOverride], false, 1); cmd != nil {
 		t.Fatal("expected nil cmd when property regional overrides already loaded")
 	}
 
@@ -168,23 +167,23 @@ func TestRegionalOverrideHandlers(t *testing.T) {
 	m.dataset.ConsolePropertyRegionalOverrides = nil
 	m.dataset.PropertyRegionalOverrides = nil
 
-	cmd := m.handleLimitRegionalOverrideCategory(2)
+	cmd := m.categoryLoad(domain.LimitRegionalOverride, lazySources[domain.LimitRegionalOverride], false, 2)
 	if cmd == nil {
 		t.Fatal("expected cmd when limit regional overrides missing")
 	}
-	require.IsType(t, limitRegionalOverridesLoadedMsg{}, cmd())
+	assert.Equal(t, domain.LimitRegionalOverride, cmd().(categoryLoadedMsg).Cat)
 
-	cmd = m.handleConsolePropertyRegionalOverrideCategory(2)
+	cmd = m.categoryLoad(domain.ConsolePropertyRegionalOverride, lazySources[domain.ConsolePropertyRegionalOverride], false, 2)
 	if cmd == nil {
 		t.Fatal("expected cmd when console property regional overrides missing")
 	}
-	require.IsType(t, consolePropertyRegionalOverridesLoadedMsg{}, cmd())
+	assert.Equal(t, domain.ConsolePropertyRegionalOverride, cmd().(categoryLoadedMsg).Cat)
 
-	cmd = m.handlePropertyRegionalOverrideCategory(2)
+	cmd = m.categoryLoad(domain.PropertyRegionalOverride, lazySources[domain.PropertyRegionalOverride], false, 2)
 	if cmd == nil {
 		t.Fatal("expected cmd when property regional overrides missing")
 	}
-	require.IsType(t, propertyRegionalOverridesLoadedMsg{}, cmd())
+	assert.Equal(t, domain.PropertyRegionalOverride, cmd().(categoryLoadedMsg).Cat)
 }
 
 func TestGetViewportBinding(t *testing.T) {

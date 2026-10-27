@@ -1,12 +1,12 @@
 package tui
 
 import (
-	"context"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -20,9 +20,8 @@ func TestTypedLoadBaseModelsCmd_Run(t *testing.T) {
 		WithLoader(fakeLoader{}),
 		WithLogger(logging.Discard()),
 	)
-	// Use a background context for the typed command constructor
 	gen := m.bumpGen()
-	cmd := loadBaseModelsCmd(context.Background(), m.loader, m.kubeConfig, m.environment, gen)
+	cmd := m.loadCategoryCmd(domain.BaseModel, gen)
 	msg := cmd()
 	assert.NotNil(t, msg)
 }
