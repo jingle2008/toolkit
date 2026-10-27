@@ -1,14 +1,19 @@
 // Package tui — destructive-action confirmation.
 //
-// The confirmation modal lives in the confirm sub-package; this file is
-// the parent's glue: the builders that decide what each action asks and
-// what it runs (closures over the live Model, invoked synchronously on
-// confirm), opening and closing the modal, the quit key, dispatching a
-// confirm.Result (run the command, or audit the refusal), and the
-// theme-derived styles and live context the modal draws.
+// The confirmation modal lives in the confirm sub-package, which knows
+// nothing of mutations; this file is the parent's glue: how each action
+// is named on screen and how strictly it is gated, the builders that
+// decide what each action asks and what it runs (closures over the live
+// Model, invoked synchronously on confirm), opening and closing the
+// modal, the quit key, dispatching a confirm.Result (run the command, or
+// audit the refusal), and the theme-derived styles and live context the
+// modal draws.
 package tui
 
 import (
+	"strconv"
+	"strings"
+
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 
@@ -21,23 +26,66 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// confirmRequest opens the confirmation modal: what the dialog asks
-// about, plus the parent's half — run, the deferred command, and
-// auditTarget, the audit record's name for the target. run is invoked
-// only on confirm, synchronously on the update goroutine (never inside
-// a tea.Cmd), and re-resolves its target at that time so a background
-// reload cannot leave it acting on a stale row; count is the scale-up's
-// instance count, 0 for other actions. A confirm's audit records come
-// from the command run returns; a cancel's from auditTarget.
+// actionLabels is how the TUI names each action it confirms — verb and
+// noun as an operator reads them, where mutation.Action carries the
+// audit record's (scale gpu_pool vs "Scale up GPU pool"). Every action
+// the modal can confirm has one (TestActionLabels_CoverModalActions).
+var actionLabels = map[mutation.Action]struct{ verb, noun string }{
+	mutation.CordonNode:                  {"Cordon", "node"},
+	mutation.UncordonNode:                {"Uncordon", "node"},
+	mutation.DrainNode:                   {"Drain", "node"},
+	mutation.RestartNode:                 {"Restart", "node"},
+	mutation.TerminateNode:               {"Terminate", "node"},
+	mutation.ScaleGPUPool:                {"Scale up", "GPU pool"},
+	mutation.DeleteDAC:                   {"Delete", "DAC"},
+	mutation.RestartInferenceService:     {"Restart", "InferenceService"},
+	mutation.DeleteInferenceService:      {"Delete", "orphaned InferenceService"},
+	mutation.ForceDeleteInferenceService: {"Force-delete", "orphaned InferenceService"},
+}
+
+// actionVerb is the TUI's name for a, e.g. "Scale up"; "" for an action
+// the modal doesn't confirm.
+func actionVerb(a mutation.Action) string { return actionLabels[a].verb }
+
+// actionNoun is the TUI's name for what a acts on, e.g. "GPU pool".
+func actionNoun(a mutation.Action) string { return actionLabels[a].noun }
+
+// confirmTier is how strictly the modal gates a: by its mutation tier.
+func confirmTier(a mutation.Action) confirm.Tier {
+	if a.Tier == mutation.Irreversible {
+		return confirm.Irreversible
+	}
+	return confirm.Recoverable
+}
+
+// confirmRequest is a destructive action awaiting confirmation: the
+// action (which names it and sets its tier), its target and warning, an
+// optional count field, plus the parent's half — run, the deferred
+// command, and auditTarget, the audit record's name for the target. run
+// is invoked only on confirm, synchronously on the update goroutine
+// (never inside a tea.Cmd), and re-resolves its target at that time so a
+// background reload cannot leave it acting on a stale row; its count is
+// count(field text) for an action with a field, 0 otherwise. A confirm's
+// audit records come from the command run returns; a cancel's from
+// auditTarget.
 type confirmRequest struct {
-	confirm.Request
+	action  mutation.Action
+	target  string // the Name row
+	warning string
+	field   *confirm.Field
+	// count parses the field's text into run's count, or says what is
+	// wrong with it; the field's Check uses the same rule.
+	count       func(text string) (int, string)
 	auditTarget string
 	run         func(count int) tea.Cmd
 }
 
-// confirmPending is the parent's half of the open confirmation: what a
-// confirm runs, what a cancel audits, and the view to restore on close.
+// confirmPending is the parent's half of the open confirmation: the
+// action (zero for the quit confirmation), what a confirm runs, what a
+// cancel audits, and the view to restore on close.
 type confirmPending struct {
+	action      mutation.Action
+	count       func(text string) (int, string)
 	auditTarget string
 	run         func(count int) tea.Cmd
 	returnView  common.ViewMode
@@ -49,11 +97,25 @@ type confirmPending struct {
 //
 //nolint:unparam // returns nil so destructive-action handlers can `return m.requestConfirm(...)`
 func (m *Model) requestConfirm(c confirmRequest) tea.Cmd {
-	c.Kind = m.category.String()
-	m.confirm = confirm.New(c.Request)
-	m.confirmPending = confirmPending{auditTarget: c.auditTarget, run: c.run, returnView: m.viewMode}
-	m.viewMode = common.ConfirmView
+	verb := actionVerb(c.action)
+	m.openConfirm(confirm.New(confirm.Spec{
+		Title:   verb + " " + actionNoun(c.action),
+		Verb:    verb,
+		Rows:    [][2]string{{"Kind", m.category.String()}, {"Name", c.target}},
+		Warning: c.warning,
+		Tier:    confirmTier(c.action),
+		Field:   c.field,
+	}), confirmPending{action: c.action, count: c.count, auditTarget: c.auditTarget, run: c.run})
 	return nil
+}
+
+// openConfirm shows dialog, with p its parent half; p.returnView is set
+// here.
+func (m *Model) openConfirm(dialog confirm.Model, p confirmPending) {
+	p.returnView = m.viewMode
+	m.confirm = dialog
+	m.confirmPending = p
+	m.viewMode = common.ConfirmView
 }
 
 // dismissConfirm closes the modal, restoring the prior view and clearing
@@ -72,25 +134,25 @@ func (m *Model) dismissConfirm() {
 // extra — deleteItem already re-finds its target by key at execution time.
 func (m *Model) confirmDelete(itemKey models.ItemKey, outcome k8s.OrphanDeleteOutcome) confirmRequest {
 	c := confirmRequest{
-		Request:     confirm.Request{Target: itemKeyString(itemKey)},
+		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func(int) tea.Cmd { return m.deleteItem(itemKey) },
 	}
 	switch m.category {
 	case domain.GPUNode:
-		c.Action = mutation.TerminateNode
-		c.Warning = "Boot volume destroyed. Cannot undo."
+		c.action = mutation.TerminateNode
+		c.warning = "Boot volume destroyed. Cannot undo."
 	case domain.InferenceService:
 		a := mutation.InferenceServiceDelete(outcome == k8s.OrphanFinalized)
-		c.Action = a
+		c.action = a
 		c.run = func(int) tea.Cmd { return m.deleteOrphanInferenceService(itemKey, a) }
-		c.Warning = "Its DAC is gone. If it stays deleting, run again after 10m to force-delete."
+		c.warning = "Its DAC is gone. If it stays deleting, run again after 10m to force-delete."
 		if outcome == k8s.OrphanFinalized {
-			c.Warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
+			c.warning = "Stuck deleting: removes its finalizer, skipping the controller's cleanup."
 		}
 	default: // DedicatedAICluster
-		c.Action = mutation.DeleteDAC
-		c.Warning = "This is irreversible."
+		c.action = mutation.DeleteDAC
+		c.warning = "This is irreversible."
 	}
 	return c
 }
@@ -107,7 +169,9 @@ func (m *Model) confirmCordon(itemKey models.ItemKey, item any) confirmRequest {
 		a, warning = mutation.UncordonNode, "Pods can be scheduled on it again."
 	}
 	return confirmRequest{
-		Request:     confirm.Request{Action: a, Warning: warning, Target: itemKeyString(itemKey)},
+		action:      a,
+		warning:     warning,
+		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func(int) tea.Cmd { return m.cordonNode(findItem(m.dataset, m.category, itemKey), itemKey, a) },
 	}
@@ -117,11 +181,9 @@ func (m *Model) confirmCordon(itemKey models.ItemKey, item any) confirmRequest {
 // out the drain's steps (k8s.DrainNode) and that it takes a while.
 func (m *Model) confirmDrain(itemKey models.ItemKey) confirmRequest {
 	return confirmRequest{
-		Request: confirm.Request{
-			Action:  mutation.DrainNode,
-			Warning: "Cordons it, moves single-replica InferenceServices elsewhere, then evicts every pod. Can take tens of minutes.",
-			Target:  itemKeyString(itemKey),
-		},
+		action:      mutation.DrainNode,
+		warning:     "Cordons it, moves single-replica InferenceServices elsewhere, then evicts every pod. Can take tens of minutes.",
+		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 		run:         func(int) tea.Cmd { return m.drainNode(findItem(m.dataset, m.category, itemKey), itemKey) },
 	}
@@ -134,18 +196,19 @@ func (m *Model) confirmDrain(itemKey models.ItemKey) confirmRequest {
 // Other categories don't bind Restart.
 func (m *Model) confirmRestart(itemKey models.ItemKey, item any) confirmRequest {
 	c := confirmRequest{
-		Request:     confirm.Request{Action: mutation.RestartInferenceService, Target: itemKeyString(itemKey)},
+		action:      mutation.RestartInferenceService,
+		target:      itemKeyString(itemKey),
 		auditTarget: m.auditName(itemKey),
 	}
 	switch m.category {
 	case domain.GPUNode:
-		c.Action = mutation.RestartNode
-		c.Warning = "Soft-resets the instance; pods running on it are interrupted."
+		c.action = mutation.RestartNode
+		c.warning = "Soft-resets the instance; pods running on it are interrupted."
 		c.run = func(int) tea.Cmd { return m.restartNode(findItem(m.dataset, m.category, itemKey), itemKey) }
 	default: // InferenceService
 		c.run = func(int) tea.Cmd { return m.restartInferenceService(findItem(m.dataset, m.category, itemKey), itemKey) }
 		if svc, ok := item.(*models.InferenceService); ok && svc != nil {
-			c.Warning = "Ready: " + svc.Ready
+			c.warning = "Ready: " + svc.Ready
 		}
 	}
 	return c
@@ -168,14 +231,47 @@ func (m *Model) requestScale(itemKey models.ItemKey, item any) tea.Cmd {
 	return m.requestConfirm(m.confirmScale(itemKey, *pool))
 }
 
+// scaleCount parses text as how many instances to add to pool, or says
+// what is wrong with it ("" when nothing). The scale field's Check and
+// the confirmed run both use it, so they can't disagree.
+func scaleCount(pool models.GPUPool, text string) (n int, problem string) {
+	n, err := strconv.Atoi(strings.TrimSpace(text))
+	if err != nil {
+		return 0, "Enter a whole number of instances, at least 1."
+	}
+	if err := mutation.CheckPoolScaleAdd(pool, n); err != nil {
+		return 0, err.Error()
+	}
+	return n, ""
+}
+
+// scaleField is the scale-up's count input over pool, a snapshot the
+// modal opened on: it starts at the pool's default and says what the
+// count does, or what is wrong with it, as it is edited.
+func scaleField(pool models.GPUPool) *confirm.Field {
+	return &confirm.Field{
+		Label:   "Add",
+		Suffix:  "instances",
+		Initial: strconv.Itoa(pool.DefaultScaleAdd()),
+		Check: func(text string) (notice, problem string) {
+			n, problem := scaleCount(pool, text)
+			if problem != "" {
+				return "", problem
+			}
+			return mutation.PoolScaleNotice(pool, n), ""
+		},
+	}
+}
+
 // confirmScale builds the recoverable request for the scale key: how
-// many instances to add, starting at pool's default, with what that does
-// redrawn as it is edited (confirm.Request.Pool). The action button
-// starts focused, so a count typed and entered scales. run is handed the
-// confirmed count.
+// many instances to add (scaleField), with the action button focused, so
+// a count typed and entered scales. run is handed the confirmed count.
 func (m *Model) confirmScale(itemKey models.ItemKey, pool models.GPUPool) confirmRequest {
 	return confirmRequest{
-		Request:     confirm.Request{Action: mutation.ScaleGPUPool, Target: itemKeyString(itemKey), Pool: &pool},
+		action:      mutation.ScaleGPUPool,
+		target:      itemKeyString(itemKey),
+		field:       scaleField(pool),
+		count:       func(text string) (int, string) { return scaleCount(pool, text) },
 		auditTarget: m.auditName(itemKey),
 		run: func(n int) tea.Cmd {
 			return m.scaleUpGPUPool(findItem(m.dataset, m.category, itemKey), itemKey, n)
@@ -197,25 +293,37 @@ func (m *Model) updateConfirmView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.confirm, res = m.confirm.Update(msg)
 	switch res.Outcome {
 	case confirm.Confirmed:
-		return m, m.acceptConfirm(res.Count)
+		return m, m.acceptConfirm(res.Text)
 	case confirm.Cancelled:
-		m.refuseConfirm(res.Action)
+		m.refuseConfirm()
 	case confirm.None:
 	}
 	return m, nil
 }
 
-// acceptConfirm closes the modal and returns the confirmed action's command.
-func (m *Model) acceptConfirm(count int) tea.Cmd {
-	run := m.confirmPending.run
+// acceptConfirm closes the modal and returns the confirmed action's
+// command, run with the count parsed from the field's text. The dialog
+// confirms only a count its Check accepts, which is the same rule, so an
+// invalid count here leaves the modal open rather than run.
+func (m *Model) acceptConfirm(text string) tea.Cmd {
+	p := m.confirmPending
+	count := 0
+	if p.count != nil {
+		n, problem := p.count(text)
+		if problem != "" {
+			return nil
+		}
+		count = n
+	}
 	m.dismissConfirm()
-	return run(count)
+	return p.run(count)
 }
 
-// refuseConfirm closes the modal without acting. Declining a (an action,
-// not the quit confirmation) is audited, as declining the CLI's prompt is.
-func (m *Model) refuseConfirm(a mutation.Action) {
-	if a.Verb != "" {
+// refuseConfirm closes the modal without acting. Declining an action
+// (not the quit confirmation) is audited, as declining the CLI's prompt
+// is.
+func (m *Model) refuseConfirm() {
+	if a := m.confirmPending.action; a.Verb != "" {
 		mutation.Audit(m.logger, surfaceTUI, a, m.confirmPending.auditTarget, mutation.PhaseRefused, nil)
 	}
 	m.dismissConfirm()
@@ -225,11 +333,12 @@ func (m *Model) refuseConfirm(a mutation.Action) {
 // context badged PRODUCTION in production and, for the quit
 // confirmation, the running actions.
 func (m *Model) confirmView() string {
-	live := confirm.Live{KubeContext: m.environment.KubeContext()}
+	kubeContext := m.environment.KubeContext()
 	if m.environment.IsProduction() {
-		live.KubeContext = m.theme.Prod.Render("PRODUCTION") + live.KubeContext // the badge pads itself
+		kubeContext = m.theme.Prod.Render("PRODUCTION") + kubeContext // the badge pads itself
 	}
-	if m.confirm.Request().Quit {
+	live := confirm.Live{Rows: [][2]string{{"Context", kubeContext}}}
+	if m.confirm.Quit() {
 		live.Running = m.runningSummary()
 	}
 	return m.confirm.View(m.modalMaxWidth(), m.confirmStyles(), live)
@@ -256,8 +365,9 @@ func (m *Model) quit() tea.Cmd {
 		m.cancelInFlight()
 		return tea.Quit
 	}
-	return m.requestConfirm(confirmRequest{Request: confirm.Request{Quit: true}, run: func(int) tea.Cmd {
+	m.openConfirm(confirm.NewQuit(), confirmPending{run: func(int) tea.Cmd {
 		m.cancelInFlight()
 		return tea.Quit
 	}})
+	return nil
 }
