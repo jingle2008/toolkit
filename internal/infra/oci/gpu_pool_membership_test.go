@@ -105,7 +105,7 @@ func TestFindGPUPoolInstance_InPool(t *testing.T) {
 	}
 	stubMembership(t, inCompartment("ocid1.compartment.c"), lister)
 
-	got, err := FindGPUPoolInstance(context.Background(), models.Environment{}, "ocid1.instance.b2", []string{"pool-a", "pool-b"})
+	got, err := FindGPUPoolInstance(context.Background(), models.Environment{}, "ocid1.instance.b2", "ocid1.compartment.c", []string{"pool-a", "pool-b"})
 	require.NoError(t, err)
 	assert.Equal(t, &PoolInstance{
 		ID: "ocid1.instance.b2", CompartmentID: "ocid1.compartment.c",
@@ -128,7 +128,7 @@ func TestFindGPUPoolInstance_NotInGPUPool(t *testing.T) {
 	}
 	stubMembership(t, inCompartment("ocid1.compartment.c"), lister)
 
-	_, err := FindGPUPoolInstance(context.Background(), models.Environment{}, "ocid1.instance.x", []string{"pool-a"})
+	_, err := FindGPUPoolInstance(context.Background(), models.Environment{}, "ocid1.instance.x", "ocid1.compartment.c", []string{"pool-a"})
 	require.ErrorIs(t, err, ErrNotGPUPoolInstance)
 }
 
@@ -136,22 +136,40 @@ func TestFindGPUPoolInstance_Refusals(t *testing.T) {
 	ctx := context.Background()
 	t.Run("not an instance OCID", func(t *testing.T) {
 		stubMembership(t, fakeInstanceGetter{err: errors.New("must not be called")}, &fakePoolLister{})
-		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.dedicatedaicluster.x", []string{"pool-a"})
+		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.dedicatedaicluster.x", "c", []string{"pool-a"})
 		require.ErrorContains(t, err, "not a compute instance OCID")
 	})
 	t.Run("get instance fails", func(t *testing.T) {
 		stubMembership(t, fakeInstanceGetter{err: errors.New("404 not authorized or not found")}, &fakePoolLister{})
-		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", []string{"pool-a"})
+		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", "c", []string{"pool-a"})
 		require.ErrorContains(t, err, "404 not authorized or not found")
 	})
-	t.Run("no compartment", func(t *testing.T) {
+	t.Run("no env compartment", func(t *testing.T) {
+		stubMembership(t, fakeInstanceGetter{err: errors.New("must not be called")}, &fakePoolLister{})
+		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", "", []string{"pool-a"})
+		require.ErrorContains(t, err, "no GPU compartment")
+	})
+	// A pool in another compartment named like a GPU pool doesn't make
+	// its instances the env's: they are refused before any pool is listed.
+	t.Run("other compartment", func(t *testing.T) {
+		lister := &fakePoolLister{
+			pools:   []core.InstancePoolSummary{poolSummary("ocid1.instancepool.a", "pool-a")},
+			members: map[string][]string{"ocid1.instancepool.a": {"ocid1.instance.x"}},
+		}
+		stubMembership(t, inCompartment("other"), lister)
+		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", "c", []string{"pool-a"})
+		require.ErrorIs(t, err, ErrNotGPUPoolInstance)
+		require.ErrorContains(t, err, `compartment "other", not the env's GPU compartment c`)
+		assert.Empty(t, lister.listedFor)
+	})
+	t.Run("instance reports no compartment", func(t *testing.T) {
 		stubMembership(t, fakeInstanceGetter{}, &fakePoolLister{})
-		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", []string{"pool-a"})
-		require.ErrorContains(t, err, "no compartment")
+		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", "c", []string{"pool-a"})
+		require.ErrorIs(t, err, ErrNotGPUPoolInstance)
 	})
 	t.Run("list pools fails", func(t *testing.T) {
 		stubMembership(t, inCompartment("c"), &fakePoolLister{poolsErr: errors.New("throttled")})
-		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", []string{"pool-a"})
+		_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", "c", []string{"pool-a"})
 		require.ErrorContains(t, err, "throttled")
 	})
 }
@@ -162,12 +180,12 @@ func TestFindGPUPoolInstance_ClientErrors(t *testing.T) {
 	ctx := context.Background()
 
 	newInstanceGetter = func(models.Environment) (instanceGetter, error) { return nil, errors.New("no config") }
-	_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", nil)
+	_, err := FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", "c", nil)
 	require.ErrorContains(t, err, "compute client")
 
 	newInstanceGetter = func(models.Environment) (instanceGetter, error) { return inCompartment("c"), nil }
 	newPoolInstanceLister = func(models.Environment) (poolInstanceLister, error) { return nil, errors.New("no config") }
-	_, err = FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", nil)
+	_, err = FindGPUPoolInstance(ctx, models.Environment{}, "ocid1.instance.x", "c", nil)
 	require.ErrorContains(t, err, "compute management client")
 }
 
@@ -185,6 +203,6 @@ func TestFindGPUPoolInstance_ListMembersFails(t *testing.T) {
 	newInstanceGetter = func(models.Environment) (instanceGetter, error) { return inCompartment("c"), nil }
 	newPoolInstanceLister = func(models.Environment) (poolInstanceLister, error) { return lister, nil }
 
-	_, err := FindGPUPoolInstance(context.Background(), models.Environment{}, "ocid1.instance.x", []string{"pool-a"})
+	_, err := FindGPUPoolInstance(context.Background(), models.Environment{}, "ocid1.instance.x", "c", []string{"pool-a"})
 	require.ErrorContains(t, err, "pool gone")
 }

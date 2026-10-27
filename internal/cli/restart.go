@@ -90,9 +90,10 @@ wait-flow tooling.
 
 By default <node> is resolved against the live cluster (kube config +
 env triple required). Pass --ocid to target an instance directly, without
-the cluster lookup (e.g. a node that left the cluster). The instance must
+looking the node up (e.g. a node that left the cluster). The instance must
 be a member of one of the env's GPU instance pools (per --repo-path,
-checked in OCI) or the command refuses; the OCID is then the target the
+checked in OCI, in the GPU compartment the cluster's GPU nodes are in)
+or the command refuses; the OCID is then the target the
 prompt, dry run and audit log name.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -101,6 +102,6 @@ prompt, dry run and audit log name.`,
 	}
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
-	cmd.Flags().StringVar(&ocid, "ocid", "", "Target this instance OCID without the k8s lookup; it must be in one of the env's GPU pools (needs --repo-path)")
+	cmd.Flags().StringVar(&ocid, "ocid", "", "Target this instance OCID without looking the node up; it must be in one of the env's GPU pools (needs --repo-path)")
 	return cmd
 }

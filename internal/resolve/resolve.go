@@ -31,14 +31,15 @@ var (
 
 // GPUNode finds a *models.GPUNode for the OCI compute actions. With
 // ocid empty, the loader is consulted and the named node is returned by
-// walking every pool. With ocid set, no cluster call is made (the node
-// may have left the cluster): the instance must be a member of one of
+// walking every pool. With ocid set, the node isn't looked up in the
+// cluster (it may have left it): the instance must be a member of one of
 // the env's GPU instance pools, checked in OCI against the pools the
-// Terraform repo at repoPath declares, and the returned node carries
-// that pool. name is only a label then.
+// Terraform repo at repoPath declares, in the GPU compartment the
+// cluster's GPU nodes are in (CompartmentID), and the returned node
+// carries that pool. name is only a label then.
 func GPUNode(ctx context.Context, ld loader.Composite, repoPath, kubeConfig string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 	if ocid != "" {
-		return gpuNodeByOCID(ctx, ld, repoPath, env, name, ocid)
+		return gpuNodeByOCID(ctx, ld, repoPath, kubeConfig, env, name, ocid)
 	}
 	grouped, err := ld.LoadGPUNodesByPool(ctx, kubeConfig, env)
 	if err != nil {
@@ -58,7 +59,7 @@ func GPUNode(ctx context.Context, ld loader.Composite, repoPath, kubeConfig stri
 // that isn't in one of the env's GPU pools. A partial Terraform load is
 // tolerated — an instance of a pool that failed to load is refused, never
 // let through.
-func gpuNodeByOCID(ctx context.Context, ld loader.Composite, repoPath string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+func gpuNodeByOCID(ctx context.Context, ld loader.Composite, repoPath, kubeConfig string, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 	pools, err := ld.LoadGPUPools(ctx, repoPath, env)
 	if err != nil {
 		if _, ok := errors.AsType[*terraform.PartialLoadError](err); !ok {
@@ -73,7 +74,11 @@ func gpuNodeByOCID(ctx context.Context, ld loader.Composite, repoPath string, en
 	for i := range pools {
 		names[i] = pools[i].Name
 	}
-	found, err := findGPUPoolInstanceFn(ctx, env, ocid, names)
+	compartmentID, err := CompartmentID(ctx, kubeConfig, env)
+	if err != nil {
+		return nil, fmt.Errorf("resolve compartment ID: %w", err)
+	}
+	found, err := findGPUPoolInstanceFn(ctx, env, ocid, compartmentID, names)
 	if err != nil {
 		return nil, fmt.Errorf("verify instance %s: %w", ocid, err)
 	}

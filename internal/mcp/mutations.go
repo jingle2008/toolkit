@@ -269,14 +269,14 @@ type drainNodeResult struct {
 
 type restartNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
-	OCID string `json:"ocid,omitempty" jsonschema:"skip the k8s lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
+	OCID string `json:"ocid,omitempty" jsonschema:"skip the node lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, in its GPU compartment, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
 	confirmGate
 	envOverride
 }
 
 type terminateNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
-	OCID string `json:"ocid,omitempty" jsonschema:"skip the k8s lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
+	OCID string `json:"ocid,omitempty" jsonschema:"skip the node lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, in its GPU compartment, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
 	confirmGate
 	irreversibleGate
 	envOverride

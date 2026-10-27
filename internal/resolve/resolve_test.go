@@ -84,13 +84,16 @@ func (l stubLoader) LoadPropertyRegionalOverrides(context.Context, string, model
 // -- GPUNode -------------------------------------------------------
 
 // fakeFindPoolInstance swaps the OCI membership check, recording the
-// pool names it was asked to search.
+// pool names it was asked to search, and resolves the env's GPU
+// compartment to "ocid1.compartment.gpu", which the check must be given.
 func fakeFindPoolInstance(t *testing.T, found *oci.PoolInstance, ferr error) *[]string {
 	t.Helper()
+	fakeCompartmentResolver(t, "ocid1.compartment.gpu")
 	orig := findGPUPoolInstanceFn
 	t.Cleanup(func() { findGPUPoolInstanceFn = orig })
 	var searched []string
-	findGPUPoolInstanceFn = func(_ context.Context, _ models.Environment, _ string, names []string) (*oci.PoolInstance, error) {
+	findGPUPoolInstanceFn = func(_ context.Context, _ models.Environment, _, compartmentID string, names []string) (*oci.PoolInstance, error) {
+		assert.Equal(t, "ocid1.compartment.gpu", compartmentID)
 		searched = names
 		return found, ferr
 	}
@@ -101,7 +104,7 @@ func TestGPUNode_OcidInGPUPool(t *testing.T) {
 	searched := fakeFindPoolInstance(t, &oci.PoolInstance{
 		ID: "ocid1.instance.fake", CompartmentID: "ocid1.compartment", PoolName: "p2", PoolID: "ocid1.instancepool.p2",
 	}, nil)
-	// The cluster is never consulted: the node may have left it.
+	// The node isn't looked up in the cluster: it may have left it.
 	ld := stubLoader{
 		pools:    []models.GPUPool{{Name: "p1"}, {Name: "p2"}},
 		poolsErr: &terraform.PartialLoadError{Source: "GPUPools", Errs: []error{errors.New("oke source missing")}},
@@ -137,6 +140,15 @@ func TestGPUNode_OcidNeedsGPUPools(t *testing.T) {
 
 	_, err = GPUNode(ctx, stubLoader{}, "/repo", "", models.Environment{}, "n1", "ocid1.instance.x")
 	require.ErrorContains(t, err, "no GPU pools in repo")
+}
+
+// Without the env's GPU compartment there is nothing to check the
+// instance against: it is refused, never let through.
+func TestGPUNode_OcidNeedsCompartment(t *testing.T) {
+	fakeFindPoolInstance(t, nil, errors.New("must not be called"))
+	fakeCompartmentResolver(t, "") // no GPU nodes in the cluster
+	_, err := GPUNode(context.Background(), stubLoader{pools: []models.GPUPool{{Name: "p1"}}}, "/repo", "/dev/null", models.Environment{}, "n1", "ocid1.instance.x")
+	require.ErrorContains(t, err, "resolve compartment ID")
 }
 
 func TestGPUNode_FoundInCluster(t *testing.T) {
