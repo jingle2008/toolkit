@@ -269,14 +269,14 @@ type drainNodeResult struct {
 
 type restartNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
-	OCID string `json:"ocid,omitempty" jsonschema:"skip the k8s lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
+	OCID string `json:"ocid,omitempty" jsonschema:"skip the node lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, in its GPU compartment, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
 	confirmGate
 	envOverride
 }
 
 type terminateNodeInput struct {
 	Node string `json:"node" jsonschema:"the node name as reported by kubectl get nodes"`
-	OCID string `json:"ocid,omitempty" jsonschema:"skip the k8s lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
+	OCID string `json:"ocid,omitempty" jsonschema:"skip the node lookup (for a node that left the cluster) and target this instance OCID; it must be an instance of one of the environment's GPU instance pools, in its GPU compartment, else the call is refused. The OCID, not node, is then the target: the result, the audit record and confirm_target name it"`
 	confirmGate
 	irreversibleGate
 	envOverride
@@ -530,7 +530,11 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 			return []any{"add", n, "from", result.Before, "to", result.After}
 		},
 		perform: func(p planned) (scaleGPUPoolResult, error) {
-			scale, err := mcpIncreasePoolSizeFn(ctx, pool, n, env, logging.FromContext(ctx))
+			count := n
+			if in.Add == nil {
+				count = oci.FillPool // n was counted from the lookup; OCI's size may have moved since
+			}
+			scale, err := mcpIncreasePoolSizeFn(ctx, pool, count, env, logging.FromContext(ctx))
 			if err != nil {
 				return scaleGPUPoolResult{}, err
 			}

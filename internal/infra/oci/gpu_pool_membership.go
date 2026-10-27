@@ -50,20 +50,25 @@ type PoolInstance struct {
 }
 
 // FindGPUPoolInstance verifies that instanceID is an instance of one of
-// the GPU pools named in poolNames (the Terraform-declared pools), with
-// no cluster call: it gets the instance for its compartment, lists that
-// compartment's instance pools, keeps those whose display name is a GPU
-// pool name (as PopulateGPUPools matches them), and looks for the
-// instance among their members. Any instance it can't place in such a
-// pool is refused with ErrNotGPUPoolInstance.
+// the GPU pools named in poolNames (the Terraform-declared pools) in
+// compartmentID, the env's GPU compartment: it gets the instance and
+// refuses one in any other compartment, lists the compartment's instance
+// pools, keeps those whose display name is a GPU pool name (as
+// PopulateGPUPools matches them), and looks for the instance among their
+// members. Any instance it can't place in such a pool is refused with
+// ErrNotGPUPoolInstance.
 func FindGPUPoolInstance(
 	ctx context.Context,
 	env models.Environment,
 	instanceID string,
+	compartmentID string,
 	poolNames []string,
 ) (*PoolInstance, error) {
 	if !strings.HasPrefix(instanceID, instanceOCIDPrefix) {
 		return nil, fmt.Errorf("%q is not a compute instance OCID (want %s...)", instanceID, instanceOCIDPrefix)
+	}
+	if compartmentID == "" {
+		return nil, errors.New("no GPU compartment to check the instance against")
 	}
 	compute, err := newInstanceGetter(env)
 	if err != nil {
@@ -74,9 +79,9 @@ func FindGPUPoolInstance(
 		return nil, fmt.Errorf("failed to get instance %s: %w, request id: %s",
 			instanceID, err, derefOr(inst.OpcRequestId, ""))
 	}
-	compartmentID := derefOr(inst.CompartmentId, "")
-	if compartmentID == "" {
-		return nil, fmt.Errorf("instance %s reported no compartment", instanceID)
+	if got := derefOr(inst.CompartmentId, ""); got != compartmentID {
+		return nil, fmt.Errorf("instance %s is in compartment %q, not the env's GPU compartment %s: %w",
+			instanceID, got, compartmentID, ErrNotGPUPoolInstance)
 	}
 
 	mgmt, err := newPoolInstanceLister(env)

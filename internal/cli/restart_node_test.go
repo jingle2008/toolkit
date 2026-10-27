@@ -34,10 +34,9 @@ func TestRestartNodeCmd_DryRun_DoesNotCallOCI(t *testing.T) {
 	}
 }
 
-func TestRestartNodeCmd_OcidNeedsNoKubeconfig(t *testing.T) {
-	// Stage env WITHOUT a kubeconfig — the --ocid path must not need
-	// it. The env triple and the repo (whose GPU pools the instance is
-	// checked against) are required.
+func TestRestartNodeCmd_OcidNeedsKubeconfig(t *testing.T) {
+	// Stage env WITHOUT a kubeconfig — the --ocid path needs it for the
+	// env's GPU compartment, which the instance must be in.
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("TOOLKIT_KUBECONFIG", "/nonexistent/kubeconfig")
 	t.Setenv("TOOLKIT_REPO_PATH", t.TempDir())
@@ -47,29 +46,14 @@ func TestRestartNodeCmd_OcidNeedsNoKubeconfig(t *testing.T) {
 	viper.Reset()
 	t.Cleanup(viper.Reset)
 
-	var gotOCID string
-	defer swap(&resolveGPUNodeFn, func(_ context.Context, cfg config.Config, _ models.Environment, name, ocid string) (*models.GPUNode, error) {
-		gotOCID = ocid
-		if cfg.RepoPath == "" {
-			t.Error("--ocid resolution needs the repo path")
-		}
-		return &models.GPUNode{Name: name, ID: ocid, NodePool: "pool-a"}, nil
+	defer swap(&resolveGPUNodeFn, func(context.Context, config.Config, models.Environment, string, string) (*models.GPUNode, error) {
+		t.Error("must not resolve without a kubeconfig")
+		return nil, errors.New("unreachable")
 	})()
 
-	var gotNode *models.GPUNode
-	defer swap(&softResetInstanceFn, func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
-		gotNode = n
-		return nil
-	})()
-
-	if _, err := runRootCmd(t, []string{"restart", "node", "node-a", "--ocid", "ocid1.instance.fake", "-y"}, ""); err != nil {
-		t.Fatalf("execute: %v", err)
-	}
-	if gotOCID != "ocid1.instance.fake" {
-		t.Errorf("resolver got ocid %q", gotOCID)
-	}
-	if gotNode == nil || gotNode.ID != "ocid1.instance.fake" || gotNode.Name != "node-a" {
-		t.Errorf("unexpected node: %+v", gotNode)
+	_, err := runRootCmd(t, []string{"restart", "node", "node-a", "--ocid", "ocid1.instance.fake", "-y"}, "")
+	if err == nil || !strings.Contains(err.Error(), "kubeconfig") {
+		t.Fatalf("expected unreadable kubeconfig, got: %v", err)
 	}
 }
 

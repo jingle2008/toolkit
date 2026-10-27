@@ -39,8 +39,9 @@ func addScaleCommand(rootCmd *cobra.Command, cfgFile *string) {
 		Short:   "Grow a GPU pool's OCI instance pool",
 		Long: `Grows the OCI instance pool of a GPU pool from the Terraform repo.
 
-Without --add, fills the pool to its Terraform-declared size, and does
-nothing when it is already there. --add N adds N instances to the size
+Without --add, fills the pool to its Terraform-declared size, counted
+from the size OCI reports at the time, and does nothing when it is
+already there. --add N adds N instances to the size
 OCI reports at the time, which may take the pool past its declared
 size: the next terraform apply shrinks it back and terminates the extra
 instances, so raise size in Terraform to keep them.
@@ -91,7 +92,11 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 
 				}, func(ctx context.Context) error {
 					var err error
-					result, err = increasePoolSizeFn(ctx, pool, n, env, logging.FromContext(ctx))
+					count := n
+					if !addGiven {
+						count = oci.FillPool // n was counted from the lookup; OCI's size may have moved since
+					}
+					result, err = increasePoolSizeFn(ctx, pool, count, env, logging.FromContext(ctx))
 					done = err == nil
 					return err
 				})

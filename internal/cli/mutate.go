@@ -48,8 +48,9 @@ func resolveNode(cfg config.Config, env models.Environment, name, ocid string, n
 
 // runNodeAction is the RunE of `restart node` and `terminate`: act, an
 // OCI action on the instance backing GPU node name, or on the --ocid
-// instance. That needs no cluster lookup but the Terraform repo, whose
-// GPU pools the instance must belong to; the OCID is then the target the
+// instance. That needs no lookup of the node but the Terraform repo,
+// whose GPU pools the instance must belong to, and the cluster for the
+// env's GPU compartment they're in; the OCID is then the target the
 // prompt and audit name, and name only a label.
 func runNodeAction(
 	cmd *cobra.Command, cfgFile *string, a mutation.Action, name, ocid string, dryRun, yes bool,
@@ -59,7 +60,7 @@ func runNodeAction(
 	if ocid != "" {
 		target, fields = ocid, func() []any { return []any{"node", name} }
 	}
-	return withMutationSetup(cmd.Context(), cfgFile, ocid == "", ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+	return withMutationSetup(cmd.Context(), cfgFile, true, ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 		var node *models.GPUNode
 		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
 			Action:      a,
@@ -108,8 +109,8 @@ var resolveGPUPoolFn = func(ctx context.Context, cfg config.Config, env models.E
 // subcommand needs.
 //
 //   - needsKube=true  → cluster-scoped mutations (cordon, drain) and
-//     OCI mutations resolving a node by name without --ocid (restart node,
-//     terminate without --ocid). Verifies the kubeconfig path is
+//     OCI mutations on a node (restart node, terminate; with --ocid, for
+//     the env's GPU compartment). Verifies the kubeconfig path is
 //     readable; the path itself is always populated by the persistent
 //     --kubeconfig flag's default (~/.kube/config), so the "missing
 //     flag" case isn't reachable in normal use.
