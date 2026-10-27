@@ -252,6 +252,28 @@ func TestListDedicatedAIClustersV2_SizeInProfileUnits(t *testing.T) {
 	}, sizes)
 }
 
+// A decoder that yields float64 for numbers (a YAML-parsed fixture, say)
+// must not zero DAC sizes or drop profile pod counts.
+func TestListDedicatedAIClusters_FloatDecodedCounts(t *testing.T) {
+	t.Parallel()
+	profile := makeUnstructuredDACProfile("multi-pod", 0)
+	profile.Object["spec"].(map[string]any)["count"] = float64(2)
+	v1 := makeUnstructuredDACV1("dac-v1", "GPU", 0, "ready", "tid1")
+	v1.Object["spec"].(map[string]any)["size"] = float64(3)
+	v2 := makeUnstructuredDACV2("dac-v2", "multi-pod", 0, "tid1")
+	v2.Object["spec"].(map[string]any)["count"] = float64(4)
+
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), dacListKinds(), profile, v1, v2)
+	clusters, err := listDedicatedAIClusters(context.Background(), client)
+	require.NoError(t, err)
+
+	sizes := make(map[string]int, len(clusters))
+	for _, c := range clusters {
+		sizes[c.Name] = c.Size
+	}
+	assert.Equal(t, map[string]int{"dac-v1": 3, "dac-v2": 2}, sizes)
+}
+
 func TestListDedicatedAIClustersV2_MalformedObject(t *testing.T) {
 	t.Parallel()
 	scheme := runtime.NewScheme()

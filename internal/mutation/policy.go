@@ -82,17 +82,22 @@ func InferenceServiceDelete(force bool) Action {
 type Phase string
 
 // The phases, in order. Refused and DryRun end a mutation that never ran.
+// The background phases follow Done for a mutation that returns once
+// started and finishes later (an MCP drain driven to completion).
 const (
-	PhaseRefused Phase = "refused" // confirmation missing or wrong
-	PhaseDryRun  Phase = "dry_run" // resolved, not performed
-	PhaseBegin   Phase = "begin"
-	PhaseFailed  Phase = "failed"
-	PhaseDone    Phase = "done"
+	PhaseRefused          Phase = "refused" // confirmation missing or wrong
+	PhaseDryRun           Phase = "dry_run" // resolved, not performed
+	PhaseBegin            Phase = "begin"
+	PhaseFailed           Phase = "failed"
+	PhaseDone             Phase = "done"
+	PhaseBackgroundFailed Phase = "background-failed"
+	PhaseBackgroundDone   Phase = "background-done"
 )
 
 // Audit writes the "mutation" record for action on target at phase,
-// from surface ("tui", "cli" or "mcp"). err is recorded on PhaseFailed,
-// which logs at error level; every other phase logs at info. fields are
+// from surface ("tui", "cli" or "mcp"). err is recorded on PhaseFailed
+// and PhaseBackgroundFailed, which log at error level; every other phase
+// logs at info. fields are
 // the action's own key-value pairs (a scale's sizes), appended after the
 // standard ones so a search on target still matches.
 func Audit(logger *slog.Logger, surface string, a Action, target string, phase Phase, err error, fields ...any) {
@@ -104,7 +109,7 @@ func Audit(logger *slog.Logger, surface string, a Action, target string, phase P
 		"phase", string(phase),
 		"dry_run", phase == PhaseDryRun,
 	}, fields...)
-	if phase == PhaseFailed {
+	if phase == PhaseFailed || phase == PhaseBackgroundFailed {
 		logger.Error("mutation", append(kv, "error", err)...)
 		return
 	}

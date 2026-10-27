@@ -1,5 +1,7 @@
 package models
 
+import "slices"
+
 // ServiceTenancy represents a service tenancy entity.
 type ServiceTenancy struct {
 	Name        string   `json:"tenancy_name"`
@@ -22,7 +24,7 @@ func (t ServiceTenancy) QualifiedName() string {
 
 // FilterableFields returns filterable fields for the service tenancy.
 func (t ServiceTenancy) FilterableFields() []string {
-	return append(t.Regions, t.Name, t.Realm, t.HomeRegion, t.Environment)
+	return slices.Concat(t.Regions, []string{t.Name, t.Realm, t.HomeRegion, t.Environment})
 }
 
 // IsFaulty returns false by default for ServiceTenancy.

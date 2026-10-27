@@ -1,5 +1,7 @@
 package models
 
+import "slices"
+
 // ConsolePropertyDefinition represents a console property definition.
 type ConsolePropertyDefinition struct {
 	Name        string `json:"name"`
@@ -63,7 +65,7 @@ func (o ConsolePropertyRegionalOverride) GetValue() string {
 
 // FilterableFields returns filterable fields for the console property regional override.
 func (o ConsolePropertyRegionalOverride) FilterableFields() []string {
-	return append(o.Regions, o.Name)
+	return slices.Concat(o.Regions, []string{o.Name})
 }
 
 // IsFaulty returns false by default for ConsolePropertyRegionalOverride.
@@ -93,7 +95,7 @@ func (o *ConsolePropertyTenancyOverride) SetTenantName(name string) {
 
 // FilterableFields returns filterable fields for the console property tenancy override.
 func (o ConsolePropertyTenancyOverride) FilterableFields() []string {
-	return append(o.Regions, o.Name, o.TenantName, o.TenantID)
+	return slices.Concat(o.Regions, []string{o.Name, o.TenantName, o.TenantID})
 }
 
 // IsFaulty returns false by default for ConsolePropertyTenancyOverride.

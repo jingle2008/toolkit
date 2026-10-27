@@ -155,15 +155,22 @@ func updateLocalAttributes(filepath string, attributes hclsyntax.Attributes) err
 		return fmt.Errorf("terraform diagnostics error: %w", errors.New(diags.Error()))
 	}
 
+	body, ok := file.Body.(*hclsyntax.Body)
+	if !ok {
+		return nil
+	}
+
 	// find `locals` block
-	for _, block := range file.Body.(*hclsyntax.Body).Blocks {
+	for _, block := range body.Blocks {
 		switch block.Type {
 		case localBlock:
 			maps.Copy(attributes, block.Body.Attributes)
 		case outputBlock:
-			key := block.Labels[0]
-			value := block.Body.Attributes[outputValue]
-			attributes[key] = value
+			value, ok := block.Body.Attributes[outputValue]
+			if len(block.Labels) == 0 || !ok {
+				continue
+			}
+			attributes[block.Labels[0]] = value
 		}
 	}
 
