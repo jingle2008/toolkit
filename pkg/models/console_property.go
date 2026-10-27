@@ -102,3 +102,7 @@ func (o ConsolePropertyTenancyOverride) FilterableFields() []string {
 func (o ConsolePropertyTenancyOverride) IsFaulty() bool {
 	return false
 }
+
+// GetTenantName is the tenant's metadata name, or its OCID when it has
+// none.
+func (o ConsolePropertyTenancyOverride) GetTenantName() string { return o.TenantName }

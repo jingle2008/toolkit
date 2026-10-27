@@ -110,3 +110,9 @@ func (d DedicatedAICluster) MarshalJSON() ([]byte, error) {
 	p.Age = AgeOf(d.CreatedAt)
 	return json.Marshal(p)
 }
+
+// RawTenantID is the tenancy-id DedicatedAICluster is labelled with.
+func (n DedicatedAICluster) RawTenantID() string { return n.TenantID }
+
+// OwnerTenant is the tenant DedicatedAICluster resolves to; nil when unresolved.
+func (n DedicatedAICluster) OwnerTenant() *Tenant { return n.Owner }

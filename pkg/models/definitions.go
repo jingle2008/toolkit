@@ -47,6 +47,15 @@ type TenancyOverride interface {
 	GetTenantID() string
 }
 
+// NamedTenancyOverride is a TenancyOverride that knows its tenant's name
+// — the three tenancy override kinds.
+type NamedTenancyOverride interface {
+	TenancyOverride
+	// GetTenantName is the tenant's metadata name, or its OCID when it
+	// has none.
+	GetTenantName() string
+}
+
 // RealmedID is implemented by OCI resources whose full OCID is
 // constructed from a realm and a region plus a stored name suffix
 // — DedicatedAICluster and ImportedModel today. Distinct from
@@ -64,6 +73,19 @@ type RealmedID interface {
 // is already the full identifier).
 type RealmedTenancyID interface {
 	TenancyOCID(realm string) string
+}
+
+// TenantOwned is a resource a tenancy owns, named by its tenancy-id
+// label — DedicatedAICluster, ImportedModel, GPUWorkload and
+// InferenceService.
+type TenantOwned interface {
+	RealmedTenancyID
+	// RawTenantID is the tenancy-id as labelled ("" or UnknownTenancy
+	// when there is none).
+	RawTenantID() string
+	// OwnerTenant is the tenant the tenancy-id resolves to; nil when it
+	// doesn't.
+	OwnerTenant() *Tenant
 }
 
 // UnknownTenancy is the tenancy-id of a DAC or imported model whose CR
@@ -91,3 +113,14 @@ type DefinitionOverride interface {
 type Faulty interface {
 	IsFaulty() bool
 }
+
+// The tenant-owned resources and the tenancy overrides.
+var (
+	_ TenantOwned          = DedicatedAICluster{}
+	_ TenantOwned          = ImportedModel{}
+	_ TenantOwned          = GPUWorkload{}
+	_ TenantOwned          = InferenceService{}
+	_ NamedTenancyOverride = LimitTenancyOverride{}
+	_ NamedTenancyOverride = ConsolePropertyTenancyOverride{}
+	_ NamedTenancyOverride = PropertyTenancyOverride{}
+)
