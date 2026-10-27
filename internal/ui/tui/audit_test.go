@@ -31,8 +31,8 @@ func auditRecords(sink *logging.RingSink) []auditRecord {
 			continue
 		}
 		out = append(out, auditRecord{
-			action: kv["action"].(string), kind: kv["kind"].(string), //nolint:forcetypeassert // Audit writes strings
-			target: kv["target"].(string), phase: kv["phase"].(string), //nolint:forcetypeassert // Audit writes strings
+			action: kv["action"].(string), kind: kv["kind"].(string),
+			target: kv["target"].(string), phase: kv["phase"].(string),
 		})
 	}
 	return out

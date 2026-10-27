@@ -26,8 +26,6 @@ type rowPickerPending struct {
 }
 
 // openRowPicker shows the row picker over targets; choose runs on enter.
-//
-//nolint:unparam // returns nil so callers can `return m.openRowPicker(...)`
 func (m *Model) openRowPicker(title, verb string, targets []domain.Scope, choose func(domain.Scope) tea.Cmd) tea.Cmd {
 	m.rowPicker = rowpicker.New(title, verb, targets)
 	m.rowPickerPending = rowPickerPending{choose: choose, returnView: m.viewMode}

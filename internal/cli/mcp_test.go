@@ -1,4 +1,3 @@
-//nolint:paralleltest // NewRootCmd uses cobra global state and the viper singleton
 package cli
 
 import (

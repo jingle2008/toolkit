@@ -82,7 +82,7 @@ func TestCheckMetadataFile_StatErrorFails(t *testing.T) {
 	// directory — is a real misconfiguration and must FAIL, not SKIP.
 	dir := t.TempDir()
 	blocked := filepath.Join(dir, "blocked")
-	require.NoError(t, os.Mkdir(blocked, 0o700)) //nolint:gosec // G302: a directory needs its execute bit to be searchable; 0o700 is owner-only
+	require.NoError(t, os.Mkdir(blocked, 0o700))
 	require.NoError(t, os.WriteFile(filepath.Join(blocked, "metadata.yaml"), []byte("x"), 0o600))
 	require.NoError(t, os.Chmod(blocked, 0o000))
 	//nolint:gosec // G302: a directory needs its execute bit to be searchable; 0o700 is owner-only

@@ -143,8 +143,6 @@ func TestRelationChecks_LoadFailureAndMissingConfig(t *testing.T) {
 
 // End to end through the command: --relations appends the rows and a
 // FAIL makes doctor exit non-zero; without it doctor stays local.
-//
-//nolint:paralleltest // NewRootCmd uses cobra/viper global state; swaps doctorLoaderFn
 func TestDoctorCmd_Relations(t *testing.T) {
 	useDoctorLoader(t, relationsLoader{})
 	tmp := t.TempDir()

@@ -416,6 +416,8 @@ func (d *drainer) stepOnce(ctx context.Context, start bool) (DrainState, error) 
 		return d.advanceWaiting(ctx, st)
 	case DrainEvicting:
 		return d.advanceEvicting(ctx, st)
+	case DrainNone, DrainDone, DrainFailed:
+		// No drain in flight: start one below, if asked to.
 	}
 	if !start {
 		return st, nil

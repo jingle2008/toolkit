@@ -92,7 +92,7 @@ func TestMetricsTarget(t *testing.T) {
 	require.NotNil(t, catalog.FindModelByName("gpt"), "the base catalog the DAC's model is in")
 
 	targetErr := func(cat domain.Category, name string) error {
-		_, _, _, err := MetricsTarget(context.Background(), metricsLoader{}, "/repo", "/kube", models.Environment{}, cat, name) //nolint:dogsled // only the error matters here
+		_, _, _, err := MetricsTarget(context.Background(), metricsLoader{}, "/repo", "/kube", models.Environment{}, cat, name)
 		return err
 	}
 	require.ErrorContains(t, targetErr(domain.DedicatedAICluster, "nope"), `no DedicatedAICluster named "nope"`)

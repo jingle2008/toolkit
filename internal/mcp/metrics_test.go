@@ -27,7 +27,7 @@ func TestMetricsURL_DAC(t *testing.T) {
 	stubMCPMetricsTarget(t, &models.DedicatedAICluster{Name: "amaaaaaadac1"})
 	res, sc := callStructured(t, "metrics_url", map[string]any{"category": "dac", "name": "amaaaaaadac1"})
 	require.False(t, res.IsError, resultText(t, res))
-	assert.True(t, strings.HasPrefix(sc["url"].(string), "https://devops.oci.oraclecorp.com/telemetry/mql/explore?data=")) //nolint:forcetypeassert // url is a string
+	assert.True(t, strings.HasPrefix(sc["url"].(string), "https://devops.oci.oraclecorp.com/telemetry/mql/explore?data="))
 	assert.Equal(t, "chat", sc["capability"])
 	assert.Equal(t, "DacId", sc["filterKey"])
 	assert.Equal(t, "ocid1.generativeaidedicatedaicluster.oc1.iad.amaaaaaadac1", sc["filterValue"])

@@ -130,7 +130,7 @@ func renderCanonicalCSV(t *testing.T, cat domain.Category) string {
 //nolint:cyclop // a per-category switch is the contract here
 func fixtureFor(t *testing.T, cat domain.Category) any {
 	t.Helper()
-	switch cat { //nolint:exhaustive
+	switch cat {
 	case domain.Tenant:
 		return []models.Tenant{{Name: "alpha", ID: "ocid1.tenancy.oc1..a", IsInternal: true, Note: "n/a"}}
 	case domain.LimitDefinition:
@@ -234,7 +234,8 @@ func fixtureFor(t *testing.T, cat domain.Category) any {
 			}
 		}
 		return cats
+	default:
+		t.Fatalf("fixtureFor: unhandled category %s", cat)
+		return nil
 	}
-	t.Fatalf("fixtureFor: unhandled category %s", cat)
-	return nil
 }

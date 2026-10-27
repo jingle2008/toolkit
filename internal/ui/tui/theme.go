@@ -133,7 +133,7 @@ func mix(a, b color.Color, t float64) color.Color {
 	ar, ag, ab, _ := a.RGBA()
 	br, bg, bb, _ := b.RGBA()
 	ch := func(x, y uint32) uint8 {
-		return uint8(float64(x>>8)*(1-t) + float64(y>>8)*t + 0.5) //nolint:gosec // a blend of two bytes is a byte
+		return uint8(float64(x>>8)*(1-t) + float64(y>>8)*t + 0.5)
 	}
 	return color.RGBA{R: ch(ar, br), G: ch(ag, bg), B: ch(ab, bb), A: 0xff}
 }

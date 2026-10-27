@@ -276,7 +276,7 @@ func (t *tailer) drain() error {
 		}
 	}
 	if t.f == nil {
-		if t.f, err = os.Open(t.path); err != nil { //nolint:gosec // G304: a file in the user's own log dir
+		if t.f, err = os.Open(t.path); err != nil {
 			return err
 		}
 	}

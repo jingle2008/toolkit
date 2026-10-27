@@ -25,7 +25,7 @@ func TestClient_WatchRepo_TriggersOnChange(t *testing.T) {
 	trig, err := Client{}.WatchRepo(ctx, dir)
 	require.NoError(t, err)
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "x.yaml"), []byte("v"), 0o600)) //nolint:gosec // test helper; 0o600 is fine for temp files
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "x.yaml"), []byte("v"), 0o600))
 	select {
 	case <-trig:
 	case <-time.After(7 * time.Second): // > DebounceWindow (5s)

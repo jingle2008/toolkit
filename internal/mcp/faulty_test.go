@@ -92,7 +92,7 @@ func TestListInferenceServices_Faulty(t *testing.T) {
 	items, ok := sc["items"].([]any)
 	require.True(t, ok)
 	require.Len(t, items, 1)
-	assert.Equal(t, "isvc-orphan", items[0].(map[string]any)["name"]) //nolint:forcetypeassert // JSON object
+	assert.Equal(t, "isvc-orphan", items[0].(map[string]any)["name"])
 	assert.Equal(t, []any{"some GPU pool sources failed to load"}, sc["warnings"])
 }
 
@@ -118,9 +118,9 @@ func TestCheckIntegrity(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, res.IsError, resultText(t, res))
 	byName := map[string]map[string]any{}
-	for _, it := range structured(t, res)["items"].([]any) { //nolint:forcetypeassert // listResult items
-		m := it.(map[string]any)       //nolint:forcetypeassert // JSON object
-		byName[m["name"].(string)] = m //nolint:forcetypeassert // name is a string
+	for _, it := range structured(t, res)["items"].([]any) {
+		m := it.(map[string]any)
+		byName[m["name"].(string)] = m
 	}
 
 	isvc := byName["InferenceService → DedicatedAICluster"]
@@ -154,8 +154,8 @@ func TestCheckIntegrity_PartialPoolsNoted(t *testing.T) {
 	require.False(t, res.IsError, resultText(t, res))
 	sc := structured(t, res)
 	assert.NotContains(t, sc, "warnings")
-	for _, it := range sc["items"].([]any) { //nolint:forcetypeassert // listResult items
-		m := it.(map[string]any) //nolint:forcetypeassert // JSON object
+	for _, it := range sc["items"].([]any) {
+		m := it.(map[string]any)
 		if m["name"] == "GPUNode → GPUPool" {
 			assert.Equal(t, "FAIL", m["status"])
 			assert.Contains(t, m["note"], "some GPU pool sources failed to load")
@@ -183,7 +183,7 @@ func TestListRelated_Faulty(t *testing.T) {
 	items, ok := sc["items"].([]any)
 	require.True(t, ok)
 	require.Len(t, items, 1)
-	assert.Equal(t, "isvc-down", items[0].(map[string]any)["name"]) //nolint:forcetypeassert // JSON object
+	assert.Equal(t, "isvc-down", items[0].(map[string]any)["name"])
 
 	res, _ := callStructured(t, "list_related", map[string]any{
 		"category": "limittenancyoverride", "parent_category": "tenant", "parent_name": "acme", "faulty": true,

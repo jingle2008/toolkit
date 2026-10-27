@@ -228,8 +228,9 @@ func isTableLike(f output.Format) bool {
 	switch f {
 	case output.FormatTable, output.FormatCSV, output.FormatTSV:
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 // validateLoaderConfig returns the names of missing required flags
@@ -650,8 +651,9 @@ func writeTableLike(w writer, headers []string, rows [][]string, opts output.Opt
 		return output.WriteDelimited(w, headers, rows, opts, ',')
 	case output.FormatTSV:
 		return output.WriteDelimited(w, headers, rows, opts, '\t')
+	default:
+		return fmt.Errorf("writeTableLike: unsupported %q", opts.Format)
 	}
-	return fmt.Errorf("writeTableLike: unsupported %q", opts.Format)
 }
 
 // writeMap renders a grouped map whose values already carry the group key
@@ -718,7 +720,7 @@ func emitTenancyGroup(
 	env models.Environment,
 	selected []string,
 ) error {
-	switch cat { //nolint:exhaustive
+	switch cat {
 	case domain.Tenant:
 		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, domain.Tenant, env, selected)
 	case domain.LimitTenancyOverride:
@@ -745,7 +747,7 @@ func emitFromDataset(
 	env models.Environment,
 	selected []string,
 ) error {
-	switch cat { //nolint:exhaustive
+	switch cat {
 	case domain.LimitDefinition:
 		return writeSlice(w,
 			collections.FilterSlice(dataset.LimitDefinitionGroup.Values, nil, filter, nil),

@@ -1,4 +1,3 @@
-//nolint:paralleltest
 package oci
 
 import (
@@ -29,6 +28,7 @@ func (e fakeServiceError) GetCode() string         { return "Code" }
 func (e fakeServiceError) GetOpcRequestID() string { return "opc" }
 
 func TestIsRetryableWorkRequestError(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name string
 		err  error
@@ -46,6 +46,7 @@ func TestIsRetryableWorkRequestError(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.want, isRetryableWorkRequestError(tc.err))
 		})
 	}
@@ -54,6 +55,7 @@ func TestIsRetryableWorkRequestError(t *testing.T) {
 // A 401 (expired session token) aborts on the first poll instead of
 // retrying until the 10-minute deletion timeout.
 func TestWaitForWorkRequest_NonRetryableFailsFast(t *testing.T) {
+	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
 		calls := 0
 		client := &fakeGenAI{GetWorkRequestFunc: func() (generativeai.GetWorkRequestResponse, error) {
@@ -71,6 +73,7 @@ func TestWaitForWorkRequest_NonRetryableFailsFast(t *testing.T) {
 
 // Transient failures (429, 5xx, network) keep polling until success.
 func TestWaitForWorkRequest_RetriesTransient(t *testing.T) {
+	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
 		errs := []error{
 			fakeServiceError{http.StatusTooManyRequests},
@@ -102,6 +105,7 @@ func endpointsFor(clusterID string, n int) generativeai.ListEndpointsResponse {
 
 // At most maxConcurrent endpoint deletions run at once.
 func TestDeleteEndpointsInDAC_ConcurrencyLimit(t *testing.T) {
+	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
 		const clusterID = "dac"
 		var mu sync.Mutex
@@ -133,6 +137,7 @@ func TestDeleteEndpointsInDAC_ConcurrencyLimit(t *testing.T) {
 
 // Once one deletion fails, no further endpoints are queued.
 func TestDeleteEndpointsInDAC_StopsAfterFailure(t *testing.T) {
+	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
 		const clusterID = "dac"
 		var mu sync.Mutex

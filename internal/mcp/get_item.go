@@ -91,7 +91,7 @@ func (s *Server) pickItem(ctx context.Context, req *sdk.CallToolRequest, cat dom
 func (s *Server) pickTenancyOverride(ctx context.Context, env models.Environment, cat domain.Category, name string) (any, []string, error) {
 	grp, err := s.tenancyGroup(ctx, env)
 	what := cat.String()
-	switch cat { //nolint:exhaustive // the three tenancy overrides
+	switch cat {
 	case domain.LimitTenancyOverride:
 		return pickFromGroups(grp.LimitTenancyOverrideMap, nil, err, name, what)
 	case domain.ConsolePropertyTenancyOverride:
@@ -122,7 +122,7 @@ func (s *Server) listAll(ctx context.Context, req *sdk.CallToolRequest, cat doma
 	li := listInput{envOverride: env}
 	fi := faultyListInput{listInput: li}
 	kind := func(k string) kindInput { return kindInput{Kind: k, listInput: li} }
-	switch cat { //nolint:exhaustive // grouped categories are picked from their groups
+	switch cat {
 	case domain.Tenant:
 		return anyItems(s.handleListTenants(ctx, req, fi))
 	case domain.BaseModel:

@@ -83,8 +83,9 @@ func (m *Model) ownLoadFailed(cat domain.Category) bool {
 	case domain.Tenant:
 		_, override := tenancyOverrideCategories[m.category]
 		return override
+	default:
+		return false
 	}
-	return false
 }
 
 // canRefresh reports whether r (refresh) is bound in the current category.

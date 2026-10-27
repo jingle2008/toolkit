@@ -252,7 +252,7 @@ func (m *Model) catalogLoaded(cat domain.Category) bool {
 	if m.dataset == nil {
 		return false
 	}
-	switch cat { //nolint:exhaustive // only the two model catalogs are relevant here
+	switch cat {
 	case domain.ImportedModel:
 		return m.dataset.ImportedModelMap != nil
 	default:
@@ -264,7 +264,7 @@ func (m *Model) catalogLoaded(cat domain.Category) bool {
 // *LoadedMsg is applied by the normal handler, caching the catalog on the
 // dataset for later navigation.
 func (m *Model) catalogLoadCmd(cat domain.Category, gen int) tea.Cmd {
-	switch cat { //nolint:exhaustive // only the two model catalogs are loadable here
+	switch cat {
 	case domain.ImportedModel:
 		return loadImportedModelsCmd(m.loadCtx, m.loader, m.kubeConfig, m.environment, gen)
 	default:

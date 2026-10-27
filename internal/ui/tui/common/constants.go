@@ -1,4 +1,4 @@
-package common //nolint:revive // allow test package to match source for unexported access
+package common
 
 const (
 	// NameCol is the column name for "Name".

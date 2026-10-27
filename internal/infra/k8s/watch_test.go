@@ -380,7 +380,7 @@ func TestWatchBaseModels_FiresOnCREvent(t *testing.T) {
 	// Cancel after observing the tick, then drain until trig closes to let
 	// watchTrigger's internal goroutines finish cleanly.
 	cancel()
-	for range trig { //nolint:revive // intentional: drain until watchTrigger closes the channel
+	for range trig {
 	}
 }
 
@@ -428,7 +428,7 @@ func TestWatchInferenceServices_NoLegacyCRD(t *testing.T) {
 	}
 
 	cancel()
-	for range trig { //nolint:revive // intentional: drain until watchTrigger closes the channel
+	for range trig {
 	}
 }
 
@@ -490,6 +490,6 @@ func TestWatchInferenceServices_LegacyWatchForbidden(t *testing.T) {
 	}
 
 	cancel()
-	for range trig { //nolint:revive // intentional: drain until watchTrigger closes the channel
+	for range trig {
 	}
 }

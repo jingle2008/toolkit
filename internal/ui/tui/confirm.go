@@ -94,8 +94,6 @@ type confirmPending struct {
 // requestConfirm opens the confirmation modal for a destructive action,
 // capturing the current view so dismissConfirm can restore it. It returns
 // nil: opening the modal issues no command.
-//
-//nolint:unparam // returns nil so destructive-action handlers can `return m.requestConfirm(...)`
 func (m *Model) requestConfirm(c confirmRequest) tea.Cmd {
 	verb := actionVerb(c.action)
 	m.openConfirm(confirm.New(confirm.Spec{
