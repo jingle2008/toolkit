@@ -192,6 +192,9 @@ func getVariableDefaults(ctx context.Context, dirPath string) (map[string]cty.Va
 		parser := hclparse.NewParser()
 		file, diags := parser.ParseHCLFile(fpath)
 		if diags.HasErrors() {
+			// The other files' defaults still count; this one's variables
+			// stay unresolved.
+			logger.Warn("skipping unparsable terraform file for variable defaults", "file", fpath, "error", diags.Error())
 			continue
 		}
 		body, ok := file.Body.(*hclsyntax.Body)
