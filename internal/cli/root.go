@@ -30,6 +30,11 @@ import (
 
 // NewRootCmd returns the root cobra command for the toolkit CLI.
 func NewRootCmd(version string) *cobra.Command {
+	return newRootCmd(version, productionDeps)
+}
+
+// newRootCmd is NewRootCmd with the mutations' infra calls from deps.
+func newRootCmd(version string, deps depsFor) *cobra.Command {
 	var cfgFile string
 
 	const exampleConfig = `repo-path: "/path/to/your/repo"
@@ -72,14 +77,14 @@ metadata-file: "" # Optional path to a YAML or JSON file with additional metadat
 	addVersionCheckCommand(rootCmd, version)
 	addGetCommand(rootCmd, &cfgFile)
 	addMCPCommand(rootCmd, &cfgFile, version)
-	addCordonCommand(rootCmd, &cfgFile)
-	addUncordonCommand(rootCmd, &cfgFile)
-	addDrainCommand(rootCmd, &cfgFile)
-	addRestartCommand(rootCmd, &cfgFile)
-	addScaleCommand(rootCmd, &cfgFile)
-	addDeleteCommand(rootCmd, &cfgFile)
-	addTerminateCommand(rootCmd, &cfgFile)
-	addSetCommand(rootCmd, &cfgFile)
+	addCordonCommand(rootCmd, &cfgFile, deps)
+	addUncordonCommand(rootCmd, &cfgFile, deps)
+	addDrainCommand(rootCmd, &cfgFile, deps)
+	addRestartCommand(rootCmd, &cfgFile, deps)
+	addScaleCommand(rootCmd, &cfgFile, deps)
+	addDeleteCommand(rootCmd, &cfgFile, deps)
+	addTerminateCommand(rootCmd, &cfgFile, deps)
+	addSetCommand(rootCmd, &cfgFile, deps)
 	addTenantCommand(rootCmd, &cfgFile)
 	addMetricsCommand(rootCmd, &cfgFile)
 

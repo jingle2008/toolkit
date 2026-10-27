@@ -5,14 +5,17 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -33,47 +36,78 @@ func stageMutationEnv(t *testing.T) {
 	t.Setenv("TOOLKIT_ENV_REALM", "oc1")
 	viper.Reset()
 	t.Cleanup(viper.Reset)
-	stubTargetLookups(t)
 }
 
 // stageOCIDEnv is stageMutationEnv for a node action given --ocid: it
-// adds the repo path that check needs, and stubs the lookup so the OCID
+// adds the repo path that check needs, and stubs d's lookup so the OCID
 // is an instance of GPU pool pool-a.
-func stageOCIDEnv(t *testing.T) {
+func stageOCIDEnv(t *testing.T, d *ops.Deps) {
 	t.Helper()
 	stageMutationEnv(t)
 	t.Setenv("TOOLKIT_REPO_PATH", t.TempDir())
-	t.Cleanup(swap(&resolveGPUNodeFn, func(_ context.Context, _ config.Config, _ models.Environment, name, ocid string) (*models.GPUNode, error) {
+	d.ResolveGPUNode = func(_ context.Context, _ models.Environment, name, ocid string) (*models.GPUNode, error) {
 		if ocid == "" {
 			t.Errorf("node %q resolved without --ocid", name)
 		}
 		return &models.GPUNode{Name: name, ID: ocid, NodePool: "pool-a"}, nil
-	}))
+	}
 }
 
-// stubTargetLookups makes the read-only target lookups that cordon,
-// drain, delete dac and set tenant run before a dry run or prompt find
+// testLookups is the read-only target lookups that cordon, drain,
+// delete dac and set tenant run before a dry run or prompt, finding
 // their target, so no test reaches a cluster, OCI or the metadata file.
-// A test that wants a lookup to fail swaps the seam again.
-func stubTargetLookups(t *testing.T) {
-	t.Helper()
-	t.Cleanup(swap(&nodeCordonedFn, func(context.Context, string, string, string) (bool, error) { return false, nil }))
-	t.Cleanup(swap(&drainStatusFn, func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
-		return k8s.DrainStatus{Node: node, DrainState: k8s.DrainState{Phase: k8s.DrainNone}}, nil
-	}))
-	t.Cleanup(swap(&getDACFn, func(_ context.Context, d *models.DedicatedAICluster, env models.Environment) (oci.DACState, error) {
-		return oci.DACState{ID: d.OCID(env.Realm, env.Region), State: "ACTIVE"}, nil
-	}))
-	t.Cleanup(swap(&checkTenantFn, func(config.Config, models.TenantMetadata) (bool, error) { return false, nil }))
+// A test that wants a lookup to fail sets its own.
+func testLookups() ops.Deps {
+	return ops.Deps{
+		NodeCordoned: func(context.Context, string, string, string) (bool, error) { return false, nil },
+		DrainStatus: func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+			return k8s.DrainStatus{Node: node, DrainState: k8s.DrainState{Phase: k8s.DrainNone}}, nil
+		},
+		GetDAC: func(_ context.Context, d *models.DedicatedAICluster, env models.Environment) (oci.DACState, error) {
+			return oci.DACState{ID: d.OCID(env.Realm, env.Region), State: "ACTIVE"}, nil
+		},
+		CheckTenant: func(models.TenantMetadata) (bool, error) { return false, nil },
+	}
 }
 
-// runRootCmd builds a fresh root command, wires stdin/stdout/stderr to
+// fillDeps sets every call d leaves unset to from's.
+func fillDeps(d *ops.Deps, from ops.Deps) {
+	dv, fv := reflect.ValueOf(d).Elem(), reflect.ValueOf(from)
+	for i := range dv.NumField() {
+		if dv.Field(i).IsNil() {
+			dv.Field(i).Set(fv.Field(i))
+		}
+	}
+}
+
+// testRootCmd is a root command whose mutations' infra calls are d's;
+// what d leaves unset (or all, for a nil d) is testLookups', then
+// production's.
+func testRootCmd(d *ops.Deps) *cobra.Command {
+	return newRootCmd("vtest", func(cfg config.Config) ops.Deps {
+		var dd ops.Deps
+		if d != nil {
+			dd = *d
+		}
+		fillDeps(&dd, testLookups())
+		fillDeps(&dd, productionDeps(cfg))
+		return dd
+	})
+}
+
+// runRootCmd is runRootCmdWith with no fakes of its own and no stdin.
+func runRootCmd(t *testing.T, args []string) (string, error) {
+	t.Helper()
+	return runRootCmdWith(t, nil, args, "")
+}
+
+// runRootCmdWith builds testRootCmd(d), wires stdin/stdout/stderr to
 // in-memory buffers, runs Execute, and returns the combined out+err
 // buffer plus the execution error. stdin is wired only when non-empty
 // so callers that don't need it inherit the cobra default.
-func runRootCmd(t *testing.T, args []string, stdin string) (string, error) {
+func runRootCmdWith(t *testing.T, d *ops.Deps, args []string, stdin string) (string, error) {
 	t.Helper()
-	cmd := NewRootCmd("vtest")
+	cmd := testRootCmd(d)
 	cmd.SetArgs(args)
 	if stdin != "" {
 		cmd.SetIn(strings.NewReader(stdin))

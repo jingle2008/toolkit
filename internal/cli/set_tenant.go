@@ -8,35 +8,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/internal/configloader"
-	"github.com/jingle2008/toolkit/internal/infra/loader"
-	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// setTenantFn is the seam tests use to fake the metadata write.
-// Production builds a fresh loader and upserts via the optional
-// TenantMetadataWriter capability (same path the TUI uses).
-var setTenantFn = func(ctx context.Context, cfg config.Config, entry models.TenantMetadata) error {
-	ld := production.New(ctx, cfg.MetadataFile)
-	writer, ok := ld.(loader.TenantMetadataWriter)
-	if !ok {
-		return errors.New("loader does not support writing metadata")
-	}
-	return writer.UpsertTenantMetadata(entry)
-}
-
-// checkTenantFn is the seam tests use to fake set tenant's lookup: what
-// the write would find, without writing.
-var checkTenantFn = func(cfg config.Config, entry models.TenantMetadata) (bool, error) {
-	if cfg.MetadataFile == "" {
-		return false, errors.New("no metadata file configured")
-	}
-	return configloader.CheckTenantUpsert(cfg.MetadataFile, entry)
-}
-
-func addSetCommand(rootCmd *cobra.Command, cfgFile *string) {
+func addSetCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 	setCmd := &cobra.Command{
 		Use:   "set",
 		Short: "Create or update a resource",
@@ -80,7 +56,7 @@ Examples:
 			}
 			return withMutationSetup(cmd.Context(), cfgFile, false, false, false, func(ctx context.Context, cfg config.Config, _ models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes},
-					ops.SetTenant(cliDeps(cfg), entry))
+					ops.SetTenant(deps(cfg), entry))
 			})
 		},
 	}

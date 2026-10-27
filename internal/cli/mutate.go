@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/configloader"
+	"github.com/jingle2008/toolkit/internal/infra/loader"
 	production "github.com/jingle2008/toolkit/internal/infra/loader/production"
 	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
@@ -21,40 +23,34 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// resolveGPUNodeFn is the seam tests use to fake the node lookup — in
-// the cluster by name, or, given an OCID, in the env's GPU instance
-// pools. In production it constructs a fresh loader per call and
-// delegates to internal/resolve.GPUNode.
-var resolveGPUNodeFn = func(ctx context.Context, cfg config.Config, env models.Environment, name, ocid string) (*models.GPUNode, error) {
-	ld := production.New(ctx, cfg.MetadataFile)
-	return resolve.GPUNode(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name, ocid)
-}
+// depsFor is the mutations' infra calls for a command's config.
+type depsFor func(cfg config.Config) ops.Deps
 
-// cliDeps is ops.Deps over this package's seams, read when a command
-// runs so tests' swaps take effect.
-func cliDeps(cfg config.Config) ops.Deps {
-	return ops.Deps{
-		ResolveGPUNode: func(ctx context.Context, env models.Environment, name, ocid string) (*models.GPUNode, error) {
-			return resolveGPUNodeFn(ctx, cfg, env, name, ocid)
-		},
-		ResolveGPUPool: func(ctx context.Context, env models.Environment, name string) (*models.GPUPool, error) {
-			return resolveGPUPoolFn(ctx, cfg, env, name)
-		},
-		NodeCordoned:     nodeCordonedFn,
-		SetCordon:        setCordonFn,
-		DrainStatus:      drainStatusFn,
-		SoftReset:        softResetInstanceFn,
-		Terminate:        terminateInstanceFn,
-		IncreasePoolSize: increasePoolSizeFn,
-		GetDAC:           getDACFn,
-		DeleteDAC:        deleteDACFn,
-		ResolveISVC:      resolveInferenceServiceFn,
-		RestartISVC:      restartInferenceServiceFn,
-		PlanOrphanISVC:   planOrphanISVCDeleteFn,
-		DeleteOrphanISVC: deleteOrphanISVCFn,
-		CheckTenant:      func(entry models.TenantMetadata) (bool, error) { return checkTenantFn(cfg, entry) },
-		UpsertTenant:     func(ctx context.Context, entry models.TenantMetadata) error { return setTenantFn(ctx, cfg, entry) },
+// productionDeps is the live cluster and OCI, with lookups through a
+// fresh loader for cfg and writes to its metadata file.
+func productionDeps(cfg config.Config) ops.Deps {
+	d := ops.Production()
+	d.ResolveGPUNode = func(ctx context.Context, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+		return resolve.GPUNode(ctx, production.New(ctx, cfg.MetadataFile), cfg.RepoPath, cfg.KubeConfig, env, name, ocid)
 	}
+	d.ResolveGPUPool = func(ctx context.Context, env models.Environment, name string) (*models.GPUPool, error) {
+		return resolve.GPUPool(ctx, production.New(ctx, cfg.MetadataFile), cfg.RepoPath, cfg.KubeConfig, env, name)
+	}
+	d.CheckTenant = func(entry models.TenantMetadata) (bool, error) {
+		if cfg.MetadataFile == "" {
+			return false, errors.New("no metadata file configured")
+		}
+		return configloader.CheckTenantUpsert(cfg.MetadataFile, entry)
+	}
+	// Same path the TUI uses: the loader's optional TenantMetadataWriter.
+	d.UpsertTenant = func(ctx context.Context, entry models.TenantMetadata) error {
+		writer, ok := production.New(ctx, cfg.MetadataFile).(loader.TenantMetadataWriter)
+		if !ok {
+			return errors.New("loader does not support writing metadata")
+		}
+		return writer.UpsertTenantMetadata(entry)
+	}
+	return d
 }
 
 // opsEnv is where a CLI mutation acts.
@@ -69,20 +65,12 @@ func opsEnv(cfg config.Config, env models.Environment) ops.Env {
 // env's GPU compartment they're in; the OCID is then the target the
 // prompt and audit name, and name only a label.
 func runNodeAction(
-	cmd *cobra.Command, cfgFile *string, name, ocid string, gate cliGate,
+	cmd *cobra.Command, cfgFile *string, deps depsFor, name, ocid string, gate cliGate,
 	newOp func(d ops.Deps, e ops.Env, name, ocid string) mutation.Op,
 ) error {
 	return withMutationSetup(cmd.Context(), cfgFile, true, ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate, newOp(cliDeps(cfg), opsEnv(cfg, env), name, ocid))
+		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate, newOp(deps(cfg), opsEnv(cfg, env), name, ocid))
 	})
-}
-
-// resolveGPUPoolFn is the seam tests use to fake gpu-pool resolution.
-// In production it constructs a fresh loader and delegates to
-// internal/resolve.GPUPool.
-var resolveGPUPoolFn = func(ctx context.Context, cfg config.Config, env models.Environment, name string) (*models.GPUPool, error) {
-	ld := production.New(ctx, cfg.MetadataFile)
-	return resolve.GPUPool(ctx, ld, cfg.RepoPath, cfg.KubeConfig, env, name)
 }
 
 // validateMutationConfig checks the minimum settings a mutation

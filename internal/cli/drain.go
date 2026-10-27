@@ -15,13 +15,7 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Seams tests use to fake the k8s calls.
-var (
-	drainNodeFn   = k8s.DrainNode
-	drainStatusFn = k8s.GetDrainStatus
-)
-
-func addDrainCommand(rootCmd *cobra.Command, cfgFile *string) {
+func addDrainCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 	var (
 		dryRun bool
 		yes    bool
@@ -62,13 +56,14 @@ no process is driving it: run the drain again to resume.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nodeName := args[0]
 			if status {
-				return runDrainStatus(cmd, cfgFile, nodeName, format, dryRun)
+				return runDrainStatus(cmd, cfgFile, deps, nodeName, format, dryRun)
 			}
 			if cmd.Flags().Changed("output") {
 				return fmt.Errorf("-o applies only with --status")
 			}
 			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				op := ops.Drain(cliDeps(cfg), opsEnv(cfg, env), nodeName)
+				d := deps(cfg)
+				op := ops.Drain(d, opsEnv(cfg, env), nodeName)
 				op.Perform = func(ctx context.Context, _ mutation.Plan) error {
 					// The drain can run for tens of minutes and the log goes to a
 					// file, so echo its milestones on stderr; stdout keeps only
@@ -77,7 +72,7 @@ no process is driving it: run the drain again to resume.`,
 					ctx = k8s.WithDrainProgress(ctx, func(line string) {
 						_, _ = fmt.Fprintf(errOut, "%s %s\n", time.Now().Format("15:04:05"), line)
 					})
-					return drainNodeFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
+					return d.DrainNode(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 				}
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes}, op)
 			})
@@ -92,7 +87,7 @@ no process is driving it: run the drain again to resume.`,
 
 // runDrainStatus is `drain <node> --status`: the drain recorded on the
 // Node, read-only.
-func runDrainStatus(cmd *cobra.Command, cfgFile *string, nodeName, format string, dryRun bool) error {
+func runDrainStatus(cmd *cobra.Command, cfgFile *string, deps depsFor, nodeName, format string, dryRun bool) error {
 	if dryRun {
 		return fmt.Errorf("--status changes nothing; --dry-run doesn't apply")
 	}
@@ -104,7 +99,7 @@ func runDrainStatus(cmd *cobra.Command, cfgFile *string, nodeName, format string
 		return fmt.Errorf("--status prints yaml or json, not %s", fmtChoice)
 	}
 	return withCommandSetup(cmd.Context(), cfgFile, "drain-status", true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-		st, err := drainStatusFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
+		st, err := deps(cfg).DrainStatus(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 		if err != nil {
 			return fmt.Errorf("get drain status of node/%s: %w", nodeName, err)
 		}

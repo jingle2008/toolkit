@@ -7,22 +7,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/internal/infra/k8s"
-	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Seams tests use to fake the OCI call and the cluster calls.
-var (
-	deleteDACFn            = oci.DeleteDedicatedAICluster
-	getDACFn               = oci.GetDedicatedAICluster
-	planOrphanISVCDeleteFn = k8s.PlanOrphanInferenceServiceDelete
-	deleteOrphanISVCFn     = k8s.DeleteOrphanInferenceService
-)
-
-func addDeleteCommand(rootCmd *cobra.Command, cfgFile *string) {
+func addDeleteCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 	delCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a resource (destructive)",
@@ -49,14 +39,14 @@ deliberately disabled to prevent reflex "y" answers.`,
 			name := args[0]
 			return withMutationSetup(cmd.Context(), cfgFile, false, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes},
-					ops.DeleteDAC(cliDeps(cfg), opsEnv(cfg, env), name))
+					ops.DeleteDAC(deps(cfg), opsEnv(cfg, env), name))
 			})
 		},
 	}
 	dacCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
 	dacCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Required: this action has no interactive prompt")
 
-	delCmd.AddCommand(dacCmd, newDeleteISVCCommand(cfgFile))
+	delCmd.AddCommand(dacCmd, newDeleteISVCCommand(cfgFile, deps))
 	rootCmd.AddCommand(delCmd)
 }
 
@@ -65,7 +55,7 @@ deliberately disabled to prevent reflex "y" answers.`,
 // refusal happens before any prompt, and the dry-run line, prompt, and
 // audit log name the real action: delete, or force-delete for a deletion
 // stuck on its finalizer.
-func newDeleteISVCCommand(cfgFile *string) *cobra.Command {
+func newDeleteISVCCommand(cfgFile *string, deps depsFor) *cobra.Command {
 	var (
 		dryRun    bool
 		yes       bool
@@ -95,7 +85,7 @@ be unique. Destructive: requires explicit --yes.`,
 				out := cmd.OutOrStdout()
 				// Planning also checks it's an orphan, and picks delete or
 				// force-delete.
-				op, done := ops.DeleteOrphanISVC(cliDeps(cfg), opsEnv(cfg, env), namespace, name)
+				op, done := ops.DeleteOrphanISVC(deps(cfg), opsEnv(cfg, env), namespace, name)
 				perform := op.Perform
 				op.Perform = func(ctx context.Context, p mutation.Plan) error {
 					err := perform(ctx, p)

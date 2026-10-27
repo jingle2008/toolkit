@@ -6,13 +6,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
-	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
-
-// increasePoolSizeFn is the seam tests use to fake the OCI call.
-var increasePoolSizeFn = oci.IncreasePoolSize
 
 // addScaleCommand wires `toolkit scale gpu-pool <name> [--add N]`.
 // Without --add it fills the pool to its Terraform-declared size and does
@@ -20,7 +16,7 @@ var increasePoolSizeFn = oci.IncreasePoolSize
 // keeps that meaning. --add N grows the pool by N instances, past the
 // declared size if need be; that drift lasts until the next terraform
 // apply, which the prompt and dry run warn about.
-func addScaleCommand(rootCmd *cobra.Command, cfgFile *string) {
+func addScaleCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 	scaleCmd := &cobra.Command{
 		Use:   "scale",
 		Short: "Scale up OCI capacity",
@@ -50,7 +46,7 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 			name := args[0]
 			addGiven := cmd.Flags().Changed("add")
 			return withMutationSetup(cmd.Context(), cfgFile, true, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				op, scale := ops.ScalePool(cliDeps(cfg), opsEnv(cfg, env), name, add, addGiven, "--add")
+				op, scale := ops.ScalePool(deps(cfg), opsEnv(cfg, env), name, add, addGiven, "--add")
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes, Outcome: scale.Sizes}, op)
 			})
 		},

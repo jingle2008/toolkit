@@ -83,7 +83,7 @@ func TestHelp_MCPReadOnlyHasNoValueName(t *testing.T) {
 // A negative --limit is refused rather than read as unlimited.
 func TestGet_NegativeLimitRefused(t *testing.T) {
 	stageMutationEnv(t)
-	_, err := runRootCmd(t, []string{"get", "alias", "--limit", "-1"}, "")
+	_, err := runRootCmd(t, []string{"get", "alias", "--limit", "-1"})
 	require.ErrorContains(t, err, "--limit must be 0 (unlimited) or more, got -1")
 }
 

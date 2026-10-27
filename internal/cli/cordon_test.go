@@ -8,17 +8,20 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
+
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 )
 
 func TestCordonCmd_DryRun_DoesNotCallK8s(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	called := false
-	defer swap(&setCordonFn, func(context.Context, string, string, string, bool) (bool, error) {
+	d.SetCordon = func(context.Context, string, string, string, bool) (bool, error) {
 		called = true
 		return true, nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"cordon", "node-a", "--dry-run"}, "")
+	out, err := runRootCmdWith(t, d, []string{"cordon", "node-a", "--dry-run"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -31,14 +34,15 @@ func TestCordonCmd_DryRun_DoesNotCallK8s(t *testing.T) {
 }
 
 func TestCordonCmd_InteractiveBail(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	called := false
-	defer swap(&setCordonFn, func(context.Context, string, string, string, bool) (bool, error) {
+	d.SetCordon = func(context.Context, string, string, string, bool) (bool, error) {
 		called = true
 		return true, nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"cordon", "node-a"}, "n\n")
+	out, err := runRootCmdWith(t, d, []string{"cordon", "node-a"}, "n\n")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -51,6 +55,7 @@ func TestCordonCmd_InteractiveBail(t *testing.T) {
 }
 
 func TestCordonCmd_YesSkipsPromptAndCalls(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	var (
 		gotKube    string
@@ -58,12 +63,12 @@ func TestCordonCmd_YesSkipsPromptAndCalls(t *testing.T) {
 		gotNode    string
 		gotWant    bool
 	)
-	defer swap(&setCordonFn, func(_ context.Context, kc, ctxName, node string, want bool) (bool, error) {
+	d.SetCordon = func(_ context.Context, kc, ctxName, node string, want bool) (bool, error) {
 		gotKube, gotContext, gotNode, gotWant = kc, ctxName, node, want
 		return true, nil
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"cordon", "node-a", "-y"}, "")
+	out, err := runRootCmdWith(t, d, []string{"cordon", "node-a", "-y"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -85,14 +90,15 @@ func TestCordonCmd_YesSkipsPromptAndCalls(t *testing.T) {
 }
 
 func TestUncordonCmd_PassesWantFalse(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
 	var gotWant bool
-	defer swap(&setCordonFn, func(_ context.Context, _, _, _ string, want bool) (bool, error) {
+	d.SetCordon = func(_ context.Context, _, _, _ string, want bool) (bool, error) {
 		gotWant = want
 		return true, nil
-	})()
+	}
 
-	if _, err := runRootCmd(t, []string{"uncordon", "node-a", "-y"}, ""); err != nil {
+	if _, err := runRootCmdWith(t, d, []string{"uncordon", "node-a", "-y"}, ""); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	if gotWant {
@@ -101,12 +107,13 @@ func TestUncordonCmd_PassesWantFalse(t *testing.T) {
 }
 
 func TestCordonCmd_NoChangeNote(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
-	defer swap(&setCordonFn, func(context.Context, string, string, string, bool) (bool, error) {
+	d.SetCordon = func(context.Context, string, string, string, bool) (bool, error) {
 		return false, nil // already in target state
-	})()
+	}
 
-	out, err := runRootCmd(t, []string{"cordon", "node-a", "-y"}, "")
+	out, err := runRootCmdWith(t, d, []string{"cordon", "node-a", "-y"}, "")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -116,12 +123,13 @@ func TestCordonCmd_NoChangeNote(t *testing.T) {
 }
 
 func TestCordonCmd_PerformError(t *testing.T) {
+	d := &ops.Deps{}
 	stageMutationEnv(t)
-	defer swap(&setCordonFn, func(context.Context, string, string, string, bool) (bool, error) {
+	d.SetCordon = func(context.Context, string, string, string, bool) (bool, error) {
 		return false, errors.New("kube unreachable")
-	})()
+	}
 
-	_, err := runRootCmd(t, []string{"cordon", "node-a", "-y"}, "")
+	_, err := runRootCmdWith(t, d, []string{"cordon", "node-a", "-y"}, "")
 	if err == nil {
 		t.Fatal("expected error to surface from cmd.Execute")
 	}
@@ -140,7 +148,7 @@ func TestCordonCmd_MissingKubeConfig(t *testing.T) {
 	viper.Reset()
 	t.Cleanup(viper.Reset)
 
-	_, err := runRootCmd(t, []string{"cordon", "node-a", "-y"}, "")
+	_, err := runRootCmd(t, []string{"cordon", "node-a", "-y"})
 	if err == nil {
 		t.Fatal("expected error when kubeconfig missing")
 	}
