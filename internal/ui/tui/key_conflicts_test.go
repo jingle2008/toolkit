@@ -88,7 +88,7 @@ func TestBacktickInInput_IsText(t *testing.T) {
 	_, _ = m.Update(keyPress(":"))
 	_, _ = m.Update(keyPress("`"))
 	assert.Equal(t, common.PaletteView, m.viewMode, "palette query")
-	assert.Equal(t, "`", m.palette.input.Value(), "palette query")
+	assert.Equal(t, "`", m.palette.Query(), "palette query")
 
 	m = newGoToModel(t)
 	m.viewMode = common.ListView

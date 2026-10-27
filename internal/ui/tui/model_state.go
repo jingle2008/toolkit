@@ -26,6 +26,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/palette"
 	"github.com/jingle2008/toolkit/internal/ui/tui/rowpicker"
 	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
@@ -131,14 +132,17 @@ type Model struct {
 	// rowPickerPending is the open picker's parent half: what choosing
 	// does and the return view.
 	rowPickerPending rowPickerPending
-	palette          paletteState // command palette state
+	palette          palette.Model // command palette (palette.go)
+	// palettePending is the open palette's parent half: what each item
+	// runs, and the return view.
+	palettePending palettePending
 
 	// actions are the mutations in flight, oldest first (action_tracker.go);
 	// actionSeq numbers them.
 	actions   []runningAction
 	actionSeq int
 	// paletteRecent names the palette items run this session, newest
-	// first (paletteRecentMax at most), by paletteItem.id.
+	// first (palette.RecentMax at most), by palette.Item.ID.
 	paletteRecent []string
 	preview       bool          // preview pane toggled on (shown when wide enough)
 	uiState       uistate.State // persisted UI preferences

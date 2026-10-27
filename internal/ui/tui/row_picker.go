@@ -16,7 +16,6 @@ import (
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/internal/ui/tui/rowpicker"
-	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
 
 // rowPickerPending is the parent's half of the open row picker: what
@@ -67,11 +66,9 @@ func (m *Model) updateRowPickerView(msg tea.Msg) (tea.Model, tea.Cmd) {
 // pickerRows is how many target rows the picker shows before scrolling.
 func (m *Model) pickerRows() int { return m.rowPicker.Rows(m.modalMaxBody()) }
 
-// scrollWindow returns the first visible row of a window of n rows that
-// keeps cursor in view (view.ScrollWindow).
-func scrollWindow(cursor, offset, n int) int { return view.ScrollWindow(cursor, offset, n) }
-
-// rowPickerView renders the picker in the theme.
+// rowPickerView renders the picker: an optional filter line, one row per
+// visible target (a left-aligned category badge, then the name), and a scroll
+// indicator when the rows don't all fit.
 func (m *Model) rowPickerView() string {
 	p := m.theme.Palette
 	return m.rowPicker.View(m.modalMaxBody(), rowpicker.Styles{Muted: p.Muted, Accent: p.Accent})

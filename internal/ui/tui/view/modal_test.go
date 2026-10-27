@@ -21,6 +21,19 @@ func TestModal_HintsOnLastLine(t *testing.T) {
 	assert.Len(t, strings.Split(bare, "\n"), 3, "no hints, no hint line")
 }
 
+// FixedModal pads the body to the unfiltered size, and leaves a larger
+// body as it is.
+func TestFixedModal_PadsToSize(t *testing.T) {
+	t.Parallel()
+	small := ansi.Strip(FixedModal("T", "x", "", color.White, color.Black, 0, 20, 5))
+	lines := strings.Split(small, "\n")
+	assert.Len(t, lines, 5+2, "five body rows inside the border")
+	assert.Equal(t, 20+4, ansi.StringWidth(lines[0]), "twenty columns plus border and padding")
+
+	big := FixedModal("T", "a\nb\nc", "", color.White, color.Black, 0, 1, 1)
+	assert.Equal(t, Modal("T", "a\nb\nc", "", color.White, color.Black, 0), big)
+}
+
 func TestTruncate(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, "short", Truncate("short", 5))
