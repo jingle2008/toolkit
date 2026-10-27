@@ -162,6 +162,25 @@ func TestSetGPUWorkloadMap_TenantFromDAC(t *testing.T) {
 	check(podsFirst)
 }
 
+// A DAC-derived tenant follows the DACs as they reload, and the caller's
+// workloads are left as they were given.
+func TestSetGPUWorkloadMap_TenantFollowsDACReload(t *testing.T) {
+	t.Parallel()
+	tenants := []Tenant{{Name: "acme", ID: "ocid1.tenancy.oc1..suffix1"}, {Name: "beta", ID: "ocid1.tenancy.oc1..suffix2"}}
+	in := map[string][]GPUWorkload{"node-a": {{Name: "reservation", Namespace: "dac-1"}}}
+	d := &Dataset{Tenants: tenants}
+	d.SetDedicatedAIClusterMap(map[string][]DedicatedAICluster{"suffix1": {{Name: "dac-1", TenantID: "suffix1"}}})
+	d.SetGPUWorkloadMap(in)
+	assert.Equal(t, "acme", d.GPUWorkloadMap["node-a"][0].TenantName())
+	assert.Empty(t, in["node-a"][0].TenantID, "the caller's workload is not written")
+
+	d.SetDedicatedAIClusterMap(map[string][]DedicatedAICluster{"suffix2": {{Name: "dac-1", TenantID: "suffix2"}}})
+	assert.Equal(t, "beta", d.GPUWorkloadMap["node-a"][0].TenantName())
+
+	d.SetDedicatedAIClusterMap(nil)
+	assert.Empty(t, d.GPUWorkloadMap["node-a"][0].TenantID, "no DAC, no tenant")
+}
+
 func TestSetInferenceServiceMap_ResolvesOwnerKeepsNamespaceKey(t *testing.T) {
 	t.Parallel()
 	d := &Dataset{

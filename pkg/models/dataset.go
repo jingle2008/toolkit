@@ -1,6 +1,9 @@
 package models
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // Dataset holds all loaded data for the toolkit.
 type Dataset struct {
@@ -127,18 +130,25 @@ func (d *Dataset) SetImportedModelMap(m map[string][]ImportedModel) {
 // A pod without a tenancy-id label in a DAC's namespace (a kueue
 // reservation pod, say) takes the DAC's tenancy, when the DACs are
 // loaded: it runs on the tenant's cluster, and without one it would show
-// no tenant and be missing from the tenant's workloads.
+// no tenant and be missing from the tenant's workloads. That tenancy is
+// taken afresh on every call, so it follows the DACs as they reload.
 func (d *Dataset) SetGPUWorkloadMap(m map[string][]GPUWorkload) {
-	if dacTenants := d.dacTenantsByName(); len(dacTenants) > 0 {
-		for _, items := range m {
-			for i := range items {
-				if items[i].TenantID == "" {
-					items[i].TenantID = dacTenants[items[i].Namespace]
-				}
+	dacTenants := d.dacTenantsByName()
+	own := make(map[string][]GPUWorkload, len(m))
+	for k, items := range m {
+		items = slices.Clone(items)
+		for i := range items {
+			w := &items[i]
+			if w.tenantFromDAC {
+				w.TenantID, w.tenantFromDAC = "", false
+			}
+			if w.TenantID == "" && dacTenants[w.Namespace] != "" {
+				w.TenantID, w.tenantFromDAC = dacTenants[w.Namespace], true
 			}
 		}
+		own[k] = items
 	}
-	d.GPUWorkloadMap = resolveOwnersInPlace(d, m,
+	d.GPUWorkloadMap = resolveOwnersInPlace(d, own,
 		func(v *GPUWorkload) string { return v.TenantID },
 		func(v *GPUWorkload, t *Tenant) { v.Owner = t })
 }
