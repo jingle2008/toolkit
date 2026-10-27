@@ -2,14 +2,12 @@ package cli
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
-	"github.com/jingle2008/toolkit/internal/logging"
-	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -52,54 +50,8 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 			name := args[0]
 			addGiven := cmd.Flags().Changed("add")
 			return withMutationSetup(cmd.Context(), cfgFile, true, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				var (
-					pool   *models.GPUPool
-					n      int
-					result oci.PoolScale
-					done   bool
-				)
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), mutationPlan{
-					Action: mutation.ScaleGPUPool,
-					Target: name,
-					DryRun: dryRun,
-					Yes:    yes,
-					Resolve: func(ctx context.Context, p *mutation.Plan) error {
-						found, err := resolveGPUPoolFn(ctx, cfg, env, name)
-						if err != nil {
-							return err
-						}
-						if found.ID == "" {
-							return fmt.Errorf("pool %s: %w", found.Name, oci.ErrNoInstancePool)
-						}
-						if n, err = mutation.PoolScaleAdd(*found, add, addGiven); err != nil {
-							return err
-						}
-						if n == 0 {
-							p.Noop = mutation.PoolAtSizeNote(*found, "--add")
-							return nil
-						}
-						pool, p.Resolved = found, mutation.ResolvedPool(found.ID, found.Size, found.ActualSize, n)
-						p.Notice = mutation.PoolScaleNotice(*found, n)
-						return nil
-					},
-					AuditFields: func() []any {
-						if !done {
-							return []any{"add", n}
-						}
-						return []any{"add", n, "from", result.Before, "to", result.After}
-					},
-					Outcome: func() string { return result.String() }, //nolint:gocritic // perform fills result in later; a method value would bind it now
-
-				}, func(ctx context.Context) error {
-					var err error
-					count := n
-					if !addGiven {
-						count = oci.FillPool // n was counted from the lookup; OCI's size may have moved since
-					}
-					result, err = increasePoolSizeFn(ctx, pool, count, env, logging.FromContext(ctx))
-					done = err == nil
-					return err
-				})
+				op, scale := ops.ScalePool(cliDeps(cfg), opsEnv(cfg, env), name, add, addGiven, "--add")
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes, Outcome: scale.Sizes}, op)
 			})
 		},
 	}

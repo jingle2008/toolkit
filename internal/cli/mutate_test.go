@@ -74,12 +74,30 @@ func TestConfirmAction_CancelledWhileWaiting(t *testing.T) {
 	}
 }
 
+// testPlan is a test's mutation: the op runPlan builds, and its flags.
+type testPlan struct {
+	Action  mutation.Action
+	Target  string
+	DryRun  bool
+	Yes     bool
+	Resolve func(context.Context, *mutation.Plan) error
+}
+
+// runPlan runs plan, performing with perform, through runMutation.
+func runPlan(ctx context.Context, in io.Reader, out io.Writer, plan testPlan, perform func(context.Context) error) error {
+	return runMutation(ctx, in, out, cliGate{DryRun: plan.DryRun, Yes: plan.Yes}, mutation.Op{
+		Plan:    mutation.Plan{Action: plan.Action, Target: plan.Target},
+		Resolve: plan.Resolve,
+		Perform: func(ctx context.Context, _ mutation.Plan) error { return perform(ctx) },
+	})
+}
+
 func TestRunMutation_DryRun(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1", DryRun: true}
+	plan := testPlan{Action: mutation.CordonNode, Target: "n1", DryRun: true}
 	called := false
 	var out bytes.Buffer
-	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
+	err := runPlan(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
 		called = true
 		return nil
 	})
@@ -96,11 +114,11 @@ func TestRunMutation_DryRun(t *testing.T) {
 
 func TestRunMutation_YesSkipsPrompt(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1", Yes: true}
+	plan := testPlan{Action: mutation.CordonNode, Target: "n1", Yes: true}
 	called := false
 	var out bytes.Buffer
 	// Stdin reader intentionally empty — Yes must not consume it.
-	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
+	err := runPlan(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
 		called = true
 		return nil
 	})
@@ -120,10 +138,10 @@ func TestRunMutation_YesSkipsPrompt(t *testing.T) {
 
 func TestRunMutation_InteractiveBail(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1"}
+	plan := testPlan{Action: mutation.CordonNode, Target: "n1"}
 	called := false
 	var out bytes.Buffer
-	err := runMutation(context.Background(), strings.NewReader("n\n"), &out, plan, func(context.Context) error {
+	err := runPlan(context.Background(), strings.NewReader("n\n"), &out, plan, func(context.Context) error {
 		called = true
 		return nil
 	})
@@ -143,10 +161,10 @@ func TestRunMutation_InteractiveBail(t *testing.T) {
 
 func TestRunMutation_InteractiveYes(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1"}
+	plan := testPlan{Action: mutation.CordonNode, Target: "n1"}
 	called := false
 	var out bytes.Buffer
-	err := runMutation(context.Background(), strings.NewReader("y\n"), &out, plan, func(context.Context) error {
+	err := runPlan(context.Background(), strings.NewReader("y\n"), &out, plan, func(context.Context) error {
 		called = true
 		return nil
 	})
@@ -160,14 +178,14 @@ func TestRunMutation_InteractiveYes(t *testing.T) {
 
 func TestRunMutation_Irreversible_NoPrompt(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{
+	plan := testPlan{
 		Action: mutation.TerminateNode, Target: "n1",
 	}
 	called := false
 	var out bytes.Buffer
 	// Stdin says "y" — should still fail because an irreversible action
 	// blocks interactive consent.
-	err := runMutation(context.Background(), strings.NewReader("y\n"), &out, plan, func(context.Context) error {
+	err := runPlan(context.Background(), strings.NewReader("y\n"), &out, plan, func(context.Context) error {
 		called = true
 		return nil
 	})
@@ -184,12 +202,12 @@ func TestRunMutation_Irreversible_NoPrompt(t *testing.T) {
 
 func TestRunMutation_Irreversible_PassesWithYes(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{
+	plan := testPlan{
 		Action: mutation.TerminateNode, Target: "n1", Yes: true,
 	}
 	called := false
 	var out bytes.Buffer
-	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
+	err := runPlan(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
 		called = true
 		return nil
 	})
@@ -203,10 +221,10 @@ func TestRunMutation_Irreversible_PassesWithYes(t *testing.T) {
 
 func TestRunMutation_PerformError(t *testing.T) {
 	t.Parallel()
-	plan := mutationPlan{Action: mutation.CordonNode, Target: "n1", Yes: true}
+	plan := testPlan{Action: mutation.CordonNode, Target: "n1", Yes: true}
 	want := errors.New("kube unreachable")
 	var out bytes.Buffer
-	err := runMutation(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
+	err := runPlan(context.Background(), strings.NewReader(""), &out, plan, func(context.Context) error {
 		return want
 	})
 	if !errors.Is(err, want) {
@@ -258,10 +276,10 @@ func TestWithMutationSetup_InitLoggerError(t *testing.T) {
 // failed, from surface cli; a dry run writes one dry_run record.
 func TestRunMutation_Audits(t *testing.T) {
 	t.Parallel()
-	phasesIn := func(stdin string, plan mutationPlan, perform func(context.Context) error) []string {
+	phasesIn := func(stdin string, plan testPlan, perform func(context.Context) error) []string {
 		sink := logging.NewRingSink(8)
 		ctx := logging.WithContext(context.Background(), slog.New(sink))
-		_ = runMutation(ctx, strings.NewReader(stdin), &bytes.Buffer{}, plan, perform)
+		_ = runPlan(ctx, strings.NewReader(stdin), &bytes.Buffer{}, plan, perform)
 		var got []string
 		for _, e := range sink.Snapshot() {
 			kv := map[any]any{}
@@ -274,26 +292,26 @@ func TestRunMutation_Audits(t *testing.T) {
 		}
 		return got
 	}
-	phases := func(plan mutationPlan, perform func(context.Context) error) []string {
+	phases := func(plan testPlan, perform func(context.Context) error) []string {
 		return phasesIn("", plan, perform)
 	}
 	ok := func(context.Context) error { return nil }
 	fail := func(context.Context) error { return errors.New("boom") }
 
-	assert.Equal(t, []string{"begin", "done"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true}, ok))
-	assert.Equal(t, []string{"begin", "failed"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true}, fail))
-	assert.Equal(t, []string{"dry_run"}, phases(mutationPlan{Action: mutation.TerminateNode, Target: "n1", DryRun: true}, ok))
+	assert.Equal(t, []string{"begin", "done"}, phases(testPlan{Action: mutation.DrainNode, Target: "n1", Yes: true}, ok))
+	assert.Equal(t, []string{"begin", "failed"}, phases(testPlan{Action: mutation.DrainNode, Target: "n1", Yes: true}, fail))
+	assert.Equal(t, []string{"dry_run"}, phases(testPlan{Action: mutation.TerminateNode, Target: "n1", DryRun: true}, ok))
 
 	// Refusals are audited, as on MCP and in the TUI: declining the
 	// prompt, and an irreversible action without --yes.
-	assert.Equal(t, []string{"refused"}, phasesIn("n\n", mutationPlan{Action: mutation.DrainNode, Target: "n1"}, ok))
-	assert.Equal(t, []string{"refused"}, phases(mutationPlan{Action: mutation.TerminateNode, Target: "n1"}, ok))
+	assert.Equal(t, []string{"refused"}, phasesIn("n\n", testPlan{Action: mutation.DrainNode, Target: "n1"}, ok))
+	assert.Equal(t, []string{"refused"}, phases(testPlan{Action: mutation.TerminateNode, Target: "n1"}, ok))
 
 	// A failed lookup is audited as failed, without a begin (nothing ran),
 	// except in a dry run.
 	lost := func(context.Context, *mutation.Plan) error { return errors.New("node not found") }
-	assert.Equal(t, []string{"failed"}, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", Yes: true, Resolve: lost}, ok))
-	assert.Empty(t, phases(mutationPlan{Action: mutation.DrainNode, Target: "n1", DryRun: true, Resolve: lost}, ok))
+	assert.Equal(t, []string{"failed"}, phases(testPlan{Action: mutation.DrainNode, Target: "n1", Yes: true, Resolve: lost}, ok))
+	assert.Empty(t, phases(testPlan{Action: mutation.DrainNode, Target: "n1", DryRun: true, Resolve: lost}, ok))
 }
 
 // An irreversible action without --yes is refused before its target is
@@ -301,7 +319,7 @@ func TestRunMutation_Audits(t *testing.T) {
 func TestRunMutation_IrreversibleRefusedBeforeLookup(t *testing.T) {
 	t.Parallel()
 	looked := false
-	err := runMutation(context.Background(), strings.NewReader("y\n"), &bytes.Buffer{}, mutationPlan{
+	err := runPlan(context.Background(), strings.NewReader("y\n"), &bytes.Buffer{}, testPlan{
 		Action: mutation.TerminateNode, Target: "n1",
 		Resolve: func(context.Context, *mutation.Plan) error { looked = true; return nil },
 	}, func(context.Context) error { return nil })
@@ -314,7 +332,7 @@ func TestRunMutation_IrreversibleRefusedBeforeLookup(t *testing.T) {
 func TestRunMutation_ResolveRefinesPlan(t *testing.T) {
 	t.Parallel()
 	var out bytes.Buffer
-	err := runMutation(context.Background(), strings.NewReader(""), &out, mutationPlan{
+	err := runPlan(context.Background(), strings.NewReader(""), &out, testPlan{
 		Action: mutation.DeleteInferenceService, Target: "svc", DryRun: true,
 		Resolve: func(_ context.Context, p *mutation.Plan) error {
 			p.Action, p.Target, p.Resolved = mutation.ForceDeleteInferenceService, "ns1/svc", mutation.ResolvedNamespace("ns1")

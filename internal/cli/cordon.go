@@ -9,6 +9,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/mutation"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -37,10 +38,6 @@ func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, verb string, u
 		dryRun bool
 		yes    bool
 	)
-	action := mutation.CordonNode
-	if !unschedulable {
-		action = mutation.UncordonNode
-	}
 	long := `Mark a Kubernetes node unschedulable. Existing pods stay
 where they are; new pods skip the node.
 
@@ -73,26 +70,18 @@ Examples:
 			nodeName := args[0]
 			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				out := cmd.OutOrStdout()
-				return runMutation(ctx, cmd.InOrStdin(), out, mutationPlan{
-					Action: action,
-					Target: nodeName,
-					DryRun: dryRun,
-					Yes:    yes,
-					Resolve: func(ctx context.Context, p *mutation.Plan) error {
-						cordoned, err := nodeCordonedFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
-						p.Resolved = mutation.ResolvedCordon(cordoned)
-						return err
-					},
-				}, func(ctx context.Context) error {
-					changed, err := setCordonFn(ctx, cfg.KubeConfig, env.KubeContext(), nodeName, unschedulable)
-					if err != nil {
+				op, changed := ops.Cordon(cliDeps(cfg), opsEnv(cfg, env), nodeName, unschedulable)
+				perform := op.Perform
+				op.Perform = func(ctx context.Context, p mutation.Plan) error {
+					if err := perform(ctx, p); err != nil {
 						return err
 					}
-					if !changed {
+					if !*changed {
 						_, _ = fmt.Fprintf(out, "note: node already %sed; no change made\n", verb)
 					}
 					return nil
-				})
+				}
+				return runMutation(ctx, cmd.InOrStdin(), out, cliGate{DryRun: dryRun, Yes: yes}, op)
 			})
 		},
 	}
