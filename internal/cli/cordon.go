@@ -26,10 +26,7 @@ func addUncordonCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 // cordon (k8s Unschedulable=true), unschedulable=false → uncordon.
 // Both go through the idempotent k8s.SetCordon path.
 func addCordonOrUncordon(rootCmd *cobra.Command, cfgFile *string, deps depsFor, verb string, unschedulable bool, short string) {
-	var (
-		dryRun bool
-		yes    bool
-	)
+	var gate cliGate
 	long := `Mark a Kubernetes node unschedulable. Existing pods stay
 where they are; new pods skip the node.
 
@@ -73,11 +70,14 @@ Examples:
 					}
 					return nil
 				}
-				return runMutation(ctx, cmd.InOrStdin(), out, cliGate{DryRun: dryRun, Yes: yes}, op)
+				return runMutation(ctx, cmd.InOrStdin(), out, gate, op)
 			})
 		},
 	}
-	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
+	gateAction := mutation.CordonNode
+	if !unschedulable {
+		gateAction = mutation.UncordonNode
+	}
+	addGateFlags(cmd, gateAction, &gate)
 	rootCmd.AddCommand(cmd)
 }

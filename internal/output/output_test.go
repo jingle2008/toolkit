@@ -385,3 +385,19 @@ func TestWriteTable_FlushError(t *testing.T) {
 	err := WriteTable(failWriter{err: sentinel}, []string{"NAME"}, [][]string{{"alice"}}, Options{})
 	require.ErrorIs(t, err, sentinel)
 }
+
+// Every -o flag parses case-insensitively, "" meaning its default, and
+// names its own formats when refusing one.
+func TestParseFormatIn(t *testing.T) {
+	t.Parallel()
+	f, err := ParseFormatIn("JSON", FormatTable, FormatTable, FormatJSON)
+	require.NoError(t, err)
+	assert.Equal(t, FormatJSON, f)
+
+	f, err = ParseFormatIn("", FormatYAML, FormatYAML, FormatJSON)
+	require.NoError(t, err)
+	assert.Equal(t, FormatYAML, f)
+
+	_, err = ParseFormatIn("csv", FormatYAML, FormatYAML, FormatJSON)
+	require.EqualError(t, err, `invalid output format "csv" (valid: yaml|json)`)
+}

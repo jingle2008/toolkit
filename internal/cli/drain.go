@@ -17,8 +17,7 @@ import (
 
 func addDrainCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 	var (
-		dryRun bool
-		yes    bool
+		gate   cliGate
 		status bool
 		format string
 	)
@@ -56,7 +55,7 @@ no process is driving it: run the drain again to resume.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nodeName := args[0]
 			if status {
-				return runDrainStatus(cmd, cfgFile, deps, nodeName, format, dryRun)
+				return runDrainStatus(cmd, cfgFile, deps, nodeName, format, gate.DryRun)
 			}
 			if cmd.Flags().Changed("output") {
 				return fmt.Errorf("-o applies only with --status")
@@ -74,12 +73,11 @@ no process is driving it: run the drain again to resume.`,
 					})
 					return d.DrainNode(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
 				}
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes}, op)
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate, op)
 			})
 		},
 	}
-	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
+	addGateFlags(cmd, mutation.DrainNode, &gate)
 	cmd.Flags().BoolVar(&status, "status", false, "Print the drain recorded on the node and exit (changes nothing)")
 	cmd.Flags().StringVarP(&format, "output", "o", "yaml", "with --status: yaml|json")
 	rootCmd.AddCommand(cmd)
@@ -91,12 +89,9 @@ func runDrainStatus(cmd *cobra.Command, cfgFile *string, deps depsFor, nodeName,
 	if dryRun {
 		return fmt.Errorf("--status changes nothing; --dry-run doesn't apply")
 	}
-	fmtChoice, err := output.ParseFormat(format)
+	fmtChoice, err := output.ParseFormatIn(format, output.FormatYAML, output.FormatYAML, output.FormatJSON)
 	if err != nil {
-		return err
-	}
-	if fmtChoice != output.FormatYAML && fmtChoice != output.FormatJSON {
-		return fmt.Errorf("--status prints yaml or json, not %s", fmtChoice)
+		return fmt.Errorf("--status prints yaml or json: %w", err)
 	}
 	return withCommandSetup(cmd.Context(), cfgFile, "drain-status", true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 		st, err := deps(cfg).DrainStatus(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)

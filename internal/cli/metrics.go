@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -79,7 +78,7 @@ func emitMetrics(
 		return withNameHint(err)
 	}
 	for _, msg := range warnings {
-		fmt.Fprintf(os.Stderr, "warning: %s\n", msg)
+		warnf(ctx, "%s", msg)
 	}
 	plan, err := telemetry.PlanOn(item, env, catalog, dac)
 	if _, ok := errors.AsType[*telemetry.SeveralDACsError](err); ok {

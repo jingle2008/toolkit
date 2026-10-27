@@ -66,6 +66,8 @@ metadata-file: "" # Optional path to a YAML or JSON file with additional metadat
 		SilenceUsage:  true,
 		SilenceErrors: false,
 		RunE:          runRootE(&cfgFile, version),
+		// Every subcommand's warnings go to its stderr (warnf).
+		PersistentPreRun: setWarnOut,
 	}
 
 	addPersistentFlags(rootCmd, &cfgFile, defaultKube, defaultConfig, defaultMetadata)

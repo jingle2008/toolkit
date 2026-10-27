@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -23,9 +24,8 @@ func addScaleCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 	}
 
 	var (
-		dryRun bool
-		yes    bool
-		add    int
+		gate cliGate
+		add  int
 	)
 	gpuPoolCmd := &cobra.Command{
 		Use:     "gpu-pool <name>",
@@ -47,13 +47,12 @@ Fire-and-forget; the work request can be tracked via the OCI console.`,
 			addGiven := cmd.Flags().Changed("add")
 			return withMutationSetup(cmd.Context(), cfgFile, true, true, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				op, scale := ops.ScalePool(deps(cfg), opsEnv(cfg, env), name, add, addGiven, "--add")
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes, Outcome: scale.Sizes}, op)
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: gate.DryRun, Yes: gate.Yes, Outcome: scale.Sizes}, op)
 			})
 		},
 	}
 	gpuPoolCmd.Flags().IntVar(&add, "add", 0, "Instances to add, counted from OCI's current size; may go past the Terraform size (default: fill to the Terraform size)")
-	gpuPoolCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")
-	gpuPoolCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
+	addGateFlags(gpuPoolCmd, mutation.ScaleGPUPool, &gate)
 
 	scaleCmd.AddCommand(gpuPoolCmd)
 	rootCmd.AddCommand(scaleCmd)

@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -22,8 +23,7 @@ func addSetCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 		name     string
 		internal bool
 		note     string
-		dryRun   bool
-		yes      bool
+		gate     cliGate
 	)
 	tenantCmd := &cobra.Command{
 		Use:   "tenant <ocid>",
@@ -55,7 +55,7 @@ Examples:
 				return err
 			}
 			return withMutationSetup(cmd.Context(), cfgFile, false, false, false, func(ctx context.Context, cfg config.Config, _ models.Environment) error {
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes},
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate,
 					ops.SetTenant(deps(cfg), entry))
 			})
 		},
@@ -63,8 +63,7 @@ Examples:
 	tenantCmd.Flags().StringVar(&name, "name", "", "Friendly tenant name (required)")
 	tenantCmd.Flags().BoolVar(&internal, "internal", true, "Mark the tenant internal (--internal=false for external); omitted keeps the recorded flag, new tenants default to internal")
 	tenantCmd.Flags().StringVar(&note, "note", "", "Optional free-form note")
-	tenantCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
-	tenantCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
+	addGateFlags(tenantCmd, mutation.SetTenant, &gate)
 
 	setCmd.AddCommand(tenantCmd)
 	rootCmd.AddCommand(setCmd)
