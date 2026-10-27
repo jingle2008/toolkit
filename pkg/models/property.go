@@ -102,3 +102,7 @@ func (o *PropertyTenancyOverride) SetTenantName(name string) {
 func (o PropertyTenancyOverride) FilterableFields() []string {
 	return slices.Concat(o.Regions, []string{o.Name, o.TenantName, o.TenantID})
 }
+
+// GetTenantName is the tenant's metadata name, or its OCID when it has
+// none.
+func (o PropertyTenancyOverride) GetTenantName() string { return o.TenantName }

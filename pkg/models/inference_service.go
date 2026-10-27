@@ -106,3 +106,9 @@ func (s InferenceService) MarshalJSON() ([]byte, error) {
 	p.Age = AgeOf(s.CreatedAt)
 	return json.Marshal(p)
 }
+
+// RawTenantID is the tenancy-id InferenceService is labelled with.
+func (s InferenceService) RawTenantID() string { return s.TenantID }
+
+// OwnerTenant is the tenant InferenceService resolves to; nil when unresolved.
+func (s InferenceService) OwnerTenant() *Tenant { return s.Owner }

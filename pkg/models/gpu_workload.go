@@ -78,3 +78,9 @@ func (w GPUWorkload) MarshalJSON() ([]byte, error) {
 	p.Age = AgeOf(w.CreatedAt)
 	return json.Marshal(p)
 }
+
+// RawTenantID is the tenancy-id GPUWorkload is labelled with.
+func (w GPUWorkload) RawTenantID() string { return w.TenantID }
+
+// OwnerTenant is the tenant GPUWorkload resolves to; nil when unresolved.
+func (w GPUWorkload) OwnerTenant() *Tenant { return w.Owner }

@@ -127,3 +127,9 @@ func (m ImportedModel) OCID(realm, region string) string {
 	region = normalizeRegion(region)
 	return fmt.Sprintf("ocid1.generativeaiimportedmodel.%s.%s.%s", realm, region, m.Name)
 }
+
+// RawTenantID is the tenancy-id ImportedModel is labelled with.
+func (m ImportedModel) RawTenantID() string { return m.TenantID }
+
+// OwnerTenant is the tenant ImportedModel resolves to; nil when unresolved.
+func (m ImportedModel) OwnerTenant() *Tenant { return m.Owner }

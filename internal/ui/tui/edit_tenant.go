@@ -66,52 +66,23 @@ func tenantEditTarget(item any, realm string) (editTarget, bool) {
 // ownedTenant is a tenant-owned row's tenancy: its OCID, its raw tenancy
 // id, and whether it resolves to a tenant. ok is false for other rows.
 func ownedTenant(item any, realm string) (ocid, tenantID string, resolved, ok bool) {
-	switch v := item.(type) {
-	case *models.DedicatedAICluster:
-		if v != nil {
-			return v.TenancyOCID(realm), v.TenantID, v.Owner != nil, true
-		}
-	case *models.ImportedModel:
-		if v != nil {
-			return v.TenancyOCID(realm), v.TenantID, v.Owner != nil, true
-		}
-	case *models.GPUWorkload:
-		if v != nil {
-			return v.TenancyOCID(realm), v.TenantID, v.Owner != nil, true
-		}
-	case *models.InferenceService:
-		if v != nil {
-			return v.TenancyOCID(realm), v.TenantID, v.Owner != nil, true
-		}
+	v, isOwned := item.(models.TenantOwned)
+	if !isOwned || isNilItem(item) {
+		return "", "", false, false
 	}
-	return "", "", false, false
+	return v.TenancyOCID(realm), v.RawTenantID(), v.OwnerTenant() != nil, true
 }
 
 // overrideTenant is a tenancy override's tenancy: its OCID (twice: it is
 // also the id), and whether its tenant has a metadata name, i.e. isn't
 // named by the OCID. ok is false for other rows.
 func overrideTenant(item any) (ocid, tenantID string, named, ok bool) {
-	var id, name string
-	switch v := item.(type) {
-	case *models.LimitTenancyOverride:
-		if v == nil {
-			return "", "", false, false
-		}
-		id, name = v.TenantID, v.TenantName
-	case *models.ConsolePropertyTenancyOverride:
-		if v == nil {
-			return "", "", false, false
-		}
-		id, name = v.TenantID, v.TenantName
-	case *models.PropertyTenancyOverride:
-		if v == nil {
-			return "", "", false, false
-		}
-		id, name = v.TenantID, v.TenantName
-	default:
+	v, isOverride := item.(models.NamedTenancyOverride)
+	if !isOverride || isNilItem(item) {
 		return "", "", false, false
 	}
-	return id, id, name != id, true
+	id := v.GetTenantID()
+	return id, id, v.GetTenantName() != id, true
 }
 
 // tenantSavedMsg / tenantSaveErrMsg report the async upsert result.
