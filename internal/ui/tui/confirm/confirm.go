@@ -1,37 +1,36 @@
-// Package confirm is the TUI's destructive-action confirmation modal.
+// Package confirm is the TUI's confirmation modal: a generic dialog the
+// parent describes with a Spec.
 //
-// The modal names the action about to run, what and where it acts on,
-// and a warning, over Cancel and action buttons. A recoverable action
-// confirms on y/Y; an irreversible one only on a capital Y, and a
-// lowercase y (or enter on its button) redraws the hint as a prompt for
-// it. n/N/esc cancel; ←/→/tab move the focus and enter presses the
-// focused button. A GPU pool scale-up also takes the instance count,
-// typed as digits or pasted. The quit confirmation, shown when quitting
-// would cancel running actions, lists them instead.
+// The modal shows a title, label/value rows and a warning over Cancel
+// and action buttons. A Recoverable spec confirms on y/Y; an
+// Irreversible one only on a capital Y, and a lowercase y (or enter on
+// its button) redraws the hint as a prompt for it. n/N/esc cancel;
+// ←/→/tab move the focus and enter presses the focused button. A spec
+// may carry one count Field, typed as digits or pasted, whose validator
+// the parent supplies; confirming waits on it. The quit confirmation
+// (NewQuit), shown when quitting would cancel running actions, lists
+// them instead.
 //
 // Model is a value type in the Bubble Tea nested-model style: Update
 // returns the updated Model, which the parent stores back, and a Result
 // that says whether the operator confirmed or cancelled. The Result is
 // returned synchronously, not as a message, so the parent closes the
-// modal and starts the action within the same keypress. The Model holds
-// no closures and nothing of the parent's: what an action does is the
-// parent's, keyed by Result.
+// modal and starts the action within the same keypress. The package
+// knows nothing of what is confirmed: what an action is called, how
+// strict it is and what it does are the parent's.
 package confirm
 
 import (
 	"fmt"
 	"image/color"
 	"slices"
-	"strconv"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/jingle2008/toolkit/internal/mutation"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
-	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 // MaxWidth caps the modal's outer width.
@@ -41,57 +40,40 @@ const MaxWidth = 56
 // lists.
 const MaxRunningRows = 5
 
-// Request is what a confirmation asks about.
-type Request struct {
-	// Action is the mutation: its tier gates the modal, its labels name
-	// it on screen. Zero for the quit confirmation.
-	Action  mutation.Action
-	Kind    string // the category acted on, for the Kind row
-	Target  string // the Name row
-	Warning string // what the action does, under the rows
-	// Quit marks the quit confirmation; it has no Action.
-	Quit bool
-	// Pool, when set, makes this a scale-up of it: the modal takes the
-	// instance count, starting at the pool's default, with the action
-	// button focused so a count typed and entered scales.
-	Pool *models.GPUPool
+// Tier is how strictly a confirmation is gated.
+type Tier int
+
+// The tiers: Recoverable confirms on y/Y and is drawn in Warn;
+// Irreversible confirms only on a capital Y, nudges on a lowercase y,
+// and is drawn in Danger under a ⚠ title.
+const (
+	Recoverable Tier = iota
+	Irreversible
+)
+
+// Spec describes a confirmation.
+type Spec struct {
+	Title   string      // e.g. "Scale up GPU pool"; the modal adds ⚠ for Irreversible
+	Verb    string      // the action button, e.g. "Scale up"; lowercased in the nudge
+	Rows    [][2]string // static label/value rows, e.g. {"Kind", "GPUPool"}
+	Warning string      // what the action does, under the rows
+	Tier    Tier
+	// Field, when set, adds a count input after the rows, with the action
+	// button focused so a count typed and entered confirms.
+	Field *Field
 }
 
-// labels is how the modal names each action it confirms — verb and noun
-// as an operator reads them, where mutation.Action carries the audit
-// record's (scale gpu_pool vs "Scale up GPU pool"). Every action the
-// modal can confirm has one (TestLabels_CoverModalActions).
-var labels = map[mutation.Action]struct{ verb, noun string }{
-	mutation.CordonNode:                  {"Cordon", "node"},
-	mutation.UncordonNode:                {"Uncordon", "node"},
-	mutation.DrainNode:                   {"Drain", "node"},
-	mutation.RestartNode:                 {"Restart", "node"},
-	mutation.TerminateNode:               {"Terminate", "node"},
-	mutation.ScaleGPUPool:                {"Scale up", "GPU pool"},
-	mutation.DeleteDAC:                   {"Delete", "DAC"},
-	mutation.RestartInferenceService:     {"Restart", "InferenceService"},
-	mutation.DeleteInferenceService:      {"Delete", "orphaned InferenceService"},
-	mutation.ForceDeleteInferenceService: {"Force-delete", "orphaned InferenceService"},
+// Field is a spec's count input: digits, a deletion or a paste edit it.
+type Field struct {
+	Label   string // the row label, e.g. "Add"
+	Suffix  string // after the input, e.g. "instances"
+	Initial string // the input's starting text
+	// Check validates the text as typed: a problem (drawn in Danger, in
+	// place of the warning) blocks confirming; otherwise a non-empty
+	// notice replaces the warning. It must be pure — it runs on every
+	// View and keypress. Nil accepts anything.
+	Check func(text string) (notice, problem string)
 }
-
-// Verb is the modal's name for a, e.g. "Scale up"; "" for an action the
-// modal doesn't confirm.
-func Verb(a mutation.Action) string { return labels[a].verb }
-
-// Noun is the modal's name for what a acts on, e.g. "GPU pool".
-func Noun(a mutation.Action) string { return labels[a].noun }
-
-// Verb is the modal's name for r's action, "Quit" for the quit
-// confirmation.
-func (r Request) Verb() string {
-	if r.Quit {
-		return "Quit"
-	}
-	return Verb(r.Action)
-}
-
-// Noun is the modal's name for what r acts on.
-func (r Request) Noun() string { return Noun(r.Action) }
 
 // Outcome is what a keypress decided.
 type Outcome int
@@ -103,41 +85,54 @@ const (
 	Cancelled
 )
 
-// Result is what Update decided: on Confirmed the parent runs Action
-// (with Count instances, for a scale-up); on Cancelled it audits the
-// refusal. Either way it closes the modal.
+// Result is what Update decided: on Confirmed the parent runs its
+// pending action, with Text the field's text ("" without a field); on
+// Cancelled it audits the refusal. Either way it closes the modal.
 type Result struct {
 	Outcome Outcome
-	Action  mutation.Action
-	Count   int // the scale-up's instance count; 0 otherwise
+	Text    string
 }
 
 // Model is an open confirmation; the zero Model is none.
 type Model struct {
-	req Request
+	spec Spec
+	quit bool
 	// onAction is the button focus: false (the default) is Cancel.
 	onAction bool
 	// nudge is set when enter on its button or a lowercase y tries an
 	// irreversible action, which only a capital Y may confirm.
 	nudge bool
-	// amount is the scale-up's count input; nil for every other action.
-	// Update replaces it rather than editing it, so copies of a Model
-	// never share an input.
-	amount *scaleAmount
+	// input is the field's input; nil without a field. Update replaces
+	// it rather than editing it, so copies of a Model never share one.
+	input *textinput.Model
 }
 
-// New opens a confirmation of req.
-func New(req Request) Model {
-	m := Model{req: req}
-	if req.Pool != nil {
-		m.amount = newScaleAmount(*req.Pool)
+// New opens a confirmation described by spec.
+func New(spec Spec) Model {
+	m := Model{spec: spec}
+	if f := spec.Field; f != nil {
+		in := textinput.New()
+		in.CharLimit = 4
+		in.Prompt = ""
+		in.SetWidth(5)
+		in.SetValue(f.Initial)
+		in.Focus()
+		m.input = &in
 		m.onAction = true
 	}
 	return m
 }
 
-// Request returns what m asks about.
-func (m Model) Request() Request { return m.req }
+// NewQuit opens the quit confirmation; View lists the running actions.
+func NewQuit() Model {
+	return Model{spec: Spec{Verb: "Quit"}, quit: true}
+}
+
+// Spec returns what m was opened with.
+func (m Model) Spec() Spec { return m.spec }
+
+// Quit reports whether m is the quit confirmation.
+func (m Model) Quit() bool { return m.quit }
 
 // OnAction reports whether the action button, not Cancel, has the focus.
 func (m Model) OnAction() bool { return m.onAction }
@@ -145,53 +140,20 @@ func (m Model) OnAction() bool { return m.onAction }
 // Nudged reports whether the hint is redrawn as a prompt for capital Y.
 func (m Model) Nudged() bool { return m.nudge }
 
-// CountText is the scale-up's count as typed; "" for other actions.
-func (m Model) CountText() string {
-	if m.amount == nil {
+// Text is the field's text as typed; "" without a field.
+func (m Model) Text() string {
+	if m.input == nil {
 		return ""
 	}
-	return m.amount.input.Value()
+	return m.input.Value()
 }
 
-// Count is the scale-up's entered count, and whether one scale-up may
-// add it; false for other actions.
-func (m Model) Count() (int, bool) {
-	if m.amount == nil {
-		return 0, false
+// check runs the field's validator over its text.
+func (m Model) check() (notice, problem string) {
+	if m.input == nil || m.spec.Field.Check == nil {
+		return "", ""
 	}
-	n, problem := m.amount.count()
-	return n, problem == ""
-}
-
-// scaleAmount is the scale-up's input: how many instances to add to
-// pool, the snapshot the modal opened on.
-type scaleAmount struct {
-	input textinput.Model
-	pool  models.GPUPool
-}
-
-// newScaleAmount starts the input at pool's default count.
-func newScaleAmount(pool models.GPUPool) *scaleAmount {
-	in := textinput.New()
-	in.CharLimit = 4
-	in.Prompt = ""
-	in.SetWidth(5)
-	in.SetValue(strconv.Itoa(pool.DefaultScaleAdd()))
-	in.Focus()
-	return &scaleAmount{input: in, pool: pool}
-}
-
-// count is the entered count, or what is wrong with it ("" when
-// nothing), as the modal says it.
-func (a *scaleAmount) count() (n int, problem string) {
-	n, err := strconv.Atoi(strings.TrimSpace(a.input.Value()))
-	if err != nil {
-		return 0, "Enter a whole number of instances, at least 1."
-	}
-	if err := mutation.CheckPoolScaleAdd(a.pool, n); err != nil {
-		return 0, err.Error()
-	}
-	return n, ""
+	return m.spec.Field.Check(m.Text())
 }
 
 // edits reports whether msg edits a count: a digit, a deletion or a
@@ -207,14 +169,11 @@ func edits(msg tea.Msg) bool {
 	return false
 }
 
-// ready reports whether m can be confirmed: always, unless its count is
-// invalid.
+// ready reports whether m can be confirmed: unless its field's check
+// reports a problem.
 func (m Model) ready() bool {
-	if m.amount == nil {
-		return true
-	}
-	_, ok := m.Count()
-	return ok
+	_, problem := m.check()
+	return problem == ""
 }
 
 // decide maps a pressed key to confirm/cancel intent for m's tier.
@@ -230,17 +189,17 @@ func (m Model) decide(s string) (confirm, cancel, nudge bool) {
 	return s == "y" || s == "Y", cancel, false
 }
 
-func (m Model) irreversible() bool { return m.req.Action.Tier == mutation.Irreversible }
+func (m Model) irreversible() bool { return m.spec.Tier == Irreversible }
 
-// Update resolves a message while the modal is open: a count edit, a
+// Update resolves a message while the modal is open: a field edit, a
 // focus move, or a key that confirms, cancels or nudges. Any other
 // message is swallowed so the modal stays put. Quitting the program is
 // the parent's: it intercepts its quit key before Update.
 func (m Model) Update(msg tea.Msg) (Model, Result) {
-	if m.amount != nil && edits(msg) {
-		a := *m.amount
-		a.input, _ = a.input.Update(msg)
-		m.amount = &a
+	if m.input != nil && edits(msg) {
+		in := *m.input
+		in, _ = in.Update(msg)
+		m.input = &in
 		return m, Result{}
 	}
 	km, ok := msg.(tea.KeyPressMsg)
@@ -269,7 +228,7 @@ func (m Model) Update(msg tea.Msg) (Model, Result) {
 
 // press is enter on the focused button: Cancel cancels, the action
 // button confirms — except an irreversible action, which only a capital
-// Y confirms, and a count that isn't valid.
+// Y confirms, and a field whose check reports a problem.
 func (m Model) press() (Model, Result) {
 	switch {
 	case !m.onAction:
@@ -283,9 +242,9 @@ func (m Model) press() (Model, Result) {
 }
 
 func (m Model) result(o Outcome) Result {
-	r := Result{Outcome: o, Action: m.req.Action}
+	r := Result{Outcome: o}
 	if o == Confirmed {
-		r.Count, _ = m.Count()
+		r.Text = m.Text()
 	}
 	return r
 }
@@ -296,7 +255,7 @@ type Styles struct {
 	Muted      color.Color // row labels, hints
 	Warn       color.Color // the recoverable tier's border, warning and focused button
 	OnWarn     color.Color // text on the Warn button
-	Danger     color.Color // the irreversible tier's border; an invalid count
+	Danger     color.Color // the irreversible tier's border; a field's problem
 	DangerFill color.Color // the focused irreversible button
 	OnDanger   color.Color // text on the DangerFill button
 	Monochrome bool        // draw the focused button in reverse video
@@ -305,41 +264,43 @@ type Styles struct {
 // Live is what the modal shows that the parent owns and may change while
 // it is open.
 type Live struct {
-	// KubeContext is the Context row, already badged for production.
-	KubeContext string
+	// Rows follow the spec's rows, e.g. a Context row badged for
+	// production.
+	Rows [][2]string
 	// Running are the quit confirmation's running actions.
 	Running []string
 }
 
 // View draws the modal at most maxWidth columns wide (and at most
-// MaxWidth). The irreversible tier is drawn in Danger with a ⚠ title and
-// asks for a capital Y; the recoverable tier is drawn in Warn.
+// MaxWidth): the spec's rows, then live's, then the field. The
+// irreversible tier is drawn in Danger with a ⚠ title and asks for a
+// capital Y; the recoverable tier is drawn in Warn.
 func (m Model) View(maxWidth int, st Styles, live Live) string {
 	width := min(maxWidth, MaxWidth)
-	if m.req.Quit {
+	if m.quit {
 		return m.quitView(width, st, live.Running)
 	}
 	inner := width - 4 // border and padding
 	border, fill, onFill, yes := st.Warn, st.Warn, st.OnWarn, "y"
-	title := m.req.Verb() + " " + m.req.Noun()
+	title := m.spec.Title
 	if m.irreversible() {
 		border, fill, onFill, yes = st.Danger, st.DangerFill, st.OnDanger, "Y"
 		title = "⚠ " + title
 	}
 
 	label := lipgloss.NewStyle().Foreground(st.Muted).Width(9)
-	rows := []string{
-		label.Render("Kind") + m.req.Kind,
-		label.Render("Name") + m.req.Target,
-		label.Render("Context") + live.KubeContext,
+	rows := make([]string, 0, len(m.spec.Rows)+len(live.Rows)+1)
+	for _, r := range slices.Concat(m.spec.Rows, live.Rows) {
+		rows = append(rows, label.Render(r[0])+r[1])
 	}
-	warning, warnColor := m.req.Warning, border
-	if a := m.amount; a != nil {
-		rows = append(rows, label.Render("Add")+a.input.View()+" instances")
-		if n, problem := a.count(); problem == "" {
-			warning = mutation.PoolScaleNotice(a.pool, n)
-		} else {
+	warning, warnColor := m.spec.Warning, border
+	if f := m.spec.Field; f != nil {
+		rows = append(rows, label.Render(f.Label)+m.input.View()+" "+f.Suffix)
+		switch notice, problem := m.check(); {
+		case problem != "":
 			warning, warnColor = problem, st.Danger
+		case notice != "":
+			warning = notice
 		}
 	}
 	body := strings.Join(rows, "\n")
@@ -349,7 +310,7 @@ func (m Model) View(maxWidth int, st Styles, live Live) string {
 	body += "\n\n" + lipgloss.PlaceHorizontal(inner, lipgloss.Center, m.buttons(st, fill, onFill))
 
 	hints := yes + " confirm · n/esc cancel · ←/→ select"
-	if m.amount != nil {
+	if m.input != nil {
 		hints = "0-9 count · " + yes + "/enter confirm · n/esc cancel"
 	}
 	if m.irreversible() {
@@ -357,7 +318,7 @@ func (m Model) View(maxWidth int, st Styles, live Live) string {
 	}
 	if m.nudge {
 		hints = lipgloss.NewStyle().Foreground(border).Bold(true).
-			Render("press capital Y to " + strings.ToLower(m.req.Verb()) + ", or esc to cancel")
+			Render("press capital Y to " + strings.ToLower(m.spec.Verb) + ", or esc to cancel")
 	}
 	return view.Modal(title, body, hints, border, st.Muted, width)
 }
@@ -398,5 +359,5 @@ func (m Model) buttons(st Styles, fill, onFill color.Color) string {
 		}
 		return s.Render("[ " + text + " ]")
 	}
-	return button("Cancel", !m.onAction) + "   " + button(m.req.Verb(), m.onAction)
+	return button("Cancel", !m.onAction) + "   " + button(m.spec.Verb, m.onAction)
 }

@@ -3,6 +3,7 @@ package confirm
 import (
 	"fmt"
 	"image/color"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -10,10 +11,6 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/jingle2008/toolkit/internal/mutation"
-	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func press(k string) tea.KeyPressMsg {
@@ -44,37 +41,45 @@ var styles = Styles{
 	OnDanger:   lipgloss.Color("15"),
 }
 
+var ctx = Live{Rows: [][2]string{{"Context", "ctx-1"}}}
+
 func recoverable() Model {
-	return New(Request{Action: mutation.DrainNode, Kind: "GPUNode", Target: "gpu-1", Warning: "Evicts every pod."})
+	return New(Spec{
+		Title: "Drain node", Verb: "Drain",
+		Rows:    [][2]string{{"Kind", "GPUNode"}, {"Name", "gpu-1"}},
+		Warning: "Evicts every pod.",
+	})
 }
 
 func irreversible() Model {
-	return New(Request{Action: mutation.DeleteDAC, Kind: "DedicatedAICluster", Target: "dac-1", Warning: "This is irreversible."})
+	return New(Spec{
+		Title: "Delete DAC", Verb: "Delete", Tier: Irreversible,
+		Rows:    [][2]string{{"Kind", "DedicatedAICluster"}, {"Name", "dac-1"}},
+		Warning: "This is irreversible.",
+	})
 }
 
-func scale(pool models.GPUPool) Model {
-	return New(Request{Action: mutation.ScaleGPUPool, Target: pool.Name, Pool: &pool})
-}
-
-// The modal names every action it can confirm — all but set tenant,
-// which the edit-tenant form confirms — and a label names one action.
-func TestLabels_CoverModalActions(t *testing.T) {
-	t.Parallel()
-	for _, a := range mutation.Actions() {
-		if a == mutation.SetTenant {
-			continue
-		}
-		assert.NotEmpty(t, Verb(a), a.String())
-		assert.NotEmpty(t, Noun(a), a.String())
-	}
-	assert.NotContains(t, labels, mutation.SetTenant)
-}
-
-func TestRequest_Labels(t *testing.T) {
-	t.Parallel()
-	assert.Equal(t, "Scale up", Request{Action: mutation.ScaleGPUPool}.Verb())
-	assert.Equal(t, "GPU pool", Request{Action: mutation.ScaleGPUPool}.Noun())
-	assert.Equal(t, "Quit", Request{Quit: true}.Verb())
+// counted is a spec with a count field accepting 1..max, its notice
+// naming the count.
+func counted(initial string, maxN int) Model {
+	return New(Spec{
+		Title: "Scale up GPU pool", Verb: "Scale up",
+		Rows:    [][2]string{{"Kind", "GPUPool"}, {"Name", "p"}},
+		Warning: "unused while the field has a notice",
+		Field: &Field{
+			Label: "Add", Suffix: "instances", Initial: initial,
+			Check: func(text string) (string, string) {
+				n, err := strconv.Atoi(text)
+				switch {
+				case err != nil || n < 1:
+					return "", "Enter a whole number, at least 1."
+				case n > maxN:
+					return "", fmt.Sprintf("%d is more than %d.", n, maxN)
+				}
+				return fmt.Sprintf("Adds %d.", n), ""
+			},
+		},
+	})
 }
 
 func TestNew(t *testing.T) {
@@ -82,32 +87,34 @@ func TestNew(t *testing.T) {
 	m := recoverable()
 	assert.False(t, m.OnAction(), "Cancel has the focus")
 	assert.False(t, m.Nudged())
-	assert.Empty(t, m.CountText())
-	_, ok := m.Count()
-	assert.False(t, ok, "no count without a pool")
-	assert.Equal(t, "gpu-1", m.Request().Target)
+	assert.False(t, m.Quit())
+	assert.Empty(t, m.Text())
+	assert.Equal(t, "Drain", m.Spec().Verb)
 
-	s := scale(models.GPUPool{Name: "p", ID: "x", Size: 4, ActualSize: 2})
-	assert.True(t, s.OnAction(), "a scale-up starts on its action button")
-	assert.Equal(t, "2", s.CountText())
-	n, ok := s.Count()
-	require.True(t, ok)
-	assert.Equal(t, 2, n)
+	s := counted("2", 100)
+	assert.True(t, s.OnAction(), "a field starts on its action button")
+	assert.Equal(t, "2", s.Text())
+
+	q := NewQuit()
+	assert.True(t, q.Quit())
+	assert.Equal(t, "Quit", q.Spec().Verb)
 }
 
 func TestUpdate_Recoverable(t *testing.T) {
 	t.Parallel()
 	for _, k := range []string{"y", "Y"} {
 		_, res := recoverable().Update(press(k))
-		assert.Equal(t, Result{Outcome: Confirmed, Action: mutation.DrainNode}, res, k)
+		assert.Equal(t, Result{Outcome: Confirmed}, res, k)
 	}
 	for _, k := range []string{"n", "N", "esc"} {
 		_, res := recoverable().Update(press(k))
-		assert.Equal(t, Result{Outcome: Cancelled, Action: mutation.DrainNode}, res, k)
+		assert.Equal(t, Result{Outcome: Cancelled}, res, k)
 	}
 	m, res := recoverable().Update(press("x"))
 	assert.Equal(t, None, res.Outcome, "other keys are swallowed")
 	assert.False(t, m.Nudged())
+	_, res = recoverable().Update(press("5"))
+	assert.Equal(t, None, res.Outcome, "digits without a field are swallowed")
 	_, res = recoverable().Update(tea.WindowSizeMsg{Width: 1})
 	assert.Equal(t, None, res.Outcome, "non-key messages are ignored")
 }
@@ -119,7 +126,6 @@ func TestUpdate_Irreversible(t *testing.T) {
 	assert.True(t, m.Nudged())
 	_, res = m.Update(press("Y"))
 	assert.Equal(t, Confirmed, res.Outcome)
-	assert.Equal(t, mutation.DeleteDAC, res.Action)
 
 	_, res = irreversible().Update(press("esc"))
 	assert.Equal(t, Cancelled, res.Outcome)
@@ -145,45 +151,58 @@ func TestUpdate_FocusAndEnter(t *testing.T) {
 	assert.True(t, m.Nudged())
 }
 
-func TestUpdate_ScaleCount(t *testing.T) {
+// The field takes digits, deletions and pastes; a problem from Check
+// blocks confirming, and a confirm carries the text.
+func TestUpdate_Field(t *testing.T) {
 	t.Parallel()
-	m := scale(models.GPUPool{Name: "p", ID: "x", Size: 4, ActualSize: 4})
+	m := counted("1", 100)
 	orig := m
 	m, res := m.Update(press("backspace"))
 	assert.Equal(t, None, res.Outcome)
-	assert.Empty(t, m.CountText())
-	assert.Equal(t, "1", orig.CountText(), "an edit doesn't reach earlier copies")
+	assert.Empty(t, m.Text())
+	assert.Equal(t, "1", orig.Text(), "an edit doesn't reach earlier copies")
 
 	_, res = m.Update(press("y"))
-	assert.Equal(t, None, res.Outcome, "no count, no confirm")
+	assert.Equal(t, None, res.Outcome, "a problem blocks y")
 	_, res = m.Update(press("enter"))
-	assert.Equal(t, None, res.Outcome)
+	assert.Equal(t, None, res.Outcome, "and enter")
 
 	m, _ = m.Update(tea.PasteMsg{Content: "3"})
 	m, _ = m.Update(press("x"))
-	assert.Equal(t, "3", m.CountText(), "letters don't type into it")
+	assert.Equal(t, "3", m.Text(), "letters don't type into it")
 	_, res = m.Update(press("enter"))
-	assert.Equal(t, Result{Outcome: Confirmed, Action: mutation.ScaleGPUPool, Count: 3}, res)
+	assert.Equal(t, Result{Outcome: Confirmed, Text: "3"}, res)
+	_, res = m.Update(press("Y"))
+	assert.Equal(t, Result{Outcome: Confirmed, Text: "3"}, res)
 
 	_, res = m.Update(press("n"))
-	assert.Equal(t, Result{Outcome: Cancelled, Action: mutation.ScaleGPUPool}, res, "a cancel carries no count")
+	assert.Equal(t, Result{Outcome: Cancelled}, res, "a cancel carries no text")
 
 	for _, d := range "01" {
 		m, _ = m.Update(press(string(d)))
 	}
-	assert.Equal(t, "301", m.CountText())
-	_, ok := m.Count()
-	assert.False(t, ok, "past the one-step limit")
+	assert.Equal(t, "301", m.Text())
+	_, res = m.Update(press("y"))
+	assert.Equal(t, None, res.Outcome, "past the check's limit")
+}
+
+// A field without a Check accepts any text.
+func TestUpdate_FieldWithoutCheck(t *testing.T) {
+	t.Parallel()
+	m := New(Spec{Verb: "Go", Field: &Field{Label: "N"}})
+	_, res := m.Update(press("enter"))
+	assert.Equal(t, Result{Outcome: Confirmed}, res)
 }
 
 func TestView_Recoverable(t *testing.T) {
 	t.Parallel()
-	out := ansi.Strip(recoverable().View(120, styles, Live{KubeContext: "ctx-1"}))
+	out := ansi.Strip(recoverable().View(120, styles, ctx))
 	assert.Contains(t, out, "Drain node")
 	assert.NotContains(t, out, "⚠")
 	assert.Contains(t, out, "Kind     GPUNode")
 	assert.Contains(t, out, "Name     gpu-1")
-	assert.Contains(t, out, "Context  ctx-1")
+	assert.Contains(t, out, "Context  ctx-1", "live rows follow the spec's")
+	assert.Less(t, strings.Index(out, "Name"), strings.Index(out, "Context"))
 	assert.Contains(t, out, "Evicts every pod.")
 	assert.Contains(t, out, "[ Cancel ]")
 	assert.Contains(t, out, "[ Drain ]")
@@ -203,16 +222,26 @@ func TestView_Irreversible(t *testing.T) {
 	assert.Equal(t, 40, lipgloss.Width(m.View(40, styles, Live{})), "narrower when the screen is")
 }
 
-func TestView_Scale(t *testing.T) {
+// The field row follows the live rows; its notice replaces the warning,
+// and its problem is drawn in Danger instead.
+func TestView_Field(t *testing.T) {
 	t.Parallel()
-	m := scale(models.GPUPool{Name: "p", ID: "x", Size: 4, ActualSize: 2})
-	out := ansi.Strip(m.View(120, styles, Live{}))
+	m := counted("2", 100)
+	raw := m.View(120, styles, ctx)
+	out := ansi.Strip(raw)
 	assert.Contains(t, out, "Add      2      instances")
-	assert.Contains(t, out, "Grows the instance pool from 2 to 4 instances.")
+	assert.Less(t, strings.Index(out, "Context"), strings.Index(out, "Add"))
+	assert.Contains(t, out, "Adds 2.")
+	assert.NotContains(t, out, "unused while")
 	assert.Contains(t, out, "0-9 count · y/enter confirm · n/esc cancel")
 
 	m, _ = m.Update(press("backspace"))
-	assert.Contains(t, ansi.Strip(m.View(120, styles, Live{})), "Enter a whole number of instances, at least 1.")
+	raw = m.View(120, styles, ctx)
+	assert.Contains(t, ansi.Strip(raw), "Enter a whole number, at least 1.")
+	assert.Contains(t, raw, "\x1b[31mEnter", "a problem is drawn in Danger")
+
+	quiet := New(Spec{Verb: "Go", Warning: "the warning", Field: &Field{Label: "N", Initial: "1"}})
+	assert.Contains(t, ansi.Strip(quiet.View(120, styles, Live{})), "the warning", "no notice keeps the warning")
 }
 
 func TestView_FocusedButton(t *testing.T) {
@@ -225,10 +254,11 @@ func TestView_FocusedButton(t *testing.T) {
 
 func TestView_Quit(t *testing.T) {
 	t.Parallel()
-	q := New(Request{Quit: true})
-	out := ansi.Strip(q.View(120, styles, Live{Running: []string{"drain gpu-1"}}))
+	q := NewQuit()
+	out := ansi.Strip(q.View(120, styles, Live{Rows: ctx.Rows, Running: []string{"drain gpu-1"}}))
 	assert.Contains(t, out, "Quit with 1 action running")
 	assert.Contains(t, out, "  drain gpu-1")
+	assert.NotContains(t, out, "Context", "the quit confirmation has no rows")
 	assert.Contains(t, out, "[ Quit ]")
 	assert.Contains(t, out, "y/q quit · n/esc cancel · ←/→ select")
 
@@ -246,7 +276,9 @@ func TestView_Quit(t *testing.T) {
 	assert.Equal(t, snapshot, running, "the caller's list is left alone")
 
 	_, res := q.Update(press("y"))
-	assert.Equal(t, Confirmed, res.Outcome)
+	assert.Equal(t, Result{Outcome: Confirmed}, res)
+	_, res = q.Update(press("esc"))
+	assert.Equal(t, Cancelled, res.Outcome)
 }
 
 // Styles carries only colors; keep the zero Styles drawable.

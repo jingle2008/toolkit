@@ -86,7 +86,7 @@ func (m *Model) handleActionDone(msg actionDoneMsg) tea.Msg {
 	// The quit confirmation exists only because actions were running;
 	// with the last one done it would ask about none, so close it (q
 	// then quits at once).
-	if len(m.actions) == 0 && m.viewMode == common.ConfirmView && m.confirm.Request().Quit {
+	if len(m.actions) == 0 && m.viewMode == common.ConfirmView && m.confirm.Quit() {
 		m.dismissConfirm()
 	}
 	return msg.msg
