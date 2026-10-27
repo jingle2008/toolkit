@@ -491,11 +491,14 @@ func emitCategory(
 		// it from the same value used as the map key.
 		return writeMap(w, relatedOrFiltered(relations.GPUNode, grouped, domain.GPUNode, related, filter), limit, opts, domain.GPUNode, env, selected)
 	case domain.GPUWorkload:
+		// The workloads' owners load while they do.
+		owners := make(chan *models.Dataset, 1)
+		go func() { owners <- workloadOwnersDataset(ctx, ld, cfg, env) }()
 		grouped, err := ld.LoadGPUWorkloadsByNode(ctx, cfg.KubeConfig, env)
 		if err != nil {
 			return fmt.Errorf("load gpu workloads: %w", err)
 		}
-		ds := workloadOwnersDataset(ctx, ld, cfg, env)
+		ds := <-owners
 		ds.SetGPUWorkloadMap(grouped)
 		return writeMap(w, relatedOrFiltered(relations.GPUWorkload, ds.GPUWorkloadMap, domain.GPUWorkload, related, filter),
 			limit, opts, domain.GPUWorkload, env, selected)
