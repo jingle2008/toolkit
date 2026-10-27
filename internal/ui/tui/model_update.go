@@ -14,6 +14,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/logview"
 	"github.com/jingle2008/toolkit/internal/ui/tui/toast"
 	view "github.com/jingle2008/toolkit/internal/ui/tui/view"
 )
@@ -72,11 +73,8 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// status-bar loading nugget keeps animating while the user
 		// stays in ListView/DetailsView during a load.
 		return m, m.handleSpinnerTickMsg(msg)
-	case logTickMsg:
-		if m.viewMode == common.LogView {
-			return m, logTickCmd()
-		}
-		return m, nil
+	case logview.TickMsg:
+		return m, m.handleLogTick()
 	case stopwatch.TickMsg, stopwatch.StartStopMsg, stopwatch.ResetMsg:
 		return m, m.handleStopwatchMsg(msg)
 	// Data / loaded messages: routed at the top so a load completing
@@ -229,9 +227,7 @@ func (m *Model) interceptToggleLog(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	if m.viewMode == common.ListView && m.inputMode != common.NormalInput {
 		return m, nil, false
 	}
-	m.log.returnView = m.viewMode
-	m.viewMode = common.LogView
-	return m, logTickCmd(), true
+	return m, m.openLog(), true
 }
 
 func (m *Model) delegateToActiveView(msg tea.Msg) (tea.Model, tea.Cmd) {

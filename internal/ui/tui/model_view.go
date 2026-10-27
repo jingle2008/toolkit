@@ -124,9 +124,7 @@ func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea
 }
 
 // indentLines prefixes every line of s with pad.
-func indentLines(s, pad string) string {
-	return pad + strings.ReplaceAll(s, "\n", "\n"+pad)
-}
+func indentLines(s, pad string) string { return view.IndentLines(s, pad) }
 
 // View renders the current state of the model as a full-screen frame.
 func (m *Model) View() tea.View {

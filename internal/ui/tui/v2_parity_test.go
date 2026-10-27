@@ -17,9 +17,10 @@ import (
 func TestViewports_NoHorizontalScrollKeys(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
+	logVP := m.log.Viewport()
 	for name, vp := range map[string]bool{
 		"details": m.viewport.KeyMap.Left.Enabled() || m.viewport.KeyMap.Right.Enabled(),
-		"log":     m.log.viewport.KeyMap.Left.Enabled() || m.log.viewport.KeyMap.Right.Enabled(),
+		"log":     logVP.KeyMap.Left.Enabled() || logVP.KeyMap.Right.Enabled(),
 	} {
 		assert.False(t, vp, "%s viewport still scrolls sideways", name)
 	}

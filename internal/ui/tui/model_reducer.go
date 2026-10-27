@@ -385,6 +385,9 @@ func (m *Model) updateLayout(w, h int) {
 		table.WithHeight(body)(m.table)
 		m.table.UpdateViewport()
 	}
+	if m.viewMode == common.LogView {
+		m.refreshLog()
+	}
 }
 
 // refreshDisplay re-renders columns and rows for the current category,

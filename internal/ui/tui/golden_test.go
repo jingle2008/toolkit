@@ -196,18 +196,17 @@ var goldenViews = []struct {
 	}},
 	{"log-following", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
-		m.viewMode = common.LogView
+		_ = m.openLog()
 	}},
 	{"log-paused", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
-		m.viewMode = common.LogView
-		_ = m.render() // first render follows the tail
-		m.log.viewport.SetYOffset(0)
+		_ = m.openLog() // opening follows the tail
+		_, _ = m.updateLogView(keyPress("home"))
 	}},
 	{"log-filtered", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.DedicatedAICluster)
-		m.viewMode = common.LogView
-		m.log.filter = "category 4"
+		_ = m.openLog()
+		m.log = m.log.SetFilter("category 4")
 	}},
 	{"confirm-recoverable", func(t *testing.T, m *Model) {
 		showCategory(t, m, domain.GPUNode)
