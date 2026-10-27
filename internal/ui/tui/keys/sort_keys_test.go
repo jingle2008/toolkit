@@ -95,11 +95,11 @@ func TestSortSequences(t *testing.T) {
 		for _, k := range b.Keys() {
 			assert.NotEqual(t, SortLeader, k, "%s binds the sort leader", b.Help().Desc)
 		}
-		if b.Help().Desc == SortPrefix+common.TenantCol {
+		if b.Help().Desc == sortPrefix+common.TenantCol {
 			found = true
 			assert.Equal(t, "s t", b.Help().Key)
 		}
-		if strings.HasPrefix(b.Help().Desc, SortPrefix) {
+		if isSort(b) {
 			assert.True(t, strings.HasPrefix(b.Help().Key, SortLeader+" "), b.Help().Desc)
 		}
 	}

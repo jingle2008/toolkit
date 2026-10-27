@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
+	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -110,10 +111,7 @@ func (m *Model) inCurrentEnv(env models.Environment) bool {
 // order, or nil when the quick-switch column should be hidden: outside list
 // view, in environment-independent categories, or with nothing to switch to.
 func (m *Model) quickSwitchBindings(mode common.ViewMode) []key.Binding {
-	if mode != common.ListView || !m.category.IsEnvironmentScoped() || m.recentEnvs.Len() < 2 {
-		return nil
-	}
-	entries := m.recentEnvs.BySlot()
+	entries := m.quickSwitchEntries(mode)
 	out := make([]key.Binding, 0, len(entries))
 	for _, e := range entries {
 		desc := e.Env.KubeContext()
@@ -125,7 +123,20 @@ func (m *Model) quickSwitchBindings(mode common.ViewMode) []key.Binding {
 			key.WithHelp(strconv.Itoa(e.Slot), desc),
 		))
 	}
+	if len(out) == 0 {
+		return nil
+	}
 	return out
+}
+
+// quickSwitchEntries is the remembered environments the digit keys switch
+// to in mode, by slot: none outside an environment-scoped list view, or
+// with fewer than two to switch between.
+func (m *Model) quickSwitchEntries(mode common.ViewMode) []recentenv.Entry {
+	if mode != common.ListView || !m.category.IsEnvironmentScoped() || m.recentEnvs.Len() < 2 {
+		return nil
+	}
+	return m.recentEnvs.BySlot()
 }
 
 // pruneRecentEnvs drops remembered environments the repo no longer declares.

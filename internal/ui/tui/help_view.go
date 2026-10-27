@@ -80,9 +80,8 @@ func (m *Model) helpSectionsFor(filter string) []helpSection {
 // sort by its column alone ("s n  Name") for the Sort section.
 func splitSorts(bind []key.Binding) (rest, sorts []key.Binding) {
 	for _, b := range bind {
-		h := b.Help()
-		if col, ok := strings.CutPrefix(h.Desc, keys.SortPrefix); ok {
-			sorts = append(sorts, key.NewBinding(key.WithKeys(b.Keys()...), key.WithHelp(h.Key, col)))
+		if col, ok := keys.SortColumnOf(b); ok {
+			sorts = append(sorts, key.NewBinding(key.WithKeys(b.Keys()...), key.WithHelp(b.Help().Key, col)))
 			continue
 		}
 		rest = append(rest, b)

@@ -139,22 +139,21 @@ func (m *Model) paletteEnvironments() []paletteItem {
 // opens from the list view (: is a list-view key).
 func (m *Model) paletteActions() []paletteItem {
 	var items []paletteItem
-	sortItem := func(h key.Help) (paletteItem, bool) {
-		col, ok := strings.CutPrefix(h.Desc, keys.SortPrefix)
+	sortItem := func(b key.Binding) (paletteItem, bool) {
+		col, ok := keys.SortColumnOf(b)
 		return paletteItem{
-			Item: palette.Item{Kind: "action", Label: "Sort by " + col, Hint: h.Key},
+			Item: palette.Item{Kind: "action", Label: "Sort by " + col, Hint: b.Help().Key},
 			run:  func() tea.Cmd { return m.sortTableByColumn(col) },
 		}, ok
 	}
 	// Sorts every list view has (Name) are mode keys, not the category's.
 	for _, b := range m.keys.Mode {
-		if it, ok := sortItem(b.Help()); ok {
+		if it, ok := sortItem(b); ok {
 			items = append(items, it)
 		}
 	}
 	for _, b := range m.keys.Context {
-		h := b.Help()
-		if it, ok := sortItem(h); ok {
+		if it, ok := sortItem(b); ok {
 			items = append(items, it)
 			continue
 		}
@@ -162,7 +161,7 @@ func (m *Model) paletteActions() []paletteItem {
 		if key.Matches(pressFor(b.Keys()[0]), keys.ToggleFaulty) {
 			kind = "toggle"
 		}
-		k := b.Keys()[0]
+		h, k := b.Help(), b.Keys()[0]
 		items = append(items, paletteItem{
 			Item: palette.Item{Kind: kind, Label: h.Desc, Hint: h.Key},
 			run:  func() tea.Cmd { return tea.Batch(m.handleNormalKeys(pressFor(k))...) },

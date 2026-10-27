@@ -34,7 +34,7 @@ func (m *Model) handleAdditionalKeys(msg tea.KeyMsg) tea.Cmd {
 	}
 
 	binding := m.keys.Context[idx]
-	if column, ok := strings.CutPrefix(binding.Help().Desc, keys.SortPrefix); ok {
+	if column, ok := keys.SortColumnOf(binding); ok {
 		return m.sortTableByColumn(column)
 	}
 
