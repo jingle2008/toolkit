@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -96,17 +95,15 @@ func writeConfigView(w io.Writer, cfgFile, format string, pretty bool) error {
 		Settings:   settings,
 	}
 
-	opts := output.Options{Pretty: pretty}
-	switch strings.ToLower(format) {
-	case "", "yaml":
-		opts.Format = output.FormatYAML
-		return output.WriteYAML(w, view, opts)
-	case "json":
-		opts.Format = output.FormatJSON
-		return output.WriteJSON(w, view, opts)
-	default:
-		return fmt.Errorf("invalid output format %q (valid: yaml|json)", format)
+	f, err := output.ParseFormatIn(format, output.FormatYAML, output.FormatYAML, output.FormatJSON)
+	if err != nil {
+		return err
 	}
+	opts := output.Options{Format: f, Pretty: pretty}
+	if f == output.FormatJSON {
+		return output.WriteJSON(w, view, opts)
+	}
+	return output.WriteYAML(w, view, opts)
 }
 
 // configValidationView is the shape printed in --validate mode. Kept
@@ -138,20 +135,17 @@ func writeConfigValidation(w io.Writer, cfgFile, format string, pretty bool) err
 		view.Error = validErr.Error()
 	}
 
-	opts := output.Options{Pretty: pretty}
-	switch strings.ToLower(format) {
-	case "", "yaml":
-		opts.Format = output.FormatYAML
-		if err := output.WriteYAML(w, view, opts); err != nil {
-			return err
-		}
-	case "json":
-		opts.Format = output.FormatJSON
-		if err := output.WriteJSON(w, view, opts); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("invalid output format %q (valid: yaml|json)", format)
+	f, err := output.ParseFormatIn(format, output.FormatYAML, output.FormatYAML, output.FormatJSON)
+	if err != nil {
+		return err
+	}
+	opts := output.Options{Format: f, Pretty: pretty}
+	write := output.WriteYAML
+	if f == output.FormatJSON {
+		write = output.WriteJSON
+	}
+	if err := write(w, view, opts); err != nil {
+		return err
 	}
 
 	if validErr != nil {

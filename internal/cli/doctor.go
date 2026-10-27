@@ -129,11 +129,9 @@ func settingKeys(root *cobra.Command) map[string]bool {
 func runDoctor(ctx context.Context, w io.Writer, cfgFile, format string, relations bool, read configFileRead) error {
 	// Validate format before doing any work — a typo'd -o shouldn't
 	// stat the filesystem (and stays consistent with `config`).
-	normalized := strings.ToLower(format)
-	switch normalized {
-	case "", "table", "json", "yaml":
-	default:
-		return fmt.Errorf("invalid output format %q (valid: table|json|yaml)", format)
+	f, err := output.ParseFormatIn(format, output.FormatTable, output.FormatTable, output.FormatJSON, output.FormatYAML)
+	if err != nil {
+		return err
 	}
 
 	var cfg config.Config
@@ -159,19 +157,16 @@ func runDoctor(ctx context.Context, w io.Writer, cfgFile, format string, relatio
 		}
 	}
 
-	switch normalized {
-	case "", "table":
-		if err := writeDoctorTable(w, results); err != nil {
-			return err
-		}
-	case "json":
-		if err := output.WriteJSON(w, results, output.Options{Pretty: true}); err != nil {
-			return err
-		}
-	case "yaml":
-		if err := output.WriteYAML(w, results, output.Options{Pretty: true}); err != nil {
-			return err
-		}
+	switch f {
+	case output.FormatJSON:
+		err = output.WriteJSON(w, results, output.Options{Pretty: true})
+	case output.FormatYAML:
+		err = output.WriteYAML(w, results, output.Options{Pretty: true})
+	default:
+		err = writeDoctorTable(w, results)
+	}
+	if err != nil {
+		return err
 	}
 
 	if n := countFails(results); n > 0 {

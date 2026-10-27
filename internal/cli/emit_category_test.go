@@ -241,7 +241,7 @@ func TestEmitTenancyGroup_UnsupportedCategory(t *testing.T) {
 	var buf bytes.Buffer
 	// A category that isn't part of the tenancy group must be rejected
 	// rather than silently emitting nothing.
-	err := emitTenancyGroup(&buf, domain.BaseModel, models.TenancyOverrideGroup{},
+	err := emitTenancyGroup(context.Background(), &buf, domain.BaseModel, models.TenancyOverrideGroup{},
 		"", nil, 0, output.Options{Format: output.FormatJSON}, testEnv(), nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not in tenancy group")

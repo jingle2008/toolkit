@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -54,6 +55,24 @@ func ParseFormat(s string) (Format, error) {
 	default:
 		return "", fmt.Errorf("invalid output format %q (valid: table|json|jsonl|yaml|csv|tsv)", s)
 	}
+}
+
+// ParseFormatIn parses s as one of a command's allowed formats: case-
+// insensitive, with "" meaning def. Every -o flag goes through it (or
+// ParseFormat, for all formats), so they agree on case and errors.
+func ParseFormatIn(s string, def Format, allowed ...Format) (Format, error) {
+	if s == "" {
+		return def, nil
+	}
+	f := Format(strings.ToLower(s))
+	if slices.Contains(allowed, f) {
+		return f, nil
+	}
+	names := make([]string, len(allowed))
+	for i, a := range allowed {
+		names[i] = string(a)
+	}
+	return "", fmt.Errorf("invalid output format %q (valid: %s)", s, strings.Join(names, "|"))
 }
 
 // Options controls how renderers emit data.

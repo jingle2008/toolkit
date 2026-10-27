@@ -18,10 +18,7 @@ func addDeleteCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 		Short: "Delete a resource (destructive)",
 	}
 
-	var (
-		dryRun bool
-		yes    bool
-	)
+	var gate cliGate
 	dacCmd := &cobra.Command{
 		Use:   "dac <name>",
 		Short: "Delete a dedicated AI cluster (synchronous; polls the work request)",
@@ -38,13 +35,12 @@ deliberately disabled to prevent reflex "y" answers.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			return withMutationSetup(cmd.Context(), cfgFile, false, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes},
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate,
 					ops.DeleteDAC(deps(cfg), opsEnv(cfg, env), name))
 			})
 		},
 	}
-	dacCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Print what would happen and exit")
-	dacCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Required: this action has no interactive prompt")
+	addGateFlags(dacCmd, mutation.DeleteDAC, &gate)
 
 	delCmd.AddCommand(dacCmd, newDeleteISVCCommand(cfgFile, deps))
 	rootCmd.AddCommand(delCmd)
@@ -57,8 +53,7 @@ deliberately disabled to prevent reflex "y" answers.`,
 // stuck on its finalizer.
 func newDeleteISVCCommand(cfgFile *string, deps depsFor) *cobra.Command {
 	var (
-		dryRun    bool
-		yes       bool
+		gate      cliGate
 		namespace string
 	)
 	cmd := &cobra.Command{
@@ -94,12 +89,11 @@ be unique. Destructive: requires explicit --yes.`,
 					}
 					return err
 				}
-				return runMutation(ctx, cmd.InOrStdin(), out, cliGate{DryRun: dryRun, Yes: yes}, op)
+				return runMutation(ctx, cmd.InOrStdin(), out, gate, op)
 			})
 		},
 	}
-	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Resolve and check the target, print what would happen, and exit")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Required: this action has no interactive prompt")
+	addGateFlags(cmd, mutation.DeleteInferenceService, &gate)
 	cmd.Flags().StringVar(&namespace, "namespace", "", "Namespace of the InferenceService (default: search all namespaces)")
 	return cmd
 }

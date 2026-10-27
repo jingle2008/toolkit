@@ -62,7 +62,7 @@ func emitFaulty(
 	}
 	for _, msg := range warnings {
 		logging.FromContext(ctx).Warn("get --faulty", "warning", msg)
-		fmt.Fprintf(os.Stderr, "warning: %s\n", msg)
+		warnf(ctx, "%s", msg)
 	}
 	switch cat { //nolint:exhaustive // validateFaulty admits only relations.FaultyCategories
 	case domain.BaseModel:
@@ -74,16 +74,16 @@ func emitFaulty(
 	case domain.GPUPool:
 		return writeSlice(w, faultySlice(ds, cat, ds.GPUPools, filter), limit, opts, cat, env, selected)
 	case domain.GPUNode:
-		return writeMap(w, relatedOrFiltered(relations.GPUNode, relations.FaultyMap(ds, cat, ds.GPUNodeMap), cat, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.GPUNode, relations.FaultyMap(ds, cat, ds.GPUNodeMap), cat, related, filter),
 			limit, opts, cat, env, selected)
 	case domain.GPUWorkload:
-		return writeMap(w, relatedOrFiltered(relations.GPUWorkload, relations.FaultyMap(ds, cat, ds.GPUWorkloadMap), cat, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.GPUWorkload, relations.FaultyMap(ds, cat, ds.GPUWorkloadMap), cat, related, filter),
 			limit, opts, cat, env, selected)
 	case domain.DedicatedAICluster:
-		return writeMap(w, relatedOrFiltered(relations.DedicatedAICluster, relations.FaultyMap(ds, cat, ds.DedicatedAIClusterMap), cat, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.DedicatedAICluster, relations.FaultyMap(ds, cat, ds.DedicatedAIClusterMap), cat, related, filter),
 			limit, opts, cat, env, selected)
 	case domain.InferenceService:
-		return writeMap(w, relatedOrFiltered(relations.InferenceService, relations.FaultyMap(ds, cat, ds.InferenceServiceMap), cat, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.InferenceService, relations.FaultyMap(ds, cat, ds.InferenceServiceMap), cat, related, filter),
 			limit, opts, cat, env, selected)
 	}
 	return fmt.Errorf("--faulty: %s rows are never faulty", cat)

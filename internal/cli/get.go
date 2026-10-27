@@ -355,14 +355,14 @@ func completeRelatedTo(_ *cobra.Command, args []string, _ string) ([]string, cob
 // Without --related-to it is exactly FilterMapOrAll, so output is
 // unchanged.
 func relatedOrFiltered[T models.NamedFilterable](
-	keys relations.Grouped[T], grouped map[string][]T, cat domain.Category, related *domain.Scope, filter string,
+	ctx context.Context, keys relations.Grouped[T], grouped map[string][]T, cat domain.Category, related *domain.Scope, filter string,
 ) map[string][]T {
 	if related == nil {
 		return collections.FilterMapOrAll(grouped, filter)
 	}
 	out := keys.Filter(grouped, related, filter, nil)
 	if countGrouped(out) == 0 && (filter == "" || countGrouped(keys.Filter(grouped, related, "", nil)) == 0) {
-		warnNoneRelated(cat, related)
+		warnNoneRelated(ctx, cat, related)
 	}
 	return out
 }
@@ -378,12 +378,12 @@ func countGrouped[T any](grouped map[string][]T) int {
 
 // relatedSlice is relatedOrFiltered for a flat category.
 func relatedSlice[T models.NamedFilterable](
-	keys relations.Flat[T], items []T, cat domain.Category, related *domain.Scope, filter string,
+	ctx context.Context, keys relations.Flat[T], items []T, cat domain.Category, related *domain.Scope, filter string,
 ) []T {
 	out := collections.FilterSlice(items, nil, filter, keys.Keep(related))
 	if related != nil && len(out) == 0 &&
 		(filter == "" || len(collections.FilterSlice(items, nil, "", keys.Keep(related))) == 0) {
-		warnNoneRelated(cat, related)
+		warnNoneRelated(ctx, cat, related)
 	}
 	return out
 }
@@ -392,8 +392,8 @@ func relatedSlice[T models.NamedFilterable](
 // mistyped name isn't mistaken for "nothing related". stdout still gets
 // the (empty) result for scripts. Callers skip it when rows are related
 // and only --filter hid them: the name is fine then.
-func warnNoneRelated(cat domain.Category, related *domain.Scope) {
-	fmt.Fprintf(os.Stderr, "warning: no %s rows related to %s/%s (the name must match the %s's first column exactly)\n",
+func warnNoneRelated(ctx context.Context, cat domain.Category, related *domain.Scope) {
+	warnf(ctx, "no %s rows related to %s/%s (the name must match the %s's first column exactly)",
 		cat, strings.ToLower(related.Category.String()), related.Name, related.Category)
 }
 
@@ -402,7 +402,7 @@ func warnNoneRelated(cat domain.Category, related *domain.Scope) {
 func warnLoad(ctx context.Context, warnings []string) {
 	for _, w := range warnings {
 		logging.FromContext(ctx).Warn("load incomplete", "warning", w)
-		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
+		warnf(ctx, "%s", w)
 	}
 }
 
@@ -438,7 +438,7 @@ func emitCategory(
 			return err
 		}
 		warnLoad(ctx, warnings)
-		return writeMap(w, relatedOrFiltered(relations.ImportedModel, grouped, domain.ImportedModel, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.ImportedModel, grouped, domain.ImportedModel, related, filter),
 			limit, opts, domain.ImportedModel, env, selected)
 	case domain.GPUPool:
 		items, warnings, err := query.GPUPools(ctx, src, env)
@@ -455,14 +455,14 @@ func emitCategory(
 		// No top-level `pool` injection: GPUNode.NodePool (json
 		// `poolName`) already carries the group key; the loader sets
 		// it from the same value used as the map key.
-		return writeMap(w, relatedOrFiltered(relations.GPUNode, grouped, domain.GPUNode, related, filter), limit, opts, domain.GPUNode, env, selected)
+		return writeMap(w, relatedOrFiltered(ctx, relations.GPUNode, grouped, domain.GPUNode, related, filter), limit, opts, domain.GPUNode, env, selected)
 	case domain.GPUWorkload:
 		grouped, warnings, err := query.GPUWorkloads(ctx, src, env)
 		if err != nil {
 			return err
 		}
 		warnLoad(ctx, warnings)
-		return writeMap(w, relatedOrFiltered(relations.GPUWorkload, grouped, domain.GPUWorkload, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.GPUWorkload, grouped, domain.GPUWorkload, related, filter),
 			limit, opts, domain.GPUWorkload, env, selected)
 	case domain.DedicatedAICluster:
 		grouped, warnings, err := query.DACs(ctx, src, env)
@@ -470,7 +470,7 @@ func emitCategory(
 			return err
 		}
 		warnLoad(ctx, warnings)
-		return writeMap(w, relatedOrFiltered(relations.DedicatedAICluster, grouped, domain.DedicatedAICluster, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.DedicatedAICluster, grouped, domain.DedicatedAICluster, related, filter),
 			limit, opts, domain.DedicatedAICluster, env, selected)
 	case domain.InferenceService:
 		// No top-level `namespace` injection: InferenceService.Namespace
@@ -480,7 +480,7 @@ func emitCategory(
 			return err
 		}
 		warnLoad(ctx, warnings)
-		return writeMap(w, relatedOrFiltered(relations.InferenceService, grouped, domain.InferenceService, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.InferenceService, grouped, domain.InferenceService, related, filter),
 			limit, opts, domain.InferenceService, env, selected)
 	case domain.Tenant,
 		domain.LimitTenancyOverride,
@@ -490,27 +490,27 @@ func emitCategory(
 		if err != nil {
 			return fmt.Errorf("load tenancy override group: %w", err)
 		}
-		return emitTenancyGroup(w, cat, group, filter, related, limit, opts, env, selected)
+		return emitTenancyGroup(ctx, w, cat, group, filter, related, limit, opts, env, selected)
 	case domain.LimitRegionalOverride:
 		items, err := ld.LoadLimitRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load limit regional overrides: %w", err)
 		}
-		return writeSlice(w, relatedSlice(relations.LimitRegionalOverride, items, domain.LimitRegionalOverride, related, filter),
+		return writeSlice(w, relatedSlice(ctx, relations.LimitRegionalOverride, items, domain.LimitRegionalOverride, related, filter),
 			limit, opts, domain.LimitRegionalOverride, env, selected)
 	case domain.ConsolePropertyRegionalOverride:
 		items, err := ld.LoadConsolePropertyRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load console property regional overrides: %w", err)
 		}
-		return writeSlice(w, relatedSlice(relations.ConsolePropertyRegionalOverride, items, domain.ConsolePropertyRegionalOverride, related, filter),
+		return writeSlice(w, relatedSlice(ctx, relations.ConsolePropertyRegionalOverride, items, domain.ConsolePropertyRegionalOverride, related, filter),
 			limit, opts, domain.ConsolePropertyRegionalOverride, env, selected)
 	case domain.PropertyRegionalOverride:
 		items, err := ld.LoadPropertyRegionalOverrides(ctx, cfg.RepoPath, env)
 		if err != nil {
 			return fmt.Errorf("load property regional overrides: %w", err)
 		}
-		return writeSlice(w, relatedSlice(relations.PropertyRegionalOverride, items, domain.PropertyRegionalOverride, related, filter),
+		return writeSlice(w, relatedSlice(ctx, relations.PropertyRegionalOverride, items, domain.PropertyRegionalOverride, related, filter),
 			limit, opts, domain.PropertyRegionalOverride, env, selected)
 	default:
 		dataset, err := ld.LoadDataset(ctx, cfg.RepoPath, env)
@@ -666,6 +666,7 @@ func writeEncoded(w writer, opts output.Options, items any) error {
 }
 
 func emitTenancyGroup(
+	ctx context.Context,
 	w writer,
 	cat domain.Category,
 	group models.TenancyOverrideGroup,
@@ -680,13 +681,13 @@ func emitTenancyGroup(
 	case domain.Tenant:
 		return writeSlice(w, collections.FilterSlice(group.Tenants, nil, filter, nil), limit, opts, domain.Tenant, env, selected)
 	case domain.LimitTenancyOverride:
-		return writeMap(w, relatedOrFiltered(relations.LimitTenancyOverride, group.LimitTenancyOverrideMap, domain.LimitTenancyOverride, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.LimitTenancyOverride, group.LimitTenancyOverrideMap, domain.LimitTenancyOverride, related, filter),
 			limit, opts, domain.LimitTenancyOverride, env, selected)
 	case domain.ConsolePropertyTenancyOverride:
-		return writeMap(w, relatedOrFiltered(relations.ConsolePropertyTenancyOverride, group.ConsolePropertyTenancyOverrideMap,
+		return writeMap(w, relatedOrFiltered(ctx, relations.ConsolePropertyTenancyOverride, group.ConsolePropertyTenancyOverrideMap,
 			domain.ConsolePropertyTenancyOverride, related, filter), limit, opts, domain.ConsolePropertyTenancyOverride, env, selected)
 	case domain.PropertyTenancyOverride:
-		return writeMap(w, relatedOrFiltered(relations.PropertyTenancyOverride, group.PropertyTenancyOverrideMap, domain.PropertyTenancyOverride, related, filter),
+		return writeMap(w, relatedOrFiltered(ctx, relations.PropertyTenancyOverride, group.PropertyTenancyOverrideMap, domain.PropertyTenancyOverride, related, filter),
 			limit, opts, domain.PropertyTenancyOverride, env, selected)
 	default:
 		return fmt.Errorf("category %s not in tenancy group", cat)

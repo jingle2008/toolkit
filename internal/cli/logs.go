@@ -307,8 +307,11 @@ type sessionView struct {
 }
 
 func writeSessions(w io.Writer, sessions []logging.Session, format string) error {
-	switch format {
-	case "json":
+	f, err := output.ParseFormatIn(format, output.FormatTable, output.FormatTable, output.FormatJSON)
+	if err != nil {
+		return err
+	}
+	if f == output.FormatJSON {
 		views := make([]sessionView, len(sessions))
 		for i, s := range sessions {
 			views[i] = sessionView{
@@ -317,21 +320,18 @@ func writeSessions(w io.Writer, sessions []logging.Session, format string) error
 			}
 		}
 		return output.WriteJSON(w, views, output.Options{Pretty: true})
-	case "table", "":
-		rows := make([][]string, len(sessions))
-		for i, s := range sessions {
-			status := "exited"
-			if s.Running {
-				status = "running"
-			}
-			rows[i] = []string{
-				s.Started.Format(time.DateTime), s.Cmd, strconv.Itoa(s.PID), humanBytes(s.Size), status,
-			}
-		}
-		return output.WriteTable(w, []string{"STARTED", "CMD", "PID", "SIZE", "STATUS"}, rows, output.Options{})
-	default:
-		return fmt.Errorf("invalid output format %q (valid: table|json)", format)
 	}
+	rows := make([][]string, len(sessions))
+	for i, s := range sessions {
+		status := "exited"
+		if s.Running {
+			status = "running"
+		}
+		rows[i] = []string{
+			s.Started.Format(time.DateTime), s.Cmd, strconv.Itoa(s.PID), humanBytes(s.Size), status,
+		}
+	}
+	return output.WriteTable(w, []string{"STARTED", "CMD", "PID", "SIZE", "STATUS"}, rows, output.Options{})
 }
 
 // humanBytes renders n in binary units, one decimal from KB up.

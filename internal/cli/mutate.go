@@ -196,6 +196,17 @@ type cliGate struct {
 	Outcome func() string
 }
 
+// addGateFlags registers cmd's --dry-run and --yes, bound to g. --yes's
+// help follows a's tier: an Irreversible action has no prompt to skip.
+func addGateFlags(cmd *cobra.Command, a mutation.Action, g *cliGate) {
+	cmd.Flags().BoolVarP(&g.DryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")
+	yes := "Skip the interactive confirmation prompt"
+	if a.Tier == mutation.Irreversible {
+		yes = "Required: this action has no interactive prompt"
+	}
+	cmd.Flags().BoolVarP(&g.Yes, "yes", "y", false, yes)
+}
+
 // errDeclined is the prompt answered no: the call ends "aborted".
 var errDeclined = errors.New("declined at the prompt")
 

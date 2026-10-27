@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/mutation"
 	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
@@ -22,8 +23,7 @@ func addRestartCommand(rootCmd *cobra.Command, cfgFile *string, deps depsFor) {
 	}
 
 	var (
-		dryRun    bool
-		yes       bool
+		gate      cliGate
 		namespace string
 	)
 	isvcCmd := &cobra.Command{
@@ -40,13 +40,12 @@ be unique; an ambiguous name errors with the candidate namespaces.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
-				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), cliGate{DryRun: dryRun, Yes: yes},
+				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate,
 					ops.RestartISVC(deps(cfg), opsEnv(cfg, env), namespace, name))
 			})
 		},
 	}
-	isvcCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Resolve the target, print what would happen, and exit")
-	isvcCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
+	addGateFlags(isvcCmd, mutation.RestartInferenceService, &gate)
 	// No -n shorthand: every mutation command already uses -n for --dry-run.
 	isvcCmd.Flags().StringVar(&namespace, "namespace", "", "Namespace of the InferenceService (default: search all namespaces)")
 
@@ -58,9 +57,8 @@ be unique; an ambiguous name errors with the candidate namespaces.`,
 // reset of the instance backing a GPU node.
 func newRestartNodeCommand(cfgFile *string, deps depsFor) *cobra.Command {
 	var (
-		dryRun bool
-		yes    bool
-		ocid   string
+		gate cliGate
+		ocid string
 	)
 	cmd := &cobra.Command{
 		Use:   "node <node>",
@@ -79,11 +77,10 @@ or the command refuses; the OCID is then the target the
 prompt, dry run and audit log name.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNodeAction(cmd, cfgFile, deps, args[0], ocid, cliGate{DryRun: dryRun, Yes: yes}, ops.RestartNode)
+			return runNodeAction(cmd, cfgFile, deps, args[0], ocid, gate, ops.RestartNode)
 		},
 	}
-	cmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Look the target up, print what would happen and what was found, and exit")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip the interactive confirmation prompt")
+	addGateFlags(cmd, mutation.RestartNode, &gate)
 	cmd.Flags().StringVar(&ocid, "ocid", "", "Target this instance OCID without looking the node up; it must be in one of the env's GPU pools (needs --repo-path)")
 	return cmd
 }
