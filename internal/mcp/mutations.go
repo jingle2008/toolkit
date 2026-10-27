@@ -19,72 +19,30 @@ import (
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
-// Seam variables — overrideable in tests so handlers don't reach a
-// live cluster or OCI tenancy. Production callers go through the
-// upstream packages directly. The resolver seams (mcpResolveGPUNodeFn,
-// mcpResolveGPUPoolFn) cover the lookup-and-enrich chain so handler
-// tests don't have to stub a fake k8s+OCI pipeline.
-var (
-	mcpSetCordonFn        = k8s.SetCordon
-	mcpNodeCordonedFn     = k8s.NodeCordoned
-	mcpStartDrainFn       = k8s.StartDrain
-	mcpAwaitDrainFn       = k8s.AwaitDrain
-	mcpDrainStatusFn      = k8s.GetDrainStatus
-	mcpSoftResetFn        = oci.SoftResetInstance
-	mcpTerminateFn        = oci.TerminateInstance
-	mcpIncreasePoolSizeFn = oci.IncreasePoolSize
-	mcpDeleteDACFn        = oci.DeleteDedicatedAICluster
-	mcpGetDACFn           = oci.GetDedicatedAICluster
-	mcpResolveISVCFn      = k8s.ResolveInferenceService
-	mcpRestartISVCFn      = k8s.RestartInferenceService
-	mcpPlanOrphanISVCFn   = k8s.PlanOrphanInferenceServiceDelete
-	mcpDeleteOrphanISVCFn = k8s.DeleteOrphanInferenceService
-	mcpResolveGPUNodeFn   = func(ctx context.Context, s *Server, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+// productionDeps is the mutations' infra calls for s: the live cluster
+// and OCI, with lookups through s's loader and metadata file.
+func productionDeps(s *Server) *ops.Deps {
+	d := ops.Production()
+	d.ResolveGPUNode = func(ctx context.Context, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 		return resolve.GPUNode(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name, ocid)
 	}
-	mcpResolveGPUPoolFn = func(ctx context.Context, s *Server, env models.Environment, name string) (*models.GPUPool, error) {
+	d.ResolveGPUPool = func(ctx context.Context, env models.Environment, name string) (*models.GPUPool, error) {
 		return resolve.GPUPool(ctx, s.loader, s.cfg.RepoPath, s.cfg.KubeConfig, env, name)
 	}
-	mcpCheckTenantFn = func(s *Server, entry models.TenantMetadata) (bool, error) {
+	d.CheckTenant = func(entry models.TenantMetadata) (bool, error) {
 		if s.cfg.MetadataFile == "" {
 			return false, errors.New("no metadata file configured")
 		}
 		return configloader.CheckTenantUpsert(s.cfg.MetadataFile, entry)
 	}
-	mcpUpsertTenantFn = func(s *Server, entry models.TenantMetadata) error {
+	d.UpsertTenant = func(_ context.Context, entry models.TenantMetadata) error {
 		writer, ok := s.loader.(loader.TenantMetadataWriter)
 		if !ok {
 			return errors.New("loader does not support writing metadata")
 		}
 		return writer.UpsertTenantMetadata(entry)
 	}
-)
-
-// mcpDeps is ops.Deps over this package's seams, read per call so
-// tests' swaps take effect.
-func (s *Server) mcpDeps() ops.Deps {
-	return ops.Deps{
-		ResolveGPUNode: func(ctx context.Context, env models.Environment, name, ocid string) (*models.GPUNode, error) {
-			return mcpResolveGPUNodeFn(ctx, s, env, name, ocid)
-		},
-		ResolveGPUPool: func(ctx context.Context, env models.Environment, name string) (*models.GPUPool, error) {
-			return mcpResolveGPUPoolFn(ctx, s, env, name)
-		},
-		NodeCordoned:     mcpNodeCordonedFn,
-		SetCordon:        mcpSetCordonFn,
-		DrainStatus:      mcpDrainStatusFn,
-		SoftReset:        mcpSoftResetFn,
-		Terminate:        mcpTerminateFn,
-		IncreasePoolSize: mcpIncreasePoolSizeFn,
-		GetDAC:           mcpGetDACFn,
-		DeleteDAC:        mcpDeleteDACFn,
-		ResolveISVC:      mcpResolveISVCFn,
-		RestartISVC:      mcpRestartISVCFn,
-		PlanOrphanISVC:   mcpPlanOrphanISVCFn,
-		DeleteOrphanISVC: mcpDeleteOrphanISVCFn,
-		CheckTenant:      func(entry models.TenantMetadata) (bool, error) { return mcpCheckTenantFn(s, entry) },
-		UpsertTenant:     func(_ context.Context, entry models.TenantMetadata) error { return mcpUpsertTenantFn(s, entry) },
-	}
+	return &d
 }
 
 // opsEnv is where a mutation acts, in env.
@@ -346,7 +304,7 @@ func (s *Server) handleUncordonNode(ctx context.Context, req *sdk.CallToolReques
 
 func (s *Server) setCordon(ctx context.Context, a mutation.Action, in cordonNodeInput, unschedulable bool) (*sdk.CallToolResult, mutationResult, error) {
 	env := s.effectiveMutationEnv(a, in.Node, in.envOverride)
-	op, _ := ops.Cordon(s.mcpDeps(), s.opsEnv(env), in.Node, unschedulable)
+	op, _ := ops.Cordon(*s.deps, s.opsEnv(env), in.Node, unschedulable)
 	return runMutationCall(ctx, s, mutationCall[mutationResult]{op: op, gate: in.confirmGate, envelope: asResult})
 }
 
@@ -358,10 +316,10 @@ func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, 
 	a := mutation.DrainNode
 	env := s.effectiveMutationEnv(a, in.Node, in.envOverride)
 	var status, failed k8s.DrainStatus
-	op := ops.Drain(s.mcpDeps(), s.opsEnv(env), in.Node)
+	op := ops.Drain(*s.deps, s.opsEnv(env), in.Node)
 	op.Perform = func(ctx context.Context, _ mutation.Plan) error {
 		var err error
-		status, err = mcpStartDrainFn(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
+		status, err = s.deps.StartDrain(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
 		if err != nil {
 			failed = status
 			return err
@@ -401,7 +359,7 @@ func (s *Server) driveDrain(kubeContext, node string) {
 	}
 	go func() {
 		defer s.drainDrivers.Delete(key)
-		if err := mcpAwaitDrainFn(s.bgCtx, s.cfg.KubeConfig, kubeContext, node); err != nil {
+		if err := s.deps.AwaitDrain(s.bgCtx, s.cfg.KubeConfig, kubeContext, node); err != nil {
 			mutation.Audit(s.logger, surfaceMCP, mutation.DrainNode, node, mutation.PhaseBackgroundFailed, err)
 			return
 		}
@@ -413,7 +371,7 @@ func (s *Server) handleDrainStatus(ctx context.Context, req *sdk.CallToolRequest
 	if strings.TrimSpace(in.Node) == "" {
 		return failTool[k8s.DrainStatus]("get drain status", errors.New("node is required"))
 	}
-	status, err := mcpDrainStatusFn(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride).KubeContext(), in.Node)
+	status, err := s.deps.DrainStatus(ctx, s.cfg.KubeConfig, s.envFor(in.envOverride).KubeContext(), in.Node)
 	if err != nil {
 		return failTool[k8s.DrainStatus]("get drain status of node/"+in.Node, err)
 	}
@@ -422,13 +380,13 @@ func (s *Server) handleDrainStatus(ctx context.Context, req *sdk.CallToolRequest
 
 func (s *Server) handleRestartNode(ctx context.Context, req *sdk.CallToolRequest, in restartNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	env := s.effectiveMutationEnv(mutation.RestartNode, ops.NodeTarget(in.Node, in.OCID), in.envOverride)
-	op := ops.RestartNode(s.mcpDeps(), s.opsEnv(env), in.Node, in.OCID)
+	op := ops.RestartNode(*s.deps, s.opsEnv(env), in.Node, in.OCID)
 	return runMutationCall(ctx, s, mutationCall[mutationResult]{op: op, gate: in.confirmGate, envelope: asResult})
 }
 
 func (s *Server) handleTerminateNode(ctx context.Context, req *sdk.CallToolRequest, in terminateNodeInput) (*sdk.CallToolResult, mutationResult, error) {
 	env := s.effectiveMutationEnv(mutation.TerminateNode, ops.NodeTarget(in.Node, in.OCID), in.envOverride)
-	op := ops.TerminateNode(s.mcpDeps(), s.opsEnv(env), in.Node, in.OCID)
+	op := ops.TerminateNode(*s.deps, s.opsEnv(env), in.Node, in.OCID)
 	return runMutationCall(ctx, s, mutationCall[mutationResult]{
 		op: op, gate: in.confirmGate, confirmTarget: in.ConfirmTarget, envelope: asResult,
 	})
@@ -440,7 +398,7 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 	if in.Add != nil {
 		add = *in.Add
 	}
-	op, scale := ops.ScalePool(s.mcpDeps(), s.opsEnv(env), in.Name, add, in.Add != nil, "add")
+	op, scale := ops.ScalePool(*s.deps, s.opsEnv(env), in.Name, add, in.Add != nil, "add")
 	return runMutationCall(ctx, s, mutationCall[scaleGPUPoolResult]{
 		op: op, gate: in.confirmGate,
 		envelope: func(r mutationResult) scaleGPUPoolResult { return scaleGPUPoolResult{mutationResult: r} },
@@ -455,7 +413,7 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, in deleteDACInput) (*sdk.CallToolResult, mutationResult, error) {
 	env := s.effectiveMutationEnv(mutation.DeleteDAC, in.Name, in.envOverride)
 	return runMutationCall(ctx, s, mutationCall[mutationResult]{
-		op:   ops.DeleteDAC(s.mcpDeps(), s.opsEnv(env), in.Name),
+		op:   ops.DeleteDAC(*s.deps, s.opsEnv(env), in.Name),
 		gate: in.confirmGate, confirmTarget: in.ConfirmTarget, envelope: asResult,
 	})
 }
@@ -463,7 +421,7 @@ func (s *Server) handleDeleteDAC(ctx context.Context, req *sdk.CallToolRequest, 
 func (s *Server) handleRestartInferenceService(ctx context.Context, req *sdk.CallToolRequest, in restartInferenceServiceInput) (*sdk.CallToolResult, mutationResult, error) {
 	env := s.effectiveMutationEnv(mutation.RestartInferenceService, ops.ISVCTarget(in.Namespace, in.Name), in.envOverride)
 	return runMutationCall(ctx, s, mutationCall[mutationResult]{
-		op:   ops.RestartISVC(s.mcpDeps(), s.opsEnv(env), in.Namespace, in.Name),
+		op:   ops.RestartISVC(*s.deps, s.opsEnv(env), in.Namespace, in.Name),
 		gate: in.confirmGate, envelope: asResult,
 	})
 }
@@ -473,7 +431,7 @@ func (s *Server) handleRestartInferenceService(ctx context.Context, req *sdk.Cal
 // and force-delete, which names the audited mutation.
 func (s *Server) handleDeleteInferenceService(ctx context.Context, req *sdk.CallToolRequest, in deleteInferenceServiceInput) (*sdk.CallToolResult, deleteInferenceServiceResult, error) {
 	env := s.effectiveMutationEnv(mutation.DeleteInferenceService, ops.ISVCTarget(in.Namespace, in.Name), in.envOverride)
-	op, done := ops.DeleteOrphanISVC(s.mcpDeps(), s.opsEnv(env), in.Namespace, in.Name)
+	op, done := ops.DeleteOrphanISVC(*s.deps, s.opsEnv(env), in.Namespace, in.Name)
 	return runMutationCall(ctx, s, mutationCall[deleteInferenceServiceResult]{
 		op: op, gate: in.confirmGate, confirmTarget: in.ConfirmTarget,
 		envelope: func(r mutationResult) deleteInferenceServiceResult {
@@ -499,7 +457,7 @@ func (s *Server) handleSetTenant(ctx context.Context, req *sdk.CallToolRequest, 
 		return failTool[mutationResult]("set tenant", err)
 	}
 	return runMutationCall(ctx, s, mutationCall[mutationResult]{
-		op: ops.SetTenant(s.mcpDeps(), entry), gate: in.confirmGate, envelope: asResult,
+		op: ops.SetTenant(*s.deps, entry), gate: in.confirmGate, envelope: asResult,
 	})
 }
 

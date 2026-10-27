@@ -1,4 +1,3 @@
-//nolint:paralleltest // global seam vars (mcpSetCordonFn et al.) make these tests inherently sequential
 package mcp
 
 import (
@@ -18,22 +17,23 @@ import (
 	"github.com/jingle2008/toolkit/internal/config"
 	"github.com/jingle2008/toolkit/internal/infra/k8s"
 	"github.com/jingle2008/toolkit/internal/infra/oci"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
 func TestIntegration_MutationTool_RequiresConfirm(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	called := false
-	orig := mcpSetCordonFn
-	defer func() { mcpSetCordonFn = orig }()
-	mcpSetCordonFn = func(context.Context, string, string, string, bool) (bool, error) {
+	d.SetCordon = func(context.Context, string, string, string, bool) (bool, error) {
 		called = true
 		return true, nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	// confirm omitted (default false) → refused
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
@@ -70,74 +70,58 @@ func assertMutationOK(t *testing.T, res *sdk.CallToolResult, action, kind, targe
 	assert.Equal(t, target, sc["target"])
 }
 
-// stubAllMutationSeams points every mutation action/resolver seam at a stub
-// that records invocation, so a refusal test can prove no action ran. Returns
-// a pointer to the shared "called" flag and a restore func.
-func stubAllMutationSeams() (*bool, func()) {
+// stubAllMutationSeams points every mutation action and resolver in d at
+// a stub that records invocation, so a refusal test can prove no action
+// ran. Returns a pointer to the shared "called" flag.
+func stubAllMutationSeams(d *ops.Deps) *bool {
 	called := false
 	mark := func() { called = true }
 
-	oCordon, oDrain := mcpSetCordonFn, mcpStartDrainFn
-	oResolveNode, oReset, oTerm := mcpResolveGPUNodeFn, mcpSoftResetFn, mcpTerminateFn
-	oResolvePool, oInc, oDelDAC := mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn
-	oUpsert := mcpUpsertTenantFn
-	oResolveISVC, oRestartISVC := mcpResolveISVCFn, mcpRestartISVCFn
-	oPlanOrphan, oDeleteOrphan := mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn
-
-	mcpSetCordonFn = func(context.Context, string, string, string, bool) (bool, error) { mark(); return true, nil }
-	mcpStartDrainFn = func(context.Context, string, string, string) (k8s.DrainStatus, error) {
+	d.SetCordon = func(context.Context, string, string, string, bool) (bool, error) { mark(); return true, nil }
+	d.StartDrain = func(context.Context, string, string, string) (k8s.DrainStatus, error) {
 		mark()
 		return k8s.DrainStatus{}, nil
 	}
-	mcpResolveGPUNodeFn = func(_ context.Context, _ *Server, _ models.Environment, name, ocid string) (*models.GPUNode, error) {
+	d.ResolveGPUNode = func(_ context.Context, _ models.Environment, name, ocid string) (*models.GPUNode, error) {
 		mark()
 		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
-	mcpSoftResetFn = func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error { mark(); return nil }
-	mcpTerminateFn = func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error { mark(); return nil }
-	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GPUPool, error) {
+	d.SoftReset = func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error { mark(); return nil }
+	d.Terminate = func(context.Context, *models.GPUNode, models.Environment, *slog.Logger) error { mark(); return nil }
+	d.ResolveGPUPool = func(_ context.Context, _ models.Environment, name string) (*models.GPUPool, error) {
 		mark()
 		return &models.GPUPool{Name: name, ID: "ocid1.pool", Size: 1}, nil
 	}
-	mcpIncreasePoolSizeFn = func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
+	d.IncreasePoolSize = func(context.Context, *models.GPUPool, int, models.Environment, *slog.Logger) (oci.PoolScale, error) {
 		mark()
 		return oci.PoolScale{}, nil
 	}
-	mcpDeleteDACFn = func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
+	d.DeleteDAC = func(context.Context, *models.DedicatedAICluster, models.Environment, *slog.Logger) error {
 		mark()
 		return nil
 	}
-	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error { mark(); return nil }
-	mcpResolveISVCFn = func(_ context.Context, _, _, namespace, _ string) (string, error) { mark(); return namespace, nil }
-	mcpRestartISVCFn = func(context.Context, string, string, string, string) error { mark(); return nil }
-	mcpPlanOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+	d.UpsertTenant = func(context.Context, models.TenantMetadata) error { mark(); return nil }
+	d.ResolveISVC = func(_ context.Context, _, _, namespace, _ string) (string, error) { mark(); return namespace, nil }
+	d.RestartISVC = func(context.Context, string, string, string, string) error { mark(); return nil }
+	d.PlanOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		mark()
 		return k8s.OrphanDeleted, nil
 	}
-	mcpDeleteOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+	d.DeleteOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		mark()
 		return k8s.OrphanDeleted, nil
 	}
 
-	return &called, func() {
-		mcpSetCordonFn, mcpStartDrainFn = oCordon, oDrain
-		mcpResolveGPUNodeFn, mcpSoftResetFn, mcpTerminateFn = oResolveNode, oReset, oTerm
-		mcpResolveGPUPoolFn, mcpIncreasePoolSizeFn, mcpDeleteDACFn = oResolvePool, oInc, oDelDAC
-		mcpUpsertTenantFn = oUpsert
-		mcpResolveISVCFn, mcpRestartISVCFn = oResolveISVC, oRestartISVC
-		mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn = oPlanOrphan, oDeleteOrphan
-	}
+	return &called
 }
 
 // Every mutation tool — not just cordon_node — must refuse without acting when
 // confirm is omitted. Guards the server-wide safety contract against a new
 // mutation tool being added that forgets the confirm gate.
 func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	t.Cleanup(cancel)
-
-	calledPtr, restore := stubAllMutationSeams()
-	t.Cleanup(restore)
 
 	tools := []struct {
 		name string
@@ -157,8 +141,10 @@ func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
 
 	for _, tc := range tools {
 		t.Run(tc.name, func(t *testing.T) {
-			*calledPtr = false
-			clientSess := newTestPair(ctx, t, stubLoader{})
+			t.Parallel()
+			d := &ops.Deps{}
+			calledPtr := stubAllMutationSeams(d)
+			clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 			res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 				Name:      tc.name,
@@ -176,6 +162,8 @@ func TestIntegration_AllMutationTools_RefuseWithoutConfirm(t *testing.T) {
 }
 
 func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
@@ -183,14 +171,12 @@ func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
 		gotNode string
 		gotWant bool
 	)
-	orig := mcpSetCordonFn
-	defer func() { mcpSetCordonFn = orig }()
-	mcpSetCordonFn = func(_ context.Context, _, _, node string, want bool) (bool, error) {
+	d.SetCordon = func(_ context.Context, _, _, node string, want bool) (bool, error) {
 		gotNode, gotWant = node, want
 		return true, nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "cordon_node",
@@ -240,18 +226,18 @@ func TestIntegration_MutationTool_ConfirmTrueExecutes(t *testing.T) {
 }
 
 func TestIntegration_UncordonTool_PassesWantFalse(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	var gotWant bool
-	orig := mcpSetCordonFn
-	defer func() { mcpSetCordonFn = orig }()
-	mcpSetCordonFn = func(_ context.Context, _, _, _ string, want bool) (bool, error) {
+	d.SetCordon = func(_ context.Context, _, _, _ string, want bool) (bool, error) {
 		gotWant = want
 		return true, nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "uncordon_node",
@@ -264,19 +250,19 @@ func TestIntegration_UncordonTool_PassesWantFalse(t *testing.T) {
 }
 
 func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	stubOCIDResolver(t)
+	stubOCIDResolver(d)
 	var gotNode *models.GPUNode
-	orig := mcpTerminateFn
-	defer func() { mcpTerminateFn = orig }()
-	mcpTerminateFn = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
+	d.Terminate = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
 		gotNode = n
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "terminate_node",
@@ -295,19 +281,19 @@ func TestIntegration_TerminateTool_OcidBypass(t *testing.T) {
 }
 
 func TestIntegration_RestartNodeTool_ConfirmTrueExecutes(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	stubOCIDResolver(t)
+	stubOCIDResolver(d)
 	var gotNode *models.GPUNode
-	orig := mcpSoftResetFn
-	defer func() { mcpSoftResetFn = orig }()
-	mcpSoftResetFn = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
+	d.SoftReset = func(_ context.Context, n *models.GPUNode, _ models.Environment, _ *slog.Logger) error {
 		gotNode = n
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "restart_node",
@@ -327,26 +313,24 @@ func TestIntegration_RestartNodeTool_ConfirmTrueExecutes(t *testing.T) {
 }
 
 func TestIntegration_ScaleGPUPoolTool_ConfirmTrueExecutes(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	// Stub the MCP-level resolver seam so we don't need a fake k8s
 	// + OCI pipeline; the resolver is covered in internal/resolve.
-	origResolve := mcpResolveGPUPoolFn
-	defer func() { mcpResolveGPUPoolFn = origResolve }()
-	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, _ models.Environment, name string) (*models.GPUPool, error) {
+	d.ResolveGPUPool = func(_ context.Context, _ models.Environment, name string) (*models.GPUPool, error) {
 		return &models.GPUPool{Name: name, ID: "ocid1.instancepool.fake", Size: 12, ActualSize: 4}, nil
 	}
 
 	var gotPool *models.GPUPool
-	origInc := mcpIncreasePoolSizeFn
-	defer func() { mcpIncreasePoolSizeFn = origInc }()
-	mcpIncreasePoolSizeFn = func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
+	d.IncreasePoolSize = func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotPool = p
 		return oci.PoolScale{Shown: 4, Before: 4, After: 4 + add}, nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "scale_gpu_pool",
@@ -365,16 +349,16 @@ func TestIntegration_ScaleGPUPoolTool_ConfirmTrueExecutes(t *testing.T) {
 }
 
 func TestIntegration_ScaleGPUPoolTool_ResolverError(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	origResolve := mcpResolveGPUPoolFn
-	defer func() { mcpResolveGPUPoolFn = origResolve }()
-	mcpResolveGPUPoolFn = func(context.Context, *Server, models.Environment, string) (*models.GPUPool, error) {
+	d.ResolveGPUPool = func(context.Context, models.Environment, string) (*models.GPUPool, error) {
 		return nil, errors.New("gpu pool \"pool-x\" not found in repo")
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "scale_gpu_pool",
@@ -389,6 +373,8 @@ func TestIntegration_ScaleGPUPoolTool_ResolverError(t *testing.T) {
 }
 
 func TestIntegration_MutationTool_HonorsEnvOverride_WhenAllowed(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	// With MutationEnvOverrideAllowed=true, per-call env_* fields flow
 	// into the env the handler hands to the action — same semantics as
 	// list_* tools.
@@ -396,16 +382,14 @@ func TestIntegration_MutationTool_HonorsEnvOverride_WhenAllowed(t *testing.T) {
 	t.Cleanup(cancel)
 
 	var gotEnv models.Environment
-	orig := mcpDeleteDACFn
-	defer func() { mcpDeleteDACFn = orig }()
-	mcpDeleteDACFn = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ *slog.Logger) error {
+	d.DeleteDAC = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ *slog.Logger) error {
 		gotEnv = env
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{}, func(c *config.Config) {
+	clientSess := newTestPair(ctx, t, stubLoader{}, withConfig(func(c *config.Config) {
 		c.MutationEnvOverrideAllowed = true
-	})
+	}), withDeps(d))
 
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
@@ -425,20 +409,20 @@ func TestIntegration_MutationTool_HonorsEnvOverride_WhenAllowed(t *testing.T) {
 }
 
 func TestIntegration_MutationTool_IgnoresEnvOverride_WhenDisallowed(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	// Default (MutationEnvOverrideAllowed=false): the agent's env_*
 	// fields are silently dropped. The action sees the startup env.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	var gotEnv models.Environment
-	orig := mcpDeleteDACFn
-	defer func() { mcpDeleteDACFn = orig }()
-	mcpDeleteDACFn = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ *slog.Logger) error {
+	d.DeleteDAC = func(_ context.Context, _ *models.DedicatedAICluster, env models.Environment, _ *slog.Logger) error {
 		gotEnv = env
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{}) // flag NOT set
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d)) // flag NOT set
 
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
@@ -461,27 +445,25 @@ func TestIntegration_MutationTool_IgnoresEnvOverride_WhenDisallowed(t *testing.T
 // hops (resolver, OCI client construction) where a future refactor
 // could accidentally drop it.
 func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	// restart node — env reaches the action AND the resolver.
 	var gotResolverEnv, gotActionEnv models.Environment
-	origResolve := mcpResolveGPUNodeFn
-	defer func() { mcpResolveGPUNodeFn = origResolve }()
-	mcpResolveGPUNodeFn = func(_ context.Context, _ *Server, env models.Environment, name, ocid string) (*models.GPUNode, error) {
+	d.ResolveGPUNode = func(_ context.Context, env models.Environment, name, ocid string) (*models.GPUNode, error) {
 		gotResolverEnv = env
 		return &models.GPUNode{Name: name, ID: ocid}, nil
 	}
-	origReset := mcpSoftResetFn
-	defer func() { mcpSoftResetFn = origReset }()
-	mcpSoftResetFn = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ *slog.Logger) error {
+	d.SoftReset = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ *slog.Logger) error {
 		gotActionEnv = env
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{}, func(c *config.Config) {
+	clientSess := newTestPair(ctx, t, stubLoader{}, withConfig(func(c *config.Config) {
 		c.MutationEnvOverrideAllowed = true
-	})
+	}), withDeps(d))
 
 	_, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "restart_node",
@@ -498,9 +480,7 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 
 	// terminate — same shape, different action seam.
 	gotActionEnv = models.Environment{}
-	origTerm := mcpTerminateFn
-	defer func() { mcpTerminateFn = origTerm }()
-	mcpTerminateFn = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ *slog.Logger) error {
+	d.Terminate = func(_ context.Context, _ *models.GPUNode, env models.Environment, _ *slog.Logger) error {
 		gotActionEnv = env
 		return nil
 	}
@@ -520,15 +500,11 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 	// scale — env reaches pool resolver AND IncreasePoolSize.
 	gotResolverEnv = models.Environment{}
 	gotActionEnv = models.Environment{}
-	origPoolResolve := mcpResolveGPUPoolFn
-	defer func() { mcpResolveGPUPoolFn = origPoolResolve }()
-	mcpResolveGPUPoolFn = func(_ context.Context, _ *Server, env models.Environment, name string) (*models.GPUPool, error) {
+	d.ResolveGPUPool = func(_ context.Context, env models.Environment, name string) (*models.GPUPool, error) {
 		gotResolverEnv = env
 		return &models.GPUPool{Name: name, ID: "ocid1.pool", Size: 4}, nil
 	}
-	origInc := mcpIncreasePoolSizeFn
-	defer func() { mcpIncreasePoolSizeFn = origInc }()
-	mcpIncreasePoolSizeFn = func(_ context.Context, _ *models.GPUPool, _ int, env models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
+	d.IncreasePoolSize = func(_ context.Context, _ *models.GPUPool, _ int, env models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotActionEnv = env
 		return oci.PoolScale{}, nil
 	}
@@ -546,18 +522,18 @@ func TestIntegration_MutationTool_PropagatesEnvOverride(t *testing.T) {
 }
 
 func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	var gotDAC *models.DedicatedAICluster
-	orig := mcpDeleteDACFn
-	defer func() { mcpDeleteDACFn = orig }()
-	mcpDeleteDACFn = func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ *slog.Logger) error {
+	d.DeleteDAC = func(_ context.Context, d *models.DedicatedAICluster, _ models.Environment, _ *slog.Logger) error {
 		gotDAC = d
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "delete_dac",
@@ -577,16 +553,16 @@ func TestIntegration_DeleteDACTool_ConfirmTrueExecutes(t *testing.T) {
 }
 
 func TestIntegration_MutationTool_PerformErrorPropagates(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	orig := mcpStartDrainFn
-	defer func() { mcpStartDrainFn = orig }()
-	mcpStartDrainFn = func(context.Context, string, string, string) (k8s.DrainStatus, error) {
+	d.StartDrain = func(context.Context, string, string, string) (k8s.DrainStatus, error) {
 		return k8s.DrainStatus{}, errors.New("pods stuck terminating")
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "drain_node",
@@ -604,6 +580,7 @@ func TestIntegration_MutationTool_PerformErrorPropagates(t *testing.T) {
 }
 
 func TestIntegration_MutationTools_RegisteredInListTools(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
@@ -626,18 +603,18 @@ func TestIntegration_MutationTools_RegisteredInListTools(t *testing.T) {
 }
 
 func TestIntegration_SetTenantTool_ConfirmTrueExecutes(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
 	var got models.TenantMetadata
-	orig := mcpUpsertTenantFn
-	defer func() { mcpUpsertTenantFn = orig }()
-	mcpUpsertTenantFn = func(_ *Server, e models.TenantMetadata) error {
+	d.UpsertTenant = func(_ context.Context, e models.TenantMetadata) error {
 		got = e
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name: "set_tenant",
@@ -661,17 +638,17 @@ func TestIntegration_SetTenantTool_ConfirmTrueExecutes(t *testing.T) {
 }
 
 func TestIntegration_SetTenantTool_RejectsBadOCID(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	orig := mcpUpsertTenantFn
-	defer func() { mcpUpsertTenantFn = orig }()
-	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error {
+	d.UpsertTenant = func(context.Context, models.TenantMetadata) error {
 		t.Fatal("must not write for bad OCID")
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "set_tenant",
@@ -683,17 +660,17 @@ func TestIntegration_SetTenantTool_RejectsBadOCID(t *testing.T) {
 }
 
 func TestIntegration_SetTenantTool_RejectsBadOCID_WithoutConfirm(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	orig := mcpUpsertTenantFn
-	defer func() { mcpUpsertTenantFn = orig }()
-	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error {
+	d.UpsertTenant = func(context.Context, models.TenantMetadata) error {
 		t.Fatal("must not write for bad OCID even without confirm")
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "set_tenant",
@@ -705,17 +682,17 @@ func TestIntegration_SetTenantTool_RejectsBadOCID_WithoutConfirm(t *testing.T) {
 }
 
 func TestIntegration_SetTenantTool_RequiresName(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	orig := mcpUpsertTenantFn
-	defer func() { mcpUpsertTenantFn = orig }()
-	mcpUpsertTenantFn = func(*Server, models.TenantMetadata) error {
+	d.UpsertTenant = func(context.Context, models.TenantMetadata) error {
 		t.Fatal("must not write when name missing")
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "set_tenant",
@@ -727,23 +704,22 @@ func TestIntegration_SetTenantTool_RequiresName(t *testing.T) {
 }
 
 func TestIntegration_RestartInferenceService_ResolvesThenPatches(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	oResolve, oRestart := mcpResolveISVCFn, mcpRestartISVCFn
-	t.Cleanup(func() { mcpResolveISVCFn, mcpRestartISVCFn = oResolve, oRestart })
-
 	var gotLookupNS, patchedNS, patchedName string
-	mcpResolveISVCFn = func(_ context.Context, _, _, namespace, _ string) (string, error) {
+	d.ResolveISVC = func(_ context.Context, _, _, namespace, _ string) (string, error) {
 		gotLookupNS = namespace
 		return "ns-resolved", nil
 	}
-	mcpRestartISVCFn = func(_ context.Context, _, _, namespace, name string) error {
+	d.RestartISVC = func(_ context.Context, _, _, namespace, name string) error {
 		patchedNS, patchedName = namespace, name
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "restart_inference_service",
@@ -769,22 +745,21 @@ func TestIntegration_RestartInferenceService_ResolvesThenPatches(t *testing.T) {
 }
 
 func TestIntegration_RestartInferenceService_ResolveErrorSkipsPatch(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	oResolve, oRestart := mcpResolveISVCFn, mcpRestartISVCFn
-	t.Cleanup(func() { mcpResolveISVCFn, mcpRestartISVCFn = oResolve, oRestart })
-
-	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) {
+	d.ResolveISVC = func(context.Context, string, string, string, string) (string, error) {
 		return "", errors.New(`InferenceService "isvc-a" exists in multiple namespaces (a, b); specify a namespace`)
 	}
 	patched := false
-	mcpRestartISVCFn = func(context.Context, string, string, string, string) error {
+	d.RestartISVC = func(context.Context, string, string, string, string) error {
 		patched = true
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "restart_inference_service",
@@ -797,23 +772,22 @@ func TestIntegration_RestartInferenceService_ResolveErrorSkipsPatch(t *testing.T
 }
 
 func TestIntegration_DeleteInferenceService_PlansThenDeletes(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	oResolve, oPlan, oDelete := mcpResolveISVCFn, mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn
-	t.Cleanup(func() { mcpResolveISVCFn, mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn = oResolve, oPlan, oDelete })
-
-	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) { return "ns-resolved", nil }
-	mcpPlanOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+	d.ResolveISVC = func(context.Context, string, string, string, string) (string, error) { return "ns-resolved", nil }
+	d.PlanOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		return k8s.OrphanFinalized, nil
 	}
 	var deletedNS, deletedName string
-	mcpDeleteOrphanISVCFn = func(_ context.Context, _, _, namespace, name string) (k8s.OrphanDeleteOutcome, error) {
+	d.DeleteOrphanISVC = func(_ context.Context, _, _, namespace, name string) (k8s.OrphanDeleteOutcome, error) {
 		deletedNS, deletedName = namespace, name
 		return k8s.OrphanFinalized, nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "delete_inference_service",
 		Arguments: map[string]any{"name": "isvc-a", "confirm": true, "confirm_target": "ns-resolved/isvc-a"},
@@ -828,23 +802,22 @@ func TestIntegration_DeleteInferenceService_PlansThenDeletes(t *testing.T) {
 
 // A target that isn't an orphan is refused at planning: nothing is deleted.
 func TestIntegration_DeleteInferenceService_RefusalSkipsDelete(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	oResolve, oPlan, oDelete := mcpResolveISVCFn, mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn
-	t.Cleanup(func() { mcpResolveISVCFn, mcpPlanOrphanISVCFn, mcpDeleteOrphanISVCFn = oResolve, oPlan, oDelete })
-
-	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) { return "ns-a", nil }
-	mcpPlanOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+	d.ResolveISVC = func(context.Context, string, string, string, string) (string, error) { return "ns-a", nil }
+	d.PlanOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		return "", fmt.Errorf("%w: its DAC dac-1 exists (ome.io); delete the DAC instead", k8s.ErrNotOrphan)
 	}
 	deleted := false
-	mcpDeleteOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+	d.DeleteOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		deleted = true
 		return "", nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "delete_inference_service",
 		Arguments: map[string]any{"name": "isvc-a", "confirm": true, "confirm_target": "isvc-a"},
@@ -856,23 +829,23 @@ func TestIntegration_DeleteInferenceService_RefusalSkipsDelete(t *testing.T) {
 }
 
 func TestIntegration_DrainNode_ReturnsAtOnceAndDrivesInBackground(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	oStart, oAwait := mcpStartDrainFn, mcpAwaitDrainFn
-	t.Cleanup(func() { mcpStartDrainFn, mcpAwaitDrainFn = oStart, oAwait })
-	mcpStartDrainFn = func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+	d.StartDrain = func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
 		return k8s.DrainStatus{Node: node, DrainState: k8s.DrainState{Phase: k8s.DrainWaiting, Restarted: []string{"ome.io:ns/chat"}}}, nil
 	}
 	release := make(chan struct{})
 	awaited := make(chan string, 2)
-	mcpAwaitDrainFn = func(_ context.Context, _, _, node string) error {
+	d.AwaitDrain = func(_ context.Context, _, _, node string) error {
 		awaited <- node
 		<-release
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 	call := func() *sdk.CallToolResult {
 		res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 			Name:      "drain_node",
@@ -902,20 +875,20 @@ func TestIntegration_DrainNode_ReturnsAtOnceAndDrivesInBackground(t *testing.T) 
 }
 
 func TestIntegration_DrainNode_FinishedDrainStartsNoDriver(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	oStart, oAwait := mcpStartDrainFn, mcpAwaitDrainFn
-	t.Cleanup(func() { mcpStartDrainFn, mcpAwaitDrainFn = oStart, oAwait })
-	mcpStartDrainFn = func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+	d.StartDrain = func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
 		return k8s.DrainStatus{Node: node, DrainState: k8s.DrainState{Phase: k8s.DrainDone}}, nil
 	}
-	mcpAwaitDrainFn = func(context.Context, string, string, string) error {
+	d.AwaitDrain = func(context.Context, string, string, string) error {
 		t.Error("no driver expected for a finished drain")
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "drain_node",
 		Arguments: map[string]any{"node": "node-a", "confirm": true},
@@ -925,13 +898,13 @@ func TestIntegration_DrainNode_FinishedDrainStartsNoDriver(t *testing.T) {
 }
 
 func TestIntegration_GetDrainStatus(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	orig := mcpDrainStatusFn
-	t.Cleanup(func() { mcpDrainStatusFn = orig })
 	var gotContext string
-	mcpDrainStatusFn = func(_ context.Context, _, kubeContext, node string) (k8s.DrainStatus, error) {
+	d.DrainStatus = func(_ context.Context, _, kubeContext, node string) (k8s.DrainStatus, error) {
 		gotContext = kubeContext
 		if node == "missing" {
 			return k8s.DrainStatus{}, errors.New("node not found")
@@ -939,7 +912,7 @@ func TestIntegration_GetDrainStatus(t *testing.T) {
 		return k8s.DrainStatus{Node: node, DrainState: k8s.DrainState{Phase: k8s.DrainEvicting}, Remaining: []string{"default/worker"}}, nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "get_drain_status",
 		Arguments: map[string]any{"node": "node-a", "env_region": "ord"},
@@ -961,22 +934,22 @@ func TestIntegration_GetDrainStatus(t *testing.T) {
 }
 
 func TestIntegration_DrainNode_FailureKeepsStatus(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	oStart, oAwait := mcpStartDrainFn, mcpAwaitDrainFn
-	t.Cleanup(func() { mcpStartDrainFn, mcpAwaitDrainFn = oStart, oAwait })
-	mcpStartDrainFn = func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+	d.StartDrain = func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
 		msg := "node runs pods that must not be drained: ft/ft-0 (finetunedmodel-name) (node uncordoned)"
 		return k8s.DrainStatus{Node: node, DrainState: k8s.DrainState{Phase: k8s.DrainFailed, CordonedByDrain: true, Message: msg}},
 			errors.New(msg)
 	}
-	mcpAwaitDrainFn = func(context.Context, string, string, string) error {
+	d.AwaitDrain = func(context.Context, string, string, string) error {
 		t.Error("no driver expected for a failed drain")
 		return nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "drain_node",
 		Arguments: map[string]any{"node": "node-a", "confirm": true},
@@ -993,17 +966,17 @@ func TestIntegration_DrainNode_FailureKeepsStatus(t *testing.T) {
 }
 
 func TestIntegration_RestartInferenceService_RefusalDoesNotResolve(t *testing.T) {
+	t.Parallel()
+	d := &ops.Deps{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	oResolve := mcpResolveISVCFn
-	t.Cleanup(func() { mcpResolveISVCFn = oResolve })
-	mcpResolveISVCFn = func(context.Context, string, string, string, string) (string, error) {
+	d.ResolveISVC = func(context.Context, string, string, string, string) (string, error) {
 		t.Error("a refused call must not touch the cluster")
 		return "", nil
 	}
 
-	clientSess := newTestPair(ctx, t, stubLoader{})
+	clientSess := newTestPair(ctx, t, stubLoader{}, withDeps(d))
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{
 		Name:      "restart_inference_service",
 		Arguments: map[string]any{"name": "isvc-a"},

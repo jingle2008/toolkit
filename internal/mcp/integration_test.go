@@ -18,6 +18,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
 	"github.com/jingle2008/toolkit/internal/logging"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -117,23 +118,50 @@ func (l fixedGPUPoolsLoader) LoadGPUPools(context.Context, string, models.Enviro
 	return l.pools, nil
 }
 
-func newTestPair(ctx context.Context, t *testing.T, ld loader.Composite, opts ...func(*config.Config)) *sdk.ClientSession {
+// testSetup is what newTestPair's options adjust.
+type testSetup struct {
+	cfg  config.Config
+	deps *ops.Deps
+}
+
+// testOption adjusts a test server.
+type testOption func(*testSetup)
+
+// withConfig adjusts the server's config.
+func withConfig(fn func(*config.Config)) testOption {
+	return func(ts *testSetup) { fn(&ts.cfg) }
+}
+
+// withDeps makes d the server's infra calls: what d leaves unset is
+// testLookups', then production's. The server keeps d itself, so a test
+// may still set its calls after connecting.
+func withDeps(d *ops.Deps) testOption {
+	return func(ts *testSetup) { ts.deps = d }
+}
+
+func newTestPair(ctx context.Context, t *testing.T, ld loader.Composite, opts ...testOption) *sdk.ClientSession {
 	t.Helper()
-	cfg := config.Config{
+	ts := testSetup{cfg: config.Config{
 		RepoPath:  "/dev/null",
 		EnvType:   "dev",
 		EnvRegion: "us-ashburn-1",
 		EnvRealm:  "oc1",
-	}
+	}}
 	for _, o := range opts {
-		o(&cfg)
+		o(&ts)
 	}
 	srv := NewServer(
-		cfg,
+		ts.cfg,
 		ld,
 		logging.Discard(),
 		"test",
 	)
+	if ts.deps == nil {
+		ts.deps = &ops.Deps{}
+	}
+	fillDeps(ts.deps, testLookups())
+	fillDeps(ts.deps, *srv.deps)
+	srv.deps = ts.deps
 
 	clientT, serverT := sdk.NewInMemoryTransports()
 	serverSess, err := srv.server.Connect(ctx, serverT, nil)
@@ -246,13 +274,13 @@ func TestIntegration_WarnsOnGPUPoolEnrichmentFailure(t *testing.T) {
 	ld := fixedGPUPoolsLoader{pools: []models.GPUPool{
 		{Name: "p1", Shape: "BM.GPU", Status: "...", Size: 8},
 	}}
-	clientSess := newTestPair(ctx, t, ld, func(c *config.Config) {
+	clientSess := newTestPair(ctx, t, ld, withConfig(func(c *config.Config) {
 		// ExplicitPath kubeconfig that can't be loaded → CompartmentID
 		// fails at the clientcmd step, mirroring an offline / no-kube
 		// host. We deliberately don't swap the resolve seams because
 		// we want the real failure path (clientcmd parse) covered too.
 		c.KubeConfig = "/dev/null/no-such-kubeconfig"
-	})
+	}))
 
 	res, err := clientSess.CallTool(ctx, &sdk.CallToolParams{Name: "list_gpu_pools"})
 	require.NoError(t, err, "tools/call transport error")
