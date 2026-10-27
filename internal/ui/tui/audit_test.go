@@ -50,13 +50,10 @@ func newGPUNodeModel(t *testing.T, node models.GPUNode) (*Model, models.ItemKey,
 
 // The cordon key sets the state the modal names — uncordon for a cordoned
 // node — and the TUI audits it as the CLI and MCP do.
-//
-//nolint:paralleltest // swaps the package-level setCordonFn seam
 func TestCordon_ConfirmedIsAudited(t *testing.T) {
-	orig := setCordonFn
-	t.Cleanup(func() { setCordonFn = orig })
+	t.Parallel()
 	var gotWant []bool
-	setCordonFn = func(_ context.Context, _, _, _ string, want bool) (bool, error) {
+	fakeSetCordon := func(_ context.Context, _, _, _ string, want bool) (bool, error) {
 		gotWant = append(gotWant, want)
 		return true, nil
 	}
@@ -67,6 +64,7 @@ func TestCordon_ConfirmedIsAudited(t *testing.T) {
 	}{{false, "cordon"}, {true, "uncordon"}} {
 		node := models.GPUNode{Name: "gpu-1", IsSchedulingDisabled: tc.cordoned}
 		m, key, sink := newGPUNodeModel(t, node)
+		m.deps.SetCordon = fakeSetCordon
 		m.requestConfirm(m.confirmCordon(key, &node))
 		_, cmd := m.updateConfirmView(keyPress("y"))
 		require.NotNil(t, cmd)
@@ -83,17 +81,15 @@ func TestCordon_ConfirmedIsAudited(t *testing.T) {
 
 // A cancelled modal acts on nothing and is audited as refused, as
 // declining the CLI's prompt is.
-//
-//nolint:paralleltest // swaps the package-level setCordonFn seam
 func TestCordon_CancelledIsAuditedRefused(t *testing.T) {
-	orig := setCordonFn
-	t.Cleanup(func() { setCordonFn = orig })
-	setCordonFn = func(context.Context, string, string, string, bool) (bool, error) {
+	t.Parallel()
+	fakeSetCordon := func(context.Context, string, string, string, bool) (bool, error) {
 		t.Fatal("cancelled cordon ran")
 		return false, nil
 	}
 	node := models.GPUNode{Name: "gpu-1"}
 	m, key, sink := newGPUNodeModel(t, node)
+	m.deps.SetCordon = fakeSetCordon
 	m.requestConfirm(m.confirmCordon(key, &node))
 	_, cmd := m.updateConfirmView(keyPress("n"))
 	assert.Nil(t, cmd)
@@ -102,17 +98,15 @@ func TestCordon_CancelledIsAuditedRefused(t *testing.T) {
 
 // An orphan delete is audited as the plan named it, under its
 // <namespace>/<name>, including a failure.
-//
-//nolint:paralleltest // swaps the package-level plan and delete seams
 func TestISVCDelete_ConfirmedIsAuditedAsPlanned(t *testing.T) {
-	stubOrphanPlan(t, k8s.OrphanFinalized, nil)
-	orig := deleteOrphanISVCFn
-	t.Cleanup(func() { deleteOrphanISVCFn = orig })
-	deleteOrphanISVCFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+	t.Parallel()
+	fakeDeleteOrphanISVC := func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		return "", assert.AnError
 	}
 
 	m := newInferenceServiceModel(t)
+	stubOrphanPlan(m, k8s.OrphanFinalized, nil)
+	m.deps.DeleteOrphanISVC = fakeDeleteOrphanISVC
 	sink := logging.NewRingSink(16)
 	m.logger = slog.New(sink)
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))
@@ -129,11 +123,10 @@ func TestISVCDelete_ConfirmedIsAuditedAsPlanned(t *testing.T) {
 
 // A refused InferenceService delete names <namespace>/<name>, as its
 // done record would.
-//
-//nolint:paralleltest // swaps the package-level plan seam
 func TestISVCDelete_CancelledIsAuditedRefused(t *testing.T) {
-	stubOrphanPlan(t, k8s.OrphanDeleted, nil)
+	t.Parallel()
 	m := newInferenceServiceModel(t)
+	stubOrphanPlan(m, k8s.OrphanDeleted, nil)
 	sink := logging.NewRingSink(16)
 	m.logger = slog.New(sink)
 	m.handleISVCDeletePlannedMsg(m.handleItemActions(ctrlX())().(isvcDeletePlannedMsg))

@@ -9,6 +9,7 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	logging "github.com/jingle2008/toolkit/internal/logging"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/logview"
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -70,6 +71,14 @@ func WithTable(tbl *table.Model) ModelOption {
 func WithLoader(l loader.Composite) ModelOption {
 	return func(m *Model) {
 		m.loader = l
+	}
+}
+
+// WithDeps sets the infra calls the Model's mutations make (default
+// ops.Production()).
+func WithDeps(d ops.Deps) ModelOption {
+	return func(m *Model) {
+		m.deps = d
 	}
 }
 

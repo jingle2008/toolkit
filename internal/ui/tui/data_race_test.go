@@ -157,15 +157,13 @@ func TestUpdateRowsAsync_WhileEnrichmentLands(t *testing.T) {
 
 // An action reads the context and logger it was built with, not the
 // model's as they are when it runs.
-//
-//nolint:paralleltest // swaps the package-level setCordonFn seam
 func TestCordonNode_ActionReadsNothingOfTheModel(t *testing.T) {
-	orig := setCordonFn
-	t.Cleanup(func() { setCordonFn = orig })
-	setCordonFn = func(ctx context.Context, _, _, _ string, _ bool) (bool, error) {
+	t.Parallel()
+	fakeSetCordon := func(ctx context.Context, _, _, _ string, _ bool) (bool, error) {
 		return true, ctx.Err()
 	}
 	m, key, sink := newGPUNodeModel(t, models.GPUNode{Name: "gpu-1"})
+	m.deps.SetCordon = fakeSetCordon
 	cmd := m.cordonNode(findItem(m.dataset, domain.GPUNode, key), key, mutation.CordonNode)
 	require.NotNil(t, cmd)
 
@@ -182,14 +180,13 @@ func TestCordonNode_ActionReadsNothingOfTheModel(t *testing.T) {
 	assert.Len(t, auditRecords(sink), 2, "audited to the logger it was built with")
 }
 
-//nolint:paralleltest // swaps the package-level plan seam
 func TestPlanDeleteInferenceService_ReadsNothingOfTheModel(t *testing.T) {
-	orig := planOrphanISVCDeleteFn
-	t.Cleanup(func() { planOrphanISVCDeleteFn = orig })
-	planOrphanISVCDeleteFn = func(ctx context.Context, _, _, _, _ string) (k8s.OrphanDeleteOutcome, error) {
+	t.Parallel()
+	fakePlanOrphanISVC := func(ctx context.Context, _, _, _, _ string) (k8s.OrphanDeleteOutcome, error) {
 		return k8s.OrphanDeleted, ctx.Err()
 	}
 	m := newInferenceServiceModel(t)
+	m.deps.PlanOrphanISVC = fakePlanOrphanISVC
 	cmd := m.handleItemActions(ctrlX())
 	require.NotNil(t, cmd)
 

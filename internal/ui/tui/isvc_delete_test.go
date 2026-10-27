@@ -18,20 +18,16 @@ import (
 
 func ctrlX() tea.KeyMsg { return keyPress("ctrl+x") }
 
-func stubOrphanPlan(t *testing.T, outcome k8s.OrphanDeleteOutcome, err error) {
-	t.Helper()
-	orig := planOrphanISVCDeleteFn
-	t.Cleanup(func() { planOrphanISVCDeleteFn = orig })
-	planOrphanISVCDeleteFn = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
+func stubOrphanPlan(m *Model, outcome k8s.OrphanDeleteOutcome, err error) {
+	m.deps.PlanOrphanISVC = func(context.Context, string, string, string, string) (k8s.OrphanDeleteOutcome, error) {
 		return outcome, err
 	}
 }
 
 // ctrl+x checks the cluster first, then opens the irreversible modal
 // naming the planned action.
-//
-//nolint:paralleltest // swaps the package-level plan seam
 func TestCtrlX_InInferenceService_PlansThenConfirms(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		outcome k8s.OrphanDeleteOutcome
 		action  string
@@ -40,8 +36,9 @@ func TestCtrlX_InInferenceService_PlansThenConfirms(t *testing.T) {
 		{k8s.OrphanFinalized, "Force-delete"},
 	} {
 		t.Run(tc.action, func(t *testing.T) {
+			t.Parallel()
 			m := newInferenceServiceModel(t)
-			stubOrphanPlan(t, tc.outcome, nil)
+			stubOrphanPlan(m, tc.outcome, nil)
 
 			cmd := m.handleItemActions(ctrlX())
 			require.NotNil(t, cmd, "ctrl+x must plan first")
@@ -55,10 +52,10 @@ func TestCtrlX_InInferenceService_PlansThenConfirms(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // swaps the package-level plan seam
 func TestCtrlX_InInferenceService_RefusalToasts(t *testing.T) {
+	t.Parallel()
 	m := newInferenceServiceModel(t)
-	stubOrphanPlan(t, "", fmt.Errorf("%w: its DAC dac-1 exists (ome.io); delete the DAC instead", k8s.ErrNotOrphan))
+	stubOrphanPlan(m, "", fmt.Errorf("%w: its DAC dac-1 exists (ome.io); delete the DAC instead", k8s.ErrNotOrphan))
 
 	cmd := m.handleItemActions(ctrlX())
 	require.NotNil(t, cmd)
@@ -71,9 +68,8 @@ func TestCtrlX_InInferenceService_RefusalToasts(t *testing.T) {
 
 // A deferred orphan delete is a refusal too; a failed check is an error
 // that names the retry key.
-//
-//nolint:paralleltest // swaps the package-level plan seam
 func TestCtrlX_DeferredWarnsFailureRetries(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		err  error
 		sev  toastSeverity
@@ -83,7 +79,7 @@ func TestCtrlX_DeferredWarnsFailureRetries(t *testing.T) {
 		{errors.New("check DAC d1 (ome.io): forbidden"), toastError, "^x retry"},
 	} {
 		m := newInferenceServiceModel(t)
-		stubOrphanPlan(t, "", tc.err)
+		stubOrphanPlan(m, "", tc.err)
 		cmd := m.handleItemActions(ctrlX())
 		m.handleISVCDeletePlannedMsg(cmd().(isvcDeletePlannedMsg))
 		require.NotNil(t, m.toasts.Active())
@@ -93,25 +89,22 @@ func TestCtrlX_DeferredWarnsFailureRetries(t *testing.T) {
 }
 
 // A plan landing after the user left the list doesn't pop a modal.
-//
-//nolint:paralleltest // swaps the package-level plan seam
 func TestCtrlX_PlanAfterNavigationIsDropped(t *testing.T) {
+	t.Parallel()
 	m := newInferenceServiceModel(t)
-	stubOrphanPlan(t, k8s.OrphanDeleted, nil)
+	stubOrphanPlan(m, k8s.OrphanDeleted, nil)
 	cmd := m.handleItemActions(ctrlX())
 	m.category = domain.DedicatedAICluster
 	m.handleISVCDeletePlannedMsg(cmd().(isvcDeletePlannedMsg))
 	assert.Equal(t, common.ListView, m.viewMode)
 }
 
-//nolint:paralleltest // swaps the package-level seams
 func TestDeleteOrphanInferenceService_ConfirmDeletesAndToasts(t *testing.T) {
+	t.Parallel()
 	m := newInferenceServiceModel(t)
-	stubOrphanPlan(t, k8s.OrphanFinalized, nil)
+	stubOrphanPlan(m, k8s.OrphanFinalized, nil)
 	var gotNS, gotName string
-	orig := deleteOrphanISVCFn
-	t.Cleanup(func() { deleteOrphanISVCFn = orig })
-	deleteOrphanISVCFn = func(_ context.Context, _, _, namespace, name string) (k8s.OrphanDeleteOutcome, error) {
+	m.deps.DeleteOrphanISVC = func(_ context.Context, _, _, namespace, name string) (k8s.OrphanDeleteOutcome, error) {
 		gotNS, gotName = namespace, name
 		return k8s.OrphanFinalized, nil
 	}

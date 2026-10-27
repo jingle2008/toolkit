@@ -21,6 +21,7 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
+	"github.com/jingle2008/toolkit/internal/mutation/ops"
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
@@ -150,6 +151,8 @@ type Model struct {
 	landOnKey  models.ItemKey
 	keys       keys.KeyMap
 	kubeConfig string
+	// deps is the mutations' infra calls; tests fake them.
+	deps       ops.Deps
 	version    string
 	k8sVersion string // API server version for the current kube context; "" until fetched
 	// loadFailed is set when the current category's load failed, so an
@@ -271,6 +274,7 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		sortAsc:      true,
 		history:      []historyEntry{},
 		historyIdx:   -1,
+		deps:         ops.Production(),
 	}
 
 	initStyles(m)

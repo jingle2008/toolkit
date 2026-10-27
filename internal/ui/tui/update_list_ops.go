@@ -7,18 +7,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/jingle2008/toolkit/internal/domain"
-	"github.com/jingle2008/toolkit/internal/infra/k8s"
-	"github.com/jingle2008/toolkit/internal/infra/oci"
 	"github.com/jingle2008/toolkit/internal/mutation"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
 	"github.com/jingle2008/toolkit/pkg/models"
-)
-
-// Seams tests use to fake the restart patch, the cordon and the scale-up.
-var (
-	restartInferenceServiceFn = k8s.RestartInferenceService
-	setCordonFn               = k8s.SetCordon
-	increasePoolSizeFn        = oci.IncreasePoolSize
 )
 
 /*
@@ -54,11 +45,11 @@ func (m *Model) deleteDedicatedAICluster(itemKey models.ItemKey) tea.Cmd {
 	// timeout; use longOpCtx so the 30s one-shot cap doesn't cancel it
 	// after endpoint deletion but before the cluster delete completes.
 	// The action reads only what is captured here, never m.
-	env, ctx, log, snapshot := m.environment, m.longOpCtx(), m.logger, *dac
+	env, ctx, log, snapshot, deps := m.environment, m.longOpCtx(), m.logger, *dac, m.deps
 	return m.trackAction("delete "+dac.Name, "Deleting", itemKey, func(progress func(string)) tea.Msg {
 		logger := newProgressLogger(log, progress)
 		err := audited(log, mutation.DeleteDAC, snapshot.Name, func() error {
-			return oci.DeleteDedicatedAICluster(ctx, &snapshot, env, logger)
+			return deps.DeleteDAC(ctx, &snapshot, env, logger)
 		})
 		if err != nil {
 			return deleteErrMsg{err: err, category: domain.DedicatedAICluster, key: itemKey, env: env}
@@ -74,12 +65,12 @@ func (m *Model) deleteGPUNode(itemKey models.ItemKey) tea.Cmd {
 		m.logger.Error("item not found for delete operation", "category", m.category, "key", itemKey)
 		return nil
 	}
-	env, opCtx, logger, snapshot := m.environment, m.opCtxFunc(), m.logger, *node
+	env, opCtx, logger, snapshot, deps := m.environment, m.opCtxFunc(), m.logger, *node, m.deps
 	return m.trackAction("terminate "+node.Name, "Terminating", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := opCtx()
 		defer cancel()
 		err := audited(logger, mutation.TerminateNode, snapshot.Name, func() error {
-			return oci.TerminateInstance(ctx, &snapshot, env, logger)
+			return deps.Terminate(ctx, &snapshot, env, logger)
 		})
 		if err != nil {
 			return deleteErrMsg{err: err, category: domain.GPUNode, key: itemKey, env: env}
@@ -98,12 +89,12 @@ func (m *Model) restartNode(item any, itemKey models.ItemKey) tea.Cmd {
 		m.logger.Error("unsupported item type for restart operation", "item", item)
 		return nil
 	}
-	env, opCtx, logger, snapshot := m.environment, m.opCtxFunc(), m.logger, *node
+	env, opCtx, logger, snapshot, deps := m.environment, m.opCtxFunc(), m.logger, *node, m.deps
 	return m.trackAction("restart "+node.Name, "Restarting", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := opCtx()
 		defer cancel()
 		err := audited(logger, mutation.RestartNode, snapshot.Name, func() error {
-			return oci.SoftResetInstance(ctx, &snapshot, env, logger)
+			return deps.SoftReset(ctx, &snapshot, env, logger)
 		})
 		return restartNodeResultMsg{key: itemKey, err: err, env: env}
 	})
@@ -253,12 +244,12 @@ func (m *Model) restartInferenceService(item any, itemKey models.ItemKey) tea.Cm
 		return nil
 	}
 	namespace, name := svc.Namespace, svc.Name
-	env, kubeConfig, opCtx, logger := m.environment, m.kubeConfig, m.opCtxFunc(), m.logger
+	env, kubeConfig, opCtx, logger, deps := m.environment, m.kubeConfig, m.opCtxFunc(), m.logger, m.deps
 	return m.trackAction("restart "+namespace+"/"+name, "", itemKey, func(func(string)) tea.Msg {
 		ctx, cancel := opCtx()
 		defer cancel()
 		err := audited(logger, mutation.RestartInferenceService, namespace+"/"+name, func() error {
-			return restartInferenceServiceFn(ctx, kubeConfig, env.KubeContext(), namespace, name)
+			return deps.RestartISVC(ctx, kubeConfig, env.KubeContext(), namespace, name)
 		})
 		return restartServiceResultMsg{key: itemKey, err: err, env: env}
 	})
