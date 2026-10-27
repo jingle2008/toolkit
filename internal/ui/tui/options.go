@@ -10,6 +10,7 @@ import (
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
 	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/recentenv"
+	"github.com/jingle2008/toolkit/internal/ui/tui/logview"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
 
@@ -82,7 +83,7 @@ func WithLogger(logger *slog.Logger) ModelOption {
 // WithLogStore sets the in-memory log ring the log overlay renders from.
 func WithLogStore(s *logging.RingSink) ModelOption {
 	return func(m *Model) {
-		m.log.store = s
+		m.log = logview.New(s)
 	}
 }
 

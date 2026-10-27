@@ -69,7 +69,7 @@ func TestPaste_LogFilter(t *testing.T) {
 	_, _ = m.Update(keyPress("`"))
 	require.Equal(t, common.LogView, m.viewMode)
 	_, _ = m.Update(keyPress("/"))
-	require.True(t, m.log.typing)
+	require.True(t, m.log.Typing())
 	_, _ = m.Update(paste(" watch closed "))
-	assert.Equal(t, "watch closed", m.log.filter)
+	assert.Equal(t, "watch closed", m.log.Filter())
 }

@@ -21,11 +21,11 @@ import (
 
 	"github.com/jingle2008/toolkit/internal/domain"
 	loader "github.com/jingle2008/toolkit/internal/infra/loader"
-	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/recentenv"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
 	"github.com/jingle2008/toolkit/internal/ui/tui/confirm"
 	keys "github.com/jingle2008/toolkit/internal/ui/tui/keys"
+	"github.com/jingle2008/toolkit/internal/ui/tui/logview"
 	"github.com/jingle2008/toolkit/internal/ui/tui/palette"
 	"github.com/jingle2008/toolkit/internal/ui/tui/rowpicker"
 	"github.com/jingle2008/toolkit/internal/ui/tui/tenantform"
@@ -50,20 +50,6 @@ type watchState struct {
 	// repo watch is unavailable. repoActive is true while it is established.
 	repoTrigger <-chan struct{}
 	repoActive  bool
-}
-
-// logOverlay holds the state for the log-viewer overlay (toggled with the
-// log keybinding); returnView restores the prior view when it closes.
-type logOverlay struct {
-	store      *logging.RingSink
-	viewport   *viewport.Model
-	returnView common.ViewMode
-	// minLevel hides entries below it; filter keeps entries containing it
-	// (case-insensitive), typed into input while typing.
-	minLevel logging.Level
-	filter   string
-	input    textinput.Model
-	typing   bool
 }
 
 // genCounters holds monotonic generation counters used to discard stale
@@ -261,8 +247,10 @@ type Model struct {
 	// Tenant-metadata entry form (EditTenantView); the zero form is none.
 	editTenant tenantform.Model
 
-	// log holds the log-overlay state. See the logOverlay type.
-	log logOverlay
+	// log is the log overlay (see the logview package); logReturn is the
+	// view it was opened over, restored when it closes.
+	log       logview.Model
+	logReturn common.ViewMode
 
 	// toasts holds the transient banners shown over the active view; see
 	// the toast package.
@@ -317,9 +305,12 @@ func initStyles(m *Model) {
 func (m *Model) restyle() {
 	if m.termFg != nil && m.termBg != nil {
 		setStyles(m, stylesFor(DerivePalette(!m.lightBg, m.termFg, m.termBg)))
-		return
+	} else {
+		setStyles(m, DefaultStyles(!m.lightBg))
 	}
-	setStyles(m, DefaultStyles(!m.lightBg))
+	if m.viewMode == common.LogView {
+		m.refreshLog() // the log's body is laid out in the theme's colors
+	}
 }
 
 // setStyles makes s the model's theme (adapted to a colorless terminal)
@@ -408,10 +399,8 @@ func setDefaults(m *Model) {
 		disableHorizontalScroll(&vp)
 		m.viewport = &vp
 	}
-	if m.log.viewport == nil {
-		lvp := viewport.New(viewport.WithWidth(20), viewport.WithHeight(20))
-		disableHorizontalScroll(&lvp)
-		m.log.viewport = &lvp
+	if !m.log.Ready() {
+		m.log = logview.New(nil)
 	}
 	if m.recentEnvs == nil {
 		m.recentEnvs = &recentenv.List{}

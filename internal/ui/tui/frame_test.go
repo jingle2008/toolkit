@@ -290,7 +290,7 @@ func TestFrame_FocusedPanelBorderIsAccent(t *testing.T) {
 	assert.Contains(t, topEdge(), accent, "list")
 	showDetails(t, m)
 	assert.Contains(t, topEdge(), accent, "details")
-	m.viewMode = common.LogView
+	_ = m.openLog()
 	assert.Contains(t, topEdge(), accent, "log")
 }
 

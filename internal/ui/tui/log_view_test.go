@@ -1,11 +1,13 @@
 package tui
 
 import (
+	"fmt"
+	"image/color"
 	"log/slog"
 	"strings"
 	"testing"
-	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,59 +15,9 @@ import (
 	"github.com/jingle2008/toolkit/internal/domain"
 	logging "github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/ui/tui/common"
+	"github.com/jingle2008/toolkit/internal/ui/tui/logview"
 	"github.com/jingle2008/toolkit/pkg/models"
 )
-
-func TestFormatLogEntry(t *testing.T) {
-	t.Parallel()
-	e := logging.Entry{
-		Time:    time.Date(2026, 6, 20, 15, 4, 5, 0, time.UTC),
-		Level:   logging.LevelInfo,
-		Message: "mutation begin",
-		Fields:  []any{"action", "drain"},
-	}
-	assert.Equal(t, "15:04:05 INFO  mutation begin action=drain", formatLogEntry(e))
-}
-
-func TestRenderLogEntries_Empty(t *testing.T) {
-	t.Parallel()
-	m := &Model{log: logOverlay{store: logging.NewRingSink(4)}}
-	body, _, _ := m.renderLogEntries(80)
-	assert.Contains(t, body, "no log entries")
-}
-
-func TestRenderLogEntries_NilStore(t *testing.T) {
-	t.Parallel()
-	m := &Model{}
-	assert.NotPanics(t, func() { _, _, _ = m.renderLogEntries(80) })
-}
-
-func TestRenderLogEntries_OrdersOldestToNewest(t *testing.T) {
-	t.Parallel()
-	ring := logging.NewRingSink(8)
-	slog.New(ring).Info("first")
-	slog.New(ring).Error("second")
-	m := &Model{log: logOverlay{store: ring}}
-	out, _, _ := m.renderLogEntries(120)
-	assert.Less(t, strings.Index(out, "first"), strings.Index(out, "second"))
-	assert.Contains(t, out, "ERROR")
-}
-
-// A log entry wider than the view wraps to multiple lines instead of being
-// truncated with an ellipsis — the whole message stays readable.
-func TestRenderLogEntries_WrapsInsteadOfTruncating(t *testing.T) {
-	t.Parallel()
-	ring := logging.NewRingSink(4)
-	long := strings.Repeat("x", 100) // one unbroken token, no color (Info)
-	slog.New(ring).Info(long)
-	m := &Model{log: logOverlay{store: ring}}
-
-	out, _, _ := m.renderLogEntries(40)
-
-	assert.NotContains(t, out, "…", "entries should wrap, not truncate with an ellipsis")
-	assert.Contains(t, out, "\n", "a 100-char entry must wrap to multiple lines at width 40")
-	assert.GreaterOrEqual(t, strings.Count(out, "x"), 100, "the full message must survive wrapping")
-}
 
 func newLogModel(t *testing.T, ring *logging.RingSink) *Model {
 	t.Helper()
@@ -92,7 +44,7 @@ func TestLogOverlay_ToggleFromList(t *testing.T) {
 	m.viewMode = common.ListView
 	_, cmd := m.Update(backtick)
 	assert.Equal(t, common.LogView, m.viewMode)
-	assert.Equal(t, common.ListView, m.log.returnView)
+	assert.Equal(t, common.ListView, m.logReturn)
 	assert.NotNil(t, cmd) // live-refresh tick started
 	// Toggle again closes back to the originating view.
 	_, _ = m.Update(backtick)
@@ -107,6 +59,16 @@ func TestLogOverlay_ReturnsToDetails(t *testing.T) {
 	assert.Equal(t, common.LogView, m.viewMode)
 	_, _ = m.Update(keyPress("esc"))
 	assert.Equal(t, common.DetailsView, m.viewMode)
+}
+
+func TestLogOverlay_QuitKeyQuits(t *testing.T) {
+	t.Parallel()
+	m := newLogModel(t, logging.NewRingSink(16))
+	m.viewMode = common.ListView
+	_, _ = m.Update(backtick)
+	_, cmd := m.Update(keyPress("q"))
+	require.NotNil(t, cmd)
+	assert.IsType(t, tea.QuitMsg{}, cmd())
 }
 
 func TestLogOverlay_PauseAndResume(t *testing.T) {
@@ -127,12 +89,59 @@ func TestLogOverlay_PauseAndResume(t *testing.T) {
 	assert.Contains(t, m.render(), "following")
 }
 
+// New entries appear on the next tick while following; scrolled up, the
+// tick leaves the offset alone.
+func TestLogOverlay_TickRefreshesAndFollows(t *testing.T) {
+	t.Parallel()
+	ring := logging.NewRingSink(200)
+	for i := 0; i < 50; i++ {
+		slog.New(ring).Info("line")
+	}
+	m := newLogModel(t, ring)
+	m.viewMode = common.ListView
+	_, _ = m.Update(backtick)
+
+	slog.New(ring).Info("fresh entry")
+	assert.NotContains(t, m.render(), "fresh entry", "View alone does not refresh")
+	_, cmd := m.Update(logview.TickMsg{})
+	assert.NotNil(t, cmd, "the tick re-arms while open")
+	assert.Contains(t, m.render(), "fresh entry")
+	assert.Contains(t, m.render(), "following")
+
+	_, _ = m.Update(keyPress("home"))
+	slog.New(ring).Info("later entry")
+	_, _ = m.Update(logview.TickMsg{})
+	vp := m.log.Viewport()
+	assert.Equal(t, 0, vp.YOffset(), "paused: the tick keeps the offset")
+	assert.Contains(t, m.render(), "PAUSED")
+}
+
 func TestLogOverlay_TickStopsWhenClosed(t *testing.T) {
 	t.Parallel()
 	m := newLogModel(t, logging.NewRingSink(8))
 	m.viewMode = common.ListView // not in LogView
-	_, cmd := m.Update(logTickMsg{})
+	_, cmd := m.Update(logview.TickMsg{})
 	assert.Nil(t, cmd) // tick does not re-arm outside LogView
+}
+
+// A resize re-lays the open log out at the new size.
+func TestLogOverlay_ResizeRelaysOut(t *testing.T) {
+	t.Parallel()
+	m := openLog(t)
+	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
+	vp := m.log.Viewport()
+	assert.Equal(t, 98, vp.Width())
+	assert.Equal(t, 20-frameChrome-2, vp.Height())
+	assert.Len(t, strings.Split(m.render(), "\n"), 20)
+}
+
+// A restyle re-lays the open log out in the new theme's colors.
+func TestLogOverlay_RestyleRelaysOut(t *testing.T) {
+	t.Parallel()
+	m := openLog(t)
+	before := m.logView()
+	_, _ = m.Update(tea.BackgroundColorMsg{Color: color.White})
+	assert.NotEqual(t, before, m.logView())
 }
 
 func TestLogOverlay_NilStoreDoesNotPanic(t *testing.T) {
@@ -149,6 +158,7 @@ func TestLogOverlay_NilStoreDoesNotPanic(t *testing.T) {
 		_, _ = m.Update(backtick)
 		_ = m.render()
 	})
+	assert.Contains(t, m.render(), "(log store unavailable)")
 }
 
 // openLog opens the log over the list with one entry per level.
@@ -165,39 +175,27 @@ func openLog(t *testing.T) *Model {
 	return m
 }
 
-// l cycles the minimum level all → info → warn → error → all.
-func TestLogView_LevelCycles(t *testing.T) {
-	t.Parallel()
-	m := openLog(t)
-	for _, want := range []int{4, 3, 2, 1, 4} {
-		_, shown, total := m.renderLogEntries(80)
-		assert.Equal(t, want, shown)
-		assert.Equal(t, 4, total)
-		m.updateLogView(keyPress("l"))
-	}
-}
-
 // / filters as it is typed; enter keeps the filter, then esc clears the
 // filters before a second esc closes the log.
 func TestLogView_FilterThenEsc(t *testing.T) {
 	t.Parallel()
 	m := openLog(t)
 	m.updateLogView(keyPress("/"))
-	require.True(t, m.log.typing)
+	require.True(t, m.log.Typing())
 	for _, r := range "DRAIN" {
 		m.updateLogView(keyPress(string(r)))
 	}
-	body, shown, _ := m.renderLogEntries(80)
+	shown, _ := m.log.Counts()
 	assert.Equal(t, 1, shown, "case-insensitive")
-	assert.Contains(t, body, "node=n1")
+	assert.Contains(t, m.logView(), "node=n1")
 
 	m.updateLogView(keyPress("enter"))
-	assert.False(t, m.log.typing)
-	assert.Equal(t, "DRAIN", m.log.filter)
-	assert.Contains(t, ansi.Strip(m.logCrumb()), "⟨/DRAIN⟩")
+	assert.False(t, m.log.Typing())
+	assert.Equal(t, "DRAIN", m.log.Filter())
+	assert.Contains(t, ansi.Strip(m.logView()), "⟨/DRAIN⟩")
 
 	m.updateLogView(keyPress("esc"))
-	assert.Empty(t, m.log.filter)
+	assert.Empty(t, m.log.Filter())
 	assert.Equal(t, common.LogView, m.viewMode, "the first esc clears the filter")
 	m.updateLogView(keyPress("esc"))
 	assert.Equal(t, common.ListView, m.viewMode)
@@ -210,19 +208,8 @@ func TestLogView_TypingTakesKeysAsText(t *testing.T) {
 	m.updateLogView(keyPress("/"))
 	m.updateLogView(keyPress("q"))
 	m.updateLogView(keyPress("`"))
-	assert.Equal(t, "q`", m.log.filter)
+	assert.Equal(t, "q`", m.log.Filter())
 	assert.Equal(t, common.LogView, m.viewMode)
-}
-
-// A filter that hides everything says so and how to undo it.
-func TestLogView_NoMatches(t *testing.T) {
-	t.Parallel()
-	m := openLog(t)
-	m.log.filter = "zzz"
-	body, shown, total := m.renderLogEntries(80)
-	assert.Equal(t, 0, shown)
-	assert.Equal(t, 4, total)
-	assert.Contains(t, body, "no entries match · esc clears the filters")
 }
 
 // The log sits in the frame: env bar, breadcrumb, a titled panel and its
@@ -230,7 +217,7 @@ func TestLogView_NoMatches(t *testing.T) {
 func TestLogView_InFrame(t *testing.T) {
 	t.Parallel()
 	m := openLog(t)
-	m.viewWidth, m.viewHeight = 100, 20
+	_, _ = m.Update(tea.WindowSizeMsg{Width: 100, Height: 20})
 	out := ansi.Strip(m.logView())
 	lines := strings.Split(out, "\n")
 	assert.Len(t, lines, 20)
@@ -238,4 +225,29 @@ func TestLogView_InFrame(t *testing.T) {
 	assert.True(t, strings.HasPrefix(lines[2], "╭───"), "the breadcrumb names the log: %s", lines[2])
 	assert.Contains(t, lines[len(lines)-2], " 4 entries ─╯", "the bottom edge counts the entries")
 	assert.Contains(t, lines[len(lines)-1], "/ filter  l level")
+}
+
+// Rendering the log changes nothing: two renders leave the model's log
+// state equal.
+func TestLogView_RenderHasNoSideEffects(t *testing.T) {
+	t.Parallel()
+	ring := logging.NewRingSink(200)
+	for i := 0; i < 100; i++ {
+		slog.New(ring).Info("line")
+	}
+	m := newLogModel(t, ring)
+	m.viewMode = common.ListView
+	_, _ = m.Update(backtick)
+	slog.New(ring).Info("unseen until the tick")
+	m.viewWidth, m.viewHeight = 60, 30 // a size the log was not laid out at
+
+	// %#v, not reflect.DeepEqual: the viewport holds a func, which
+	// DeepEqual never finds equal.
+	state := func() string { return fmt.Sprintf("%#v", m.log) }
+	before := state()
+	first := m.render()
+	assert.Equal(t, before, state())
+	assert.Equal(t, first, m.render())
+	assert.Equal(t, before, state())
+	assert.NotContains(t, first, "unseen until the tick")
 }
