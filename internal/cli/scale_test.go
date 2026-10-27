@@ -61,7 +61,7 @@ func TestScaleGPUPool_HappyPath(t *testing.T) {
 	)
 	defer swap(&increasePoolSizeFn, func(_ context.Context, p *models.GPUPool, add int, _ models.Environment, _ *slog.Logger) (oci.PoolScale, error) {
 		gotPool, gotAdd = p, add
-		return oci.PoolScale{Shown: 4, Before: 4, After: 4 + add}, nil
+		return oci.PoolScale{Shown: 4, Before: 4, After: p.Size}, nil
 	})()
 
 	out, err := runRootCmd(t, []string{"scale", "gpupool", "pool-a", "-y"}, "")
@@ -71,8 +71,10 @@ func TestScaleGPUPool_HappyPath(t *testing.T) {
 	if gotPool == nil || gotPool.Name != "pool-a" || gotPool.ID == "" {
 		t.Errorf("unexpected pool handed to IncreasePoolSize: %+v", gotPool)
 	}
-	if gotAdd != 4 {
-		t.Errorf("without --add a short pool is filled: add=%d, want 4", gotAdd)
+	// The fill is counted from OCI's size when it updates, not the 4 the
+	// lookup saw.
+	if gotAdd != oci.FillPool {
+		t.Errorf("without --add a short pool is filled: add=%d, want oci.FillPool", gotAdd)
 	}
 	if !strings.Contains(out, "scale gpu_pool/pool-a: OK (4 → 8 instances)") {
 		t.Errorf("expected OK with sizes, got: %q", out)

@@ -74,20 +74,29 @@ type PoolScale struct {
 	After  int `json:"after"`
 }
 
-// String renders s as "4 → 6 instances", noting when OCI's size had moved
-// from the one the caller saw.
+// String renders s as "4 → 6 instances" ("already 6 instances" when a
+// fill found nothing to add), noting when OCI's size had moved from the
+// one the caller saw.
 func (s PoolScale) String() string {
 	out := fmt.Sprintf("%d → %d instances", s.Before, s.After)
+	if s.After == s.Before {
+		out = fmt.Sprintf("already %d instances; nothing to scale", s.Before)
+	}
 	if s.Before != s.Shown {
 		out += fmt.Sprintf(" (was %d, not %d)", s.Before, s.Shown)
 	}
 	return out
 }
 
+// FillPool, as IncreasePoolSize's add, grows the pool to its
+// Terraform-declared size instead of by a count.
+const FillPool = 0
+
 // IncreasePoolSize grows the given GPU pool's instance pool by add
-// instances, which may take it past its Terraform-declared size. add is
-// counted from the size OCI reports just before the update, not from
-// pool.ActualSize, which may be stale.
+// instances, which may take it past its Terraform-declared size, or with
+// FillPool to pool.Size and never past it (a pool already there is left
+// as is). Either is counted from the size OCI reports just before the
+// update, not from pool.ActualSize, which may be stale.
 func IncreasePoolSize(
 	ctx context.Context,
 	pool *models.GPUPool,
@@ -99,7 +108,7 @@ func IncreasePoolSize(
 	if pool.ID == "" {
 		return scale, fmt.Errorf("pool %s: %w", pool.Name, ErrNoInstancePool)
 	}
-	if add < 1 {
+	if add < 0 {
 		return scale, fmt.Errorf("pool %s: scale-up must add at least 1 instance, got %d", pool.Name, add)
 	}
 	mgmtClient, err := newComputeMgmtClient(env)
@@ -115,6 +124,14 @@ func IncreasePoolSize(
 		return scale, fmt.Errorf("instance pool %s reported no size", pool.ID)
 	}
 	scale.Before = *current.Size
+	if add == FillPool {
+		if scale.Before >= pool.Size {
+			scale.After = scale.Before
+			logger.Info("instance pool is already at its Terraform size", "id", pool.ID, "name", pool.Name, "size", scale.Before)
+			return scale, nil
+		}
+		add = pool.Size - scale.Before
+	}
 	scale.After = scale.Before + add
 	newSize := scale.After
 	logger.Info("scaling up instance pool", "id", pool.ID, "name", pool.Name, "from", scale.Before, "newSize", newSize)

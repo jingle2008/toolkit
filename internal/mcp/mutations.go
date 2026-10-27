@@ -530,7 +530,11 @@ func (s *Server) handleScaleGPUPool(ctx context.Context, req *sdk.CallToolReques
 			return []any{"add", n, "from", result.Before, "to", result.After}
 		},
 		perform: func(p planned) (scaleGPUPoolResult, error) {
-			scale, err := mcpIncreasePoolSizeFn(ctx, pool, n, env, logging.FromContext(ctx))
+			count := n
+			if in.Add == nil {
+				count = oci.FillPool // n was counted from the lookup; OCI's size may have moved since
+			}
+			scale, err := mcpIncreasePoolSizeFn(ctx, pool, count, env, logging.FromContext(ctx))
 			if err != nil {
 				return scaleGPUPoolResult{}, err
 			}

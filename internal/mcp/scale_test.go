@@ -43,6 +43,17 @@ func TestScaleGPUPool_AddPastTerraformSize(t *testing.T) {
 	assert.Contains(t, sc["note"], "the next terraform apply shrinks it back")
 }
 
+// Without add, a short pool is filled from OCI's size at the time, not
+// by the shortfall the lookup saw, which may be stale.
+//
+//nolint:paralleltest // replaces package-level seams
+func TestScaleGPUPool_WithoutAddFills(t *testing.T) {
+	gotAdd := stubScalePool(t, models.GPUPool{Name: "pool-a", ID: "ocid1.pool", Size: 6, ActualSize: 4})
+	sc := structured(t, callTool(t, "scale_gpu_pool", map[string]any{"name": "pool-a", "confirm": true}))
+	assert.Equal(t, oci.FillPool, *gotAdd)
+	assert.Equal(t, "OK", sc["status"])
+}
+
 // Without add, a pool at its Terraform size is left alone: status NOOP
 // says how to go past it, and nothing reaches OCI.
 //

@@ -157,7 +157,30 @@ func TestIncreasePoolSize_StaleActualSize(t *testing.T) {
 	assert.Equal(t, "5 → 7 instances (was 5, not 4)", scale.String())
 }
 
-// Nothing reaches OCI for a pool it doesn't have or a count below 1.
+// FillPool fills to the declared size from the size OCI reports, not
+// from a stale ActualSize: it never goes past the declared size.
+func TestIncreasePoolSize_Fill(t *testing.T) {
+	gotSize := fakePoolMgmt(t, 5, nil)
+	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 4, Size: 6}
+	scale, err := IncreasePoolSize(context.Background(), pool, FillPool, makeEnv(), slog.New(&testLogger{}))
+	require.NoError(t, err)
+	assert.Equal(t, 6, *gotSize, "one short of 6 now, not two")
+	assert.Equal(t, "5 → 6 instances (was 5, not 4)", scale.String())
+}
+
+// A fill that finds OCI already at (or past) the declared size updates
+// nothing.
+func TestIncreasePoolSize_FillAtSize(t *testing.T) {
+	gotSize := fakePoolMgmt(t, 6, nil)
+	pool := &models.GPUPool{ID: "pid", Name: "pname", ActualSize: 4, Size: 6}
+	scale, err := IncreasePoolSize(context.Background(), pool, FillPool, makeEnv(), slog.New(&testLogger{}))
+	require.NoError(t, err)
+	assert.Equal(t, 0, *gotSize, "no update")
+	assert.Equal(t, PoolScale{Shown: 4, Before: 6, After: 6}, scale)
+	assert.Equal(t, "already 6 instances; nothing to scale (was 6, not 4)", scale.String())
+}
+
+// Nothing reaches OCI for a pool it doesn't have or a negative count.
 func TestIncreasePoolSize_Refusals(t *testing.T) {
 	orig := newComputeMgmtClient
 	defer func() { newComputeMgmtClient = orig }()
@@ -167,7 +190,7 @@ func TestIncreasePoolSize_Refusals(t *testing.T) {
 	}
 	_, err := IncreasePoolSize(context.Background(), &models.GPUPool{Name: "gone", Status: models.GPUPoolStatusNonexistent}, 1, makeEnv(), slog.New(&testLogger{}))
 	require.ErrorIs(t, err, ErrNoInstancePool)
-	_, err = IncreasePoolSize(context.Background(), &models.GPUPool{ID: "pid", Name: "p"}, 0, makeEnv(), slog.New(&testLogger{}))
+	_, err = IncreasePoolSize(context.Background(), &models.GPUPool{ID: "pid", Name: "p"}, -1, makeEnv(), slog.New(&testLogger{}))
 	require.ErrorContains(t, err, "at least 1")
 }
 
