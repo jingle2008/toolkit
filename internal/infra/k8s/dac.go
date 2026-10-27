@@ -19,8 +19,10 @@ func listDedicatedAIClusters(ctx context.Context, client dynamic.Interface) ([]m
 	if err != nil {
 		return nil, err
 	}
+	// A cluster without the legacy API, or a role without it, has no
+	// legacy DACs rather than no DACs.
 	v1Clusters, err := listDedicatedAIClustersV1(ctx, client, cache)
-	if err != nil {
+	if err != nil && !legacyAPIUnavailable(err) {
 		return nil, err
 	}
 	v2Clusters, err := listDedicatedAIClustersV2(ctx, client, cache)
@@ -100,12 +102,7 @@ func extractDAC(ctx context.Context, cache PodCache, statusField string, overlay
 
 // listDedicatedAIClustersV1 fetches DedicatedAIClusters from v1alpha1 CRD
 func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, cache PodCache) ([]models.DedicatedAICluster, error) {
-	gvr := schema.GroupVersionResource{
-		Group:    "ome.oracle.com",
-		Version:  "v1alpha1",
-		Resource: "dedicatedaiclusters",
-	}
-	return listDACsWithOverlay(ctx, client, gvr, extractDAC(ctx, cache, "status",
+	return listDACsWithOverlay(ctx, client, dacV1GVR, extractDAC(ctx, cache, "status",
 		func(spec map[string]any, _ PodStats, dac *models.DedicatedAICluster) {
 			dac.Type, _ = spec["type"].(string)
 			dac.UnitShape, _ = spec["unitShape"].(string)
@@ -118,12 +115,7 @@ func listDedicatedAIClustersV1(ctx context.Context, client dynamic.Interface, ca
 // is a pod count; dividing by the profile's spec.count converts it to
 // profile units.
 func listDACProfilePodCounts(ctx context.Context, client dynamic.Interface) (map[string]int, error) {
-	gvr := schema.GroupVersionResource{
-		Group:    "ome.io",
-		Version:  "v1beta1",
-		Resource: "dedicatedaiclusterprofiles",
-	}
-	list, err := client.Resource(gvr).List(ctx, v1.ListOptions{})
+	list, err := client.Resource(dacProfileGVR).List(ctx, v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -145,12 +137,7 @@ func listDedicatedAIClustersV2(ctx context.Context, client dynamic.Interface, ca
 		logger.Warn("failed to list DAC profiles; Size falls back to pod count", "error", err)
 	}
 
-	gvr := schema.GroupVersionResource{
-		Group:    "ome.io",
-		Version:  "v1beta1",
-		Resource: "dedicatedaiclusters",
-	}
-	return listDACsWithOverlay(ctx, client, gvr, extractDAC(ctx, cache, "dacLifecycleState",
+	return listDACsWithOverlay(ctx, client, dacV2GVR, extractDAC(ctx, cache, "dacLifecycleState",
 		func(spec map[string]any, stats PodStats, dac *models.DedicatedAICluster) {
 			dac.Profile, _ = spec["profile"].(string)
 			count, _ := nestedCount(spec, "count")
@@ -187,7 +174,7 @@ func LoadDedicatedAIClusters(ctx context.Context, client dynamic.Interface) (map
 }
 
 func tenantIDFromLabels(labels map[string]any) string {
-	value := labels["tenancy-id"]
+	value := labels[labelTenancyID]
 	if value != nil {
 		if str, ok := value.(string); ok {
 			return str

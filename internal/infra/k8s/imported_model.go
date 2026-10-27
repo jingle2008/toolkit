@@ -8,7 +8,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
 	"github.com/jingle2008/toolkit/pkg/models"
@@ -40,22 +39,12 @@ import (
 // sources are conceptually one catalog — a missing half is more
 // confusing than an explicit error.
 func LoadImportedModels(ctx context.Context, client dynamic.Interface) (map[string][]models.ImportedModel, error) {
-	namespacedGVR := schema.GroupVersionResource{
-		Group:    "ome.io",
-		Version:  "v1beta1",
-		Resource: "basemodels",
-	}
-	nsList, err := client.Resource(namespacedGVR).List(ctx, v1.ListOptions{})
+	nsList, err := client.Resource(baseModelGVR).List(ctx, v1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("list BaseModel: %w", err)
 	}
 
-	clusterGVR := schema.GroupVersionResource{
-		Group:    "ome.io",
-		Version:  "v1beta1",
-		Resource: "clusterbasemodels",
-	}
-	cbList, err := client.Resource(clusterGVR).List(ctx, v1.ListOptions{})
+	cbList, err := client.Resource(clusterBaseModelGVR).List(ctx, v1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("list ClusterBaseModel: %w", err)
 	}
@@ -75,7 +64,7 @@ func LoadImportedModels(ctx context.Context, client dynamic.Interface) (map[stri
 		if !hasLabels {
 			continue // shared catalog
 		}
-		if _, ok := labels["tenancy-id"]; !ok {
+		if _, ok := labels[labelTenancyID]; !ok {
 			// Shared catalog (no tenancy-id label) — surfaced by
 			// LoadBaseModels instead. Cluster-scoped CBMs in this
 			// loader leave Namespace empty by construction.

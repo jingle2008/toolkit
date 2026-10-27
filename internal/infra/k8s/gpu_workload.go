@@ -70,7 +70,7 @@ func LoadGPUWorkloadsByNode(ctx context.Context, clientset kubernetes.Interface)
 			w := models.GPUWorkload{
 				Name:      pod.Name,
 				Node:      pod.Spec.NodeName,
-				TenantID:  labels["tenancy-id"],
+				TenantID:  labels[labelTenancyID],
 				Namespace: pod.Namespace,
 				Model:     labels["base-model-name"],
 				Runtime:   labels["serving-runtime"],
