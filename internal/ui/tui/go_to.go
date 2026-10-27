@@ -44,7 +44,7 @@ func (m *Model) openGoTo() tea.Cmd {
 		return m.goTo(targets[0])
 	default:
 		cmd := m.openRowPicker("Go to", "go", targets, m.goTo)
-		m.rowPicker.cursor = goToParentIndex(m.category, m.scope, targets)
+		m.rowPicker = m.rowPicker.WithCursor(goToParentIndex(m.category, m.scope, targets))
 		return cmd
 	}
 }

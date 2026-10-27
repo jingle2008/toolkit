@@ -78,15 +78,15 @@ func TestRowPicker_FilterPastEightRows(t *testing.T) {
 	for _, k := range []string{"1", "j"} { // j types: the filter owns letters
 		_, _ = m.updateRowPickerView(keyPress(k))
 	}
-	assert.Equal(t, "1j", m.rowPicker.filter)
-	assert.Empty(t, m.rowPicker.visible())
+	assert.Equal(t, "1j", m.rowPicker.Filter())
+	assert.Empty(t, m.rowPicker.Visible())
 	assert.Contains(t, ansi.Strip(m.rowPickerView()), "no matches")
 	_, _ = m.updateRowPickerView(keyPress("enter"))
 	assert.Equal(t, common.RowPickerView, m.viewMode, "enter on no match is a no-op")
 
 	_, _ = m.updateRowPickerView(keyPress("backspace"))
-	assert.Equal(t, "1", m.rowPicker.filter)
-	require.Len(t, m.rowPicker.visible(), 3) // row-01, row-10, row-11
+	assert.Equal(t, "1", m.rowPicker.Filter())
+	require.Len(t, m.rowPicker.Visible(), 3) // row-01, row-10, row-11
 	_, _ = m.updateRowPickerView(keyPress("down"))
 	_, _ = m.updateRowPickerView(keyPress("enter"))
 	assert.Equal(t, "row-10", chosen.Name)
@@ -97,8 +97,8 @@ func TestRowPicker_ShortListKeepsJK(t *testing.T) {
 	m := newTestModel(t)
 	m.openRowPicker("Pick", "go", pickerTargets(3), func(domain.Scope) tea.Cmd { return nil })
 	_, _ = m.updateRowPickerView(keyPress("j"))
-	assert.Equal(t, 1, m.rowPicker.cursor)
-	assert.Empty(t, m.rowPicker.filter)
+	assert.Equal(t, 1, m.rowPicker.Cursor())
+	assert.Empty(t, m.rowPicker.Filter())
 	assert.NotContains(t, ansi.Strip(m.rowPickerView()), "filter:")
 }
 
