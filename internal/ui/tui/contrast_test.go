@@ -69,20 +69,20 @@ func TestColorless_FocusInReverse(t *testing.T) {
 	t.Parallel()
 	m := newConfirmTestModel(t)
 	m.updateLayout(120, 40)
-	assert.False(t, m.styles.Selected.GetReverse(), "colors draw the selection")
+	assert.False(t, m.theme.Table.Selected.GetReverse(), "colors draw the selection")
 
 	_, _ = m.Update(tea.ColorProfileMsg{Profile: colorprofile.ASCII})
 	assert.True(t, m.theme.Monochrome)
-	assert.True(t, m.styles.Selected.GetReverse())
+	assert.True(t, m.theme.Table.Selected.GetReverse())
 
 	_, _ = m.Update(tea.BackgroundColorMsg{Color: color.White})
-	assert.True(t, m.styles.Selected.GetReverse(), "a later background report keeps it")
+	assert.True(t, m.theme.Table.Selected.GetReverse(), "a later background report keeps it")
 
 	m.requestConfirm(confirmRequest{action: mutation.DrainNode, target: "n1", run: func(int) tea.Cmd { return nil }})
 	assert.Contains(t, m.confirmView(), "\x1b[1;7m", "the focused button is bold reverse")
 
 	_, _ = m.Update(tea.ColorProfileMsg{Profile: colorprofile.TrueColor})
-	assert.False(t, m.styles.Selected.GetReverse(), "color comes back")
+	assert.False(t, m.theme.Table.Selected.GetReverse(), "color comes back")
 }
 
 // themes are common terminal color schemes, as foreground and background.

@@ -95,7 +95,6 @@ type Model struct {
 	viewWidth     int
 	dataset       *models.Dataset
 	table         *table.Model
-	styles        table.Styles
 	category      domain.Category
 	headers       []header
 	editTarget    common.EditTarget
@@ -354,7 +353,6 @@ func setStyles(m *Model, s Styles) {
 	m.themeGen++
 	if m.table != nil {
 		m.table.SetStyles(s.Table)
-		m.styles = s.Table
 	}
 	if m.viewport != nil {
 		m.viewport.Style = s.Viewport

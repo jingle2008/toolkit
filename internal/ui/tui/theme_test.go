@@ -41,7 +41,7 @@ func TestBackgroundColorMsg_RestylesComponents(t *testing.T) {
 	light := NewPalette(false)
 	require.Equal(t, light, m.theme.Palette)
 	assert.Equal(t, light.Accent, m.loadingSpinner.Style.GetForeground())
-	assert.Equal(t, light.Selection, m.styles.Selected.GetBackground())
+	assert.Equal(t, light.Selection, m.theme.Table.Selected.GetBackground())
 	r, ok := m.renderer.(view.ProductionRenderer)
 	require.True(t, ok)
 	assert.True(t, r.Light, "the JSON view follows the background")

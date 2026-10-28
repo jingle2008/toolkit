@@ -295,7 +295,7 @@ func (m *Model) updateColumns() {
 			whole:   status,
 		}
 	}
-	widths := columnWidths(specs, m.table.Width(), m.styles.Header.GetHorizontalFrameSize())
+	widths := columnWidths(specs, m.table.Width(), m.theme.Table.Header.GetHorizontalFrameSize())
 	for i, header := range m.headers {
 		if isNumericCol(header.text) {
 			titles[i] = padLeft(titles[i], widths[i])
