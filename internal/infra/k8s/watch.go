@@ -17,10 +17,10 @@ import (
 )
 
 // DebounceWindow is the coalescing window for watch triggers: events
-// observed within one window collapse to a single reload tick. It is a
-// package-level var so tests can shorten it. ~5s matches the TUI's
-// "eventual" freshness target without re-listing on every raw event.
-var DebounceWindow = 5 * time.Second
+// observed within one window collapse to a single reload tick. ~5s
+// matches the TUI's "eventual" freshness target without re-listing on
+// every raw event. Tests give watchTrigger a shorter one.
+const DebounceWindow = 5 * time.Second
 
 // watchTrigger opens every watcher via the given openers and merges
 // their events into a single coalesced trigger channel. Each received
@@ -293,11 +293,15 @@ func gpuPodWatchOpeners(clientset kubernetes.Interface) []func(context.Context) 
 // API versions LoadInferenceServices merges). Like the loader, it skips
 // the legacy API when that is unavailable.
 func WatchInferenceServices(ctx context.Context, client dynamic.Interface) (<-chan struct{}, error) {
-	return watchTrigger(
-		ctx, DebounceWindow,
+	return watchTrigger(ctx, DebounceWindow, inferenceServiceWatchOpeners(client)...)
+}
+
+// inferenceServiceWatchOpeners watches both InferenceService APIs.
+func inferenceServiceWatchOpeners(client dynamic.Interface) []func(context.Context) (watch.Interface, error) {
+	return []func(context.Context) (watch.Interface, error){
 		crWatchOpener(client, inferenceServiceGVR),
 		legacyCRWatchOpener(client, inferenceServiceV1GVR),
-	)
+	}
 }
 
 // legacyCRWatchOpener is crWatchOpener for a legacy ome.oracle.com GVR:
@@ -382,6 +386,11 @@ func WatchImportedModels(ctx context.Context, client dynamic.Interface) (<-chan 
 // WatchGPUNodes triggers on Node changes plus GPU pod changes (pods
 // drive allocation and node issues).
 func WatchGPUNodes(ctx context.Context, clientset kubernetes.Interface) (<-chan struct{}, error) {
+	return watchTrigger(ctx, DebounceWindow, gpuNodeWatchOpeners(clientset)...)
+}
+
+// gpuNodeWatchOpeners watches the GPU nodes and the pods on them.
+func gpuNodeWatchOpeners(clientset kubernetes.Interface) []func(context.Context) (watch.Interface, error) {
 	nodeOpener := durableOpener(
 		func(ctx context.Context) (string, error) {
 			l, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{
@@ -401,7 +410,7 @@ func WatchGPUNodes(ctx context.Context, clientset kubernetes.Interface) (<-chan 
 	openers := make([]func(context.Context) (watch.Interface, error), 0, 1+len(gpuPodSelectors))
 	openers = append(openers, nodeOpener)
 	openers = append(openers, gpuPodWatchOpeners(clientset)...)
-	return watchTrigger(ctx, DebounceWindow, openers...)
+	return openers
 }
 
 // WatchGPUWorkloads triggers on GPU pod changes.

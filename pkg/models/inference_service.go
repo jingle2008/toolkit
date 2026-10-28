@@ -50,7 +50,15 @@ type InferenceService struct {
 func (s InferenceService) GetName() string { return s.Name }
 
 // IsFaulty reports whether the Ready condition is anything but True.
-func (s InferenceService) IsFaulty() bool { return s.Ready != "True" }
+func (s InferenceService) IsFaulty() bool { return s.Ready != ConditionTrue }
+
+// The values a Kubernetes condition's status takes, as InferenceService
+// Ready carries them.
+const (
+	ConditionTrue    = "True"
+	ConditionFalse   = "False"
+	ConditionUnknown = "Unknown"
+)
 
 // FilterableFields returns the fields matched by `--filter`. Age is
 // excluded (matching GPUWorkload): a formatted duration is noise for

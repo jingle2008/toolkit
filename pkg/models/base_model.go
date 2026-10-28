@@ -116,9 +116,13 @@ func (m BaseModel) FilterableFields() []string {
 	})
 }
 
-// IsFaulty reports whether the model's Status is anything other than "Ready".
+// BaseModelStateReady is the state OME reports for a model it serves.
+const BaseModelStateReady = "Ready"
+
+// IsFaulty reports whether the model's Status is anything other than
+// BaseModelStateReady.
 func (m BaseModel) IsFaulty() bool {
-	return m.Status != "Ready"
+	return m.Status != BaseModelStateReady
 }
 
 // Flags returns the flags for the base model.
