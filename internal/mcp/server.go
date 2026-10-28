@@ -23,6 +23,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/jingle2008/toolkit/internal/config"
+	"github.com/jingle2008/toolkit/internal/domain"
 	"github.com/jingle2008/toolkit/internal/infra/loader"
 	"github.com/jingle2008/toolkit/internal/logging"
 	"github.com/jingle2008/toolkit/internal/mutation"
@@ -239,3 +240,28 @@ func failTool[Out any](what string, err error) (*sdk.CallToolResult, Out, error)
 
 // normFilter applies the same fuzzy substring matching the CLI uses.
 func normFilter(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
+
+// kindCategories are a kind's category in each family the definition and
+// override tools list.
+type kindCategories struct{ definition, tenancy, regional domain.Category }
+
+// overrideKinds is the kind the definition and override tools take,
+// each to its categories: the one place the kind names are spelled.
+var overrideKinds = map[string]kindCategories{
+	"limit":            {domain.LimitDefinition, domain.LimitTenancyOverride, domain.LimitRegionalOverride},
+	"console_property": {domain.ConsolePropertyDefinition, domain.ConsolePropertyTenancyOverride, domain.ConsolePropertyRegionalOverride},
+	"property":         {domain.PropertyDefinition, domain.PropertyTenancyOverride, domain.PropertyRegionalOverride},
+}
+
+// kindNames lists overrideKinds' names, for errors and tool descriptions;
+// TestOverrideKinds_NamesMatch keeps it in step.
+const kindNames = "limit, console_property, property"
+
+// categories is k's kind's categories, or an error naming the kinds.
+func (k kindInput) categories() (kindCategories, error) {
+	c, ok := overrideKinds[k.kind()]
+	if !ok {
+		return kindCategories{}, fmt.Errorf("unknown kind %q (expected: %s)", k.Kind, kindNames)
+	}
+	return c, nil
+}

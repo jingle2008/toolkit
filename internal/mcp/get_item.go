@@ -116,12 +116,9 @@ func pickFromGroups[T any](grouped map[string][]T, warnings []string, err error,
 
 // listAll is every row of a flat category, as its list_* tool returns it
 // unfiltered, so a row looks the same either way.
-//
-//nolint:cyclop // one case per flat category, each a list tool
 func (s *Server) listAll(ctx context.Context, req *sdk.CallToolRequest, cat domain.Category, env envOverride) ([]any, []string, error) {
 	li := listInput{envOverride: env}
 	fi := faultyListInput{listInput: li}
-	kind := func(k string) kindInput { return kindInput{Kind: k, listInput: li} }
 	switch cat {
 	case domain.Tenant:
 		return anyItems(s.handleListTenants(ctx, req, fi))
@@ -135,18 +132,10 @@ func (s *Server) listAll(ctx context.Context, req *sdk.CallToolRequest, cat doma
 		return anyItems(s.handleListEnvironments(ctx, req, li))
 	case domain.ServiceTenancy:
 		return anyItems(s.handleListServiceTenancies(ctx, req, li))
-	case domain.LimitDefinition:
-		return anyItems(s.handleListDefinitions(ctx, req, kind("limit")))
-	case domain.ConsolePropertyDefinition:
-		return anyItems(s.handleListDefinitions(ctx, req, kind("console_property")))
-	case domain.PropertyDefinition:
-		return anyItems(s.handleListDefinitions(ctx, req, kind("property")))
-	case domain.LimitRegionalOverride:
-		return anyItems(s.handleListRegionalOverrides(ctx, req, kind("limit")))
-	case domain.ConsolePropertyRegionalOverride:
-		return anyItems(s.handleListRegionalOverrides(ctx, req, kind("console_property")))
-	case domain.PropertyRegionalOverride:
-		return anyItems(s.handleListRegionalOverrides(ctx, req, kind("property")))
+	case domain.LimitDefinition, domain.ConsolePropertyDefinition, domain.PropertyDefinition:
+		return anyItems(s.definitions(ctx, li, cat))
+	case domain.LimitRegionalOverride, domain.ConsolePropertyRegionalOverride, domain.PropertyRegionalOverride:
+		return anyItems(s.regionalOverrides(ctx, li, cat))
 	default:
 		return nil, nil, fmt.Errorf("%s has no rows to get by name", cat)
 	}
