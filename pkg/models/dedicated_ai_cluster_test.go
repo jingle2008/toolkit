@@ -95,7 +95,7 @@ func TestDedicatedAICluster_GetIDAndTenantID(t *testing.T) {
 		{
 			name:      "IAD short code",
 			realm:     "oc1",
-			region:    string(RegionIAD),
+			region:    string(regionIAD),
 			dacName:   "mydac",
 			tenantID:  "t123",
 			expID:     "ocid1.generativeaidedicatedaicluster.oc1.iad.mydac",
@@ -104,7 +104,7 @@ func TestDedicatedAICluster_GetIDAndTenantID(t *testing.T) {
 		{
 			name:      "PHX short code",
 			realm:     "oc1",
-			region:    string(RegionPHX),
+			region:    string(regionPHX),
 			dacName:   "mydac",
 			tenantID:  "t123",
 			expID:     "ocid1.generativeaidedicatedaicluster.oc1.phx.mydac",

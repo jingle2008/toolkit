@@ -29,13 +29,6 @@ func TestRegion_GetCode(t *testing.T) {
 	assert.Equal(t, "UNKNOWN", r.Code())
 }
 
-func TestCodeToRegion(t *testing.T) {
-	t.Parallel()
-	assert.Equal(t, Region("us-phoenix-1"), CodeToRegion("phx"))
-	assert.Equal(t, Region("us-ashburn-1"), CodeToRegion("iad"))
-	assert.Equal(t, Region(""), CodeToRegion("unknown"))
-}
-
 func TestResolveRegion(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -71,5 +64,27 @@ func TestResolveRegion_UnknownCodeIsAnError(t *testing.T) {
 		// forms; the whole point of erroring here is that the loader's
 		// "environment is not valid or in the list" doesn't.
 		assert.Contains(t, err.Error(), "unknown region code")
+	}
+}
+
+// The extras fill gaps in the SDK's list; once the SDK lists one of
+// them, the extra should go (regenerate, then delete it here).
+func TestExtraShortNames_NotInSDK(t *testing.T) {
+	t.Parallel()
+	for code := range extraShortNames {
+		_, inSDK := sdkShortNames[code]
+		assert.Falsef(t, inSDK, "%s is in the SDK now: drop it from extraShortNames", code)
+	}
+}
+
+// Short codes resolve from the SDK's list and the extras alike, and
+// Code maps the regions back.
+func TestShortNames_ResolveBothWays(t *testing.T) {
+	t.Parallel()
+	for code, want := range map[string]Region{"phx": regionPHX, "iad": regionIAD, "fra": "eu-frankfurt-1", "tiw": "us-tacoma-1"} {
+		got, err := ResolveRegion(code)
+		require.NoError(t, err, code)
+		assert.Equal(t, want, got, code)
+		assert.Equal(t, code, want.Code(), code)
 	}
 }

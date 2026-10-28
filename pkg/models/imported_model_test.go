@@ -53,12 +53,12 @@ func TestImportedModel_OCID(t *testing.T) {
 	}{
 		{
 			name:   "IAD short code",
-			region: string(RegionIAD),
+			region: string(regionIAD),
 			want:   "ocid1.generativeaiimportedmodel.oc1.iad.mymodel",
 		},
 		{
 			name:   "PHX short code",
-			region: string(RegionPHX),
+			region: string(regionPHX),
 			want:   "ocid1.generativeaiimportedmodel.oc1.phx.mymodel",
 		},
 		{
