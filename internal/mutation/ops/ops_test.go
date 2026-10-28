@@ -25,6 +25,19 @@ func run(t *testing.T, op mutation.Op) mutation.Plan {
 	return p
 }
 
+// A drain resolves its current phase and runs the front-end's perform.
+func TestDrain(t *testing.T) {
+	t.Parallel()
+	d := Deps{DrainStatus: func(_ context.Context, _, _, node string) (k8s.DrainStatus, error) {
+		assert.Equal(t, "node-1", node)
+		return k8s.DrainStatus{DrainState: k8s.DrainState{Phase: k8s.DrainNone}}, nil
+	}}
+	performed := false
+	p := run(t, Drain(d, Env{}, "node-1", func(context.Context) error { performed = true; return nil }))
+	assert.True(t, performed)
+	assert.Equal(t, mutation.ResolvedDrain(string(k8s.DrainNone)), p.Resolved)
+}
+
 // Given an OCID, a node action targets it and audits the node beside it.
 func TestNodeAction_OCIDTarget(t *testing.T) {
 	t.Parallel()

@@ -62,8 +62,7 @@ no process is driving it: run the drain again to resume.`,
 			}
 			return withMutationSetup(cmd, cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				d := deps(cfg)
-				op := ops.Drain(d, opsEnv(cfg, env), nodeName)
-				op.Perform = func(ctx context.Context, _ mutation.Plan) error {
+				op := ops.Drain(d, opsEnv(cfg, env), nodeName, func(ctx context.Context) error {
 					// The drain can run for tens of minutes and the log goes to a
 					// file, so echo its milestones on stderr; stdout keeps only
 					// the result line.
@@ -72,7 +71,7 @@ no process is driving it: run the drain again to resume.`,
 						_, _ = fmt.Fprintf(errOut, "%s %s\n", time.Now().Format("15:04:05"), line)
 					})
 					return d.DrainNode(ctx, cfg.KubeConfig, env.KubeContext(), nodeName)
-				}
+				})
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate, op)
 			})
 		},

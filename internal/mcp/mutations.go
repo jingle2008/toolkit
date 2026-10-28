@@ -316,8 +316,7 @@ func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, 
 	a := mutation.DrainNode
 	env := s.effectiveMutationEnv(a, in.Node, in.envOverride)
 	var status, failed k8s.DrainStatus
-	op := ops.Drain(*s.deps, s.opsEnv(env), in.Node)
-	op.Perform = func(ctx context.Context, _ mutation.Plan) error {
+	op := ops.Drain(*s.deps, s.opsEnv(env), in.Node, func(ctx context.Context) error {
 		var err error
 		status, err = s.deps.StartDrain(ctx, s.cfg.KubeConfig, env.KubeContext(), in.Node)
 		if err != nil {
@@ -328,7 +327,7 @@ func (s *Server) handleDrainNode(ctx context.Context, req *sdk.CallToolRequest, 
 			s.driveDrain(env.KubeContext(), in.Node)
 		}
 		return nil
-	}
+	})
 	res, out, err := runMutationCall(ctx, s, mutationCall[drainNodeResult]{
 		op: op, gate: in.confirmGate,
 		envelope: func(r mutationResult) drainNodeResult { return drainNodeResult{mutationResult: r} },
