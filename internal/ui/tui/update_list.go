@@ -145,7 +145,7 @@ func (m *Model) toggleAliases() []tea.Cmd {
 	if m.category != domain.Alias {
 		return m.updateCategory(domain.Alias)
 	}
-	if m.historyIdx > 0 {
+	if m.nav.idx > 0 {
 		return []tea.Cmd{m.moveHistory(-1)}
 	}
 	return m.updateCategory(nextCategory(domain.Alias))
@@ -167,8 +167,8 @@ func (*Model) pasteFilter() tea.Cmd {
 
 func (m *Model) enterHelpView() {
 	m.openView(common.HelpView)
-	m.helpScroll = 0
-	m.helpFilter, m.helpTyping = "", false
+	m.help.scroll = 0
+	m.help.filter, m.help.typing = "", false
 }
 
 func (m *Model) handleNextCategory() tea.Cmd {

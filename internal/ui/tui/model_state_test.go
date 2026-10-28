@@ -83,7 +83,7 @@ func TestSetDefaults_TableStyles(t *testing.T) {
 	m := &Model{}
 	setDefaults(m)
 	assert.NotNil(t, m.table)
-	assert.NotNil(t, m.styles)
+	assert.NotNil(t, m.theme.Table)
 	assert.NotNil(t, m.textInput)
 	assert.NotNil(t, m.viewport)
 	assert.NotNil(t, m.loadingSpinner)

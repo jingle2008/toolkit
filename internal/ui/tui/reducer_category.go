@@ -54,7 +54,7 @@ func (m *Model) updateCategoryCore(category domain.Category) []tea.Cmd {
 		refresh = true
 	} else {
 		m.category = category
-		m.landOn, m.landOnKey = nil, nil // cursor targets for an earlier navigation
+		m.nav.landOn, m.nav.landOnKey = nil, nil // cursor targets for an earlier navigation
 		// A scope carries over to its other children (:gw after drilling
 		// into a DAC) and to its own category (the row to land on), but
 		// not past a category it doesn't apply to: there it would be
@@ -160,7 +160,7 @@ func (m *Model) enterDetailView() tea.Cmd {
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	m.selectedKey = itemKeyFrom(m.category, row)
 	m.updateLayout(m.viewWidth, m.viewHeight)
-	m.detailStale, m.detailItem, m.detailGone = false, nil, false
+	m.detail.stale, m.detail.item, m.detail.gone = false, nil, false
 	return m.updateContentAsync()
 }
 

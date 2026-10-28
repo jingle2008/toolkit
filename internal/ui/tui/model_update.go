@@ -46,20 +46,20 @@ func (m *Model) route(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.onResize(msg)
 	case tea.BackgroundColorMsg:
-		m.lightBg = !msg.IsDark()
-		m.termBg = msg.Color
+		m.term.lightBg = !msg.IsDark()
+		m.term.bg = msg.Color
 		m.restyle()
 		if r, ok := m.renderer.(view.ProductionRenderer); ok {
-			r.Light = m.lightBg // the JSON view follows the background
+			r.Light = m.term.lightBg // the JSON view follows the background
 			m.renderer = r
 		}
 		return m, m.updateContentAsync()
 	case tea.ColorProfileMsg:
-		m.colorless = msg.Profile == colorprofile.NoTTY || msg.Profile == colorprofile.ASCII
+		m.term.colorless = msg.Profile == colorprofile.NoTTY || msg.Profile == colorprofile.ASCII
 		m.restyle()
 		return m, nil
 	case tea.ForegroundColorMsg:
-		m.termFg = msg.Color
+		m.term.fg = msg.Color
 		m.restyle()
 		return m, nil
 	case errMsg:

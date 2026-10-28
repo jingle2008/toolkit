@@ -227,7 +227,7 @@ func (m *Model) statsText() string {
 // fit, how far down it is scrolled: "fields", "JSON · 40%".
 func (m *Model) detailPosition() string {
 	layout := "fields"
-	if m.detailJSON {
+	if m.detail.json {
 		layout = "JSON"
 	}
 	if m.viewport.TotalLineCount() <= m.viewport.Height() {
@@ -256,7 +256,7 @@ func (m *Model) breadcrumbChips() string {
 	if m.showFaulty {
 		chips = append(chips, lipgloss.NewStyle().Foreground(p.Danger).Render("⟨faulty⟩"))
 	}
-	if len(m.history) > 1 {
+	if len(m.nav.history) > 1 {
 		chips = append(chips, chip.Render(m.historyChip()))
 	}
 	if cell := m.prefixCell(); cell != "" {
@@ -272,13 +272,13 @@ func (m *Model) breadcrumbChips() string {
 // each way [ and ] can still go: "⟨◀ 3/3⟩", "⟨1/3 ▶⟩", "⟨◀ 2/3 ▶⟩".
 func (m *Model) historyChip() string {
 	back, fwd := "", ""
-	if m.historyIdx > 0 {
+	if m.nav.idx > 0 {
 		back = "◀ "
 	}
-	if m.historyIdx < len(m.history)-1 {
+	if m.nav.idx < len(m.nav.history)-1 {
 		fwd = " ▶"
 	}
-	return fmt.Sprintf("⟨%s%d/%d%s⟩", back, m.historyIdx+1, len(m.history), fwd)
+	return fmt.Sprintf("⟨%s%d/%d%s⟩", back, m.nav.idx+1, len(m.nav.history), fwd)
 }
 
 // footer is the frame's last line: the category's most useful actions,

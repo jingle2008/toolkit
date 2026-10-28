@@ -121,7 +121,7 @@ func (m *Model) handleTableRowsComputedMsg(msg tableRowsComputedMsg) {
 }
 
 func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
-	m.detailStale = true
+	m.detail.stale = true
 	// Capture the prior selection before m.rawRows is replaced below, so an
 	// in-place reload can re-home the cursor onto the same item by identity.
 	// Identity is the per-category item key (itemKeyFrom), not the bare Name
@@ -161,7 +161,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 		// landOn places the cursor once, when the rows it was set for
 		// first land; later reloads keep the selection as usual.
 		if len(m.rawRows) > 0 {
-			m.landOn, m.landOnKey = nil, nil
+			m.nav.landOn, m.nav.landOnKey = nil, nil
 		}
 	} else {
 		m.table.UpdateViewport()
@@ -185,7 +185,7 @@ func (m *Model) reselectIndex(prevKey models.ItemKey, prevIdx int) int {
 	if idx := indexOfItemKey(m.rawRows, m.category, prevKey); idx >= 0 {
 		return idx
 	}
-	if idx := indexOfItemKey(m.rawRows, m.category, m.landOnKey); idx >= 0 {
+	if idx := indexOfItemKey(m.rawRows, m.category, m.nav.landOnKey); idx >= 0 {
 		return idx
 	}
 	// The plain rows: a name the display shortened to fit wouldn't match.
@@ -295,7 +295,7 @@ func (m *Model) updateColumns() {
 			whole:   status,
 		}
 	}
-	widths := columnWidths(specs, m.table.Width(), m.styles.Header.GetHorizontalFrameSize())
+	widths := columnWidths(specs, m.table.Width(), m.theme.Table.Header.GetHorizontalFrameSize())
 	for i, header := range m.headers {
 		if isNumericCol(header.text) {
 			titles[i] = padLeft(titles[i], widths[i])
@@ -338,8 +338,8 @@ func (m *Model) findContextIndex(rows []table.Row) int {
 	switch {
 	case m.category == domain.Environment:
 		name = m.environment.GetName()
-	case m.landOn != nil && m.category == m.landOn.Category:
-		name = m.landOn.Name
+	case m.nav.landOn != nil && m.category == m.nav.landOn.Category:
+		name = m.nav.landOn.Name
 	case m.scope != nil && m.category == m.scope.Category:
 		name = m.scope.Name
 	default:
@@ -360,8 +360,8 @@ func (m *Model) updateLayout(w, h int) {
 	m.viewWidth, m.viewHeight = w, h
 	// The export modal shows four lines above the directory list; give the
 	// list the rest of the modal body, up to its usual 15 rows.
-	if m.dirPicker != nil {
-		m.dirPicker.SetHeight(min(exportListMax, max(m.modalMaxBody()-exportChrome, 3)))
+	if m.export.dir != nil {
+		m.export.dir.SetHeight(min(exportListMax, max(m.modalMaxBody()-exportChrome, 3)))
 	}
 	// The frame draws its panel's border itself: two columns and two rows
 	// around the table or details body, plus frameChrome rows of bars.

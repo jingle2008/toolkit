@@ -35,9 +35,9 @@ func (m *Model) enterExportView() []tea.Cmd {
 	ti := textinput.New()
 	ti.Prompt = ""
 	ti.SetValue(m.exportFilename())
-	m.exportName = ti
-	m.naming = false
-	return []tea.Cmd{m.dirPicker.Init()}
+	m.export.name = ti
+	m.export.naming = false
+	return []tea.Cmd{m.export.dir.Init()}
 }
 
 // updateExportView handles the export modal. enter exports into the
@@ -60,12 +60,12 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmd tea.Cmd
-	if m.naming {
-		m.exportName, cmd = m.exportName.Update(msg)
+	if m.export.naming {
+		m.export.name, cmd = m.export.name.Update(msg)
 		return m, cmd
 	}
-	updated, cmd := m.dirPicker.Update(msg)
-	m.dirPicker = &updated
+	updated, cmd := m.export.dir.Update(msg)
+	m.export.dir = &updated
 	return m, cmd
 }
 
@@ -74,17 +74,17 @@ func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 // text, not keys.
 func (m *Model) exportKey(km tea.KeyPressMsg) (tea.Cmd, bool) {
 	switch k := km.String(); {
-	case k == "ctrl+c" || (!m.naming && key.Matches(km, keys.Quit)):
+	case k == "ctrl+c" || (!m.export.naming && key.Matches(km, keys.Quit)):
 		return m.quit(), true
-	case k == "esc" || (!m.naming && key.Matches(km, keys.ExportCSV)):
+	case k == "esc" || (!m.export.naming && key.Matches(km, keys.ExportCSV)):
 		m.closeView()
 		return nil, true
 	case k == "tab" || k == "shift+tab":
-		m.naming = !m.naming
-		if m.naming {
-			return m.exportName.Focus(), true
+		m.export.naming = !m.export.naming
+		if m.export.naming {
+			return m.export.name.Focus(), true
 		}
-		m.exportName.Blur()
+		m.export.name.Blur()
 		return nil, true
 	case k == "enter":
 		return m.startExport(), true
@@ -95,14 +95,14 @@ func (m *Model) exportKey(km tea.KeyPressMsg) (tea.Cmd, bool) {
 // startExport writes the CSV to the folder shown under the name given,
 // or toasts why the name won't do.
 func (m *Model) startExport() tea.Cmd {
-	name := strings.TrimSpace(m.exportName.Value())
+	name := strings.TrimSpace(m.export.name.Value())
 	switch {
 	case name == "":
 		return m.showToast("file name is required", toastWarn)
 	case strings.ContainsRune(name, filepath.Separator):
 		return m.showToast("file name can't contain "+string(filepath.Separator), toastWarn)
 	}
-	return m.exportTableCSVCmd(filepath.Join(m.dirPicker.CurrentDirectory, name))
+	return m.exportTableCSVCmd(filepath.Join(m.export.dir.CurrentDirectory, name))
 }
 
 // exportTableCSVCmd writes the table to outPath. The CSV is built here,
@@ -130,15 +130,15 @@ func (m *Model) exportView() string {
 	p := m.theme.Palette
 	label := lipgloss.NewStyle().Foreground(p.Muted).Width(8)
 	strong := lipgloss.NewStyle().Foreground(p.Text).Bold(true)
-	name := strong.Render(m.exportName.Value())
-	if m.naming {
-		name = m.exportName.View()
+	name := strong.Render(m.export.name.Value())
+	if m.export.naming {
+		name = m.export.name.View()
 	}
 	width := m.modalMaxWidth()
 	field := max(width-4-label.GetWidth(), 1) // border, padding and label
-	m.exportName.SetWidth(field)
-	list := strings.TrimRight(m.dirPicker.View(), "\n")
-	body := label.Render("Folder") + strong.Render(truncateLeft(tildePath(m.dirPicker.CurrentDirectory), field)) + "\n" +
+	m.export.name.SetWidth(field)
+	list := strings.TrimRight(m.export.dir.View(), "\n")
+	body := label.Render("Folder") + strong.Render(truncateLeft(tildePath(m.export.dir.CurrentDirectory), field)) + "\n" +
 		label.Render("Name") + name + "\n\n" + list
 	return m.modal("Export CSV", body, exportHints, p.Accent, width)
 }

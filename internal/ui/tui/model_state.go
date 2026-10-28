@@ -95,7 +95,6 @@ type Model struct {
 	viewWidth     int
 	dataset       *models.Dataset
 	table         *table.Model
-	styles        table.Styles
 	category      domain.Category
 	headers       []header
 	editTarget    common.EditTarget
@@ -105,15 +104,11 @@ type Model struct {
 	initialFilter string
 	viewMode      common.ViewMode
 	// viewStack is the views open overlays return to (view_stack.go).
-	viewStack  []common.ViewMode
-	helpScroll int // first help body line shown when help scrolls
-	// helpFilter keeps the help bindings whose key or description contains
-	// it (case-insensitive), typed into helpInput while helpTyping.
-	helpFilter string
-	helpInput  textinput.Model
-	helpTyping bool
-	prefix     string        // pending prefix key (keys.SortLeader) or ""
-	confirm    confirm.Model // destructive-action confirmation modal (confirm.go)
+	viewStack []common.ViewMode
+	// help is the help screen's state.
+	help    helpState
+	prefix  string        // pending prefix key (keys.SortLeader) or ""
+	confirm confirm.Model // destructive-action confirmation modal (confirm.go)
 	// confirmPending is the open confirmation's parent half: its command,
 	// audit name and return view.
 	confirmPending confirmPending
@@ -142,14 +137,8 @@ type Model struct {
 	renderer      view.Renderer
 	loader        loader.Composite
 	scope         *domain.Scope // selected scope (parent context for current category)
-	// landOn is the row the cursor lands on after the next navigation,
-	// when it isn't m.scope's: esc back to a parent shows the parent under
-	// its own history scope but puts the cursor on the row drilled in from.
-	// Used once: cleared when that navigation's rows first land.
-	landOn *domain.Scope
-	// landOnKey is the row the cursor lands on after the next navigation
-	// by item key: the row [ or ] left it on. Used once, as landOn.
-	landOnKey  models.ItemKey
+	// nav is the category navigation history and the next landing row.
+	nav        navState
 	keys       keys.KeyMap
 	kubeConfig string
 	// deps is the mutations' infra calls; tests fake them.
@@ -199,10 +188,6 @@ type Model struct {
 	recentEnvsPath string
 	recentSaver    recentSaver
 
-	// Category navigation history
-	history    []historyEntry // chronological list of visited lists
-	historyIdx int            // index of the current position in history
-
 	// Show only faulty items in list view: rows whose model reports
 	// IsFaulty, or that name a parent row that doesn't exist (see
 	// faultyFilter); the gate itself is category-agnostic.
@@ -213,16 +198,8 @@ type Model struct {
 	// mutates the table's rows in place, which would otherwise leak
 	// "…" into ScopedItemKey lookups.
 	rawRows []table.Row
-	// colorless is set when the terminal shows no color (NO_COLOR, or a
-	// profile without it); setStyles then draws focus in reverse video.
-	// lightBg records the reported background, so a profile change
-	// rebuilds the right theme (dark until reported).
-	colorless bool
-	lightBg   bool
-	// termFg and termBg are the terminal's reported text and background
-	// colors, nil until it answers; with both, the palette's neutrals are
-	// derived from them (DerivePalette).
-	termFg, termBg color.Color
+	// term is the terminal's reported colors.
+	term termColors
 	// rowTotal is how many rows the category (in its scope) has before the
 	// filter and faulty-only mode; the panel shows it when they hide some.
 	rowTotal int
@@ -230,23 +207,13 @@ type Model struct {
 	// width; the panel title says so.
 	hiddenColumns []string
 
-	// detailJSON shows the details view as raw JSON instead of fields.
-	detailJSON bool
-	// detailStale is set when the rows are rebuilt (a reload, or an action
-	// changing a row), so Update re-renders an open details view.
-	detailStale bool
-	// detailItem is the item details last rendered; detailGone is set when
-	// it has since left the dataset, and details keeps showing it.
-	detailItem any
-	detailGone bool
+	// detail is the details view's state.
+	detail detailState
 	// previewMemo memoizes the preview pane's body; see previewCache.
 	previewMemo previewCache
 
-	// Export CSV popup state: the folder list, and the file name with
-	// whether it has focus.
-	dirPicker  *filepicker.Model
-	exportName textinput.Model
-	naming     bool
+	// export is the export popup's state.
+	export exportState
 
 	// Tenant-metadata entry form (EditTenantView); the zero form is none.
 	editTenant tenantform.Model
@@ -257,6 +224,65 @@ type Model struct {
 	// toasts holds the transient banners shown over the active view; see
 	// the toast package.
 	toasts toast.Model
+}
+
+// helpState is the help screen's scroll and filter.
+type helpState struct {
+	scroll int // first help body line shown when help scrolls
+	// filter keeps the help bindings whose key or description contains
+	// it (case-insensitive), typed into input while typing.
+	filter string
+	input  textinput.Model
+	typing bool
+}
+
+// exportState is the export popup's state: the folder list, and the
+// file name with whether it has focus.
+type exportState struct {
+	dir    *filepicker.Model
+	name   textinput.Model
+	naming bool
+}
+
+// detailState is the details view's state.
+type detailState struct {
+	// json shows the details view as raw JSON instead of fields.
+	json bool
+	// stale is set when the rows are rebuilt (a reload, or an action
+	// changing a row), so Update re-renders an open details view.
+	stale bool
+	// item is the item details last rendered; gone is set when it has
+	// since left the dataset, and details keeps showing it.
+	item any
+	gone bool
+}
+
+// navState is where navigation has been and where it lands next.
+type navState struct {
+	history []historyEntry // chronological list of visited lists
+	idx     int            // index of the current position in history
+	// landOn is the row the cursor lands on after the next navigation,
+	// when it isn't m.scope's: esc back to a parent shows the parent under
+	// its own history scope but puts the cursor on the row drilled in from.
+	// Used once: cleared when that navigation's rows first land.
+	landOn *domain.Scope
+	// landOnKey is the row the cursor lands on after the next navigation
+	// by item key: the row [ or ] left it on. Used once, as landOn.
+	landOnKey models.ItemKey
+}
+
+// termColors is what the terminal reports of its colors.
+type termColors struct {
+	// colorless is set when the terminal shows no color (NO_COLOR, or a
+	// profile without it); setStyles then draws focus in reverse video.
+	// lightBg records the reported background, so a profile change
+	// rebuilds the right theme (dark until reported).
+	colorless bool
+	lightBg   bool
+	// fg and bg are the terminal's reported text and background colors,
+	// nil until it answers; with both, the palette's neutrals are derived
+	// from them (DerivePalette).
+	fg, bg color.Color
 }
 
 /*
@@ -270,8 +296,7 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		viewMode:   common.ListView,
 		sortColumn: common.NameCol,
 		sortAsc:    true,
-		history:    []historyEntry{},
-		historyIdx: -1,
+		nav:        navState{history: []historyEntry{}, idx: -1},
 		deps:       ops.Production(),
 	}
 
@@ -283,9 +308,9 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 	setDefaults(m)
 
 	// Seed initial category in history if not already present
-	if len(m.history) == 0 {
-		m.history = []historyEntry{{category: m.category, scope: copyScope(m.scope)}}
-		m.historyIdx = 0
+	if len(m.nav.history) == 0 {
+		m.nav.history = []historyEntry{{category: m.category, scope: copyScope(m.scope)}}
+		m.nav.idx = 0
 	}
 
 	// Initialize keys based on initial category and mode
@@ -305,10 +330,10 @@ func initStyles(m *Model) {
 // palette derived from its colors once it has given both, else the fixed
 // one for its background (dark until it says).
 func (m *Model) restyle() {
-	if m.termFg != nil && m.termBg != nil {
-		setStyles(m, stylesFor(DerivePalette(!m.lightBg, m.termFg, m.termBg)))
+	if m.term.fg != nil && m.term.bg != nil {
+		setStyles(m, stylesFor(DerivePalette(!m.term.lightBg, m.term.fg, m.term.bg)))
 	} else {
-		setStyles(m, DefaultStyles(!m.lightBg))
+		setStyles(m, DefaultStyles(!m.term.lightBg))
 	}
 	if m.viewMode == common.LogView {
 		m.refreshLog() // the log's body is laid out in the theme's colors
@@ -321,14 +346,13 @@ func (m *Model) restyle() {
 // tea.BackgroundColorMsg or tea.ColorProfileMsg restyles everything
 // through it.
 func setStyles(m *Model, s Styles) {
-	if m.colorless && !s.Monochrome {
+	if m.term.colorless && !s.Monochrome {
 		s = s.monochrome()
 	}
 	m.theme = s
 	m.themeGen++
 	if m.table != nil {
 		m.table.SetStyles(s.Table)
-		m.styles = s.Table
 	}
 	if m.viewport != nil {
 		m.viewport.Style = s.Viewport
@@ -336,8 +360,8 @@ func setStyles(m *Model, s Styles) {
 	if m.loadingSpinner != nil {
 		m.loadingSpinner.Style = s.Spinner
 	}
-	if m.dirPicker != nil {
-		m.dirPicker.Styles = pickerStyles(m.dirPicker.Styles, s.Palette)
+	if m.export.dir != nil {
+		m.export.dir.Styles = pickerStyles(m.export.dir.Styles, s.Palette)
 	}
 }
 
@@ -415,7 +439,7 @@ func setDefaults(m *Model) {
 		sw := stopwatch.New(stopwatch.WithInterval(time.Second))
 		m.loadingTimer = &sw
 	}
-	if m.dirPicker == nil {
+	if m.export.dir == nil {
 		homeDir, _ := os.UserHomeDir()
 		p := filepicker.New()
 		p.CurrentDirectory = homeDir
@@ -433,7 +457,7 @@ func setDefaults(m *Model) {
 		p.KeyMap.Open.SetKeys("l", "right")
 		p.KeyMap.Select.SetEnabled(false)
 		p.Styles.EmptyDirectory = p.Styles.EmptyDirectory.SetString("no folders here")
-		m.dirPicker = &p
+		m.export.dir = &p
 	}
 	setStyles(m, m.theme)
 }

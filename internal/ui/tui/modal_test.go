@@ -151,12 +151,12 @@ func TestHelp_ScrollReachesEveryBinding(t *testing.T) {
 		}
 		_, _ = m.updateHelpView(keyPress("j"))
 	}
-	assert.Equal(t, maxScroll, m.helpScroll)
+	assert.Equal(t, maxScroll, m.help.scroll)
 	for d, seen := range want {
 		assert.True(t, seen, "binding %q never shown", d)
 	}
 	_, _ = m.updateHelpView(keyPress("home"))
-	assert.Zero(t, m.helpScroll)
+	assert.Zero(t, m.help.scroll)
 }
 
 func TestToasts_StackAndExpire(t *testing.T) {
@@ -201,7 +201,7 @@ func TestHelp_Filter(t *testing.T) {
 	m.enterHelpView()
 
 	m.updateHelpView(keyPress("/"))
-	require.True(t, m.helpTyping)
+	require.True(t, m.help.typing)
 	for _, r := range "drain" {
 		m.updateHelpView(keyPress(string(r)))
 	}
@@ -212,11 +212,11 @@ func TestHelp_Filter(t *testing.T) {
 	assert.Contains(t, view, "/drain")
 
 	m.updateHelpView(keyPress("enter"))
-	assert.False(t, m.helpTyping)
+	assert.False(t, m.help.typing)
 	assert.Contains(t, ansi.Strip(m.fullHelpView()), "⟨/drain⟩")
 
 	m.updateHelpView(keyPress("esc"))
-	assert.Empty(t, m.helpFilter)
+	assert.Empty(t, m.help.filter)
 	assert.Equal(t, common.HelpView, m.viewMode, "the first esc clears the filter")
 	m.updateHelpView(keyPress("esc"))
 	assert.Equal(t, common.ListView, m.viewMode)
@@ -227,11 +227,11 @@ func TestHelp_FilterKeepsMatchingGroupAndSaysNone(t *testing.T) {
 	m := newGoldenModel(t, 120, 40)
 	showCategory(t, m, domain.GPUNode)
 	m.enterHelpView()
-	m.helpFilter = "sort"
+	m.help.filter = "sort"
 	view := ansi.Strip(m.fullHelpView())
 	assert.Contains(t, view, "s f         Free", "the Sort group's entries are labeled by column")
 
-	m.helpFilter = "zzz"
+	m.help.filter = "zzz"
 	assert.Contains(t, ansi.Strip(m.fullHelpView()), "no keys match · esc clears the filter")
 }
 
@@ -244,7 +244,7 @@ func TestHelp_FilterTakesKeysAsText(t *testing.T) {
 	m.updateHelpView(keyPress("/"))
 	m.updateHelpView(keyPress("h"))
 	m.updateHelpView(keyPress("?"))
-	assert.Equal(t, "h?", m.helpFilter)
+	assert.Equal(t, "h?", m.help.filter)
 	assert.Equal(t, common.HelpView, m.viewMode)
 }
 

@@ -63,7 +63,7 @@ func TestToggleAliases_FromLaunchAliasGoesToTenant(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.category = domain.Alias
-	m.history, m.historyIdx = []historyEntry{{category: domain.Alias}}, 0
+	m.nav.history, m.nav.idx = []historyEntry{{category: domain.Alias}}, 0
 
 	m.toggleAliases()
 	assert.Equal(t, domain.Tenant, m.category)
@@ -82,7 +82,7 @@ func TestEnterHelpView(t *testing.T) {
 func TestEnterExportView_NoPickerPath(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.dirPicker.Path = ""
+	m.export.dir.Path = ""
 	before := m.viewMode
 
 	cmds := m.enterExportView()
