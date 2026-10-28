@@ -86,11 +86,11 @@ func TestPickerStyles_Themed(t *testing.T) {
 	t.Parallel()
 	m := newGoldenModel(t, 120, 40)
 	p := m.theme.Palette
-	assert.Equal(t, p.Accent, m.dirPicker.Styles.Cursor.GetForeground())
-	assert.Equal(t, p.Text, m.dirPicker.Styles.Directory.GetForeground())
-	assert.Equal(t, p.Accent, m.dirPicker.Styles.Selected.GetForeground())
-	assert.Equal(t, p.Muted, m.dirPicker.Styles.File.GetForeground())
-	assert.Contains(t, m.dirPicker.Styles.EmptyDirectory.Render(), "no folders here", "keeps its text")
+	assert.Equal(t, p.Accent, m.export.dir.Styles.Cursor.GetForeground())
+	assert.Equal(t, p.Text, m.export.dir.Styles.Directory.GetForeground())
+	assert.Equal(t, p.Accent, m.export.dir.Styles.Selected.GetForeground())
+	assert.Equal(t, p.Muted, m.export.dir.Styles.File.GetForeground())
+	assert.Contains(t, m.export.dir.Styles.EmptyDirectory.Render(), "no folders here", "keeps its text")
 }
 
 // The chrome has one fill — PROD — and keys are the only orange.

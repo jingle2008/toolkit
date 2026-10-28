@@ -238,11 +238,8 @@ type Model struct {
 	// previewMemo memoizes the preview pane's body; see previewCache.
 	previewMemo previewCache
 
-	// Export CSV popup state: the folder list, and the file name with
-	// whether it has focus.
-	dirPicker  *filepicker.Model
-	exportName textinput.Model
-	naming     bool
+	// export is the export popup's state.
+	export exportState
 
 	// Tenant-metadata entry form (EditTenantView); the zero form is none.
 	editTenant tenantform.Model
@@ -263,6 +260,14 @@ type helpState struct {
 	filter string
 	input  textinput.Model
 	typing bool
+}
+
+// exportState is the export popup's state: the folder list, and the
+// file name with whether it has focus.
+type exportState struct {
+	dir    *filepicker.Model
+	name   textinput.Model
+	naming bool
 }
 
 /*
@@ -342,8 +347,8 @@ func setStyles(m *Model, s Styles) {
 	if m.loadingSpinner != nil {
 		m.loadingSpinner.Style = s.Spinner
 	}
-	if m.dirPicker != nil {
-		m.dirPicker.Styles = pickerStyles(m.dirPicker.Styles, s.Palette)
+	if m.export.dir != nil {
+		m.export.dir.Styles = pickerStyles(m.export.dir.Styles, s.Palette)
 	}
 }
 
@@ -421,7 +426,7 @@ func setDefaults(m *Model) {
 		sw := stopwatch.New(stopwatch.WithInterval(time.Second))
 		m.loadingTimer = &sw
 	}
-	if m.dirPicker == nil {
+	if m.export.dir == nil {
 		homeDir, _ := os.UserHomeDir()
 		p := filepicker.New()
 		p.CurrentDirectory = homeDir
@@ -439,7 +444,7 @@ func setDefaults(m *Model) {
 		p.KeyMap.Open.SetKeys("l", "right")
 		p.KeyMap.Select.SetEnabled(false)
 		p.Styles.EmptyDirectory = p.Styles.EmptyDirectory.SetString("no folders here")
-		m.dirPicker = &p
+		m.export.dir = &p
 	}
 	setStyles(m, m.theme)
 }

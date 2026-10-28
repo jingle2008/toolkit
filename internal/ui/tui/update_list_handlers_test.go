@@ -82,7 +82,7 @@ func TestEnterHelpView(t *testing.T) {
 func TestEnterExportView_NoPickerPath(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.dirPicker.Path = ""
+	m.export.dir.Path = ""
 	before := m.viewMode
 
 	cmds := m.enterExportView()

@@ -164,10 +164,10 @@ func showExport(t *testing.T, m *Model) {
 	for _, d := range []string{"alpha", "beta", "gamma"} {
 		require.NoError(t, os.Mkdir(filepath.Join(dir, d), 0o750))
 	}
-	m.dirPicker.CurrentDirectory = dir
+	m.export.dir.CurrentDirectory = dir
 	m.enterExportView()
-	updated, _ := m.dirPicker.Update(m.dirPicker.Init()())
-	m.dirPicker = &updated
+	updated, _ := m.export.dir.Update(m.export.dir.Init()())
+	m.export.dir = &updated
 }
 
 var goldenViews = []struct {

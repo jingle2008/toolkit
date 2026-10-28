@@ -98,10 +98,10 @@ func newExportModel(t *testing.T) (*Model, string) {
 	for _, d := range []string{"alpha", "beta"} {
 		require.NoError(t, os.Mkdir(filepath.Join(dir, d), 0o750))
 	}
-	m.dirPicker.CurrentDirectory = dir
+	m.export.dir.CurrentDirectory = dir
 	m.enterExportView()
-	updated, _ := m.dirPicker.Update(m.dirPicker.Init()())
-	m.dirPicker = &updated
+	updated, _ := m.export.dir.Update(m.export.dir.Init()())
+	m.export.dir = &updated
 	return m, dir
 }
 
@@ -125,7 +125,7 @@ func TestExport_OpenThenExport(t *testing.T) {
 
 	_, cmd := m.updateExportView(keyPress("right"))
 	require.NotNil(t, cmd, "opening a folder re-reads it")
-	assert.Equal(t, filepath.Join(dir, "alpha"), m.dirPicker.CurrentDirectory)
+	assert.Equal(t, filepath.Join(dir, "alpha"), m.export.dir.CurrentDirectory)
 }
 
 // tab focuses the name: typing edits it, and e or q are text, not keys.
@@ -133,13 +133,13 @@ func TestExport_RenameTakesKeysAsText(t *testing.T) {
 	t.Parallel()
 	m, dir := newExportModel(t)
 	m.updateExportView(keyPress("tab"))
-	require.True(t, m.naming)
-	m.exportName.SetValue("")
+	require.True(t, m.export.naming)
+	m.export.name.SetValue("")
 	for _, r := range "qe.csv" {
 		m.updateExportView(keyPress(string(r)))
 	}
 	assert.Equal(t, common.ExportView, m.viewMode, "e and q are typed, not run")
-	assert.Equal(t, "qe.csv", m.exportName.Value())
+	assert.Equal(t, "qe.csv", m.export.name.Value())
 
 	_, cmd := m.updateExportView(keyPress("enter"))
 	done, ok := cmd().(exportDoneMsg)
@@ -155,7 +155,7 @@ func TestExport_BadNamesWarn(t *testing.T) {
 		"a/b.csv": "file name can't contain /",
 	} {
 		m, _ := newExportModel(t)
-		m.exportName.SetValue(name)
+		m.export.name.SetValue(name)
 		m.updateExportView(keyPress("enter"))
 		require.NotNil(t, m.toasts.Active(), name)
 		assert.Equal(t, want, m.toasts.Active().Msg)
