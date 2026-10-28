@@ -2,22 +2,16 @@ package k8s
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/kubectl/pkg/drain"
 
 	"github.com/jingle2008/toolkit/internal/logging"
 )
@@ -124,76 +118,6 @@ var (
 	drainNow           = time.Now
 )
 
-const drainCASRetries = 5
-
-// errDrainSuperseded means another driver changed the drain state first.
-var errDrainSuperseded = errors.New("drain state changed concurrently")
-
-const (
-	fineTuneLabel       = "finetunedmodel-name"
-	replicationJobLabel = "replicationJob"
-)
-
-// drainBlockerLabels mark pods whose eviction loses work in flight; a
-// node running any of them must not be drained.
-var drainBlockerLabels = []string{fineTuneLabel, trainingLabelV2, replicationJobLabel}
-
-// servingAPI ties a serving pod label to the InferenceService API that owns
-// the pod. The two OME generations keep minReplicas at different spec paths.
-type servingAPI struct {
-	label           string
-	gvr             schema.GroupVersionResource
-	minReplicasPath []string
-}
-
-var servingAPIs = []servingAPI{
-	{label: servingLabelV2, gvr: inferenceServiceGVR, minReplicasPath: []string{"engine", "minReplicas"}},
-	{label: servingLabelV1, gvr: inferenceServiceV1GVR, minReplicasPath: []string{"predictor", "minReplicas"}},
-}
-
-// isvcRef identifies one InferenceService with pods on the node.
-type isvcRef struct {
-	api       *servingAPI
-	namespace string
-	name      string
-}
-
-func (r isvcRef) String() string {
-	return r.api.gvr.Group + ":" + r.namespace + "/" + r.name
-}
-
-// parseISVCRef inverts isvcRef.String.
-func parseISVCRef(s string) (isvcRef, bool) {
-	group, rest, ok := strings.Cut(s, ":")
-	if !ok {
-		return isvcRef{}, false
-	}
-	namespace, name, ok := strings.Cut(rest, "/")
-	if !ok {
-		return isvcRef{}, false
-	}
-	for i := range servingAPIs {
-		if servingAPIs[i].gvr.Group == group {
-			return isvcRef{api: &servingAPIs[i], namespace: namespace, name: name}, true
-		}
-	}
-	return isvcRef{}, false
-}
-
-// Eviction seams for tests. checkEvictionSupport is an API discovery
-// call, so it runs once per eviction round, not once per pod.
-var (
-	checkEvictionSupport = drain.CheckEvictionSupport
-	// evictPod evicts one pod via the eviction API group gv, deleting it
-	// instead where the cluster lacks the eviction API (gv empty).
-	evictPod = func(helper *drain.Helper, pod corev1.Pod, gv schema.GroupVersion) error {
-		if gv.Empty() {
-			return helper.DeletePod(pod)
-		}
-		return helper.EvictPod(pod, gv)
-	}
-)
-
 /*
 StartDrain starts draining a node, or resumes the drain already in
 progress, and returns without waiting for it: it cordons the node, refuses
@@ -255,65 +179,6 @@ type drainer struct {
 	node      string
 	// noted throttles repeating progress lines; see shouldNote.
 	noted map[string]noteMark
-}
-
-type noteMark struct {
-	sig string
-	at  time.Time
-}
-
-// DrainProgressFunc receives a drain's milestones as one-line summaries.
-type DrainProgressFunc func(line string)
-
-type drainProgressKey struct{}
-
-// WithDrainProgress returns a ctx whose drains also report each milestone
-// they log to report, e.g. to show progress on a terminal.
-func WithDrainProgress(ctx context.Context, report DrainProgressFunc) context.Context {
-	return context.WithValue(ctx, drainProgressKey{}, report)
-}
-
-// DrainProgressFrom returns ctx's progress hook, or a no-op.
-func DrainProgressFrom(ctx context.Context) DrainProgressFunc {
-	if report, ok := ctx.Value(drainProgressKey{}).(DrainProgressFunc); ok && report != nil {
-		return report
-	}
-	return func(string) {}
-}
-
-// note logs a drain milestone and reports it to ctx's progress hook.
-func note(ctx context.Context, warn bool, msg string, kv ...any) {
-	logger := logging.FromContext(ctx)
-	if warn {
-		logger.Warn(msg, kv...)
-	} else {
-		logger.Info(msg, kv...)
-	}
-	var b strings.Builder
-	b.WriteString(msg)
-	for i := 0; i+1 < len(kv); i += 2 {
-		fmt.Fprintf(&b, " %v=%v", kv[i], kv[i+1])
-	}
-	DrainProgressFrom(ctx)(b.String())
-}
-
-/*
-shouldNote reports whether a repeating progress line is due: when its
-content sig differs from the last one noted under key, or, with every > 0,
-when every has passed since. It keeps a long wait or a PDB-blocked
-eviction from flooding the log (and the TUI's bounded log window) with a
-line per poll.
-*/
-func (d *drainer) shouldNote(key, sig string, every time.Duration) bool {
-	now := drainNow()
-	if last, ok := d.noted[key]; ok && last.sig == sig && (every <= 0 || now.Sub(last.at) < every) {
-		return false
-	}
-	if d.noted == nil {
-		d.noted = map[string]noteMark{}
-	}
-	d.noted[key] = noteMark{sig: sig, at: now}
-	return true
 }
 
 func newDrainer(kubeconfig, contextName, nodeName string) (*drainer, error) {
@@ -546,47 +411,6 @@ func (d *drainer) advanceEvicting(ctx context.Context, st DrainState) (DrainStat
 	return st, nil
 }
 
-// evictRound evicts every pod not already terminating. A refused eviction
-// (e.g. 429 from a PodDisruptionBudget) is retried next round until the
-// phase times out.
-func (d *drainer) evictRound(ctx context.Context, helper *drain.Helper, pods []corev1.Pod, gv schema.GroupVersion) {
-	for _, pod := range pods {
-		if pod.DeletionTimestamp != nil {
-			continue // already terminating
-		}
-		name := pod.Namespace + "/" + pod.Name
-		err := evictPod(helper, pod, gv)
-		switch {
-		case err == nil:
-			note(ctx, false, "drain: evicted", "pod", name)
-		case apierrors.IsNotFound(err):
-		case d.shouldNote("deferred:"+name, err.Error(), drainProgressEvery):
-			note(ctx, false, "drain: eviction deferred, will retry", "pod", name, "error", err)
-		}
-	}
-}
-
-func (d *drainer) noteRestartPlan(ctx context.Context, restarted []string) {
-	if len(restarted) == 0 {
-		note(ctx, false, "drain: no single-replica InferenceServices to restart", "node", d.node)
-		return
-	}
-	note(ctx, false, "drain: restarting single-replica InferenceServices", "node", d.node, "services", restarted)
-}
-
-// noteEvictionWarnings logs, once each, kubectl drain's warnings (e.g.
-// DaemonSet pods ignored) and the pods whose emptyDir data eviction loses.
-// The latter is detected here because kubectl's own emptyDir warning is
-// overwritten by its later filters for any controller-managed pod.
-func (d *drainer) noteEvictionWarnings(ctx context.Context, warnings string, pods []corev1.Pod) {
-	if warnings != "" && d.shouldNote("evict-warnings", warnings, 0) {
-		note(ctx, true, "drain: "+warnings, "node", d.node)
-	}
-	if lossy := emptyDirPods(pods); len(lossy) > 0 && d.shouldNote("evict-emptydir", strings.Join(lossy, ","), 0) {
-		note(ctx, true, "drain: evicting pods with emptyDir volumes; their emptyDir data is lost", "node", d.node, "pods", lossy)
-	}
-}
-
 // fail records the drain as failed. With rollback set, a node the drain
 // cordoned is uncordoned in the same patch, and the record stops claiming
 // a cordon: one found later is an operator's, which the next drain's
@@ -611,248 +435,10 @@ func (d *drainer) fail(ctx context.Context, st DrainState, msg string, rollback 
 	return next, nil
 }
 
-/*
-transition atomically replaces the node's drain state from with next,
-optionally setting spec.unschedulable in the same patch. It returns
-errDrainSuperseded when the stored state is no longer from, and retries
-resourceVersion conflicts caused by unrelated node updates.
-*/
-func (d *drainer) transition(ctx context.Context, from, next DrainState, unschedulable *bool) error {
-	raw, err := json.Marshal(next)
-	if err != nil {
-		return fmt.Errorf("marshal drain state: %w", err)
-	}
-	for range drainCASRetries {
-		node, err := d.clientset.CoreV1().Nodes().Get(ctx, d.node, v1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if !readDrainState(ctx, node).sameAs(from) {
-			return errDrainSuperseded
-		}
-		patch := map[string]any{"metadata": map[string]any{
-			// A stale resourceVersion makes the API server reject the patch.
-			"resourceVersion": node.ResourceVersion,
-			"annotations":     map[string]string{DrainAnnotation: string(raw)},
-		}}
-		if unschedulable != nil {
-			patch["spec"] = map[string]any{"unschedulable": *unschedulable}
-		}
-		body, err := json.Marshal(patch)
-		if err != nil {
-			return fmt.Errorf("marshal drain patch: %w", err)
-		}
-		_, err = d.clientset.CoreV1().Nodes().Patch(ctx, d.node, types.MergePatchType, body, v1.PatchOptions{})
-		if !apierrors.IsConflict(err) {
-			return err
-		}
-	}
-	return fmt.Errorf("update drain state on node %s: too many conflicts", d.node)
-}
-
-func (s DrainState) sameAs(o DrainState) bool {
-	return s.Phase == o.Phase && s.StartedAt.Equal(o.StartedAt) && s.PhaseStartedAt.Equal(o.PhaseStartedAt)
-}
-
-// readDrainState decodes the node's drain annotation. A missing or
-// unreadable annotation reads as no drain, so a new one can replace it.
-func readDrainState(ctx context.Context, node *corev1.Node) DrainState {
-	raw, ok := node.Annotations[DrainAnnotation]
-	if !ok {
-		return DrainState{Phase: DrainNone}
-	}
-	var st DrainState
-	if err := json.Unmarshal([]byte(raw), &st); err != nil || st.Phase == "" {
-		logging.FromContext(ctx).Warn("drain: ignoring unreadable drain annotation", "node", node.Name, "value", raw, "error", err)
-		return DrainState{Phase: DrainNone}
-	}
-	return st
-}
-
-func (d *drainer) status(ctx context.Context) (DrainStatus, error) {
-	node, err := d.clientset.CoreV1().Nodes().Get(ctx, d.node, v1.GetOptions{})
-	if err != nil {
-		return DrainStatus{}, err
-	}
-	out := DrainStatus{Node: d.node, DrainState: readDrainState(ctx, node)}
-	var timeout time.Duration
-	switch out.Phase {
-	case DrainStarting:
-		timeout = drainStartingStale
-	case DrainWaiting:
-		timeout = drainRescheduleTimeout
-		pods, err := podsOnNode(ctx, d.clientset, d.node)
-		if err != nil {
-			return DrainStatus{}, err
-		}
-		out.Remaining = remainingServices(out.DrainState, pods)
-	case DrainEvicting:
-		timeout = drainEvictTimeout
-		list, errs := d.evictHelper(ctx).GetPodsForDeletion(d.node)
-		if len(errs) > 0 {
-			return DrainStatus{}, utilerrors.NewAggregate(errs)
-		}
-		out.Remaining = podNames(list.Pods())
-	default:
-		return out, nil
-	}
-	deadline := out.PhaseStartedAt.Add(timeout)
-	out.Deadline = &deadline
-	return out, nil
-}
-
-func (d *drainer) evictHelper(ctx context.Context) *drain.Helper {
-	logger := logging.FromContext(ctx)
-	return &drain.Helper{
-		Ctx:                 ctx,
-		Client:              d.clientset,
-		Out:                 logWriter{logger},
-		ErrOut:              logWriter{logger},
-		IgnoreAllDaemonSets: true,
-		DeleteEmptyDirData:  true,
-		GracePeriodSeconds:  -1, // Use pod's termination grace period
-	}
-}
-
 func (d *drainer) now() time.Time {
 	return drainNow().UTC().Truncate(time.Second)
 }
 
 func (d *drainer) expired(st DrainState, timeout time.Duration) bool {
 	return drainNow().After(st.PhaseStartedAt.Add(timeout))
-}
-
-func podsOnNode(ctx context.Context, clientset kubernetes.Interface, nodeName string) ([]corev1.Pod, error) {
-	list, err := clientset.CoreV1().Pods("").List(ctx, v1.ListOptions{
-		FieldSelector: "spec.nodeName=" + nodeName,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list pods on node %s: %w", nodeName, err)
-	}
-	return list.Items, nil
-}
-
-// podActive reports whether the pod still holds the node: not yet
-// completed or failed.
-func podActive(pod *corev1.Pod) bool {
-	return pod.Status.Phase != corev1.PodSucceeded && pod.Status.Phase != corev1.PodFailed
-}
-
-// emptyDirPods names the pods that mount an emptyDir volume.
-func emptyDirPods(pods []corev1.Pod) []string {
-	var names []string
-	for i := range pods {
-		for _, vol := range pods[i].Spec.Volumes {
-			if vol.EmptyDir != nil {
-				names = append(names, pods[i].Namespace+"/"+pods[i].Name)
-				break
-			}
-		}
-	}
-	return names
-}
-
-func podNames(pods []corev1.Pod) []string {
-	names := make([]string, len(pods))
-	for i := range pods {
-		names[i] = pods[i].Namespace + "/" + pods[i].Name
-	}
-	return names
-}
-
-func checkDrainBlockers(pods []corev1.Pod) error {
-	var blockers []string
-	for i := range pods {
-		pod := &pods[i]
-		if !podActive(pod) {
-			continue
-		}
-		for _, label := range drainBlockerLabels {
-			if _, ok := pod.Labels[label]; ok {
-				blockers = append(blockers, fmt.Sprintf("%s/%s (%s)", pod.Namespace, pod.Name, label))
-				break
-			}
-		}
-	}
-	if len(blockers) > 0 {
-		return fmt.Errorf("node runs pods that must not be drained: %s", strings.Join(blockers, ", "))
-	}
-	return nil
-}
-
-// servingRefs returns the distinct InferenceServices with live pods in
-// pods, sorted for deterministic processing.
-func servingRefs(pods []corev1.Pod) []isvcRef {
-	seen := map[string]isvcRef{}
-	for i := range pods {
-		pod := &pods[i]
-		if !podActive(pod) || pod.DeletionTimestamp != nil {
-			continue
-		}
-		for j := range servingAPIs {
-			api := &servingAPIs[j]
-			if name := pod.Labels[api.label]; name != "" {
-				ref := isvcRef{api: api, namespace: pod.Namespace, name: name}
-				seen[ref.String()] = ref
-				break
-			}
-		}
-	}
-	refs := make([]isvcRef, 0, len(seen))
-	for _, ref := range seen {
-		refs = append(refs, ref)
-	}
-	slices.SortFunc(refs, func(a, b isvcRef) int { return strings.Compare(a.String(), b.String()) })
-	return refs
-}
-
-/*
-planRestarts picks the InferenceServices on the node to restart: those
-whose minReplicas is at most 1 (unset counts as 1). Multi-replica services
-are left to eviction, their other replicas serving meanwhile; so is a
-service whose CR is gone.
-*/
-func planRestarts(ctx context.Context, client dynamic.Interface, pods []corev1.Pod) ([]isvcRef, error) {
-	var plan []isvcRef
-	for _, ref := range servingRefs(pods) {
-		obj, err := client.Resource(ref.api.gvr).Namespace(ref.namespace).Get(ctx, ref.name, v1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			note(ctx, true, "drain: InferenceService not found, leaving its pods to eviction", "service", ref.String())
-			continue
-		}
-		if err != nil {
-			return nil, fmt.Errorf("get InferenceService %s: %w", ref, err)
-		}
-		spec, _ := obj.Object["spec"].(map[string]any)
-		minReplicas, ok := nestedCount(spec, ref.api.minReplicasPath...)
-		if !ok {
-			minReplicas = 1
-		}
-		if minReplicas > 1 {
-			note(ctx, false, "drain: leaving multi-replica InferenceService to eviction", "service", ref.String(), "minReplicas", minReplicas)
-			continue
-		}
-		plan = append(plan, ref)
-	}
-	return plan, nil
-}
-
-// remainingServices lists the restarted InferenceServices that still have
-// live pods on the node.
-func remainingServices(st DrainState, pods []corev1.Pod) []string {
-	var remaining []string
-	for _, s := range st.Restarted {
-		ref, ok := parseISVCRef(s)
-		if !ok {
-			continue
-		}
-		for i := range pods {
-			pod := &pods[i]
-			if podActive(pod) && pod.Namespace == ref.namespace && pod.Labels[ref.api.label] == ref.name {
-				remaining = append(remaining, s)
-				break
-			}
-		}
-	}
-	return remaining
 }
