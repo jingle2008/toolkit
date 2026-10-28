@@ -71,3 +71,27 @@ func TestProductionRenderer_NoTopMargin(t *testing.T) {
 		assert.Equal(t, strings.TrimRight(first, " "), first, "no trailing padding")
 	}
 }
+
+// glamour pads each line to its wrap width: no line of the code block it
+// renders is padded past body's widest line plus wrapSlack, and every
+// line, however long, is left unwrapped for hangingWrap to wrap.
+func TestRenderCodeBlock_UnwrappedAndUnpadded(t *testing.T) {
+	t.Parallel()
+	var b strings.Builder
+	b.WriteString("{\n")
+	for range 100 {
+		b.WriteString("    \"key\": \"value\",\n")
+	}
+	long := `    "id": "` + strings.Repeat("a", 300) + `"`
+	b.WriteString(long + "\n}")
+	body := b.String()
+	for _, r := range []ProductionRenderer{{}, {Light: true}} {
+		out, err := r.renderCodeBlock(body)
+		require.NoError(t, err)
+		plain := stripANSI(out)
+		for _, l := range strings.Split(plain, "\n") {
+			assert.LessOrEqual(t, len(l), len(long)+wrapSlack, "light=%v: padded no wider than the wrap", r.Light)
+		}
+		assert.Contains(t, plain, long, "light=%v: the long line isn't wrapped", r.Light)
+	}
+}

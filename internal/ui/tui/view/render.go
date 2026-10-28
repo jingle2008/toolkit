@@ -29,27 +29,47 @@ type ProductionRenderer struct {
 // edge, without the margin, which left every other line indented and a
 // long value's tail at column one.
 func (r ProductionRenderer) RenderJSON(data any, width int) (string, error) {
-	style := styles.DarkStyle // auto style has delay of 5 to 10s after upgrade
-	if r.Light {
-		style = styles.LightStyle
-	}
-	renderer, err := glamour.NewTermRenderer(
-		glamour.WithStandardStyle(style),
-		glamour.WithWordWrap(noWrap),
-	)
-	if err != nil {
-		return "", fmt.Errorf("error creating TermRenderer: %w", err)
-	}
-	out, err := renderer.Render(fmt.Sprintf("```json\n%v\n```", data))
+	out, err := r.renderCodeBlock(fmt.Sprint(data))
 	if err != nil {
 		return "", err
 	}
 	return hangingWrap(trimMargins(out), width), nil
 }
 
-// noWrap is a line width no JSON line reaches, to keep glamour from
-// wrapping.
-const noWrap = 1 << 16
+// renderCodeBlock renders body as a JSON code block with glamour, as
+// glamour lays it out: margins and padding included.
+//
+// glamour pads every line out to its wrap width, so the wrap width is
+// set just past body's widest line, where glamour never wraps but pads
+// little; a fixed huge width padded each line to that many cells, which
+// made a details view's JSON take seconds to render.
+func (r ProductionRenderer) renderCodeBlock(body string) (string, error) {
+	style := styles.DarkStyle // auto style has delay of 5 to 10s after upgrade
+	if r.Light {
+		style = styles.LightStyle
+	}
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithStandardStyle(style),
+		glamour.WithWordWrap(widestLine(body)+wrapSlack),
+	)
+	if err != nil {
+		return "", fmt.Errorf("error creating TermRenderer: %w", err)
+	}
+	return renderer.Render("```json\n" + body + "\n```")
+}
+
+// wrapSlack is room past a code block's widest line for glamour's
+// document and code block margins, so the line stays unwrapped.
+const wrapSlack = 16
+
+// widestLine is the width of s's widest line.
+func widestLine(s string) int {
+	widest := 0
+	for _, l := range strings.Split(s, "\n") {
+		widest = max(widest, ansi.StringWidth(l))
+	}
+	return widest
+}
 
 // hangingWrap cuts each line of s wider than width into pieces that fit,
 // each continuation indented under its line's own text plus two cells,
