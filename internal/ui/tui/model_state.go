@@ -199,16 +199,8 @@ type Model struct {
 	// mutates the table's rows in place, which would otherwise leak
 	// "…" into ScopedItemKey lookups.
 	rawRows []table.Row
-	// colorless is set when the terminal shows no color (NO_COLOR, or a
-	// profile without it); setStyles then draws focus in reverse video.
-	// lightBg records the reported background, so a profile change
-	// rebuilds the right theme (dark until reported).
-	colorless bool
-	lightBg   bool
-	// termFg and termBg are the terminal's reported text and background
-	// colors, nil until it answers; with both, the palette's neutrals are
-	// derived from them (DerivePalette).
-	termFg, termBg color.Color
+	// term is the terminal's reported colors.
+	term termColors
 	// rowTotal is how many rows the category (in its scope) has before the
 	// filter and faulty-only mode; the panel shows it when they hide some.
 	rowTotal int
@@ -280,6 +272,20 @@ type navState struct {
 	landOnKey models.ItemKey
 }
 
+// termColors is what the terminal reports of its colors.
+type termColors struct {
+	// colorless is set when the terminal shows no color (NO_COLOR, or a
+	// profile without it); setStyles then draws focus in reverse video.
+	// lightBg records the reported background, so a profile change
+	// rebuilds the right theme (dark until reported).
+	colorless bool
+	lightBg   bool
+	// fg and bg are the terminal's reported text and background colors,
+	// nil until it answers; with both, the palette's neutrals are derived
+	// from them (DerivePalette).
+	fg, bg color.Color
+}
+
 /*
 NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
@@ -325,10 +331,10 @@ func initStyles(m *Model) {
 // palette derived from its colors once it has given both, else the fixed
 // one for its background (dark until it says).
 func (m *Model) restyle() {
-	if m.termFg != nil && m.termBg != nil {
-		setStyles(m, stylesFor(DerivePalette(!m.lightBg, m.termFg, m.termBg)))
+	if m.term.fg != nil && m.term.bg != nil {
+		setStyles(m, stylesFor(DerivePalette(!m.term.lightBg, m.term.fg, m.term.bg)))
 	} else {
-		setStyles(m, DefaultStyles(!m.lightBg))
+		setStyles(m, DefaultStyles(!m.term.lightBg))
 	}
 	if m.viewMode == common.LogView {
 		m.refreshLog() // the log's body is laid out in the theme's colors
@@ -341,7 +347,7 @@ func (m *Model) restyle() {
 // tea.BackgroundColorMsg or tea.ColorProfileMsg restyles everything
 // through it.
 func setStyles(m *Model, s Styles) {
-	if m.colorless && !s.Monochrome {
+	if m.term.colorless && !s.Monochrome {
 		s = s.monochrome()
 	}
 	m.theme = s
