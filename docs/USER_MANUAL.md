@@ -672,7 +672,7 @@ After sourcing the file / restarting your shell, pressing `Tab` while typing `to
 
 ## Logging & Debugging
 
-Toolkit writes structured logs to one file per process (session) in `~/.local/state/toolkit/logs` (`$XDG_STATE_HOME/toolkit/logs` when set), named `<start>-<cmd>-<pid>.log`. Running several instances at once is safe: each has its own file. Exited sessions beyond the newest 50, or idle for 14 days, are pruned automatically.
+Toolkit writes structured logs to one file per process (session) in `~/.local/state/toolkit/logs` (`$XDG_STATE_HOME/toolkit/logs` when set), named `<start>-<cmd>-<pid>.log`. Running several instances at once is safe: each has its own file. Exited sessions beyond the newest 50 of their command, or idle for 14 days, are pruned automatically.
 
 ```bash
 # Show the latest session's log, or follow it live

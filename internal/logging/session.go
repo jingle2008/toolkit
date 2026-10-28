@@ -17,7 +17,9 @@ import (
 
 // Session retention, applied by PruneSessions at every session start.
 // Running sessions are never removed; exited ones go once they fall
-// outside the newest MaxSessions or haven't been written for MaxAge.
+// outside the newest MaxSessions of their command or haven't been
+// written for MaxAge. The budget is per command so a script's many
+// short get or mutation runs can't push out the TUI's or MCP's logs.
 const (
 	MaxSessions = 50
 	MaxAge      = 14 * 24 * time.Hour
@@ -169,9 +171,9 @@ func (s Session) Files() []string {
 	return files
 }
 
-// PruneSessions removes exited sessions beyond the newest MaxSessions,
-// or last written more than MaxAge before now, and reports how many it
-// removed. Running sessions are always kept, and so is anything a
+// PruneSessions removes exited sessions beyond the newest MaxSessions
+// of their command, or last written more than MaxAge before now, and
+// reports how many it removed. Running sessions are always kept, and so is anything a
 // concurrent prune already deleted.
 func PruneSessions(dir string, now time.Time) (int, error) {
 	sessions, err := ListSessions(dir)
@@ -179,13 +181,13 @@ func PruneSessions(dir string, now time.Time) (int, error) {
 		return 0, err
 	}
 	var errs []error
-	removed, kept := 0, 0
+	removed, kept := 0, map[string]int{}
 	for _, s := range sessions {
 		if s.Running {
 			continue
 		}
-		if kept < MaxSessions && now.Sub(s.ModTime) <= MaxAge {
-			kept++
+		if kept[s.Cmd] < MaxSessions && now.Sub(s.ModTime) <= MaxAge {
+			kept[s.Cmd]++
 			continue
 		}
 		for _, f := range s.Files() {

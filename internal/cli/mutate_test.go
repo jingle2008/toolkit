@@ -342,3 +342,26 @@ func TestRunMutation_ResolveRefinesPlan(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "DRY-RUN: would force-delete inference_service/ns1/svc (namespace=ns1)\n", out.String())
 }
+
+// A mutation's log session is named for its command path, so
+// `toolkit logs --cmd drain` finds it.
+func TestMutationName(t *testing.T) {
+	t.Parallel()
+	root := testRootCmd(nil)
+	for path, want := range map[string]string{
+		"drain":                    "drain",
+		"cordon":                   "cordon",
+		"restart node":             "restart-node",
+		"delete inference-service": "delete-inference-service",
+		"scale gpu-pool":           "scale-gpu-pool",
+		"set tenant":               "set-tenant",
+	} {
+		cmd, _, err := root.Find(strings.Fields(path))
+		if err != nil || cmd.CommandPath() != root.Name()+" "+path {
+			t.Fatalf("find %q: %v (got %q)", path, err, cmd.CommandPath())
+		}
+		if got := mutationName(cmd); got != want {
+			t.Errorf("mutationName(%q) = %q, want %q", path, got, want)
+		}
+	}
+}

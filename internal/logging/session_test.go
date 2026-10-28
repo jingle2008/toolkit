@@ -123,6 +123,36 @@ func TestPruneSessions(t *testing.T) {
 	}
 }
 
+// Each command has its own MaxSessions budget: a full set of newer get
+// sessions doesn't push out an older tui one.
+func TestPruneSessions_BudgetPerCommand(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	now := time.Now()
+	tui := SessionID(now.Add(-2*time.Hour), "tui", deadPID)
+	touch(t, filepath.Join(dir, tui+".log"), "x", now)
+	gets := make([]string, 0, MaxSessions+1)
+	for i := range MaxSessions + 1 {
+		id := SessionID(now.Add(-time.Hour+time.Duration(i)*time.Second), "get", deadPID)
+		gets = append(gets, id)
+		touch(t, filepath.Join(dir, id+".log"), "x", now)
+	}
+
+	removed, err := PruneSessions(dir, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if removed != 1 {
+		t.Errorf("removed %d, want 1", removed)
+	}
+	if _, err := os.Stat(filepath.Join(dir, gets[0]+".log")); !os.IsNotExist(err) {
+		t.Errorf("oldest get session survived: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, tui+".log")); err != nil {
+		t.Errorf("tui session pruned by get's budget: %v", err)
+	}
+}
+
 func TestNewSession_WritesPerProcessFile(t *testing.T) {
 	t.Parallel()
 	dir := filepath.Join(t.TempDir(), "logs")

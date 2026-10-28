@@ -60,7 +60,7 @@ no process is driving it: run the drain again to resume.`,
 			if cmd.Flags().Changed("output") {
 				return fmt.Errorf("-o applies only with --status")
 			}
-			return withMutationSetup(cmd.Context(), cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+			return withMutationSetup(cmd, cfgFile, true, false, true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 				d := deps(cfg)
 				op := ops.Drain(d, opsEnv(cfg, env), nodeName)
 				op.Perform = func(ctx context.Context, _ mutation.Plan) error {
