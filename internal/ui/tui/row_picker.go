@@ -21,21 +21,20 @@ import (
 // rowPickerPending is the parent's half of the open row picker: what
 // choosing a row does and the view to restore on close.
 type rowPickerPending struct {
-	choose     func(domain.Scope) tea.Cmd
-	returnView common.ViewMode
+	choose func(domain.Scope) tea.Cmd
 }
 
 // openRowPicker shows the row picker over targets; choose runs on enter.
 func (m *Model) openRowPicker(title, verb string, targets []domain.Scope, choose func(domain.Scope) tea.Cmd) tea.Cmd {
 	m.rowPicker = rowpicker.New(title, verb, targets)
-	m.rowPickerPending = rowPickerPending{choose: choose, returnView: m.viewMode}
-	m.viewMode = common.RowPickerView
+	m.rowPickerPending = rowPickerPending{choose: choose}
+	m.openView(common.RowPickerView)
 	return nil
 }
 
 // dismissRowPicker closes the picker, restoring the prior view.
 func (m *Model) dismissRowPicker() {
-	m.viewMode = m.rowPickerPending.returnView
+	m.closeView()
 	m.rowPicker = rowpicker.Model{}
 	m.rowPickerPending = rowPickerPending{}
 }

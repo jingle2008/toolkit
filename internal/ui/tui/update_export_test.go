@@ -18,7 +18,7 @@ func TestUpdateExportView_ExitAndQuit(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.viewMode = common.ExportView
-	m.lastViewMode = common.ListView
+	m.viewStack = []common.ViewMode{common.ListView}
 
 	model, cmd := m.updateExportView(keyPress(keys.ExportCSV.Keys()[0]))
 	assert.Equal(t, common.ListView, model.(*Model).viewMode)
@@ -41,7 +41,7 @@ func TestUpdateExportView_QuitCancelsInFlight(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.viewMode = common.ExportView
-	m.lastViewMode = common.ListView
+	m.viewStack = []common.ViewMode{common.ListView}
 
 	canceled := false
 	m.loadCancel = func() { canceled = true }
@@ -62,7 +62,7 @@ func TestUpdateExportView_EscDismisses(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
 	m.viewMode = common.ExportView
-	m.lastViewMode = common.ListView
+	m.viewStack = []common.ViewMode{common.ListView}
 
 	model, cmd := m.updateExportView(keyPress("esc"))
 	assert.Equal(t, common.ListView, model.(*Model).viewMode)
@@ -70,7 +70,7 @@ func TestUpdateExportView_EscDismisses(t *testing.T) {
 }
 
 // TestUpdateExportView_DismissRestoresLastViewMode guards against a
-// regression where esc or e is changed from "restore lastViewMode" to
+// regression where esc or e is changed from "return to the view it opened over" to
 // a hardcoded ListView. The popup must return the user to whichever
 // view they opened it from, including DetailsView.
 func TestUpdateExportView_DismissRestoresLastViewMode(t *testing.T) {
@@ -81,7 +81,7 @@ func TestUpdateExportView_DismissRestoresLastViewMode(t *testing.T) {
 	} {
 		m := newTestModel(t)
 		m.viewMode = common.ExportView
-		m.lastViewMode = common.DetailsView
+		m.viewStack = []common.ViewMode{common.DetailsView}
 
 		model, cmd := m.updateExportView(k)
 		assert.Equal(t, common.DetailsView, model.(*Model).viewMode, "key=%v", k)

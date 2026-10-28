@@ -689,8 +689,7 @@ func (m *Model) beginTask() tea.Cmd {
 			m.loadingTimer.Start(),
 		)
 		if m.dataset == nil {
-			m.lastViewMode = m.viewMode
-			m.viewMode = common.LoadingView
+			m.openView(common.LoadingView)
 		}
 	}
 	m.pendingTasks++
@@ -715,8 +714,6 @@ func (m *Model) endTask(success bool) {
 			"success", success,
 			"elapsed", elapsed,
 		)
-		if m.viewMode == common.LoadingView {
-			m.viewMode = m.lastViewMode
-		}
+		m.leaveLoading()
 	}
 }

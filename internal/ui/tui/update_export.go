@@ -31,8 +31,7 @@ const exportHints = "enter export · ↑/↓ select · → open · ← up · tab
 // folder list re-read, the name reset to the category's default, focus on
 // the list.
 func (m *Model) enterExportView() []tea.Cmd {
-	m.lastViewMode = m.viewMode
-	m.viewMode = common.ExportView
+	m.openView(common.ExportView)
 	ti := textinput.New()
 	ti.Prompt = ""
 	ti.SetValue(m.exportFilename())
@@ -47,10 +46,10 @@ func (m *Model) enterExportView() []tea.Cmd {
 func (m *Model) updateExportView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case exportDoneMsg:
-		m.viewMode = m.lastViewMode
+		m.closeView()
 		return m, m.showToast("exported to "+tildePath(msg.path), toastInfo)
 	case exportErrMsg:
-		m.viewMode = m.lastViewMode
+		m.closeView()
 		return m, m.showErrorWithNext(fmt.Sprintf("export failed: %v", msg.err), keys.ExportCSV.Help().Key+" pick another folder")
 	}
 
@@ -78,7 +77,7 @@ func (m *Model) exportKey(km tea.KeyPressMsg) (tea.Cmd, bool) {
 	case k == "ctrl+c" || (!m.naming && key.Matches(km, keys.Quit)):
 		return m.quit(), true
 	case k == "esc" || (!m.naming && key.Matches(km, keys.ExportCSV)):
-		m.viewMode = m.lastViewMode
+		m.closeView()
 		return nil, true
 	case k == "tab" || k == "shift+tab":
 		m.naming = !m.naming

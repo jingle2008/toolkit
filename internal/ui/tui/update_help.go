@@ -32,7 +32,7 @@ func (m *Model) updateHelpView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case key.Matches(keyMsg, keys.Back) && m.helpFilter != "":
 		m.helpFilter, m.helpScroll = "", 0
 	case key.Matches(keyMsg, keys.Back, keys.Help):
-		m.viewMode = m.lastViewMode
+		m.closeView()
 	case key.Matches(keyMsg, keys.Quit):
 		return m, m.quit()
 	default:

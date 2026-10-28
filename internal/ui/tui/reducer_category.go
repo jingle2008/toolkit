@@ -156,7 +156,7 @@ func (m *Model) enterDetailView() tea.Cmd {
 		return nil
 	}
 
-	m.viewMode = common.DetailsView
+	m.setBaseView(common.DetailsView)
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	m.selectedKey = itemKeyFrom(m.category, row)
 	m.updateLayout(m.viewWidth, m.viewHeight)
@@ -166,7 +166,7 @@ func (m *Model) enterDetailView() tea.Cmd {
 
 // exitDetailView exits detail view mode.
 func (m *Model) exitDetailView() {
-	m.viewMode = common.ListView
+	m.setBaseView(common.ListView)
 	m.keys = keys.ResolveKeys(m.category, m.viewMode)
 	m.updateLayout(m.viewWidth, m.viewHeight)
 }

@@ -59,12 +59,12 @@ func (m *Model) helpSectionsFor(filter string) []helpSection {
 	// the view's keys.
 	listLevel := slices.DeleteFunc(slices.Clone(actions), func(b key.Binding) bool { return !keys.ListLevel(b) })
 	actions = slices.DeleteFunc(actions, keys.ListLevel)
-	add("Quick switch", m.quickSwitchBindings(m.lastViewMode))
+	add("Quick switch", m.quickSwitchBindings(m.parentView()))
 	add("Actions", actions)
 	add("Sort", slices.Concat(modeSorts, actionSorts))
-	add(fmt.Sprintf("%s view", m.lastViewMode), slices.Concat(mode, listLevel))
+	add(fmt.Sprintf("%s view", m.parentView()), slices.Concat(mode, listLevel))
 	add("General", m.keys.Global)
-	switch m.lastViewMode {
+	switch m.parentView() {
 	case common.ListView:
 		add("Navigation", sentenceCase(m.tableBinding()))
 	case common.DetailsView:
@@ -264,7 +264,7 @@ func (m *Model) fullHelpView() string {
 	if lipgloss.Width(hints) > inner {
 		hints = strings.Replace(hints, "j/k pgup/pgdn home/end scroll", "j/k scroll", 1)
 	}
-	return m.fixedModal("Keys · "+m.lastViewMode.String()+" view", clipLines(body, inner), clipLines(hints, inner),
+	return m.fixedModal("Keys · "+m.parentView().String()+" view", clipLines(body, inner), clipLines(hints, inner),
 		m.theme.Palette.Accent, 0, min(lipgloss.Width(full), inner), lipgloss.Height(full))
 }
 
