@@ -3,6 +3,8 @@ package configloader
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -132,6 +134,49 @@ func TestLoadTenancyOverridesDI_LoadOverridesError(t *testing.T) {
 		func(_ context.Context, _ string) ([]mockNamedItem, error) { return nil, os.ErrNotExist },
 	)
 	require.Error(t, err)
+}
+
+// Tenants load in parallel: each lands under its own key, from its own
+// directory.
+func TestLoadTenancyOverridesDI_EachTenantItsOwn(t *testing.T) {
+	t.Parallel()
+	tenants := make([]string, 50)
+	for i := range tenants {
+		tenants[i] = fmt.Sprintf("t%02d", i)
+	}
+	got, err := loadTenancyOverridesWith(
+		context.Background(),
+		"root", "realm", "name",
+		func(string) ([]string, error) { return tenants, nil },
+		func(_ context.Context, dir string) ([]mockNamedItem, error) {
+			return []mockNamedItem{{Name: filepath.Base(dir)}}, nil
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, got, len(tenants))
+	for _, tenant := range tenants {
+		assert.Equal(t, []mockNamedItem{{Name: tenant}}, got[tenant])
+	}
+}
+
+// A tenant that fails to load fails the whole load with its own error,
+// not the cancellation it causes the others.
+func TestLoadTenancyOverridesDI_FirstErrorWins(t *testing.T) {
+	t.Parallel()
+	errBad := errors.New("bad file")
+	_, err := loadTenancyOverridesWith(
+		context.Background(),
+		"root", "realm", "name",
+		func(string) ([]string, error) { return []string{"ok1", "bad", "ok2", "ok3"}, nil },
+		func(ctx context.Context, dir string) ([]mockNamedItem, error) {
+			if filepath.Base(dir) == "bad" {
+				return nil, errBad
+			}
+			<-ctx.Done()
+			return nil, ctx.Err()
+		},
+	)
+	require.ErrorIs(t, err, errBad)
 }
 
 func TestLoadTenancyOverridesDI_Empty(t *testing.T) {
