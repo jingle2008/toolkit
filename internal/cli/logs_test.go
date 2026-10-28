@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -80,6 +81,26 @@ func TestRunLogs(t *testing.T) {
 				t.Errorf("got %q, want %q", out.String(), tc.want)
 			}
 		})
+	}
+}
+
+// A PID that prefixes a newer session's ID (which starts with its
+// date) picks the PID's session, not the newer one.
+func TestPickSession_PIDBeatsIDPrefix(t *testing.T) {
+	now := time.Now()
+	newer := logging.Session{ID: logging.SessionID(now, "get", 999), Cmd: "get", PID: 999}
+	year := newer.ID[:4]
+	pid, err := strconv.Atoi(year)
+	if err != nil {
+		t.Fatal(err)
+	}
+	older := logging.Session{ID: logging.SessionID(now.Add(-time.Hour), "get", pid), Cmd: "get", PID: pid}
+	got, err := pickSession([]logging.Session{newer, older}, []string{year}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != older.ID {
+		t.Errorf("picked %s, want PID %d's session %s", got.ID, pid, older.ID)
 	}
 }
 
@@ -191,6 +212,35 @@ func TestFollowFile_AppendsRotationAndExit(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("followFile did not return after the session exited")
+	}
+	if got := out.String(); got != "a\nb\nc\n" {
+		t.Errorf("got %q", got)
+	}
+}
+
+// Lines appended after the last drain but before a rotation are still
+// printed, ahead of the new file's.
+func TestTailer_ReadsRotatedFileToEnd(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "s.log")
+	writeFile(t, path, "a\n")
+	var out bytes.Buffer
+	tl := &tailer{path: path, w: &out}
+	defer tl.close()
+	if err := tl.drain(); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600) //nolint:gosec // G304: test temp path
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = f.WriteString("b\n")
+	_ = f.Close()
+	if err := os.Rename(path, path+".1"); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, path, "c\n")
+	if err := tl.drain(); err != nil {
+		t.Fatal(err)
 	}
 	if got := out.String(); got != "a\nb\nc\n" {
 		t.Errorf("got %q", got)

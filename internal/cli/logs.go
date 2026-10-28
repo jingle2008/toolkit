@@ -162,14 +162,22 @@ func runLogs(ctx context.Context, w io.Writer, cfg config.Config, args []string,
 var processAliveFn = logging.ProcessAlive
 
 // pickSession returns the newest session matching cmd (when set) and
-// the SESSION argument (when given): a PID, or a session ID prefix.
+// the SESSION argument (when given): a PID, or a session ID prefix. A
+// PID match wins over a prefix match, since IDs start with the date: a
+// PID like 2026 prefixes every session started this year.
 func pickSession(sessions []logging.Session, args []string, cmd string) (logging.Session, error) {
-	for _, s := range sessions {
-		if cmd != "" && s.Cmd != cmd {
-			continue
+	matches := []func(logging.Session) bool{func(logging.Session) bool { return true }}
+	if len(args) > 0 {
+		matches = []func(logging.Session) bool{
+			func(s logging.Session) bool { return strconv.Itoa(s.PID) == args[0] },
+			func(s logging.Session) bool { return strings.HasPrefix(s.ID, args[0]) },
 		}
-		if len(args) == 0 || strconv.Itoa(s.PID) == args[0] || strings.HasPrefix(s.ID, args[0]) {
-			return s, nil
+	}
+	for _, match := range matches {
+		for _, s := range sessions {
+			if (cmd == "" || s.Cmd == cmd) && match(s) {
+				return s, nil
+			}
 		}
 	}
 	switch {
@@ -261,7 +269,9 @@ type tailer struct {
 
 // drain writes path's new bytes to w, reopening from the start when
 // path is a different file than the one held, or shorter than what was
-// already read. A path that doesn't exist yet drains nothing.
+// already read. A rotated-away file is read to its end first, so lines
+// written just before the rotation aren't lost. A path that doesn't
+// exist yet drains nothing.
 func (t *tailer) drain() error {
 	st, err := os.Stat(t.path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -271,8 +281,16 @@ func (t *tailer) drain() error {
 		return err
 	}
 	if t.f != nil {
-		if cur, err := t.f.Stat(); err != nil || !os.SameFile(cur, st) || st.Size() < t.off {
+		cur, err := t.f.Stat()
+		switch {
+		case err != nil || st.Size() < t.off && os.SameFile(cur, st):
 			t.close()
+		case !os.SameFile(cur, st):
+			err := t.copyNew()
+			t.close()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if t.f == nil {
@@ -280,6 +298,11 @@ func (t *tailer) drain() error {
 			return err
 		}
 	}
+	return t.copyNew()
+}
+
+// copyNew writes the held file's bytes past off to w.
+func (t *tailer) copyNew() error {
 	n, err := io.Copy(t.w, io.NewSectionReader(t.f, t.off, 1<<62))
 	t.off += n
 	return err

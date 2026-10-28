@@ -28,11 +28,14 @@ var mutationTools = map[string]bool{
 }
 
 // envCache holds the repo's environments, loaded on first use and
-// reloaded when an override isn't in them. mu guards envs only, not the
-// load.
+// reloaded when an override isn't in them. mu guards the fields, not the
+// load. Loads run concurrently, so each takes a ticket when it starts
+// and stores its result only if no later-started load has stored first.
 type envCache struct {
-	mu   sync.Mutex
-	envs []models.Environment
+	mu      sync.Mutex
+	envs    []models.Environment
+	tickets uint64 // loads started
+	stored  uint64 // ticket of the load envs came from
 }
 
 // envGuard refuses a tool call whose env_type/env_region/env_realm
@@ -79,10 +82,13 @@ func (s *Server) checkEnvOverride(ctx context.Context, in envOverride) error {
 	env := s.envFor(in)
 	s.envCache.mu.Lock()
 	cached := s.envCache.envs
-	s.envCache.mu.Unlock()
 	if cached != nil && configloader.CheckEnvironment(env, cached) == nil {
+		s.envCache.mu.Unlock()
 		return nil
 	}
+	s.envCache.tickets++
+	ticket := s.envCache.tickets
+	s.envCache.mu.Unlock()
 	// Not cached yet, or not in the cached list: (re)load, since the repo
 	// may have gained the environment since. The load reads the repo, so
 	// it runs unlocked: other calls' overrides are checked meanwhile
@@ -93,7 +99,9 @@ func (s *Server) checkEnvOverride(ctx context.Context, in envOverride) error {
 		return nil
 	}
 	s.envCache.mu.Lock()
-	s.envCache.envs = envs
+	if ticket > s.envCache.stored {
+		s.envCache.envs, s.envCache.stored = envs, ticket
+	}
 	s.envCache.mu.Unlock()
 	return configloader.CheckEnvironment(env, envs)
 }

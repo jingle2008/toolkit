@@ -34,3 +34,23 @@ func TestRedirectStderr_KeepsOnlyNonEmptyCapture(t *testing.T) {
 		t.Errorf("capture = %q, %v", data, err)
 	}
 }
+
+// An empty capture another process still holds (a shared --log-file)
+// stays: removing it would send that process's stderr to an unlinked
+// file.
+func TestRedirectStderr_KeepsSharedCapture(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "shared.stderr")
+	other, err := openStderrSink(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = other.Close() }()
+	restore, err := redirectStderr(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restore()
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("shared capture removed: %v", err)
+	}
+}
