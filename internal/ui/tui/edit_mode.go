@@ -63,16 +63,16 @@ func (m *Model) goBack() tea.Cmd {
 	}
 	from := copyScope(m.scope)
 	parent := from.Category
-	for i := m.historyIdx - 1; i >= 0; i-- {
-		if m.history[i].category == parent {
+	for i := m.nav.idx - 1; i >= 0; i-- {
+		if m.nav.history[i].category == parent {
 			m.saveView()
-			child := m.history[m.historyIdx]
-			m.history = slices.Concat(m.history[:i+1], []historyEntry{child}, m.history[m.historyIdx+1:])
-			m.historyIdx = i
-			m.scope = copyScope(m.history[i].scope)
+			child := m.nav.history[m.nav.idx]
+			m.nav.history = slices.Concat(m.nav.history[:i+1], []historyEntry{child}, m.nav.history[m.nav.idx+1:])
+			m.nav.idx = i
+			m.scope = copyScope(m.nav.history[i].scope)
 			cmds := m.updateCategoryNoHist(parent)
-			m.restoreView(m.history[i].view)
-			m.landOn, m.landOnKey = from, nil // the drilled-from row, not the saved cursor
+			m.restoreView(m.nav.history[i].view)
+			m.nav.landOn, m.nav.landOnKey = from, nil // the drilled-from row, not the saved cursor
 			return tea.Sequence(cmds...)
 		}
 	}

@@ -23,8 +23,8 @@ func histOf(cats ...domain.Category) []historyEntry {
 
 // histCategories is m's history, categories only.
 func histCategories(m *Model) []domain.Category {
-	out := make([]domain.Category, len(m.history))
-	for i, e := range m.history {
+	out := make([]domain.Category, len(m.nav.history))
+	for i, e := range m.nav.history {
 		out[i] = e.category
 	}
 	return out
@@ -57,7 +57,7 @@ func newHistoryModel(t *testing.T) *Model {
 		"n1": {{Name: "dac-pod-1", Node: "n1", Namespace: histDAC}, {Name: "other-pod", Node: "n1", Namespace: "other"}},
 		"n2": {{Name: "dac-pod-2", Node: "n2", Namespace: histDAC}},
 	}
-	m.history, m.historyIdx = histOf(m.category), 0
+	m.nav.history, m.nav.idx = histOf(m.category), 0
 	return m
 }
 
@@ -146,7 +146,7 @@ func TestHistory_SameCategoryOtherScopeIsNewEntry(t *testing.T) {
 	drill(m, domain.GPUWorkload, "n1")
 	m.scope = &domain.Scope{Category: domain.GPUNode, Name: "n2"}
 	m.updateCategory(domain.GPUWorkload)
-	require.Len(t, m.history, 4)
+	require.Len(t, m.nav.history, 4)
 	require.Equal(t, []string{"dac-pod-2"}, shownNames(m))
 
 	back(t, m)
@@ -166,7 +166,7 @@ func TestHistory_EscRestoresParentScopeAndCursor(t *testing.T) {
 
 	_, _ = m.Update(keyPress("esc"))
 	require.Equal(t, domain.GPUNode, m.category)
-	assert.Equal(t, 2, m.historyIdx, "back in history, not pushed")
+	assert.Equal(t, 2, m.nav.idx, "back in history, not pushed")
 	assert.Equal(t, []string{"n2", "n3"}, shownNames(m), "p2's nodes, as visited")
 	assert.Equal(t, "n3", m.selectedRawRow()[0], "the cursor lands on the node drilled in from")
 
@@ -189,7 +189,7 @@ func TestHistory_LandOnUsedOnce(t *testing.T) {
 	_, _ = m.Update(keyPress("esc"))
 	require.Equal(t, []string{"n2", "n3", "n4"}, shownNames(m))
 	require.Equal(t, "n2", m.selectedRawRow()[0])
-	assert.Nil(t, m.landOn, "cleared once the cursor is placed")
+	assert.Nil(t, m.nav.landOn, "cleared once the cursor is placed")
 
 	m.table.SetCursor(2) // n4
 	m.dataset.GPUNodeMap["p2"] = m.dataset.GPUNodeMap["p2"][:2]
@@ -204,7 +204,7 @@ func TestHistory_EscClearingScopeIsRecorded(t *testing.T) {
 	m.updateCategory(domain.GPUNode)
 	drill(m, domain.GPUWorkload, "n1")
 	m.backToLastState()
-	assert.Nil(t, m.history[m.historyIdx].scope)
+	assert.Nil(t, m.nav.history[m.nav.idx].scope)
 }
 
 // An entry keeps its own copy of the scope.
@@ -213,7 +213,7 @@ func TestHistory_EntryDoesNotAliasScope(t *testing.T) {
 	m := newHistoryModel(t)
 	drill(m, domain.LimitTenancyOverride, "Acme")
 	m.scope.Name = "Other"
-	assert.Equal(t, "Acme", m.history[m.historyIdx].scope.Name)
+	assert.Equal(t, "Acme", m.nav.history[m.nav.idx].scope.Name)
 }
 
 // An environment switch drops the entries' scopes naming rows of the old
@@ -225,13 +225,13 @@ func TestHistory_EnvSwitchClearsScopes(t *testing.T) {
 	m.goTo(domain.Scope{Category: domain.DedicatedAICluster, Name: histDAC})
 	drill(m, domain.GPUWorkload, histDAC)
 	m.switchEnvironment(models.Environment{Type: "preprod", Region: "us-ashburn-1", Realm: "realm"}, domain.GPUWorkload)
-	for i, e := range m.history {
+	for i, e := range m.nav.history {
 		if e.scope != nil {
 			assert.Equalf(t, domain.Tenant, e.scope.Category, "entry %d keeps only the tenant's scope", i)
 		}
 	}
-	assert.True(t, slices.ContainsFunc(m.history, func(e historyEntry) bool { return e.scope != nil }), "the tenant's scope survives a same-realm switch")
-	assert.Nil(t, m.landOn)
+	assert.True(t, slices.ContainsFunc(m.nav.history, func(e historyEntry) bool { return e.scope != nil }), "the tenant's scope survives a same-realm switch")
+	assert.Nil(t, m.nav.landOn)
 }
 
 // A scope carries over to its parent's other children, but not past a

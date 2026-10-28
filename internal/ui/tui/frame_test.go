@@ -72,8 +72,8 @@ func TestBreadcrumbChips(t *testing.T) {
 	m.filter = "gpu"
 	m.sortColumn, m.sortAsc = common.AgeCol, false
 	m.showFaulty = true
-	m.history = histOf(domain.Tenant, domain.DedicatedAICluster)
-	m.historyIdx = 1
+	m.nav.history = histOf(domain.Tenant, domain.DedicatedAICluster)
+	m.nav.idx = 1
 	chips := ansi.Strip(m.breadcrumbChips())
 	for _, want := range []string{"⟨/gpu⟩", "⟨sort: age ▼⟩", "⟨faulty⟩", "⟨◀ 2/2⟩"} {
 		assert.Contains(t, chips, want)
@@ -240,9 +240,9 @@ func TestUpdateLayout_RetruncatesInTheMiddle(t *testing.T) {
 func TestHistoryChip_ArrowsFollowDirections(t *testing.T) {
 	t.Parallel()
 	m := newGoldenModel(t, 120, 30)
-	m.history = histOf(domain.Tenant, domain.GPUNode, domain.GPUPool)
+	m.nav.history = histOf(domain.Tenant, domain.GPUNode, domain.GPUPool)
 	for idx, want := range []string{"⟨1/3 ▶⟩", "⟨◀ 2/3 ▶⟩", "⟨◀ 3/3⟩"} {
-		m.historyIdx = idx
+		m.nav.idx = idx
 		assert.Equal(t, want, m.historyChip())
 	}
 }

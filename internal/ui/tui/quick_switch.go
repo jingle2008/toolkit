@@ -67,7 +67,7 @@ func (m *Model) switchEnvironment(env models.Environment, target domain.Category
 	if !scopeSurvives(m.scope, sameRealm) {
 		m.scope = nil
 	}
-	m.landOn, m.landOnKey = nil, nil
+	m.nav.landOn, m.nav.landOnKey = nil, nil
 	m.dropStaleHistoryScopes(sameRealm)
 	if target == m.category {
 		m.watch.k8sActive = false

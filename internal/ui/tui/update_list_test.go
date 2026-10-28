@@ -124,8 +124,8 @@ func TestHandleNextCategory(t *testing.T) {
 		textInput:      &ti,
 	}
 	// Seed initial history as in NewModel
-	m.history = histOf(m.category)
-	m.historyIdx = 0
+	m.nav.history = histOf(m.category)
+	m.nav.idx = 0
 	cmd := m.handleNextCategory()
 	assert.NotNil(t, cmd)
 }
@@ -144,8 +144,8 @@ func TestHandlePrevCategory(t *testing.T) {
 		textInput:      &ti,
 	}
 	// Seed initial history as in NewModel
-	m.history = histOf(m.category)
-	m.historyIdx = 0
+	m.nav.history = histOf(m.category)
+	m.nav.idx = 0
 	cmd := m.handlePrevCategory()
 	assert.NotNil(t, cmd)
 }
@@ -155,42 +155,39 @@ func TestHandlePrevCategory(t *testing.T) {
 func TestSeedHistory(t *testing.T) {
 	t.Parallel()
 	m := &Model{
-		history:    []historyEntry{},
-		historyIdx: -1,
-		category:   domain.Tenant,
+		nav:      navState{history: []historyEntry{}, idx: -1},
+		category: domain.Tenant,
 	}
 	// Simulate initial seeding as in NewModel
-	if len(m.history) == 0 {
-		m.history = histOf(m.category)
-		m.historyIdx = 0
+	if len(m.nav.history) == 0 {
+		m.nav.history = histOf(m.category)
+		m.nav.idx = 0
 	}
-	assert.Len(t, m.history, 1)
-	assert.Equal(t, 0, m.historyIdx)
-	assert.Equal(t, domain.Tenant, m.history[0].category)
+	assert.Len(t, m.nav.history, 1)
+	assert.Equal(t, 0, m.nav.idx)
+	assert.Equal(t, domain.Tenant, m.nav.history[0].category)
 }
 
 func TestHistoryCap20(t *testing.T) {
 	t.Parallel()
 	m := &Model{
-		history:    []historyEntry{},
-		historyIdx: -1,
+		nav: navState{history: []historyEntry{}, idx: -1},
 	}
 	// Add 25 categories, should cap at 20
 	for i := range 25 {
 		m.pushHistory(domain.Category(i))
 	}
-	assert.Len(t, m.history, 20)
-	assert.Equal(t, 19, m.historyIdx)
-	assert.Equal(t, domain.Category(5), m.history[0].category)
-	assert.Equal(t, domain.Category(24), m.history[19].category)
+	assert.Len(t, m.nav.history, 20)
+	assert.Equal(t, 19, m.nav.idx)
+	assert.Equal(t, domain.Category(5), m.nav.history[0].category)
+	assert.Equal(t, domain.Category(24), m.nav.history[19].category)
 }
 
 func makeModelWithHistory(hist []domain.Category, idx int) *Model {
 	tbl := table.New()
 	ti := textinput.New()
 	return &Model{
-		history:        histOf(hist...),
-		historyIdx:     idx,
+		nav:            navState{history: histOf(hist...), idx: idx},
 		loadingSpinner: &spinner.Model{},
 		loadingTimer:   &stopwatch.Model{},
 		table:          &tbl,
@@ -205,22 +202,22 @@ func TestMoveHistoryBackForward(t *testing.T) {
 	// Move back
 	cmd := m.moveHistory(-1)
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 1, m.historyIdx)
-	assert.Equal(t, domain.GPUPool, m.history[m.historyIdx].category)
+	assert.Equal(t, 1, m.nav.idx)
+	assert.Equal(t, domain.GPUPool, m.nav.history[m.nav.idx].category)
 	// Move forward
 	cmd = m.moveHistory(1)
 	assert.NotNil(t, cmd)
-	assert.Equal(t, 2, m.historyIdx)
-	assert.Equal(t, domain.GPUNode, m.history[m.historyIdx].category)
+	assert.Equal(t, 2, m.nav.idx)
+	assert.Equal(t, domain.GPUNode, m.nav.history[m.nav.idx].category)
 	// Out of bounds (forward)
 	cmd = m.moveHistory(1)
 	assert.Nil(t, cmd)
-	assert.Equal(t, 2, m.historyIdx)
+	assert.Equal(t, 2, m.nav.idx)
 	// Out of bounds (back)
-	m.historyIdx = 0
+	m.nav.idx = 0
 	cmd = m.moveHistory(-1)
 	assert.Nil(t, cmd)
-	assert.Equal(t, 0, m.historyIdx)
+	assert.Equal(t, 0, m.nav.idx)
 }
 
 func TestBackForwardKeyBindings(t *testing.T) {
@@ -230,11 +227,11 @@ func TestBackForwardKeyBindings(t *testing.T) {
 	// Simulate "[" key
 	msg := keyPress("[")
 	cmds := m.handleNormalKeys(msg)
-	assert.Equal(t, 0, m.historyIdx)
+	assert.Equal(t, 0, m.nav.idx)
 	assert.NotNil(t, cmds)
 	// Simulate "]" key
 	msg = keyPress("]")
 	cmds = m.handleNormalKeys(msg)
-	assert.Equal(t, 1, m.historyIdx)
+	assert.Equal(t, 1, m.nav.idx)
 	assert.NotNil(t, cmds)
 }

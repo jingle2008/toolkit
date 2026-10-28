@@ -145,7 +145,7 @@ func (m *Model) toggleAliases() []tea.Cmd {
 	if m.category != domain.Alias {
 		return m.updateCategory(domain.Alias)
 	}
-	if m.historyIdx > 0 {
+	if m.nav.idx > 0 {
 		return []tea.Cmd{m.moveHistory(-1)}
 	}
 	return m.updateCategory(nextCategory(domain.Alias))

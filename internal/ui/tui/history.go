@@ -38,10 +38,10 @@ type listView struct {
 // it is left. The entry is matched by category alone: a drill-in or a
 // go-to sets the destination's scope just before it navigates.
 func (m *Model) saveView() {
-	if m.historyIdx < 0 || m.historyIdx >= len(m.history) || m.history[m.historyIdx].category != m.category {
+	if m.nav.idx < 0 || m.nav.idx >= len(m.nav.history) || m.nav.history[m.nav.idx].category != m.category {
 		return
 	}
-	m.history[m.historyIdx].view = &listView{
+	m.nav.history[m.nav.idx].view = &listView{
 		filter:     m.filter,
 		input:      m.textInput.Value(),
 		sortColumn: m.sortColumn,
@@ -61,7 +61,7 @@ func (m *Model) restoreView(v *listView) {
 	m.filter = v.filter
 	m.textInput.SetValue(v.input)
 	m.sortColumn, m.sortAsc, m.showFaulty = v.sortColumn, v.sortAsc, v.showFaulty
-	m.landOnKey = v.cursor
+	m.nav.landOnKey = v.cursor
 }
 
 // copyScope returns a copy of s, so a history entry never aliases m.scope.
@@ -86,26 +86,26 @@ func sameScope(a, b *domain.Scope) bool {
 // It also enforces a cap of maxHistory entries.
 func (m *Model) pushHistory(cat domain.Category) {
 	// ignore dups: the same list under the same scope
-	if m.historyIdx >= 0 {
-		cur := m.history[m.historyIdx]
+	if m.nav.idx >= 0 {
+		cur := m.nav.history[m.nav.idx]
 		if cur.category == cat && sameScope(cur.scope, m.scope) {
 			return
 		}
 	}
 	// truncate forward part when user branches
-	if m.historyIdx+1 < len(m.history) {
-		m.history = m.history[:m.historyIdx+1]
+	if m.nav.idx+1 < len(m.nav.history) {
+		m.nav.history = m.nav.history[:m.nav.idx+1]
 	}
-	m.history = append(m.history, historyEntry{category: cat, scope: copyScope(m.scope)})
-	m.historyIdx = len(m.history) - 1
+	m.nav.history = append(m.nav.history, historyEntry{category: cat, scope: copyScope(m.scope)})
+	m.nav.idx = len(m.nav.history) - 1
 
 	// Cap history size
-	if len(m.history) > maxHistory {
-		shift := len(m.history) - maxHistory
-		m.history = m.history[shift:]
-		m.historyIdx -= shift
-		if m.historyIdx < 0 {
-			m.historyIdx = 0
+	if len(m.nav.history) > maxHistory {
+		shift := len(m.nav.history) - maxHistory
+		m.nav.history = m.nav.history[shift:]
+		m.nav.idx -= shift
+		if m.nav.idx < 0 {
+			m.nav.idx = 0
 		}
 	}
 }
@@ -114,13 +114,13 @@ func (m *Model) pushHistory(cat domain.Category) {
 // tea.Cmd that switches to that entry's category, under its scope,
 // WITHOUT recording.
 func (m *Model) moveHistory(dir int) tea.Cmd {
-	target := m.historyIdx + dir
-	if target < 0 || target >= len(m.history) {
+	target := m.nav.idx + dir
+	if target < 0 || target >= len(m.nav.history) {
 		return nil // out of bounds
 	}
 	m.saveView()
-	m.historyIdx = target
-	e := m.history[target]
+	m.nav.idx = target
+	e := m.nav.history[target]
 	m.scope = copyScope(e.scope)
 	if e.category == m.category {
 		// Same list under another scope: updateCategoryCore would treat it
@@ -129,7 +129,7 @@ func (m *Model) moveHistory(dir int) tea.Cmd {
 		m.filter = ""
 		m.textInput.Reset()
 		m.sortColumn, m.sortAsc, m.showFaulty = common.NameCol, true, false
-		m.landOn = nil
+		m.nav.landOn = nil
 		m.restoreView(e.view)
 		m.applyRows(nil, nil, false)
 		return m.updateRowsAsync()
@@ -142,8 +142,8 @@ func (m *Model) moveHistory(dir int) tea.Cmd {
 // syncHistoryScope records the current scope on the current entry, after
 // the scope changed in place (esc leaving a scope without navigating).
 func (m *Model) syncHistoryScope() {
-	if m.historyIdx >= 0 && m.historyIdx < len(m.history) {
-		m.history[m.historyIdx].scope = copyScope(m.scope)
+	if m.nav.idx >= 0 && m.nav.idx < len(m.nav.history) {
+		m.nav.history[m.nav.idx].scope = copyScope(m.scope)
 	}
 }
 
@@ -154,9 +154,9 @@ func (m *Model) syncHistoryScope() {
 // a tenant's within the realm, still hold and are kept. The categories
 // stay, so [ still retraces where you were.
 func (m *Model) dropStaleHistoryScopes(sameRealm bool) {
-	for i := range m.history {
-		if !scopeSurvives(m.history[i].scope, sameRealm) {
-			m.history[i].scope = nil
+	for i := range m.nav.history {
+		if !scopeSurvives(m.nav.history[i].scope, sameRealm) {
+			m.nav.history[i].scope = nil
 		}
 	}
 }

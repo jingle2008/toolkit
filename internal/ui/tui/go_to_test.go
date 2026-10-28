@@ -215,7 +215,7 @@ func TestEsc_ScopedListReturnsToParent(t *testing.T) {
 	m.viewMode = common.ListView
 	m.updateCategory(domain.Tenant)
 	m.updateRows(true)
-	m.history, m.historyIdx = histOf(domain.Tenant), 0
+	m.nav.history, m.nav.idx = histOf(domain.Tenant), 0
 
 	_, _ = m.Update(keyPress("enter"))
 	require.Equal(t, domain.DedicatedAICluster, m.category)
@@ -223,7 +223,7 @@ func TestEsc_ScopedListReturnsToParent(t *testing.T) {
 
 	_, _ = m.Update(keyPress("esc"))
 	assert.Equal(t, domain.Tenant, m.category)
-	assert.Equal(t, 0, m.historyIdx, "back in history, not pushed")
+	assert.Equal(t, 0, m.nav.idx, "back in history, not pushed")
 	m.updateRows(true)
 	assert.Equal(t, "Acme", m.selectedRawRow()[0], "the cursor lands on the row drilled in from")
 
@@ -238,7 +238,7 @@ func TestEsc_ScopedListPushesParent(t *testing.T) {
 	m := newGoToModel(t)
 	m.viewMode = common.ListView
 	m.scope = &domain.Scope{Category: domain.DedicatedAICluster, Name: "amaaaaaa-dac1"}
-	m.history, m.historyIdx = histOf(domain.InferenceService), 0
+	m.nav.history, m.nav.idx = histOf(domain.InferenceService), 0
 
 	_, _ = m.Update(keyPress("esc"))
 	assert.Equal(t, domain.DedicatedAICluster, m.category)

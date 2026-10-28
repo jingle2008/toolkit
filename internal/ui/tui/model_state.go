@@ -138,14 +138,8 @@ type Model struct {
 	renderer      view.Renderer
 	loader        loader.Composite
 	scope         *domain.Scope // selected scope (parent context for current category)
-	// landOn is the row the cursor lands on after the next navigation,
-	// when it isn't m.scope's: esc back to a parent shows the parent under
-	// its own history scope but puts the cursor on the row drilled in from.
-	// Used once: cleared when that navigation's rows first land.
-	landOn *domain.Scope
-	// landOnKey is the row the cursor lands on after the next navigation
-	// by item key: the row [ or ] left it on. Used once, as landOn.
-	landOnKey  models.ItemKey
+	// nav is the category navigation history and the next landing row.
+	nav        navState
 	keys       keys.KeyMap
 	kubeConfig string
 	// deps is the mutations' infra calls; tests fake them.
@@ -194,10 +188,6 @@ type Model struct {
 	recentEnvs     *recentenv.List
 	recentEnvsPath string
 	recentSaver    recentSaver
-
-	// Category navigation history
-	history    []historyEntry // chronological list of visited lists
-	historyIdx int            // index of the current position in history
 
 	// Show only faulty items in list view: rows whose model reports
 	// IsFaulty, or that name a parent row that doesn't exist (see
@@ -276,6 +266,20 @@ type detailState struct {
 	gone bool
 }
 
+// navState is where navigation has been and where it lands next.
+type navState struct {
+	history []historyEntry // chronological list of visited lists
+	idx     int            // index of the current position in history
+	// landOn is the row the cursor lands on after the next navigation,
+	// when it isn't m.scope's: esc back to a parent shows the parent under
+	// its own history scope but puts the cursor on the row drilled in from.
+	// Used once: cleared when that navigation's rows first land.
+	landOn *domain.Scope
+	// landOnKey is the row the cursor lands on after the next navigation
+	// by item key: the row [ or ] left it on. Used once, as landOn.
+	landOnKey models.ItemKey
+}
+
 /*
 NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
@@ -287,8 +291,7 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 		viewMode:   common.ListView,
 		sortColumn: common.NameCol,
 		sortAsc:    true,
-		history:    []historyEntry{},
-		historyIdx: -1,
+		nav:        navState{history: []historyEntry{}, idx: -1},
 		deps:       ops.Production(),
 	}
 
@@ -300,9 +303,9 @@ func NewModel(opts ...ModelOption) (*Model, error) {
 	setDefaults(m)
 
 	// Seed initial category in history if not already present
-	if len(m.history) == 0 {
-		m.history = []historyEntry{{category: m.category, scope: copyScope(m.scope)}}
-		m.historyIdx = 0
+	if len(m.nav.history) == 0 {
+		m.nav.history = []historyEntry{{category: m.category, scope: copyScope(m.scope)}}
+		m.nav.idx = 0
 	}
 
 	// Initialize keys based on initial category and mode

@@ -161,7 +161,7 @@ func (m *Model) applyRows(rows []table.Row, stats tableStats, autoSelect bool) {
 		// landOn places the cursor once, when the rows it was set for
 		// first land; later reloads keep the selection as usual.
 		if len(m.rawRows) > 0 {
-			m.landOn, m.landOnKey = nil, nil
+			m.nav.landOn, m.nav.landOnKey = nil, nil
 		}
 	} else {
 		m.table.UpdateViewport()
@@ -185,7 +185,7 @@ func (m *Model) reselectIndex(prevKey models.ItemKey, prevIdx int) int {
 	if idx := indexOfItemKey(m.rawRows, m.category, prevKey); idx >= 0 {
 		return idx
 	}
-	if idx := indexOfItemKey(m.rawRows, m.category, m.landOnKey); idx >= 0 {
+	if idx := indexOfItemKey(m.rawRows, m.category, m.nav.landOnKey); idx >= 0 {
 		return idx
 	}
 	// The plain rows: a name the display shortened to fit wouldn't match.
@@ -338,8 +338,8 @@ func (m *Model) findContextIndex(rows []table.Row) int {
 	switch {
 	case m.category == domain.Environment:
 		name = m.environment.GetName()
-	case m.landOn != nil && m.category == m.landOn.Category:
-		name = m.landOn.Name
+	case m.nav.landOn != nil && m.category == m.nav.landOn.Category:
+		name = m.nav.landOn.Name
 	case m.scope != nil && m.category == m.scope.Category:
 		name = m.scope.Name
 	default:
