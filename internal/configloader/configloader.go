@@ -13,6 +13,8 @@ import (
 	"slices"
 	"strings"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/jingle2008/toolkit/internal/encoding/jsonutil"
 	"github.com/jingle2008/toolkit/internal/fileutil"
 	"github.com/jingle2008/toolkit/internal/infra/terraform"
@@ -93,16 +95,31 @@ func loadTenancyOverridesWith[T models.NamedItem](
 		return nil, err
 	}
 
-	for _, tenant := range tenants {
-		overrides, err := loadOverridesFunc(ctx, filepath.Join(realmDir, tenant))
-		if err != nil {
-			return nil, err
-		}
-		results[tenant] = overrides
+	// The tenants' directories load in parallel: a realm holds thousands
+	// of small files, and reading them one at a time waits on each open.
+	loaded := make([][]T, len(tenants))
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(overrideLoadWorkers)
+	for i, tenant := range tenants {
+		g.Go(func() error {
+			overrides, err := loadOverridesFunc(gctx, filepath.Join(realmDir, tenant))
+			loaded[i] = overrides
+			return err
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	for i, tenant := range tenants {
+		results[tenant] = loaded[i]
 	}
 
 	return results, nil
 }
+
+// overrideLoadWorkers is how many tenant directories load at once; more
+// than 8 measured slower on macOS.
+const overrideLoadWorkers = 8
 
 func loadTenancyOverrides[T models.NamedItem](ctx context.Context, root, realm, name string) (map[string][]T, error) {
 	return loadTenancyOverridesWith(ctx, root, realm, name, listSubDirs, loadOverrides[T])
