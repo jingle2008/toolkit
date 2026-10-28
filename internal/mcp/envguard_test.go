@@ -133,3 +133,36 @@ func TestCheckEnvOverride_ReloadDoesNotBlockCachedOverrides(t *testing.T) {
 	close(release)
 	require.ErrorContains(t, <-done, "not an environment the repo declares")
 }
+
+// A reload that started earlier but finishes later doesn't overwrite
+// the newer list a later-started reload already cached.
+//
+//nolint:paralleltest // swaps package-level seams
+func TestCheckEnvOverride_StaleReloadDoesNotOverwrite(t *testing.T) {
+	phxDev := models.Environment{Realm: "oc1", Type: "dev", Region: "us-phoenix-1"}
+	release := make(chan struct{})
+	slowStarted := make(chan struct{})
+	calls := 0
+	orig := mcpLoadEnvironmentsFn
+	t.Cleanup(func() { mcpLoadEnvironmentsFn = orig })
+	mcpLoadEnvironmentsFn = func(context.Context, string) ([]models.Environment, error) {
+		calls++
+		if calls == 1 {
+			close(slowStarted)
+			<-release
+			return []models.Environment{ashburnDev}, nil
+		}
+		return []models.Environment{ashburnDev, phxDev}, nil
+	}
+	s := &Server{logger: logging.Discard()}
+
+	done := make(chan error)
+	go func() {
+		done <- s.checkEnvOverride(context.Background(), envOverride{EnvRealm: "oc1", EnvType: "dev", EnvRegion: "iad"})
+	}()
+	<-slowStarted
+	require.NoError(t, s.checkEnvOverride(context.Background(), envOverride{EnvRealm: "oc1", EnvType: "dev", EnvRegion: "phx"}))
+	close(release)
+	require.NoError(t, <-done)
+	assert.Equal(t, []models.Environment{ashburnDev, phxDev}, s.envCache.envs)
+}
