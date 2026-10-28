@@ -212,12 +212,8 @@ func durableOpener(
 	return func(ctx context.Context) (watch.Interface, error) {
 		// Watch clients carry no client-side Timeout (NewWatchConfig), so
 		// bound the initial list here to keep a broken cluster failing fast.
-		listCtx := ctx
-		if RequestTimeout > 0 {
-			var cancel context.CancelFunc
-			listCtx, cancel = context.WithTimeout(ctx, RequestTimeout)
-			defer cancel()
-		}
+		listCtx, cancel := context.WithTimeout(ctx, RequestTimeout)
+		defer cancel()
 		rv, err := listRV(listCtx)
 		if err != nil {
 			return nil, err

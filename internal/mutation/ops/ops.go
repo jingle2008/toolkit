@@ -108,10 +108,10 @@ func Cordon(d Deps, e Env, node string, unschedulable bool) (op mutation.Op, cha
 	}, changed
 }
 
-// Drain looks node's drain up. How it runs is the front-end's: the CLI
-// drives it to the end, MCP starts it and drives it in the background,
-// so the caller sets Perform.
-func Drain(d Deps, e Env, node string) mutation.Op {
+// Drain looks node's drain up and runs it with perform. How it runs is
+// the front-end's: the CLI drives it to the end, MCP starts it and
+// drives it in the background.
+func Drain(d Deps, e Env, node string, perform func(context.Context) error) mutation.Op {
 	return mutation.Op{
 		Plan: mutation.Plan{Action: mutation.DrainNode, Target: node},
 		Resolve: func(ctx context.Context, p *mutation.Plan) error {
@@ -119,6 +119,7 @@ func Drain(d Deps, e Env, node string) mutation.Op {
 			p.Resolved = mutation.ResolvedDrain(string(status.Phase))
 			return err
 		},
+		Perform: func(ctx context.Context, _ mutation.Plan) error { return perform(ctx) },
 	}
 }
 
