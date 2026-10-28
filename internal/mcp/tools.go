@@ -122,19 +122,19 @@ func registerTools(s *Server) {
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_definitions",
 		Annotations: readOnly(),
-		Description: "List definitions of the given kind. `kind` must be one of: limit, console_property, property. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List definitions of the given kind. `kind` must be one of: " + kindNames + ". Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListDefinitions)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_tenancy_overrides",
 		Annotations: readOnly(),
-		Description: "List tenancy-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property. Each item carries the owning tenant via `tenant`. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List tenancy-scoped overrides of the given kind. `kind` must be one of: " + kindNames + ". Each item carries the owning tenant via `tenant`. Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListTenancyOverrides)
 
 	sdk.AddTool(s.server, &sdk.Tool{
 		Name:        "list_regional_overrides",
 		Annotations: readOnly(),
-		Description: "List regional-scoped overrides of the given kind. `kind` must be one of: limit, console_property, property. Supports `limit` (max items after filter; 0 = unlimited).",
+		Description: "List regional-scoped overrides of the given kind. `kind` must be one of: " + kindNames + ". Supports `limit` (max items after filter; 0 = unlimited).",
 	}, s.handleListRegionalOverrides)
 
 	sdk.AddTool(s.server, &sdk.Tool{
@@ -360,75 +360,112 @@ func (s *Server) handleListModelArtifacts(ctx context.Context, req *sdk.CallTool
 }
 
 func (s *Server) handleListDefinitions(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
+	k, err := in.categories()
+	if err != nil {
+		return failTool[listResult[any]]("list_definitions", err)
+	}
+	return s.definitions(ctx, in.listInput, k.definition)
+}
+
+func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
+	k, err := in.categories()
+	if err != nil {
+		return failTool[listResult[any]]("list_tenancy_overrides", err)
+	}
+	return s.tenancyOverrides(ctx, in.listInput, k.tenancy)
+}
+
+func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
+	k, err := in.categories()
+	if err != nil {
+		return failTool[listResult[any]]("list_regional_overrides", err)
+	}
+	return s.regionalOverrides(ctx, in.listInput, k.regional)
+}
+
+// definitions lists the definitions of category cat (a *Definition).
+func (s *Server) definitions(ctx context.Context, in listInput, cat domain.Category) (*sdk.CallToolResult, listResult[any], error) {
 	dataset, err := s.loader.LoadDataset(ctx, s.cfg.RepoPath, s.envFor(in.envOverride))
 	if err != nil {
 		return failTool[listResult[any]]("load dataset", err)
 	}
-	switch in.kind() {
-	case "limit":
-		items := collections.FilterSlice(dataset.LimitDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
-		return jsonResult(collections.TruncateSlice(toAnySlice(items), in.Limit), nil)
-	case "console_property":
-		items := collections.FilterSlice(dataset.ConsolePropertyDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
-		return jsonResult(collections.TruncateSlice(toAnySlice(items), in.Limit), nil)
-	case "property":
-		items := collections.FilterSlice(dataset.PropertyDefinitionGroup.Values, nil, normFilter(in.Filter), nil)
-		return jsonResult(collections.TruncateSlice(toAnySlice(items), in.Limit), nil)
-	default:
-		return failTool[listResult[any]]("list_definitions",
-			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
+	switch cat { //nolint:exhaustive // the definition categories (overrideKinds)
+	case domain.LimitDefinition:
+		return listFlatAny(dataset.LimitDefinitionGroup.Values, in)
+	case domain.ConsolePropertyDefinition:
+		return listFlatAny(dataset.ConsolePropertyDefinitionGroup.Values, in)
+	case domain.PropertyDefinition:
+		return listFlatAny(dataset.PropertyDefinitionGroup.Values, in)
 	}
+	return failTool[listResult[any]]("list definitions", fmt.Errorf("%s is no definition category", cat))
 }
 
-func (s *Server) handleListTenancyOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
+// tenancyOverrides lists the tenancy overrides of category cat.
+func (s *Server) tenancyOverrides(ctx context.Context, in listInput, cat domain.Category) (*sdk.CallToolResult, listResult[any], error) {
 	grp, err := s.tenancyGroup(ctx, s.envFor(in.envOverride))
 	if err != nil {
 		return nil, listResult[any]{}, err
 	}
-	switch in.kind() {
-	case "limit":
-		flat := output.Flatten(collections.FilterMapOrAll(grp.LimitTenancyOverrideMap, normFilter(in.Filter)))
-		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
-	case "console_property":
-		flat := output.Flatten(collections.FilterMapOrAll(grp.ConsolePropertyTenancyOverrideMap, normFilter(in.Filter)))
-		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
-	case "property":
-		flat := output.Flatten(collections.FilterMapOrAll(grp.PropertyTenancyOverrideMap, normFilter(in.Filter)))
-		return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
-	default:
-		return failTool[listResult[any]]("list_tenancy_overrides",
-			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
+	switch cat { //nolint:exhaustive // the tenancy override categories (overrideKinds)
+	case domain.LimitTenancyOverride:
+		return listGroupedAny(grp.LimitTenancyOverrideMap, in)
+	case domain.ConsolePropertyTenancyOverride:
+		return listGroupedAny(grp.ConsolePropertyTenancyOverrideMap, in)
+	case domain.PropertyTenancyOverride:
+		return listGroupedAny(grp.PropertyTenancyOverrideMap, in)
 	}
+	return failTool[listResult[any]]("list tenancy overrides", fmt.Errorf("%s is no tenancy override category", cat))
 }
 
-func (s *Server) handleListRegionalOverrides(ctx context.Context, req *sdk.CallToolRequest, in kindInput) (*sdk.CallToolResult, listResult[any], error) {
+// regionalOverrides lists the regional overrides of category cat.
+func (s *Server) regionalOverrides(ctx context.Context, in listInput, cat domain.Category) (*sdk.CallToolResult, listResult[any], error) {
 	env := s.envFor(in.envOverride)
-	switch in.kind() {
-	case "limit":
-		items, err := s.loader.LoadLimitRegionalOverrides(ctx, s.cfg.RepoPath, env)
-		if err != nil {
-			return failTool[listResult[any]]("load limit regional overrides", err)
-		}
-		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
-		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
-	case "console_property":
-		items, err := s.loader.LoadConsolePropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
-		if err != nil {
-			return failTool[listResult[any]]("load console property regional overrides", err)
-		}
-		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
-		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
-	case "property":
-		items, err := s.loader.LoadPropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
-		if err != nil {
-			return failTool[listResult[any]]("load property regional overrides", err)
-		}
-		filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
-		return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
+	var (
+		res  *sdk.CallToolResult
+		out  listResult[any]
+		err  error
+		what string
+	)
+	switch cat {
+	case domain.LimitRegionalOverride:
+		items, lerr := s.loader.LoadLimitRegionalOverrides(ctx, s.cfg.RepoPath, env)
+		res, out, err = listLoadedAny(items, lerr, in)
+		what = "load limit regional overrides"
+	case domain.ConsolePropertyRegionalOverride:
+		items, lerr := s.loader.LoadConsolePropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
+		res, out, err = listLoadedAny(items, lerr, in)
+		what = "load console property regional overrides"
+	case domain.PropertyRegionalOverride:
+		items, lerr := s.loader.LoadPropertyRegionalOverrides(ctx, s.cfg.RepoPath, env)
+		res, out, err = listLoadedAny(items, lerr, in)
+		what = "load property regional overrides"
 	default:
-		return failTool[listResult[any]]("list_regional_overrides",
-			fmt.Errorf("unknown kind %q (expected: limit, console_property, property)", in.Kind))
+		return failTool[listResult[any]]("list regional overrides", fmt.Errorf("%s is no regional override category", cat))
 	}
+	if err != nil {
+		return failTool[listResult[any]](what, err)
+	}
+	return res, out, nil
+}
+
+// listFlatAny filters and truncates items as a list tool returns them.
+func listFlatAny[T models.NamedFilterable](items []T, in listInput) (*sdk.CallToolResult, listResult[any], error) {
+	filtered := collections.FilterSlice(items, nil, normFilter(in.Filter), nil)
+	return jsonResult(collections.TruncateSlice(toAnySlice(filtered), in.Limit), nil)
+}
+
+// listGroupedAny is listFlatAny for a grouped category.
+func listGroupedAny[T models.NamedFilterable](grouped map[string][]T, in listInput) (*sdk.CallToolResult, listResult[any], error) {
+	flat := output.Flatten(collections.FilterMapOrAll(grouped, normFilter(in.Filter)))
+	return jsonResult(collections.TruncateSlice(toAnySlice(flat), in.Limit), nil)
+}
+
+// listLoadedAny is listFlatAny for a load that may have failed.
+func listLoadedAny[T models.NamedFilterable](items []T, err error, in listInput) (*sdk.CallToolResult, listResult[any], error) {
+	if err != nil {
+		return nil, listResult[any]{}, err
+	}
+	return listFlatAny(items, in)
 }
 
 // noInput is used by tools that take no arguments; the SDK requires
