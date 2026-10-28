@@ -37,7 +37,7 @@ func (m *Model) updateDetailView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(keyMsg, keys.CopyObject):
 			cmds = append(cmds, m.copyItemJSONByChoice())
 		case key.Matches(keyMsg, keys.ToggleJSON):
-			m.detailJSON = !m.detailJSON
+			m.detail.json = !m.detail.json
 			m.viewport.GotoTop()
 			return m, m.updateContentAsync()
 		}

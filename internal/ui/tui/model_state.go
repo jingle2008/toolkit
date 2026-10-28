@@ -226,15 +226,8 @@ type Model struct {
 	// width; the panel title says so.
 	hiddenColumns []string
 
-	// detailJSON shows the details view as raw JSON instead of fields.
-	detailJSON bool
-	// detailStale is set when the rows are rebuilt (a reload, or an action
-	// changing a row), so Update re-renders an open details view.
-	detailStale bool
-	// detailItem is the item details last rendered; detailGone is set when
-	// it has since left the dataset, and details keeps showing it.
-	detailItem any
-	detailGone bool
+	// detail is the details view's state.
+	detail detailState
 	// previewMemo memoizes the preview pane's body; see previewCache.
 	previewMemo previewCache
 
@@ -268,6 +261,19 @@ type exportState struct {
 	dir    *filepicker.Model
 	name   textinput.Model
 	naming bool
+}
+
+// detailState is the details view's state.
+type detailState struct {
+	// json shows the details view as raw JSON instead of fields.
+	json bool
+	// stale is set when the rows are rebuilt (a reload, or an action
+	// changing a row), so Update re-renders an open details view.
+	stale bool
+	// item is the item details last rendered; gone is set when it has
+	// since left the dataset, and details keeps showing it.
+	item any
+	gone bool
 }
 
 /*

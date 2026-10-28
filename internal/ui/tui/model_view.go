@@ -49,13 +49,13 @@ func (m *Model) updateContentAsync() tea.Cmd {
 	item := snapshotItem(findItem(m.dataset, m.category, m.selectedKey))
 	// An item deleted while details is open stays on screen, marked gone,
 	// rendered from what details last showed.
-	if m.detailGone = isNilItem(item) && m.detailItem != nil; m.detailGone {
-		item = m.detailItem
+	if m.detail.gone = isNilItem(item) && m.detail.item != nil; m.detail.gone {
+		item = m.detail.item
 	}
-	m.detailItem = item
+	m.detail.item = item
 	width := m.detailRenderWidth()
 	renderer := m.renderer
-	asJSON := m.detailJSON
+	asJSON := m.detail.json
 	styles := m.fieldStyles()
 
 	return func() tea.Msg {
@@ -81,17 +81,17 @@ func (m *Model) updateContentAsync() tea.Cmd {
 // rebuilt, so it shows the item as the latest reload has it. The viewport
 // keeps its scroll position.
 func (m *Model) refreshStaleDetail() tea.Cmd {
-	if !m.detailStale || m.viewMode != common.DetailsView {
+	if !m.detail.stale || m.viewMode != common.DetailsView {
 		return nil
 	}
-	m.detailStale = false
+	m.detail.stale = false
 	return m.updateContentAsync()
 }
 
 // detailTitle is the details panel's title: the item's key, marked gone
 // once it has left the dataset.
 func (m *Model) detailTitle() string {
-	if m.detailGone {
+	if m.detail.gone {
 		return itemKeyString(m.selectedKey) + " · gone"
 	}
 	return itemKeyString(m.selectedKey)
@@ -114,7 +114,7 @@ func (m *Model) handleDetailContentRenderedMsg(msg detailContentRenderedMsg) tea
 	if msg.Err != nil {
 		// The other layout renders without what failed.
 		other := "tab shows JSON"
-		if m.detailJSON {
+		if m.detail.json {
 			other = "tab shows fields"
 		}
 		return m.showErrorWithNext(fmt.Sprintf("render failed: %v", msg.Err), other)

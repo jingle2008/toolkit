@@ -227,7 +227,7 @@ func (m *Model) statsText() string {
 // fit, how far down it is scrolled: "fields", "JSON · 40%".
 func (m *Model) detailPosition() string {
 	layout := "fields"
-	if m.detailJSON {
+	if m.detail.json {
 		layout = "JSON"
 	}
 	if m.viewport.TotalLineCount() <= m.viewport.Height() {

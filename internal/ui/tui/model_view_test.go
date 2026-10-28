@@ -141,7 +141,7 @@ func TestUpdateContent_Error(t *testing.T) {
 	m.dataset = &models.Dataset{}
 	m.viewport.SetContent("")
 	m.renderer = &errRenderer{}
-	m.detailJSON = true // the renderer draws the JSON layout
+	m.detail.json = true // the renderer draws the JSON layout
 	cmd := m.updateContentAsync()
 	require.NotNil(t, cmd)
 	msg, ok := cmd().(detailContentRenderedMsg)
