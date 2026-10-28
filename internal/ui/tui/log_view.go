@@ -18,8 +18,7 @@ import (
 // openLog shows the log over the current view, following the tail, and
 // arms the live-refresh tick.
 func (m *Model) openLog() tea.Cmd {
-	m.logReturn = m.viewMode
-	m.viewMode = common.LogView
+	m.openView(common.LogView)
 	m.refreshLog()
 	return logview.Tick()
 }
@@ -67,7 +66,7 @@ func (m *Model) updateLogView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.log, res, cmd = m.log.Update(msg)
 	switch res.Outcome {
 	case logview.Closed:
-		m.viewMode = m.logReturn
+		m.closeView()
 	case logview.Quit:
 		return m, m.quit()
 	case logview.None:

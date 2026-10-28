@@ -88,7 +88,6 @@ type confirmPending struct {
 	count       func(text string) (int, string)
 	auditTarget string
 	run         func(count int) tea.Cmd
-	returnView  common.ViewMode
 }
 
 // requestConfirm opens the confirmation modal for a destructive action,
@@ -113,19 +112,18 @@ func (m *Model) requestConfirm(c confirmRequest) tea.Cmd {
 	return nil
 }
 
-// openConfirm shows dialog, with p its parent half; p.returnView is set
-// here.
+// openConfirm shows dialog over the current view, with p its parent
+// half.
 func (m *Model) openConfirm(dialog confirm.Model, p confirmPending) {
-	p.returnView = m.viewMode
 	m.confirm = dialog
 	m.confirmPending = p
-	m.viewMode = common.ConfirmView
+	m.openView(common.ConfirmView)
 }
 
 // dismissConfirm closes the modal, restoring the prior view and clearing
 // the pending overlay.
 func (m *Model) dismissConfirm() {
-	m.viewMode = m.confirmPending.returnView
+	m.closeView()
 	m.confirm = confirm.Model{}
 	m.confirmPending = confirmPending{}
 }

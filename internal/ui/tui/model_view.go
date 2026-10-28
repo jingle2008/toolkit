@@ -159,23 +159,23 @@ func (m *Model) renderMode(mode common.ViewMode) string {
 	case common.LoadingView:
 		return m.loadingView()
 	case common.HelpView:
-		return m.overlayModal(m.lastViewMode, m.fullHelpView())
+		return m.overlayModal(m.parentView(), m.fullHelpView())
 	case common.ListView:
 		return m.frame(m.tableTitle(), m.listBody())
 	case common.DetailsView:
 		return m.frame(m.detailTitle(), m.viewport.View())
 	case common.ExportView:
-		return m.overlayModal(m.lastViewMode, m.exportView())
+		return m.overlayModal(m.parentView(), m.exportView())
 	case common.EditTenantView:
-		return m.overlayModal(m.lastViewMode, m.editTenantView())
+		return m.overlayModal(m.parentView(), m.editTenantView())
 	case common.LogView:
 		return m.logView()
 	case common.ConfirmView:
-		return m.overlayModal(m.confirmPending.returnView, m.confirmView())
+		return m.overlayModal(m.parentView(), m.confirmView())
 	case common.RowPickerView:
-		return m.overlayModal(m.rowPickerPending.returnView, m.rowPickerView())
+		return m.overlayModal(m.parentView(), m.rowPickerView())
 	case common.PaletteView:
-		return m.overlayModal(m.palettePending.returnView, m.paletteView())
+		return m.overlayModal(m.parentView(), m.paletteView())
 	default:
 		return ""
 	}

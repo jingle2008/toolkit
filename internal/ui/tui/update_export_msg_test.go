@@ -13,7 +13,7 @@ import (
 func TestUpdateExportView_DoneRestoresViewAndSaysWhere(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.lastViewMode = common.DetailsView
+	m.viewStack = []common.ViewMode{common.DetailsView}
 	m.viewMode = common.ExportView
 
 	got, _ := m.updateExportView(exportDoneMsg{path: "/tmp/out.csv"})
@@ -26,7 +26,7 @@ func TestUpdateExportView_DoneRestoresViewAndSaysWhere(t *testing.T) {
 func TestUpdateExportView_ErrRestoresPreviousViewAndToasts(t *testing.T) {
 	t.Parallel()
 	m := newTestModel(t)
-	m.lastViewMode = common.DetailsView
+	m.viewStack = []common.ViewMode{common.DetailsView}
 	m.viewMode = common.ExportView
 
 	got, _ := m.updateExportView(exportErrMsg{err: errors.New("disk full")})

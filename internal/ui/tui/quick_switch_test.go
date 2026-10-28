@@ -274,7 +274,7 @@ func TestHelp_SentenceCaseOnlyForNavigation(t *testing.T) {
 	t.Parallel()
 	m := newQuickSwitchModel(t, "")
 	m.updateLayout(200, 40)
-	m.lastViewMode = common.ListView
+	m.viewStack = []common.ViewMode{common.ListView}
 	var lines []string
 	for _, sec := range m.helpSections() {
 		lines = append(lines, sec...)

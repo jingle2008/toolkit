@@ -105,8 +105,7 @@ func (m *Model) openTenantForm(item any) tea.Cmd {
 		return m.showToast("tenant already resolved or has no tenancy id", toastWarn)
 	}
 	m.editTenant = tenantform.New(tgt.ocid, tgt.tenantID)
-	m.lastViewMode = m.viewMode
-	m.viewMode = common.EditTenantView
+	m.openView(common.EditTenantView)
 	return textinput.Blink
 }
 
@@ -133,7 +132,7 @@ func (m *Model) updateEditTenantView(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.quit()
 	case tenantform.Cancel:
 		m.editTenant = tenantform.Model{}
-		m.viewMode = common.ListView
+		m.closeView()
 		return m, nil
 	case tenantform.OpenPortal:
 		return m, m.openPortalCmd()
@@ -151,7 +150,7 @@ func (m *Model) updateEditTenantView(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *Model) handleTenantSavedMsg(msg tenantSavedMsg) tea.Cmd {
 	m.editTenant = tenantform.Model{}
 	if m.viewMode == common.EditTenantView {
-		m.viewMode = common.ListView
+		m.closeView()
 	}
 	// The save is a tracked action and outlives an environment switch;
 	// tenants are per realm, so one saved in another realm is left to

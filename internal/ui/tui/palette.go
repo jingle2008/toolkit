@@ -34,8 +34,7 @@ type paletteItem struct {
 // item runs, by its index among the palette's items, and the view to
 // restore on close.
 type palettePending struct {
-	runs       []func() tea.Cmd
-	returnView common.ViewMode
+	runs []func() tea.Cmd
 }
 
 // openPalette shows the palette over the current view with every item
@@ -48,8 +47,8 @@ func (m *Model) openPalette() {
 		items[i], runs[i] = it.Item, it.run
 	}
 	m.palette = palette.New(items, m.paletteRecent)
-	m.palettePending = palettePending{runs: runs, returnView: m.viewMode}
-	m.viewMode = common.PaletteView
+	m.palettePending = palettePending{runs: runs}
+	m.openView(common.PaletteView)
 }
 
 // paletteItems lists what the palette offers right now: every category
@@ -230,7 +229,7 @@ func (m *Model) rememberPalette(it palette.Item) {
 }
 
 func (m *Model) closePalette() {
-	m.viewMode = m.palettePending.returnView
+	m.closeView()
 	m.palette = palette.Model{}
 	m.palettePending = palettePending{}
 }

@@ -104,8 +104,9 @@ type Model struct {
 	filter        string
 	initialFilter string
 	viewMode      common.ViewMode
-	lastViewMode  common.ViewMode // for toggling help view
-	helpScroll    int             // first help body line shown when help scrolls
+	// viewStack is the views open overlays return to (view_stack.go).
+	viewStack  []common.ViewMode
+	helpScroll int // first help body line shown when help scrolls
 	// helpFilter keeps the help bindings whose key or description contains
 	// it (case-insensitive), typed into helpInput while helpTyping.
 	helpFilter string
@@ -250,10 +251,8 @@ type Model struct {
 	// Tenant-metadata entry form (EditTenantView); the zero form is none.
 	editTenant tenantform.Model
 
-	// log is the log overlay (see the logview package); logReturn is the
-	// view it was opened over, restored when it closes.
-	log       logview.Model
-	logReturn common.ViewMode
+	// log is the log overlay (see the logview package).
+	log logview.Model
 
 	// toasts holds the transient banners shown over the active view; see
 	// the toast package.
@@ -265,16 +264,15 @@ NewModel creates a new Model for the toolkit TUI, applying the given options.
 */
 func NewModel(opts ...ModelOption) (*Model, error) {
 	m := &Model{
-		inputMode:    common.NormalInput,
-		editTarget:   common.NoneTarget,
-		category:     domain.Tenant, // or a sensible default
-		viewMode:     common.ListView,
-		lastViewMode: common.ListView,
-		sortColumn:   common.NameCol,
-		sortAsc:      true,
-		history:      []historyEntry{},
-		historyIdx:   -1,
-		deps:         ops.Production(),
+		inputMode:  common.NormalInput,
+		editTarget: common.NoneTarget,
+		category:   domain.Tenant, // or a sensible default
+		viewMode:   common.ListView,
+		sortColumn: common.NameCol,
+		sortAsc:    true,
+		history:    []historyEntry{},
+		historyIdx: -1,
+		deps:       ops.Production(),
 	}
 
 	initStyles(m)

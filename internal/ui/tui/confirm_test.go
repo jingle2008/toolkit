@@ -46,7 +46,7 @@ func TestRequestConfirm_OpensModalAndCapturesReturnView(t *testing.T) {
 
 	assert.Nil(t, cmd, "opening the modal issues no command")
 	assert.Equal(t, common.ConfirmView, m.viewMode)
-	assert.Equal(t, common.ListView, m.confirmPending.returnView)
+	assert.Equal(t, common.ListView, m.parentView())
 	assert.Equal(t, "Drain", actionVerb(m.confirmPending.action))
 }
 

@@ -44,7 +44,7 @@ func TestLogOverlay_ToggleFromList(t *testing.T) {
 	m.viewMode = common.ListView
 	_, cmd := m.Update(backtick)
 	assert.Equal(t, common.LogView, m.viewMode)
-	assert.Equal(t, common.ListView, m.logReturn)
+	assert.Equal(t, common.ListView, m.parentView())
 	assert.NotNil(t, cmd) // live-refresh tick started
 	// Toggle again closes back to the originating view.
 	_, _ = m.Update(backtick)

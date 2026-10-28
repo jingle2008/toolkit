@@ -76,7 +76,7 @@ func TestEnterHelpView(t *testing.T) {
 
 	m.enterHelpView()
 	assert.Equal(t, common.HelpView, m.viewMode)
-	assert.Equal(t, before, m.lastViewMode, "previous view must be remembered for Back")
+	assert.Equal(t, before, m.parentView(), "previous view must be remembered for Back")
 }
 
 func TestEnterExportView_NoPickerPath(t *testing.T) {
@@ -87,7 +87,7 @@ func TestEnterExportView_NoPickerPath(t *testing.T) {
 
 	cmds := m.enterExportView()
 	assert.Equal(t, common.ExportView, m.viewMode)
-	assert.Equal(t, before, m.lastViewMode)
+	assert.Equal(t, before, m.parentView())
 	require.Len(t, cmds, 1)
 	assert.NotNil(t, cmds[0], "empty path should initialize the picker")
 }
