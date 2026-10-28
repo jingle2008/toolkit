@@ -84,7 +84,7 @@ func (n DedicatedAICluster) IsFaulty() bool {
 
 func normalizeRegion(region string) string {
 	r := Region(region)
-	if r == RegionIAD || r == RegionPHX {
+	if r == regionIAD || r == regionPHX {
 		return r.Code()
 	}
 	return region
