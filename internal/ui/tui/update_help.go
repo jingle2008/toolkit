@@ -19,18 +19,18 @@ func (m *Model) updateHelpView(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if !ok {
 		return m, nil
 	}
-	if m.helpTyping {
+	if m.help.typing {
 		return m, m.updateHelpInput(keyMsg)
 	}
 	switch {
 	case keyMsg.String() == "/":
 		ti := textinput.New()
 		ti.Prompt = "/"
-		ti.SetValue(m.helpFilter)
-		m.helpInput, m.helpTyping = ti, true
-		return m, m.helpInput.Focus()
-	case key.Matches(keyMsg, keys.Back) && m.helpFilter != "":
-		m.helpFilter, m.helpScroll = "", 0
+		ti.SetValue(m.help.filter)
+		m.help.input, m.help.typing = ti, true
+		return m, m.help.input.Focus()
+	case key.Matches(keyMsg, keys.Back) && m.help.filter != "":
+		m.help.filter, m.help.scroll = "", 0
 	case key.Matches(keyMsg, keys.Back, keys.Help):
 		m.closeView()
 	case key.Matches(keyMsg, keys.Quit):
@@ -48,16 +48,16 @@ func (m *Model) updateHelpInput(km tea.KeyPressMsg) tea.Cmd {
 	case "ctrl+c":
 		return m.quit()
 	case "enter":
-		m.helpTyping = false
+		m.help.typing = false
 		return nil
 	case "esc":
-		m.helpTyping, m.helpFilter = false, ""
-		m.helpScroll = 0
+		m.help.typing, m.help.filter = false, ""
+		m.help.scroll = 0
 		return nil
 	}
 	var cmd tea.Cmd
-	m.helpInput, cmd = m.helpInput.Update(km)
-	m.helpFilter = strings.TrimSpace(m.helpInput.Value())
-	m.helpScroll = 0
+	m.help.input, cmd = m.help.input.Update(km)
+	m.help.filter = strings.TrimSpace(m.help.input.Value())
+	m.help.scroll = 0
 	return cmd
 }

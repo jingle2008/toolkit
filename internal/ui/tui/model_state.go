@@ -105,15 +105,11 @@ type Model struct {
 	initialFilter string
 	viewMode      common.ViewMode
 	// viewStack is the views open overlays return to (view_stack.go).
-	viewStack  []common.ViewMode
-	helpScroll int // first help body line shown when help scrolls
-	// helpFilter keeps the help bindings whose key or description contains
-	// it (case-insensitive), typed into helpInput while helpTyping.
-	helpFilter string
-	helpInput  textinput.Model
-	helpTyping bool
-	prefix     string        // pending prefix key (keys.SortLeader) or ""
-	confirm    confirm.Model // destructive-action confirmation modal (confirm.go)
+	viewStack []common.ViewMode
+	// help is the help screen's state.
+	help    helpState
+	prefix  string        // pending prefix key (keys.SortLeader) or ""
+	confirm confirm.Model // destructive-action confirmation modal (confirm.go)
 	// confirmPending is the open confirmation's parent half: its command,
 	// audit name and return view.
 	confirmPending confirmPending
@@ -257,6 +253,16 @@ type Model struct {
 	// toasts holds the transient banners shown over the active view; see
 	// the toast package.
 	toasts toast.Model
+}
+
+// helpState is the help screen's scroll and filter.
+type helpState struct {
+	scroll int // first help body line shown when help scrolls
+	// filter keeps the help bindings whose key or description contains
+	// it (case-insensitive), typed into input while typing.
+	filter string
+	input  textinput.Model
+	typing bool
 }
 
 /*

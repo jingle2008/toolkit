@@ -167,8 +167,8 @@ func (*Model) pasteFilter() tea.Cmd {
 
 func (m *Model) enterHelpView() {
 	m.openView(common.HelpView)
-	m.helpScroll = 0
-	m.helpFilter, m.helpTyping = "", false
+	m.help.scroll = 0
+	m.help.filter, m.help.typing = "", false
 }
 
 func (m *Model) handleNextCategory() tea.Cmd {

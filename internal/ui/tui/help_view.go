@@ -26,7 +26,7 @@ const (
 type helpSection []string
 
 // helpSections is helpSectionsFor the current filter.
-func (m *Model) helpSections() []helpSection { return m.helpSectionsFor(m.helpFilter) }
+func (m *Model) helpSections() []helpSection { return m.helpSectionsFor(m.help.filter) }
 
 // helpSectionsFor renders every key group that applies to the view help
 // was opened from, keeping only the bindings filter matches — all of a
@@ -107,7 +107,7 @@ func sentenceCase(bind []key.Binding) []key.Binding {
 
 // helpLines lays the sections out in as many columns (up to three) as the
 // modal's width allows and returns the resulting body lines.
-func (m *Model) helpLines() []string { return m.helpLinesFor(m.helpFilter) }
+func (m *Model) helpLines() []string { return m.helpLinesFor(m.help.filter) }
 
 func (m *Model) helpLinesFor(filter string) []string {
 	columns, secW, _ := m.helpColumnsFor(filter)
@@ -116,7 +116,7 @@ func (m *Model) helpLinesFor(filter string) []string {
 
 // helpColumns is helpColumnsFor the current filter.
 func (m *Model) helpColumns() (columns [][]string, secW int, titles map[string]bool) {
-	return m.helpColumnsFor(m.helpFilter)
+	return m.helpColumnsFor(m.help.filter)
 }
 
 // helpColumnsFor packs filter's sections into columns, returning them with
@@ -139,7 +139,7 @@ func (m *Model) helpColumnsFor(filter string) (columns [][]string, secW int, tit
 // section title that would be the window's last line — its keys below it,
 // out of view — is left for the next page, so no title shows alone.
 func (m *Model) helpWindowLines(off, rows int) []string {
-	return m.helpWindowLinesFor(m.helpFilter, off, rows)
+	return m.helpWindowLinesFor(m.help.filter, off, rows)
 }
 
 func (m *Model) helpWindowLinesFor(filter string, off, rows int) []string {
@@ -238,7 +238,7 @@ func tallestColumn(secs []helpSection, cuts []int) int {
 // scroll offset; maxScroll is 0 when everything fits. The filter line and
 // the blank under it take two rows while a filter is typed or set.
 func (m *Model) helpWindow(lines int) (rows, maxScroll int) {
-	return m.helpWindowFor(lines, m.helpTyping || m.helpFilter != "")
+	return m.helpWindowFor(lines, m.help.typing || m.help.filter != "")
 }
 
 func (m *Model) helpWindowFor(lines int, filtering bool) (rows, maxScroll int) {
@@ -254,10 +254,10 @@ func (m *Model) helpWindowFor(lines int, filtering bool) (rows, maxScroll int) {
 }
 
 // fullHelpView renders the help modal: key groups in columns, scrolled
-// to m.helpScroll with an indicator when they don't fit. Filtered, it
+// to m.help.scroll with an indicator when they don't fit. Filtered, it
 // keeps the size of unfiltered help (fixedModal).
 func (m *Model) fullHelpView() string {
-	body, maxScroll := m.helpBody(m.helpFilter, m.helpTyping, m.helpScroll)
+	body, maxScroll := m.helpBody(m.help.filter, m.help.typing, m.help.scroll)
 	full, _ := m.helpBody("", false, 0)
 	inner := max(m.viewWidth*9/10-4, 1) // modal border and padding
 	hints := m.helpHints(maxScroll)
@@ -316,7 +316,7 @@ func (m *Model) helpBody(filter string, typing bool, scroll int) (body string, m
 func (m *Model) helpHead(body string, lines, maxScroll int, filter string, typing bool) string {
 	switch {
 	case typing:
-		return m.helpInput.View() + "\n\n" + body
+		return m.help.input.View() + "\n\n" + body
 	case filter != "":
 		return lipgloss.NewStyle().Foreground(m.theme.Palette.Accent).Render("⟨/"+filter+"⟩") + "\n\n" + body
 	}
@@ -331,13 +331,13 @@ func (m *Model) helpHead(body string, lines, maxScroll int, filter string, typin
 // or not, with the scroll keys when it scrolls.
 func (m *Model) helpHints(maxScroll int) string {
 	switch {
-	case m.helpTyping:
+	case m.help.typing:
 		return "enter keep · esc clear"
-	case maxScroll > 0 && m.helpFilter != "":
+	case maxScroll > 0 && m.help.filter != "":
 		return "j/k pgup/pgdn home/end scroll · / filter · esc clear"
 	case maxScroll > 0:
 		return "j/k pgup/pgdn home/end scroll · / filter · esc close"
-	case m.helpFilter != "":
+	case m.help.filter != "":
 		return "/ filter · esc clear"
 	}
 	return "/ filter · esc close"
@@ -349,17 +349,17 @@ func (m *Model) scrollHelp(k string) {
 	rows, maxScroll := m.helpWindow(len(m.helpLines()))
 	switch k {
 	case "j", "down":
-		m.helpScroll++
+		m.help.scroll++
 	case "k", "up":
-		m.helpScroll--
+		m.help.scroll--
 	case "pgdown", "f", "space":
-		m.helpScroll += rows
+		m.help.scroll += rows
 	case "pgup", "b":
-		m.helpScroll -= rows
+		m.help.scroll -= rows
 	case "home":
-		m.helpScroll = 0
+		m.help.scroll = 0
 	case "end":
-		m.helpScroll = maxScroll
+		m.help.scroll = maxScroll
 	}
-	m.helpScroll = min(max(m.helpScroll, 0), maxScroll)
+	m.help.scroll = min(max(m.help.scroll, 0), maxScroll)
 }
