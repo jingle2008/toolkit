@@ -39,8 +39,8 @@ func addLogsCommand(rootCmd *cobra.Command, cfgFile *string) {
 		Short: "Show toolkit's log files (one per session)",
 		Long: `Show the logs toolkit writes. Every toolkit process (tui, get, mcp,
 mutations) logs to its own session file in --log-dir, named
-<start>-<cmd>-<pid>.log; exited sessions beyond the newest 50, or idle
-for 14 days, are pruned when the next one starts.
+<start>-<cmd>-<pid>.log; exited sessions beyond the newest 50 of their
+command, or idle for 14 days, are pruned when the next one starts.
 
 With no SESSION, prints the most recent session (narrowed by --cmd).
 SESSION is a PID or a session ID (prefix); ` + "`toolkit logs ls`" + ` lists them.

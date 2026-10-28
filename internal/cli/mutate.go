@@ -68,7 +68,7 @@ func runNodeAction(
 	cmd *cobra.Command, cfgFile *string, deps depsFor, name, ocid string, gate cliGate,
 	newOp func(d ops.Deps, e ops.Env, name, ocid string) mutation.Op,
 ) error {
-	return withMutationSetup(cmd.Context(), cfgFile, true, ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
+	return withMutationSetup(cmd, cfgFile, true, ocid != "", true, func(ctx context.Context, cfg config.Config, env models.Environment) error {
 		return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate, newOp(deps(cfg), opsEnv(cfg, env), name, ocid))
 	})
 }
@@ -120,17 +120,26 @@ func validateMutationConfig(cfg config.Config, needsKube, needsRepo, needsEnv bo
 // withMutationSetup runs the standard prelude every mutation
 // subcommand shares — read the config file, unmarshal, validate per
 // needsKube/needsRepo/needsEnv, init the logger (deferred Sync), attach
-// the logger to ctx (the command's signal-cancellable context from
-// Execute), and build the Environment triple — then invokes fn with the
-// resolved cfg / env / ctx. Keeps the setup uniform so individual
-// subcommands focus only on flag parsing and their perform closure.
+// the logger to ctx (cmd's signal-cancellable context from Execute),
+// and build the Environment triple — then invokes fn with the resolved
+// cfg / env / ctx. Keeps the setup uniform so individual subcommands
+// focus only on flag parsing and their perform closure. The log session
+// and cmd attr are named for cmd (mutationName).
 func withMutationSetup(
-	ctx context.Context,
+	cmd *cobra.Command,
 	cfgFile *string,
 	needsKube, needsRepo, needsEnv bool,
 	fn func(ctx context.Context, cfg config.Config, env models.Environment) error,
 ) error {
-	return withCommandSetup(ctx, cfgFile, "mutate", standardChecks(needsKube, needsRepo, needsEnv), fn)
+	return withCommandSetup(cmd.Context(), cfgFile, mutationName(cmd), standardChecks(needsKube, needsRepo, needsEnv), fn)
+}
+
+// mutationName is cmd's path below the root, hyphen-joined: drain,
+// restart-node, delete-dac. It names the mutation's log session, so
+// `toolkit logs --cmd drain` finds it.
+func mutationName(cmd *cobra.Command) string {
+	path := strings.TrimPrefix(cmd.CommandPath(), cmd.Root().Name()+" ")
+	return strings.ReplaceAll(path, " ", "-")
 }
 
 // setupChecks are what a command checks of its config before it runs.

@@ -54,7 +54,7 @@ Examples:
 			if err != nil {
 				return err
 			}
-			return withMutationSetup(cmd.Context(), cfgFile, false, false, false, func(ctx context.Context, cfg config.Config, _ models.Environment) error {
+			return withMutationSetup(cmd, cfgFile, false, false, false, func(ctx context.Context, cfg config.Config, _ models.Environment) error {
 				return runMutation(ctx, cmd.InOrStdin(), cmd.OutOrStdout(), gate,
 					ops.SetTenant(deps(cfg), entry))
 			})
