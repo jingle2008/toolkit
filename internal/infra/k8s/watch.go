@@ -22,6 +22,13 @@ import (
 // every raw event. Tests give watchTrigger a shorter one.
 const DebounceWindow = 5 * time.Second
 
+// stopAll stops every watcher in the slice.
+func stopAll(watchers []watch.Interface) {
+	for _, w := range watchers {
+		w.Stop()
+	}
+}
+
 // watchTrigger opens every watcher via the given openers and merges
 // their events into a single coalesced trigger channel. Each received
 // value on the returned channel means "something changed; reload now".
@@ -34,13 +41,6 @@ const DebounceWindow = 5 * time.Second
 //
 // If any opener returns an error, all already-opened watchers are
 // stopped and the error is returned with no channel.
-// stopAll stops every watcher in the slice.
-func stopAll(watchers []watch.Interface) {
-	for _, w := range watchers {
-		w.Stop()
-	}
-}
-
 func watchTrigger(
 	ctx context.Context,
 	window time.Duration,
