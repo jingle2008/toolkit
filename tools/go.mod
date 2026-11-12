@@ -2,7 +2,7 @@ module github.com/jingle2008/toolkit/tools
 
 go 1.26.1
 
-toolchain go1.26.10
+toolchain go1.26.11
 
 tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
