@@ -76,7 +76,8 @@ func TestHelp_MCPReadOnlyHasNoValueName(t *testing.T) {
 	var out bytes.Buffer
 	cmd.SetOut(&out)
 	require.NoError(t, cmd.Execute())
-	assert.Contains(t, out.String(), "      --mcp-read-only   ")
+	// pflag 1.1 suffixes bool flags with [=true|false]; earlier versions don't.
+	assert.Regexp(t, `(?m)^      --mcp-read-only(\[=true\|false\])? {2,}Start `, out.String())
 	assert.NotContains(t, out.String(), "--mcp-read-only toolkit")
 }
 
